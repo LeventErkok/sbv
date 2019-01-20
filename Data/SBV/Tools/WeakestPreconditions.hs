@@ -37,7 +37,7 @@ module Data.SBV.Tools.WeakestPreconditions (
 import Data.List   (intercalate)
 import Data.Maybe  (fromMaybe)
 
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, void)
 
 import Data.SBV
 import Data.SBV.Control
@@ -125,13 +125,11 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
                                                  return $ Failed s startState lEndState
 
                       case finalState of
-                        Stuck end s -> if wpVerbose
-                                       then do msg ""
-                                               msg "Execution trace:"
-                                               msg "================"
-                                               _ <- io $ traceExecution cfg prog lStartState
-                                               giveUp end s
-                                       else return $ Indeterminate "Not all proof obligations were established."
+                        Stuck end s -> do when wpVerbose $ do msg ""
+                                                              msg "Execution trace:"
+                                                              msg "================"
+                                                              void (io $ traceExecution cfg prog lStartState)
+                                          giveUp end s
                         Good  _     -> return $ Indeterminate "Not all proof obligations were established."
 
   where msg = io . when wpVerbose . putStrLn
