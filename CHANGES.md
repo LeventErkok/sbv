@@ -12,7 +12,7 @@
     It uses Dijkstra's weakest preconditions methodology to establish total correctness,
     i.e., along with correctness, termination is also guaranteed. Loop invariants and
     termination measures are supplied by the user. For an example use case, see the
-    example in `Documentation.SBV.Examples.ProofTools.WPSum`.
+    example in `Documentation.SBV.Examples.WeakestPreconditions.Sum`.
 
 ### Version 8.0, 2019-01-14
 

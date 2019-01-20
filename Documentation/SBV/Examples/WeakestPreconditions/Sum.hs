@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.ProofTools.WPSum
+-- Module    : Documentation.SBV.Examples.WeakestPreconditions.Sum
 -- Author    : Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -16,7 +16,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 
-module Documentation.SBV.Examples.ProofTools.WPSum where
+module Documentation.SBV.Examples.WeakestPreconditions.Sum where
 
 import Data.SBV
 import Data.SBV.Control

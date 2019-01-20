@@ -9,7 +9,7 @@
 -- A toy imperative language with a proof system based on Dijkstra's weakest
 -- preconditions methodology to establish total correctness proofs.
 --
--- See "Documentation.SBV.Examples.ProofTools.WPSum" for an example proof.
+-- See "Documentation.SBV.Examples.WeakestPreconditions.Sum" for an example proof.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts       #-}
