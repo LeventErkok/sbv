@@ -68,6 +68,7 @@ type S = SumS SInteger
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
 algorithm :: Invariant S -> Measure S -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
+                        , If (\SumS{n} -> n .< 0) Abort Skip
                         , While "i <= n"
                                 inv
                                 msr
@@ -77,7 +78,9 @@ algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
                                       ]
                         ]
 
--- | Precondition for our program: @n@ must be non-negative.
+-- | Precondition for our program: @n@ must be non-negative. Note that there is
+-- an explicit 'Abort' statement in our program to protect against this case, so
+-- if we do not have this precondition, all programs will fail.
 pre :: S -> SBool
 pre SumS{n} = n .>= 0
 
@@ -159,7 +162,11 @@ Execution trace:
   {n = 0, i = 0, s = 0}
 ===> [1.1] Assign
   {n = 0, i = 0, s = 0}
-===> [1.2] Loop i <= n: invariant fails to hold prior to loop entry
+===> [1.2] Conditional, taking the "else" branch
+  {n = 0, i = 0, s = 0}
+===> [1.2.2] Skip
+  {n = 0, i = 0, s = 0}
+===> [1.3] Loop i <= n: invariant fails to hold prior to loop entry
 <BLANKLINE>
 Analysis complete. Proof failed.
 Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
@@ -221,13 +228,17 @@ Looking at depth: 0, 1, 2. Found!
   {n = 1, i = 0, s = 0}
 ===> [1.1] Assign
   {n = 1, i = 0, s = 0}
-===> [1.2] Loop i <= n: condition holds, executing the body
+===> [1.2] Conditional, taking the "else" branch
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.1] Assign
+===> [1.2.2] Skip
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.2] Assign
+===> [1.3] Loop i <= n: condition holds, executing the body
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.2] Assign
   {n = 1, i = 1, s = 0}
-===> [1.2] Loop i <= n: invariant fails to hold in iteration 2
+===> [1.3] Loop i <= n: invariant fails to hold in iteration 2
 <BLANKLINE>
 Analysis complete. Proof failed.
 Proof failure: Loop i <= n: invariant fails to hold in iteration 2
@@ -259,13 +270,17 @@ Looking at depth: 0, 1, 2. Found!
   {n = 1, i = 0, s = 0}
 ===> [1.1] Assign
   {n = 1, i = 0, s = 0}
-===> [1.2] Loop i <= n: condition holds, executing the body
+===> [1.2] Conditional, taking the "else" branch
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.1] Assign
+===> [1.2.2] Skip
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.2] Assign
+===> [1.3] Loop i <= n: condition holds, executing the body
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.2] Assign
   {n = 1, i = 1, s = 0}
-===> [1.2] Loop i <= n: measure must be non-negative, evaluated to: -1
+===> [1.3] Loop i <= n: measure must be non-negative, evaluated to: -1
 <BLANKLINE>
 Analysis complete. Proof failed.
 Proof failure: Loop i <= n: measure must be non-negative, evaluated to: -1
@@ -294,13 +309,17 @@ Looking at depth: 0, 1, 2. Found!
   {n = 1, i = 0, s = 0}
 ===> [1.1] Assign
   {n = 1, i = 0, s = 0}
-===> [1.2] Loop i <= n: condition holds, executing the body
+===> [1.2] Conditional, taking the "else" branch
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.1] Assign
+===> [1.2.2] Skip
   {n = 1, i = 0, s = 0}
-===> [1.2.{1}.2] Assign
+===> [1.3] Loop i <= n: condition holds, executing the body
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.3.{1}.2] Assign
   {n = 1, i = 1, s = 0}
-===> [1.2] Loop i <= n: measure failed to decrease, prev = 1, current = 2
+===> [1.3] Loop i <= n: measure failed to decrease, prev = 1, current = 2
 <BLANKLINE>
 Analysis complete. Proof failed.
 Proof failure: Loop i <= n: measure failed to decrease, prev = 1, current = 2
