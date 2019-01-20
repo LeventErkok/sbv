@@ -11,6 +11,8 @@
 -- different versions lead to proofs and failures.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -23,14 +25,16 @@ import Data.SBV.Control
 
 import Data.SBV.Tools.WeakestPreconditions
 
--- * System state
+import GHC.Generics (Generic)
+
+-- * Program state
 
 -- | The state for the sum program, parameterized over a base type @a@.
 data SumS a = SumS { n :: a    -- ^ The input value
                    , i :: a    -- ^ Loop counter
                    , s :: a    -- ^ Running sum
                    }
-                   deriving Show
+                   deriving (Show, Generic, Mergeable)
 
 -- | Show instance for 'SumS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -42,17 +46,9 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
 
 -- | Make our state 'Data.SBV.Control.Queariable'
 instance (SymVal a, SMTValue a) => Queriable IO (SumS (SBV a)) (SumS a) where
- create                = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
- project SumS{n, i, s} = SumS <$> getValue n <*> getValue i <*> getValue s
- embed   SumS{n, i, s} = return $ SumS (literal n) (literal i) (literal s)
-
--- | We also need it mergeable:
-instance Mergeable a => Mergeable (SumS a) where
-  symbolicMerge force c SumS{n = n1, i = i1, s = s1} SumS{n = n2, i = i2, s = s2}
-        = SumS { n = symbolicMerge force c n1 n2
-               , i = symbolicMerge force c i1 i2
-               , s = symbolicMerge force c s1 s2
-               }
+  create                = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
+  project SumS{n, i, s} = SumS <$> getValue n <*> getValue i <*> getValue s
+  embed   SumS{n, i, s} = return $ SumS (literal n) (literal i) (literal s)
 
 -- | Helper type synonym
 type S = SumS SInteger
