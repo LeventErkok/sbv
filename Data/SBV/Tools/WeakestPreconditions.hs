@@ -164,31 +164,30 @@ unrollBound :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st 
 unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
         let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
-            go _ _     Skip                            st = (sTrue, sTrue,      st)
-            go _ pCond Abort                           st = (sTrue, sNot pCond, st)
-            go _ _     (Assign f)                      st = (sTrue, sTrue,      f st)
+            go _ pCond Skip                            st = (pCond, sTrue,      st)
+            go _ pCond Abort                           st = (pCond, sNot pCond, st)
+            go _ pCond (Assign f)                      st = (pCond, sTrue,      f st)
             go b pCond (If c tb fb)                    st = ite (c st) (go b (pCond .&&       c st)  tb st)
                                                                        (go b (pCond .&& sNot (c st)) fb st)
-            go _ _     (Seq [])                        st = (sTrue, sTrue, st)
-            go b pCond (Seq (s:ss))                    st = let (r1, p1, st')  = go b pCond s        st
-                                                                (r2, p2, st'') = go b pCond (Seq ss) st'
-                                                            in (r1 .&& r2, p1 .&& p2, st'')
+            go _ pCond (Seq [])                        st = (pCond, sTrue, st)
+            go b pCond (Seq (s:ss))                    st = let (r1, p1, st')  = go b pCond          s        st
+                                                                (r2, p2, st'') = go b (pCond .&& r1) (Seq ss) st'
+                                                            in (r2, p1 .&& p2, st'')
             go b pCond (While _ inv measure cond body) st = while b pCond st
-               where while 0 p curST = (p .=> sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
+               where while 0 p curST = (p .&& sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
                      while i p curST = let c1 = cond curST                        -- loop is executing, condition must hold
                                            c2 = inv  curST                        -- invariant must hold
                                            c3 = measure curST .>= 0               -- measure must be non-negative
 
                                            -- execute the body
-                                           p' = p .&& c1
-                                           (rBody, c4, st') = go b p' body curST
+                                           (rBody, c4, st') = go b (p .&& c1) body curST
 
-                                           c5 = measure st' .< measure curST -- measure must decrease
+                                           c5 = c1 .&& c2 .&& c4 .&& cond st' .&& rBody .=> measure st' .< measure curST -- measure must decrease
 
                                            -- execute the remainder of the loop, decrementing the counter
-                                           (rRest, c6, st'') = while (i-1) p' st'
+                                           (rRest, c6, st'') = while (i-1) rBody st'
 
-                                       in (p .=> c1 .&& rBody .&& rRest, p .=> sAnd [c1, c2, c3, c4, c5, c6], st'')
+                                       in (p .&& c1 .&& rBody .&& rRest, sAnd [c1, c2, c3, c4, c5, c6], st'')
 
         startState <- create
 
@@ -209,10 +208,9 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
           Sat   -> do ls <- project startState
                       es <- project endState
 
-                      sls <- embed ls
-                      msg $ "Found a counter-example violation at depth " ++ show bound ++ ":"
-                      msg ""
-                      res <- io $ traceExecution cfg prog sls
+                      msg ". Found!\n"
+                      lStartState <- embed ls
+                      res <- io $ traceExecution cfg prog lStartState
                       msg ""
                       case res of
                         Good{}    -> error $ unlines [ "Impossible happened! Unrolling semantics found a bad state, but executor did not reach it."
@@ -220,21 +218,27 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
                                                      , "End   state: " ++ show es
                                                      , "Please report this as a bug in SBV!"
                                                      ]
-                        -- Should really ensure here that the trace result state is the same as @es@,
-                        -- but let's not worry about that for now
-                        Stuck _ r -> do msg "Analysis complete. Proof failed."
-                                        return $ Just $ Failed r ls es
+
+                        -- Make sure to return the final state from the trace-executor
+                        -- since the SMT solver can pick an arbitrary state so long as
+                        -- the constraints fail here:
+                        Stuck end r -> do msg "Analysis complete. Proof failed."
+                                          le <- project end
+                                          return $ Just $ Failed r ls le
 
    where msg = when wpVerbose . io . putStrLn
 
--- | Try to find a good counter-example by unrolling up to 20 times
+-- | Try to find a good counter-example by unrolling up to 10 times
 unroll :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
 unroll cfg@WPConfig{wpVerbose, wpCexDepth} reason prog = go 0
-  where msg = when wpVerbose . putStrLn
+  where msg     = when wpVerbose . putStrLn
+        msgNoLn = when wpVerbose . putStr
 
-        go i | i > wpCexDepth = do msg $ "No violating trace found. (Searched up to depth " ++ show wpCexDepth ++ ".)"
+        go i | i > wpCexDepth = do msg $ ".\nNo violating trace found. (Searched up to depth " ++ show wpCexDepth ++ ".)"
                                    return $ Indeterminate reason
-             | True           = do mbRes <- unrollBound cfg i prog
+             | True           = do let comma = if i == 0 then "" else ", "
+                                   msgNoLn $ comma ++ show i
+                                   mbRes <- unrollBound cfg i prog
                                    case mbRes of
                                      Nothing -> go (i+1)
                                      Just r  -> return r
@@ -249,7 +253,7 @@ data WPConfig = WPConfig { wpSolver   :: SMTConfig   -- ^ SMT Solver to use
 defaultWPCfg :: WPConfig
 defaultWPCfg = WPConfig { wpSolver   = defaultSMTCfg
                         , wpVerbose  = False
-                        , wpCexDepth = 20
+                        , wpCexDepth = 10
                         }
 
 -- | Checking WP based correctness
@@ -259,7 +263,8 @@ wpProveWith :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st 
             -> IO (ProofResult res)
 wpProveWith cfg@WPConfig{wpVerbose} prog = do
 
-        let msg = when wpVerbose . putStrLn
+        let msg     = when wpVerbose . putStrLn
+            msgNoLn = when wpVerbose . putStr
 
         res <- proveWP cfg prog
         case res of
@@ -267,6 +272,7 @@ wpProveWith cfg@WPConfig{wpVerbose} prog = do
                                      return res
           Proven{}             -> return res
           Indeterminate reason -> do msg "\nAnalysis is indeterminate, not all proof obligations were established. Searching for a counter-example."
+                                     msgNoLn "Looking at depth: "
                                      unroll cfg reason prog
 
 -- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
