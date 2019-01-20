@@ -29,6 +29,8 @@
 -- in Bradley's paper quite closely.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveFoldable        #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -43,13 +45,14 @@ import Data.SBV.Control
 
 -- | System state. We simply have two components, parameterized
 -- over the type so we can put in both concrete and symbolic values.
-data S a = S { x :: a, y :: a } deriving Show
+data S a = S { x :: a, y :: a }
+         deriving (Show, Functor, Foldable, Traversable)
 
 -- | Make our state queriable
 instance Queriable IO (S SInteger) (S Integer) where
-  create          = S <$> freshVar_ <*> freshVar_
-  project S{x, y} = S <$> getValue x <*> getValue y
-  embed   S{x, y} = return $ S (literal x) (literal y)
+  create  = S <$> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- * Encoding the problem
 

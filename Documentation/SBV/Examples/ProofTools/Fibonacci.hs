@@ -23,7 +23,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -41,13 +43,13 @@ import GHC.Generics hiding (S)
 -- | System state. We simply have two components, parameterized
 -- over the type so we can put in both concrete and symbolic values.
 data S a = S { i :: a, k :: a, m :: a, n :: a }
-         deriving (Show, Mergeable, Generic)
+         deriving (Show, Mergeable, Generic, Functor, Foldable, Traversable)
 
 -- | Make our state queriable
 instance Queriable IO (S SInteger) (S Integer) where
-   create                = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-   project S{i, k, m, n} = S <$> getValue i <*> getValue k <*> getValue m <*> getValue n
-   embed   S{i, k, m, n} = return $ S (literal i) (literal k) (literal m) (literal n)
+   create  = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+   project = mapM getValue
+   embed   = return . fmap literal
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

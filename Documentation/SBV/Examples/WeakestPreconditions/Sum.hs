@@ -12,8 +12,9 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
+{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -34,7 +35,7 @@ data SumS a = SumS { n :: a    -- ^ The input value
                    , i :: a    -- ^ Loop counter
                    , s :: a    -- ^ Running sum
                    }
-                   deriving (Show, Generic, Mergeable)
+                   deriving (Show, Generic, Mergeable, Functor, Foldable, Traversable)
 
 -- | Show instance for 'SumS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -46,9 +47,9 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
 
 -- | Make our state 'Data.SBV.Control.Queariable'
 instance (SymVal a, SMTValue a) => Queriable IO (SumS (SBV a)) (SumS a) where
-  create                = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
-  project SumS{n, i, s} = SumS <$> getValue n <*> getValue i <*> getValue s
-  embed   SumS{n, i, s} = return $ SumS (literal n) (literal i) (literal s)
+  create  = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Helper type synonym
 type S = SumS SInteger
