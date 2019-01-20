@@ -54,7 +54,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , MonadQuery(..), QueryT(..), Query, Queriable(..), QueryState(..), QueryContext(..)
+  , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
   ) where
@@ -545,7 +545,14 @@ mapQueryT :: (ReaderT State m a -> ReaderT State n b) -> QueryT m a -> QueryT n 
 mapQueryT f = QueryT . f . runQueryT
 {-# INLINE mapQueryT #-}
 
--- | An queriable value.
+-- | Create a fresh variable of some type in the underlying query monad transformer.
+-- For further control on how these variables are projected and embedded, see the
+-- 'Queriable' class.
+class Fresh m a where
+  fresh :: QueryT m a
+
+-- | An queriable value. This is a generalization of the 'Fresh' class, in case one needs
+-- to be more specific about how projections/embeddings are done.
 class Queriable m a b | a -> b where
   -- | ^ Create a new symbolic value of type @a@
   create  :: QueryT m a

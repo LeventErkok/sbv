@@ -45,11 +45,9 @@ import GHC.Generics hiding (S)
 data S a = S { i :: a, k :: a, m :: a, n :: a }
          deriving (Show, Mergeable, Generic, Functor, Foldable, Traversable)
 
--- | Make our state queriable
-instance Queriable IO (S SInteger) (S Integer) where
-   create  = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-   project = mapM getValue
-   embed   = return . fmap literal
+-- | 'Fresh' instance for our state
+instance Fresh IO (S SInteger) where
+   fresh = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

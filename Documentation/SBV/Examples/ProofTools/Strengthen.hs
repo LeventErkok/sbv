@@ -48,11 +48,9 @@ import Data.SBV.Control
 data S a = S { x :: a, y :: a }
          deriving (Show, Functor, Foldable, Traversable)
 
--- | Make our state queriable
-instance Queriable IO (S SInteger) (S Integer) where
-  create  = S <$> freshVar_ <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+-- | 'Fresh' instance for our state
+instance Fresh IO (S SInteger) where
+  fresh = S <$> freshVar_ <*> freshVar_
 
 -- * Encoding the problem
 

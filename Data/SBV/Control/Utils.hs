@@ -72,7 +72,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
-                              , MonadQuery(..), QueryContext(..), Queriable(..)
+                              , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState
@@ -202,6 +202,12 @@ instance (MonadIO m, SymVal a, SMTValue a) => Queriable m (SBV a) a where
   create  = freshVar_
   project = getValue
   embed   = return . literal
+
+-- | Generic 'Queriable' instance for things that are 'Fresh' and look like containers:
+instance (MonadIO m, SymVal a, SMTValue a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) (t a) where
+  create  = fresh
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)

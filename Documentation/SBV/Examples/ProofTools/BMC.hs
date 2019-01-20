@@ -44,11 +44,9 @@ instance Show a => Show (S a) where
 instance EqSymbolic a => EqSymbolic (S a) where
    S {x = x1, y = y1} .== S {x = x2, y = y2} = x1 .== x2 .&& y1 .== y2
 
--- | 'Queriable' instance for our state
-instance Queriable IO (S SInteger) (S Integer) where
-  create  = S <$> freshVar_ <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+-- | 'Fresh' instance for our state
+instance Fresh IO (S SInteger) where
+  fresh = S <$> freshVar_ <*> freshVar_
 
 -- * Encoding the problem
 

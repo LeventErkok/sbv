@@ -45,11 +45,9 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
                     Nothing -> "<symbolic>"
                     Just l  -> show l
 
--- | Make our state 'Data.SBV.Control.Queriable'
-instance (SymVal a, SMTValue a) => Queriable IO (SumS (SBV a)) (SumS a) where
-  create  = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+-- | 'Fresh' instance for the program state
+instance (SymVal a, SMTValue a) => Fresh IO (SumS (SBV a)) where
+  fresh = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
 
 -- | Helper type synonym
 type S = SumS SInteger
