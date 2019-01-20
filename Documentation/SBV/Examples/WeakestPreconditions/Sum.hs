@@ -45,7 +45,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
                     Nothing -> "<symbolic>"
                     Just l  -> show l
 
--- | Make our state 'Data.SBV.Control.Queariable'
+-- | Make our state 'Data.SBV.Control.Quariable'
 instance (SymVal a, SMTValue a) => Queriable IO (SumS (SBV a)) (SumS a) where
   create  = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
   project = mapM getValue
