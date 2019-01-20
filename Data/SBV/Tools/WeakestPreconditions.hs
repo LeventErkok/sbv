@@ -37,7 +37,7 @@ module Data.SBV.Tools.WeakestPreconditions (
 import Data.List   (intercalate)
 import Data.Maybe  (fromMaybe)
 
-import Control.Monad (when, unless)
+import Control.Monad (when, unless, void)
 
 import Data.SBV
 import Data.SBV.Control
@@ -88,17 +88,13 @@ type Invariant st = st -> SBool
 -- | A measure takes the state and returns an integer valued metric.
 type Measure st = st -> SInteger
 
--- | Checking correctness.
-checkWith :: forall st res. (Show st, Queriable IO st res)
-          => SMTConfig             -- ^ Solver to use
-          -> Bool                  -- ^ Be chatty
-          -> Program st            -- ^ Program to check
-          -> IO (ProofResult res)
-checkWith cfg chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
+-- | Checking WP based correctness
+wpProof :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Bool -> Program st -> IO (ProofResult res)
+wpProof cfg chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
 
         weakestPrecondition <- wp program postcondition
 
-        -- The program is correct, if we can prove the precondition
+        -- The program is correct if we can prove the precondition
         -- implies the post-condition for all starting states
         let correctness st = precondition st .=> weakestPrecondition st
 
@@ -106,42 +102,37 @@ checkWith cfg chatty prog@Program{precondition, program, postcondition} = runSMT
         start <- create
         constrain $ sNot (correctness start)
 
-        do cs <- checkSat
-           case cs of
-             Unk   -> Indeterminate . show <$> getUnknownReason
-             Unsat -> do msg "Total correctness is established."
-                         return Proven
-             Sat   -> do os <- getObservables
+        cs <- checkSat
+        case cs of
+          Unk   -> Indeterminate . show <$> getUnknownReason
+          Unsat -> do msg "Total correctness is established."
+                      return Proven
+          Sat   -> do os <- getObservables
 
-                         let plu w (_:_:_) = w ++ "s"
-                             plu w _       = w
+                      let plu w (_:_:_) = w ++ "s"
+                          plu w _       = w
 
-                         unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
-                                               msg m
-                                               msg $ replicate (length m) '='
-                                               mapM_ (msg . ("  " ++) . fst) os
-                                               msg ""
+                      unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
+                                            msg m
+                                            msg $ replicate (length m) '='
+                                            mapM_ (msg . ("  " ++) . fst) os
+                                            msg ""
 
-                         msg "Execution leading to failed proof obligation:"
-                         msg "============================================="
+                      startState  <- project start
+                      lStartState <- embed   startState
+                      finalState  <- io $ traceExecution False prog lStartState
 
-                         startState  <- project start
-                         lStartState <- embed   startState
-                         finalState  <- io $ traceExecution chatty prog lStartState
+                      let giveUp endState s = do lEndState <- project endState
+                                                 return $ Failed s startState lEndState
 
-                         let giveUp endState s = do lEndState <- project endState
-                                                    return $ Failed s startState lEndState
-
-                         res <- case finalState of
-                                  Stuck end s -> giveUp end s
-                                  Good  end   -> giveUp end "Not all proof obligations were established."
-
-                         case res of
-                           Failed{}        -> msg "\nAnalysis complete. Proof Failed."
-                           Indeterminate{} -> msg "\nAnalysis complete. Unable to prove correctness."
-                           Proven{}        -> msg "\nAnalysis complete. Property proven successfully."
-
-                         return res
+                      case finalState of
+                        Stuck end s -> if chatty
+                                       then do msg "Execution trace:"
+                                               msg "================"
+                                               _ <- io $ traceExecution True prog lStartState
+                                               giveUp end s
+                                       else return $ Indeterminate "Not all proof obligations were established."
+                        Good  _     -> return $ Indeterminate "Not all proof obligations were established."
 
   where msg = io . when chatty . putStrLn
 
@@ -168,8 +159,96 @@ checkWith cfg chatty prog@Program{precondition, program, postcondition} = runSMT
                                      , term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= 0
                                      ]
 
+-- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
+-- @bound@ times, so the unrolling is multiplicative. In case we cannot establish correctness, try to find a starting state that
+-- violates one of the conditions. This is good old bounded-model checking, but comes in quite handy.
+unrollBound :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Int -> Bool -> Program st -> IO (Maybe (res, res))
+unrollBound cfg bound chatty prog@Program{precondition, program, postcondition} = runSMTWith cfg $ query $ do
+
+        let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
+            go _ _     Skip                            st = (sTrue, sTrue,      st)
+            go _ pCond Abort                           st = (sTrue, sNot pCond, st)
+            go _ _     (Assign f)                      st = (sTrue, sTrue,      f st)
+            go b pCond (If c tb fb)                    st = ite (c st) (go b (pCond .&&       c st)  tb st)
+                                                                       (go b (pCond .&& sNot (c st)) fb st)
+            go _ _     (Seq [])                        st = (sTrue, sTrue, st)
+            go b pCond (Seq (s:ss))                    st = let (r1, p1, st')  = go b pCond s        st
+                                                                (r2, p2, st'') = go b pCond (Seq ss) st'
+                                                            in (r1 .&& r2, p1 .&& p2, st'')
+            go b pCond (While _ inv measure cond body) st = while b pCond st
+               where while 0 p curST = (p .=> sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
+                     while i p curST = let c1 = cond curST                        -- loop is executing, condition must hold
+                                           c2 = inv  curST                        -- invariant must hold
+                                           c3 = measure curST .>= 0               -- measure must be non-negative
+
+                                           -- execute the body
+                                           p' = p .&& c1
+                                           (rBody, c4, st') = go b p' body curST
+
+                                           c5 = measure st' .< measure curST -- measure must decrease
+
+                                           -- execute the remainder of the loop, decrementing the counter
+                                           (rRest, c6, st'') = while (i-1) p' st'
+
+                                       in (p .=> c1 .&& rBody .&& rRest, p .=> sAnd [c1, c2, c3, c4, c5, c6], st'')
+
+        startState <- create
+
+        let (reachability, constraints, endState) = go bound sTrue program startState
+
+            pre  = precondition startState
+            post = postcondition endState
+
+        -- A good counter-example would be one that satisfies the pre-condition
+        -- but fails the constraints or the endState
+        constrain $ pre .&& reachability .&& (sNot constraints .|| sNot post)
+
+        cs <- checkSat
+
+        case cs of
+          Unk   -> return Nothing
+          Unsat -> return Nothing
+          Sat   -> do ls <- project startState
+                      es <- project endState
+
+                      sls <- embed ls
+                      when chatty $ io $ void (traceExecution True prog sls)
+
+                      return $ Just (ls, es)
+
+-- | Try to find a good counter-example by unrolling up to 20 times
+unroll :: forall st res. (Show st, Mergeable st, Queriable IO st res) => SMTConfig -> Bool -> String -> Program st -> IO (ProofResult res)
+unroll cfg chatty reason prog = go 0
+  where unrollMax = 20
+
+        msg = when chatty . putStrLn
+
+        go i | i > unrollMax = do msg $ "No violating trace found (searched up to depth: " ++ show unrollMax ++ ")"
+                                  return $ Indeterminate reason
+             | True          = do mbRes <- unrollBound cfg i chatty prog
+                                  case mbRes of
+                                    Nothing       -> go (i+1)
+                                    Just (ls, le) -> return $ Failed reason ls le
+
+-- | Checking WP based correctness
+checkWith :: forall st res. (Show st, Mergeable st, Queriable IO st res)
+          => SMTConfig             -- ^ Solver to use
+          -> Bool                  -- ^ Be chatty
+          -> Program st            -- ^ Program to check
+          -> IO (ProofResult res)
+checkWith cfg chatty prog = do
+
+        let msg = when chatty . putStrLn
+
+        res <- wpProof cfg chatty prog
+        case res of
+          Failed{}             -> do msg "\nAnalysis complete. Proof Failed."
+                                     return res
+          Proven{}             -> return res
+          Indeterminate reason -> unroll cfg chatty reason prog
+
 -- | Check correctness using the default solver.
-check :: (Show st, Queriable IO st res)
+check :: (Show st, Mergeable st, Queriable IO st res)
       => Bool
       -> Program st
       -> IO (ProofResult res)
@@ -273,13 +352,13 @@ traceExecution chatty Program{precondition, program, postcondition} start = do
                          while _ _      s@Stuck{}  = return s
                          while c mbPrev (Good  is)
                            | not (currentCondition is)
-                           = step loc st $ tag "condition fails, terminating"
+                           = step loc is $ tag "condition fails, terminating"
                            | not (currentInvariant is)
-                           = stop loc st $ tag "invariant fails to hold in iteration " ++ show c
+                           = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
                            | mCur < 0
-                           = stop loc st $ tag "measure must be non-negative, evaluated to: " ++ show mCur
+                           = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
                            | Just mPrev <- mbPrev, mCur >= mPrev
-                           = stop loc st $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
+                           = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
                                 while (c+1) (Just mCur) nextState
