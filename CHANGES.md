@@ -5,14 +5,16 @@
 
 ### Version 8.1, Not yet released
 
-  * Rework the 'Queriable' class to allow projection/embedding pairs.
+  * Rework the 'Queriable' class to allow projection/embedding pairs. Also
+    added a new 'Fresh' class, which is more usable in simpler scenarios
+    where the default projection/embedding definitions are suitable.
 
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a total
     correctness proof engine for imperative programs, written in a toy language.
     It uses Dijkstra's weakest preconditions methodology to establish total correctness,
     i.e., along with correctness, termination is also guaranteed. Loop invariants and
     termination measures are supplied by the user. For an example use case, see the
-    example in `Documentation.SBV.Examples.WeakestPreconditions.Sum`.
+    examples in `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
 ### Version 8.0, 2019-01-14
 
