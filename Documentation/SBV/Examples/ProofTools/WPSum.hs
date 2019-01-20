@@ -191,7 +191,8 @@ Following proof obligation failed:
   Loop "i <= n": Invariant must establish the post condition
 <BLANKLINE>
 Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-No violating trace found. (Searched up to depth 20.)
+Looking at depth: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
+No violating trace found. (Searched up to depth 10.)
 Indeterminate: Not all proof obligations were established.
 
 In this case, we are told that the invariant was not sufficient to establish
@@ -199,7 +200,10 @@ the postcondition, as expected. Also note that we do not get a violation trace,
 because there is none! No execution of this program will violate any of the
 requirements. It just happens that the invariant isn't strong enough to establish
 the required property. (Note that SBV might fail to provide a counter-example
-trace if it is beyond depth 20, as indicated in the message.)
+trace if it is beyond depth 10, as indicated in the message. In that sense, SBV does
+not know if there is a violating trace or not. It only knows that the invariant
+provided is not sufficient to establish correctness, and hence the 'Indeterminate'
+result.)
 
 == Failing to maintain the invariant
 
@@ -215,7 +219,7 @@ Following proof obligation failed:
   Loop "i <= n": Invariant must be maintained by the loop
 <BLANKLINE>
 Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-Found a counter-example violation at depth 2:
+Looking at depth: 0, 1, 2. Found!
 <BLANKLINE>
   {n = 1, i = 0, s = 0}
 ===> Precondition holds, starting execution
@@ -235,8 +239,80 @@ Proof failure: Loop i <= n: invariant fails to hold in iteration 2
 Starting state:
   SumS {n = 1, i = 0, s = 0}
 Failed in state:
-  SumS {n = 1, i = 2, s = 1}
+  SumS {n = 1, i = 1, s = 0}
 
 Here, we posed the extra incorrect invariant that @s@ must equal @i@, and SBV found us a trace that violates the invariant. Note that
 the proof fails in this case not because the program is incorrect, but the stipulated invariant is not valid.
+
+== Having a bad measure, Part I
+
+The termination measure must always be non-negative:
+
+>>> :set -XNamedFieldPuns
+>>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let measure   SumS{n, i}    = - i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Termination measure must always be non-negative
+<BLANKLINE>
+Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
+Looking at depth: 0, 1, 2. Found!
+<BLANKLINE>
+  {n = 1, i = 0, s = 0}
+===> Precondition holds, starting execution
+  {n = 1, i = 0, s = 0}
+===> [1.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.2] Loop i <= n: condition holds, executing the body
+  {n = 1, i = 0, s = 0}
+===> [1.2.{1}.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.2.{1}.2] Assign
+  {n = 1, i = 1, s = 0}
+===> [1.2] Loop i <= n: measure must be non-negative, evaluated to: -1
+<BLANKLINE>
+Analysis complete. Proof failed.
+Proof failure: Loop i <= n: measure must be non-negative, evaluated to: -1
+Starting state:
+  SumS {n = 1, i = 0, s = 0}
+Failed in state:
+  SumS {n = 1, i = 1, s = 0}
+
+== Having a bad measure, Part II
+
+The other way we can have a bad measure is if it fails to decrease through the loop body:
+
+>>> :set -XNamedFieldPuns
+>>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let measure   SumS{n, i}    = n + i
+>>> correctness invariant measure
+Following proof obligation failed:
+===================================
+  Loop "i <= n": Termination measure must get smaller
+<BLANKLINE>
+Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
+Looking at depth: 0, 1, 2. Found!
+<BLANKLINE>
+  {n = 1, i = 0, s = 0}
+===> Precondition holds, starting execution
+  {n = 1, i = 0, s = 0}
+===> [1.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.2] Loop i <= n: condition holds, executing the body
+  {n = 1, i = 0, s = 0}
+===> [1.2.{1}.1] Assign
+  {n = 1, i = 0, s = 0}
+===> [1.2.{1}.2] Assign
+  {n = 1, i = 1, s = 0}
+===> [1.2] Loop i <= n: measure failed to decrease, prev = 1, current = 2
+<BLANKLINE>
+Analysis complete. Proof failed.
+Proof failure: Loop i <= n: measure failed to decrease, prev = 1, current = 2
+Starting state:
+  SumS {n = 1, i = 0, s = 0}
+Failed in state:
+  SumS {n = 1, i = 1, s = 0}
+
+Clearly, as @i@ increases, so does our bogus measure @n+i@.
 -}
