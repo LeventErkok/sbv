@@ -105,7 +105,9 @@ imperativeSum inv msr = Program { precondition  = pre
 --
 -- The correct termination measure is @n-i@: It goes down in each
 -- iteration provided we start with @n >= 0@ and it always remains
--- non-negative while the loop is executing.
+-- non-negative while the loop is executing. Note that we do not
+-- need a lexicographic measure in this case, hence we simply return
+-- a list of one element.
 --
 -- The correct invariant is a conjunction of two facts. First, @s@ is
 -- equivalent to the sum of numbers @0@ upto but not including @i@.
@@ -127,7 +129,7 @@ imperativeSum inv msr = Program { precondition  = pre
 --
 -- >>> :set -XNamedFieldPuns
 -- >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
--- >>> let measure   SumS{n, i}    = n - i
+-- >>> let measure   SumS{n, i}    = [n - i]
 -- >>> correctness invariant measure
 -- Total correctness is established.
 -- Q.E.D.
@@ -149,7 +151,7 @@ do the job, but it is instructive to see the output:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant _          = sFalse
->>> let measure   SumS{n, i} = n - i
+>>> let measure   SumS{n, i} = [n - i]
 >>> correctness invariant measure
 Following proof obligation failed:
 ===================================
@@ -186,7 +188,7 @@ thing to try would be the invariant that always returns true:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant _          = sTrue
->>> let measure   SumS{n, i} = n - i
+>>> let measure   SumS{n, i} = [n - i]
 >>> correctness invariant measure
 Following proof obligation failed:
 ===================================
@@ -214,7 +216,7 @@ is an example:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== i .&& s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> let measure   SumS{n, i}    = n - i
+>>> let measure   SumS{n, i}    = [n - i]
 >>> correctness invariant measure
 Following proof obligation failed:
 ===================================
@@ -256,7 +258,7 @@ The termination measure must always be non-negative:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> let measure   SumS{n, i}    = - i
+>>> let measure   SumS{n, i}    = [- i]
 >>> correctness invariant measure
 Following proof obligation failed:
 ===================================
@@ -280,10 +282,10 @@ Looking at depth: 0, 1, 2. Found!
   {n = 1, i = 0, s = 0}
 ===> [1.3.{1}.2] Assign
   {n = 1, i = 1, s = 0}
-===> [1.3] Loop i <= n: measure must be non-negative, evaluated to: -1
+===> [1.3] Loop i <= n: measure must be non-negative, evaluated to: [-1]
 <BLANKLINE>
 Analysis complete. Proof failed.
-Proof failure: Loop i <= n: measure must be non-negative, evaluated to: -1
+Proof failure: Loop i <= n: measure must be non-negative, evaluated to: [-1]
 Starting state:
   SumS {n = 1, i = 0, s = 0}
 Failed in state:
@@ -295,7 +297,7 @@ The other way we can have a bad measure is if it fails to decrease through the l
 
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> let measure   SumS{n, i}    = n + i
+>>> let measure   SumS{n, i}    = [n + i]
 >>> correctness invariant measure
 Following proof obligation failed:
 ===================================
@@ -319,10 +321,10 @@ Looking at depth: 0, 1, 2. Found!
   {n = 1, i = 0, s = 0}
 ===> [1.3.{1}.2] Assign
   {n = 1, i = 1, s = 0}
-===> [1.3] Loop i <= n: measure failed to decrease, prev = 1, current = 2
+===> [1.3] Loop i <= n: measure failed to decrease, prev = [1], current = [2]
 <BLANKLINE>
 Analysis complete. Proof failed.
-Proof failure: Loop i <= n: measure failed to decrease, prev = 1, current = 2
+Proof failure: Loop i <= n: measure failed to decrease, prev = [1], current = [2]
 Starting state:
   SumS {n = 1, i = 0, s = 0}
 Failed in state:
