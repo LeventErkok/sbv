@@ -57,13 +57,13 @@ data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental as
                           }
 
 -- | A statement in our imperative program, parameterized over the state.
-data Stmt st = Skip                                                                -- ^ Skip, do nothing.
-             | Abort                                                               -- ^ Abort execution.
-             | Assign (st -> st)                                                   -- ^ Assignment: Transform the state by a function.
-             | If (st -> SBool) (Stmt st) (Stmt st)                                -- ^ Conditional: @If condition thenBranch elseBranch@.
-             | While String (st -> SBool) (st -> SInteger) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
-                                                                                   -- The string @name@ is merely for diagnostic purposes.
-             | Seq [Stmt st]                                                       -- ^ A sequence of statements.
+data Stmt st = Skip                                                                  -- ^ Skip, do nothing.
+             | Abort                                                                 -- ^ Abort execution.
+             | Assign (st -> st)                                                     -- ^ Assignment: Transform the state by a function.
+             | If (st -> SBool) (Stmt st) (Stmt st)                                  -- ^ Conditional: @If condition thenBranch elseBranch@.
+             | While String (st -> SBool) (st -> [SInteger]) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
+                                                                                     -- The string @name@ is merely for diagnostic purposes.
+             | Seq [Stmt st]                                                         -- ^ A sequence of statements.
 
 -- | The result of a weakest-precondition proof.
 data ProofResult res = Proven                     -- ^ The property holds, and termination is guaranteed.
@@ -86,8 +86,9 @@ instance Show res => Show (ProofResult res) where
 -- | An invariant takes a state and evaluates to a boolean.
 type Invariant st = st -> SBool
 
--- | A measure takes the state and returns an integer valued metric.
-type Measure st = st -> SInteger
+-- | A measure takes the state and returns a sequence of integers. The ordering
+-- will be done lexicographically over the elements.
+type Measure st = st -> [SInteger]
 
 -- | Checking WP based correctness
 proveWP :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
@@ -150,12 +151,14 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
                     term what = observeIf (== False) ("Loop " ++ show nm ++ ": Termination measure must " ++ what)
                 st'  <- create
                 inv' <- wp s inv
-                m'   <- wp s (\st -> m st .< m st')
+                let curM = m st'
+                    zero = map (const 0) curM
+                m'   <- wp s (\st -> m st .< curM)
                 return $ \st -> sAnd [ tag  "hold prior to loop entry"     $ inv st
                                      , tag  "be maintained by the loop"    $ inv st' .&&       c st'  .=> inv' st'
                                      , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
                                      , term "get smaller"                  $ inv st' .&&       c st'  .=> m' st'
-                                     , term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= 0
+                                     , term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= zero
                                      ]
 
 -- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
@@ -178,7 +181,10 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
                where while 0 p curST = (p .&& sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
                      while i p curST = let c1 = cond curST                        -- loop is executing, condition must hold
                                            c2 = inv  curST                        -- invariant must hold
-                                           c3 = measure curST .>= 0               -- measure must be non-negative
+
+                                           m    = measure curST
+                                           zero = map (const 0) m
+                                           c3 = m .>= zero                        -- measure must be non-negative
 
                                            -- execute the body
                                            (rBody, c4, st') = go b (p .&& c1) body curST
@@ -372,7 +378,7 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
                    where tag s = "Loop " ++ loopName ++ ": " ++ s
 
                          currentCondition = unwrap loc (tag  "evaluating the while condition") . condition
-                         currentMeasure   = unwrap loc (tag  "evaluating the measure")         . measure
+                         currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
                          currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
 
                          while _ _      s@Stuck{}  = return s
@@ -381,7 +387,7 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
                            = step loc is $ tag "condition fails, terminating"
                            | not (currentInvariant is)
                            = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
-                           | mCur < 0
+                           | mCur < zero
                            = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
                            | Just mPrev <- mbPrev, mCur >= mPrev
                            = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
@@ -389,3 +395,4 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
                                 while (c+1) (Just mCur) nextState
                            where mCur = currentMeasure is
+                                 zero = map (const 0) mCur
