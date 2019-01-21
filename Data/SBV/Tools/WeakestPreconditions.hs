@@ -56,14 +56,21 @@ data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental as
                           , postcondition :: st -> SBool   -- ^ Correctness statement
                           }
 
+-- | An invariant takes a state and evaluates to a boolean.
+type Invariant st = st -> SBool
+
+-- | A measure takes the state and returns a sequence of integers. The ordering
+-- will be done lexicographically over the elements.
+type Measure st = st -> [SInteger]
+
 -- | A statement in our imperative program, parameterized over the state.
-data Stmt st = Skip                                                                  -- ^ Skip, do nothing.
-             | Abort                                                                 -- ^ Abort execution.
-             | Assign (st -> st)                                                     -- ^ Assignment: Transform the state by a function.
-             | If (st -> SBool) (Stmt st) (Stmt st)                                  -- ^ Conditional: @If condition thenBranch elseBranch@.
-             | While String (st -> SBool) (st -> [SInteger]) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
-                                                                                     -- The string @name@ is merely for diagnostic purposes.
-             | Seq [Stmt st]                                                         -- ^ A sequence of statements.
+data Stmt st = Skip                                                             -- ^ Skip, do nothing.
+             | Abort                                                            -- ^ Abort execution.
+             | Assign (st -> st)                                                -- ^ Assignment: Transform the state by a function.
+             | If (st -> SBool) (Stmt st) (Stmt st)                             -- ^ Conditional: @If condition thenBranch elseBranch@.
+             | While String (Invariant st) (Measure st) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
+                                                                                -- The string @name@ is merely for diagnostic purposes.
+             | Seq [Stmt st]                                                    -- ^ A sequence of statements.
 
 -- | The result of a weakest-precondition proof.
 data ProofResult res = Proven                     -- ^ The property holds, and termination is guaranteed.
@@ -82,13 +89,6 @@ instance Show res => Show (ProofResult res) where
                                              , "Failed in state:"
                                              , intercalate "\n" ["  " ++ l | l <- lines (show end)]
                                              ]
-
--- | An invariant takes a state and evaluates to a boolean.
-type Invariant st = st -> SBool
-
--- | A measure takes the state and returns a sequence of integers. The ordering
--- will be done lexicographically over the elements.
-type Measure st = st -> [SInteger]
 
 -- | Checking WP based correctness
 proveWP :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
@@ -184,7 +184,7 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
 
                                            m    = measure curST
                                            zero = map (const 0) m
-                                           c3 = m .>= zero                        -- measure must be non-negative
+                                           c3   = m .>= zero                      -- measure must be non-negative
 
                                            -- execute the body
                                            (rBody, c4, st') = go b (p .&& c1) body curST
@@ -235,7 +235,7 @@ unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, po
 
    where msg = when wpVerbose . io . putStrLn
 
--- | Try to find a good counter-example by unrolling up to 10 times
+-- | Try to find a good counter-example by unrolling up to 'wpCexDepth' times.
 unroll :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
 unroll cfg@WPConfig{wpVerbose, wpCexDepth} reason prog = go 0
   where msg     = when wpVerbose . putStrLn

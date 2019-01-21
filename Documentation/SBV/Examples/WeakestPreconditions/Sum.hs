@@ -204,7 +204,8 @@ the postcondition, as expected. Also note that we do not get a violation trace,
 because there is none! No execution of this program will violate any of the
 requirements. It just happens that the invariant isn't strong enough to establish
 the required property. (Note that SBV might fail to provide a counter-example
-trace if it is beyond depth 10, as indicated in the message. In that sense, SBV does
+trace if it is beyond depth 'wpCexDepth' (default: 10), as indicated
+in the message. In that sense, SBV does
 not know if there is a violating trace or not. It only knows that the invariant
 provided is not sufficient to establish correctness, and hence the 'Indeterminate'
 result.)
