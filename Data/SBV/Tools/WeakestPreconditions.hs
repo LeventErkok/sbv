@@ -60,19 +60,19 @@ data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental as
 type Invariant st = st -> SBool
 
 -- | A measure takes the state and returns a sequence of integers. The ordering
--- will be done lexicographically over the elements. If you do not provide
--- a measure, then that particular loop will be implicitly assumed to be always
--- terminating, i.e., you will have a partial proof of correctness.
-type Measure st = Maybe (st -> [SInteger])
+-- will be done lexicographically over the elements.
+type Measure st = st -> [SInteger]
 
 -- | A statement in our imperative program, parameterized over the state.
-data Stmt st = Skip                                                             -- ^ Skip, do nothing.
-             | Abort                                                            -- ^ Abort execution.
-             | Assign (st -> st)                                                -- ^ Assignment: Transform the state by a function.
-             | If (st -> SBool) (Stmt st) (Stmt st)                             -- ^ Conditional: @If condition thenBranch elseBranch@.
-             | While String (Invariant st) (Measure st) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
-                                                                                -- The string @name@ is merely for diagnostic purposes.
-             | Seq [Stmt st]                                                    -- ^ A sequence of statements.
+data Stmt st = Skip                                                                     -- ^ Skip, do nothing.
+             | Abort                                                                    -- ^ Abort execution.
+             | Assign (st -> st)                                                        -- ^ Assignment: Transform the state by a function.
+             | If (st -> SBool) (Stmt st) (Stmt st)                                     -- ^ Conditional: @If condition thenBranch elseBranch@.
+             | While String (Invariant st) (Maybe (Measure st)) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
+                                                                                        -- The string @name@ is merely for diagnostic purposes.
+                                                                                        -- If the measure is 'Nothing', then only partial correctness
+                                                                                        -- of this loop will be proven.
+             | Seq [Stmt st]                                                            -- ^ A sequence of statements.
 
 -- | The result of a weakest-precondition proof.
 data ProofResult res = Proven Bool                -- ^ The property holds. If 'Bool' is 'True', then total correctness, otherwise partial.

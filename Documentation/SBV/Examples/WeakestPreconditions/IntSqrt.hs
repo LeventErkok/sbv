@@ -73,7 +73,7 @@ type S = SqrtS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters for simplicity.
-algorithm :: Invariant S -> Measure S -> Stmt S
+algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
 algorithm inv msr = Seq [ If (\SqrtS{x} -> x .>= 0) Skip Abort
                         , Assign $ \st -> st{sqrt = 0, i = 1, j = 1}
                         , While "i <= x"
@@ -99,7 +99,7 @@ post SqrtS{x, sqrt} = sq sqrt .<= x .&& sq (sqrt+1) .> x
   where sq n = n * n
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeSqrt :: Invariant S -> Measure S -> Program S
+imperativeSqrt :: Invariant S -> Maybe (Measure S) -> Program S
 imperativeSqrt inv msr = Program { precondition  = pre
                                  , program       = algorithm inv msr
                                  , postcondition = post
@@ -119,7 +119,7 @@ invariant SqrtS{x, sqrt, i, j} = j .> 0 .&& sq sqrt .<= x .&& i .== sq (sqrt + 1
 
 -- | The measure. In each iteration @i@ strictly increases, thus reducing the differential @x - i@
 measure :: Measure S
-measure = Just (\SqrtS{x, i} -> [x - i])
+measure SqrtS{x, i} = [x - i]
 
 -- | Check that the program terminates and the post condition holds. We have:
 --
@@ -127,4 +127,4 @@ measure = Just (\SqrtS{x, i} -> [x - i])
 -- Total correctness is established.
 -- Q.E.D.
 correctness :: IO ()
-correctness = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSqrt invariant measure)
+correctness = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSqrt invariant (Just measure))

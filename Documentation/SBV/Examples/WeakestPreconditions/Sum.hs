@@ -66,7 +66,7 @@ type S = SumS SInteger
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
-algorithm :: Invariant S -> Measure S -> Stmt S
+algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
                         , If (\SumS{n} -> n .< 0) Abort Skip
                         , While "i <= n"
@@ -90,7 +90,7 @@ post :: S -> SBool
 post SumS{n, s} = s .== (n * (n+1)) `sDiv` 2
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
-imperativeSum :: Invariant S -> Measure S -> Program S
+imperativeSum :: Invariant S -> Maybe (Measure S) -> Program S
 imperativeSum inv msr = Program { precondition  = pre
                                 , program       = algorithm inv msr
                                 , postcondition = post
@@ -133,7 +133,7 @@ imperativeSum inv msr = Program { precondition  = pre
 -- >>> correctness invariant (Just measure)
 -- Total correctness is established.
 -- Q.E.D.
-correctness :: Invariant S -> Measure S -> IO ()
+correctness :: Invariant S -> Maybe (Measure S) -> IO ()
 correctness inv msr = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
 
 -- * Example proof attempts
