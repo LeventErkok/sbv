@@ -124,7 +124,7 @@ measure = Just (\SqrtS{x, i} -> [x - i])
 -- | Check that the program terminates and the post condition holds. We have:
 --
 -- >>> correctness
--- Correctness is established.
+-- Total correctness is established.
 -- Q.E.D.
 correctness :: IO ()
 correctness = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSqrt invariant measure)

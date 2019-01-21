@@ -131,7 +131,7 @@ imperativeSum inv msr = Program { precondition  = pre
 -- >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 -- >>> let measure   SumS{n, i}    = [n - i]
 -- >>> correctness invariant (Just measure)
--- Correctness is established.
+-- Total correctness is established.
 -- Q.E.D.
 correctness :: Invariant S -> Measure S -> IO ()
 correctness inv msr = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)

@@ -75,7 +75,7 @@ data Stmt st = Skip                                                             
              | Seq [Stmt st]                                                    -- ^ A sequence of statements.
 
 -- | The result of a weakest-precondition proof.
-data ProofResult res = Proven                     -- ^ The property holds, and termination is guaranteed.
+data ProofResult res = Proven Bool                -- ^ The property holds. If 'Bool' is 'True', then total correctness, otherwise partial.
                      | Indeterminate String       -- ^ The property fails, but no causing start state is found.
                                                   --   This typically happens if the loop invariants are not strong enough.
                      | Failed String res res      -- ^ The property fails. The string is the reason for failure, and the
@@ -83,7 +83,8 @@ data ProofResult res = Proven                     -- ^ The property holds, and t
 
 -- | 'Show' instance for proofs, for readability.
 instance Show res => Show (ProofResult res) where
-  show Proven             = "Q.E.D."
+  show (Proven True)       = "Q.E.D."
+  show (Proven False)      = "Q.E.D. [Partial: not all termination measures were provided.]"
   show (Indeterminate s)  = "Indeterminate: " ++ s
   show (Failed s beg end) = intercalate "\n" [ "Proof failure: "++ s
                                              , "Starting state:"
@@ -91,6 +92,15 @@ instance Show res => Show (ProofResult res) where
                                              , "Failed in state:"
                                              , intercalate "\n" ["  " ++ l | l <- lines (show end)]
                                              ]
+
+-- | Are all the termination measures provided?
+isTotal :: Stmt st -> Bool
+isTotal Skip                = True
+isTotal Abort               = True
+isTotal (Assign _)          = True
+isTotal (If _ tb fb)        = all isTotal [tb, fb]
+isTotal (While _ _ msr _ s) = isJust msr && isTotal s
+isTotal (Seq ss)            = all isTotal ss
 
 -- | Checking WP based correctness
 proveWP :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
@@ -109,8 +119,14 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
         cs <- checkSat
         case cs of
           Unk   -> Indeterminate . show <$> getUnknownReason
-          Unsat -> do msg "Correctness is established."
-                      return Proven
+
+          Unsat -> do let t = isTotal program
+
+                      if t then msg "Total correctness is established."
+                           else msg "Partial correctness is established."
+
+                      return $ Proven t
+
           Sat   -> do os <- getObservables
 
                       let plu w (_:_:_) = w ++ "s"
