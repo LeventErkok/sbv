@@ -9,12 +9,13 @@
     added a new 'Fresh' class, which is more usable in simpler scenarios
     where the default projection/embedding definitions are suitable.
 
-  * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a total
-    correctness proof engine for imperative programs, written in a toy language.
-    It uses Dijkstra's weakest preconditions methodology to establish total correctness,
-    i.e., along with correctness, termination is also guaranteed. Loop invariants and
-    termination measures are supplied by the user. For an example use case, see the
-    examples in `Documentation.SBV.Examples.WeakestPreconditions` directory.
+  * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
+    language and an engine for checking partial and total correctness of imperative programs.
+    It uses Dijkstra's weakest preconditions methodology to establish correctness claims.
+    Loop invariants are required and must be supplied by the user. For total correctness,
+    user must also provide termination measure functions. However, if desired, these can
+    be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
+    For example use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
 ### Version 8.0, 2019-01-14
 
