@@ -7,7 +7,7 @@
 -- Stability : experimental
 --
 -- A toy imperative language with a proof system based on Dijkstra's weakest
--- preconditions methodology to establish total correctness proofs.
+-- preconditions methodology to establish partial/total correctness proofs.
 --
 -- See @Documentation.SBV.Examples.WeakestPreconditions@ directory for
 -- several example proofs.
@@ -28,7 +28,7 @@ module Data.SBV.Tools.WeakestPreconditions (
         -- * Result of a proof
         , ProofResult(..)
 
-        -- * Checking WP total correctness
+        -- * Checking WP correctness
         , wpProve, wpProveWith, WPConfig(..), defaultWPCfg
 
         -- * Tracing concrete execution
@@ -36,7 +36,7 @@ module Data.SBV.Tools.WeakestPreconditions (
         ) where
 
 import Data.List   (intercalate)
-import Data.Maybe  (fromMaybe)
+import Data.Maybe  (fromMaybe, fromJust, isJust)
 
 import Control.Monad (when, unless, void)
 
@@ -60,8 +60,10 @@ data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental as
 type Invariant st = st -> SBool
 
 -- | A measure takes the state and returns a sequence of integers. The ordering
--- will be done lexicographically over the elements.
-type Measure st = st -> [SInteger]
+-- will be done lexicographically over the elements. If you do not provide
+-- a measure, then that particular loop will be implicitly assumed to be always
+-- terminating, i.e., you will have a partial proof of correctness.
+type Measure st = Maybe (st -> [SInteger])
 
 -- | A statement in our imperative program, parameterized over the state.
 data Stmt st = Skip                                                             -- ^ Skip, do nothing.
@@ -107,7 +109,7 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
         cs <- checkSat
         case cs of
           Unk   -> Indeterminate . show <$> getUnknownReason
-          Unsat -> do msg "Total correctness is established."
+          Unsat -> do msg "Correctness is established."
                       return Proven
           Sat   -> do os <- getObservables
 
@@ -138,28 +140,34 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
 
         -- Compute the weakest precondition to establish the property:
         wp :: Stmt st -> (st -> SBool) -> Query (st -> SBool)
-        wp Skip                 post = return post
-        wp Abort                _    = return (const sFalse)
-        wp (Assign f)           post = return $ post . f
-        wp (If c tb fb)         post = do tWP <- wp tb post
-                                          fWP <- wp fb post
-                                          return $ \st -> ite (c st) (tWP st) (fWP st)
-        wp (Seq [])             post = return post
-        wp (Seq (s:ss))         post = wp s =<< wp (Seq ss) post
-        wp (While nm inv m c s) post = do
-                let tag  what = observeIf (== False) ("Loop " ++ show nm ++ ": Invariant must " ++ what)
-                    term what = observeIf (== False) ("Loop " ++ show nm ++ ": Termination measure must " ++ what)
+        wp Skip                  post = return post
+        wp Abort                 _    = return (const sFalse)
+        wp (Assign f)            post = return $ post . f
+        wp (If c tb fb)          post = do tWP <- wp tb post
+                                           fWP <- wp fb post
+                                           return $ \st -> ite (c st) (tWP st) (fWP st)
+        wp (Seq [])              post = return post
+        wp (Seq (s:ss))          post = wp s =<< wp (Seq ss) post
+        wp (While nm inv mm c s) post = do
                 st'  <- create
+
+                let tag  what  = observeIf (== False) ("Loop " ++ show nm ++ ": Invariant must " ++ what)
+                    term what  = observeIf (== False) ("Loop " ++ show nm ++ ": Termination measure must " ++ what)
+
+                    hasMeasure = isJust mm
+                    m          = fromJust mm
+                    curM       = m st'
+                    zero       = map (const 0) curM
+
                 inv' <- wp s inv
-                let curM = m st'
-                    zero = map (const 0) curM
                 m'   <- wp s (\st -> m st .< curM)
-                return $ \st -> sAnd [ tag  "hold prior to loop entry"     $ inv st
-                                     , tag  "be maintained by the loop"    $ inv st' .&&       c st'  .=> inv' st'
-                                     , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
-                                     , term "get smaller"                  $ inv st' .&&       c st'  .=> m' st'
-                                     , term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= zero
-                                     ]
+
+                return $ \st -> sAnd $ [ tag  "hold prior to loop entry"     $ inv st
+                                       , tag  "be maintained by the loop"    $ inv st' .&&       c st'  .=> inv' st'
+                                       , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
+                                       ]
+                                    ++ [ term "get smaller"                  $ inv st' .&&       c st'  .=> m' st'          | hasMeasure]
+                                    ++ [ term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= zero | hasMeasure]
 
 -- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
 -- @bound@ times, so the unrolling is multiplicative. In case we cannot establish correctness, try to find a starting state that
@@ -168,28 +176,35 @@ unrollBound :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st 
 unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
         let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
-            go _ pCond Skip                            st = (pCond, sTrue,      st)
-            go _ pCond Abort                           st = (pCond, sNot pCond, st)
-            go _ pCond (Assign f)                      st = (pCond, sTrue,      f st)
-            go b pCond (If c tb fb)                    st = ite (c st) (go b (pCond .&&       c st)  tb st)
-                                                                       (go b (pCond .&& sNot (c st)) fb st)
-            go _ pCond (Seq [])                        st = (pCond, sTrue, st)
-            go b pCond (Seq (s:ss))                    st = let (r1, p1, st')  = go b pCond          s        st
-                                                                (r2, p2, st'') = go b (pCond .&& r1) (Seq ss) st'
-                                                            in (r2, p1 .&& p2, st'')
-            go b pCond (While _ inv measure cond body) st = while b pCond st
+            go _ pCond Skip                       st = (pCond, sTrue,      st)
+            go _ pCond Abort                      st = (pCond, sNot pCond, st)
+            go _ pCond (Assign f)                 st = (pCond, sTrue,      f st)
+            go b pCond (If c tb fb)               st = ite (c st) (go b (pCond .&&       c st)  tb st)
+                                                                  (go b (pCond .&& sNot (c st)) fb st)
+            go _ pCond (Seq [])                   st = (pCond, sTrue, st)
+            go b pCond (Seq (s:ss))               st = let (r1, p1, st')  = go b pCond          s        st
+                                                           (r2, p2, st'') = go b (pCond .&& r1) (Seq ss) st'
+                                                       in (r2, p1 .&& p2, st'')
+            go b pCond (While _ inv mm cond body) st = while b pCond st
                where while 0 p curST = (p .&& sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
                      while i p curST = let c1 = cond curST                        -- loop is executing, condition must hold
                                            c2 = inv  curST                        -- invariant must hold
 
+                                           hasMeasure = isJust mm
+                                           measure    = fromJust mm
+
                                            m    = measure curST
                                            zero = map (const 0) m
-                                           c3   = m .>= zero                      -- measure must be non-negative
+                                           c3
+                                            | hasMeasure = m .>= zero              -- measure must be non-negative
+                                            | True       = sTrue
 
                                            -- execute the body
                                            (rBody, c4, st') = go b (p .&& c1) body curST
 
-                                           c5 = c1 .&& c2 .&& c4 .&& cond st' .&& rBody .=> measure st' .< measure curST -- measure must decrease
+                                           c5
+                                            | hasMeasure = c1 .&& c2 .&& c4 .&& cond st' .&& rBody .=> measure st' .< measure curST -- measure must decrease
+                                            | True       = sTrue
 
                                            -- execute the remainder of the loop, decrementing the counter
                                            (rRest, c6, st'') = while (i-1) rBody st'
@@ -370,12 +385,15 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
                   where walk []     _ is = return is
                         walk (s:ss) c is = walk ss (c+1) =<< go (Line c : loc) s is
 
-                analyze (While loopName invariant measure condition body)
+                analyze (While loopName invariant mbMeasure condition body)
                    | currentInvariant st
                    = while 1 Nothing (Good st)
                    | True
                    = stop loc st $ "Loop " ++ loopName ++ ": invariant fails to hold prior to loop entry"
                    where tag s = "Loop " ++ loopName ++ ": " ++ s
+
+                         hasMeasure = isJust mbMeasure
+                         measure    = fromJust mbMeasure
 
                          currentCondition = unwrap loc (tag  "evaluating the while condition") . condition
                          currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
@@ -387,9 +405,9 @@ traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition}
                            = step loc is $ tag "condition fails, terminating"
                            | not (currentInvariant is)
                            = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
-                           | mCur < zero
+                           | hasMeasure && mCur < zero
                            = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
-                           | Just mPrev <- mbPrev, mCur >= mPrev
+                           | hasMeasure, Just mPrev <- mbPrev, mCur >= mPrev
                            = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")

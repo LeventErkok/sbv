@@ -130,8 +130,8 @@ imperativeSum inv msr = Program { precondition  = pre
 -- >>> :set -XNamedFieldPuns
 -- >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 -- >>> let measure   SumS{n, i}    = [n - i]
--- >>> correctness invariant measure
--- Total correctness is established.
+-- >>> correctness invariant (Just measure)
+-- Correctness is established.
 -- Q.E.D.
 correctness :: Invariant S -> Measure S -> IO ()
 correctness inv msr = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
@@ -147,12 +147,13 @@ the weakest-precondition engine behaves.
 == Always false invariant
 
 Let's see what happens if we have an always false invariant. Clearly, this will not
-do the job, but it is instructive to see the output:
+do the job, but it is instructive to see the output. For this exercise, we are only
+interested in partial correctness (to see the impact of the invariant only), so we
+will simply use 'Nothing' for the measures.
 
 >>> :set -XNamedFieldPuns
->>> let invariant _          = sFalse
->>> let measure   SumS{n, i} = [n - i]
->>> correctness invariant measure
+>>> let invariant _ = sFalse
+>>> correctness invariant Nothing
 Following proof obligation failed:
 ===================================
   Loop "i <= n": Invariant must hold prior to loop entry
@@ -187,9 +188,8 @@ executes, and must be strong enough to establish the postcondition. The easiest
 thing to try would be the invariant that always returns true:
 
 >>> :set -XNamedFieldPuns
->>> let invariant _          = sTrue
->>> let measure   SumS{n, i} = [n - i]
->>> correctness invariant measure
+>>> let invariant _ = sTrue
+>>> correctness invariant Nothing
 Following proof obligation failed:
 ===================================
   Loop "i <= n": Invariant must establish the post condition
@@ -217,8 +217,7 @@ is an example:
 
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== i .&& s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> let measure   SumS{n, i}    = [n - i]
->>> correctness invariant measure
+>>> correctness invariant Nothing
 Following proof obligation failed:
 ===================================
   Loop "i <= n": Invariant must be maintained by the loop
@@ -260,7 +259,7 @@ The termination measure must always be non-negative:
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 >>> let measure   SumS{n, i}    = [- i]
->>> correctness invariant measure
+>>> correctness invariant (Just measure)
 Following proof obligation failed:
 ===================================
   Loop "i <= n": Termination measure must always be non-negative
@@ -299,7 +298,7 @@ The other way we can have a bad measure is if it fails to decrease through the l
 >>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 >>> let measure   SumS{n, i}    = [n + i]
->>> correctness invariant measure
+>>> correctness invariant (Just measure)
 Following proof obligation failed:
 ===================================
   Loop "i <= n": Termination measure must get smaller
