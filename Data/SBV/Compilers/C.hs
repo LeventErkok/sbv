@@ -193,6 +193,7 @@ specifier cfg sv = case kindOf sv of
                      KList k            -> die $ "list sort: " ++ show k
                      KUninterpreted s _ -> die $ "uninterpreted sort: " ++ s
                      KTuple k           -> die $ "tuple sort: " ++ show k
+                     KSum k             -> die $ "sum sort: " ++ show k
   where spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
         spec (False,  8) = text "%\"PRIu8\""
@@ -489,6 +490,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                       len (KBounded True  n)   = 4 + length (show n) -- SIntN
                       len (KList s)            = die $ "List sort: " ++ show s
                       len (KTuple s)           = die $ "Tuple sort: " ++ show s
+                      len (KSum s  )           = die $ "Sum sort: " ++ show s
                       len (KUninterpreted s _) = die $ "Uninterpreted sort: " ++ s
 
                       getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
@@ -747,6 +749,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                                        Just i  -> (True, canOverflow True i)
                                                KList     s        -> die $ "List sort " ++ show s
                                                KTuple    s        -> die $ "Tuple sort " ++ show s
+                                               KSum      s        -> die $ "Sum sort " ++ show s
                                                KUninterpreted s _ -> die $ "Uninterpreted sort: " ++ s
 
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x

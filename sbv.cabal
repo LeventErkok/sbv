@@ -75,6 +75,7 @@ Library
                   , Data.SBV.Internals
                   , Data.SBV.List
                   , Data.SBV.String
+                  , Data.SBV.Sum
                   , Data.SBV.Tuple
                   , Data.SBV.Char
                   , Data.SBV.RegExp
@@ -304,6 +305,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Interpolants
                   , TestSuite.Queries.Lists
                   , TestSuite.Queries.Strings
+                  , TestSuite.Queries.Sums
                   , TestSuite.Queries.Tuples
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.QuickCheck.QC

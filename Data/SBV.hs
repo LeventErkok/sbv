@@ -163,6 +163,7 @@ module Data.SBV (
   , sString, sString_
   , sList, sList_
   , sTuple, sTuple_
+  , sSum
 
   -- ** List of values
   -- $createSyms
@@ -177,6 +178,7 @@ module Data.SBV (
   , sStrings
   , sLists
   , sTuples
+  , sSums
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)

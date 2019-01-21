@@ -17,7 +17,7 @@ import Test.Tasty
 
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..), pickTests)
 
-import System.Exit (exitSuccess)
+-- import System.Exit (exitSuccess)
 
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
@@ -43,6 +43,7 @@ import qualified TestSuite.Basics.Recursive
 import qualified TestSuite.Basics.SmallShifts
 import qualified TestSuite.Basics.SquashReals
 import qualified TestSuite.Basics.String
+import qualified TestSuite.Basics.Sum
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.Basics.Tuple
 import qualified TestSuite.BitPrecise.BitTricks
@@ -126,8 +127,11 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
           case testEnv of
-            TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping tests"
-                                   exitSuccess
+            TestEnvUnknown   -> defaultMain $ testGroup "sum"
+            -- putStrLn "Unknown test environment, skipping tests"
+            --                        exitSuccess
+
+                                   [ TestSuite.Basics.Sum.tests ]
 
             TestEnvLocal     -> defaultMain $ testGroup "Local" [heavyTests, localOnlyTests, otherTests]
 
@@ -181,6 +185,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.SmallShifts.tests
                , TestSuite.Basics.SquashReals.tests
                , TestSuite.Basics.String.tests
+               , TestSuite.Basics.Sum.tests
                , TestSuite.Basics.TOut.tests
                , TestSuite.Basics.Tuple.tests
                , TestSuite.BitPrecise.BitTricks.tests

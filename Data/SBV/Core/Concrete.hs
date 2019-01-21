@@ -36,6 +36,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
           | CList     ![CVal]              -- ^ list
           | CUserSort !(Maybe Int, String) -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
           | CTuple    ![CVal]              -- ^ tuple
+          | CSum      !Int !CVal           -- ^ disjoint union
 
 -- | Assing a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -48,6 +49,7 @@ cvRank CString   {} = 5
 cvRank CList     {} = 6
 cvRank CUserSort {} = 7
 cvRank CTuple    {} = 8
+cvRank CSum      {} = 9
 
 -- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -62,6 +64,7 @@ instance Eq CVal where
   CList     a == CList     b = a == b
   CUserSort a == CUserSort b = a == b
   CTuple    a == CTuple    b = a == b
+  CSum   i1 a == CSum   i2 b = i1 == i2 && a == b
   _           == _           = False
 
 -- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
@@ -75,6 +78,7 @@ instance Ord CVal where
   CList     a `compare` CList   b   = a        `compare`                  b
   CUserSort a `compare` CUserSort b = a        `compare`                  b
   CTuple    a `compare` CTuple    b = a        `compare`                  b
+  CSum   i1 a `compare` CSum   i2 b = i1 `compare` i2 <> a `compare` b
   a           `compare` b           = cvRank a `compare`                  cvRank b
 
 -- | 'CV' represents a concrete word of a fixed size:
@@ -186,30 +190,32 @@ trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
 -- | Lift a unary function through a 'CV'.
-liftCV :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CVal] -> b) -> ([CVal] -> b) -> CV -> b
-liftCV f _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ f _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ f _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ f _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ f (CV _ (CTuple    v)) = f v
+liftCV :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CVal] -> b) -> ([CVal] -> b) -> (Int -> CVal -> b) -> CV -> b
+liftCV f _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ f _ _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ f _ _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ f _ _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ f _ (CV _ (CTuple    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ f (CV _ (CSum    i v)) = f i v
 
 -- | Lift a binary function through a 'CV'.
-liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
-liftCV2 r i f d c s u v w x y = case (cvVal x, cvVal y) of
-                                (CAlgReal  a, CAlgReal  b) -> r a b
-                                (CInteger  a, CInteger  b) -> i a b
-                                (CFloat    a, CFloat    b) -> f a b
-                                (CDouble   a, CDouble   b) -> d a b
-                                (CChar     a, CChar     b) -> c a b
-                                (CString   a, CString   b) -> s a b
-                                (CList     a, CList     b) -> u a b
-                                (CTuple    a, CTuple    b) -> v a b
-                                (CUserSort a, CUserSort b) -> w a b
-                                _                          -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
+liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((Int, CVal) -> (Int, CVal) -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
+liftCV2 r i f d c s u v v' w x y = case (cvVal x, cvVal y) of
+                                   (CAlgReal  a, CAlgReal  b) -> r a b
+                                   (CInteger  a, CInteger  b) -> i a b
+                                   (CFloat    a, CFloat    b) -> f a b
+                                   (CDouble   a, CDouble   b) -> d a b
+                                   (CChar     a, CChar     b) -> c a b
+                                   (CString   a, CString   b) -> s a b
+                                   (CList     a, CList     b) -> u a b
+                                   (CTuple    a, CTuple    b) -> v a b
+                                   (CSum   i1 a, CSum   i2 b) -> v' (i1, a) (i2, b)
+                                   (CUserSort a, CUserSort b) -> w a b
+                                   _                          -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a 'CV'.
 mapCV :: (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (Char -> Char) -> (String -> String) -> ((Maybe Int, String) -> (Maybe Int, String)) -> CV -> CV
@@ -223,6 +229,7 @@ mapCV r i f d c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CUserSort a -> CUserSort (u a)
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                     CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
+                                                    CSum{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sum!"
 
 -- | Map a binary function through a 'CV'.
 mapCV2 :: (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> (Char -> Char -> Char) -> (String -> String -> String) -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String)) -> CV -> CV -> CV
@@ -249,7 +256,7 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show snd shL shT w ++ kInfo
+showCV shk w               = liftCV show show show show show show snd shL shT shSum w ++ kInfo
       where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
                   | True = ""
 
@@ -263,6 +270,9 @@ showCV shk w               = liftCV show show show show show show snd shL shT w 
               where xs' = case kindOf w of
                             KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
                             kw -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
+
+            shSum :: Int -> CVal -> String
+            shSum _ _ = "error: TODO"
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
@@ -286,6 +296,7 @@ mkConstCV KString              a = error $ "Unexpected call to mkConstCV (String
 mkConstCV (KUninterpreted s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}            a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KTuple{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KSum{}             a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CVal') of the correct kind.
 randomCVal :: Kind -> IO CVal
@@ -305,6 +316,9 @@ randomCVal k =
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KTuple ks          -> CTuple <$> traverse randomCVal ks
+    KSum ks            -> do
+      i <- randomRIO (0, length ks - 1)
+      CSum i <$> randomCVal (ks !! i)
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

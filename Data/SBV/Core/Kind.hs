@@ -46,6 +46,7 @@ data Kind = KBool
           | KString
           | KList Kind
           | KTuple [Kind]
+          | KSum [Kind]
           deriving (Eq, Ord)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
@@ -64,6 +65,7 @@ instance Show Kind where
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
+  show (KSum m)             = "(" ++ intercalate " | " (show <$> m) ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -79,6 +81,7 @@ smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
 smtType (KUninterpreted s _) = s
 smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType (KSum kinds)         = "(SBVSum" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -99,6 +102,7 @@ kindHasSign = \case KBool            -> False
                     KChar            -> False
                     KList{}          -> False
                     KTuple{}         -> False
+                    KSum{}           -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
@@ -146,6 +150,7 @@ class HasKind a where
   isString        :: a -> Bool
   isList          :: a -> Bool
   isTuple         :: a -> Bool
+  isSum           :: a -> Bool
   showType        :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -162,6 +167,7 @@ class HasKind a where
                   KChar              -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek           -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
                   KTuple tys         -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
+                  KSum tys           -> error $ "SBV.HasKind.intSizeOf((S)Sum)" ++ show tys
 
   isBoolean       (kindOf -> KBool{})          = True
   isBoolean       _                            = False
@@ -195,6 +201,9 @@ class HasKind a where
 
   isTuple         (kindOf -> KTuple{})         = True
   isTuple         _                            = False
+
+  isSum           (kindOf -> KSum{})           = True
+  isSum           _                            = False
 
   showType = show . kindOf
 
@@ -252,3 +261,6 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
 
 instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasKind g, HasKind h) => HasKind (a, b, c, d, e, f, g, h) where
   kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h)]
+
+instance (HasKind a, HasKind b) => HasKind (Either a b) where
+  kindOf _ = KSum [kindOf (Proxy @a), kindOf (Proxy @b)]

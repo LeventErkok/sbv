@@ -400,6 +400,11 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
 
    sexprToVal _                                       = Nothing
 
+instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
+  sexprToVal (EApp [ECon "left",  a]) = Left <$> sexprToVal a
+  sexprToVal (EApp [ECon "right", b]) = Right <$> sexprToVal b
+  sexprToVal _                        = Nothing
+
 instance SMTValue () where
    sexprToVal (ECon "SBVTuple0") = Just ()
    sexprToVal _                  = Nothing

@@ -13,6 +13,7 @@
 {-# LANGUAGE DefaultSignatures   #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -27,7 +28,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
-  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples
+  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sSum, sSums
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf
@@ -230,6 +231,18 @@ fromCVTup i inp@(CV (KTuple ks) (CTuple cs))
    where lks = length ks
          lcs = length cs
 fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple received: " ++ show (i, inp)
+
+instance (SymVal a, SymVal b) => SymVal (Either a b) where
+  mkSymVal = genMkSymVar (kindOf (Proxy @(Either a b)))
+  literal = \case
+    Left  a -> SBV $ SVal k $ Left $ CV k $ CSum 0 $ toCV a
+    Right b -> SBV $ SVal k $ Left $ CV k $ CSum 1 $ toCV b
+    where k = kindOf (Proxy @(Either a b))
+  fromCV (CV (KSum [k1, _k2]) (CSum 0 c))
+    = Left  $ fromCV $ CV k1 c
+  fromCV (CV (KSum [_k1, k2]) (CSum 1 c))
+    = Right $ fromCV $ CV k2 c
+  fromCV bad = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
@@ -498,6 +511,12 @@ sTuple_ = free_
 -- | Generalization of 'Data.SBV.sTuples'
 sTuples :: (SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
+
+sSum :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SSum a b)
+sSum = symbolic
+
+sSums :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SSum a b]
+sSums = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool
@@ -1085,6 +1104,7 @@ instance (SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KList{}          -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUninterpreted{} -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}         -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KSum{}           -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
