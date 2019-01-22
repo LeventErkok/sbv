@@ -83,8 +83,8 @@ data ProofResult res = Proven Bool                -- ^ The property holds. If 'B
 
 -- | 'Show' instance for proofs, for readability.
 instance Show res => Show (ProofResult res) where
-  show (Proven True)       = "Q.E.D."
-  show (Proven False)      = "Q.E.D. [Partial: not all termination measures were provided.]"
+  show (Proven True)      = "Q.E.D."
+  show (Proven False)     = "Q.E.D. [Partial: not all termination measures were provided.]"
   show (Indeterminate s)  = "Indeterminate: " ++ s
   show (Failed s beg end) = intercalate "\n" [ "Proof failure: "++ s
                                              , "Starting state:"
