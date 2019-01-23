@@ -129,6 +129,7 @@ Library
                   , Documentation.SBV.Examples.ProofTools.Sum
                   , Documentation.SBV.Examples.WeakestPreconditions.IntDiv
                   , Documentation.SBV.Examples.WeakestPreconditions.IntSqrt
+                  , Documentation.SBV.Examples.WeakestPreconditions.Length
                   , Documentation.SBV.Examples.WeakestPreconditions.Sum
                   , Documentation.SBV.Examples.Puzzles.Birthday
                   , Documentation.SBV.Examples.Puzzles.Coins
