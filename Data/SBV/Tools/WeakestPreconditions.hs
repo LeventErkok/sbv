@@ -43,6 +43,8 @@ import Control.Monad (when, unless, void)
 import Data.SBV
 import Data.SBV.Control
 
+import System.IO (hFlush, stdout)
+
 -- | A Program over a state is simply a statement, together with
 -- a pre-condition capturing environmental assumptions and
 -- a post-condition that states its correctness. In the usual
@@ -301,8 +303,9 @@ wpProveWith :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st 
             -> IO (ProofResult res)
 wpProveWith cfg@WPConfig{wpVerbose} prog = do
 
-        let msg     = when wpVerbose . putStrLn
-            msgNoLn = when wpVerbose . putStr
+        let msg       = when wpVerbose . putStrLn
+            msgNoLn s = when wpVerbose $ do putStr s
+                                            hFlush stdout
 
         res <- proveWP cfg prog
         case res of
