@@ -1523,6 +1523,17 @@ instance Mergeable () where
    symbolicMerge _ _ _ _ = ()
    select _ _ _ = ()
 
+-- | Construct a useful error message if we hit an unmergeable case.
+cannotMerge :: String -> String -> String -> a
+cannotMerge typ why hint = error $ unlines [ ""
+                                           , "*** Data.SBV.Mergeable: Cannot merge instances of " ++ typ ++ "."
+                                           , "*** While trying to do a symbolic if-then-else with incompatible branch results."
+                                           , "***"
+                                           , "*** " ++ why
+                                           , "*** "
+                                           , "*** Hint: " ++ hint
+                                           ]
+
 -- Mergeable instances for List/Maybe/Either/Array are useful, but can
 -- throw exceptions if there is no structural matching of the results
 -- It's a question whether we should really keep them..
@@ -1531,7 +1542,9 @@ instance Mergeable () where
 instance Mergeable a => Mergeable [a] where
   symbolicMerge f t xs ys
     | lxs == lys = zipWith (symbolicMerge f t) xs ys
-    | True       = error $ "SBV.Mergeable.List: No least-upper-bound for lists of differing size " ++ show (lxs, lys)
+    | True       = cannotMerge "lists"
+                               ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys)
+                               ("Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists.")
     where (lxs, lys) = (length xs, length ys)
 
 -- ZipList
@@ -1543,7 +1556,9 @@ instance Mergeable a => Mergeable (ZipList a) where
 instance Mergeable a => Mergeable (Maybe a) where
   symbolicMerge _ _ Nothing  Nothing  = Nothing
   symbolicMerge f t (Just a) (Just b) = Just $ symbolicMerge f t a b
-  symbolicMerge _ _ a b = error $ "SBV.Mergeable.Maybe: No least-upper-bound for " ++ show (k a, k b)
+  symbolicMerge _ _ a b = cannotMerge "'Maybe' values"
+                                      ("Branches produce different constructors: " ++ show (k a, k b))
+                                      ("Instead of an option type, try using a valid bit to indicate when a result is valid.")
       where k Nothing = "Nothing"
             k _       = "Just"
 
@@ -1551,7 +1566,9 @@ instance Mergeable a => Mergeable (Maybe a) where
 instance (Mergeable a, Mergeable b) => Mergeable (Either a b) where
   symbolicMerge f t (Left a)  (Left b)  = Left  $ symbolicMerge f t a b
   symbolicMerge f t (Right a) (Right b) = Right $ symbolicMerge f t a b
-  symbolicMerge _ _ a b = error $ "SBV.Mergeable.Either: No least-upper-bound for " ++ show (k a, k b)
+  symbolicMerge _ _ a b = cannotMerge "'Either' values"
+                                      ("Branches produce different constructors: " ++ show (k a, k b))
+                                      ("Consider using a product type by a tag instead.")
      where k (Left _)  = "Left"
            k (Right _) = "Right"
 
@@ -1559,7 +1576,9 @@ instance (Mergeable a, Mergeable b) => Mergeable (Either a b) where
 instance (Ix a, Mergeable b) => Mergeable (Array a b) where
   symbolicMerge f t a b
     | ba == bb = listArray ba (zipWith (symbolicMerge f t) (elems a) (elems b))
-    | True     = error $ "SBV.Mergeable.Array: No least-upper-bound for rangeSizes" ++ show (k ba, k bb)
+    | True     = cannotMerge "'Array' values"
+                             ("Branches produce different ranges: " ++ show (k ba, k bb))
+                             ("Consider using SBV's native arrays 'SArray' and 'SFunArray' instead.")
     where [ba, bb] = map bounds [a, b]
           k = rangeSize
 
