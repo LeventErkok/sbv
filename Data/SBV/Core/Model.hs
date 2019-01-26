@@ -1542,7 +1542,7 @@ instance Mergeable a => Mergeable [a] where
   symbolicMerge f t xs ys
     | lxs == lys = zipWith (symbolicMerge f t) xs ys
     | True       = cannotMerge "lists"
-                               ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys)
+                               ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys ++ ". Must have the same length.")
                                "Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists."
     where (lxs, lys) = (length xs, length ys)
 
