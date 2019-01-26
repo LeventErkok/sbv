@@ -19,7 +19,7 @@
 --
 -- >>> prove $ \x -> x `shiftL` 2 .== 2 * (x :: SWord8)
 -- Falsifiable. Counter-example:
---   s0 = 64 :: Word8
+--   s0 = 32 :: Word8
 --
 -- The function 'prove' has the following type:
 --
