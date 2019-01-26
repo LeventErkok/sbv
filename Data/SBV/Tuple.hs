@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Tuple
--- Author    : Joel Burget, Levent Erkok
+-- Copyright : (c) Joel Burget
+--                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

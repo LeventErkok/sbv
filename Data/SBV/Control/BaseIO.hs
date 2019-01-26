@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Control.BaseIO
--- Author    : Brian Schroeder, Levent Erkok
+-- Copyright : (c) Brian Schroeder
+--                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

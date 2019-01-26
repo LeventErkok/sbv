@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : TestSuite.Basics.BoundedList
--- Author    : Joel Burget
+-- Copyright : (c) Joel Burget
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
