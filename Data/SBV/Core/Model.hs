@@ -9,17 +9,16 @@
 -- Instance declarations for our symbolic world
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE Rank2Types            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeOperators         #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE DefaultSignatures   #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans  #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
@@ -1544,7 +1543,7 @@ instance Mergeable a => Mergeable [a] where
     | lxs == lys = zipWith (symbolicMerge f t) xs ys
     | True       = cannotMerge "lists"
                                ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys)
-                               ("Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists.")
+                               "Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists."
     where (lxs, lys) = (length xs, length ys)
 
 -- ZipList
@@ -1558,7 +1557,7 @@ instance Mergeable a => Mergeable (Maybe a) where
   symbolicMerge f t (Just a) (Just b) = Just $ symbolicMerge f t a b
   symbolicMerge _ _ a b = cannotMerge "'Maybe' values"
                                       ("Branches produce different constructors: " ++ show (k a, k b))
-                                      ("Instead of an option type, try using a valid bit to indicate when a result is valid.")
+                                      "Instead of an option type, try using a valid bit to indicate when a result is valid."
       where k Nothing = "Nothing"
             k _       = "Just"
 
@@ -1568,7 +1567,7 @@ instance (Mergeable a, Mergeable b) => Mergeable (Either a b) where
   symbolicMerge f t (Right a) (Right b) = Right $ symbolicMerge f t a b
   symbolicMerge _ _ a b = cannotMerge "'Either' values"
                                       ("Branches produce different constructors: " ++ show (k a, k b))
-                                      ("Consider using a product type by a tag instead.")
+                                      "Consider using a product type by a tag instead."
      where k (Left _)  = "Left"
            k (Right _) = "Right"
 
@@ -1578,7 +1577,7 @@ instance (Ix a, Mergeable b) => Mergeable (Array a b) where
     | ba == bb = listArray ba (zipWith (symbolicMerge f t) (elems a) (elems b))
     | True     = cannotMerge "'Array' values"
                              ("Branches produce different ranges: " ++ show (k ba, k bb))
-                             ("Consider using SBV's native arrays 'SArray' and 'SFunArray' instead.")
+                             "Consider using SBV's native arrays 'SArray' and 'SFunArray' instead."
     where [ba, bb] = map bounds [a, b]
           k = rangeSize
 

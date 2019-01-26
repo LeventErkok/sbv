@@ -153,7 +153,7 @@ instance Show OptimizeResult where
 
                IndependentResult   rs  -> multi "objectives" (map (uncurry shI) rs)
 
-               ParetoResult (False, [r]) -> sh (\s -> "Unique pareto front: " ++ s) r
+               ParetoResult (False, [r]) -> sh ("Unique pareto front: " ++) r
                ParetoResult (False, rs)  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
                ParetoResult (True,  rs)  ->    multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
                                            ++ "\n*** Note: Pareto-front extraction was terminated as requested by the user."

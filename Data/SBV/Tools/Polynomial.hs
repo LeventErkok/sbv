@@ -9,10 +9,9 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE PatternGuards        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE PatternGuards     #-}
 
 module Data.SBV.Tools.Polynomial (
         -- * Polynomial arithmetic and CRCs
