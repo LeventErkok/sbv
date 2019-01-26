@@ -5,6 +5,8 @@
 
 ### Version 8.1, Not yet released
 
+  * Added functions `elem`/`notElem` to `Data.SBV.List`.
+
   * Rework the 'Queriable' class to allow projection/embedding pairs. Also
     added a new 'Fresh' class, which is more usable in simpler scenarios
     where the default projection/embedding definitions are suitable.

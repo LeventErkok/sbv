@@ -24,12 +24,12 @@ module Data.SBV.List (
         -- * Deconstructing/Reconstructing
         , head, tail, uncons, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), nil, (.++)
         -- * Containment
-        , isInfixOf, isSuffixOf, isPrefixOf
+        , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
         , take, drop, subList, replace, indexOf, offsetIndexOf
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -199,6 +199,14 @@ nil = []
 infixr 5 .++
 (.++) :: SymVal a => SList a -> SList a -> SList a
 (.++) = concat
+
+-- | @`elem` e l@. Does @l@ contain the element @e@?
+elem :: SymVal a => SBV a -> SList a -> SBool
+e `elem` l = singleton e `isInfixOf` l
+
+-- | @`notElem` e l@. Does @l@ not contain the element @e@?
+notElem :: SymVal a => SBV a -> SList a -> SBool
+e `notElem` l = sNot (e `elem` l)
 
 -- | @`isInfixOf` sub l@. Does @l@ contain the subsequence @sub@?
 --
