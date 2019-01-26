@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Strings.RegexCrossword
--- Author    : Joel Burget
+-- Copyright : (c) Joel Burget
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

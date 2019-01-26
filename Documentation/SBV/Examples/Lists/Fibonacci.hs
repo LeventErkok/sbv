@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Lists.Fibonacci
--- Author    : Joel Burget
+-- Copyright : (c) Joel Burget
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

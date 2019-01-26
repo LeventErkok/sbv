@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Transformers.SymbolicEval
--- Author    : Brian Schroeder
+-- Copyright : (c) Brian Schroeder
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

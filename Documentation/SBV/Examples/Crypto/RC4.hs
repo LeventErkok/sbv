@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Crypto.RC4
--- Author    : Austin Seipp
+-- Copyright : (c) Austin Seipp
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental

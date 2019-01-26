@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Data.SBV.Provers.ABC
--- Author    : Adam Foltzer
+-- Copyright : (c) Adam Foltzer
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
