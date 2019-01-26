@@ -19,6 +19,10 @@
     be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
     For example use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
+  * Documentation: Jan Path kindly fixed module headers of all the files to produce
+    much better looking Haddock documents. Thanks Jan!
+
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
