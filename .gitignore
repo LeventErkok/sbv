@@ -9,3 +9,4 @@ SBVTestSuite/GoldFiles/*.gold_temp
 cabal.project.local
 dist-newstyle/
 .ghc.environment.*
+.*.swp
