@@ -461,11 +461,18 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                 let nm  = show sv
                     cmd = "(get-value (" ++ nm ++ "))"
                     bad = unexpected "getValue" cmd "a model value" Nothing
+
                 r <- ask cmd
-                parse r bad $ \case EApp [EApp [ECon o,  v]] | o == show sv -> case sexprToVal v of
-                                                                                 Nothing -> bad r Nothing
-                                                                                 Just c  -> return c
-                                    _                                       -> bad r Nothing
+
+                let extract v = case sexprToVal v of
+                                  Nothing -> bad r Nothing
+                                  Just c  -> return c
+
+                -- Along with regular extractions, also handle the oddball case of true/false request. These
+                -- can come from queries, so we have to handle it specifically here.
+                parse r bad $ \case EApp [EApp [ECon o,  v]]                   | o == show sv                                             -> extract v
+                                    EApp [EApp [ENum (i, _), v@(ENum (j, _))]] | sv `elem` [falseSV, trueSV] && i `elem` [0, 1] && i == j -> extract v
+                                    _                                                                                                     -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
