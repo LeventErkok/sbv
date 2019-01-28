@@ -68,7 +68,7 @@ type D = DivS SInteger
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters for simplicity.
 algorithm :: Invariant D -> Maybe (Measure D) -> Stmt D
-algorithm inv msr = Seq [ If (\DivS{x, y} -> x .>= 0 .&& y .> 0) Skip Abort
+algorithm inv msr = Seq [ assert "x, y >= 0" $ \DivS{x, y} -> x .>= 0 .&& y .>= 0
                         , Assign $ \st@DivS{x} -> st{r = x, q = 0}
                         , While "y <= r"
                                 inv
@@ -78,7 +78,7 @@ algorithm inv msr = Seq [ If (\DivS{x, y} -> x .>= 0 .&& y .> 0) Skip Abort
                         ]
 
 -- | Precondition for our program: @x@ must non-negative and @y@ must be strictly positive.
--- Note that there is an explicit 'Abort' statement in our program to protect against this case, so
+-- Note that there is an explicit call to 'Data.SBV.Tools.WeakestPreconditions.abort' in our program to protect against this case, so
 -- if we do not have this precondition, all programs will fail.
 pre :: D -> SBool
 pre DivS{x, y} = x .>= 0 .&& y .> 0

@@ -68,7 +68,7 @@ type S = SumS SInteger
 -- measure. For convenience, we take those two as parameters, so we can experiment later.
 algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
-                        , If (\SumS{n} -> n .< 0) Abort Skip
+                        , assert "n >= 0" $ \SumS{n} -> n .>= 0
                         , While "i <= n"
                                 inv
                                 msr
@@ -79,7 +79,7 @@ algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
                         ]
 
 -- | Precondition for our program: @n@ must be non-negative. Note that there is
--- an explicit 'Abort' statement in our program to protect against this case, so
+-- an explicit call to 'Data.SBV.Tools.WeakestPreconditions.abort' in our program to protect against this case, so
 -- if we do not have this precondition, all programs will fail.
 pre :: S -> SBool
 pre SumS{n} = n .>= 0
@@ -133,8 +133,8 @@ imperativeSum inv msr = Program { precondition  = pre
 -- >>> correctness invariant (Just measure)
 -- Total correctness is established.
 -- Q.E.D.
-correctness :: Invariant S -> Maybe (Measure S) -> IO ()
-correctness inv msr = print =<< wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
+correctness :: Invariant S -> Maybe (Measure S) -> IO (ProofResult (SumS Integer))
+correctness inv msr = wpProveWith defaultWPCfg{wpVerbose=True} (imperativeSum inv msr)
 
 -- * Example proof attempts
 --
@@ -151,32 +151,13 @@ do the job, but it is instructive to see the output. For this exercise, we are o
 interested in partial correctness (to see the impact of the invariant only), so we
 will simply use 'Nothing' for the measures.
 
->>> :set -XNamedFieldPuns
+>>> import Control.Monad (void)
 >>> let invariant _ = sFalse
->>> correctness invariant Nothing
+>>> void $ correctness invariant Nothing
 Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must hold prior to loop entry
-<BLANKLINE>
-Execution trace:
-================
-  {n = 0, i = 0, s = 0}
-===> Precondition holds, starting execution
-  {n = 0, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 0, i = 0, s = 0}
-===> [1.2] Conditional, taking the "else" branch
-  {n = 0, i = 0, s = 0}
-===> [1.2.2] Skip
-  {n = 0, i = 0, s = 0}
-===> [1.3] Loop i <= n: invariant fails to hold prior to loop entry
-<BLANKLINE>
-Analysis complete. Proof failed.
-Proof failure: Loop i <= n: invariant fails to hold prior to loop entry
-Starting state:
-  SumS {n = 0, i = 0, s = 0}
-Failed in state:
-  SumS {n = 0, i = 0, s = 0}
+==================================
+  Invariant for loop "i <= n" must hold upon entry:
+    SumS {n = 0, i = 0, s = 0}
 
 When the invariant is constant false, it fails upon entry to the loop, and thus the
 proof itself fails.
@@ -187,148 +168,69 @@ The invariant must hold prior to entry to the loop, after the loop-body
 executes, and must be strong enough to establish the postcondition. The easiest
 thing to try would be the invariant that always returns true:
 
->>> :set -XNamedFieldPuns
 >>> let invariant _ = sTrue
->>> correctness invariant Nothing
+>>> void $ correctness invariant Nothing
 Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must establish the post condition
-<BLANKLINE>
-Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-Looking at depth: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.
-No violating trace found. (Searched up to depth 10.)
-Indeterminate: Not all proof obligations were established.
+==================================
+  Post condition must hold:
+    SumS {n = 0, i = 1, s = 1}
 
-In this case, we are told that the invariant was not sufficient to establish
-the postcondition, as expected. Also note that we do not get a violation trace,
-because there is none! No execution of this program will violate any of the
-requirements. It just happens that the invariant isn't strong enough to establish
-the required property. (Note that SBV might fail to provide a counter-example
-trace if it is beyond depth 'wpCexDepth' (default: 10), as indicated
-in the message. In that sense, SBV does
-not know if there is a violating trace or not. It only knows that the invariant
-provided is not sufficient to establish correctness, and hence the 'Indeterminate'
-result.)
+In this case, we are told that the given state does not establish the
+post-condition. Indeed when @n=0@, we would expect @s=0@, not @s=1@.
+
+The natural question to ask is how did SBV come up with this unexpected
+state at the end of the program run? If you think about the program execution, indeed this
+state is unreachable: We know that @s@ represents the sum of all numbers up to @i-1@,
+so if @i=1@, we would expect @s@ to be @0@. Our invariant is clearly an overapproximation
+of the reachable space, and SBV is telling us that it needs to constrain and outlaw
+the state @{n = 0, i = 1, s = 1}@. Clearly, the invariant has to state something
+about the relationship between @i@ and @s@, which we are missing in this case.
 
 == Failing to maintain the invariant
 
 What happens if we pose an invariant that the loop actually does not maintain? Here
 is an example:
 
->>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== i .&& s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
->>> correctness invariant Nothing
+>>> void $ correctness invariant Nothing
 Following proof obligation failed:
-===================================
-  Loop "i <= n": Invariant must be maintained by the loop
-<BLANKLINE>
-Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-Looking at depth: 0, 1, 2. Found!
-<BLANKLINE>
-  {n = 1, i = 0, s = 0}
-===> Precondition holds, starting execution
-  {n = 1, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.2] Conditional, taking the "else" branch
-  {n = 1, i = 0, s = 0}
-===> [1.2.2] Skip
-  {n = 1, i = 0, s = 0}
-===> [1.3] Loop i <= n: condition holds, executing the body
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.2] Assign
-  {n = 1, i = 1, s = 0}
-===> [1.3] Loop i <= n: invariant fails to hold in iteration 2
-<BLANKLINE>
-Analysis complete. Proof failed.
-Proof failure: Loop i <= n: invariant fails to hold in iteration 2
-Starting state:
-  SumS {n = 1, i = 0, s = 0}
-Failed in state:
-  SumS {n = 1, i = 1, s = 0}
+==================================
+  Invariant for loop "i <= n" must be maintaned by the body:
+    Before: SumS {n = 0, i = 0, s = 0}
+    After : SumS {n = 0, i = 1, s = 0}
 
-Here, we posed the extra incorrect invariant that @s@ must equal @i@, and SBV found us a trace that violates the invariant. Note that
+Here, we posed the extra incorrect invariant that @s@ must equal @i@, and SBV found us a reachable state that violates the invariant. Note that
 the proof fails in this case not because the program is incorrect, but the stipulated invariant is not valid.
 
 == Having a bad measure, Part I
 
 The termination measure must always be non-negative:
 
->>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 >>> let measure   SumS{n, i}    = [- i]
->>> correctness invariant (Just measure)
+>>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
-===================================
-  Loop "i <= n": Termination measure must always be non-negative
-<BLANKLINE>
-Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-Looking at depth: 0, 1, 2. Found!
-<BLANKLINE>
-  {n = 1, i = 0, s = 0}
-===> Precondition holds, starting execution
-  {n = 1, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.2] Conditional, taking the "else" branch
-  {n = 1, i = 0, s = 0}
-===> [1.2.2] Skip
-  {n = 1, i = 0, s = 0}
-===> [1.3] Loop i <= n: condition holds, executing the body
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.2] Assign
-  {n = 1, i = 1, s = 0}
-===> [1.3] Loop i <= n: measure must be non-negative, evaluated to: [-1]
-<BLANKLINE>
-Analysis complete. Proof failed.
-Proof failure: Loop i <= n: measure must be non-negative, evaluated to: [-1]
-Starting state:
-  SumS {n = 1, i = 0, s = 0}
-Failed in state:
-  SumS {n = 1, i = 1, s = 0}
+==================================
+  Measure for loop "i <= n" must be non-negative:
+    State  : SumS {n = 1, i = 1, s = 0}
+    Measure: -1
+
+The failure is pretty obvious in this case: Measure produces a negative value.
 
 == Having a bad measure, Part II
 
 The other way we can have a bad measure is if it fails to decrease through the loop body:
 
->>> :set -XNamedFieldPuns
 >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
 >>> let measure   SumS{n, i}    = [n + i]
->>> correctness invariant (Just measure)
+>>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
-===================================
-  Loop "i <= n": Termination measure must get smaller
-<BLANKLINE>
-Analysis is indeterminate, not all proof obligations were established. Searching for a counter-example.
-Looking at depth: 0, 1, 2. Found!
-<BLANKLINE>
-  {n = 1, i = 0, s = 0}
-===> Precondition holds, starting execution
-  {n = 1, i = 0, s = 0}
-===> [1.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.2] Conditional, taking the "else" branch
-  {n = 1, i = 0, s = 0}
-===> [1.2.2] Skip
-  {n = 1, i = 0, s = 0}
-===> [1.3] Loop i <= n: condition holds, executing the body
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.1] Assign
-  {n = 1, i = 0, s = 0}
-===> [1.3.{1}.2] Assign
-  {n = 1, i = 1, s = 0}
-===> [1.3] Loop i <= n: measure failed to decrease, prev = [1], current = [2]
-<BLANKLINE>
-Analysis complete. Proof failed.
-Proof failure: Loop i <= n: measure failed to decrease, prev = [1], current = [2]
-Starting state:
-  SumS {n = 1, i = 0, s = 0}
-Failed in state:
-  SumS {n = 1, i = 1, s = 0}
+==================================
+  Measure for loop "i <= n" must decrease:
+    Before : SumS {n = 0, i = 0, s = 0}
+    Measure: 0
+    After  : SumS {n = 0, i = 1, s = 0}
+    Measure: 1
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@.
 -}

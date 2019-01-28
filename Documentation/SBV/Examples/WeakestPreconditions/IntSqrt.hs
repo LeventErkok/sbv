@@ -74,7 +74,7 @@ type S = SqrtS SInteger
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
 -- measure. For convenience, we take those two as parameters for simplicity.
 algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
-algorithm inv msr = Seq [ If (\SqrtS{x} -> x .>= 0) Skip Abort
+algorithm inv msr = Seq [ assert "x >= 0" $ \SqrtS{x} -> x .>= 0
                         , Assign $ \st -> st{sqrt = 0, i = 1, j = 1}
                         , While "i <= x"
                                 inv
@@ -87,7 +87,7 @@ algorithm inv msr = Seq [ If (\SqrtS{x} -> x .>= 0) Skip Abort
                         ]
 
 -- | Precondition for our program: @x@ must be non-negative. Note that there is an explicit
--- 'Abort' statement in our program to protect against this case, so if we do not have this
+-- call to 'Data.SBV.Tools.WeakestPreconditions.abort' in our program to protect against this case, so if we do not have this
 -- precondition, all programs will fail.
 pre :: S -> SBool
 pre SqrtS{x} = x .>= 0
