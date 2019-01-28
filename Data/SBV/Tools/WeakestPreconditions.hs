@@ -20,39 +20,38 @@
 
 module Data.SBV.Tools.WeakestPreconditions (
         -- * Programs and statements
-          Program(..), Stmt(..)
+          Program(..), Stmt(..), assert
 
         -- * Invariants and measures
         , Invariant, Measure
 
+        -- * Verification conditions
+        , VC(..)
+
         -- * Result of a proof
         , ProofResult(..)
 
-        -- * Checking WP correctness
-        , wpProve, wpProveWith, WPConfig(..), defaultWPCfg
+        -- * Configuring the WP engine
+        , WPConfig(..), defaultWPCfg
 
-        -- * Tracing concrete execution
-        , Status(..), traceExecution
+        -- * Checking WP correctness
+        , wpProve, wpProveWith
         ) where
 
 import Data.List   (intercalate)
-import Data.Maybe  (fromMaybe, fromJust, isJust)
+import Data.Maybe  (fromJust, isJust, isNothing)
 
-import Control.Monad (when, unless, void)
+import Control.Monad (when)
 
 import Data.SBV
 import Data.SBV.Control
 
-import System.IO (hFlush, stdout)
-
--- | A Program over a state is simply a statement, together with
+-- | A program over a state is simply a statement, together with
 -- a pre-condition capturing environmental assumptions and
 -- a post-condition that states its correctness. In the usual
 -- Hoare-triple notation, it captures:
 --
---   @
---     {precondition} program {postcondition}
---   @
+--   @ {precondition} program {postcondition} @
 data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental assumptions
                           , program       :: Stmt st       -- ^ Program
                           , postcondition :: st -> SBool   -- ^ Correctness statement
@@ -67,7 +66,7 @@ type Measure st = st -> [SInteger]
 
 -- | A statement in our imperative program, parameterized over the state.
 data Stmt st = Skip                                                                     -- ^ Skip, do nothing.
-             | Abort                                                                    -- ^ Abort execution.
+             | Abort String                                                             -- ^ Abort execution. The name is for diagnostic purposes.
              | Assign (st -> st)                                                        -- ^ Assignment: Transform the state by a function.
              | If (st -> SBool) (Stmt st) (Stmt st)                                     -- ^ Conditional: @If condition thenBranch elseBranch@.
              | While String (Invariant st) (Maybe (Measure st)) (st -> SBool) (Stmt st) -- ^ A while loop: @While name invariant measure condition body@.
@@ -76,47 +75,92 @@ data Stmt st = Skip                                                             
                                                                                         -- of this loop will be proven.
              | Seq [Stmt st]                                                            -- ^ A sequence of statements.
 
--- | The result of a weakest-precondition proof.
-data ProofResult res = Proven Bool                -- ^ The property holds. If 'Bool' is 'True', then total correctness, otherwise partial.
-                     | Indeterminate String       -- ^ The property fails, but no causing start state is found.
-                                                  --   This typically happens if the loop invariants are not strong enough.
-                     | Failed String res res      -- ^ The property fails. The string is the reason for failure, and the
-                                                  --   two @res@ values are the starting and ending states, respectively.
-
--- | 'Show' instance for proofs, for readability.
-instance Show res => Show (ProofResult res) where
-  show (Proven True)      = "Q.E.D."
-  show (Proven False)     = "Q.E.D. [Partial: not all termination measures were provided.]"
-  show (Indeterminate s)  = "Indeterminate: " ++ s
-  show (Failed s beg end) = intercalate "\n" [ "Proof failure: "++ s
-                                             , "Starting state:"
-                                             , intercalate "\n" ["  " ++ l | l <- lines (show beg)]
-                                             , "Failed in state:"
-                                             , intercalate "\n" ["  " ++ l | l <- lines (show end)]
-                                             ]
+-- | An 'assert' is a quick way of ensuring some condition holds. If it does,
+-- then it's equivalent to 'Skip'. Otherwise, it is equivalent to 'Abort'.
+assert :: String -> (st -> SBool) -> Stmt st
+assert nm cond = If cond Skip (Abort nm)
 
 -- | Are all the termination measures provided?
 isTotal :: Stmt st -> Bool
 isTotal Skip                = True
-isTotal Abort               = True
+isTotal (Abort _)           = True
 isTotal (Assign _)          = True
 isTotal (If _ tb fb)        = all isTotal [tb, fb]
 isTotal (While _ _ msr _ s) = isJust msr && isTotal s
 isTotal (Seq ss)            = all isTotal ss
 
+-- | A verification condition. Upon failure, each 'VC' carries enough state and diagnostic information
+-- to indicate what particular proof obligation failed for further debugging.
+data VC st m = BadPostcondition         st                  -- ^ The postcondition doesn't hold
+             | AbortReachable    String st                  -- ^ The named abort condition is reachable
+             | InvariantPre      String st                  -- ^ Invariant doesn't hold upon entry to the named loop
+             | InvariantMaintain String st st               -- ^ Invariant isn't maintained by the body
+             | MeasureBound      String (st, [m])           -- ^ Measure cannot be shown to be non-negative
+             | MeasureDecrease   String (st, [m]) (st, [m]) -- ^ Measure cannot be shown to decrease through each iteration
+
+-- | Helper function to display VC's nicely
+dispVC :: String -> [(String, String)] -> String
+dispVC tag flds = intercalate "\n" $ col tag : map showField flds
+  where col "" = ""
+        col t  = t ++ ":"
+
+        showField (t, c) = intercalate "\n" $ zipWith mark [(1::Int)..] (lines c)
+           where tt   = if null t then "" else col t ++ " "
+                 sp   = replicate (length tt) ' '
+                 mark i s = "  " ++ (if i == 1 then tt else sp) ++ s
+
+-- If a measure is a singleton, just show the number. Otherwise as a list:
+showMeasure :: Show a => [a] -> String
+showMeasure [x] = show x
+showMeasure xs  = show xs
+
+-- | Show instance for VC's
+instance (Show st, Show m) => Show (VC st m) where
+  show (BadPostcondition     s)                 = dispVC "Post condition must hold"                                             [("", show s)]
+  show (AbortReachable    nm s)                 = dispVC ("Abort " ++ show nm ++ " condition is satisfiable")                   [("", show s)]
+  show (InvariantPre      nm s)                 = dispVC ("Invariant for loop " ++ show nm ++ " must hold upon entry")          [("", show s)]
+  show (InvariantMaintain nm s1 s2)             = dispVC ("Invariant for loop " ++ show nm ++ " must be maintaned by the body")
+                                                         [ ("Before", show s1)
+                                                         , ("After ", show s2)
+                                                         ]
+  show (MeasureBound      nm (s, m))            = dispVC ("Measure for loop "   ++ show nm ++ " must be non-negative")
+                                                         [ ("State  ", show s)
+                                                         , ("Measure", showMeasure m )
+                                                         ]
+  show (MeasureDecrease   nm (s1, m1) (s2, m2)) = dispVC ("Measure for loop "   ++ show nm ++ " must decrease")
+                                                         [ ("Before ", show s1)
+                                                         , ("Measure", showMeasure m1)
+                                                         , ("After  ", show s2)
+                                                         , ("Measure", showMeasure m2)
+                                                         ]
+
+-- | The result of a weakest-precondition proof.
+data ProofResult res = Proven Bool                -- ^ The property holds. If 'Bool' is 'True', then total correctness, otherwise partial.
+                     | Indeterminate String       -- ^ Failed to establish correctness. Happens when the proof obligations lead to
+                                                  -- the SMT solver to return @Unk@. This can happen, for instance, if you have
+                                                  -- non-linear constraints, causing the solver to give up.
+                     | Failed [VC res Integer]    -- ^ The property fails, failing to establish the conditions listed.
+
+-- | 'Show' instance for proofs, for readability.
+instance Show res => Show (ProofResult res) where
+  show (Proven True)     = "Q.E.D."
+  show (Proven False)    = "Q.E.D. [Partial: not all termination measures were provided.]"
+  show (Indeterminate s) = "Indeterminate: " ++ s
+  show (Failed vcs)      = intercalate "\n" $ ("Proof failure. Failing verification condition" ++ if length vcs > 1 then "s:" else ":")
+                                              : map (\vc -> intercalate "\n" ["  " ++ l | l <- lines (show vc)]) vcs
+
+
+
 -- | Checking WP based correctness
-proveWP :: forall st res. (Show st, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
-proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
+wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
+wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
-        weakestPrecondition <- wp program postcondition
+        weakestPrecondition <- wp program (\st -> [(postcondition st, BadPostcondition st)])
 
-        -- The program is correct if we can prove the precondition
-        -- implies the post-condition for all starting states
-        let correctness st = precondition st .=> weakestPrecondition st
-
-        -- As usual, assert the negation of the requirement and do a check-sat:
         start <- create
-        constrain $ sNot (correctness start)
+        let vcs = weakestPrecondition start
+
+        constrain $ sNot $ precondition start .=> sAnd (map fst vcs)
 
         cs <- checkSat
         case cs of
@@ -129,307 +173,119 @@ proveWP cfg@WPConfig{wpVerbose} prog@Program{precondition, program, postconditio
 
                       return $ Proven t
 
-          Sat   -> do os <- getObservables
+          Sat   -> do let checkVC :: (SBool, VC st SInteger) -> Query [VC res Integer]
+                          checkVC (cond, vc) = do c <- getValue cond
+                                                  if c
+                                                     then return []   -- The VC was OK
+                                                     else do vc' <- case vc of
+                                                                      BadPostcondition    s                 -> BadPostcondition    <$> project s
+                                                                      AbortReachable    l s                 -> AbortReachable    l <$> project s
+                                                                      InvariantPre      l s                 -> InvariantPre      l <$> project s
+                                                                      InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
+                                                                      MeasureBound      l (s, m)            -> do r <- project s
+                                                                                                                  v <- mapM getValue m
+                                                                                                                  return $ MeasureBound l (r, v)
+                                                                      MeasureDecrease   l (s1, i1) (s2, i2) -> do r1 <- project s1
+                                                                                                                  v1 <- mapM getValue i1
+                                                                                                                  r2 <- project s2
+                                                                                                                  v2 <- mapM getValue i2
+                                                                                                                  return $ MeasureDecrease l (r1, v1) (r2, v2)
+                                                             return [vc']
+
+                      badVCs <- concat <$> mapM checkVC vcs
+
+                      when (null badVCs) $ error "Data.SBV.proveWP: Impossible happened. Proof failed, but no failing VC found!"
 
                       let plu w (_:_:_) = w ++ "s"
                           plu w _       = w
 
-                      unless (null os) $ do let m = "Following proof " ++ plu "obligation" os ++ " failed: "
-                                            msg m
-                                            msg $ replicate (length m) '='
-                                            mapM_ (msg . ("  " ++) . fst) os
+                          m = "Following proof " ++ plu "obligation" badVCs ++ " failed:"
 
-                      startState  <- project start
-                      lStartState <- embed   startState
-                      finalState  <- io $ traceExecution cfg{wpVerbose=False} prog lStartState
+                      msg m
+                      msg $ replicate (length m) '='
 
-                      let giveUp endState s = do lEndState <- project endState
-                                                 return $ Failed s startState lEndState
+                      let disp c = mapM_ msg ["  " ++ l | l <- lines (show c)]
+                      mapM_ disp badVCs
 
-                      case finalState of
-                        Stuck end s -> do when wpVerbose $ do msg ""
-                                                              msg "Execution trace:"
-                                                              msg "================"
-                                                              void (io $ traceExecution cfg prog lStartState)
-                                          giveUp end s
-                        Good  _     -> return $ Indeterminate "Not all proof obligations were established."
+                      return $ Failed badVCs
 
   where msg = io . when wpVerbose . putStrLn
 
         -- Compute the weakest precondition to establish the property:
-        wp :: Stmt st -> (st -> SBool) -> Query (st -> SBool)
-        wp Skip                  post = return post
-        wp Abort                 _    = return (const sFalse)
-        wp (Assign f)            post = return $ post . f
-        wp (If c tb fb)          post = do tWP <- wp tb post
-                                           fWP <- wp fb post
-                                           return $ \st -> ite (c st) (tWP st) (fWP st)
+        wp :: Stmt st -> (st -> [(SBool, VC st SInteger)]) -> Query (st -> [(SBool, VC st SInteger)])
+
+        -- Skip simply keeps the conditions
+        wp Skip post = return post
+
+        -- Abort is never satisfiable. The only way to have Abort's VC to pass is
+        -- to run it in a precondition (either via program or in an if branch) that
+        -- evaluates to false, i.e., it must not be reachable.
+        wp (Abort nm) _ = return $ \st -> [(sFalse, AbortReachable nm st)]
+
+        -- Assign simply transforms the state and passes on
+        wp (Assign f) post = return $ post . f
+
+        -- Conditional: We separately collect the VCs, and predicate with the proper branch condition
+        wp (If c tb fb) post = do tWP <- wp tb post
+                                  fWP <- wp fb post
+                                  return $ \st -> let cond = c st
+                                                  in   [(     cond .=> b, v) | (b, v) <- tWP st]
+                                                    ++ [(sNot cond .=> b, v) | (b, v) <- fWP st]
+
+        -- Sequencing: Simply run through the statements
         wp (Seq [])              post = return post
         wp (Seq (s:ss))          post = wp s =<< wp (Seq ss) post
-        wp (While nm inv mm c s) post = do
+
+        -- While loop, where all the WP magic happens!
+        wp (While nm inv mm cond body) post = do
                 st'  <- create
 
-                let tag  what  = observeIf (== False) ("Loop " ++ show nm ++ ": Invariant must " ++ what)
-                    term what  = observeIf (== False) ("Loop " ++ show nm ++ ": Termination measure must " ++ what)
+                let noMeasure = isNothing mm
+                    m         = fromJust mm
+                    curM      = m st'
+                    zero      = map (const 0) curM
 
-                    hasMeasure = isJust mm
-                    m          = fromJust mm
-                    curM       = m st'
-                    zero       = map (const 0) curM
+                    iterates   = inv st' .&&       cond st'
+                    terminates = inv st' .&& sNot (cond st')
 
-                inv' <- wp s inv
-                m'   <- wp s (\st -> m st .< curM)
 
-                return $ \st -> sAnd $ [ tag  "hold prior to loop entry"     $ inv st
-                                       , tag  "be maintained by the loop"    $ inv st' .&&       c st'  .=> inv' st'
-                                       , tag  "establish the post condition" $ inv st' .&& sNot (c st') .=> post st'
-                                       ]
-                                    ++ [ term "get smaller"                  $ inv st' .&&       c st'  .=> m' st'          | hasMeasure]
-                                    ++ [ term "always be non-negative"       $ inv st' .&&       c st'  .=> m  st' .>= zero | hasMeasure]
+                -- Condition 1: Invariant must hold prior to loop entry
+                invHoldsPrior <- wp Skip (\st -> [(inv st, InvariantPre nm st)])
 
--- | Do a forward proof at a given bound for each one of its @While@ loops. If there are nested loops, each will be unrolled
--- @bound@ times, so the unrolling is multiplicative. In case we cannot establish correctness, try to find a starting state that
--- violates one of the conditions. This is good old bounded-model checking, but comes in quite handy.
-unrollBound :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> Int -> Program st -> IO (Maybe (ProofResult res))
-unrollBound cfg@WPConfig{wpVerbose} bound prog@Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
+                -- Condition 2: If we iterate, invariant must be maitained by the body
+                invMaintained <- wp body (\st -> [(iterates .=> inv st, InvariantMaintain nm st' st)])
 
-        let go :: Int -> SBool -> Stmt st -> st -> (SBool, SBool, st)
-            go _ pCond Skip                       st = (pCond, sTrue,      st)
-            go _ pCond Abort                      st = (pCond, sNot pCond, st)
-            go _ pCond (Assign f)                 st = (pCond, sTrue,      f st)
-            go b pCond (If c tb fb)               st = ite (c st) (go b (pCond .&&       c st)  tb st)
-                                                                  (go b (pCond .&& sNot (c st)) fb st)
-            go _ pCond (Seq [])                   st = (pCond, sTrue, st)
-            go b pCond (Seq (s:ss))               st = let (r1, p1, st')  = go b pCond          s        st
-                                                           (r2, p2, st'') = go b (pCond .&& r1) (Seq ss) st'
-                                                       in (r2, p1 .&& p2, st'')
-            go b pCond (While _ inv mm cond body) st = while b pCond st
-               where while 0 p curST = (p .&& sNot (cond curST), sTrue, curST)    -- loop is terminating, condition must fail
-                     while i p curST = let c1 = cond curST                        -- loop is executing, condition must hold
-                                           c2 = inv  curST                        -- invariant must hold
+                -- Condition 3: If we terminate, invariant must be strong enough to establish the post condition
+                invEstablish <- wp body (const [(terminates .=> b, v) | (b, v) <- post st'])
 
-                                           hasMeasure = isJust mm
-                                           measure    = fromJust mm
+                -- Condition 4: If we iterate, measure must always be non-negative
+                measureNonNegative <- if noMeasure
+                                      then return  (const [])
+                                      else wp Skip (const [(iterates .=> curM .>= zero, MeasureBound nm (st', curM))])
 
-                                           m    = measure curST
-                                           zero = map (const 0) m
-                                           c3
-                                            | hasMeasure = m .>= zero              -- measure must be non-negative
-                                            | True       = sTrue
+                -- Condition 5: If we iterate, the measure must decrease
+                measureDecreases <- if noMeasure
+                                    then return  (const [])
+                                    else wp body (\st -> let prevM = m st in [(iterates .=> prevM .< curM, MeasureDecrease nm (st', curM) (st, prevM))])
 
-                                           -- execute the body
-                                           (rBody, c4, st') = go b (p .&& c1) body curST
-
-                                           c5
-                                            | hasMeasure = c1 .&& c2 .&& c4 .&& cond st' .&& rBody .=> measure st' .< measure curST -- measure must decrease
-                                            | True       = sTrue
-
-                                           -- execute the remainder of the loop, decrementing the counter
-                                           (rRest, c6, st'') = while (i-1) rBody st'
-
-                                       in (p .&& c1 .&& rBody .&& rRest, sAnd [c1, c2, c3, c4, c5, c6], st'')
-
-        startState <- create
-
-        let (reachability, constraints, endState) = go bound sTrue program startState
-
-            pre  = precondition startState
-            post = postcondition endState
-
-        -- A good counter-example would be one that satisfies the pre-condition
-        -- but fails the constraints or the endState
-        constrain $ pre .&& reachability .&& (sNot constraints .|| sNot post)
-
-        cs <- checkSat
-
-        case cs of
-          Unk   -> return Nothing
-          Unsat -> return Nothing
-          Sat   -> do ls <- project startState
-                      es <- project endState
-
-                      msg ". Found!\n"
-                      lStartState <- embed ls
-                      res <- io $ traceExecution cfg prog lStartState
-                      msg ""
-                      case res of
-                        Good{}    -> error $ unlines [ "Impossible happened! Unrolling semantics found a bad state, but executor did not reach it."
-                                                     , "Start state: " ++ show ls
-                                                     , "End   state: " ++ show es
-                                                     , "Please report this as a bug in SBV!"
-                                                     ]
-
-                        -- Make sure to return the final state from the trace-executor
-                        -- since the SMT solver can pick an arbitrary state so long as
-                        -- the constraints fail here:
-                        Stuck end r -> do msg "Analysis complete. Proof failed."
-                                          le <- project end
-                                          return $ Just $ Failed r ls le
-
-   where msg = when wpVerbose . io . putStrLn
-
--- | Try to find a good counter-example by unrolling up to 'wpCexDepth' times.
-unroll :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res) => WPConfig -> String -> Program st -> IO (ProofResult res)
-unroll cfg@WPConfig{wpVerbose, wpCexDepth} reason prog = go 0
-  where msg     = when wpVerbose . putStrLn
-        msgNoLn = when wpVerbose . putStr
-
-        go i | i > wpCexDepth = do msg $ ".\nNo violating trace found. (Searched up to depth " ++ show wpCexDepth ++ ".)"
-                                   return $ Indeterminate reason
-             | True           = do let comma = if i == 0 then "" else ", "
-                                   msgNoLn $ comma ++ show i
-                                   mbRes <- unrollBound cfg i prog
-                                   case mbRes of
-                                     Nothing -> go (i+1)
-                                     Just r  -> return r
-
--- | Configuration for WP proofs.
-data WPConfig = WPConfig { wpSolver   :: SMTConfig   -- ^ SMT Solver to use
-                         , wpVerbose  :: Bool        -- ^ Should we be chatty?
-                         , wpCexDepth :: Int         -- ^ In case of proof failure, search for cex's upto this depth
-                         }
-
--- | Default WP configuration.
-defaultWPCfg :: WPConfig
-defaultWPCfg = WPConfig { wpSolver   = defaultSMTCfg
-                        , wpVerbose  = False
-                        , wpCexDepth = 10
-                        }
-
--- | Checking WP based correctness
-wpProveWith :: forall st res. (Show st, Show res, Mergeable st, Queriable IO st res)
-            => WPConfig              -- ^ Configuration to use
-            -> Program st            -- ^ Program to check
-            -> IO (ProofResult res)
-wpProveWith cfg@WPConfig{wpVerbose} prog = do
-
-        let msg       = when wpVerbose . putStrLn
-            msgNoLn s = when wpVerbose $ do putStr s
-                                            hFlush stdout
-
-        res <- proveWP cfg prog
-        case res of
-          Failed{}             -> do msg "\nAnalysis complete. Proof failed."
-                                     return res
-          Proven{}             -> return res
-          Indeterminate reason -> do msg "\nAnalysis is indeterminate, not all proof obligations were established. Searching for a counter-example."
-                                     msgNoLn "Looking at depth: "
-                                     unroll cfg reason prog
+                -- Simply concatenate the VCs from all our conditions:
+                return $ \st ->    invHoldsPrior      st
+                                ++ invMaintained      st'
+                                ++ invEstablish       st'
+                                ++ measureNonNegative st'
+                                ++ measureDecreases   st'
 
 -- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
-wpProve :: (Show st, Show res, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
+wpProve :: (Show res, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
 wpProve = wpProveWith defaultWPCfg
 
--- * Concrete execution of a program
+-- | Configuration for WP proofs.
+data WPConfig = WPConfig { wpSolver  :: SMTConfig   -- ^ SMT Solver to use
+                         , wpVerbose :: Bool        -- ^ Should we be chatty?
+                         }
 
--- | Tracking locations: Either a line (sequence) number, or an iteration count
-data Location = Line Int
-               | Iteration Int
-
--- | A 'Loc' is a nesting of locations. We store this in reverse order.
-type Loc = [Location]
-
--- | Are we in a good state, or in a stuck state?
-data Status st = Good st                -- ^ Execution finished in the given state.
-               | Stuck st String        -- ^ Execution got stuck in the state, with some explanation why.
-
--- | Trace the execution of a program. The return value will have a 'Good' state to indicate
--- the program ended successfully, if that is the case. The result will be 'Stuck' if the program aborts without
--- completing: This can happen either by executing an 'Abort' statement, or some invariant gets violated,
--- or if a metric fails to go down through a loop body. In these latter cases, turning verbosity on will print
--- a readable trace of the program execution.
-traceExecution :: forall st. Show st
-               => WPConfig              -- ^ Configuration
-               -> Program st            -- ^ Program
-               -> st                    -- ^ Starting state
-               -> IO (Status st)
-traceExecution WPConfig{wpVerbose} Program{precondition, program, postcondition} start = do
-
-                printST start
-
-                status <- if unwrap [] "checking precondition" (precondition start)
-                          then go [Line 1] program =<< step [] start "Precondition holds, starting execution"
-                          else stop [] start "Initial state does not satisfy the precondition"
-
-                case status of
-                  s@Stuck{} -> return s
-                  Good end  -> if unwrap [] "checking postcondition" (postcondition end)
-                               then step [] end "Program successfully terminated, post condition holds of the final state"
-                               else stop [] end "final state does not satisfy the postcondition"
-
-  where msg :: String -> IO ()
-        msg = when wpVerbose . putStrLn
-
-        sLoc :: Loc -> String
-        sLoc l
-          | null l = "===>"
-          | True   = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
-          where sh (Line  i)     = show i
-                sh (Iteration i) = "{" ++ show i ++ "}"
-
-        step :: Loc -> st -> String -> IO (Status st)
-        step l st m = do msg $ sLoc l ++ " " ++ m
-                         printST st
-                         return $ Good st
-
-        stop :: Loc -> st -> String -> IO (Status st)
-        stop l st m = do msg $ sLoc l ++ " " ++ m
-                         return $ Stuck st m
-
-        dispST :: st -> String
-        dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
-
-        printST :: st -> IO ()
-        printST = msg . dispST
-
-        unwrap :: SymVal a => Loc -> String -> SBV a -> a
-        unwrap l m = fromMaybe die . unliteral
-           where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
-
-        go :: Loc -> Stmt st -> Status st -> IO (Status st)
-        go _   _ s@Stuck{}  = return s
-        go loc p (Good  st) = analyze p
-          where analyze Skip         = step loc st "Skip"
-
-                analyze Abort        = stop loc st "Abort command executed"
-
-                analyze (Assign f)   = step loc (f st) "Assign"
-
-                analyze (If c tb eb)
-                  | branchTrue       = go (Line 1 : loc) tb =<< step loc st "Conditional, taking the \"then\" branch"
-                  | True             = go (Line 2 : loc) eb =<< step loc st "Conditional, taking the \"else\" branch"
-                  where branchTrue = unwrap loc "evaluating the test condition" (c st)
-
-                analyze (Seq stmts)  = walk stmts 1 (Good st)
-                  where walk []     _ is = return is
-                        walk (s:ss) c is = walk ss (c+1) =<< go (Line c : loc) s is
-
-                analyze (While loopName invariant mbMeasure condition body)
-                   | currentInvariant st
-                   = while 1 Nothing (Good st)
-                   | True
-                   = stop loc st $ "Loop " ++ loopName ++ ": invariant fails to hold prior to loop entry"
-                   where tag s = "Loop " ++ loopName ++ ": " ++ s
-
-                         hasMeasure = isJust mbMeasure
-                         measure    = fromJust mbMeasure
-
-                         currentCondition = unwrap loc (tag  "evaluating the while condition") . condition
-                         currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
-                         currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
-
-                         while _ _      s@Stuck{}  = return s
-                         while c mbPrev (Good  is)
-                           | not (currentCondition is)
-                           = step loc is $ tag "condition fails, terminating"
-                           | not (currentInvariant is)
-                           = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
-                           | hasMeasure && mCur < zero
-                           = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
-                           | hasMeasure, Just mPrev <- mbPrev, mCur >= mPrev
-                           = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
-                           | True
-                           = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
-                                while (c+1) (Just mCur) nextState
-                           where mCur = currentMeasure is
-                                 zero = map (const 0) mCur
+-- | Default WP configuration: Uses the default solver, and is not verbose.
+defaultWPCfg :: WPConfig
+defaultWPCfg = WPConfig { wpSolver  = defaultSMTCfg
+                        , wpVerbose = False
+                        }
