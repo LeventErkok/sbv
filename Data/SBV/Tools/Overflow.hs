@@ -10,13 +10,12 @@
 -- Based on: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE ImplicitParams       #-}
-{-# LANGUAGE Rank2Types           #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE ImplicitParams      #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module Data.SBV.Tools.Overflow (
 
@@ -503,6 +502,3 @@ checkOp2 loc w op cop a b = sAssert (Just loc) (msg "underflows") (sNot u)
         msg c = k ++ " " ++ w ++ " " ++ c
 
         (u, o) = a `cop` b
-
--- I can't get HLint and GHC to agree on what's necessary!
-{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
