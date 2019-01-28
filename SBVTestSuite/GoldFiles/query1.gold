@@ -7,7 +7,6 @@
 [GOOD] (set-option :produce-unsat-cores true)
 [GOOD] (set-option :produce-unsat-assumptions true)
 [GOOD] (set-option :produce-proofs true)
-[GOOD] (set-option :produce-interpolants true)
 [GOOD] (set-option :random-seed 123)
 [GOOD] (set-option :produce-assertions true)
 [GOOD] (set-option :smt.mbqi true)
@@ -54,19 +53,17 @@
 [RECV] true
 [SEND] (get-option :produce-proofs)
 [RECV] true
-[SEND] (get-option :produce-interpolants)
-[RECV] true
 [SEND] (get-option :produce-unsat-assumptions)
 [RECV] unsupported
 [SEND] (get-option :produce-unsat-cores)
-[SKIP] ; :produce-unsat-assumptions line: 42 position: 0
+[SKIP] ; :produce-unsat-assumptions line: 40 position: 0
 [RECV] true
 [SEND] (get-option :random-seed)
 [RECV] 123
 [SEND] (get-option :reproducible-resource-limit)
 [RECV] unsupported
 [SEND] (get-option :verbosity)
-[SKIP] ; :reproducible-resource-limit line: 45 position: 0
+[SKIP] ; :reproducible-resource-limit line: 43 position: 0
 [RECV] 0
 [SEND] (get-option :smt.mbqi)
 [RECV] true
@@ -110,10 +107,10 @@
 [SEND] (get-info :memory)
 [RECV] unsupported
 [SEND] (get-info :time)
-[SKIP] ; :memory line: 71 position: 0
+[SKIP] ; :memory line: 69 position: 0
 [RECV] unsupported
 [SEND] (get-value (s0))
-[SKIP] ; :time line: 72 position: 0
+[SKIP] ; :time line: 70 position: 0
 [RECV] ((s0 5))
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
@@ -151,20 +148,20 @@
        (declare-fun bey () Bool)
        (declare-fun hey () Bool)
        (proof
-       (let (($x177 (<= s0 6)))
-        (let (($x178 (not $x177)))
-        (let (($x239 (or (not bey) $x178)))
-        (let ((@x237 (monotonicity (rewrite (= (> s0 6) $x178)) (= (=> bey (> s0 6)) (=> bey $x178)))))
-        (let ((@x243 (trans @x237 (rewrite (= (=> bey $x178) $x239)) (= (=> bey (> s0 6)) $x239))))
-        (let ((@x244 (mp (asserted (=> bey (> s0 6))) @x243 $x239)))
-        (let (($x256 (>= s0 6)))
-        (let (($x255 (not $x256)))
-        (let (($x265 (or (not hey) $x255)))
-        (let ((@x258 (monotonicity (rewrite (= (<= 6 s0) $x256)) (= (not (<= 6 s0)) $x255))))
-        (let ((@x260 (trans (rewrite (= (< s0 6) (not (<= 6 s0)))) @x258 (= (< s0 6) $x255))))
-        (let ((@x269 (trans (monotonicity @x260 (= (=> hey (< s0 6)) (=> hey $x255))) (rewrite (= (=> hey $x255) $x265)) (= (=> hey (< s0 6)) $x265))))
-        (let ((@x270 (mp (asserted (=> hey (< s0 6))) @x269 $x265)))
-        (unit-resolution ((_ th-lemma arith farkas 1 1) (or $x256 $x177)) (unit-resolution @x270 (asserted hey) $x255) (unit-resolution @x244 (asserted bey) $x178) false))))))))))))))))
+       (let (($x178 (<= s0 6)))
+        (let (($x179 (not $x178)))
+        (let (($x240 (or (not bey) $x179)))
+        (let ((@x238 (monotonicity (rewrite (= (> s0 6) $x179)) (= (=> bey (> s0 6)) (=> bey $x179)))))
+        (let ((@x244 (trans @x238 (rewrite (= (=> bey $x179) $x240)) (= (=> bey (> s0 6)) $x240))))
+        (let ((@x245 (mp (asserted (=> bey (> s0 6))) @x244 $x240)))
+        (let (($x257 (>= s0 6)))
+        (let (($x256 (not $x257)))
+        (let (($x266 (or (not hey) $x256)))
+        (let ((@x259 (monotonicity (rewrite (= (<= 6 s0) $x257)) (= (not (<= 6 s0)) $x256))))
+        (let ((@x261 (trans (rewrite (= (< s0 6) (not (<= 6 s0)))) @x259 (= (< s0 6) $x256))))
+        (let ((@x270 (trans (monotonicity @x261 (= (=> hey (< s0 6)) (=> hey $x256))) (rewrite (= (=> hey $x256) $x266)) (= (=> hey (< s0 6)) $x266))))
+        (let ((@x271 (mp (asserted (=> hey (< s0 6))) @x270 $x266)))
+        (unit-resolution ((_ th-lemma arith farkas 1 1) (or $x257 $x178)) (unit-resolution @x271 (asserted hey) $x256) (unit-resolution @x245 (asserted bey) $x179) false))))))))))))))))
 [SEND, TimeOut: 90000ms] (get-assertions)
 
 [RECV] ((! s7 :named |a > 0|)

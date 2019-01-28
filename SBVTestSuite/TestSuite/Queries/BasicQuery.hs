@@ -46,7 +46,6 @@ query1 = do
        setOption $ ProduceUnsatCores True
        setOption $ ProduceUnsatAssumptions True
        setOption $ ProduceProofs True
-       setOption $ ProduceInterpolants True
        setOption $ RandomSeed 123
        setOption $ ProduceAssertions True
        setOption $ OptionKeyword ":smt.mbqi" ["true"]
@@ -62,7 +61,6 @@ query1 = do
                   _ <- getOption ProduceAssertions
                   _ <- getOption ProduceAssignments
                   _ <- getOption ProduceProofs
-                  _ <- getOption ProduceInterpolants
                   _ <- getOption ProduceUnsatAssumptions
                   _ <- getOption ProduceUnsatCores
                   _ <- getOption RandomSeed
