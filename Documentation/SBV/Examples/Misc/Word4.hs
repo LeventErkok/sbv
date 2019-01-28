@@ -41,7 +41,7 @@ instance Show Word4 where
 instance Read Word4 where
   readsPrec p s = [ (word4 x, s') | (x, s') <- readsPrec p s ]
 
--- | Bounded instance; from 0 to 255
+-- | Bounded instance; from 0 to 15
 instance Bounded Word4 where
   minBound = Word4 0x00
   maxBound = Word4 0x0f
