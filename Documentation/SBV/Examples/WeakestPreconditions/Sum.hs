@@ -156,7 +156,7 @@ will simply use 'Nothing' for the measures.
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Invariant for loop "i <= n" must hold upon entry:
+  Invariant for loop "i <= n" fails upon entry:
     SumS {n = 0, i = 0, s = 0}
 
 When the invariant is constant false, it fails upon entry to the loop, and thus the
@@ -172,10 +172,11 @@ thing to try would be the invariant that always returns true:
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Post condition must hold:
-    SumS {n = 0, i = 1, s = 1}
+  Post condition fails:
+    Start: SumS {n = 0, i = 0, s = 0}
+    End  : SumS {n = 0, i = 1, s = 1}
 
-In this case, we are told that the given state does not establish the
+In this case, we are told that the end state does not establish the
 post-condition. Indeed when @n=0@, we would expect @s=0@, not @s=1@.
 
 The natural question to ask is how did SBV come up with this unexpected
@@ -195,7 +196,7 @@ is an example:
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Invariant for loop "i <= n" must be maintaned by the body:
+  Invariant for loop "i <= n" is not maintaned by the body:
     Before: SumS {n = 0, i = 0, s = 0}
     After : SumS {n = 0, i = 1, s = 0}
 
@@ -211,7 +212,7 @@ The termination measure must always be non-negative:
 >>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
 ==================================
-  Measure for loop "i <= n" must be non-negative:
+  Measure for loop "i <= n" is negative:
     State  : SumS {n = 1, i = 1, s = 0}
     Measure: -1
 
@@ -226,7 +227,7 @@ The other way we can have a bad measure is if it fails to decrease through the l
 >>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
 ==================================
-  Measure for loop "i <= n" must decrease:
+  Measure for loop "i <= n" does not decrease:
     Before : SumS {n = 0, i = 0, s = 0}
     Measure: 0
     After  : SumS {n = 0, i = 1, s = 0}
