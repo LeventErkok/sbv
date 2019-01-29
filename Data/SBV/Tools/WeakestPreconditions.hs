@@ -91,8 +91,8 @@ isTotal (Seq ss)            = all isTotal ss
 
 -- | A verification condition. Upon failure, each 'VC' carries enough state and diagnostic information
 -- to indicate what particular proof obligation failed for further debugging.
-data VC st m = BadPostcondition         st                  -- ^ The postcondition doesn't hold
-             | AbortReachable    String st                  -- ^ The named abort condition is reachable
+data VC st m = BadPostcondition         st st               -- ^ The postcondition doesn't hold
+             | AbortReachable    String st st               -- ^ The named abort condition is reachable
              | InvariantPre      String st                  -- ^ Invariant doesn't hold upon entry to the named loop
              | InvariantMaintain String st st               -- ^ Invariant isn't maintained by the body
              | MeasureBound      String (st, [m])           -- ^ Measure cannot be shown to be non-negative
@@ -116,18 +116,25 @@ showMeasure xs  = show xs
 
 -- | Show instance for VC's
 instance (Show st, Show m) => Show (VC st m) where
-  show (BadPostcondition     s)                 = dispVC "Post condition must hold"                                             [("", show s)]
-  show (AbortReachable    nm s)                 = dispVC ("Abort " ++ show nm ++ " condition is satisfiable")                   [("", show s)]
-  show (InvariantPre      nm s)                 = dispVC ("Invariant for loop " ++ show nm ++ " must hold upon entry")          [("", show s)]
-  show (InvariantMaintain nm s1 s2)             = dispVC ("Invariant for loop " ++ show nm ++ " must be maintaned by the body")
+  show (BadPostcondition     s1 s2)             = dispVC "Post condition fails"
+                                                         [ ("Start", show s1)
+                                                         , ("End  ", show s2)
+                                                         ]
+  show (AbortReachable    nm s1 s2)             = dispVC ("Abort " ++ show nm ++ " condition is satisfiable")
                                                          [ ("Before", show s1)
                                                          , ("After ", show s2)
                                                          ]
-  show (MeasureBound      nm (s, m))            = dispVC ("Measure for loop "   ++ show nm ++ " must be non-negative")
+  show (InvariantPre      nm s)                 = dispVC ("Invariant for loop " ++ show nm ++ " fails upon entry")
+                                                         [("", show s)]
+  show (InvariantMaintain nm s1 s2)             = dispVC ("Invariant for loop " ++ show nm ++ " is not maintaned by the body")
+                                                         [ ("Before", show s1)
+                                                         , ("After ", show s2)
+                                                         ]
+  show (MeasureBound      nm (s, m))            = dispVC ("Measure for loop "   ++ show nm ++ " is negative")
                                                          [ ("State  ", show s)
                                                          , ("Measure", showMeasure m )
                                                          ]
-  show (MeasureDecrease   nm (s1, m1) (s2, m2)) = dispVC ("Measure for loop "   ++ show nm ++ " must decrease")
+  show (MeasureDecrease   nm (s1, m1) (s2, m2)) = dispVC ("Measure for loop "   ++ show nm ++ " does not decrease")
                                                          [ ("Before ", show s1)
                                                          , ("Measure", showMeasure m1)
                                                          , ("After  ", show s2)
@@ -155,9 +162,10 @@ instance Show res => Show (ProofResult res) where
 wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
 wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
 
-        weakestPrecondition <- wp program (\st -> [(postcondition st, BadPostcondition st)])
-
         start <- create
+
+        weakestPrecondition <- wp start program (\st -> [(postcondition st, BadPostcondition start st)])
+
         let vcs = weakestPrecondition start
 
         constrain $ sNot $ precondition start .=> sAnd (map fst vcs)
@@ -178,8 +186,8 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
                                                   if c
                                                      then return []   -- The VC was OK
                                                      else do vc' <- case vc of
-                                                                      BadPostcondition    s                 -> BadPostcondition    <$> project s
-                                                                      AbortReachable    l s                 -> AbortReachable    l <$> project s
+                                                                      BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
+                                                                      AbortReachable    l s1 s2             -> AbortReachable    l <$> project s1 <*> project s2
                                                                       InvariantPre      l s                 -> InvariantPre      l <$> project s
                                                                       InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
                                                                       MeasureBound      l (s, m)            -> do r <- project s
@@ -212,32 +220,32 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
   where msg = io . when wpVerbose . putStrLn
 
         -- Compute the weakest precondition to establish the property:
-        wp :: Stmt st -> (st -> [(SBool, VC st SInteger)]) -> Query (st -> [(SBool, VC st SInteger)])
+        wp :: st -> Stmt st -> (st -> [(SBool, VC st SInteger)]) -> Query (st -> [(SBool, VC st SInteger)])
 
         -- Skip simply keeps the conditions
-        wp Skip post = return post
+        wp _ Skip post = return post
 
         -- Abort is never satisfiable. The only way to have Abort's VC to pass is
         -- to run it in a precondition (either via program or in an if branch) that
         -- evaluates to false, i.e., it must not be reachable.
-        wp (Abort nm) _ = return $ \st -> [(sFalse, AbortReachable nm st)]
+        wp start (Abort nm) _ = return $ \st -> [(sFalse, AbortReachable nm start st)]
 
         -- Assign simply transforms the state and passes on
-        wp (Assign f) post = return $ post . f
+        wp _ (Assign f) post = return $ post . f
 
         -- Conditional: We separately collect the VCs, and predicate with the proper branch condition
-        wp (If c tb fb) post = do tWP <- wp tb post
-                                  fWP <- wp fb post
-                                  return $ \st -> let cond = c st
-                                                  in   [(     cond .=> b, v) | (b, v) <- tWP st]
-                                                    ++ [(sNot cond .=> b, v) | (b, v) <- fWP st]
+        wp start (If c tb fb) post = do tWP <- wp start tb post
+                                        fWP <- wp start fb post
+                                        return $ \st -> let cond = c st
+                                                        in   [(     cond .=> b, v) | (b, v) <- tWP st]
+                                                          ++ [(sNot cond .=> b, v) | (b, v) <- fWP st]
 
         -- Sequencing: Simply run through the statements
-        wp (Seq [])              post = return post
-        wp (Seq (s:ss))          post = wp s =<< wp (Seq ss) post
+        wp _     (Seq [])              post = return post
+        wp start (Seq (s:ss))          post = wp start s =<< wp start (Seq ss) post
 
         -- While loop, where all the WP magic happens!
-        wp (While nm inv mm cond body) post = do
+        wp start (While nm inv mm cond body) post = do
                 st'  <- create
 
                 let noMeasure = isNothing mm
@@ -250,23 +258,23 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
 
 
                 -- Condition 1: Invariant must hold prior to loop entry
-                invHoldsPrior <- wp Skip (\st -> [(inv st, InvariantPre nm st)])
+                invHoldsPrior <- wp start Skip (\st -> [(inv st, InvariantPre nm st)])
 
                 -- Condition 2: If we iterate, invariant must be maitained by the body
-                invMaintained <- wp body (\st -> [(iterates .=> inv st, InvariantMaintain nm st' st)])
+                invMaintained <- wp st' body (\st -> [(iterates .=> inv st, InvariantMaintain nm st' st)])
 
                 -- Condition 3: If we terminate, invariant must be strong enough to establish the post condition
-                invEstablish <- wp body (const [(terminates .=> b, v) | (b, v) <- post st'])
+                invEstablish <- wp st' body (const [(terminates .=> b, v) | (b, v) <- post st'])
 
                 -- Condition 4: If we iterate, measure must always be non-negative
                 measureNonNegative <- if noMeasure
                                       then return  (const [])
-                                      else wp Skip (const [(iterates .=> curM .>= zero, MeasureBound nm (st', curM))])
+                                      else wp st' Skip (const [(iterates .=> curM .>= zero, MeasureBound nm (st', curM))])
 
                 -- Condition 5: If we iterate, the measure must decrease
                 measureDecreases <- if noMeasure
                                     then return  (const [])
-                                    else wp body (\st -> let prevM = m st in [(iterates .=> prevM .< curM, MeasureDecrease nm (st', curM) (st, prevM))])
+                                    else wp st' body (\st -> let prevM = m st in [(iterates .=> prevM .< curM, MeasureDecrease nm (st', curM) (st, prevM))])
 
                 -- Simply concatenate the VCs from all our conditions:
                 return $ \st ->    invHoldsPrior      st
