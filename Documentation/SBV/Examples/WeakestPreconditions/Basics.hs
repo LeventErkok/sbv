@@ -106,6 +106,7 @@ It is instructive to look at how the proof changes as we put in different @pre@ 
 
 If we stick in an extra increment for @y@ after, we can easily break the postcondition:
 
+>>> :set -XNamedFieldPuns
 >>> import Control.Monad (void)
 >>> void $ correctness Skip $ Assign $ \st@IncS{y} -> st{y = y+1}
 Following proof obligation failed:
