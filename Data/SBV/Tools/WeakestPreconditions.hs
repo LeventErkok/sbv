@@ -94,7 +94,8 @@ isTotal (Seq ss)            = all isTotal ss
 
 -- | A verification condition. Upon failure, each 'VC' carries enough state and diagnostic information
 -- to indicate what particular proof obligation failed for further debugging.
-data VC st m = BadPostcondition         st st               -- ^ The postcondition doesn't hold
+data VC st m = BadPrecondition          st                  -- ^ The precondition doesn't hold. This can only happen in 'traceExecution'.
+             | BadPostcondition         st st               -- ^ The postcondition doesn't hold
              | AbortReachable    String st st               -- ^ The named abort condition is reachable
              | InvariantPre      String st                  -- ^ Invariant doesn't hold upon entry to the named loop
              | InvariantMaintain String st st               -- ^ Invariant isn't maintained by the body
@@ -119,7 +120,9 @@ showMeasure xs  = show xs
 
 -- | Show instance for VC's
 instance (Show st, Show m) => Show (VC st m) where
-  show (BadPostcondition     s1 s2)             = dispVC "Post condition fails"
+  show (BadPrecondition   s)                    = dispVC "Precondition fails"
+                                                         [("", show s)]
+  show (BadPostcondition  s1 s2)                = dispVC "Postcondition fails"
                                                          [ ("Start", show s1)
                                                          , ("End  ", show s2)
                                                          ]
@@ -189,6 +192,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
                                                   if c
                                                      then return []   -- The VC was OK
                                                      else do vc' <- case vc of
+                                                                      BadPrecondition     s                 -> BadPrecondition     <$> project s
                                                                       BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
                                                                       AbortReachable    l s1 s2             -> AbortReachable    l <$> project s1 <*> project s2
                                                                       InvariantPre      l s                 -> InvariantPre      l <$> project s
@@ -311,14 +315,20 @@ data Location = Line      Int
 type Loc = [Location]
 
 -- | Are we in a good state, or in a stuck state?
-data Status st = Good st                -- ^ Execution finished in the given state.
-               | Stuck st String        -- ^ Execution got stuck in the state, with some explanation why.
-               deriving Show
+data Status st = Good st               -- ^ Execution finished in the given state.
+               | Stuck (VC st Integer) -- ^ Execution got stuck, with the failing VC
 
--- | Trace the execution of a program, starting from a completely concrete state. The return value will have
--- a 'Good' state to indicate the program ended successfully, if that is the case. The result will be 'Stuck'
--- if the program aborts without completing: This can happen either by executing an 'Abort' statement, or some
--- invariant gets violated, or if a metric fails to go down through a loop body.
+-- | Show instance for 'Status'
+instance Show st => Show (Status st) where
+  show (Good st)  = "Program terminated successfully. Final state:\n" ++ intercalate "\n" ["  " ++ l | l <- lines (show st)]
+  show (Stuck vc) = "Program is stuck.\n" ++ show vc
+
+-- | Trace the execution of a program, starting from a sufficiently concrete state. (Sufficiently here means that
+-- all parts of the state that is used uninitialized must have concrete values, i.e., essentially the inputs.
+-- You can leave the "temporary" variables initialized by the program before use undefined or even symbolic.)
+-- The return value will have a 'Good' state to indicate the program ended successfully, if that is the case. The
+-- result will be 'Stuck' if the program aborts without completing: This can happen either by executing an 'Abort'
+-- statement, or some invariant gets violated, or if a metric fails to go down through a loop body.
 traceExecution :: forall st. Show st
                => Program st            -- ^ Program
                -> st                    -- ^ Starting state. It must be fully concrete.
@@ -327,13 +337,13 @@ traceExecution Program{precondition, program, postcondition} start = do
 
                 status <- if unwrap [] "checking precondition" (precondition start)
                           then go [Line 1] program =<< step [] start "*** Precondition holds, starting execution:"
-                          else giveUp [] start "*** Initial state does not satisfy the precondition:"
+                          else giveUp start (BadPrecondition start) "*** Initial state does not satisfy the precondition:"
 
                 case status of
                   s@Stuck{} -> return s
                   Good end  -> if unwrap [] "checking postcondition" (postcondition end)
                                then step [] end "*** Program successfully terminated, post condition holds of the final state:"
-                               else giveUp [] end "*** Failed, final state does not satisfy the postcondition:"
+                               else giveUp end (BadPostcondition start end) "*** Failed, final state does not satisfy the postcondition:"
 
   where sLoc :: Loc -> String -> String
         sLoc l m
@@ -347,14 +357,14 @@ traceExecution Program{precondition, program, postcondition} start = do
                          printST st
                          return $ Good st
 
-        stop :: Loc -> st -> String -> IO (Status st)
-        stop l st m = do putStrLn $ sLoc l m
-                         return $ Stuck st m
+        stop :: Loc -> VC st Integer -> String -> IO (Status st)
+        stop l vc m = do putStrLn $ sLoc l m
+                         return $ Stuck vc
 
-        giveUp :: Loc -> st -> String -> IO (Status st)
-        giveUp l st m = do r <- stop l st m
-                           printST st
-                           return r
+        giveUp :: st -> VC st Integer -> String -> IO (Status st)
+        giveUp st vc m = do r <- stop [] vc m
+                            printST st
+                            return r
 
         dispST :: st -> String
         dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
@@ -371,7 +381,7 @@ traceExecution Program{precondition, program, postcondition} start = do
         go loc p (Good  st) = analyze p
           where analyze Skip = step loc st "Skip"
 
-                analyze (Abort nm) = stop loc st $ "Abort command executed, labeled: " ++ show nm
+                analyze (Abort nm) = stop loc (AbortReachable nm start st) $ "Abort command executed, labeled: " ++ show nm
 
                 analyze (Assign f) = step loc (f st) "Assign"
 
@@ -386,9 +396,9 @@ traceExecution Program{precondition, program, postcondition} start = do
 
                 analyze (While loopName invariant mbMeasure condition body)
                    | currentInvariant st
-                   = while 1 Nothing (Good st)
+                   = while 1 st Nothing (Good st)
                    | True
-                   = stop loc st $ tag "invariant fails to hold prior to loop entry"
+                   = stop loc  (InvariantPre loopName st) $ tag "invariant fails to hold prior to loop entry"
                    where tag s = "Loop " ++ show loopName ++ ": " ++ s
 
                          hasMeasure = isJust mbMeasure
@@ -398,18 +408,18 @@ traceExecution Program{precondition, program, postcondition} start = do
                          currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
                          currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
 
-                         while _ _      s@Stuck{}  = return s
-                         while c mbPrev (Good  is)
+                         while _ _      _      s@Stuck{}  = return s
+                         while c prevST mbPrev (Good  is)
                            | not (currentCondition is)
                            = step loc is $ tag "condition fails, terminating"
                            | not (currentInvariant is)
-                           = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
+                           = stop loc (InvariantMaintain loopName prevST is) $ tag "invariant fails to hold in iteration " ++ show c
                            | hasMeasure && mCur < zero
-                           = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
+                           = stop loc (MeasureBound loopName (is, mCur)) $ tag "measure must be non-negative, evaluated to: " ++ show mCur
                            | hasMeasure, Just mPrev <- mbPrev, mCur >= mPrev
-                           = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
+                           = stop loc (MeasureDecrease loopName (prevST, mPrev) (is, mCur)) $ tag $ "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
                            | True
                            = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
-                                while (c+1) (Just mCur) nextState
+                                while (c+1) is (Just mCur) nextState
                            where mCur = currentMeasure is
                                  zero = map (const 0) mCur
