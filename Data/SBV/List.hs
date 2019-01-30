@@ -23,7 +23,7 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), nil, (.++)
+        , head, tail, uncons, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), snoc, nil, (.++)
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
@@ -182,6 +182,10 @@ concat x y | isConcretelyEmpty x = y
 infixr 5 .:
 (.:) :: SymVal a => SBV a -> SList a -> SList a
 a .: as = singleton a .++ as
+
+-- | Append an element
+snoc :: SymVal a => SList a -> SBV a -> SList a
+as `snoc` a = as .++ singleton a
 
 -- | Empty list. This value has the property that it's the only list with length 0:
 --

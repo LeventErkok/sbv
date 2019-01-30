@@ -24,7 +24,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), nil, (.++)
+        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), snoc, nil, (.++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -178,6 +178,10 @@ implode = foldr ((.++) . singleton) ""
 infixr 5 .:
 (.:) :: SChar -> SString -> SString
 c .: cs = singleton c .++ cs
+
+-- | Append an element
+snoc :: SString -> SChar -> SString
+s `snoc` c = s .++ singleton c
 
 -- | Empty string. This value has the property that it's the only string with length 0:
 --

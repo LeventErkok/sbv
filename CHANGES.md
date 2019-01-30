@@ -7,6 +7,8 @@
 
   * Added functions `elem`/`notElem` to `Data.SBV.List`.
 
+  * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
+
   * Rework the 'Queriable' class to allow projection/embedding pairs. Also
     added a new 'Fresh' class, which is more usable in simpler scenarios
     where the default projection/embedding definitions are suitable.
