@@ -36,10 +36,13 @@ module Data.SBV.Tools.WeakestPreconditions (
 
         -- * Checking WP correctness
         , wpProve, wpProveWith
+
+        -- * Concrete runs of programs
+        , traceExecution, Status(..)
         ) where
 
 import Data.List   (intercalate)
-import Data.Maybe  (fromJust, isJust, isNothing)
+import Data.Maybe  (fromJust, isJust, isNothing, fromMaybe)
 
 import Control.Monad (when)
 
@@ -297,3 +300,113 @@ defaultWPCfg :: WPConfig
 defaultWPCfg = WPConfig { wpSolver  = defaultSMTCfg
                         , wpVerbose = False
                         }
+
+-- * Concrete execution of a program
+
+-- | Tracking locations: Either a line (sequence) number, or an iteration count
+data Location = Line      Int
+              | Iteration Int
+
+-- | A 'Loc' is a nesting of locations. We store this in reverse order.
+type Loc = [Location]
+
+-- | Are we in a good state, or in a stuck state?
+data Status st = Good st                -- ^ Execution finished in the given state.
+               | Stuck st String        -- ^ Execution got stuck in the state, with some explanation why.
+               deriving Show
+
+-- | Trace the execution of a program. The return value will have a 'Good' state to indicate
+-- the program ended successfully, if that is the case. The result will be 'Stuck' if the program aborts without
+-- completing: This can happen either by executing an 'Abort' statement, or some invariant gets violated,
+-- or if a metric fails to go down through a loop body.
+traceExecution :: forall st. Show st
+               => Program st            -- ^ Program
+               -> st                    -- ^ Starting state
+               -> IO (Status st)
+traceExecution Program{precondition, program, postcondition} start = do
+
+                printST start
+
+                status <- if unwrap [] "checking precondition" (precondition start)
+                          then go [Line 1] program =<< step [] start "Precondition holds, starting execution"
+                          else stop [] start "Initial state does not satisfy the precondition"
+
+                case status of
+                  s@Stuck{} -> return s
+                  Good end  -> if unwrap [] "checking postcondition" (postcondition end)
+                               then step [] end "Program successfully terminated, post condition holds of the final state"
+                               else stop [] end "final state does not satisfy the postcondition"
+
+  where sLoc :: Loc -> String
+        sLoc l
+          | null l = "===>"
+          | True   = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
+          where sh (Line  i)     = show i
+                sh (Iteration i) = "{" ++ show i ++ "}"
+
+        step :: Loc -> st -> String -> IO (Status st)
+        step l st m = do putStrLn $ sLoc l ++ " " ++ m
+                         printST st
+                         return $ Good st
+
+        stop :: Loc -> st -> String -> IO (Status st)
+        stop l st m = do putStrLn $ sLoc l ++ " " ++ m
+                         return $ Stuck st m
+
+        dispST :: st -> String
+        dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
+
+        printST :: st -> IO ()
+        printST = putStrLn . dispST
+
+        unwrap :: SymVal a => Loc -> String -> SBV a -> a
+        unwrap l m = fromMaybe die . unliteral
+           where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
+
+        go :: Loc -> Stmt st -> Status st -> IO (Status st)
+        go _   _ s@Stuck{}  = return s
+        go loc p (Good  st) = analyze p
+          where analyze Skip         = step loc st "Skip"
+
+                analyze (Abort nm)    = stop loc st $ "Abort command executed, labeled: " ++ show nm
+
+                analyze (Assign f)   = step loc (f st) "Assign"
+
+                analyze (If c tb eb)
+                  | branchTrue       = go (Line 1 : loc) tb =<< step loc st "Conditional, taking the \"then\" branch"
+                  | True             = go (Line 2 : loc) eb =<< step loc st "Conditional, taking the \"else\" branch"
+                  where branchTrue = unwrap loc "evaluating the test condition" (c st)
+
+                analyze (Seq stmts)  = walk stmts 1 (Good st)
+                  where walk []     _ is = return is
+                        walk (s:ss) c is = walk ss (c+1) =<< go (Line c : loc) s is
+
+                analyze (While loopName invariant mbMeasure condition body)
+                   | currentInvariant st
+                   = while 1 Nothing (Good st)
+                   | True
+                   = stop loc st $ tag "invariant fails to hold prior to loop entry"
+                   where tag s = "Loop " ++ show loopName ++ ": " ++ s
+
+                         hasMeasure = isJust mbMeasure
+                         measure    = fromJust mbMeasure
+
+                         currentCondition = unwrap loc (tag  "evaluating the while condition") . condition
+                         currentMeasure   = map (unwrap loc (tag  "evaluating the measure"))   . measure
+                         currentInvariant = unwrap loc (tag  "evaluating the invariant")       . invariant
+
+                         while _ _      s@Stuck{}  = return s
+                         while c mbPrev (Good  is)
+                           | not (currentCondition is)
+                           = step loc is $ tag "condition fails, terminating"
+                           | not (currentInvariant is)
+                           = stop loc is $ tag "invariant fails to hold in iteration " ++ show c
+                           | hasMeasure && mCur < zero
+                           = stop loc is $ tag "measure must be non-negative, evaluated to: " ++ show mCur
+                           | hasMeasure, Just mPrev <- mbPrev, mCur >= mPrev
+                           = stop loc is $ tag "measure failed to decrease, prev = " ++ show mPrev ++ ", current = " ++ show mCur
+                           | True
+                           = do nextState <- go (Iteration c : loc) body =<< step loc is (tag "condition holds, executing the body")
+                                while (c+1) (Just mCur) nextState
+                           where mCur = currentMeasure is
+                                 zero = map (const 0) mCur
