@@ -21,6 +21,9 @@
     be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
     For example use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
+  * SBV now supports implicit constraints in the query mode, which were previously only
+    available before user queries started.
+
   * Documentation: Jan Path kindly fixed module headers of all the files to produce
     much better looking Haddock documents. Thanks Jan!
 

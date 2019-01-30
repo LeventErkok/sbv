@@ -151,15 +151,16 @@ syncUpSolver afterAPush is = do
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
                            arrange (i, (at, rt, es)) = ((i, at, rt), es)
-                       inps  <- reverse <$> readIORef (rNewInps is)
-                       ks    <- readIORef (rNewKinds is)
-                       cnsts <- sortBy cmp . map swap . Map.toList <$> readIORef (rNewConsts is)
-                       arrs  <- IMap.toAscList <$> readIORef (rNewArrs is)
-                       tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
-                       uis   <- Map.toAscList <$> readIORef (rNewUIs is)
-                       as    <- readIORef (rNewAsgns is)
+                       inps        <- reverse <$> readIORef (rNewInps is)
+                       ks          <- readIORef (rNewKinds is)
+                       cnsts       <- sortBy cmp . map swap . Map.toList <$> readIORef (rNewConsts is)
+                       arrs        <- IMap.toAscList <$> readIORef (rNewArrs is)
+                       tbls        <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
+                       uis         <- Map.toAscList <$> readIORef (rNewUIs is)
+                       as          <- readIORef (rNewAsgns is)
+                       constraints <- readIORef (rNewConstraints is)
 
-                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as cfg
+                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context

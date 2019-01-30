@@ -127,6 +127,7 @@ Library
                   , Documentation.SBV.Examples.ProofTools.Fibonacci
                   , Documentation.SBV.Examples.ProofTools.Strengthen
                   , Documentation.SBV.Examples.ProofTools.Sum
+                  , Documentation.SBV.Examples.WeakestPreconditions.Append
                   , Documentation.SBV.Examples.WeakestPreconditions.IntDiv
                   , Documentation.SBV.Examples.WeakestPreconditions.IntSqrt
                   , Documentation.SBV.Examples.WeakestPreconditions.Length

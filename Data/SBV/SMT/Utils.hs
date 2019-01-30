@@ -54,14 +54,15 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  [NamedSymVar]                -- ^ inputs
-                          -> Set.Set Kind                 -- ^ new kinds
-                          -> [(SV, CV)]                   -- ^ constants
-                          -> [(Int, ArrayInfo)]           -- ^ newly created arrays
-                          -> [((Int, Kind, Kind), [SV])]  -- ^ newly created tables
-                          -> [(String, SBVType)]          -- ^ newly created uninterpreted functions/constants
-                          -> SBVPgm                       -- ^ assignments
-                          -> SMTConfig                    -- ^ configuration
+type SMTLibIncConverter a =  [NamedSymVar]                     -- ^ inputs
+                          -> Set.Set Kind                      -- ^ new kinds
+                          -> [(SV, CV)]                        -- ^ constants
+                          -> [(Int, ArrayInfo)]                -- ^ newly created arrays
+                          -> [((Int, Kind, Kind), [SV])]       -- ^ newly created tables
+                          -> [(String, SBVType)]               -- ^ newly created uninterpreted functions/constants
+                          -> SBVPgm                            -- ^ assignments
+                          -> [(Bool, [(String, String)], SV)]  -- ^ extra constraints
+                          -> SMTConfig                         -- ^ configuration
                           -> a
 
 -- | Create an annotated term

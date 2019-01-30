@@ -327,7 +327,7 @@ findTupleArities ks = Set.toAscList
 
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
+cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- sorts
                concatMap declSort [(s, dt) | KUninterpreted s dt <- Set.toList newKs]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
@@ -348,6 +348,10 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
             ++ concat arrayDelayeds
             -- array setups
             ++ concat arraySetups
+            -- extra hard constraints
+            ++ map (\(attr, v) -> "(assert "      ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") hardAsserts
+            -- extra soft constraints
+            ++ map (\(attr, v) -> "(assert-soft " ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") softAsserts
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
@@ -361,6 +365,10 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cfg =
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         tableMap  = IM.fromList $ map mkTable allTables
           where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
+
+        hardAsserts, softAsserts :: [([(String, String)], SV)]
+        hardAsserts = [(attr, v) | (False, attr, v) <- cstrs]
+        softAsserts = [(attr, v) | (True,  attr, v) <- cstrs]
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =

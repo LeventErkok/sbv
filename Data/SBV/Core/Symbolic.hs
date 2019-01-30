@@ -70,7 +70,7 @@ import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy)
-import Data.Maybe                  (isJust, fromJust, fromMaybe, listToMaybe)
+import Data.Maybe                  (isJust, fromJust, fromMaybe)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -774,32 +774,35 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
                                              CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
-data IncState = IncState { rNewInps   :: IORef [NamedSymVar]   -- always existential!
-                         , rNewKinds  :: IORef KindSet
-                         , rNewConsts :: IORef CnstMap
-                         , rNewArrs   :: IORef ArrayMap
-                         , rNewTbls   :: IORef TableMap
-                         , rNewUIs    :: IORef UIMap
-                         , rNewAsgns  :: IORef SBVPgm
+data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always existential!
+                         , rNewKinds       :: IORef KindSet
+                         , rNewConsts      :: IORef CnstMap
+                         , rNewArrs        :: IORef ArrayMap
+                         , rNewTbls        :: IORef TableMap
+                         , rNewUIs         :: IORef UIMap
+                         , rNewAsgns       :: IORef SBVPgm
+                         , rNewConstraints :: IORef [(Bool, [(String, String)], SV)]
                          }
 
 -- | Get a new IncState
 newIncState :: IO IncState
 newIncState = do
-        is  <- newIORef []
-        ks  <- newIORef Set.empty
-        nc  <- newIORef Map.empty
-        am  <- newIORef IMap.empty
-        tm  <- newIORef Map.empty
-        ui  <- newIORef Map.empty
-        pgm <- newIORef (SBVPgm S.empty)
-        return IncState { rNewInps   = is
-                        , rNewKinds  = ks
-                        , rNewConsts = nc
-                        , rNewArrs   = am
-                        , rNewTbls   = tm
-                        , rNewUIs    = ui
-                        , rNewAsgns  = pgm
+        is    <- newIORef []
+        ks    <- newIORef Set.empty
+        nc    <- newIORef Map.empty
+        am    <- newIORef IMap.empty
+        tm    <- newIORef Map.empty
+        ui    <- newIORef Map.empty
+        pgm   <- newIORef (SBVPgm S.empty)
+        cstrs <- newIORef []
+        return IncState { rNewInps        = is
+                        , rNewKinds       = ks
+                        , rNewConsts      = nc
+                        , rNewArrs        = am
+                        , rNewTbls        = tm
+                        , rNewUIs         = ui
+                        , rNewAsgns       = pgm
+                        , rNewConstraints = cstrs
                         }
 
 -- | Get a new IncState
@@ -982,10 +985,16 @@ internalVariable st k = do (sv, nm) <- newSV st k
                                      SMTMode    _ False _ -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
-                           modifyState st rinps (first ((:) (q, (sv, "__internal_sbv_" ++ nm))))
-                                     $ noInteractive [ "Internal variable creation:"
-                                                     , "  Named: " ++ nm
-                                                     ]
+                               n = "__internal_sbv_" ++ nm
+                               v = (sv, n)
+                           modifyState st rinps (first ((q, v) :))
+                                     $ modifyIncState st rNewInps (\newInps -> case q of
+                                                                                 EX -> v : newInps
+                                                                                 -- I don't think the following can actually happen
+                                                                                 -- but just be safe:
+                                                                                 ALL  -> noInteractive [ "Internal universally quantified variable creation:"
+                                                                                                       , "  Named: " ++ nm
+                                                                                                       ])
                            return sv
 {-# INLINE internalVariable #-}
 
@@ -1374,13 +1383,10 @@ imposeConstraint isSoft attrs c = do st <- symbolicEnv
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
 internalConstraint st isSoft attrs b = do v <- svToSV st b
+                                          let c = (isSoft, attrs, v)
                                           unless (null attrs && v == trueSV) $
-                                                 modifyState st rConstraints ((isSoft, attrs, v):)
-                                                              $ noInteractive [ "Adding an internal " ++ soft ++ "constraint:"
-                                                                              , "  Named: " ++ fromMaybe "<unnamed>" (listToMaybe [nm | (":named", nm) <- attrs])
-                                                                              ]
-    where soft | isSoft = "soft-"
-               | True   = ""
+                                                 modifyState st rConstraints (c:)
+                                                              $ modifyIncState st rNewConstraints (c:)
 
 -- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
