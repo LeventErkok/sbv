@@ -115,7 +115,7 @@ invariant LenS{xs, ys, l} = L.length xs .== l + L.length ys
 measure :: Measure S
 measure LenS{ys} = [L.length ys]
 
--- * Correctness.
+-- * Correctness
 
 -- | We check that @l@ is the length of the input list @xs@ upon termination.
 -- Note that even though this is an inductive proof, it is fairly easy to prove with our SMT based
