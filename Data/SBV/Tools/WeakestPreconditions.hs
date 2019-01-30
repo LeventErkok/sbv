@@ -315,43 +315,46 @@ data Status st = Good st                -- ^ Execution finished in the given sta
                | Stuck st String        -- ^ Execution got stuck in the state, with some explanation why.
                deriving Show
 
--- | Trace the execution of a program. The return value will have a 'Good' state to indicate
--- the program ended successfully, if that is the case. The result will be 'Stuck' if the program aborts without
--- completing: This can happen either by executing an 'Abort' statement, or some invariant gets violated,
--- or if a metric fails to go down through a loop body.
+-- | Trace the execution of a program, starting from a completely concrete state. The return value will have
+-- a 'Good' state to indicate the program ended successfully, if that is the case. The result will be 'Stuck'
+-- if the program aborts without completing: This can happen either by executing an 'Abort' statement, or some
+-- invariant gets violated, or if a metric fails to go down through a loop body.
 traceExecution :: forall st. Show st
                => Program st            -- ^ Program
-               -> st                    -- ^ Starting state
+               -> st                    -- ^ Starting state. It must be fully concrete.
                -> IO (Status st)
 traceExecution Program{precondition, program, postcondition} start = do
 
-                printST start
-
                 status <- if unwrap [] "checking precondition" (precondition start)
-                          then go [Line 1] program =<< step [] start "Precondition holds, starting execution"
-                          else stop [] start "Initial state does not satisfy the precondition"
+                          then go [Line 1] program =<< step [] start "*** Precondition holds, starting execution:"
+                          else giveUp [] start "*** Initial state does not satisfy the precondition:"
 
                 case status of
                   s@Stuck{} -> return s
                   Good end  -> if unwrap [] "checking postcondition" (postcondition end)
-                               then step [] end "Program successfully terminated, post condition holds of the final state"
-                               else stop [] end "final state does not satisfy the postcondition"
+                               then step [] end "*** Program successfully terminated, post condition holds of the final state:"
+                               else giveUp [] end "*** Failed, final state does not satisfy the postcondition:"
 
-  where sLoc :: Loc -> String
-        sLoc l
-          | null l = "===>"
-          | True   = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "]"
+  where sLoc :: Loc -> String -> String
+        sLoc l m
+          | null l = m
+          | True   = "===> [" ++ intercalate "." (map sh (reverse l)) ++ "] " ++ m
           where sh (Line  i)     = show i
                 sh (Iteration i) = "{" ++ show i ++ "}"
 
         step :: Loc -> st -> String -> IO (Status st)
-        step l st m = do putStrLn $ sLoc l ++ " " ++ m
+        step l st m = do putStrLn $ sLoc l m
                          printST st
                          return $ Good st
 
         stop :: Loc -> st -> String -> IO (Status st)
-        stop l st m = do putStrLn $ sLoc l ++ " " ++ m
+        stop l st m = do putStrLn $ sLoc l m
                          return $ Stuck st m
+
+        giveUp :: Loc -> st -> String -> IO (Status st)
+        giveUp l st m = do r <- stop l st m
+                           printST st
+                           return r
 
         dispST :: st -> String
         dispST st = intercalate "\n" ["  " ++ l | l <- lines (show st)]
@@ -361,16 +364,16 @@ traceExecution Program{precondition, program, postcondition} start = do
 
         unwrap :: SymVal a => Loc -> String -> SBV a -> a
         unwrap l m = fromMaybe die . unliteral
-           where die = error $ "*** traceExecution: " ++ sLoc l ++ ": Failed to extract concrete value while " ++ show m
+           where die = error $ "*** Data.SBV.WeakestPreconditions.traceExecution: " ++ sLoc l (": Failed to extract concrete value while " ++ show m)
 
         go :: Loc -> Stmt st -> Status st -> IO (Status st)
         go _   _ s@Stuck{}  = return s
         go loc p (Good  st) = analyze p
-          where analyze Skip         = step loc st "Skip"
+          where analyze Skip = step loc st "Skip"
 
-                analyze (Abort nm)    = stop loc st $ "Abort command executed, labeled: " ++ show nm
+                analyze (Abort nm) = stop loc st $ "Abort command executed, labeled: " ++ show nm
 
-                analyze (Assign f)   = step loc (f st) "Assign"
+                analyze (Assign f) = step loc (f st) "Assign"
 
                 analyze (If c tb eb)
                   | branchTrue       = go (Line 1 : loc) tb =<< step loc st "Conditional, taking the \"then\" branch"
