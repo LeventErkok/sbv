@@ -172,7 +172,7 @@ thing to try would be the invariant that always returns true:
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Post condition fails:
+  Postcondition fails:
     Start: SumS {n = 0, i = 0, s = 0}
     End  : SumS {n = 0, i = 1, s = 1}
 

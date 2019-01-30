@@ -111,7 +111,7 @@ If we stick in an extra increment for @y@ after, we can easily break the postcon
 >>> void $ correctness Skip $ Assign $ \st@IncS{y} -> st{y = y+1}
 Following proof obligation failed:
 ==================================
-  Post condition fails:
+  Postcondition fails:
     Start: IncS {x = 0, y = 0}
     End  : IncS {x = 0, y = 2}
 
