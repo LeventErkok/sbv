@@ -328,8 +328,10 @@ findTupleArities ks = Set.toAscList
 -- | Convert in a query context
 cvtInc :: Bool -> SMTLibIncConverter [String]
 cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+            -- any new settings?
+               settings
             -- sorts
-               concatMap declSort [(s, dt) | KUninterpreted s dt <- Set.toList newKs]
+            ++ concatMap declSort [(s, dt) | KUninterpreted s dt <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- constants
@@ -358,6 +360,8 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         rm = roundingMode cfg
 
+        newKinds = Set.toList newKs
+
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ svType s ++ ")"
 
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg afterAPush False consts skolemMap) arrs
@@ -369,6 +373,14 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
         hardAsserts, softAsserts :: [([(String, String)], SV)]
         hardAsserts = [(attr, v) | (False, attr, v) <- cstrs]
         softAsserts = [(attr, v) | (True,  attr, v) <- cstrs]
+
+        -- If lists are newly introduced, put in the flatten commands:
+        settings
+          | not (null [() | KList{} <- newKinds])
+          = concat [flattenConfig | Just flattenConfig <- [supportsFlattenedSequences solverCaps]]
+          | True
+          = []
+          where solverCaps = capabilities (solver cfg)
 
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =
