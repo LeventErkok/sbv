@@ -98,11 +98,16 @@ post :: S -> SBool
 post SqrtS{x, sqrt} = sq sqrt .<= x .&& sq (sqrt+1) .> x
   where sq n = n * n
 
+-- | Stability condition: Program must leave @x@ unchanged.
+stability :: S -> S -> [(String, SBool)]
+stability SqrtS{x} SqrtS{x = x'} = [ ("x must not change", x .== x')]
+
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeSqrt :: Invariant S -> Maybe (Measure S) -> Program S
 imperativeSqrt inv msr = Program { precondition  = pre
                                  , program       = algorithm inv msr
                                  , postcondition = post
+                                 , stable        = stability
                                  }
 
 -- * Correctness

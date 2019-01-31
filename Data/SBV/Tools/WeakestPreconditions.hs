@@ -55,9 +55,15 @@ import Data.SBV.Control
 -- Hoare-triple notation, it captures:
 --
 --   @ {precondition} program {postcondition} @
-data Program st = Program { precondition  :: st -> SBool   -- ^ Environmental assumptions
-                          , program       :: Stmt st       -- ^ Program
-                          , postcondition :: st -> SBool   -- ^ Correctness statement
+--
+-- We also allow for a stability check, which is ensured at
+-- every assignment statement to deal with ghost variables.
+-- In general, this is useful for making sure what you consider
+-- as "primary inputs" remain unaffected.
+data Program st = Program { precondition  :: st -> SBool                   -- ^ Environmental assumptions
+                          , program       :: Stmt st                       -- ^ Program
+                          , postcondition :: st -> SBool                   -- ^ Correctness statement
+                          , stable        :: st -> st -> [(String, SBool)] -- ^ Each assignment must satisfy stability
                           }
 
 -- | An invariant takes a state and evaluates to a boolean.
@@ -96,6 +102,7 @@ isTotal (Seq ss)            = all isTotal ss
 -- to indicate what particular proof obligation failed for further debugging.
 data VC st m = BadPrecondition          st                  -- ^ The precondition doesn't hold. This can only happen in 'traceExecution'.
              | BadPostcondition         st st               -- ^ The postcondition doesn't hold
+             | Unstable          String st st               -- ^ Stability condition is violated
              | AbortReachable    String st st               -- ^ The named abort condition is reachable
              | InvariantPre      String st                  -- ^ Invariant doesn't hold upon entry to the named loop
              | InvariantMaintain String st st               -- ^ Invariant isn't maintained by the body
@@ -125,6 +132,10 @@ instance (Show st, Show m) => Show (VC st m) where
   show (BadPostcondition  s1 s2)                = dispVC "Postcondition fails"
                                                          [ ("Start", show s1)
                                                          , ("End  ", show s2)
+                                                         ]
+  show (Unstable          m s1 s2)              = dispVC ("Stability fails: " ++ m)
+                                                         [ ("Before", show s1)
+                                                         , ("After ", show s2)
                                                          ]
   show (AbortReachable    nm s1 s2)             = dispVC ("Abort " ++ show nm ++ " condition is satisfiable")
                                                          [ ("Before", show s1)
@@ -166,7 +177,7 @@ instance Show res => Show (ProofResult res) where
 
 -- | Checking WP based correctness
 wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
-wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition} = runSMTWith (wpSolver cfg) $ query $ do
+wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition, stable} = runSMTWith (wpSolver cfg) $ query $ do
 
         start <- create
 
@@ -194,6 +205,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
                                                      else do vc' <- case vc of
                                                                       BadPrecondition     s                 -> BadPrecondition     <$> project s
                                                                       BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
+                                                                      Unstable          l s1 s2             -> Unstable          l <$> project s1 <*> project s2
                                                                       AbortReachable    l s1 s2             -> AbortReachable    l <$> project s1 <*> project s2
                                                                       InvariantPre      l s                 -> InvariantPre      l <$> project s
                                                                       InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
@@ -237,8 +249,11 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
         -- evaluates to false, i.e., it must not be reachable.
         wp start (Abort nm) _ = return $ \st -> [(sFalse, AbortReachable nm start st)]
 
-        -- Assign simply transforms the state and passes on
-        wp _ (Assign f) post = return $ post . f
+        -- Assign simply transforms the state and passes on. It also checks that the
+        -- stability constraints are not violated.
+        wp _ (Assign f) post = return $ \st -> let st'       = f st
+                                                   vcs       = [(b, Unstable nm st st') | (nm, b) <- stable st st']
+                                               in vcs ++ post st'
 
         -- Conditional: We separately collect the VCs, and predicate with the proper branch condition
         wp start (If c tb fb) post = do tWP <- wp start tb post
@@ -333,7 +348,7 @@ traceExecution :: forall st. Show st
                => Program st            -- ^ Program
                -> st                    -- ^ Starting state. It must be fully concrete.
                -> IO (Status st)
-traceExecution Program{precondition, program, postcondition} start = do
+traceExecution Program{precondition, program, postcondition, stable} start = do
 
                 status <- if unwrap [] "checking precondition" (precondition start)
                           then go [Line 1] program =<< step [] start "*** Precondition holds, starting execution:"
@@ -383,7 +398,12 @@ traceExecution Program{precondition, program, postcondition} start = do
 
                 analyze (Abort nm) = stop loc (AbortReachable nm start st) $ "Abort command executed, labeled: " ++ show nm
 
-                analyze (Assign f) = step loc (f st) "Assign"
+                analyze (Assign f) = case [nm | (nm, b) <- stable st st', not (unwrap loc ("evaluating stability condition named " ++ show nm) b)] of
+                                       []  -> step loc st' "Assign"
+                                       nms -> let comb = intercalate ", " nms
+                                                  bad  = Unstable comb st st'
+                                              in stop loc bad $ "Stability condition fails for: " ++ show comb
+                    where st' = f st
 
                 analyze (If c tb eb)
                   | branchTrue       = go (Line 1 : loc) tb =<< step loc st "Conditional, taking the \"then\" branch"

@@ -83,16 +83,23 @@ algorithm inv msr = Seq [ assert "x, y >= 0" $ \DivS{x, y} -> x .>= 0 .&& y .>= 
 pre :: D -> SBool
 pre DivS{x, y} = x .>= 0 .&& y .> 0
 
--- | Postcondition for our program: Remainder must be non-negative and less than y,
+-- | Postcondition for our program: Remainder must be non-negative and less than @y@,
 -- and it must hold that @x = q*y + r@:
 post :: D -> SBool
 post DivS{x, y, q, r} = r .>= 0 .&& r .< y .&& x .== q * y + r
+
+-- | Stability condition: Program must leave @x@ and @y@ unchanged.
+stability :: D -> D -> [(String, SBool)]
+stability DivS{x, y} DivS{x = x', y = y'} = [ ("x must not change", x .== x')
+                                            , ("y must not change", y .== y')
+                                            ]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeDiv :: Invariant D -> Maybe (Measure D) -> Program D
 imperativeDiv inv msr = Program { precondition  = pre
                                 , program       = algorithm inv msr
                                 , postcondition = post
+                                , stable        = stability
                                 }
 
 -- * Correctness

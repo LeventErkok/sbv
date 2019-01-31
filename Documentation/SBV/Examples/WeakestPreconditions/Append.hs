@@ -99,8 +99,18 @@ algorithm = Seq [ Assign $ \st          -> st{zs = []}
 imperativeAppend :: Program A
 imperativeAppend = Program { precondition  = const sTrue  -- no precondition
                            , program       = algorithm
-                           , postcondition = \AppS{xs, ys, zs} -> zs .== xs .++ ys
+                           , postcondition = postcondition
+                           , stable        = stable
                            }
+  where -- We must append properly!
+        postcondition :: A -> SBool
+        postcondition AppS{xs, ys, zs} = zs .== xs .++ ys
+
+        -- Program should never change values of @xs@ and @ys@
+        stable :: A -> A -> [(String, SBool)]
+        stable AppS{xs, ys} AppS{xs = xs', ys = ys'} = [ ("xs must not change", xs .== xs')
+                                                       , ("ys must not change", ys .== ys')
+                                                       ]
 
 -- * Correctness
 

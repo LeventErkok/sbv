@@ -77,11 +77,16 @@ pre IncS{x} = x .>= 0
 post :: I -> SBool
 post IncS{x, y} = y .== x+1
 
+-- | Stability: @x@ must remain unchanged.
+stability :: I -> I -> [(String, SBool)]
+stability IncS{x} IncS{x = x'} = [("x must not change", x .== x')]
+
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeInc :: Stmt I -> Stmt I -> Program I
 imperativeInc before after = Program { precondition  = pre
                                      , program       = algorithm before after
                                      , postcondition = post
+                                     , stable        = stability
                                      }
 
 -- * Correctness
@@ -152,4 +157,17 @@ It is important to emphasize that you can put whatever invariant you might want:
 
 >>> void $ correctness Skip (assert "y > x" (\st@IncS{x, y} -> y .> x))
 Total correctness is established.
+
+== Violating stability
+
+What happens if our program modifies @x@? After all, we can simply set @x=10@ and @y=11@ and our post condition would be satisfied:
+
+>>> void $ correctness Skip (Assign $ \st -> st{x = 10, y = 11})
+Following proof obligation failed:
+==================================
+  Stability fails: x must not change:
+    Before: IncS {x = 0, y = 1}
+    After : IncS {x = 10, y = 11}
+
+So, the stability condition prevents programs from cheating!
 -}
