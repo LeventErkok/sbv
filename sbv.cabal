@@ -231,6 +231,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Assert
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.BoundedList
+                  , TestSuite.Basics.DynSign
                   , TestSuite.Basics.Exceptions
                   , TestSuite.Basics.GenBenchmark
                   , TestSuite.Basics.Higher

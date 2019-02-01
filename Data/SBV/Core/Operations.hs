@@ -594,11 +594,15 @@ svSelect xsOrig err ind = xs `seq` SVal kElt (Right (cache r))
                          -- takes care of that automatically
                          newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
 
+-- Change the sign of a bit-vector quantity. Fails if passed a non-bv
 svChangeSign :: Bool -> SVal -> SVal
 svChangeSign s x
+  | not (isBounded x)       = error $ "Data.SBV." ++ nm ++ ": Received non bit-vector kind: " ++ show (kindOf x)
   | Just n <- svAsInteger x = svInteger k n
   | True                    = SVal k (Right (cache y))
   where
+    nm = if s then "svSign" else "svUnsign"
+
     k = KBounded s (intSizeOf x)
     y st = do xsw <- svToSV st x
               newExpr st k (SBVApp (Extract (intSizeOf x - 1) 0) [xsw])

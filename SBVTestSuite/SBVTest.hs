@@ -28,6 +28,7 @@ import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Assert
 import qualified TestSuite.Basics.BasicTests
 import qualified TestSuite.Basics.BoundedList
+import qualified TestSuite.Basics.DynSign
 import qualified TestSuite.Basics.Exceptions
 import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
@@ -165,6 +166,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.Assert.tests
                , TestSuite.Basics.BasicTests.tests
                , TestSuite.Basics.BoundedList.tests
+               , TestSuite.Basics.DynSign.tests
                , TestSuite.Basics.Exceptions.testsRemote
                , TestSuite.Basics.GenBenchmark.tests
                , TestSuite.Basics.Higher.tests
