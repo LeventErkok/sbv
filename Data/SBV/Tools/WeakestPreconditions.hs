@@ -59,7 +59,15 @@ import Data.SBV.Control
 -- We also allow for a stability check, which is ensured at
 -- every assignment statement to deal with ghost variables.
 -- In general, this is useful for making sure what you consider
--- as "primary inputs" remain unaffected.
+-- as "primary inputs" remain unaffected. Of course, you can
+-- also put any arbitrary condition you want to check that you
+-- want performed for each 'Assign' statement.
+--
+-- Note that stability is quite a strong condition: It is intended
+-- to capture constants that never change during execution. So,
+-- if you have a program that changes an input temporarily but
+-- always restores it at the end, it would still fail the stability
+-- condition.
 data Program st = Program { precondition  :: st -> SBool                   -- ^ Environmental assumptions
                           , program       :: Stmt st                       -- ^ Program
                           , postcondition :: st -> SBool                   -- ^ Correctness statement
