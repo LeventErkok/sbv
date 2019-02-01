@@ -325,7 +325,11 @@ findTupleArities ks = Set.toAscList
                     $ Set.map length
                     $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
--- | Convert in a query context
+-- | Convert in a query context.
+-- NB. We do not store everything in 'newKs', but only what we need
+-- to do as an extra in the incremental context. See `registerKind`
+-- for a list of what we include, in case something doesn't show up
+-- and you need it!
 cvtInc :: Bool -> SMTLibIncConverter [String]
 cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?

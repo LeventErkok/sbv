@@ -1023,13 +1023,18 @@ registerKind st k
   = do -- Adding a kind to the incState is tricky; we only need to add it
        --     *    If it's an uninterpreted sort that's not already in the general state
        --     * OR If it's a tuple-sort whose cardinality isn't already in the general state
+       --     * OR If it's a list that's not already in the general state (so we can send the flatten commands)
 
        existingKinds <- readIORef (rUsedKinds st)
 
        modifyState st rUsedKinds (Set.insert k) $ do
 
+                          -- Why do we discriminate here? Because the incremental context is sensitive to the
+                          -- order: In particular, if an uninterpreted kind is already in there, we don't
+                          -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
                           let needsAdding = case k of
                                               KUninterpreted{} -> k `notElem` existingKinds
+                                              KList{}          -> k `notElem` existingKinds
                                               KTuple nks       -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
                                               _                -> False
 
