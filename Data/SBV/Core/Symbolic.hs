@@ -1069,20 +1069,16 @@ registerLabel whence st nm
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CV -> IO SV
 newConst st c = do
-  let k = kindOf c
   constMap <- readIORef (rconstMap st)
   case c `Map.lookup` constMap of
-     -- NB. Check to make sure that the kind of the hash-consed value
-     -- is the same kind as we're requesting. This might look unnecessary,
-     -- at first, but `svSign` and `svUnsign` rely on this as we can
-     -- get the same expression but at a different type. See
-     -- https://github.com/GaloisInc/cryptol/issues/566 as an example.
-     -- Also see 'newExpr' for the same.
-    Just sv | kindOf sv == k -> return sv
-    _                        -> do (sv, _) <- newSV st k
-                                   let ins = Map.insert c sv
-                                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
-                                   return sv
+    -- NB. Unlike in 'newExpr', we don't have to make sure the returned sv
+    -- has the kind we asked for, because the constMap stores the full CV
+    -- which already has a kind field in it.
+    Just sv -> return sv
+    Nothing -> do (sv, _) <- newSV st (kindOf c)
+                  let ins = Map.insert c sv
+                  modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
+                  return sv
 {-# INLINE newConst #-}
 
 -- | Create a new table; hash-cons as necessary
@@ -1108,7 +1104,6 @@ newExpr st k app = do
      -- at first, but `svSign` and `svUnsign` rely on this as we can
      -- get the same expression but at a different type. See
      -- https://github.com/GaloisInc/cryptol/issues/566 as an example.
-     -- Also see 'newConst' for the same.
      Just sv | kindOf sv == k -> return sv
      _                        -> do (sv, _) <- newSV st k
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))
