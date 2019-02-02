@@ -103,9 +103,11 @@ assert nm cond = If cond Skip (Abort nm)
 
 -- | Stability: A call of the form @stable "f" f@ means the value of the field @f@
 -- does not change during any assignment. The string argument is for diagnostic
--- purposes only.
+-- purposes only. Note that we use strong-equality here, so if the program
+-- is manipulating floats, we don't get a false-positive on @NaN@ and also
+-- not miss @+0@ and @-@@ changes.
 stable :: EqSymbolic a => String -> (st -> a) -> st -> st -> (String, SBool)
-stable nm f before after = (nm, f before .== f after)
+stable nm f before after = (nm, f before .=== f after)
 
 -- | Are all the termination measures provided?
 isTotal :: Stmt st -> Bool

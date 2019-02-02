@@ -19,7 +19,8 @@
     Loop invariants are required and must be supplied by the user. For total correctness,
     user must also provide termination measure functions. However, if desired, these can
     be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
-    For example use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
+    Checking input parameters for no-change is supported via stability checks. For example
+    use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
   * Added strong-equality (.===) and inequality (./==) to the 'EqSymbolic' class. This
     method is equivalent to the usual (.==) and (./=) for all types except 'SFloat' and
