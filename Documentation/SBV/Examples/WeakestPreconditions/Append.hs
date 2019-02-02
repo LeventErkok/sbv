@@ -97,7 +97,8 @@ algorithm = Seq [ Assign $ \st          -> st{zs = []}
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeAppend :: Program A
-imperativeAppend = Program { precondition  = const sTrue  -- no precondition
+imperativeAppend = Program { setup         = return ()
+                           , precondition  = const sTrue  -- no precondition
                            , program       = algorithm
                            , postcondition = postcondition
                            , stability     = noChange

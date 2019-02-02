@@ -83,7 +83,8 @@ noChange = [stable "x" x]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeInc :: Stmt I -> Stmt I -> Program I
-imperativeInc before after = Program { precondition  = pre
+imperativeInc before after = Program { setup         = return ()
+                                     , precondition  = pre
                                      , program       = algorithm before after
                                      , postcondition = post
                                      , stability     = noChange

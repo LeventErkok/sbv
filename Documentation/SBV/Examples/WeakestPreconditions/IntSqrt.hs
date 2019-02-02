@@ -104,7 +104,8 @@ noChange = [stable "x" x]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeSqrt :: Invariant S -> Maybe (Measure S) -> Program S
-imperativeSqrt inv msr = Program { precondition  = pre
+imperativeSqrt inv msr = Program { setup         = return ()
+                                 , precondition  = pre
                                  , program       = algorithm inv msr
                                  , postcondition = post
                                  , stability     = noChange

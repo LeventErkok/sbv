@@ -105,7 +105,8 @@ noChange = [stable "xs" xs]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeLength :: Invariant S -> Maybe (Measure S) -> Program S
-imperativeLength inv msr = Program { precondition  = pre
+imperativeLength inv msr = Program { setup         = return ()
+                                   , precondition  = pre
                                    , program       = algorithm inv msr
                                    , postcondition = post
                                    , stability     = noChange
