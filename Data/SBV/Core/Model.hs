@@ -484,12 +484,24 @@ observe = observeIf (const True)
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
-infix 4 .==, ./=
+infix 4 .==, ./=, .===, ./==
 class EqSymbolic a where
   -- | Symbolic equality.
   (.==) :: a -> a -> SBool
   -- | Symbolic inequality.
   (./=) :: a -> a -> SBool
+  -- | Strong equality. On floats ('SFloat'/'SDouble'), strong equality is object equality; that
+  -- is @NaN == NaN@ holds, but @+0 == -0@ doesn't. On other types, (.===) is simply (.==).
+  -- Note that (.==) is the /right/ notion of equality for floats per IEEE754 specs, since by
+  -- definition @+0 == -0@ and @NaN@ equals no other value including itself. But occasionally
+  -- we want to be stronger and state @NaN@ equals @NaN@ and @+0@ and @-0@ are different from
+  -- each other. In a context where your type is concrete, simply use `fpIsEqualObject`. But in
+  -- a polymorphic context, use the strong equality instead.
+  --
+  -- NB. If you do not care about or work with floats, simply use (.==) and (./=).
+  (.===) :: a -> a -> SBool
+  -- | Negation of strong equality. Equaivalent to negation of (.===) on all types.
+  (./==) :: a -> a -> SBool
 
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
   distinct :: [a] -> SBool
@@ -501,7 +513,9 @@ class EqSymbolic a where
   sElem    :: a -> [a] -> SBool
   {-# MINIMAL (.==) #-}
 
-  x ./= y = sNot (x .== y)
+  x ./=  y = sNot (x .==  y)
+  x .=== y = x .== y
+  x ./== y = sNot (x .=== y)
 
   allEqual []     = sTrue
   allEqual (x:xs) = sAll (x .==) xs
@@ -561,6 +575,8 @@ for natural reasons..
 instance EqSymbolic (SBV a) where
   SBV x .== SBV y = SBV (svEqual x y)
   SBV x ./= SBV y = SBV (svNotEqual x y)
+
+  SBV x .=== SBV y = SBV (svStrongEqual x y)
 
   -- Custom version of distinct that generates better code for base types
   distinct []                                             = sTrue

@@ -21,6 +21,14 @@
     be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
     For example use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
+  * Added strong-equality (.===) and inequality (./==) to the 'EqSymbolic' class. This
+    method is equivalent to the usual (.==) and (./=) for all types except 'SFloat' and
+    'SDouble'. For the floating types, it is object equality, that is 'NaN .=== Nan'
+    and '0 ./== -0'. Use the regular equality for float/double's as they follow the
+    IEEE754 rules, but occasionally we need to express object equality in a polymorphic
+    way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
+    except it works on all types.
+
   * SBV now supports implicit constraints in the query mode, which were previously only
     available before user queries started.
 

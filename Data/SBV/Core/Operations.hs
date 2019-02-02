@@ -21,7 +21,7 @@ module Data.SBV.Core.Operations
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svQuotRem
-  , svEqual, svNotEqual
+  , svEqual, svNotEqual, svStrongEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
@@ -59,6 +59,8 @@ import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
 
 import Data.Ratio
+
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 --------------------------------------------------------------------------------
 -- Basic constructors
@@ -285,6 +287,28 @@ svEqual = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
 svNotEqual = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=)
+
+-- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
+-- Otherwise equivalent to `svEqual`.
+svStrongEqual :: SVal -> SVal -> SVal
+svStrongEqual x y
+  | isFloat x, Just f1 <- getF x, Just f2 <- getF y
+  = svBool $ f1 `fpIsEqualObjectH` f2
+  | isDouble x, Just f1 <- getD x, Just f2 <- getD y
+  = svBool $ f1 `fpIsEqualObjectH` f2
+  | isFloat x || isDouble x
+  = SVal KBool $ Right $ cache r
+  | True
+  = svEqual x y
+  where getF (SVal _ (Left (CV _ (CFloat f)))) = Just f
+        getF _                                 = Nothing
+
+        getD (SVal _ (Left (CV _ (CDouble d)))) = Just d
+        getD _                                  = Nothing
+
+        r st = do sx <- svToSV st x
+                  sy <- svToSV st y
+                  newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sx, sy])
 
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
