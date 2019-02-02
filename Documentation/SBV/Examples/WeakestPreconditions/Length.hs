@@ -100,15 +100,15 @@ post :: S -> SBool
 post LenS{xs, l} = l .== L.length xs
 
 -- | Stability condition: Program must leave @xs@ unchanged.
-stability :: S -> S -> [(String, SBool)]
-stability LenS{xs} LenS{xs = xs'} = [ ("xs must not change", xs .== xs')]
+noChange :: Stable S
+noChange = [stable "xs" xs]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeLength :: Invariant S -> Maybe (Measure S) -> Program S
 imperativeLength inv msr = Program { precondition  = pre
                                    , program       = algorithm inv msr
                                    , postcondition = post
-                                   , stable        = stability
+                                   , stability     = noChange
                                    }
 
 -- | The invariant simply relates the length of the input to the length of the

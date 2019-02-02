@@ -78,15 +78,15 @@ post :: I -> SBool
 post IncS{x, y} = y .== x+1
 
 -- | Stability: @x@ must remain unchanged.
-stability :: I -> I -> [(String, SBool)]
-stability IncS{x} IncS{x = x'} = [("x must not change", x .== x')]
+noChange :: Stable I
+noChange = [stable "x" x]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeInc :: Stmt I -> Stmt I -> Program I
 imperativeInc before after = Program { precondition  = pre
                                      , program       = algorithm before after
                                      , postcondition = post
-                                     , stable        = stability
+                                     , stability     = noChange
                                      }
 
 -- * Correctness
@@ -165,7 +165,7 @@ What happens if our program modifies @x@? After all, we can simply set @x=10@ an
 >>> void $ correctness Skip (Assign $ \st -> st{x = 10, y = 11})
 Following proof obligation failed:
 ==================================
-  Stability fails: x must not change:
+  Stability fails for "x":
     Before: IncS {x = 0, y = 1}
     After : IncS {x = 10, y = 11}
 

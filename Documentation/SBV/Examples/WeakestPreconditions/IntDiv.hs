@@ -88,18 +88,16 @@ pre DivS{x, y} = x .>= 0 .&& y .> 0
 post :: D -> SBool
 post DivS{x, y, q, r} = r .>= 0 .&& r .< y .&& x .== q * y + r
 
--- | Stability condition: Program must leave @x@ and @y@ unchanged.
-stability :: D -> D -> [(String, SBool)]
-stability DivS{x, y} DivS{x = x', y = y'} = [ ("x must not change", x .== x')
-                                            , ("y must not change", y .== y')
-                                            ]
+-- | Stability: @x@ and @y@ must remain unchanged.
+noChange :: Stable D
+noChange = [stable "x" x, stable "y" y]
 
 -- | A program is the algorithm, together with its pre- and post-conditions.
 imperativeDiv :: Invariant D -> Maybe (Measure D) -> Program D
 imperativeDiv inv msr = Program { precondition  = pre
                                 , program       = algorithm inv msr
                                 , postcondition = post
-                                , stable        = stability
+                                , stability     = noChange
                                 }
 
 -- * Correctness

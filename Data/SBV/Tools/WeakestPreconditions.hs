@@ -20,10 +20,10 @@
 
 module Data.SBV.Tools.WeakestPreconditions (
         -- * Programs and statements
-          Program(..), Stmt(..), assert
+          Program(..), Stmt(..), assert, stable
 
-        -- * Invariants and measures
-        , Invariant, Measure
+        -- * Invariants, measures, and stability
+        , Invariant, Measure, Stable
 
         -- * Verification conditions
         , VC(..)
@@ -68,11 +68,15 @@ import Data.SBV.Control
 -- if you have a program that changes an input temporarily but
 -- always restores it at the end, it would still fail the stability
 -- condition.
-data Program st = Program { precondition  :: st -> SBool                   -- ^ Environmental assumptions
-                          , program       :: Stmt st                       -- ^ Program
-                          , postcondition :: st -> SBool                   -- ^ Correctness statement
-                          , stable        :: st -> st -> [(String, SBool)] -- ^ Each assignment must satisfy stability
+data Program st = Program { precondition  :: st -> SBool  -- ^ Environmental assumptions
+                          , program       :: Stmt st      -- ^ Program
+                          , postcondition :: st -> SBool  -- ^ Correctness statement
+                          , stability     :: Stable st    -- ^ Each assignment must satisfy stability
                           }
+
+-- | A stability condition captures a primary input that does not change. Use 'stable'
+-- to create elements of this type.
+type Stable st = [st -> st -> (String, SBool)]
 
 -- | An invariant takes a state and evaluates to a boolean.
 type Invariant st = st -> SBool
@@ -96,6 +100,12 @@ data Stmt st = Skip                                                             
 -- then it's equivalent to 'Skip'. Otherwise, it is equivalent to 'Abort'.
 assert :: String -> (st -> SBool) -> Stmt st
 assert nm cond = If cond Skip (Abort nm)
+
+-- | Stability: A call of the form @stable "f" f@ means the value of the field @f@
+-- does not change during any assignment. The string argument is for diagnostic
+-- purposes only.
+stable :: EqSymbolic a => String -> (st -> a) -> st -> st -> (String, SBool)
+stable nm f before after = (nm, f before .== f after)
 
 -- | Are all the termination measures provided?
 isTotal :: Stmt st -> Bool
@@ -141,7 +151,7 @@ instance (Show st, Show m) => Show (VC st m) where
                                                          [ ("Start", show s1)
                                                          , ("End  ", show s2)
                                                          ]
-  show (Unstable          m s1 s2)              = dispVC ("Stability fails: " ++ m)
+  show (Unstable          m s1 s2)              = dispVC ("Stability fails for " ++ show m)
                                                          [ ("Before", show s1)
                                                          , ("After ", show s2)
                                                          ]
@@ -185,7 +195,7 @@ instance Show res => Show (ProofResult res) where
 
 -- | Checking WP based correctness
 wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
-wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition, stable} = runSMTWith (wpSolver cfg) $ query $ do
+wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition, stability} = runSMTWith (wpSolver cfg) $ query $ do
 
         start <- create
 
@@ -260,7 +270,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{precondition, program, postcondition
         -- Assign simply transforms the state and passes on. It also checks that the
         -- stability constraints are not violated.
         wp _ (Assign f) post = return $ \st -> let st'       = f st
-                                                   vcs       = [(b, Unstable nm st st') | (nm, b) <- stable st st']
+                                                   vcs       = map (\s -> let (nm, b) = s st st' in (b, Unstable nm st st')) stability
                                                in vcs ++ post st'
 
         -- Conditional: We separately collect the VCs, and predicate with the proper branch condition
@@ -356,7 +366,7 @@ traceExecution :: forall st. Show st
                => Program st            -- ^ Program
                -> st                    -- ^ Starting state. It must be fully concrete.
                -> IO (Status st)
-traceExecution Program{precondition, program, postcondition, stable} start = do
+traceExecution Program{precondition, program, postcondition, stability} start = do
 
                 status <- if unwrap [] "checking precondition" (precondition start)
                           then go [Line 1] program =<< step [] start "*** Precondition holds, starting execution:"
@@ -406,7 +416,7 @@ traceExecution Program{precondition, program, postcondition, stable} start = do
 
                 analyze (Abort nm) = stop loc (AbortReachable nm start st) $ "Abort command executed, labeled: " ++ show nm
 
-                analyze (Assign f) = case [nm | (nm, b) <- stable st st', not (unwrap loc ("evaluating stability condition named " ++ show nm) b)] of
+                analyze (Assign f) = case [nm | s <- stability, let (nm, b) = s st st', not (unwrap loc ("evaluation stability condition " ++ show nm) b)] of
                                        []  -> step loc st' "Assign"
                                        nms -> let comb = intercalate ", " nms
                                                   bad  = Unstable comb st st'
