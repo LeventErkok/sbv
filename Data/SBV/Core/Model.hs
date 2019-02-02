@@ -495,7 +495,7 @@ class EqSymbolic a where
   -- Note that (.==) is the /right/ notion of equality for floats per IEEE754 specs, since by
   -- definition @+0 == -0@ and @NaN@ equals no other value including itself. But occasionally
   -- we want to be stronger and state @NaN@ equals @NaN@ and @+0@ and @-0@ are different from
-  -- each other. In a context where your type is concrete, simply use `Data.SBV.Core.fpIsEqualObject`. But in
+  -- each other. In a context where your type is concrete, simply use `Data.SBV.fpIsEqualObject`. But in
   -- a polymorphic context, use the strong equality instead.
   --
   -- NB. If you do not care about or work with floats, simply use (.==) and (./=).
