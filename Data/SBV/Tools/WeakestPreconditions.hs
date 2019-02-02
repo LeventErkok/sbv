@@ -42,7 +42,7 @@ module Data.SBV.Tools.WeakestPreconditions (
         ) where
 
 import Data.List   (intercalate)
-import Data.Maybe  (fromJust, isJust, isNothing, fromMaybe)
+import Data.Maybe  (fromJust, isJust, isNothing)
 
 import Control.Monad (when)
 
@@ -416,8 +416,17 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
         printST = putStrLn . dispST
 
         unwrap :: SymVal a => Loc -> String -> SBV a -> a
-        unwrap l m = fromMaybe die . unliteral
-           where die = error $ "*** Data.SBV.WeakestPreconditions.traceExecution: " ++ sLoc l (": Failed to extract concrete value while " ++ show m)
+        unwrap l m v = case unliteral v of
+                         Just c  -> c
+                         Nothing -> error $ unlines [ ""
+                                                    , "*** Data.SBV.WeakestPreconditions.traceExecution:"
+                                                    , "***"
+                                                    , "***    Unable to extract concrete value:"
+                                                    , "***      "  ++ sLoc l m
+                                                    , "***"
+                                                    , "*** Make sure the starting state is fully concrete and"
+                                                    , "*** there are no uninterpreted functions in play!"
+                                                    ]
 
         go :: Loc -> Stmt st -> Status st -> IO (Status st)
         go _   _ s@Stuck{}  = return s
@@ -471,3 +480,5 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                                 while (c+1) is (Just mCur) nextState
                            where mCur = currentMeasure is
                                  zero = map (const 0) mCur
+
+{-# ANN traceExecution ("HLint: ignore Use fromMaybe" :: String) #-}
