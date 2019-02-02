@@ -326,8 +326,8 @@ findTupleArities ks = Set.toAscList
                     $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
 -- | Convert in a query context.
--- NB. We do not store everything in 'newKs', but only what we need
--- to do as an extra in the incremental context. See `registerKind`
+-- NB. We do not store everything in @newKs@ below, but only what we need
+-- to do as an extra in the incremental context. See `Data.SBV.Core.Symbolic.registerKind`
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: Bool -> SMTLibIncConverter [String]
