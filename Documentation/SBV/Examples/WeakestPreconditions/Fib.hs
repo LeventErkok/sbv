@@ -34,8 +34,8 @@ import GHC.Generics (Generic)
 -- | The state for the sum program, parameterized over a base type @a@.
 data FibS a = FibS { n :: a    -- ^ The input value
                    , i :: a    -- ^ Loop counter
-                   , k :: a    -- ^ track fib (i+1)
-                   , m :: a    -- ^ track fib i
+                   , k :: a    -- ^ tracks @fib (i+1)@
+                   , m :: a    -- ^ tracks @fib i@
                    }
                    deriving (Show, Generic, Mergeable, Functor, Foldable, Traversable)
 
@@ -80,22 +80,43 @@ algorithm = Seq [ Assign $ \st -> st{i = 0, k = 1, m = 0}
                               ]
                 ]
 
--- | We cannot define fibonacci at the SBV level over integers,
--- since it would not be symbolically terminating. So, we use an
--- uninterpreted function instead, and set up the proper axioms manually.
+-- | Symbolic fibonacci as our specification. Note that we cannot
+-- really implement the fibonacci function since it is not
+-- symbolically terminating.  So, we instead uninterpret and
+-- axiomatize it below.
+--
+-- NB. The concrete part of the definition is only used in calls to 'traceExecution'
+-- and is not needed for the proof. If you don't need to call 'traceExecution', you
+-- can simply ignore that part and directly uninterpret.
 fib :: SInteger -> SInteger
-fib = uninterpret "fib"
+fib x
+ | isSymbolic x = uninterpret "fib" x
+ | True         = go x
+ where go i = ite (i .== 0) 0
+            $ ite (i .== 1) 1
+            $ go (i-1) + go (i-2)
 
 -- | Constraints and axioms we need to state explicitly to tell
 -- the SMT solver about our specification for fibonacci.
 axiomatizeFib :: Symbolic ()
-axiomatizeFib = do constrain $ fib 0 .== 0
-                   constrain $ fib 1 .== 1
+axiomatizeFib = do -- Base cases.
+                   -- Note that we write these in forms of implications,
+                   -- instead of the more direct:
+                   --
+                   --    constrain $ fib 0 .== 0
+                   --    constrain $ fib 1 .== 1
+                   --
+                   -- As otherwise they would be concretely evaluated and
+                   -- would not be sent to the SMT solver!
 
-                   -- This is unfortunate; but SBV currently does not support
-                   -- adding quantified constraints. So we have to write this
-                   -- axiom in SMT-Lib. Note also how carefully we've chosen
-                   -- this axiom to work with our proof!
+                   x <- free_
+                   constrain $ x .== 0 .=> fib x .== 0
+                   constrain $ x .== 1 .=> fib x .== 1
+
+                   -- The inductive case. Unfortunately; SBV does not support
+                   -- adding quantified constraints in the query mode. So we
+                   -- have to write this axiom directly in SMT-Lib. Note also how
+                   -- carefully we've chosen this axiom to work with our proof!
                    addAxiom "fib_n" [ "(assert (forall ((x Int))"
                                     , "                (= (fib (+ x 2)) (+ (fib (+ x 1)) (fib x)))))"
                                     ]
@@ -121,10 +142,62 @@ imperativeFib = Program { setup         = axiomatizeFib
                         , stability     = noChange
                         }
 
--- | Correctness. We have:
+-- * Correctness
+
+-- | With the axioms in place, it is trivial to establish correctness:
 --
 -- >>> correctness
 -- Total correctness is established.
 -- Q.E.D.
+--
+-- Note that I found this proof to be quite fragile: If you do not get the algorithm right
+-- or the axioms aren't in place, z3 simply goes to an infinite loop, instead of providing
+-- counter-examples. Of course, this is to be expected with the quantifiers present.
 correctness :: IO (ProofResult (FibS Integer))
 correctness = wpProveWith defaultWPCfg{wpVerbose=True} imperativeFib
+
+-- * Concrete execution
+-- $concreteExec
+
+{- $concreteExec
+
+Example concrete run. As we mentioned in the definition for 'fib', the concrete-execution
+function cannot deal with uninterpreted functions and axioms for obvious reasons. In those
+cases we revert to the concrete definition. Here's an example run:
+
+>>> traceExecution imperativeFib $ FibS {n = 3, i = 0, k = 0, m = 0}
+*** Precondition holds, starting execution:
+  {n = 3, i = 0, k = 0, m = 0}
+===> [1.1] Assign
+  {n = 3, i = 0, k = 1, m = 0}
+===> [1.2] Conditional, taking the "then" branch
+  {n = 3, i = 0, k = 1, m = 0}
+===> [1.2.1] Skip
+  {n = 3, i = 0, k = 1, m = 0}
+===> [1.3] Loop "i < n": condition holds, executing the body
+  {n = 3, i = 0, k = 1, m = 0}
+===> [1.3.{1}.1] Assign
+  {n = 3, i = 0, k = 1, m = 1}
+===> [1.3.{1}.2] Assign
+  {n = 3, i = 1, k = 1, m = 1}
+===> [1.3] Loop "i < n": condition holds, executing the body
+  {n = 3, i = 1, k = 1, m = 1}
+===> [1.3.{2}.1] Assign
+  {n = 3, i = 1, k = 2, m = 1}
+===> [1.3.{2}.2] Assign
+  {n = 3, i = 2, k = 2, m = 1}
+===> [1.3] Loop "i < n": condition holds, executing the body
+  {n = 3, i = 2, k = 2, m = 1}
+===> [1.3.{3}.1] Assign
+  {n = 3, i = 2, k = 3, m = 2}
+===> [1.3.{3}.2] Assign
+  {n = 3, i = 3, k = 3, m = 2}
+===> [1.3] Loop "i < n": condition fails, terminating
+  {n = 3, i = 3, k = 3, m = 2}
+*** Program successfully terminated, post condition holds of the final state:
+  {n = 3, i = 3, k = 3, m = 2}
+Program terminated successfully. Final state:
+  {n = 3, i = 3, k = 3, m = 2}
+
+As expected, @fib 3@ is @2@.
+-}
