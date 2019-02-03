@@ -73,8 +73,8 @@ import Data.SBV.Control
 -- want to run before the proof takes place, typically for calls
 -- to 'Data.SBV.setOption'. If not needed, simply pass @return ()@.
 -- For an interesting use case where we use setup to axiomatize
--- the spec, see 'Documentation.SBV.Examples.WeakestPreconditions.Fib'
 -- the spec, see "Documentation.SBV.Examples.WeakestPreconditions.Fib"
+-- and "Documentation.SBV.Examples.WeakestPreconditions.GCD".
 data Program st = Program { setup         :: Symbolic ()  -- ^ Any set-up required
                           , precondition  :: st -> SBool  -- ^ Environmental assumptions
                           , program       :: Stmt st      -- ^ Program
