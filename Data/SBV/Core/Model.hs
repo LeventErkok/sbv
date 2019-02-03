@@ -25,9 +25,9 @@ module Data.SBV.Core.Model (
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
-  , sBool, sBools, sWord8, sWord8s, sWord16, sWord16s, sWord32
-  , sWord32s, sWord64, sWord64s, sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s, sInt64
-  , sInt64s, sInteger, sIntegers, sReal, sReals, sFloat, sFloats, sDouble, sDoubles, sChar, sChars, sString, sStrings, sList, sLists, sTuple, sTuples
+  , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
+  , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
+  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf
@@ -294,9 +294,14 @@ instance IsString SString where
 -- necessary, as they are mere aliases for 'symbolic' and 'symbolics', but
 -- they nonetheless make programming easier.
 ------------------------------------------------------------------------------------
+
 -- | Generalization of 'Data.SBV.sBool'
 sBool :: MonadSymbolic m => String -> m SBool
 sBool = symbolic
+
+-- | Generalization of 'Data.SBV.sBool_'
+sBool_ :: MonadSymbolic m => m SBool
+sBool_ = free_
 
 -- | Generalization of 'Data.SBV.sBools'
 sBools :: MonadSymbolic m => [String] -> m [SBool]
@@ -306,6 +311,10 @@ sBools = symbolics
 sWord8 :: MonadSymbolic m => String -> m SWord8
 sWord8 = symbolic
 
+-- | Generalization of 'Data.SBV.sWord8_'
+sWord8_ :: MonadSymbolic m => m SWord8
+sWord8_ = free_
+
 -- | Generalization of 'Data.SBV.sWord8s'
 sWord8s :: MonadSymbolic m => [String] -> m [SWord8]
 sWord8s = symbolics
@@ -313,6 +322,10 @@ sWord8s = symbolics
 -- | Generalization of 'Data.SBV.sWord16'
 sWord16 :: MonadSymbolic m => String -> m SWord16
 sWord16 = symbolic
+
+-- | Generalization of 'Data.SBV.sWord16_'
+sWord16_ :: MonadSymbolic m => m SWord16
+sWord16_ = free_
 
 -- | Generalization of 'Data.SBV.sWord16s'
 sWord16s :: MonadSymbolic m => [String] -> m [SWord16]
@@ -322,6 +335,10 @@ sWord16s = symbolics
 sWord32 :: MonadSymbolic m => String -> m SWord32
 sWord32 = symbolic
 
+-- | Generalization of 'Data.SBV.sWord32_'
+sWord32_ :: MonadSymbolic m => m SWord32
+sWord32_ = free_
+
 -- | Generalization of 'Data.SBV.sWord32s'
 sWord32s :: MonadSymbolic m => [String] -> m [SWord32]
 sWord32s = symbolics
@@ -329,6 +346,10 @@ sWord32s = symbolics
 -- | Generalization of 'Data.SBV.sWord64'
 sWord64 :: MonadSymbolic m => String -> m SWord64
 sWord64 = symbolic
+
+-- | Generalization of 'Data.SBV.sWord64_'
+sWord64_ :: MonadSymbolic m => m SWord64
+sWord64_ = free_
 
 -- | Generalization of 'Data.SBV.sWord64s'
 sWord64s :: MonadSymbolic m => [String] -> m [SWord64]
@@ -338,6 +359,10 @@ sWord64s = symbolics
 sInt8 :: MonadSymbolic m => String -> m SInt8
 sInt8 = symbolic
 
+-- | Generalization of 'Data.SBV.sInt8_'
+sInt8_ :: MonadSymbolic m => m SInt8
+sInt8_ = free_
+
 -- | Generalization of 'Data.SBV.sInt8s'
 sInt8s :: MonadSymbolic m => [String] -> m [SInt8]
 sInt8s = symbolics
@@ -345,6 +370,10 @@ sInt8s = symbolics
 -- | Generalization of 'Data.SBV.sInt16'
 sInt16 :: MonadSymbolic m => String -> m SInt16
 sInt16 = symbolic
+
+-- | Generalization of 'Data.SBV.sInt16_'
+sInt16_ :: MonadSymbolic m => m SInt16
+sInt16_ = free_
 
 -- | Generalization of 'Data.SBV.sInt16s'
 sInt16s :: MonadSymbolic m => [String] -> m [SInt16]
@@ -354,6 +383,10 @@ sInt16s = symbolics
 sInt32 :: MonadSymbolic m => String -> m SInt32
 sInt32 = symbolic
 
+-- | Generalization of 'Data.SBV.sInt32_'
+sInt32_ :: MonadSymbolic m => m SInt32
+sInt32_ = free_
+
 -- | Generalization of 'Data.SBV.sInt32s'
 sInt32s :: MonadSymbolic m => [String] -> m [SInt32]
 sInt32s = symbolics
@@ -361,6 +394,10 @@ sInt32s = symbolics
 -- | Generalization of 'Data.SBV.sInt64'
 sInt64 :: MonadSymbolic m => String -> m SInt64
 sInt64 = symbolic
+
+-- | Generalization of 'Data.SBV.sInt64_'
+sInt64_ :: MonadSymbolic m => m SInt64
+sInt64_ = free_
 
 -- | Generalization of 'Data.SBV.sInt64s'
 sInt64s :: MonadSymbolic m => [String] -> m [SInt64]
@@ -370,6 +407,10 @@ sInt64s = symbolics
 sInteger:: MonadSymbolic m => String -> m SInteger
 sInteger = symbolic
 
+-- | Generalization of 'Data.SBV.sInteger_'
+sInteger_:: MonadSymbolic m => m SInteger
+sInteger_ = free_
+
 -- | Generalization of 'Data.SBV.sIntegers'
 sIntegers :: MonadSymbolic m => [String] -> m [SInteger]
 sIntegers = symbolics
@@ -377,6 +418,10 @@ sIntegers = symbolics
 -- | Generalization of 'Data.SBV.sReal'
 sReal:: MonadSymbolic m => String -> m SReal
 sReal = symbolic
+
+-- | Generalization of 'Data.SBV.sReal_'
+sReal_:: MonadSymbolic m => m SReal
+sReal_ = free_
 
 -- | Generalization of 'Data.SBV.sReals'
 sReals :: MonadSymbolic m => [String] -> m [SReal]
@@ -386,6 +431,10 @@ sReals = symbolics
 sFloat :: MonadSymbolic m => String -> m SFloat
 sFloat = symbolic
 
+-- | Generalization of 'Data.SBV.sFloat_'
+sFloat_ :: MonadSymbolic m => m SFloat
+sFloat_ = free_
+
 -- | Generalization of 'Data.SBV.sFloats'
 sFloats :: MonadSymbolic m => [String] -> m [SFloat]
 sFloats = symbolics
@@ -393,6 +442,10 @@ sFloats = symbolics
 -- | Generalization of 'Data.SBV.sDouble'
 sDouble :: MonadSymbolic m => String -> m SDouble
 sDouble = symbolic
+
+-- | Generalization of 'Data.SBV.sDouble_'
+sDouble_ :: MonadSymbolic m => m SDouble
+sDouble_ = free_
 
 -- | Generalization of 'Data.SBV.sDoubles'
 sDoubles :: MonadSymbolic m => [String] -> m [SDouble]
@@ -402,13 +455,21 @@ sDoubles = symbolics
 sChar :: MonadSymbolic m => String -> m SChar
 sChar = symbolic
 
--- | Generalization of 'Data.SBV.sString'
-sString :: MonadSymbolic m => String -> m SString
-sString = symbolic
+-- | Generalization of 'Data.SBV.sChar_'
+sChar_ :: MonadSymbolic m => m SChar
+sChar_ = free_
 
 -- | Generalization of 'Data.SBV.sChars'
 sChars :: MonadSymbolic m => [String] -> m [SChar]
 sChars = symbolics
+
+-- | Generalization of 'Data.SBV.sString'
+sString :: MonadSymbolic m => String -> m SString
+sString = symbolic
+
+-- | Generalization of 'Data.SBV.sString_'
+sString_ :: MonadSymbolic m => m SString
+sString_ = free_
 
 -- | Generalization of 'Data.SBV.sStrings'
 sStrings :: MonadSymbolic m => [String] -> m [SString]
@@ -418,6 +479,10 @@ sStrings = symbolics
 sList :: (SymVal a, MonadSymbolic m) => String -> m (SList a)
 sList = symbolic
 
+-- | Generalization of 'Data.SBV.sList_'
+sList_ :: (SymVal a, MonadSymbolic m) => m (SList a)
+sList_ = free_
+
 -- | Generalization of 'Data.SBV.sLists'
 sLists :: (SymVal a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
@@ -425,6 +490,10 @@ sLists = symbolics
 -- | Generalization of 'Data.SBV.sTuple'
 sTuple :: (SymVal tup, MonadSymbolic m) => String -> m (SBV tup)
 sTuple = symbolic
+
+-- | Generalization of 'Data.SBV.sTuple_'
+sTuple_ :: (SymVal tup, MonadSymbolic m) => m (SBV tup)
+sTuple_ = free_
 
 -- | Generalization of 'Data.SBV.sTuples'
 sTuples :: (SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]

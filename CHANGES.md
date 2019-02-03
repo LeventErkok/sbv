@@ -30,6 +30,10 @@
     way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
     except it works on all types.
 
+  * Add unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
+    'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,
+    strings, lists, and tuples.
+
   * SBV now supports implicit constraints in the query mode, which were previously only
     available before user queries started.
 

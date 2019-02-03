@@ -109,7 +109,7 @@ axiomatizeFib = do -- Base cases.
                    -- As otherwise they would be concretely evaluated and
                    -- would not be sent to the SMT solver!
 
-                   x <- free_
+                   x <- sInteger_
                    constrain $ x .== 0 .=> fib x .== 0
                    constrain $ x .== 1 .=> fib x .== 1
 

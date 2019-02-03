@@ -152,11 +152,31 @@ module Data.SBV (
   -- * Creating symbolic values
   -- ** Single value
   -- $createSym
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString, sList, sTuple
+  , sBool, sBool_
+  , sWord8, sWord8_, sWord16, sWord16_, sWord32, sWord32_, sWord64, sWord64_
+  , sInt8,  sInt8_,  sInt16,  sInt16_,  sInt32,  sInt32_,  sInt64,  sInt64_
+  , sInteger, sInteger_
+  , sReal, sReal_
+  , sFloat, sFloat_
+  , sDouble, sDouble_
+  , sChar, sChar_
+  , sString, sString_
+  , sList, sList_
+  , sTuple, sTuple_
 
   -- ** List of values
   -- $createSyms
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists, sTuples
+  , sBools
+  , sWord8s, sWord16s, sWord32s, sWord64s
+  , sInt8s,  sInt16s,  sInt32s,  sInt64s
+  , sIntegers
+  , sReals
+  , sFloats
+  , sDoubles
+  , sChars
+  , sStrings
+  , sLists
+  , sTuples
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
@@ -303,14 +323,14 @@ import Data.SBV.Core.Data       hiding (addAxiom, forall, forall_,
                                         newArray, newArray_)
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         forall, forall_, exists, exists_,
-                                        solve, sBool, sBools, sChar, sChars,
-                                        sDouble, sDoubles, sFloat, sFloats,
-                                        sInt8, sInt8s, sInt16, sInt16s, sInt32, sInt32s,
-                                        sInt64, sInt64s, sInteger, sIntegers,
-                                        sList, sLists, sTuple, sTuples,
-                                        sReal, sReals, sString, sStrings,
-                                        sWord8, sWord8s, sWord16, sWord16s,
-                                        sWord32, sWord32s, sWord64, sWord64s)
+                                        solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
+                                        sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
+                                        sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s,
+                                        sInt64, sInt64_, sInt64s, sInteger, sInteger_, sIntegers,
+                                        sList, sList_, sLists, sTuple, sTuple_, sTuples,
+                                        sReal, sReal_, sReals, sString, sString_, sStrings,
+                                        sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
+                                        sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
@@ -582,7 +602,8 @@ modules to make any sensible use of the SBV functionality.
 
 {- $createSym
 These functions simplify declaring symbolic variables of various types. Strictly speaking, they are just synonyms
-for 'free' (specialized at the given type), but they might be easier to use.
+for 'free' (specialized at the given type), but they might be easier to use. We provide both the named and anonymous
+versions, latter with the underscore suffix.
 -}
 
 {- $createSyms

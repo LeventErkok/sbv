@@ -315,11 +315,17 @@ newArray = Trans.newArray
 genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
 genMkSymVar = Trans.genMkSymVar
 
--- | Declare an 'SBool'
+-- | Declare a named 'SBool'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sBool'
 sBool :: String -> Symbolic SBool
 sBool = Trans.sBool
+
+-- | Declare an unnamed 'SBool'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sBool_'
+sBool_ :: Symbolic SBool
+sBool_ = Trans.sBool_
 
 -- | Declare a list of 'SBool's
 --
@@ -327,11 +333,17 @@ sBool = Trans.sBool
 sBools :: [String] -> Symbolic [SBool]
 sBools = Trans.sBools
 
--- | Declare an 'SWord8'
+-- | Declare a named 'SWord8'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord8'
 sWord8 :: String -> Symbolic SWord8
 sWord8 = Trans.sWord8
+
+-- | Declare an unnamed 'SWord8'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord8_'
+sWord8_ :: Symbolic SWord8
+sWord8_ = Trans.sWord8_
 
 -- | Declare a list of 'SWord8's
 --
@@ -339,11 +351,17 @@ sWord8 = Trans.sWord8
 sWord8s :: [String] -> Symbolic [SWord8]
 sWord8s = Trans.sWord8s
 
--- | Declare an 'SWord16'
+-- | Declare a named 'SWord16'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord16'
 sWord16 :: String -> Symbolic SWord16
 sWord16 = Trans.sWord16
+
+-- | Declare an unnamed 'SWord16'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord16_'
+sWord16_ :: Symbolic SWord16
+sWord16_ = Trans.sWord16_
 
 -- | Declare a list of 'SWord16's
 --
@@ -351,11 +369,17 @@ sWord16 = Trans.sWord16
 sWord16s :: [String] -> Symbolic [SWord16]
 sWord16s = Trans.sWord16s
 
--- | Declare an 'SWord32'
+-- | Declare a named 'SWord32'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord32'
 sWord32 :: String -> Symbolic SWord32
 sWord32 = Trans.sWord32
+
+-- | Declare an unamed 'SWord32'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord32_'
+sWord32_ :: Symbolic SWord32
+sWord32_ = Trans.sWord32_
 
 -- | Declare a list of 'SWord32's
 --
@@ -363,11 +387,17 @@ sWord32 = Trans.sWord32
 sWord32s :: [String] -> Symbolic [SWord32]
 sWord32s = Trans.sWord32s
 
--- | Declare an 'SWord64'
+-- | Declare a named 'SWord64'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord64'
 sWord64 :: String -> Symbolic SWord64
 sWord64 = Trans.sWord64
+
+-- | Declare an unnamed 'SWord64'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord64_'
+sWord64_ :: Symbolic SWord64
+sWord64_ = Trans.sWord64_
 
 -- | Declare a list of 'SWord64's
 --
@@ -375,11 +405,17 @@ sWord64 = Trans.sWord64
 sWord64s :: [String] -> Symbolic [SWord64]
 sWord64s = Trans.sWord64s
 
--- | Declare an 'SInt8'
+-- | Declare a named 'SInt8'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt8'
 sInt8 :: String -> Symbolic SInt8
 sInt8 = Trans.sInt8
+
+-- | Declare an unnamed 'SInt8'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt8_'
+sInt8_ :: Symbolic SInt8
+sInt8_ = Trans.sInt8_
 
 -- | Declare a list of 'SInt8's
 --
@@ -387,11 +423,17 @@ sInt8 = Trans.sInt8
 sInt8s :: [String] -> Symbolic [SInt8]
 sInt8s = Trans.sInt8s
 
--- | Declare an 'SInt16'
+-- | Declare a named 'SInt16'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt16'
 sInt16 :: String -> Symbolic SInt16
 sInt16 = Trans.sInt16
+
+-- | Declare an unnamed 'SInt16'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt16_'
+sInt16_ :: Symbolic SInt16
+sInt16_ = Trans.sInt16_
 
 -- | Declare a list of 'SInt16's
 --
@@ -399,11 +441,17 @@ sInt16 = Trans.sInt16
 sInt16s :: [String] -> Symbolic [SInt16]
 sInt16s = Trans.sInt16s
 
--- | Declare an 'SInt32'
+-- | Declare a named 'SInt32'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt32'
 sInt32 :: String -> Symbolic SInt32
 sInt32 = Trans.sInt32
+
+-- | Declare an unnamed 'SInt32'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt32_'
+sInt32_ :: Symbolic SInt32
+sInt32_ = Trans.sInt32_
 
 -- | Declare a list of 'SInt32's
 --
@@ -411,11 +459,17 @@ sInt32 = Trans.sInt32
 sInt32s :: [String] -> Symbolic [SInt32]
 sInt32s = Trans.sInt32s
 
--- | Declare an 'SInt64'
+-- | Declare a named 'SInt64'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt64'
 sInt64 :: String -> Symbolic SInt64
 sInt64 = Trans.sInt64
+
+-- | Declare an unnamed 'SInt64'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt64_'
+sInt64_ :: Symbolic SInt64
+sInt64_ = Trans.sInt64_
 
 -- | Declare a list of 'SInt64's
 --
@@ -423,11 +477,17 @@ sInt64 = Trans.sInt64
 sInt64s :: [String] -> Symbolic [SInt64]
 sInt64s = Trans.sInt64s
 
--- | Declare an 'SInteger'
+-- | Declare a named 'SInteger'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInteger'
 sInteger :: String -> Symbolic SInteger
 sInteger = Trans.sInteger
+
+-- | Declare an unnamed 'SInteger'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInteger_'
+sInteger_ :: Symbolic SInteger
+sInteger_ = Trans.sInteger_
 
 -- | Declare a list of 'SInteger's
 --
@@ -435,11 +495,17 @@ sInteger = Trans.sInteger
 sIntegers :: [String] -> Symbolic [SInteger]
 sIntegers = Trans.sIntegers
 
--- | Declare an 'SReal'
+-- | Declare a named 'SReal'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sReal'
 sReal :: String -> Symbolic SReal
 sReal = Trans.sReal
+
+-- | Declare an unnamed 'SReal'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sReal_'
+sReal_ :: Symbolic SReal
+sReal_ = Trans.sReal_
 
 -- | Declare a list of 'SReal's
 --
@@ -447,11 +513,17 @@ sReal = Trans.sReal
 sReals :: [String] -> Symbolic [SReal]
 sReals = Trans.sReals
 
--- | Declare an 'SFloat'
+-- | Declare a named 'SFloat'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFloat'
 sFloat :: String -> Symbolic SFloat
 sFloat = Trans.sFloat
+
+-- | Declare an unnamed 'SFloat'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFloat_'
+sFloat_ :: Symbolic SFloat
+sFloat_ = Trans.sFloat_
 
 -- | Declare a list of 'SFloat's
 --
@@ -459,11 +531,17 @@ sFloat = Trans.sFloat
 sFloats :: [String] -> Symbolic [SFloat]
 sFloats = Trans.sFloats
 
--- | Declare an 'SDouble'
+-- | Declare a named 'SDouble'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sDouble'
 sDouble :: String -> Symbolic SDouble
 sDouble = Trans.sDouble
+
+-- | Declare an unnamed 'SDouble'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sDouble_'
+sDouble_ :: Symbolic SDouble
+sDouble_ = Trans.sDouble_
 
 -- | Declare a list of 'SDouble's
 --
@@ -471,17 +549,17 @@ sDouble = Trans.sDouble
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = Trans.sDoubles
 
--- | Declare an 'SChar'
+-- | Declare a named 'SChar'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sChar'
 sChar :: String -> Symbolic SChar
 sChar = Trans.sChar
 
--- | Declare an 'SString'
+-- | Declare an unnamed 'SChar'
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sString'
-sString :: String -> Symbolic SString
-sString = Trans.sString
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sChar_'
+sChar_ :: Symbolic SChar
+sChar_ = Trans.sChar_
 
 -- | Declare a list of 'SChar's
 --
@@ -489,17 +567,35 @@ sString = Trans.sString
 sChars :: [String] -> Symbolic [SChar]
 sChars = Trans.sChars
 
+-- | Declare a named 'SString'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sString'
+sString :: String -> Symbolic SString
+sString = Trans.sString
+
+-- | Declare an unnamed 'SString'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sString_'
+sString_ :: Symbolic SString
+sString_ = Trans.sString_
+
 -- | Declare a list of 'SString's
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sStrings'
 sStrings :: [String] -> Symbolic [SString]
 sStrings = Trans.sStrings
 
--- | Declare an 'SList'
+-- | Declare a named 'SList'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sList'
 sList :: SymVal a => String -> Symbolic (SList a)
 sList = Trans.sList
+
+-- | Declare an unnamed 'SList'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sList_'
+sList_ :: SymVal a => Symbolic (SList a)
+sList_ = Trans.sList_
 
 -- | Declare a list of 'SList's
 --
@@ -507,11 +603,17 @@ sList = Trans.sList
 sLists :: SymVal a => [String] -> Symbolic [SList a]
 sLists = Trans.sLists
 
--- | Declare a tuple.
+-- | Declare a named tuple.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple'
 sTuple :: SymVal tup => String -> Symbolic (SBV tup)
 sTuple = Trans.sTuple
+
+-- | Declare an unnamed tuple.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple_'
+sTuple_ :: SymVal tup => Symbolic (SBV tup)
+sTuple_ = Trans.sTuple_
 
 -- | Declare a list of tuples.
 --
