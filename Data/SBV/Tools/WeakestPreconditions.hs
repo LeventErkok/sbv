@@ -74,6 +74,7 @@ import Data.SBV.Control
 -- to 'Data.SBV.setOption'. If not needed, simply pass @return ()@.
 -- For an interesting use case where we use setup to axiomatize
 -- the spec, see 'Documentation.SBV.Examples.WeakestPreconditions.Fib'
+-- the spec, see "Documentation.SBV.Examples.WeakestPreconditions.Fib"
 data Program st = Program { setup         :: Symbolic ()  -- ^ Any set-up required
                           , precondition  :: st -> SBool  -- ^ Environmental assumptions
                           , program       :: Stmt st      -- ^ Program
