@@ -53,6 +53,7 @@ import Data.Word
 
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
+import qualified Data.Sequence      as S
 
 import Control.Monad            (join, unless)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
@@ -70,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..)
+                              , SBVType(..), forceSVArg
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -479,24 +480,54 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SMTValue a, SMTValue b) => String -> (SBV a -> SBV b) -> m ([(a, b)], b)
-getFunction nm _ = do State{rUIMap} <- queryState
-                      uiMap <- liftIO $ readIORef rUIMap
-                      case nm `Map.lookup` uiMap of
-                        Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
-                        Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
-                                                   ++ "      Registered at: " ++ show et ++ "\n"
-                                                   ++ "      Requested  at: " ++ show t
-                                | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
-                                                    bad = unexpected "getFunction" cmd "a function value" Nothing
+getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SymVal a, SMTValue a, SMTValue b) => (SBV a -> SBV b) -> m ([(a, b)], b)
+getFunction f = do st@State{rUIMap} <- queryState
+                   uiMap <- liftIO $ readIORef rUIMap
+                   nm    <- findName st [n | (n, SBVType as) <- Map.toList uiMap, length as == 2]
+                   case nm `Map.lookup` uiMap of
+                     Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
+                     Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
+                                                ++ "      Registered at: " ++ show et ++ "\n"
+                                                ++ "      Requested  at: " ++ show t
+                             | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
+                                                 bad = unexpected "getFunction" cmd "a function value" Nothing
 
-                                                r <- ask cmd
+                                             r <- ask cmd
 
-                                                parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> extract r bad e
-                                                                    _                                 -> bad r Nothing
+                                             parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> extract r bad e
+                                                                 _                                 -> bad r Nothing
    where ka = kindOf (Proxy @a)
          kb = kindOf (Proxy @b)
          et = SBVType [ka, kb]
+
+         -- This can be rather expensive, but probably not too much!
+         -- Saturate the function and grab its name.
+         -- =<< liftIO (readIORef spgm)
+         findName :: State -> [String] -> m String
+         findName st@State{spgm} cands = do v <- freshVar_
+                                            r <- liftIO $ sbvToSV st $ f v
+                                            liftIO $ forceSVArg r
+                                            SBVPgm asgns <- liftIO $ readIORef spgm
+                                            case S.findIndexR ((== r) . fst) asgns of
+                                              Nothing -> error "Data.SBV.getFunction: Cannot locate the uninterpreted function!"
+                                              Just i  -> case asgns `S.index` i of
+                                                           (sv, (SBVApp (Uninterpreted nm) _)) | r == sv -> return nm
+                                                           _                                             -> let tag = case cands of
+                                                                                                                        [] ->     [ "***    But, there are no matching uninterpreted functions in the context." ]
+                                                                                                                        [x]->     [ "***    The only possible candidate is: " ++ x ]
+                                                                                                                        _  ->     [ "***    Candidates are:"
+                                                                                                                                  , "***        " ++ intercalate ", " cands
+                                                                                                                                  ]
+                                                                                                            in error $ unlines $  [ ""
+                                                                                                                                  , "*** Data.SBV.getFunction: Called on a non-uninterpreted function!"
+                                                                                                                                  , "***"
+                                                                                                                                  , "***    Expected to receive a function created by \"uninterpret\""
+                                                                                                                                  ]
+                                                                                                                               ++ tag
+                                                                                                                               ++ [ "***"
+                                                                                                                                  , "*** Make sure to call getFunction on uninterpreted functions only!"
+                                                                                                                                  , "*** Or report this as a bug if that is already the case."
+                                                                                                                                  ]
 
          extract r bad e = case vals e of
                              Just res -> case convert (partitionEithers res) of
@@ -512,7 +543,7 @@ getFunction nm _ = do State{rUIMap} <- queryState
                  convert :: ([(SExpr, SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
                  convert (vs, [d]) = do ab <- mapM cvtPair vs
                                         dv <- sexprToVal d
-                                        return $ (ab, dv)
+                                        return (ab, dv)
                  convert _         = Nothing
 
                  cvtPair :: (SExpr, SExpr) -> Maybe (a, b)
