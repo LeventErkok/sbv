@@ -479,6 +479,26 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     EApp [EApp [ENum (i, _), v@(ENum (j, _))]] | sv `elem` [falseSV, trueSV] && i `elem` [0, 1] && i == j -> extract v
                                     _                                                                                                     -> bad r Nothing
 
+-- | A class which allows for sexpr-conversion to functions
+class SMTFunction a b where
+  sexprToFun :: SExpr -> Maybe ([(a, b)], b)  -- key-value pairs + default
+
+instance (SMTValue a, SMTValue b) => SMTFunction a b where
+  sexprToFun e = convert =<< partitionEithers <$> vals e
+    where vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
+          vals (EApp [ECon "store", prev, ind, val])                         = do rest <- vals prev
+                                                                                  return $ Left (ind, val) : rest
+          vals _                                                             = Nothing
+
+          convert :: ([(SExpr, SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
+          convert (vs, [d]) = do ab <- mapM cvtPair vs
+                                 dv <- sexprToVal d
+                                 return (ab, dv)
+          convert _         = Nothing
+
+          cvtPair :: (SExpr, SExpr) -> Maybe (a, b)
+          cvtPair (k, v) = (,) <$> sexprToVal k <*> sexprToVal v
+
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SymVal a, SMTValue a, SMTValue b) => (SBV a -> SBV b) -> m ([(a, b)], b)
 getFunction f = do st@State{rUIMap} <- queryState
@@ -494,15 +514,14 @@ getFunction f = do st@State{rUIMap} <- queryState
 
                                              r <- ask cmd
 
-                                             parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> extract r bad e
-                                                                 _                                 -> bad r Nothing
+                                             parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm, Just assocs <- sexprToFun e -> return assocs
+                                                                 _                                                              -> bad r Nothing
    where ka = kindOf (Proxy @a)
          kb = kindOf (Proxy @b)
          et = SBVType [ka, kb]
 
          -- This can be rather expensive, but probably not too much!
          -- Saturate the function and grab its name.
-         -- =<< liftIO (readIORef spgm)
          findName :: State -> [String] -> m String
          findName st@State{spgm} cands = do v <- freshVar_
                                             r <- liftIO $ sbvToSV st $ f v
@@ -528,26 +547,6 @@ getFunction f = do st@State{rUIMap} <- queryState
                                                                                                                                 , "*** Make sure to call getFunction on uninterpreted functions only!"
                                                                                                                                 , "*** Or report this as a bug if that is already the case."
                                                                                                                                 ]
-
-         extract r bad e = case vals e of
-                             Just res -> case convert (partitionEithers res) of
-                                            Just ps -> return ps
-                                            Nothing -> bad r Nothing
-                             Nothing  -> bad r Nothing
-
-           where vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
-                 vals (EApp [ECon "store", prev, ind, val])                         = do rest <- vals prev
-                                                                                         return $ Left (ind, val) : rest
-                 vals _                                                             = Nothing
-
-                 convert :: ([(SExpr, SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
-                 convert (vs, [d]) = do ab <- mapM cvtPair vs
-                                        dv <- sexprToVal d
-                                        return (ab, dv)
-                 convert _         = Nothing
-
-                 cvtPair :: (SExpr, SExpr) -> Maybe (a, b)
-                 cvtPair (k, v) = (,) <$> sexprToVal k <*> sexprToVal v
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
