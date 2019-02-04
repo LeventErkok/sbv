@@ -511,23 +511,23 @@ getFunction f = do st@State{rUIMap} <- queryState
                                             case S.findIndexR ((== r) . fst) asgns of
                                               Nothing -> error "Data.SBV.getFunction: Cannot locate the uninterpreted function!"
                                               Just i  -> case asgns `S.index` i of
-                                                           (sv, (SBVApp (Uninterpreted nm) _)) | r == sv -> return nm
-                                                           _                                             -> let tag = case cands of
-                                                                                                                        [] ->     [ "***    But, there are no matching uninterpreted functions in the context." ]
-                                                                                                                        [x]->     [ "***    The only possible candidate is: " ++ x ]
-                                                                                                                        _  ->     [ "***    Candidates are:"
-                                                                                                                                  , "***        " ++ intercalate ", " cands
-                                                                                                                                  ]
-                                                                                                            in error $ unlines $  [ ""
-                                                                                                                                  , "*** Data.SBV.getFunction: Called on a non-uninterpreted function!"
-                                                                                                                                  , "***"
-                                                                                                                                  , "***    Expected to receive a function created by \"uninterpret\""
-                                                                                                                                  ]
-                                                                                                                               ++ tag
-                                                                                                                               ++ [ "***"
-                                                                                                                                  , "*** Make sure to call getFunction on uninterpreted functions only!"
-                                                                                                                                  , "*** Or report this as a bug if that is already the case."
-                                                                                                                                  ]
+                                                           (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
+                                                           _                                           -> let tag = case cands of
+                                                                                                                      [] ->     [ "***    But, there are no matching uninterpreted functions in the context." ]
+                                                                                                                      [x]->     [ "***    The only possible candidate is: " ++ x ]
+                                                                                                                      _  ->     [ "***    Candidates are:"
+                                                                                                                                , "***        " ++ intercalate ", " cands
+                                                                                                                                ]
+                                                                                                          in error $ unlines $  [ ""
+                                                                                                                                , "*** Data.SBV.getFunction: Called on a non-uninterpreted function!"
+                                                                                                                                , "***"
+                                                                                                                                , "***    Expected to receive a function created by \"uninterpret\""
+                                                                                                                                ]
+                                                                                                                             ++ tag
+                                                                                                                             ++ [ "***"
+                                                                                                                                , "*** Make sure to call getFunction on uninterpreted functions only!"
+                                                                                                                                , "*** Or report this as a bug if that is already the case."
+                                                                                                                                ]
 
          extract r bad e = case vals e of
                              Just res -> case convert (partitionEithers res) of
