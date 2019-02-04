@@ -23,7 +23,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..)
+     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
@@ -36,6 +36,8 @@ module Data.SBV.Control.Utils (
      , runProofOn
      , executeQuery
      ) where
+
+import Data.Either (partitionEithers)
 
 import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
@@ -68,6 +70,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
+                              , SBVType(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -474,6 +477,46 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                 parse r bad $ \case EApp [EApp [ECon o,  v]]                   | o == show sv                                             -> extract v
                                     EApp [EApp [ENum (i, _), v@(ENum (j, _))]] | sv `elem` [falseSV, trueSV] && i `elem` [0, 1] && i == j -> extract v
                                     _                                                                                                     -> bad r Nothing
+
+-- | Generalization of 'Data.SBV.Control.getFunction'
+getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SMTValue a, SMTValue b) => String -> (SBV a -> SBV b) -> m ([(a, b)], b)
+getFunction nm _ = do State{rUIMap} <- queryState
+                      uiMap <- liftIO $ readIORef rUIMap
+                      case nm `Map.lookup` uiMap of
+                        Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
+                        Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
+                                                   ++ "      Registered at: " ++ show et ++ "\n"
+                                                   ++ "      Requested  at: " ++ show t
+                                | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
+                                                    bad = unexpected "getFunction" cmd "a function value" Nothing
+
+                                                r <- ask cmd
+
+                                                parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> extract r bad e
+                                                                    _                                 -> bad r Nothing
+   where ka = kindOf (Proxy @a)
+         kb = kindOf (Proxy @b)
+         et = SBVType [ka, kb]
+
+         extract r bad e = case vals e of
+                             Just res -> case convert (partitionEithers res) of
+                                            Just ps -> return ps
+                                            Nothing -> bad r Nothing
+                             Nothing  -> bad r Nothing
+
+           where vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
+                 vals (EApp [ECon "store", prev, ind, val])                         = do rest <- vals prev
+                                                                                         return $ Left (ind, val) : rest
+                 vals _                                                             = Nothing
+
+                 convert :: ([(SExpr, SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
+                 convert (vs, [d]) = do ab <- mapM cvtPair vs
+                                        dv <- sexprToVal d
+                                        return $ (ab, dv)
+                 convert _         = Nothing
+
+                 cvtPair :: (SExpr, SExpr) -> Maybe (a, b)
+                 cvtPair (k, v) = (,) <$> sexprToVal k <*> sexprToVal v
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String

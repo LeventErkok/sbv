@@ -385,6 +385,12 @@ getValue = Trans.getValue
 getUninterpretedValue :: HasKind a => SBV a -> Query String
 getUninterpretedValue = Trans.getUninterpretedValue
 
+-- | Get the value of an uninterpreted function, as a list of domain, value pairs.
+-- The final value is the "else" clause, i.e., what the function maps values outside
+-- of the domain of the first list.
+getFunction :: (HasKind a, HasKind b, SMTValue a, SMTValue b) => String -> (SBV a -> SBV b) -> Query ([(a, b)], b)
+getFunction = Trans.getFunction
+
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
 -- we will "squash" the representations.
 --
