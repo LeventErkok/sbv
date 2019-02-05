@@ -11,13 +11,15 @@
 
 {-# LANGUAGE BangPatterns #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr) where
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseStoreAssociations) where
 
-import Data.Bits  (setBit, testBit)
-import Data.Word  (Word32, Word64)
-import Data.Char  (isDigit, ord, isSpace)
-import Data.List  (isPrefixOf)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Bits   (setBit, testBit)
+import Data.Char   (isDigit, ord, isSpace)
+import Data.Either (partitionEithers)
+import Data.List   (isPrefixOf)
+import Data.Maybe  (fromMaybe, listToMaybe)
+import Data.Word   (Word32, Word64)
+
 import Numeric    (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.Core.AlgReals
@@ -236,3 +238,23 @@ constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` f
                  , (["RTN", "roundTowardNegative"],    show RoundTowardNegative)
                  , (["RTZ", "roundTowardZero"],        show RoundTowardZero)
                  ]
+
+-- | Parse a series of associations in the array notation, things that look like:
+--
+--     (store (store ((as const Array) 12) 3 5 9) 5 6 75)
+--
+-- This is (most likely) entirely Z3 specific. So, we might have to tweak it for other
+-- solvers; though it isn't entirely clear how to do that as we do not know what solver
+-- we're using here. The trick is to handle all of possible SExpr's we see.
+-- We'll cross that bridge when we get to it.
+parseStoreAssociations :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
+parseStoreAssociations e = regroup =<< partitionEithers <$> vals e
+    where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
+          vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
+                                                                                  return $ Left (init argsVal, last argsVal) : rest
+          vals _                                                             = Nothing
+
+          regroup :: ([([SExpr], SExpr)], [SExpr]) -> Maybe ([([SExpr], SExpr)], SExpr)
+          regroup (vs, [d]) = Just (vs, d)
+          regroup _         = Nothing
