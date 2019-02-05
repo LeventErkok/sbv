@@ -480,24 +480,30 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to functions
-class SMTFunction a b where
-  sexprToFun :: SExpr -> Maybe ([(a, b)], b)  -- key-value pairs + default
+class (SMTValue a, SMTValue b) => SMTFunction a b where
+  sexprToPoint :: [SExpr] -> SExpr -> Maybe (a, b)
+  sexprToFun   :: SExpr   -> Maybe ([(a, b)], b)  -- key-value pairs + default
 
-instance (SMTValue a, SMTValue b) => SMTFunction a b where
+  -- Default and boring definition of converting an assoc list in SMT-Lib notation
+  -- to a reasonable key-value pairs and a default. This is entirely Z3 specific
+  -- so, we might have to tweak it for other solvers; though it isn't entirely clear
+  -- how to do that as we do not know what solver we're using here. The trick is
+  -- to handle all of possible SExpr's we see. We'll cross that bridge when we
+  -- get to it.
   sexprToFun e = convert =<< partitionEithers <$> vals e
-    where vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
-          vals (EApp [ECon "store", prev, ind, val])                         = do rest <- vals prev
-                                                                                  return $ Left (ind, val) : rest
+    where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
+          vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
+                                                                                  return $ Left (init argsVal, last argsVal) : rest
           vals _                                                             = Nothing
 
-          convert :: ([(SExpr, SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
-          convert (vs, [d]) = do ab <- mapM cvtPair vs
-                                 dv <- sexprToVal d
-                                 return (ab, dv)
+          convert :: ([([SExpr], SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
+          convert (vs, [d]) = (,) <$> mapM (uncurry sexprToPoint) vs <*> sexprToVal d
           convert _         = Nothing
 
-          cvtPair :: (SExpr, SExpr) -> Maybe (a, b)
-          cvtPair (k, v) = (,) <$> sexprToVal k <*> sexprToVal v
+instance (SMTValue a, SMTValue b) => SMTFunction a b where
+   sexprToPoint [x] d = (,) <$> sexprToVal x <*> sexprToVal d
+   sexprToPoint _   _ = Nothing
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SymVal a, SMTValue a, SMTValue b) => (SBV a -> SBV b) -> m ([(a, b)], b)
