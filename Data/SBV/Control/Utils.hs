@@ -9,21 +9,22 @@
 -- Query related utils.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE DefaultSignatures     #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE DefaultSignatures      #-}
+{-# LANGUAGE FlexibleContexts       #-}
+{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE LambdaCase             #-}
+{-# LANGUAGE NamedFieldPuns         #-}
+{-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TupleSections          #-}
+{-# LANGUAGE TypeApplications       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..)
+     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
@@ -36,8 +37,6 @@ module Data.SBV.Control.Utils (
      , runProofOn
      , executeQuery
      ) where
-
-import Data.Either (partitionEithers)
 
 import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
@@ -53,7 +52,6 @@ import Data.Word
 
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
-import qualified Data.Sequence      as S
 
 import Control.Monad            (join, unless)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
@@ -71,7 +69,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg
+                              , SBVType(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -480,79 +478,41 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to functions
-class (SMTValue a, SMTValue b) => SMTFunction a b where
-  sexprToPoint :: [SExpr] -> SExpr -> Maybe (a, b)
-  sexprToFun   :: SExpr   -> Maybe ([(a, b)], b)  -- key-value pairs + default
+class SMTFunction fun a r | fun -> a r, a r -> fun where
+  sexprArg   :: fun -> [SExpr] -> Maybe a
+  sexprRes   :: fun -> SExpr   -> Maybe r
+  sexprToFun :: fun -> SExpr   -> Maybe ([(a, r)], r)
+  smtFunType :: fun -> SBVType
 
-  -- Default and boring definition of converting an assoc list in SMT-Lib notation
-  -- to a reasonable key-value pairs and a default. This is entirely Z3 specific
-  -- so, we might have to tweak it for other solvers; though it isn't entirely clear
-  -- how to do that as we do not know what solver we're using here. The trick is
-  -- to handle all of possible SExpr's we see. We'll cross that bridge when we
-  -- get to it.
-  sexprToFun e = convert =<< partitionEithers <$> vals e
-    where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
-          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
-          vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
-                                                                                  return $ Left (init argsVal, last argsVal) : rest
-          vals _                                                             = Nothing
+  sexprToFun f e = convert =<< parseStoreAssociations e
+    where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprRes f d
+          sexprPoint (as, v) = (,) <$> sexprArg f as <*> sexprRes f v
 
-          convert :: ([([SExpr], SExpr)], [SExpr]) -> Maybe ([(a, b)], b)
-          convert (vs, [d]) = (,) <$> mapM (uncurry sexprToPoint) vs <*> sexprToVal d
-          convert _         = Nothing
+instance (HasKind a, HasKind r, SMTValue a, SMTValue r) => SMTFunction (SBV a -> SBV r) a r where
+   sexprArg _ [x] = sexprToVal x
+   sexprArg _ _   = Nothing
 
-instance (SMTValue a, SMTValue b) => SMTFunction a b where
-   sexprToPoint [x] d = (,) <$> sexprToVal x <*> sexprToVal d
-   sexprToPoint _   _ = Nothing
+   sexprRes _ = sexprToVal
+
+   smtFunType _   = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: forall m a b. (MonadIO m, MonadQuery m, HasKind a, HasKind b, SymVal a, SMTValue a, SMTValue b) => (SBV a -> SBV b) -> m ([(a, b)], b)
-getFunction f = do st@State{rUIMap} <- queryState
-                   uiMap <- liftIO $ readIORef rUIMap
-                   nm    <- findName st [n | (n, SBVType as) <- Map.toList uiMap, length as == 2]
-                   case nm `Map.lookup` uiMap of
-                     Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
-                     Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
-                                                ++ "      Registered at: " ++ show et ++ "\n"
-                                                ++ "      Requested  at: " ++ show t
-                             | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
-                                                 bad = unexpected "getFunction" cmd "a function value" Nothing
+getFunction :: forall m a b. (MonadIO m, MonadQuery m, SMTValue a, SMTValue b, HasKind a, HasKind b) => String -> (SBV a -> SBV b) -> m ([(a, b)], b)
+getFunction nm f = do State{rUIMap} <- queryState
+                      uiMap <- liftIO $ readIORef rUIMap
+                      let et = smtFunType f
+                      case nm `Map.lookup` uiMap of
+                        Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
+                        Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
+                                                   ++ "      Registered at: " ++ show et ++ "\n"
+                                                   ++ "      Requested  at: " ++ show t
+                                | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
+                                                    bad = unexpected "getFunction" cmd "a function value" Nothing
 
-                                             r <- ask cmd
+                                                r <- ask cmd
 
-                                             parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm, Just assocs <- sexprToFun e -> return assocs
-                                                                 _                                                              -> bad r Nothing
-   where ka = kindOf (Proxy @a)
-         kb = kindOf (Proxy @b)
-         et = SBVType [ka, kb]
-
-         -- This can be rather expensive, but probably not too much!
-         -- Saturate the function and grab its name.
-         findName :: State -> [String] -> m String
-         findName st@State{spgm} cands = do v <- freshVar_
-                                            r <- liftIO $ sbvToSV st $ f v
-                                            liftIO $ forceSVArg r
-                                            SBVPgm asgns <- liftIO $ readIORef spgm
-                                            case S.findIndexR ((== r) . fst) asgns of
-                                              Nothing -> error "Data.SBV.getFunction: Cannot locate the uninterpreted function!"
-                                              Just i  -> case asgns `S.index` i of
-                                                           (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
-                                                           _                                           -> let tag = case cands of
-                                                                                                                      [] ->     [ "***    But, there are no matching uninterpreted functions in the context." ]
-                                                                                                                      [x]->     [ "***    The only possible candidate is: " ++ x ]
-                                                                                                                      _  ->     [ "***    Candidates are:"
-                                                                                                                                , "***        " ++ intercalate ", " cands
-                                                                                                                                ]
-                                                                                                          in error $ unlines $  [ ""
-                                                                                                                                , "*** Data.SBV.getFunction: Called on a non-uninterpreted function!"
-                                                                                                                                , "***"
-                                                                                                                                , "***    Expected to receive a function created by \"uninterpret\""
-                                                                                                                                ]
-                                                                                                                             ++ tag
-                                                                                                                             ++ [ "***"
-                                                                                                                                , "*** Make sure to call getFunction on uninterpreted functions only!"
-                                                                                                                                , "*** Or report this as a bug if that is already the case."
-                                                                                                                                ]
+                                                parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm, Just assocs <- sexprToFun f e -> return assocs
+                                                                    _                                                                -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
