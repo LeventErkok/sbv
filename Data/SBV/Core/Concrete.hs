@@ -26,6 +26,9 @@ import Data.SBV.Core.AlgReals
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
+data SumSide = InL | InR
+  deriving (Eq, Ord)
+
 -- | A constant value
 data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
           | CInteger  !Integer             -- ^ bit-vector/unbounded integer
@@ -36,7 +39,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
           | CList     ![CVal]              -- ^ list
           | CUserSort !(Maybe Int, String) -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
           | CTuple    ![CVal]              -- ^ tuple
-          | CSum      !Int !CVal           -- ^ disjoint union
+          | CSum      !SumSide !CVal       -- ^ disjoint union
 
 -- | Assing a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -190,7 +193,7 @@ trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
 -- | Lift a unary function through a 'CV'.
-liftCV :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CVal] -> b) -> ([CVal] -> b) -> (Int -> CVal -> b) -> CV -> b
+liftCV :: (AlgReal -> b) -> (Integer -> b) -> (Float -> b) -> (Double -> b) -> (Char -> b) -> (String -> b) -> ((Maybe Int, String) -> b) -> ([CVal] -> b) -> ([CVal] -> b) -> (SumSide -> CVal -> b) -> CV -> b
 liftCV f _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
 liftCV _ f _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
 liftCV _ _ f _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
@@ -203,7 +206,7 @@ liftCV _ _ _ _ _ _ _ _ f _ (CV _ (CTuple    v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ f (CV _ (CSum    i v)) = f i v
 
 -- | Lift a binary function through a 'CV'.
-liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((Int, CVal) -> (Int, CVal) -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
+liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((SumSide, CVal) -> (SumSide, CVal) -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
 liftCV2 r i f d c s u v v' w x y = case (cvVal x, cvVal y) of
                                    (CAlgReal  a, CAlgReal  b) -> r a b
                                    (CInteger  a, CInteger  b) -> i a b
@@ -271,8 +274,12 @@ showCV shk w               = liftCV show show show show show show snd shL shT sh
                             KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
                             kw -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
 
-            shSum :: Int -> CVal -> String
-            shSum _ _ = "error: TODO"
+            shSum :: SumSide -> CVal -> String
+            shSum side val = case kindOf w of
+              KSum k1 k2 -> case side of
+                InL -> "(InL " ++ showCV False (CV k1 val) ++ ")"
+                InR -> "(InR " ++ showCV False (CV k2 val) ++ ")"
+              kw -> error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
@@ -316,9 +323,11 @@ randomCVal k =
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KTuple ks          -> CTuple <$> traverse randomCVal ks
-    KSum ks            -> do
-      i <- randomRIO (0, length ks - 1)
-      CSum i <$> randomCVal (ks !! i)
+    KSum k1 k2         -> do
+      i <- randomIO
+      if i
+      then CSum InL <$> randomCVal k1
+      else CSum InR <$> randomCVal k2
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

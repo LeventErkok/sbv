@@ -72,10 +72,11 @@ Library
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
                   , Data.SBV.Dynamic
+                  , Data.SBV.Either
                   , Data.SBV.Internals
                   , Data.SBV.List
+                  , Data.SBV.Maybe
                   , Data.SBV.String
-                  , Data.SBV.Sum
                   , Data.SBV.Tuple
                   , Data.SBV.Char
                   , Data.SBV.RegExp

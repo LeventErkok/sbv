@@ -308,6 +308,7 @@ cvToSMTLib rm x
   | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
+  | isSum x          , CSum side c      <- cvVal x = smtLibSum (kindOf x) side c
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
@@ -336,6 +337,11 @@ cvToSMTLib rm x
         smtLibTup (KTuple []) _  = "SBVTuple0"
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
+
+        smtLibSum :: Kind -> SumSide -> CVal -> String
+        smtLibSum (KSum k _) InL c = "(left "  ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibSum (KSum _ k) InR c = "(right " ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibSum k          _   _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibSum), received kind: " ++ show k
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)

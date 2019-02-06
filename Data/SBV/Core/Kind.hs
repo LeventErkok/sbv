@@ -46,7 +46,7 @@ data Kind = KBool
           | KString
           | KList Kind
           | KTuple [Kind]
-          | KSum [Kind]
+          | KSum Kind Kind
           deriving (Eq, Ord)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
@@ -65,7 +65,7 @@ instance Show Kind where
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
-  show (KSum m)             = "(" ++ intercalate " | " (show <$> m) ++ ")"
+  show (KSum k1 k2)         = "(Either " ++ show k1 ++ " " ++ show k2 ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -81,7 +81,7 @@ smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
 smtType (KUninterpreted s _) = s
 smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
-smtType (KSum kinds)         = "(SBVSum" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType (KSum k1 k2)         = "(SBVSum2" ++ " " ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -167,7 +167,7 @@ class HasKind a where
                   KChar              -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek           -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
                   KTuple tys         -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
-                  KSum tys           -> error $ "SBV.HasKind.intSizeOf((S)Sum)" ++ show tys
+                  KSum k1 k2         -> error $ "SBV.HasKind.intSizeOf((S)Sum)" ++ show (k1, k2)
 
   isBoolean       (kindOf -> KBool{})          = True
   isBoolean       _                            = False
@@ -263,4 +263,7 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
   kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h)]
 
 instance (HasKind a, HasKind b) => HasKind (Either a b) where
-  kindOf _ = KSum [kindOf (Proxy @a), kindOf (Proxy @b)]
+  kindOf _ = KSum (kindOf (Proxy @a)) (kindOf (Proxy @b))
+
+instance HasKind a => HasKind (Maybe a) where
+  kindOf _ = KSum (kindOf (Proxy @())) (kindOf (Proxy @a))

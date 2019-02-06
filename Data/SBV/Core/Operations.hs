@@ -1245,7 +1245,7 @@ liftSym2B
   -> (String -> String -> Bool)
   -> ([CVal] -> [CVal] -> Bool)
   -> ([CVal] -> [CVal] -> Bool)
-  -> ((Int, CVal) -> (Int, CVal) -> Bool)
+  -> ((SumSide, CVal) -> (SumSide, CVal) -> Bool)
   -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool)
   -> SVal
   -> SVal

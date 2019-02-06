@@ -692,7 +692,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
                               KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KSum k             -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show k
+                              KSum k1 k2         -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
                               KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
@@ -712,7 +712,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KSum k             -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show k
+                                KSum k1 k2         -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
                                 KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
@@ -780,9 +780,12 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor 0)   [])    = "SBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
-        sh (SBVApp (SumConstructor     b) [arg]) = "(" ++ (if b then "right " else "left ") ++ ssv arg ++ ")"
-        sh (SBVApp (SumIs              b) [arg]) = "((_ is " ++ (if b then "right" else "left") ++ ") " ++ ssv arg ++ ")"
-        sh (SBVApp (SumAccess          b) [arg]) = "(" ++ (if b then "getRight " else "getLeft ") ++ ssv arg ++ ")"
+        sh (SBVApp (SumConstructor   InL) [arg]) = "(left " ++ ssv arg ++ ")"
+        sh (SBVApp (SumConstructor   InR) [arg]) = "(right " ++ ssv arg ++ ")"
+        sh (SBVApp (SumIs            InL) [arg]) = "((_ is left) " ++ ssv arg ++ ")"
+        sh (SBVApp (SumIs            InR) [arg]) = "((_ is right) " ++ ssv arg ++ ")"
+        sh (SBVApp (SumAccess        InL) [arg]) = "(getLeft " ++ ssv arg ++ ")"
+        sh (SBVApp (SumAccess        InR) [arg]) = "(getRight " ++ ssv arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

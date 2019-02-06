@@ -16,7 +16,7 @@ module TestSuite.Queries.Sums (tests)  where
 
 import Data.SBV
 import Data.SBV.Control
-import Data.SBV.Sum
+import Data.SBV.Either as E
 import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
@@ -35,9 +35,9 @@ testQuery t rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=
 
 querySums :: Symbolic (Either Integer Char)
 querySums = do
-  a <- sSum @Integer @Char "a"
+  a <- sEither @Integer @Char "a"
 
-  constrain $ case_ a (.== 1) (const sFalse)
+  constrain $ E.either a (.== 1) (const sFalse)
 
   query $ do
     _ <- checkSat

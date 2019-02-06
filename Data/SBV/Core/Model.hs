@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
-  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sSum, sSums
+  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sEither, sEithers, sMaybe, sMaybes
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf
@@ -235,14 +235,26 @@ fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple rece
 instance (SymVal a, SymVal b) => SymVal (Either a b) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Either a b)))
   literal = \case
-    Left  a -> SBV $ SVal k $ Left $ CV k $ CSum 0 $ toCV a
-    Right b -> SBV $ SVal k $ Left $ CV k $ CSum 1 $ toCV b
+    Left  a -> SBV $ SVal k $ Left $ CV k $ CSum InL $ toCV a
+    Right b -> SBV $ SVal k $ Left $ CV k $ CSum InR $ toCV b
     where k = kindOf (Proxy @(Either a b))
-  fromCV (CV (KSum [k1, _k2]) (CSum 0 c))
+  fromCV (CV (KSum k1 _k2) (CSum InL c))
     = Left  $ fromCV $ CV k1 c
-  fromCV (CV (KSum [_k1, k2]) (CSum 1 c))
+  fromCV (CV (KSum _k1 k2) (CSum InR c))
     = Right $ fromCV $ CV k2 c
   fromCV bad = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
+
+instance SymVal a => SymVal (Maybe a) where
+  mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))
+  literal = \case
+    Nothing -> SBV $ SVal k $ Left $ CV k $ CSum InL $ toCV ()
+    Just  a -> SBV $ SVal k $ Left $ CV k $ CSum InR $ toCV a
+    where k = kindOf (Proxy @(Maybe a))
+  fromCV (CV (KSum _k1 _k2) (CSum InL _c))
+    = Nothing
+  fromCV (CV (KSum _k1 k2) (CSum InR c))
+    = Just $ fromCV $ CV k2 c
+  fromCV bad = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
@@ -512,11 +524,17 @@ sTuple_ = free_
 sTuples :: (SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
 
-sSum :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SSum a b)
-sSum = symbolic
+sEither :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SEither a b)
+sEither = symbolic
 
-sSums :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SSum a b]
-sSums = symbolics
+sEithers :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SEither a b]
+sEithers = symbolics
+
+sMaybe :: (SymVal a, MonadSymbolic m) => String -> m (SMaybe a)
+sMaybe = symbolic
+
+sMaybes :: (SymVal a, MonadSymbolic m) => [String] -> m [SMaybe a]
+sMaybes = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool

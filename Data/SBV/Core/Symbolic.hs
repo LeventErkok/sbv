@@ -174,9 +174,9 @@ data Op = Plus
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
-        | SumConstructor Bool                   -- Construct a sum
-        | SumIs Bool                            -- Sum branch tester
-        | SumAccess Bool                        -- Sum branch access
+        | SumConstructor SumSide                -- Construct a sum
+        | SumIs SumSide                         -- Sum branch tester
+        | SumAccess SumSide                     -- Sum branch access
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -414,9 +414,12 @@ instance Show Op where
   show (TupleConstructor   0) = "SBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
-  show (SumConstructor     b) = if b then "right" else "left"
-  show (SumIs              b) = "(_ is " ++ if b then "right" else "left" ++ ")"
-  show (SumAccess          b) = if b then "getRight" else "getLeft"
+  show (SumConstructor   InL) = "left"
+  show (SumConstructor   InR) = "right"
+  show (SumIs            InL) = "(_ is left)"
+  show (SumIs            InR) = "(_ is right)"
+  show (SumAccess        InL) = "getLeft"
+  show (SumAccess        InR) = "getRight"
 
   show op
     | Just s <- op `lookup` syms = s
@@ -1059,7 +1062,7 @@ registerKind st k
          KString        {}  -> return ()
          KList          ek  -> registerKind st ek
          KTuple         eks -> mapM_ (registerKind st) eks
-         KSum           eks -> mapM_ (registerKind st) eks
+         KSum         k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()

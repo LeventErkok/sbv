@@ -405,6 +405,11 @@ instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
   sexprToVal (EApp [ECon "right", b]) = Right <$> sexprToVal b
   sexprToVal _                        = Nothing
 
+instance SMTValue a => SMTValue (Maybe a) where
+  sexprToVal (EApp [ECon "left",  _]) = pure Nothing
+  sexprToVal (EApp [ECon "right", b]) = Just <$> sexprToVal b
+  sexprToVal _                        = Nothing
+
 instance SMTValue () where
    sexprToVal (ECon "SBVTuple0") = Just ()
    sexprToVal _                  = Nothing
