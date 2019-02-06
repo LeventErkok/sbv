@@ -28,7 +28,7 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
-  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sEither, sEithers, sMaybe, sMaybes
+  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf
@@ -524,15 +524,27 @@ sTuple_ = free_
 sTuples :: (SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
 
+-- | Generalization of 'Data.SBV.sEither'
 sEither :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SEither a b)
 sEither = symbolic
 
+-- | Generalization of 'Data.SBV.sEither_'
+sEither_ :: (SymVal a, SymVal b, MonadSymbolic m) => m (SEither a b)
+sEither_ = free_
+
+-- | Generalization of 'Data.SBV.sEithers'
 sEithers :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SEither a b]
 sEithers = symbolics
 
+-- | Generalization of 'Data.SBV.sMaybe'
 sMaybe :: (SymVal a, MonadSymbolic m) => String -> m (SMaybe a)
 sMaybe = symbolic
 
+-- | Generalization of 'Data.SBV.sMaybe_'
+sMaybe_ :: (SymVal a, MonadSymbolic m) => m (SMaybe a)
+sMaybe_ = free_
+
+-- | Generalization of 'Data.SBV.sMaybes'
 sMaybes :: (SymVal a, MonadSymbolic m) => [String] -> m [SMaybe a]
 sMaybes = symbolics
 
