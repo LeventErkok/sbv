@@ -25,7 +25,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
      , parse
@@ -39,7 +39,7 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
 import Data.Function (on)
@@ -70,7 +70,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , forceSVArg
+                              , SBVType, forceSVArg
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -829,6 +829,14 @@ getObservables = do State{rObservables} <- queryState
                                                           else walk os            sofar
 
                     walk rObs []
+
+-- | Get UIs, both constants and functions. This call returns both the before and after query ones.
+-- | Generalization of 'Data.SBV.Control.getUIs'.
+getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
+getUIs = do State{rUIMap, rIncState} <- queryState
+            prior <- io $ readIORef rUIMap
+            new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
+            return $ nub $ sort $ Map.toList prior ++ Map.toList new
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.

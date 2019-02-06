@@ -1551,7 +1551,7 @@ instance NFData SMTResult where
   rnf (ProofError _    xs) = rnf xs `seq` ()
 
 instance NFData SMTModel where
-  rnf (SMTModel objs assocs) = rnf objs `seq` rnf assocs `seq` ()
+  rnf (SMTModel objs assocs uifuns) = rnf objs `seq` rnf assocs `seq` rnf uifuns `seq` ()
 
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
@@ -1629,8 +1629,11 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-        modelObjectives :: [(String, GeneralizedCV)]  -- ^ Mapping of symbolic values to objective values.
-     ,  modelAssocs     :: [(String, CV)]             -- ^ Mapping of symbolic values to constants.
+       modelObjectives :: [(String, GeneralizedCV)]      -- ^ Mapping of symbolic values to objective values.
+     , modelAssocs     :: [(String, CV)]                 -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, ([([CV], CV)], CV))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                         -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                         -- in the 'modelAssocs' field.
      }
      deriving Show
 

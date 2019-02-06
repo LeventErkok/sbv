@@ -298,6 +298,7 @@ getModelAtIndex mbi = do
              cfg    <- getConfig
              inps   <- getQuantifiedInputs
              obsvs  <- getObservables
+             uis    <- getUIs
              rm     <- io $ readIORef runMode
              assocs <- case rm of
                          m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
@@ -721,6 +722,8 @@ SBV a |-> v = case literal v of
                 r                      -> error $ "Data.SBV: Impossible happened in |->: Cannot construct a CV with literal: " ++ show r
 
 -- | Generalization of 'Data.SBV.Control.mkSMTResult'
+-- NB. This function does not allow users to create interpretations for UI-Funs. But that's
+-- probably not a good idea anyhow.
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
@@ -783,6 +786,7 @@ mkSMTResult asgns = do
 
              let m = SMTModel { modelObjectives = []
                               , modelAssocs     = assocs
+                              , modelUIFuns     = []
                               }
 
              return $ Satisfiable queryConfig m

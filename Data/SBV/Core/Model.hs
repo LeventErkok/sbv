@@ -1547,7 +1547,7 @@ sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
      then x
-     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] []))
+     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] [] []))
    | True
    = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
@@ -2081,7 +2081,7 @@ instance Testable (Symbolic SBool) where
                                Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
                        us -> noQC us
 
-           complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo)
+           complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo [])
 
            noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 

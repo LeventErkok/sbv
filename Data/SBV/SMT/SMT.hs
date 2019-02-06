@@ -349,6 +349,13 @@ class Modelable a where
   getModelObjectiveValue :: String -> a -> Maybe GeneralizedCV
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
+  -- | Extract model uninterpreted-functions
+  getModelUIFuns :: a -> M.Map String ([([CV], CV)], CV)
+
+  -- | Extract the value of an uninterpreted-function as an association list
+  getModelUIFunValue :: String -> a -> Maybe ([([CV], CV)], CV)
+  getModelUIFunValue v r = v `M.lookup` getModelUIFuns r
+
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
@@ -369,16 +376,18 @@ getModelUninterpretedValues s (AllSatResult (_, _, xs)) =  map (s `getModelUnint
 -- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
   getModelAssignment (ThmResult r) = getModelAssignment r
-  modelExists        (ThmResult r) = modelExists r
+  modelExists        (ThmResult r) = modelExists        r
   getModelDictionary (ThmResult r) = getModelDictionary r
   getModelObjectives (ThmResult r) = getModelObjectives r
+  getModelUIFuns     (ThmResult r) = getModelUIFuns     r
 
 -- | 'SatResult' as a generic model provider
 instance Modelable SatResult where
   getModelAssignment (SatResult r) = getModelAssignment r
-  modelExists        (SatResult r) = modelExists r
+  modelExists        (SatResult r) = modelExists        r
   getModelDictionary (SatResult r) = getModelDictionary r
   getModelObjectives (SatResult r) = getModelObjectives r
+  getModelUIFuns     (SatResult r) = getModelUIFuns     r
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
@@ -404,6 +413,12 @@ instance Modelable SMTResult where
   getModelObjectives Unknown{}         = M.empty
   getModelObjectives ProofError{}      = M.empty
 
+  getModelUIFuns Unsatisfiable{}   = M.empty
+  getModelUIFuns (Satisfiable _ m) = M.fromList (modelUIFuns m)
+  getModelUIFuns (SatExtField _ m) = M.fromList (modelUIFuns m)
+  getModelUIFuns Unknown{}         = M.empty
+  getModelUIFuns ProofError{}      = M.empty
+
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
 parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
@@ -424,13 +439,13 @@ displayModels disp (AllSatResult (_, _, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result of
-  Unsatisfiable _ uc            -> unsatMsg ++ showUnsatCore uc
-  Satisfiable _ (SMTModel _ []) -> satMsg
-  Satisfiable _ m               -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _)  -> satExtMsg   ++ showModelDictionary cfg b
-  Unknown     _ r               -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
-  ProofError  _ []              -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError  _ ls              -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  Unsatisfiable _ uc               -> unsatMsg ++ showUnsatCore uc
+  Satisfiable _ (SMTModel _ [] []) -> satMsg
+  Satisfiable _ m                  -> satMsgModel ++ showModel cfg m
+  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary cfg b
+  Unknown     _ r                  -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
+  ProofError  _ []                 -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError  _ ls                 -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
  where cfg = resultConfig result
        showUnsatCore Nothing   = ""
        showUnsatCore (Just xs) = ". Unsat core:\n" ++ intercalate "\n" ["    " ++ x | x <- xs]
