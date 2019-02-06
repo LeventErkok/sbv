@@ -294,38 +294,45 @@ getModel = getModelAtIndex Nothing
 -- | Get a model stored at an index. This is likely very Z3 specific!
 getModelAtIndex :: (MonadIO m, MonadQuery m) => Maybe Int -> m SMTModel
 getModelAtIndex mbi = do
-             State{runMode} <- queryState
-             cfg    <- getConfig
-             inps   <- getQuantifiedInputs
-             obsvs  <- getObservables
-             uis    <- getUIs
-             rm     <- io $ readIORef runMode
-             assocs <- case rm of
-                         m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                         m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-                         SMTMode _ isSAT _ -> -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-                                              let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                                                            else takeWhile ((== ALL) . fst) inps
+    State{runMode} <- queryState
+    rm     <- io $ readIORef runMode
+    case rm of
+      m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      SMTMode _ isSAT _ -> do cfg   <- getConfig
+                              inps  <- getQuantifiedInputs
+                              obsvs <- getObservables
+                              uis   <- getUIs
 
-                                                  -- are we inside a quantifier
-                                                  insideQuantifier = length allModelInputs < length inps
+                               -- for "sat", display the prefix existentials. for "proof", display the prefix universals
+                              let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
+                                                        else takeWhile ((== ALL) . fst) inps
 
-                                                  -- observables are only meaningful if we're not in a quantified context
-                                                  prefixObservables | insideQuantifier = []
-                                                                    | True             = obsvs
+                                  -- are we inside a quantifier
+                                  insideQuantifier = length allModelInputs < length inps
 
-                                                  sortByNodeId :: [(NamedSymVar, a)] -> [a]
-                                                  sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
+                                  -- observables are only meaningful if we're not in a quantified context
+                                  prefixObservables | insideQuantifier = []
+                                                    | True             = obsvs
 
-                                                  grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
+                                  sortByNodeId :: [(NamedSymVar, a)] -> [a]
+                                  sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
 
-                                              in do inputAssocs <- mapM (grab . snd) allModelInputs
-                                                    return $  sortOn fst prefixObservables
-                                                           ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
+                                  grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
 
-             return SMTModel { modelObjectives = []
-                             , modelAssocs     = assocs
-                             }
+                              inputAssocs <- mapM (grab . snd) allModelInputs
+
+                              let assocs =  sortOn fst prefixObservables
+                                         ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
+
+                              -- collect UIs
+                              let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1] -- functions have at least two things in their type!
+                              uivs <- mapM (\ui@(nm, _) -> (nm,) <$> getUIFunCVAssoc mbi ui) uiFuns
+
+                              return SMTModel { modelObjectives = []
+                                              , modelAssocs     = assocs
+                                              , modelUIFuns     = uivs
+                                              }
 
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.

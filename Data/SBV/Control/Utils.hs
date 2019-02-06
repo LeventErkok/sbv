@@ -24,7 +24,7 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
+     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUIFunCVAssoc, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
@@ -37,6 +37,8 @@ module Data.SBV.Control.Utils (
      , runProofOn
      , executeQuery
      ) where
+
+import Control.Monad (zipWithM)
 
 import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
@@ -70,7 +72,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType, forceSVArg
+                              , SBVType(..), forceSVArg
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -782,6 +784,36 @@ getValueCV mbi s
                   case (rep1, rep2) of
                     (CV KReal (CAlgReal a), CV KReal (CAlgReal b)) -> return $ CV KReal (CAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
                     _                                              -> bad
+
+-- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
+getUIFunCVAssoc :: (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m ([([CV], CV)], CV)
+getUIFunCVAssoc mbi (nm, t) = do let modelIndex = case mbi of
+                                                    Nothing -> ""
+                                                    Just i  -> " :model_index " ++ show i
+
+                                     cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+
+                                     bad        = unexpected "get-value" cmd "a function value" Nothing
+
+                                 r <- ask cmd
+
+                                 let (ats, rt) = case t of
+                                                   SBVType as | length as > 1 -> (init as, last as)
+                                                   _                          -> error $ "Data.SBV.getUIFunCVAssoc: Expected a function type, got: " ++ show t
+
+                                 let convert (vs, d) = (,) <$> mapM toPoint vs <*> toRes d
+                                     toPoint (as, v)
+                                        | length as == length ats = (,) <$> zipWithM recoverKindedValue ats as <*> toRes v
+                                        | True                    = error $ "Data.SBV.getUIFunCVAssoc: Mismatching type/value arity, got: " ++ show (as, ats)
+
+                                     toRes :: SExpr -> Maybe CV
+                                     toRes = recoverKindedValue rt
+
+                                 parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm
+                                                                             , Just assocs <- parseStoreAssociations e
+                                                                             , Just res    <- convert assocs
+                                                                             -> return res
+                                                     _                       -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.checkSat'
 checkSat :: (MonadIO m, MonadQuery m) => m CheckSatResult
