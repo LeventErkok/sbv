@@ -479,43 +479,40 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
 
 -- | A class which allows for sexpr-conversion to functions
 class SMTFunction fun a r | fun -> a r where
-  sexprToFun :: fun -> SExpr -> Maybe (SBVType, ([(a, r)], r))
+  sexprToFun :: fun -> SExpr   -> Maybe (SBVType, ([(a, r)], r))
+  sexprToArg :: fun -> [SExpr] -> Maybe a
+  sexprToRes :: fun -> SExpr   -> Maybe r
+  smtFunType :: fun -> SBVType
+
+  sexprToFun f e = (smtFunType f, ) <$> assocs
+    where assocs = convert =<< parseStoreAssociations e
+
+          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToRes f d
+          sexprPoint (as, v) = (,) <$> sexprToArg f as <*> sexprToRes f v
 
 instance (HasKind a, HasKind r, SMTValue a, SMTValue r) => SMTFunction (SBV a -> SBV r) a r where
-  sexprToFun _ e = (t, ) <$> assocs
-    where assocs = convert =<< parseStoreAssociations e
+  sexprToArg _ [a0] = sexprToVal a0
+  sexprToArg _ _    = Nothing
 
-          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
-          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
+  sexprToRes _ = sexprToVal
 
-          sexprArg [x] = sexprToVal x
-          sexprArg _   = Nothing
-
-          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
 
 instance (HasKind a, HasKind b, HasKind r, SMTValue a, SMTValue b, SMTValue r) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r where
-  sexprToFun _ e = (t, ) <$> assocs
-    where assocs = convert =<< parseStoreAssociations e
+  sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
+  sexprToArg _ _        = Nothing
 
-          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
-          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
+  sexprToRes _ = sexprToVal
 
-          sexprArg [x, y] = (,) <$> sexprToVal x <*> sexprToVal y
-          sexprArg _      = Nothing
-
-          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
 
 instance (HasKind a, HasKind b, HasKind c, HasKind r, SMTValue a, SMTValue b, SMTValue c, SMTValue r) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r where
-  sexprToFun _ e = (t, ) <$> assocs
-    where assocs = convert =<< parseStoreAssociations e
+  sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
+  sexprToArg _ _            = Nothing
 
-          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
-          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
+  sexprToRes _ = sexprToVal
 
-          sexprArg [x, y, z] = (,,) <$> sexprToVal x <*> sexprToVal y <*> sexprToVal z
-          sexprArg _         = Nothing
-
-          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SMTFunction fun a r) => String -> fun -> m ([(a, r)], r)
