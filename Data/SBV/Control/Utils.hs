@@ -478,41 +478,89 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to functions
-class SMTFunction fun a r | fun -> a r, a r -> fun where
-  sexprArg   :: fun -> [SExpr] -> Maybe a
-  sexprRes   :: fun -> SExpr   -> Maybe r
-  sexprToFun :: fun -> SExpr   -> Maybe ([(a, r)], r)
-  smtFunType :: fun -> SBVType
-
-  sexprToFun f e = convert =<< parseStoreAssociations e
-    where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprRes f d
-          sexprPoint (as, v) = (,) <$> sexprArg f as <*> sexprRes f v
+class SMTFunction fun a r | fun -> a r where
+  sexprToFun :: fun -> SExpr -> Maybe (SBVType, ([(a, r)], r))
 
 instance (HasKind a, HasKind r, SMTValue a, SMTValue r) => SMTFunction (SBV a -> SBV r) a r where
-   sexprArg _ [x] = sexprToVal x
-   sexprArg _ _   = Nothing
+  sexprToFun _ e = (t, ) <$> assocs
+    where assocs = convert =<< parseStoreAssociations e
 
-   sexprRes _ = sexprToVal
+          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
+          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
 
-   smtFunType _   = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
+          sexprArg [x] = sexprToVal x
+          sexprArg _   = Nothing
+
+          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
+
+instance (HasKind a, HasKind b, HasKind r, SMTValue a, SMTValue b, SMTValue r) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r where
+  sexprToFun _ e = (t, ) <$> assocs
+    where assocs = convert =<< parseStoreAssociations e
+
+          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
+          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
+
+          sexprArg [x, y] = (,) <$> sexprToVal x <*> sexprToVal y
+          sexprArg _      = Nothing
+
+          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
+
+instance (HasKind a, HasKind b, HasKind c, HasKind r, SMTValue a, SMTValue b, SMTValue c, SMTValue r) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r where
+  sexprToFun _ e = (t, ) <$> assocs
+    where assocs = convert =<< parseStoreAssociations e
+
+          convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
+          sexprPoint (as, v) = (,) <$> sexprArg as <*> sexprToVal v
+
+          sexprArg [x, y, z] = (,,) <$> sexprToVal x <*> sexprToVal y <*> sexprToVal z
+          sexprArg _         = Nothing
+
+          t = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: forall m a b. (MonadIO m, MonadQuery m, SMTValue a, SMTValue b, HasKind a, HasKind b) => String -> (SBV a -> SBV b) -> m ([(a, b)], b)
+getFunction :: (MonadIO m, MonadQuery m, SMTFunction fun a r) => String -> fun -> m ([(a, r)], r)
 getFunction nm f = do State{rUIMap} <- queryState
                       uiMap <- liftIO $ readIORef rUIMap
-                      let et = smtFunType f
                       case nm `Map.lookup` uiMap of
-                        Nothing           -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is not a declared uninterpreted function."
-                        Just t  | t /= et -> error $  "Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
-                                                   ++ "      Registered at: " ++ show et ++ "\n"
-                                                   ++ "      Requested  at: " ++ show t
-                                | True    -> do let cmd = "(get-value (" ++ nm ++ "))"
-                                                    bad = unexpected "getFunction" cmd "a function value" Nothing
+                        Nothing -> unknown (Map.keys uiMap)
+                        Just t  -> do let cmd = "(get-value (" ++ nm ++ "))"
+                                          bad = unexpected "getFunction" cmd "a function value" Nothing
 
-                                                r <- ask cmd
+                                      r <- ask cmd
 
-                                                parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm, Just assocs <- sexprToFun f e -> return assocs
-                                                                    _                                                                -> bad r Nothing
+                                      parse r bad $ \case EApp [EApp [ECon o, e]]
+                                                            | o == nm, Just (t', assocs) <- sexprToFun f e -> if t == t'
+                                                                                                              then return assocs
+                                                                                                              else badType t t'
+                                                          _ -> bad r Nothing
+
+   where unknown cands = error $ unlines $  [ ""
+                                            , "*** Data.SBV.getFunction: Called on a non-uninterpreted function: " ++ show nm
+                                            , "***"
+                                            , "***    Expected to receive a function created by \"uninterpret\""
+                                            ]
+                                         ++ tag
+                                         ++ [ "***"
+                                            , "*** Make sure to call getFunction on uninterpreted functions only!"
+                                            , "*** Or report this as a bug if that is already the case."
+                                            ]
+             where tag = case cands of
+                           []  -> [ "***    But, there are no matching uninterpreted functions in the context." ]
+                           [x] -> [ "***    The only possible candidate is: " ++ x ]
+                           _   -> [ "***    Candidates are:"
+                                  , "***        " ++ intercalate ", " cands
+                                  ]
+
+         badType t t' = error $ unlines [ ""
+                                        , "*** Data.SBV.getFunction: " ++ show nm ++ " is registered with a different type\n"
+                                        , "***"
+                                        , "***     Registered at: " ++ show t
+                                        , "***     Requested  at: " ++ show t'
+                                        , "***"
+                                        , "*** This is most likely an SBV bug! Please report."
+                                        ]
+
+
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
