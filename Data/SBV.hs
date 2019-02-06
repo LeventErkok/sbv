@@ -146,6 +146,8 @@ module Data.SBV (
   -- ** Tuples
   -- $tuples
   , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
+  -- ** Sum types
+  , SMaybe, SEither
   -- * Arrays of symbolic values
   , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
 
@@ -334,7 +336,8 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sList, sList_, sLists, sTuple, sTuple_, sTuples,
                                         sReal, sReal_, sReals, sString, sString_, sStrings,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
-                                        sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s)
+                                        sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
+                                        sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)

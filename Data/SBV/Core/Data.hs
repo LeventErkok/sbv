@@ -161,8 +161,10 @@ type SString = SBV String
 -- Note that lists can be nested, i.e., we do allow lists of lists of ... items.
 type SList a = SBV [a]
 
+-- | Symbolic 'Either'
 type SEither a b = SBV (Either a b)
 
+-- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
 -- | Symbolic 2-tuple.
