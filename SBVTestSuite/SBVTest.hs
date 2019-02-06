@@ -17,7 +17,7 @@ import Test.Tasty
 
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..), pickTests)
 
--- import System.Exit (exitSuccess)
+import System.Exit (exitSuccess)
 
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
@@ -100,6 +100,7 @@ import qualified TestSuite.Queries.Int_Z3
 import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Lists
 import qualified TestSuite.Queries.Strings
+import qualified TestSuite.Queries.Sums
 import qualified TestSuite.Queries.Tuples
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
@@ -127,11 +128,8 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
           putStrLn $ "SBVTest: Test platform: " ++ show testEnv
 
           case testEnv of
-            TestEnvUnknown   -> defaultMain $ testGroup "sum"
-            -- putStrLn "Unknown test environment, skipping tests"
-            --                        exitSuccess
-
-                                   [ TestSuite.Basics.Sum.tests ]
+            TestEnvUnknown   -> do putStrLn "Unknown test environment, skipping tests"
+                                   exitSuccess
 
             TestEnvLocal     -> defaultMain $ testGroup "Local" [heavyTests, localOnlyTests, otherTests]
 
@@ -234,6 +232,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Int_Z3.tests
                , TestSuite.Queries.Lists.tests
                , TestSuite.Queries.Strings.tests
+               , TestSuite.Queries.Sums.tests
                , TestSuite.Queries.Tuples.tests
                , TestSuite.Queries.Uninterpreted.tests
                , TestSuite.Transformers.SymbolicEval.tests

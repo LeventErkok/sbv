@@ -248,6 +248,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.SmallShifts
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.String
+                  , TestSuite.Basics.Sum
                   , TestSuite.Basics.List
                   , TestSuite.Basics.TOut
                   , TestSuite.Basics.Tuple

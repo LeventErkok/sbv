@@ -22,7 +22,7 @@ import Data.SBV.Sum
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Basics.List" [
+  testGroup "Basics.Sum" [
       goldenCapturedIO "sumEitherSat" $ \rf -> checkWith z3{redirectVerbose=Just rf} sumEitherSat    Sat
     , goldenCapturedIO "sumBimapPlus" $ \rf -> checkWith z3{redirectVerbose=Just rf} sumBimapPlus    Sat
     ]

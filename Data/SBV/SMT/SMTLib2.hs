@@ -126,8 +126,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ concatMap declSort usorts
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
-             ++ [ "; --- sums ---" ] -- TODO: don't always declare
-             ++ declSum
+             ++ [ "; --- sums ---" ]
+             ++ (if containsSum kindInfo then declSum else [])
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -327,6 +327,10 @@ findTupleArities ks = Set.toAscList
                     $ Set.map length
                     $ Set.fromList [ tupKs | KTuple tupKs <- Set.toList ks ]
 
+-- | Is @Either@ being used?
+containsSum :: Set Kind -> Bool
+containsSum = not . Set.null . Set.filter isSum
+
 declSum :: [String]
 declSum =
   [ "(declare-datatypes ((SBVSum2 2)) ("
@@ -347,8 +351,8 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ concatMap declSort [(s, dt) | KUninterpreted s dt <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
-            -- TODO: don't always declare
-            ++ declSum
+            -- sums
+            ++ (if containsSum newKs then declSum else [])
             -- constants
             ++ concatMap (declConst cfg) consts
             -- inputs
