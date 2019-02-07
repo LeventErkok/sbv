@@ -4,6 +4,7 @@
 (set-logic QF_BV)
 ; --- uninterpreted sorts ---
 ; --- tuples ---
+; --- sums ---
 ; --- literal constants ---
 (define-fun s1 () (_ BitVec 8) #x01)
 ; --- skolem constants ---

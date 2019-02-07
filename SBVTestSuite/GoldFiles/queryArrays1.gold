@@ -8,6 +8,7 @@
 [GOOD] (set-logic ALL) ; external query, using all logics.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a1"

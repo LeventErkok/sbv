@@ -10,6 +10,7 @@
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5)))
 [GOOD] ; --- skolem constants ---

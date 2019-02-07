@@ -9,6 +9,7 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] (declare-sort L 0)  ; N.B. Uninterpreted: L.B: not a nullary constructor
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () L)

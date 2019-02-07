@@ -8,6 +8,7 @@
 [GOOD] (set-logic QF_UFBV) ; NB. User specified.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "i"

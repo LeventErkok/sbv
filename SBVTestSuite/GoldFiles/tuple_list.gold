@@ -13,6 +13,7 @@
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
                                            ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
                                                          (proj_2_SBVTuple2 T2))))))
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s4 () Int 0)
 [GOOD] (define-fun s7 () Int 1)

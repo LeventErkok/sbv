@@ -9,6 +9,7 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes (T1 T2) ((tup-2 (mk-tup-2 (proj-1 T1) (proj-2 T2)))))
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s_2 () Bool false)
 [GOOD] (define-fun s_1 () Bool true)

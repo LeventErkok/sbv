@@ -10,6 +10,7 @@
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s5 () Int 6)
 [GOOD] (define-fun s7 () Int 0)

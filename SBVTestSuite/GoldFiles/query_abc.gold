@@ -8,6 +8,7 @@
 [ISSUE] (set-logic ALL) ; external query, using all logics.
 [ISSUE] ; --- uninterpreted sorts ---
 [ISSUE] ; --- tuples ---
+[ISSUE] ; --- sums ---
 [ISSUE] ; --- literal constants ---
 [ISSUE] (define-fun s2 () (_ BitVec 32) #x00000000)
 [ISSUE] ; --- skolem constants ---

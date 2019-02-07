@@ -8,6 +8,7 @@
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s8 () Int 2)
 [GOOD] (define-fun s2 () String "abc")

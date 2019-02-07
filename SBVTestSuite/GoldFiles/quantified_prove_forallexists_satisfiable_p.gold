@@ -8,6 +8,7 @@
 [GOOD] (set-logic BV)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (_ BitVec 8) #x01)
 [GOOD] ; --- skolem constants ---

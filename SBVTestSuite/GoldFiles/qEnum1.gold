@@ -12,6 +12,7 @@
           (ite (= x Plus) 0 (ite (= x Minus) 1 2))
        )
 [GOOD] ; --- tuples ---
+[GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () BinOp) ; tracks user variable "p"
