@@ -14,6 +14,7 @@ module Data.SBV.Core.Concrete
   ) where
 
 import Control.Monad (replicateM)
+import Data.Semigroup ((<>))
 
 import Data.Bits
 import System.Random (randomIO, randomRIO)
