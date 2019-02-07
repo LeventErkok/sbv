@@ -327,7 +327,7 @@ getModelAtIndex mbi = do
 
                               -- collect UIs
                               let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1] -- functions have at least two things in their type!
-                              uivs <- mapM (\ui@(nm, _) -> (nm,) <$> getUIFunCVAssoc mbi ui) uiFuns
+                              uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
                               return SMTModel { modelObjectives = []
                                               , modelAssocs     = assocs

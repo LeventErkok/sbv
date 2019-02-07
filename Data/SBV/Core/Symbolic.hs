@@ -1629,11 +1629,11 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]      -- ^ Mapping of symbolic values to objective values.
-     , modelAssocs     :: [(String, CV)]                 -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, ([([CV], CV)], CV))] -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                         -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                         -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                 -- ^ Mapping of symbolic values to objective values.
+     , modelAssocs     :: [(String, CV)]                            -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                    -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                    -- in the 'modelAssocs' field.
      }
      deriving Show
 
