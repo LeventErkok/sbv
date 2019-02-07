@@ -73,12 +73,16 @@ docTest:
 regularTests:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 
-release: veryclean install docs test
+checkLinks:
+	@rm -f .brokdb
+	@brok $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md) > /dev/null
+	@rm -f .brokdb
+
+release: veryclean install docs test checkLinks
 	cabal $(CSDIST)
 	@make -C buildUtils veryclean
 	@make -C buildUtils
 	buildUtils/testInterfaces
-	buildUtils/checkLinks
 	@echo "*** SBV is ready for release!"
 
 # use this as follows:
