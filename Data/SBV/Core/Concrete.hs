@@ -266,12 +266,22 @@ showCV shk w               = liftCV show show show show show show snd shL shT w 
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
-showBaseKind k@KUninterpreted{} = show k   -- Leave user-sorts untouched!
-showBaseKind (KList k)          = "[" ++ showBaseKind k ++ "]"
-showBaseKind (KTuple ks)        = "(" ++ intercalate ", " (map showBaseKind ks) ++ ")"
-showBaseKind k = case show k of
-                   ('S':sk) -> sk
-                   s        -> s
+showBaseKind = sh
+  where sh k@KBool            = noS (show k)
+        sh k@KBounded{}       = noS (show k)
+        sh k@KUnbounded       = noS (show k)
+        sh k@KReal            = noS (show k)
+        sh k@KUninterpreted{} = show k     -- Leave user-sorts untouched!
+        sh k@KFloat           = noS (show k)
+        sh k@KDouble          = noS (show k)
+        sh k@KChar            = noS (show k)
+        sh k@KString          = noS (show k)
+        sh (KList k)          = "[" ++ sh k ++ "]"
+        sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
+
+        -- Drop the initial S if it's there
+        noS ('S':s) = s
+        noS s       = s
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
