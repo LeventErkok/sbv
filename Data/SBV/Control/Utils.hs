@@ -38,8 +38,6 @@ module Data.SBV.Control.Utils (
      , executeQuery
      ) where
 
-import Control.Monad (zipWithM)
-
 import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
@@ -56,7 +54,7 @@ import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
 
-import Control.Monad            (join, unless)
+import Control.Monad            (join, unless, zipWithM)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
