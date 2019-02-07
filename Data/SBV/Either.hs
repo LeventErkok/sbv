@@ -1,5 +1,4 @@
 {-# language KindSignatures      #-}
-{-# language LambdaCase          #-}
 {-# language Rank2Types          #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
@@ -22,7 +21,7 @@ module Data.SBV.Either (
   ) where
 
 import           Prelude             hiding      (either)
-import qualified Prelude             as Prelude
+import qualified Prelude
 import           Data.Proxy          (Proxy(Proxy))
 import           Data.SBV.Core.Data
 import           Data.SBV.Core.Model () -- instances only
@@ -77,7 +76,7 @@ first f = bimap f id
 second
   :: (SymVal a, SymVal b, SymVal c)
   => (SBV b -> SBV c) -> SBV (Either a b) -> SBV (Either a c)
-second f = bimap id f
+second = bimap id
 
 -- | Return 'sTrue' if the given symbolic value is 'Left', 'sFalse' otherwise
 isLeft :: (SymVal a, SymVal b) => SBV (Either a b) -> SBV Bool

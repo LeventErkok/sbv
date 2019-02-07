@@ -1,5 +1,4 @@
 {-# language KindSignatures      #-}
-{-# language LambdaCase          #-}
 {-# language Rank2Types          #-}
 {-# language ScopedTypeVariables #-}
 {-# language TypeApplications    #-}
@@ -22,7 +21,7 @@ module Data.SBV.Maybe (
   ) where
 
 import           Prelude             hiding      (maybe, map)
-import qualified Prelude             as Prelude
+import qualified Prelude
 import           Data.Proxy          (Proxy(Proxy))
 import           Data.SBV.Core.Data
 import           Data.SBV.Core.Model () -- instances only
@@ -80,13 +79,10 @@ maybe brNothing brJust ma
 
   where ka = kindOf (Proxy @a)
         kb = kindOf (Proxy @b)
-        ku = kindOf (Proxy @())
 
         res st = do mav <- sbvToSV st ma
                     isNothing' <- newExpr st KBool $ SBVApp (SumIs InL) [mav]
-                    br1 <- sbvToSV st $ const brNothing $ SBV $ SVal ku $
-                      Right $ cache $ \_ -> newExpr st ku $
-                        SBVApp (SumAccess InL) [mav]
+                    br1 <- sbvToSV st brNothing
                     br2 <- sbvToSV st $ brJust $ SBV $ SVal ka $
                       Right $ cache $ \_ -> newExpr st ka $
                         SBVApp (SumAccess InR)  [mav]
