@@ -36,10 +36,14 @@ import Data.SBV.Utils.Lib (stringToQFS)
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where
-  -- | Show a number in hexadecimal (starting with @0x@ and type.)
+  -- | Show a number in hexadecimal, starting with @0x@ and type.
   hexS :: a -> String
-  -- | Show a number in binary (starting with @0b@ and type.)
+  -- | Show a number in binary, starting with @0b@ and type.
   binS :: a -> String
+  -- | Show a number in hexadecimal, starting with @0x@ but no type.
+  hexP :: a -> String
+  -- | Show a number in binary, starting with @0b@ but no type.
+  binP :: a -> String
   -- | Show a number in hex, without prefix, or types.
   hex :: a -> String
   -- | Show a number in bin, without prefix, or types.
@@ -47,27 +51,110 @@ class PrettyNum a where
 
 -- Why not default methods? Because defaults need "Integral a" but Bool is not..
 instance PrettyNum Bool where
-  {hexS = show; binS = show; hex = show; bin = show}
+  hexS = show
+  binS = show
+  hexP = show
+  binP = show
+  hex  = show
+  bin  = show
+
 instance PrettyNum String where
-  {hexS = show; binS = show; hex = show; bin = show}
+  hexS = show
+  binS = show
+  hexP = show
+  binP = show
+  hex  = show
+  bin  = show
+
 instance PrettyNum Word8 where
-  {hexS = shex True True (False,8) ; binS = sbin True True (False,8) ; hex = shex False False (False,8) ; bin = sbin False False (False,8) ;}
+  hexS = shex True  True  (False, 8)
+  binS = sbin True  True  (False, 8)
+
+  hexP = shex False True  (False, 8)
+  binP = sbin False True  (False, 8)
+
+  hex  = shex False False (False, 8)
+  bin  = sbin False False (False, 8)
+
 instance PrettyNum Int8 where
-  {hexS = shex True True (True,8)  ; binS = sbin True True (True,8)  ; hex = shex False False (True,8)  ; bin = sbin False False (True,8)  ;}
+  hexS = shex True  True  (True, 8)
+  binS = sbin True  True  (True, 8)
+
+  hexP = shex False True  (True, 8)
+  binP = sbin False True  (True, 8)
+
+  hex  = shex False False (True, 8)
+  bin  = sbin False False (True, 8)
+
 instance PrettyNum Word16 where
-  {hexS = shex True True (False,16); binS = sbin True True (False,16); hex = shex False False (False,16); bin = sbin False False (False,16);}
-instance PrettyNum Int16  where
-  {hexS = shex True True (True,16);  binS = sbin True True (True,16) ; hex = shex False False (True,16);  bin = sbin False False (True,16) ;}
+  hexS = shex True  True  (False, 16)
+  binS = sbin True  True  (False, 16)
+
+  hexP = shex False True  (False, 16)
+  binP = sbin False True  (False, 16)
+
+  hex  = shex False False (False, 16)
+  bin  = sbin False False (False, 16)
+
+instance PrettyNum Int16 where
+  hexS = shex True  True  (True, 16)
+  binS = sbin True  True  (True, 16)
+
+  hexP = shex False True  (True, 16)
+  binP = sbin False True  (True, 16)
+
+  hex  = shex False False (True, 16)
+  bin  = sbin False False (True, 16)
+
 instance PrettyNum Word32 where
-  {hexS = shex True True (False,32); binS = sbin True True (False,32); hex = shex False False (False,32); bin = sbin False False (False,32);}
-instance PrettyNum Int32  where
-  {hexS = shex True True (True,32);  binS = sbin True True (True,32) ; hex = shex False False (True,32);  bin = sbin False False (True,32) ;}
+  hexS = shex True  True  (False, 32)
+  binS = sbin True  True  (False, 32)
+
+  hexP = shex False True  (False, 32)
+  binP = sbin False True  (False, 32)
+
+  hex  = shex False False (False, 32)
+  bin  = sbin False False (False, 32)
+
+instance PrettyNum Int32 where
+  hexS = shex True  True  (True, 32)
+  binS = sbin True  True  (True, 32)
+
+  hexP = shex False True  (True, 32)
+  binP = sbin False True  (True, 32)
+
+  hex  = shex False False (True, 32)
+  bin  = sbin False False (True, 32)
+
 instance PrettyNum Word64 where
-  {hexS = shex True True (False,64); binS = sbin True True (False,64); hex = shex False False (False,64); bin = sbin False False (False,64);}
-instance PrettyNum Int64  where
-  {hexS = shex True True (True,64);  binS = sbin True True (True,64) ; hex = shex False False (True,64);  bin = sbin False False (True,64) ;}
+  hexS = shex True  True  (False, 64)
+  binS = sbin True  True  (False, 64)
+
+  hexP = shex False True  (False, 64)
+  binP = sbin False True  (False, 64)
+
+  hex  = shex False False (False, 64)
+  bin  = sbin False False (False, 64)
+
+instance PrettyNum Int64 where
+  hexS = shex True  True  (True, 64)
+  binS = sbin True  True  (True, 64)
+
+  hexP = shex False True  (True, 64)
+  binP = sbin False True  (True, 64)
+
+  hex  = shex False False (True, 64)
+  bin  = sbin False False (True, 64)
+
 instance PrettyNum Integer where
-  {hexS = shexI True True; binS = sbinI True True; hex = shexI False False; bin = sbinI False False;}
+  hexS = shexI True  True
+  binS = sbinI True  True
+
+  hexP = shexI False True
+  binP = sbinI False True
+
+  hex  = shexI False False
+  bin  = sbinI False False
 
 instance PrettyNum CV where
   hexS cv | isUninterpreted cv = show cv ++ " :: " ++ show (kindOf cv)
@@ -88,8 +175,26 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
+  hexP cv | isUninterpreted cv = show cv
+          | isBoolean       cv = hexS (cvToBool cv)
+          | isFloat         cv = let CFloat   f = cvVal cv in show f
+          | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isReal          cv = let CAlgReal r = cvVal cv in show r
+          | isString        cv = let CString  s = cvVal cv in show s
+          | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
+          | True               = let CInteger i = cvVal cv in shex  False True (hasSign cv, intSizeOf cv) i
+
+  binP cv | isUninterpreted cv = show cv
+          | isBoolean       cv = binS (cvToBool cv)
+          | isFloat         cv = let CFloat   f = cvVal cv in show f
+          | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isReal          cv = let CAlgReal r = cvVal cv in show r
+          | isString        cv = let CString  s = cvVal cv in show s
+          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
+          | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
+
   hex cv | isUninterpreted cv = show cv
-         | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
+         | isBoolean       cv = hexS (cvToBool cv)
          | isFloat         cv = let CFloat   f = cvVal cv in show f
          | isDouble        cv = let CDouble  d = cvVal cv in show d
          | isReal          cv = let CAlgReal r = cvVal cv in show r
@@ -98,7 +203,7 @@ instance PrettyNum CV where
          | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
   bin cv | isUninterpreted cv = show cv
-         | isBoolean       cv = binS (cvToBool cv) ++ " :: Bool"
+         | isBoolean       cv = binS (cvToBool cv)
          | isFloat         cv = let CFloat   f = cvVal cv in show f
          | isDouble        cv = let CDouble  d = cvVal cv in show d
          | isReal          cv = let CAlgReal r = cvVal cv in show r
@@ -109,6 +214,10 @@ instance PrettyNum CV where
 instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
   binS s = maybe (show s) (binS :: a -> String) $ unliteral s
+
+  hexP s = maybe (show s) (hexP :: a -> String) $ unliteral s
+  binP s = maybe (show s) (binP :: a -> String) $ unliteral s
+
   hex  s = maybe (show s) (hex  :: a -> String) $ unliteral s
   bin  s = maybe (show s) (bin  :: a -> String) $ unliteral s
 
