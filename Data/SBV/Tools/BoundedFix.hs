@@ -49,6 +49,13 @@ import Data.SBV
 -- >>> prove $ \n -> n .== 10 .=> bfac n .== 3628800
 -- Falsifiable. Counter-example:
 --   s0 = 10 :: Integer
+-- <BLANKLINE>
+--   fac :: Integer -> Integer
+--   fac _ = 2
+--
+-- The counter-example is telling us how it instantiated the function @fac@ when the recursion
+-- bottomed out: It simply made it return @2@ for all arguments at that point, which provides
+-- the (unintended) counter-example.
 --
 -- By design, if a function defined via `bfix` is given a concrete argument, it will unroll
 -- the recursion as much as necessary to complete the call (which can of course diverge). The bound
@@ -60,11 +67,15 @@ import Data.SBV
 --   bfac_10 = 3628800 :: Integer
 --   bfac_n  = 7257600 :: Integer
 --   s0      =      10 :: Integer
+-- <BLANKLINE>
+--   fac :: Integer -> Integer
+--   fac _ = 2
 --
--- Here, we see that the SMT solver must have decided to assign the value @2@ in the final call just
--- as it was reaching the base case, and thus got the final result incorrect. (Note
--- that @7257600 = 2 * 3628800@.) A wrapper algorithm can then assert the actual value of
--- @bfac 10@ here as an extra constraint and can search for "deeper bugs."
+-- Here, we see further evidence that the SMT solver must have decided to assign the
+-- value @2@ in the final call just as it was reaching the base case, and thus got the
+-- final result incorrect. (Note that @7257600 = 2 * 3628800@.) A wrapper algorithm can
+-- then assert the actual value of @bfac 10@ here as an extra constraint and can
+-- search for "deeper bugs."
 bfix :: (SymVal a, Uninterpreted (SBV a -> r)) => Int -> String -> ((SBV a -> r) -> (SBV a -> r)) -> SBV a -> r
 bfix bound nm f x
   | isConcrete x = g x
