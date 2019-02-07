@@ -453,7 +453,16 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg model = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+showModel cfg model
+   | null uiFuncs
+   = nonUIFuncs
+   | True
+   = nonUIFuncs
+   ++ "\n\nUninterpreted Functions:"
+   ++ "\n========================\n"
+   ++ intercalate "\n" (map (showModelUI cfg) uiFuncs)
+   where nonUIFuncs = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+         uiFuncs    = modelUIFuns model
 
 -- | Show bindings in a generalized model dictionary, tabulated
 showModelDictionary :: SMTConfig -> [(String, GeneralizedCV)] -> String
@@ -486,6 +495,10 @@ showModelDictionary cfg allVars
         valPart (x:xs)      = x : valPart xs
 
         lTrimRight = length . dropWhile isSpace . reverse
+
+-- | Show an uninterpreted function
+showModelUI :: SMTConfig -> (String, ([([CV], CV)], CV)) -> String
+showModelUI _cfg (nm, def) = nm ++ " = " ++ show def
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> CV -> String

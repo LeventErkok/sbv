@@ -882,6 +882,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
 
+                     allUninterpreteds <- getUIs
+                     let uiFuns = [u | u@(_, SBVType as) <- allUninterpreteds, length as > 1] -- Functions have at least two kinds in their type
+
                      let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
@@ -902,13 +905,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop vars cfg
+                     (sc, ms) <- loop uiFuns vars cfg
                      return (sc, w, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop vars cfg = go (1::Int) []
+         loop uiFuns vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -924,8 +927,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
+                                      let getUIFun ui = error $ "AllSat.TBD: Extraction for: " ++ show ui
+
                                       let m = Satisfiable cfg SMTModel { modelObjectives = []
                                                                        , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
+                                                                       , modelUIFuns     = map getUIFun uiFuns
                                                                        }
 
                                           (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
