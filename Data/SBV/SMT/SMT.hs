@@ -43,7 +43,7 @@ import Control.Monad      (zipWithM)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe, isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.List          (intercalate, isPrefixOf)
+import Data.List          (intercalate, isPrefixOf, transpose)
 import Data.Word          (Word8, Word16, Word32, Word64)
 
 import Data.IORef (readIORef, writeIORef)
@@ -61,6 +61,7 @@ import qualified Data.Map.Strict as M
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
+import Data.SBV.Core.Concrete (showCV, showBaseKind)
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -350,10 +351,10 @@ class Modelable a where
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
   -- | Extract model uninterpreted-functions
-  getModelUIFuns :: a -> M.Map String ([([CV], CV)], CV)
+  getModelUIFuns :: a -> M.Map String (SBVType, ([([CV], CV)], CV))
 
   -- | Extract the value of an uninterpreted-function as an association list
-  getModelUIFunValue :: String -> a -> Maybe ([([CV], CV)], CV)
+  getModelUIFunValue :: String -> a -> Maybe (SBVType, ([([CV], CV)], CV))
   getModelUIFunValue v r = v `M.lookup` getModelUIFuns r
 
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
@@ -458,9 +459,7 @@ showModel cfg model
    = nonUIFuncs
    | True
    = nonUIFuncs
-   ++ "\n\nUninterpreted Functions:"
-   ++ "\n========================\n"
-   ++ intercalate "\n" (map (showModelUI cfg) uiFuncs)
+   ++ "\n\n" ++ intercalate "\n\n" (map (showModelUI cfg) uiFuncs)
    where nonUIFuncs = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
          uiFuncs    = modelUIFuns model
 
@@ -497,8 +496,44 @@ showModelDictionary cfg allVars
         lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show an uninterpreted function
-showModelUI :: SMTConfig -> (String, ([([CV], CV)], CV)) -> String
-showModelUI _cfg (nm, def) = nm ++ " = " ++ show def
+showModelUI :: SMTConfig -> (String, (SBVType, ([([CV], CV)], CV))) -> String
+showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l | l <- sig : map align body]
+  where noOfArgs = length ts - 1
+
+        sig      = nm ++ " :: " ++ intercalate " -> " (map showBaseKind ts)
+
+        ls       = map line defs
+        defLine  = (nm : replicate noOfArgs "_", scv dflt)
+
+        body     = ls ++ [defLine]
+
+        colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
+
+        resWidth  = maximum  (0 : map (length . snd) body)
+
+        align (xs, r) = unwords $ zipWith fieldL colWidths xs ++ ["=", fieldR resWidth r]
+        fieldL i x =           take i (        x ++ repeat ' ')
+        fieldR i x = reverse $ take i (reverse x ++ repeat ' ')
+
+        scv = sh (printBase cfg)
+          where sh 2  = binP
+                sh 10 = showCV False
+                sh 16 = hexP
+                sh _  = show
+
+        -- NB. If we have a float NaN/Infinity/+0/-0 etc. these will
+        -- simply print as is, but will not be valid patterns. (We
+        -- have the semi-goal of being able to paste these definitions
+        -- in a Haskell file.) For the time being, punt on this, but
+        -- we might want to do this properly later somehow. (Perhaps
+        -- using some sort of a view pattern.)
+        line :: ([CV], CV) -> ([String], String)
+        line (args, r) = (nm : map (paren . scv) args, scv r)
+          where -- If negative, parenthesize. I think this is the only case
+                -- we need to worry about. Hopefully!
+                paren :: String -> String
+                paren x@('-':_) = '(' : x ++ ")"
+                paren x         = x
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> CV -> String
