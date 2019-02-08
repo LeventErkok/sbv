@@ -1295,4 +1295,5 @@ executeQuery queryContext (QueryT userQuery) = do
                              , "*** Query calls are only valid within runSMT/runSMTWith calls"
                              ]
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN module          ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN getAllSatResult ("HLint: ignore Use forM_"          :: String) #-}
