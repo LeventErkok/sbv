@@ -75,12 +75,18 @@ mkSymbolicEnumeration ''Sport
 -- It's not hard to modify this program to grab the values of all the assignments, i.e., the full
 -- solution to the puzzle. We leave that as an exercise to the interested reader!
 fishOwner :: IO ()
-fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSat puzzle
+fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSatWith z3{isNonModelVar = modelIgnore} puzzle
                case vs of
                  [Just (v::Nationality)] -> print v
                  []                      -> error "no solution"
                  _                       -> error "no unique solution"
- where puzzle = do
+ where -- For model construction purposes, we should not consider
+       -- The different values of the uninterpreted functions we use. We only
+       -- care for one instantiation of that. (Otherwise this'll produce thousands
+       -- of correct but uninteresting results.)
+       modelIgnore s = s `elem` ["color", "nationality", "beverage", "pet", "sport"]
+
+       puzzle = do
 
           let c = uninterpret "color"
               n = uninterpret "nationality"

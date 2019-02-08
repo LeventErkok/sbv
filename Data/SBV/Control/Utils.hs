@@ -71,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven)
+                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -881,13 +881,44 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     st@State{rUsedKinds} <- queryState
+                     topState@State{rUsedKinds} <- queryState
 
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
 
                      allUninterpreteds <- getUIs
-                     let uiFuns = [u | u@(_, SBVType as) <- allUninterpreteds, length as > 1] -- Functions have at least two kinds in their type
+
+                      -- Functions have at least two kinds in their type and all components must be "interpreted"
+                     let allUiFuns = [u | u@(nm, SBVType as) <- allUninterpreteds, length as > 1, not (isNonModelVar cfg nm)]
+
+                         -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
+                         -- there is no way to reflect back the values to the solver.)
+                         collectAcceptable []                              sofar = return sofar
+                         collectAcceptable (ui@(nm, t@(SBVType ats)):rest) sofar
+                           | all ok ats
+                           = collectAcceptable rest (ui : sofar)
+                           | True
+                           = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " ++ nm ++ " :: " ++ show t
+                                           , "*** Will *not* be used in allSat consideretions since its type"
+                                           , "*** has uninterpreted sorts present."
+                                           ]
+                                collectAcceptable rest sofar
+
+                           where ok :: Kind -> Bool
+                                 ok KBool                        = True
+                                 ok KBounded{}                   = True
+                                 ok KUnbounded                   = True
+                                 ok KReal                        = True
+                                 ok (KUninterpreted _ (Right _)) = True  -- These are the enumerated sorts, and they are perfectly fine
+                                 ok (KUninterpreted _ (Left  _)) = False -- These are the completely uninterpreted sorts, which we can't handle
+                                 ok KFloat                       = True
+                                 ok KDouble                      = True
+                                 ok KChar                        = True
+                                 ok KString                      = True
+                                 ok (KList k)                    = ok k
+                                 ok (KTuple ks)                  = all ok ks
+
+                     uiFuns <- reverse <$> collectAcceptable allUiFuns []
 
                      -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
                      -- as cex's tend to get larger
@@ -896,7 +927,6 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                         in case supportsFlattenedSequences solverCaps of
                              Nothing   -> return ()
                              Just cmds -> mapM_ (send True) cmds
-
 
                      let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
 
@@ -918,7 +948,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop st uiFuns vars cfg
+                     (sc, ms) <- loop topState uiFuns vars cfg
                      return (sc, w, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
@@ -967,9 +997,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                     | True                    = a `svNotEqual` b
 
                                                    fpNotEq a b = SVal KBool $ Right $ cache r
-                                                       where r st = do swa <- svToSV st a
-                                                                       swb <- svToSV st b
-                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [swa, swb])
+                                                       where r st = do sva <- svToSV st a
+                                                                       svb <- svToSV st b
+                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
 
                                           -- For each uninterpreted constant, use equivalence class
                                           uninterpretedEqs :: [SVal]
@@ -985,13 +1015,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                           -- For each uninterpreted function, create a disqualifying equation
                                           -- We do this rather brute-force, since we need to create a new function
                                           -- and do an existential assertion.
-                                          uninterpretedReject :: Maybe String
+                                          uninterpretedReject :: Maybe [String]
                                           uninterpretedFuns    :: [String]
                                           (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
                                               where uiReject = case rejects of
                                                                  []  -> Nothing
-                                                                 [x] -> Just x
-                                                                 xs  -> Just $ "(or " ++ unwords xs ++ ")"
+                                                                 xs  -> Just xs
 
                                                     (rejects, defs) = unzip $ map mkNotEq uiFunVals
 
@@ -1013,10 +1042,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                             uparams = unwords params
 
                                                             chain (vals, fallThru) = walk vals
-                                                              where walk []               = [scv fallThru]
-                                                                    walk ((as, r) : rest) = ("(ite " ++ cond as ++ " " ++ scv r ++ "")
-                                                                                          :  walk rest
-                                                                                          ++ [")"]
+                                                              where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
+                                                                    walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r ++ "") :  walk rest
 
                                                                     cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
                                                                     eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
@@ -1044,20 +1071,33 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                       let resultsSoFar = m : sofar
 
                                       -- Send function disequalities, if any:
-                                      mapM_ (send True) $ mergeSExpr uninterpretedFuns
+                                      let uiFunRejector   = "uiFunRejector_model_" ++ show cnt
+                                          header          = "define-fun " ++ uiFunRejector ++ " () Bool "
+
+                                          defineRejector []     = return ()
+                                          defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
+                                          defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
+                                                                                                 :  ("        (or " ++ x)
+                                                                                                 :  ["            " ++ e | e <- xs]
+                                                                                                 ++ ["        ))"]
+                                      rejectFuncs <- case uninterpretedReject of
+                                                       Nothing -> return Nothing
+                                                       Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
+                                                                     defineRejector fs
+                                                                     return $ Just uiFunRejector
 
                                       -- send the disallow clause and the uninterpreted rejector:
-                                      case (disallow, uninterpretedReject) of
+                                      case (disallow, rejectFuncs) of
                                          (Nothing, Nothing) -> return (False, resultsSoFar)
                                          (Just d,  Nothing) -> do constrain d
                                                                   go (cnt+1) resultsSoFar
-                                         (Nothing, Just r)  -> do send True $ "(assert " ++ r ++ ")"
+                                         (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"
                                                                   go (cnt+1) resultsSoFar
-                                         (Just d, Just r)   -> -- This is where it gets ugly. We have an SBV and a string
-                                                               -- and we need to "or" them. Sigh..
-                                                               do sv <- io $ sbvToSV topState d
-                                                                  io $ forceSVArg sv
-                                                                  mapM_ (send True) $ mergeSExpr ["(assert (or", show sv, r, "))"]
+                                         (Just d,  Just f)  -> -- This is where it gets ugly. We have an SBV and a string and we need to "or" them.
+                                                               -- But we need a way to force 'd' to be produced. So, go ahead and force it:
+                                                               do constrain $ d .=> d  -- NB: Redundant, but it makes sure the corresponding constraint gets shown
+                                                                  svd <- io $ svToSV topState (unSBV d)
+                                                                  send True $ "(assert (or " ++ f ++ " " ++ show svd ++ "))"
                                                                   go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
