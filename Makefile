@@ -74,9 +74,7 @@ regularTests:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 
 checkLinks:
-	@rm -f .brokdb
-	@brok $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md) > /dev/null
-	@rm -f .brokdb
+	@brok --no-cache $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md) > /dev/null
 
 release: veryclean install docs test checkLinks
 	cabal $(CSDIST)
