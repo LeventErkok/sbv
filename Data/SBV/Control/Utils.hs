@@ -39,7 +39,7 @@ module Data.SBV.Control.Utils (
      , executeQuery
      ) where
 
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
@@ -881,7 +881,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     State{rUsedKinds} <- queryState
+                     st@State{rUsedKinds} <- queryState
 
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
@@ -918,13 +918,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop uiFuns vars cfg
+                     (sc, ms) <- loop st uiFuns vars cfg
                      return (sc, w, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop uiFuns vars cfg = go (1::Int) []
+         loop topState uiFuns vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -985,10 +985,20 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                           -- For each uninterpreted function, create a disqualifying equation
                                           -- We do this rather brute-force, since we need to create a new function
                                           -- and do an existential assertion.
-                                          uninterpretedFuns :: [String]
-                                          uninterpretedFuns = concatMap mkNotEq uiFunVals
-                                              where mkNotEq (nm, (SBVType ts, vs)) = def ++ dif
+                                          uninterpretedReject :: Maybe String
+                                          uninterpretedFuns    :: [String]
+                                          (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
+                                              where uiReject = case rejects of
+                                                                 []  -> Nothing
+                                                                 [x] -> Just x
+                                                                 xs  -> Just $ "(or " ++ unwords xs ++ ")"
+
+                                                    (rejects, defs) = unzip $ map mkNotEq uiFunVals
+
+                                                    mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
                                                       where nm' = nm ++ "_model" ++ show cnt
+
+                                                            reject = nm' ++ "_reject"
 
                                                             -- rounding mode doesn't matter here, just pick one
                                                             scv = cvToSMTLib RoundNearestTiesToEven
@@ -1015,9 +1025,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                   :  chain vs
                                                                   ++ [")"]
 
-                                                            dif = [ "(assert (exists (" ++ args ++ ")"
-                                                                  , "                (distinct (" ++ nm  ++ " " ++ uparams ++ ")"
-                                                                  , "                          (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                            dif = [ "(define-fun " ++  reject ++ " () Bool"
+                                                                  , "   (exists (" ++ args ++ ")"
+                                                                  , "           (distinct (" ++ nm  ++ " " ++ uparams ++ ")"
+                                                                  , "           (" ++ nm' ++ " " ++ uparams ++ "))))"
                                                                   ]
 
                                           eqs = interpretedEqs ++ uninterpretedEqs
@@ -1032,12 +1043,22 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                       let resultsSoFar = m : sofar
 
-                                      -- make sure there's some var. This happens! 'allSat true' is the pathetic example.
-                                      case (disallow, uninterpretedFuns) of
-                                        (Nothing, []) -> return (False, resultsSoFar)
-                                        _             -> do when (isJust disallow) $ constrain (fromJust disallow)
-                                                            mapM_ (send True) $ mergeSExpr uninterpretedFuns
-                                                            go (cnt+1) resultsSoFar
+                                      -- Send function disequalities, if any:
+                                      mapM_ (send True) $ mergeSExpr uninterpretedFuns
+
+                                      -- send the disallow clause and the uninterpreted rejector:
+                                      case (disallow, uninterpretedReject) of
+                                         (Nothing, Nothing) -> return (False, resultsSoFar)
+                                         (Just d,  Nothing) -> do constrain d
+                                                                  go (cnt+1) resultsSoFar
+                                         (Nothing, Just r)  -> do send True $ "(assert " ++ r ++ ")"
+                                                                  go (cnt+1) resultsSoFar
+                                         (Just d, Just r)   -> -- This is where it gets ugly. We have an SBV and a string
+                                                               -- and we need to "or" them. Sigh..
+                                                               do sv <- io $ sbvToSV topState d
+                                                                  io $ forceSVArg sv
+                                                                  mapM_ (send True) $ mergeSExpr ["(assert (or", show sv, r, "))"]
+                                                                  go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
 getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
