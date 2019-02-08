@@ -393,10 +393,10 @@ instance Modelable SatResult where
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
   getModelAssignment (Unsatisfiable _ _) = Left "SBV.getModelAssignment: Unsatisfiable result"
-  getModelAssignment (Satisfiable _ m)   = Right (False, parseModelOut m)
-  getModelAssignment (SatExtField _ _)   = Left "SBV.getModelAssignment: The model is in an extension field"
-  getModelAssignment (Unknown _ m)       = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
-  getModelAssignment (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
+  getModelAssignment (Satisfiable   _ m) = Right (False, parseModelOut m)
+  getModelAssignment (SatExtField   _ _) = Left "SBV.getModelAssignment: The model is in an extension field"
+  getModelAssignment (Unknown       _ m) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
+  getModelAssignment (ProofError    _ s) = error $ unlines $ "Backend solver complains: " : s
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
