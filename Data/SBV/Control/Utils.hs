@@ -24,7 +24,8 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUIFunCVAssoc, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
+     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUIFunCVAssoc, getUnsatAssumptions
+     , SMTValue(..), SMTFunction(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
@@ -38,7 +39,7 @@ module Data.SBV.Control.Utils (
      , executeQuery
      ) where
 
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, fromJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
@@ -70,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg
+                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -81,15 +82,19 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
+import Data.SBV.Core.Kind       (smtType)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMT     (showModel)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
+
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib (qfsToString, isKString)
+import Data.SBV.Utils.Lib       (qfsToString, isKString)
 import Data.SBV.Utils.SExpr
+import Data.SBV.Utils.PrettyNum (cvToSMTLib)
+
 import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (toList)
@@ -884,6 +889,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      allUninterpreteds <- getUIs
                      let uiFuns = [u | u@(_, SBVType as) <- allUninterpreteds, length as > 1] -- Functions have at least two kinds in their type
 
+                     -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
+                     -- as cex's tend to get larger
+                     unless (null uiFuns) $
+                        let solverCaps = capabilities (solver cfg)
+                        in case supportsFlattenedSequences solverCaps of
+                             Nothing   -> return ()
+                             Just cmds -> mapM_ (send True) cmds
+
+
                      let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
@@ -943,7 +957,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                           (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
 
-                                          -- For each "interpreted" variable, figure out the model equivalence
+                                          -- For each interpreted variable, figure out the model equivalence
                                           -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
                                           -- and equality don't get along!
                                           interpretedEqs :: [SVal]
@@ -957,7 +971,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                        swb <- svToSV st b
                                                                        newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [swa, swb])
 
-                                          -- For each "uninterpreted" variable, use equivalence class
+                                          -- For each uninterpreted constant, use equivalence class
                                           uninterpretedEqs :: [SVal]
                                           uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
                                                            . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
@@ -968,7 +982,46 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                             where pwDistinct :: [SVal] -> [SVal]
                                                   pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
 
+                                          -- For each uninterpreted function, create a disqualifying equation
+                                          -- We do this rather brute-force, since we need to create a new function
+                                          -- and do an existential assertion.
+                                          uninterpretedFuns :: [String]
+                                          uninterpretedFuns = concatMap mkNotEq uiFunVals
+                                              where mkNotEq (nm, (SBVType ts, vs)) = def ++ dif
+                                                      where nm' = nm ++ "_model" ++ show cnt
+
+                                                            -- rounding mode doesn't matter here, just pick one
+                                                            scv = cvToSMTLib RoundNearestTiesToEven
+
+                                                            (ats, rt) = (init ts, last ts)
+
+                                                            args = unwords ["(x!" ++ show i ++ " " ++ smtType t ++ ")" | (t, i) <- zip ats [(0::Int)..]]
+                                                            res  = smtType rt
+
+                                                            params = ["x!" ++ show i | (_, i) <- zip ats [(0::Int)..]]
+
+                                                            uparams = unwords params
+
+                                                            chain (vals, fallThru) = walk vals
+                                                              where walk []               = [scv fallThru]
+                                                                    walk ((as, r) : rest) = ("(ite " ++ cond as ++ " " ++ scv r ++ "")
+                                                                                          :  walk rest
+                                                                                          ++ [")"]
+
+                                                                    cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
+                                                                    eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
+
+                                                            def =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
+                                                                  :  chain vs
+                                                                  ++ [")"]
+
+                                                            dif = [ "(assert (exists (" ++ args ++ ")"
+                                                                  , "                (distinct (" ++ nm  ++ " " ++ uparams ++ ")"
+                                                                  , "                          (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                                  ]
+
                                           eqs = interpretedEqs ++ uninterpretedEqs
+
                                           disallow = case eqs of
                                                        [] -> Nothing
                                                        _  -> Just $ SBV $ foldr1 svOr eqs
@@ -980,11 +1033,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                       let resultsSoFar = m : sofar
 
                                       -- make sure there's some var. This happens! 'allSat true' is the pathetic example.
-
-                                      case disallow of
-                                        Nothing -> return (False, resultsSoFar)
-                                        Just d  -> do constrain d
-                                                      go (cnt+1) resultsSoFar
+                                      case (disallow, uninterpretedFuns) of
+                                        (Nothing, []) -> return (False, resultsSoFar)
+                                        _             -> do when (isJust disallow) $ constrain (fromJust disallow)
+                                                            mapM_ (send True) $ mergeSExpr uninterpretedFuns
+                                                            go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
 getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
