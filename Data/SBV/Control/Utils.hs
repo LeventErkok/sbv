@@ -931,11 +931,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
-                                      let getUIFun ui = error $ "AllSat.TBD: Extraction for: " ++ show ui
+                                      let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
+                                                                   return (nm, (t, cvs))
+                                      uiFunVals <- mapM getUIFun uiFuns
 
                                       let model = SMTModel { modelObjectives = []
                                                            , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
-                                                           , modelUIFuns     = map getUIFun uiFuns
+                                                           , modelUIFuns     = uiFunVals
                                                            }
                                           m = Satisfiable cfg model
 
