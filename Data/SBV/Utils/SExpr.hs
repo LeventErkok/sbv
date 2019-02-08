@@ -247,8 +247,15 @@ constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` f
 -- solvers; though it isn't entirely clear how to do that as we do not know what solver
 -- we're using here. The trick is to handle all of possible SExpr's we see.
 -- We'll cross that bridge when we get to it.
-parseStoreAssociations :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
-parseStoreAssociations e = regroup =<< partitionEithers <$> vals e
+--
+-- NB. In case there's no "constraint" on the UI, Z3 produces the self-referential model:
+--
+--    (x (_ as-array x))
+--
+-- So, we specifically handle that here, by returning a Left of that name.
+parseStoreAssociations :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SExpr))
+parseStoreAssociations (EApp [ECon "_", ECon "as-array", ECon nm]) = Just $ Left nm
+parseStoreAssociations e                                           = Right <$> (regroup =<< partitionEithers <$> vals e)
     where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
           vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
           vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
