@@ -30,7 +30,10 @@
     way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
     except it works on all types.
 
-  * Add unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
+  * Added configuration option `allSatPrintAlong`. If set to True, calls to
+    allSat will print their models as they are found. The default is False.
+
+  * Added unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
     'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,
     strings, lists, and tuples.
 

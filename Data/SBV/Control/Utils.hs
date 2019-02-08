@@ -54,7 +54,7 @@ import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
 
-import Control.Monad            (join, unless, zipWithM)
+import Control.Monad            (join, unless, zipWithM, when)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
@@ -83,6 +83,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
+import Data.SBV.SMT.SMT     (showModel)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -917,20 +918,26 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                         return (True, sofar)
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
+
+                        let endMsg = when (allSatPrintAlong cfg && not (null sofar)) $ io . putStrLn $ "Found " ++ show (cnt-1) ++ " solutions."
+
                         cs <- checkSat
                         case cs of
-                          Unsat -> return (False, sofar)
+                          Unsat -> do endMsg
+                                      return (False, sofar)
                           Unk   -> do queryDebug ["*** Solver returned unknown, terminating query."]
+                                      endMsg
                                       return (False, sofar)
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
                                       let getUIFun ui = error $ "AllSat.TBD: Extraction for: " ++ show ui
 
-                                      let m = Satisfiable cfg SMTModel { modelObjectives = []
-                                                                       , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
-                                                                       , modelUIFuns     = map getUIFun uiFuns
-                                                                       }
+                                      let model = SMTModel { modelObjectives = []
+                                                           , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
+                                                           , modelUIFuns     = map getUIFun uiFuns
+                                                           }
+                                          m = Satisfiable cfg model
 
                                           (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
 
@@ -963,6 +970,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                           disallow = case eqs of
                                                        [] -> Nothing
                                                        _  -> Just $ SBV $ foldr1 svOr eqs
+
+                                      when (allSatPrintAlong cfg) $ do
+                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
+                                        io $ putStrLn $ showModel cfg model
 
                                       let resultsSoFar = m : sofar
 

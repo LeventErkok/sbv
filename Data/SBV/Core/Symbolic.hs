@@ -1612,7 +1612,8 @@ data SMTConfig = SMTConfig {
        , printBase           :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec       :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , satCmd              :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount :: Maybe Int      -- ^ In an allSat call, return at most this many models. If nothing, return all.
+       , allSatMaxModelCount :: Maybe Int      -- ^ In an 'allSat' call, return at most this many models. If nothing, return all.
+       , allSatPrintAlong    :: Bool           -- ^ In an 'allSat' call, print models as they are found.
        , isNonModelVar       :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , transcript          :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion       :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
