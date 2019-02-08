@@ -443,7 +443,7 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
   Unsatisfiable _ uc               -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ [] []) -> satMsg
   Satisfiable _ m                  -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary cfg b
+  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
   Unknown     _ r                  -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
   ProofError  _ []                 -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls                 -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
@@ -458,21 +458,24 @@ showModel cfg model
    | null uiFuncs
    = nonUIFuncs
    | True
-   = nonUIFuncs
-   ++ "\n\n" ++ intercalate "\n\n" (map (showModelUI cfg) uiFuncs)
-   where nonUIFuncs = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+   = sep nonUIFuncs ++ intercalate "\n\n" (map (showModelUI cfg) uiFuncs)
+   where nonUIFuncs = showModelDictionary (null uiFuncs) cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
          uiFuncs    = modelUIFuns model
+         sep ""     = ""
+         sep x      = x ++ "\n\n"
 
 -- | Show bindings in a generalized model dictionary, tabulated
-showModelDictionary :: SMTConfig -> [(String, GeneralizedCV)] -> String
-showModelDictionary cfg allVars
+showModelDictionary :: Bool -> SMTConfig -> [(String, GeneralizedCV)] -> String
+showModelDictionary warnEmpty cfg allVars
    | null allVars
-   = "[There are no variables bound by the model.]"
+   = warn "[There are no variables bound by the model.]"
    | null relevantVars
-   = "[There are no model-variables bound by the model.]"
+   = warn "[There are no model-variables bound by the model.]"
    | True
    = intercalate "\n" . display . map shM $ relevantVars
-  where relevantVars  = filter (not . ignore) allVars
+  where warn s = if warnEmpty then s else ""
+
+        relevantVars  = filter (not . ignore) allVars
         ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
@@ -511,9 +514,8 @@ showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l |
 
         resWidth  = maximum  (0 : map (length . snd) body)
 
-        align (xs, r) = unwords $ zipWith fieldL colWidths xs ++ ["=", fieldR resWidth r]
-        fieldL i x =           take i (        x ++ repeat ' ')
-        fieldR i x = reverse $ take i (reverse x ++ repeat ' ')
+        align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
+           where left i x = take i (x ++ repeat ' ')
 
         scv = sh (printBase cfg)
           where sh 2  = binP
