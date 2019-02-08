@@ -48,8 +48,12 @@ mkSymbolicEnumeration ''Color
 type Flower = SInteger
 
 -- | The uninterpreted function 'col' assigns a color to each flower.
+-- Note that we use the suffix "_modelIgnore" as we don't consider variations
+-- on this function to be interesting for model construction purposes.
+-- We'll use the 'isNonModelVar' parameter to ignore them later on, see
+-- the call below to 'allSatWith'.
 col :: Flower -> SBV Color
-col = uninterpret "col"
+col = uninterpret "col_modelIgnore"
 
 -- | Describe a valid pick of three flowers @i@, @j@, @k@, assuming
 -- we have @n@ flowers to start with. Essentially the numbers should
@@ -68,11 +72,7 @@ puzzle = do n <- sInteger "N"
 
             let valid = validPick n
 
-            -- Declare three existential flowers. We name these with
-            -- the suffix "_modelIgnore" as we don't consider variations
-            -- on them to be interesting for model construction purposes.
-            -- We'll use the 'isNonModelVar' parameter to ignore them
-            -- for that purpose.
+            -- Declare three existential flowers. 
             ef1 <- exists "ef1_modelIgnore"
             ef2 <- exists "ef2_modelIgnore"
             ef3 <- exists "ef3_modelIgnore"
