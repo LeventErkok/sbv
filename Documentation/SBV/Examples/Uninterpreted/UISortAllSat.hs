@@ -55,23 +55,13 @@ classify = uninterpret "classify"
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
+-- <BLANKLINE>
+--   classify :: L -> Integer
+--   classify L!val!1 = 1
+--   classify L!val!2 = 2
+--   classify _       = 0
 -- Solution #2:
 --   l  = L!val!1 :: L
---   l0 = L!val!0 :: L
---   l1 = L!val!1 :: L
---   l2 = L!val!2 :: L
--- Solution #3:
---   l  = L!val!2 :: L
---   l0 = L!val!0 :: L
---   l1 = L!val!1 :: L
---   l2 = L!val!2 :: L
--- Found 3 different solutions.
---
--- We can also ask for a value of the `classify` function itself:
---
--- >>> sat genLs
--- Satisfiable. Model:
---   l  = L!val!0 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
@@ -80,9 +70,17 @@ classify = uninterpret "classify"
 --   classify L!val!1 = 1
 --   classify L!val!2 = 2
 --   classify _       = 0
---
--- Note that `allSat` does not return function values in this case since the uninterpreted
--- function itself has uninterpreted components.
+-- Solution #3:
+--   l  = L!val!2 :: L
+--   l0 = L!val!0 :: L
+--   l1 = L!val!1 :: L
+--   l2 = L!val!2 :: L
+-- <BLANKLINE>
+--   classify :: L -> Integer
+--   classify L!val!1 = 1
+--   classify L!val!2 = 2
+--   classify _       = 0
+-- Found 3 different solutions.
 genLs :: Predicate
 genLs = do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]
            constrain $ classify l0 .== 0

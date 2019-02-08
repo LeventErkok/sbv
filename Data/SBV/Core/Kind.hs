@@ -18,7 +18,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
@@ -221,6 +221,21 @@ instance HasKind AlgReal where kindOf _ = KReal
 instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 instance HasKind Char    where kindOf _ = KChar
+
+-- | Do we have a completely uninterpreted sort lying around anywhere?
+hasUninterpretedSorts :: Kind -> Bool
+hasUninterpretedSorts KBool                        = False
+hasUninterpretedSorts KBounded{}                   = False
+hasUninterpretedSorts KUnbounded                   = False
+hasUninterpretedSorts KReal                        = False
+hasUninterpretedSorts (KUninterpreted _ (Right _)) = False  -- These are the enumerated sorts, and they are perfectly fine
+hasUninterpretedSorts (KUninterpreted _ (Left  _)) = True   -- These are the completely uninterpreted sorts, which we are looking for here
+hasUninterpretedSorts KFloat                       = False
+hasUninterpretedSorts KDouble                      = False
+hasUninterpretedSorts KChar                        = False
+hasUninterpretedSorts KString                      = False
+hasUninterpretedSorts (KList k)                    = hasUninterpretedSorts k
+hasUninterpretedSorts (KTuple ks)                  = any hasUninterpretedSorts ks
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString

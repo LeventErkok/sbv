@@ -82,7 +82,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
-import Data.SBV.Core.Kind       (smtType)
+import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMT     (showModel)
@@ -894,29 +894,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
                          collectAcceptable []                              sofar = return sofar
-                         collectAcceptable (ui@(nm, t@(SBVType ats)):rest) sofar
-                           | all ok ats
-                           = collectAcceptable rest (ui : sofar)
+                         collectAcceptable ((nm, t@(SBVType ats)):rest) sofar
+                           | not (any hasUninterpretedSorts ats)
+                           = collectAcceptable rest (nm : sofar)
                            | True
                            = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " ++ nm ++ " :: " ++ show t
                                            , "*** Will *not* be used in allSat consideretions since its type"
                                            , "*** has uninterpreted sorts present."
                                            ]
                                 collectAcceptable rest sofar
-
-                           where ok :: Kind -> Bool
-                                 ok KBool                        = True
-                                 ok KBounded{}                   = True
-                                 ok KUnbounded                   = True
-                                 ok KReal                        = True
-                                 ok (KUninterpreted _ (Right _)) = True  -- These are the enumerated sorts, and they are perfectly fine
-                                 ok (KUninterpreted _ (Left  _)) = False -- These are the completely uninterpreted sorts, which we can't handle
-                                 ok KFloat                       = True
-                                 ok KDouble                      = True
-                                 ok KChar                        = True
-                                 ok KString                      = True
-                                 ok (KList k)                    = ok k
-                                 ok (KTuple ks)                  = all ok ks
 
                      uiFuns <- reverse <$> collectAcceptable allUiFuns []
 
@@ -948,13 +934,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop topState uiFuns vars cfg
+                     (sc, ms) <- loop topState (allUiFuns, uiFuns) vars cfg
                      return (sc, w, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop topState uiFuns vars cfg = go (1::Int) []
+         loop topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -977,7 +963,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                       let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
                                                                    return (nm, (t, cvs))
-                                      uiFunVals <- mapM getUIFun uiFuns
+                                      uiFunVals <- mapM getUIFun allUiFuns
 
                                       let model = SMTModel { modelObjectives = []
                                                            , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
@@ -1022,7 +1008,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                  []  -> Nothing
                                                                  xs  -> Just xs
 
-                                                    (rejects, defs) = unzip $ map mkNotEq uiFunVals
+                                                    (rejects, defs) = unzip $ map mkNotEq [ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
                                                     mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
                                                       where nm' = nm ++ "_model" ++ show cnt
