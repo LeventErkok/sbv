@@ -33,10 +33,7 @@ import Data.SBV
 
 -- | Find the multiplier and the mask as described. We have:
 --
--- TODO: Currently turning this off, z3 got really slow on this!
--- See: https://github.com/Z3Prover/z3/issues/2075
---
--- maskAndMult
+-- >>> maskAndMult
 -- Satisfiable. Model:
 --   mask = 0x8080808080808080 :: Word64
 --   mult = 0x0002040810204081 :: Word64
