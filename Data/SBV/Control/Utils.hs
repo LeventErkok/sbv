@@ -85,7 +85,7 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
-import Data.SBV.SMT.SMT     (showModel)
+import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -485,14 +485,21 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to functions
-class SMTValue r => SMTFunction fun a r | fun -> a r where
+class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
   smtFunSaturate :: (MonadIO m, MonadQuery m) => fun -> m (SBV r)
   smtFunName     :: (MonadIO m, MonadQuery m) => fun -> m String
-  smtFunDefault  :: fun -> r
+  smtFunDefault  :: fun -> Maybe r
   sexprToFun     :: fun -> SExpr -> Maybe ([(a, r)], r)
 
-  {-# MINIMAL sexprToArg, smtFunSaturate, smtFunDefault #-}
+  {-# MINIMAL sexprToArg, smtFunSaturate  #-}
+
+  -- Given the function, figure out a default "return value"
+  smtFunDefault _
+    | Just v <- defaultKindedValue (kindOf (Proxy @r)), Just (res, []) <- parseCVs [v]
+    = Just res
+    | True
+    = Nothing
 
   -- Given the function, determine what its name is and do some sanity checks
   smtFunName f = do st@State{rUIMap} <- queryState
@@ -531,14 +538,14 @@ class SMTValue r => SMTFunction fun a r | fun -> a r where
                       Nothing        -> Nothing
                       -- Ideally, we'd check that the name returned in the Left case matches our name
                       -- But let's not worry about that detail for now.
-                      Just (Left _)  -> Just ([], smtFunDefault f)
+                      Just (Left _)  -> smtFunDefault f >>= \v -> Just ([], v)
                       Just (Right v) -> convert v
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
           sexprPoint (as, v) = (,) <$> sexprToArg f as <*> sexprToVal v
 
 -- | Functions of arity 1
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  HasKind r, SMTValue r
+instance ( SymVal a, HasKind a, SMTValue a
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV r) a r
          where
   sexprToArg _ [a0] = sexprToVal a0
@@ -547,9 +554,9 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_
 
 -- | Functions of arity 2
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,  HasKind a, SMTValue a
+         , SymVal b,  HasKind b, SMTValue b
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r
          where
   sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
@@ -558,10 +565,10 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_
 
 -- | Functions of arity 3
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r
          where
   sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
@@ -570,11 +577,11 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 4
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV r) (a, b, c, d) r
          where
   sexprToArg _ [a0, a1, a2, a3] = (,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3
@@ -583,12 +590,12 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 5
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV r) (a, b, c, d, e) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4] = (,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4
@@ -597,13 +604,13 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 6
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV r) (a, b, c, d, e, f) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5] = (,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5
@@ -612,14 +619,14 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 7
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  SymVal g, HasKind g, SMTValue g
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SymVal g,   HasKind g, SMTValue g
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV r) (a, b, c, d, e, f, g) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = (,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6
@@ -628,15 +635,15 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 8
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  SymVal g, HasKind g, SMTValue g
-         ,  SymVal h, HasKind h, SMTValue h
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SymVal g,   HasKind g, SMTValue g
+         , SymVal h,   HasKind h, SMTValue h
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV h -> SBV r) (a, b, c, d, e, f, g, h) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = (,,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6 <*> sexprToVal a7
