@@ -79,11 +79,13 @@ regularTests:
 checkLinks:
 	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
 
-release: veryclean install docs test checkLinks
-	cabal $(CSDIST)
+testInterfaces:
 	@make -C buildUtils veryclean
 	@make -C buildUtils
 	buildUtils/testInterfaces
+
+release: veryclean install docs test testInterfaces checkLinks
+	cabal $(CSDIST)
 	@echo "*** SBV is ready for release!"
 
 # use this as follows:
