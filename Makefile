@@ -70,6 +70,9 @@ lintTest:
 docTest:
 	@$(TIME) doctest --fast --no-magic $(DOCTESTSOURCES)
 
+vdocTest:
+	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
+
 regularTests:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 
