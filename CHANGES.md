@@ -5,6 +5,22 @@
 
 ### Version 8.1, Not yet released
 
+  * SBV models now contain values for uninterpreted functions. This was a long
+    requested feature, but there was no previous support since SMTLib does not
+    have a standard way of querying such values. We now support this for z3 only,
+    using z3 specific syntax in responses, so other solvers may not work. The
+    calls to `sat` now include function models, and you can also get them
+    via `getFunction` in a query.
+
+  * The `allSat` function is similarly modified to return uninterpreted-function
+    models. There are a few technical restrictions, however: Only the values
+    of uninterpreted functions without any uninterpreted arguments will participate
+    in `allSat` computation. (For instance, `uninterpret "f" :: SInteger -> SInteger`
+    is OK, but `uninterpret "f" :: MyType -> SInteger` is not, where `MyType` itself
+    is uninterpreted.) The reason for this is again there is no SMTLib way of
+    reflecting model values back into the solver. This restriction should not
+    cause much trouble in practice, but do get in touch if it is a use-case for you.
+
   * Added functions `elem`/`notElem` to `Data.SBV.List`.
 
   * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
