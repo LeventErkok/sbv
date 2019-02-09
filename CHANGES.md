@@ -18,16 +18,8 @@
     in `allSat` computation. (For instance, `uninterpret "f" :: SInteger -> SInteger`
     is OK, but `uninterpret "f" :: MyType -> SInteger` is not, where `MyType` itself
     is uninterpreted.) The reason for this is again there is no SMTLib way of
-    reflecting model values back into the solver. This restriction should not
+    reflecting uninterpreted model values back into the solver. This restriction should not
     cause much trouble in practice, but do get in touch if it is a use-case for you.
-
-  * Added functions `elem`/`notElem` to `Data.SBV.List`.
-
-  * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
-
-  * Rework the 'Queriable' class to allow projection/embedding pairs. Also
-    added a new 'Fresh' class, which is more usable in simpler scenarios
-    where the default projection/embedding definitions are suitable.
 
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
     language and an engine for checking partial and total correctness of imperative programs.
@@ -37,6 +29,14 @@
     be skipped (by passing 'Nothing'), in which case partial correctness will be proven.
     Checking input parameters for no-change is supported via stability checks. For example
     use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
+
+  * Added functions `elem`/`notElem` to `Data.SBV.List`.
+
+  * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
+
+  * Rework the 'Queriable' class to allow projection/embedding pairs. Also
+    added a new 'Fresh' class, which is more usable in simpler scenarios
+    where the default projection/embedding definitions are suitable.
 
   * Added strong-equality (.===) and inequality (./==) to the 'EqSymbolic' class. This
     method is equivalent to the usual (.==) and (./=) for all types except 'SFloat' and
