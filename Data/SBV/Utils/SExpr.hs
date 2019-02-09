@@ -11,7 +11,7 @@
 
 {-# LANGUAGE BangPatterns #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseStoreAssociations) where
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction) where
 
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
@@ -239,6 +239,62 @@ constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` f
                  , (["RTZ", "roundTowardZero"],        show RoundTowardZero)
                  ]
 
+-- | Parse a function like value. These come in two flavors: Either in the form of
+-- a store-expression or a lambda-expression. So we handle both here.
+parseSExprFunction :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SExpr))
+parseSExprFunction e
+  | Just r <- parseLambdaExpression  e = Just (Right r)
+  | Just r <- parseStoreAssociations e = Just r
+  | True                               = Nothing         -- out-of luck. NB. This is where we would add support for other solvers!
+
+-- | Parse a lambda expression, most likely z3 specific. There's some guess work
+-- involved here regarding how z3 produces lambda-expressions; while we try to
+-- be flexible, this is certainly not a full fledged parser. But hopefully it'll
+-- cover everything z3 will throw at it.
+parseLambdaExpression :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
+parseLambdaExpression funExpr = case funExpr of
+                                  EApp [ECon "lambda", EApp params, body] -> mapM getParam params >>= flip lambda body >>= chainAssigns
+                                  _                                       -> Nothing
+  where getParam (EApp [ECon v, _]) = Just v
+        getParam _                  = Nothing
+
+        lambda :: [String] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+        lambda params body = reverse <$> go [] body
+          where go :: [Either ([SExpr], SExpr) SExpr] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+                go sofar (EApp [ECon "ite", selector, thenBranch, elseBranch]) = do mbS <- select selector
+                                                                                    tB  <- go [] thenBranch
+                                                                                    case cond  mbS tB of
+                                                                                       Just s  -> go (Left s : sofar) elseBranch
+                                                                                       _       -> Nothing
+                go sofar e                                                     = Just $ Right e : sofar
+
+                cond :: [SExpr] -> [Either ([SExpr], SExpr) SExpr] -> Maybe ([SExpr], SExpr)
+                cond s [Right v] = Just (s, v)
+                cond _ _         = Nothing
+
+                select :: SExpr -> Maybe [SExpr]
+                select e
+                   | Just dict <- build e [] = mapM (`lookup` dict) params
+                   | True                    = Nothing
+                  where -- build a dictionary of assignments from the scrutinee
+                        build :: SExpr -> [(String, SExpr)] -> Maybe [(String, SExpr)]
+                        build (EApp (ECon "and" : rest)) sofar = let next _ Nothing  = Nothing
+                                                                     next c (Just x) = build c x
+                                                                 in foldr next (Just sofar) rest
+
+                        build expr sofar | Just (v, r) <- grok expr, v `elem` params = Just $ (v, r) : sofar
+                                         | True                                      = Nothing
+
+                        -- See if we can figure out what z3 is telling us; hopefully this
+                        -- mapping covers everything we can see:
+                        grok (EApp [ECon "=", ECon v, r]) = Just (v, r)
+                        grok (EApp [ECon "=", r, ECon v]) = Just (v, r)
+                        grok (EApp [ECon "not", ECon v])  = Just (v, ENum (0, Nothing)) -- boolean negation, require it to be 0
+                        grok (ECon v)                     = Just (v, ENum (1, Nothing)) -- boolean identity, require it to be 1
+
+                        -- Tough luck, we couldn't understand:
+                        grok _ = Nothing
+
 -- | Parse a series of associations in the array notation, things that look like:
 --
 --     (store (store ((as const Array) 12) 3 5 9) 5 6 75)
@@ -255,13 +311,15 @@ constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` f
 -- So, we specifically handle that here, by returning a Left of that name.
 parseStoreAssociations :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SExpr))
 parseStoreAssociations (EApp [ECon "_", ECon "as-array", ECon nm]) = Just $ Left nm
-parseStoreAssociations e                                           = Right <$> (regroup =<< partitionEithers <$> vals e)
+parseStoreAssociations e                                           = Right <$> (chainAssigns =<< vals e)
     where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
           vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
           vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
                                                                                   return $ Left (init argsVal, last argsVal) : rest
           vals _                                                             = Nothing
 
-          regroup :: ([([SExpr], SExpr)], [SExpr]) -> Maybe ([([SExpr], SExpr)], SExpr)
-          regroup (vs, [d]) = Just (vs, d)
-          regroup _         = Nothing
+-- | Turn a sequence of left-right chain assignments (condition + free) into a single chain
+chainAssigns :: [Either ([SExpr], SExpr) SExpr] -> Maybe ([([SExpr], SExpr)], SExpr)
+chainAssigns chain = regroup $ partitionEithers chain
+  where regroup (vs, [d]) = Just (vs, d)
+        regroup _         = Nothing

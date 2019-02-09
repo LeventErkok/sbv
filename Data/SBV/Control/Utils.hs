@@ -534,7 +534,7 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind
 
-  sexprToFun f e = case parseStoreAssociations e of
+  sexprToFun f e = case parseSExprFunction e of
                       Nothing        -> Nothing
                       -- Ideally, we'd check that the name returned in the Left case matches our name
                       -- But let's not worry about that detail for now.
@@ -847,7 +847,7 @@ getUIFunCVAssoc mbi (nm, t) = do let modelIndex = case mbi of
                                      toRes :: SExpr -> Maybe CV
                                      toRes = recoverKindedValue rt
 
-                                 parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseStoreAssociations e of
+                                 parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseSExprFunction e of
                                                                                             Just (Right assocs)         -> case convert assocs of
                                                                                                                               Just res -> return res
                                                                                                                               Nothing  -> bad r Nothing
