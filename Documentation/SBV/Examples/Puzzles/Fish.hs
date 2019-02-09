@@ -74,7 +74,7 @@ mkSymbolicEnumeration ''Sport
 --
 -- It's not hard to modify this program to grab the values of all the assignments, i.e., the full
 -- solution to the puzzle. We leave that as an exercise to the interested reader!
--- NB. We use the 'allSatTrackUIFuns' configuration to indicate that the uninterpreted function
+-- NB. We use the 'allSatTrackUFs' configuration to indicate that the uninterpreted function
 -- changes do not matter for generating different values. All we care is that the fishOwner changes!
 fishOwner :: IO ()
 fishOwner = do vs <- getModelValues "fishOwner" `fmap` allSatWith z3{allSatTrackUFs = False} puzzle
