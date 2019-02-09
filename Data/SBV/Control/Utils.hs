@@ -986,11 +986,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+
+                        when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
+
                         return (True, sofar)
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
 
-                        let endMsg = when (allSatPrintAlong cfg && not (null sofar)) $ io . putStrLn $ "Found " ++ show (cnt-1) ++ " solutions."
+                        let endMsg = when (allSatPrintAlong cfg && not (null sofar)) $ do
+                                             let msg 0 = "No solutions found."
+                                                 msg 1 = "This is the only solution."
+                                                 msg n = "Found " ++ show n ++ " different solutions."
+                                             io . putStrLn $ msg (cnt - 1)
 
                         cs <- checkSat
                         case cs of
