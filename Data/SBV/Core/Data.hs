@@ -33,7 +33,7 @@ module Data.SBV.Core.Data
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymVal(..)
- , CV(..), SumSide(..), CVal(..), AlgReal(..), AlgRealPoly(..), ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
+ , CV(..), CVal(..), AlgReal(..), AlgRealPoly(..), ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
  , mkConstCV ,liftCV2, mapCV, mapCV2
  , SV(..), trueSV, falseSV, trueCV, falseCV, normCV
  , SVal(..)

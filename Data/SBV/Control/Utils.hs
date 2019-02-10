@@ -71,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>), SumSide(InL)
+                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -407,13 +407,13 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
    sexprToVal _                                       = Nothing
 
 instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
-  sexprToVal (EApp [ECon "left_SBVSum2",  a]) = Left  <$> sexprToVal a
-  sexprToVal (EApp [ECon "right_SBVSum2", b]) = Right <$> sexprToVal b
-  sexprToVal _                                = Nothing
+  sexprToVal (EApp [ECon "left_SBVEither",  a]) = Left  <$> sexprToVal a
+  sexprToVal (EApp [ECon "right_SBVEither", b]) = Right <$> sexprToVal b
+  sexprToVal _                                  = Nothing
 
 instance SMTValue a => SMTValue (Maybe a) where
-  sexprToVal (EApp [ECon "left_SBVSum2",  _]) = pure Nothing
-  sexprToVal (EApp [ECon "right_SBVSum2", b]) = Just <$> sexprToVal b
+  sexprToVal (ECon "nothing_SBVMaybe")        = pure Nothing
+  sexprToVal (EApp [ECon "just_SBVMaybe", a]) = Just <$> sexprToVal a
   sexprToVal _                                = Nothing
 
 instance SMTValue () where
@@ -738,8 +738,8 @@ defaultKindedValue k = CV k <$> cvt k
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
-        cvt (KSum Nothing   _)    = Just $ CSum InL (CTuple [])  -- why not?
-        cvt (KSum (Just kl) _)    = CSum InL <$> cvt kl          -- why not?
+        cvt (KMaybe _)            = Just $ CMaybe Nothing
+        cvt (KEither k1 _)        = (CEither . Left) <$> cvt k1   -- why not?
 
         -- Tricky case of uninterpreted
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)

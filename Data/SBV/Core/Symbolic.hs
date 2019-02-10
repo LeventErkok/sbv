@@ -174,9 +174,12 @@ data Op = Plus
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
-        | SumConstructor SumSide                -- Construct a sum
-        | SumIs SumSide                         -- Sum branch tester
-        | SumAccess SumSide                     -- Sum branch access
+        | EitherConstructor Bool                -- Construct a sum; False: left, True: right
+        | EitherIs Bool                         -- Either branch tester; False: left, True: right
+        | EitherAccess Bool                     -- Either branch access; False: left, True: right
+        | MaybeConstructor                      -- Construct a maybe just value
+        | MaybeIs Bool                          -- Maybe tester; False: nothing, True: just
+        | MaybeAccess                           -- Maybe branch access; grab the contents of the just
         deriving (Eq, Ord)
 
 -- | Floating point operations
@@ -414,12 +417,18 @@ instance Show Op where
   show (TupleConstructor   0) = "SBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
-  show (SumConstructor   InL) = "left_SBVSum2"
-  show (SumConstructor   InR) = "right_SBVSum2"
-  show (SumIs            InL) = "(_ is left_SBVSum2)"
-  show (SumIs            InR) = "(_ is right_SBVSum2)"
-  show (SumAccess        InL) = "get_left_SBVSum2"
-  show (SumAccess        InR) = "get_right_SBVSum2"
+
+  show (EitherConstructor   False) = "left_SBVEither"
+  show (EitherConstructor   True ) = "right_SBVEither"
+  show (EitherIs            False) = "(_ is left_SBVEither)"
+  show (EitherIs            True ) = "(_ is right_SBVEither)"
+  show (EitherAccess        False) = "get_left_SBVEither"
+  show (EitherAccess        True ) = "get_right_SBVEither"
+
+  show MaybeConstructor        = "just_SBVMaybe"
+  show (MaybeIs         False) = "(_ is nothing_SBVMaybe)"
+  show (MaybeIs         True ) = "(_ is just_SBVMaybe )"
+  show MaybeAccess             = "get_just_SBVMaybe"
 
   show op
     | Just s <- op `lookup` syms = s
@@ -1045,26 +1054,27 @@ registerKind st k
                                               KUninterpreted{} -> k `notElem` existingKinds
                                               KList{}          -> k `notElem` existingKinds
                                               KTuple nks       -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                              KSum{}           -> k `notElem` existingKinds
+                                              KMaybe{}         -> k `notElem` existingKinds
+                                              KEither{}        -> k `notElem` existingKinds
                                               _                -> False
 
                           when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
        -- Don't forget to register subkinds!
        case k of
-         KBool          {}           -> return ()
-         KBounded       {}           -> return ()
-         KUnbounded     {}           -> return ()
-         KReal          {}           -> return ()
-         KUninterpreted {}           -> return ()
-         KFloat         {}           -> return ()
-         KDouble        {}           -> return ()
-         KChar          {}           -> return ()
-         KString        {}           -> return ()
-         KList          ek           -> registerKind st ek
-         KTuple         eks          -> mapM_ (registerKind st) eks
-         KSum           Nothing   ke -> mapM_ (registerKind st) [KTuple [], ke]  -- NB. Register 0-tuple here, as Maybe uses that
-         KSum           (Just k1) k2 -> mapM_ (registerKind st) [k1, k2]
+         KBool          {}    -> return ()
+         KBounded       {}    -> return ()
+         KUnbounded     {}    -> return ()
+         KReal          {}    -> return ()
+         KUninterpreted {}    -> return ()
+         KFloat         {}    -> return ()
+         KDouble        {}    -> return ()
+         KChar          {}    -> return ()
+         KString        {}    -> return ()
+         KList          ek    -> registerKind st ek
+         KTuple         eks   -> mapM_ (registerKind st) eks
+         KMaybe         ke    -> registerKind st ke
+         KEither        k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()

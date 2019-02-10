@@ -417,7 +417,8 @@ cvToSMTLib rm x
   | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
-  | isSum x          , CSum side c      <- cvVal x = smtLibSum (kindOf x) side c
+  | isMaybe x        , CMaybe mc        <- cvVal x = smtLibMaybe  (kindOf x) mc
+  | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
 
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
@@ -447,11 +448,15 @@ cvToSMTLib rm x
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
-        smtLibSum :: Kind -> SumSide -> CVal -> String
-        smtLibSum (KSum Nothing  _) InL c = "(left_SBVSum2 "  ++ cvToSMTLib rm (CV (KTuple []) c) ++ ")"
-        smtLibSum (KSum (Just k) _) InL c = "(left_SBVSum2 "  ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibSum (KSum _        k) InR c = "(right_SBVSum2 " ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibSum k                 _   _ = error $ "SBV.cvToSMTLib: Impossible case (smtLibSum), received kind: " ++ show k
+        smtLibMaybe :: Kind -> Maybe CVal -> String
+        smtLibMaybe (KMaybe _) Nothing   = "nothing_SBVMaybe"
+        smtLibMaybe (KMaybe k) (Just  c) = "(just_SBVMaybe " ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibMaybe k          _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
+
+        smtLibEither :: Kind -> Either CVal CVal -> String
+        smtLibEither (KEither  k _) (Left c)  = "(left_SBVEither "  ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibEither (KEither  _ k) (Right c) = "(right_SBVEither " ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibEither k              _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibEither), received kind: " ++ show k
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)

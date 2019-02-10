@@ -55,7 +55,7 @@ isJust = maybe sFalse (const sTrue)
 
 -- | The symbolic 'Nothing'
 nothing :: forall a. SymVal a => SBV (Maybe a)
-nothing = SBV $ SVal k $ Left $ CV k $ CSum InL (CTuple [])
+nothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
   where k = kindOf (Proxy @(Maybe a))
 
 -- | Construct an @SBV (Maybe a)@ from an @SBV a@
@@ -67,7 +67,7 @@ just sa
   = SBV $ SVal k $ Right $ cache res
   where k = kindOf (Proxy @(Maybe a))
         res st = do asv <- sbvToSV st sa
-                    newExpr st k $ SBVApp (SumConstructor InR) [asv]
+                    newExpr st k $ SBVApp MaybeConstructor [asv]
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
@@ -88,7 +88,7 @@ maybe brNothing brJust ma
 
         res st = do mav <- sbvToSV st ma
 
-                    let justVal = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (SumAccess InR)  [mav]
+                    let justVal = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp MaybeAccess [mav]
 
                         justRes = brJust justVal
 
@@ -96,5 +96,5 @@ maybe brNothing brJust ma
                     br2 <- sbvToSV st justRes
 
                     -- Do we have a value?
-                    noVal <- newExpr st KBool $ SBVApp (SumIs InL) [mav]
+                    noVal <- newExpr st KBool $ SBVApp (MaybeIs False) [mav]
                     newExpr st kb $ SBVApp Ite [noVal, br1, br2]

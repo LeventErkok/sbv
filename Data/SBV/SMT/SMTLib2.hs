@@ -127,7 +127,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
-             ++ (if containsSum kindInfo then declSum else [])
+             ++ (if containsSum   kindInfo then declSum   else [])
+             ++ (if containsMaybe kindInfo then declMaybe else [])
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -329,13 +330,23 @@ findTupleArities ks = Set.toAscList
 
 -- | Is @Either@ being used?
 containsSum :: Set Kind -> Bool
-containsSum = not . Set.null . Set.filter isSum
+containsSum = not . Set.null . Set.filter isEither
+
+-- | Is @Maybe@ being used?
+containsMaybe :: Set Kind -> Bool
+containsMaybe = not . Set.null . Set.filter isMaybe
 
 declSum :: [String]
-declSum = [ "(declare-datatypes ((SBVSum2 2)) ((par (T1 T2)"
-          , "                                  ((left_SBVSum2  (get_left_SBVSum2  T1))"
-          , "                                   (right_SBVSum2 (get_right_SBVSum2 T2))))))"
+declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
+          , "                                    ((left_SBVSum2  (get_left_SBVSum2  T1))"
+          , "                                     (right_SBVSum2 (get_right_SBVSum2 T2))))))"
           ]
+
+declMaybe :: [String]
+declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
+            , "                                    (nothing_SBVMaybe"
+            , "                                     (just_SBVMaybe (get_just_SBVMaybe T))))))"
+            ]
 
 -- | Convert in a query context.
 -- NB. We do not store everything in @newKs@ below, but only what we need
@@ -351,7 +362,8 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
-            ++ (if containsSum newKs then declSum else [])
+            ++ (if containsSum   newKs then declSum   else [])
+            ++ (if containsMaybe newKs then declMaybe else [])
             -- constants
             ++ concatMap (declConst cfg) consts
             -- inputs
@@ -691,7 +703,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
                               KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KSum k1 k2         -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
+                              KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
+                              KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
                               KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
@@ -711,7 +724,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KSum k1 k2         -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
+                                KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
+                                KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
                                 KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
@@ -779,12 +793,18 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor 0)   [])    = "SBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
-        sh (SBVApp (SumConstructor   InL) [arg]) = "(left_SBVSum2 "  ++ ssv arg ++ ")"
-        sh (SBVApp (SumConstructor   InR) [arg]) = "(right_SBVSum2 " ++ ssv arg ++ ")"
-        sh (SBVApp (SumIs            InL) [arg]) = "((_ is left_SBVSum2) "  ++ ssv arg ++ ")"
-        sh (SBVApp (SumIs            InR) [arg]) = "((_ is right_SBVSum2) " ++ ssv arg ++ ")"
-        sh (SBVApp (SumAccess        InL) [arg]) = "(get_left_SBVSum2 "  ++ ssv arg ++ ")"
-        sh (SBVApp (SumAccess        InR) [arg]) = "(get_right_SBVSum2 " ++ ssv arg ++ ")"
+
+        sh (SBVApp (EitherConstructor False) [arg]) = "(left_SBVEither "         ++ ssv arg ++ ")"
+        sh (SBVApp (EitherConstructor True ) [arg]) = "(right_SBVEither "        ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          False) [arg]) = "((_ is left_SBVEither) "  ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          True ) [arg]) = "((_ is right_SBVEither) " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess      False) [arg]) = "(get_left_SBVEither "     ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess      True ) [arg]) = "(get_right_SBVEither "    ++ ssv arg ++ ")"
+
+        sh (SBVApp MaybeConstructor [arg]) = "(just_SBVMaybe "           ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs False)  [arg]) = "((_ is nothing_SBVMaybe) " ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs True )  [arg]) = "((_ is just_SBVMaybe) "    ++ ssv arg ++ ")"
+        sh (SBVApp MaybeAccess      [arg]) = "(get_just_SBVMaybe  "      ++ ssv arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

@@ -44,7 +44,7 @@ left sa
   = SBV $ SVal k $ Right $ cache res
   where k = kindOf (Proxy @(Either a b))
         res st = do asv <- sbvToSV st sa
-                    newExpr st k $ SBVApp (SumConstructor InL) [asv]
+                    newExpr st k $ SBVApp (EitherConstructor False) [asv]
 
 -- | Construct an @SBV (Either a b)@ from an @SBV b@
 right :: forall a b. (SymVal a, SymVal b) => SBV b -> SBV (Either a b)
@@ -55,7 +55,7 @@ right sb
   = SBV $ SVal k $ Right $ cache res
   where k = kindOf (Proxy @(Either a b))
         res st = do bsv <- sbvToSV st sb
-                    newExpr st k $ SBVApp (SumConstructor InR) [bsv]
+                    newExpr st k $ SBVApp (EitherConstructor True) [bsv]
 
 -- | Construct an @SBV (Either a b)@ from an @Either a b@
 liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SBV (Either a b)
@@ -81,8 +81,8 @@ either brA brB sab
 
         res st = do abv <- sbvToSV st sab
 
-                    let leftVal  = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (SumAccess InL) [abv]
-                        rightVal = SBV $ SVal kb $ Right $ cache $ \_ -> newExpr st kb $ SBVApp (SumAccess InR) [abv]
+                    let leftVal  = SBV $ SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (EitherAccess False) [abv]
+                        rightVal = SBV $ SVal kb $ Right $ cache $ \_ -> newExpr st kb $ SBVApp (EitherAccess True)  [abv]
 
                         leftRes  = brA leftVal
                         rightRes = brB rightVal
@@ -91,7 +91,7 @@ either brA brB sab
                     br2 <- sbvToSV st rightRes
 
                     --  Which branch are we in? Return the appropriate value:
-                    onLeft <- newExpr st KBool $ SBVApp (SumIs InL) [abv]
+                    onLeft <- newExpr st KBool $ SBVApp (EitherIs False) [abv]
                     newExpr st kc $ SBVApp Ite [onLeft, br1, br2]
 
 -- | Map over both sides of a symbolic 'Either' at the same time

@@ -235,29 +235,29 @@ instance (SymVal a, SymVal b) => SymVal (Either a b) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Either a b)))
 
   literal s
-    | Left  a <- s = mk InL (toCV a)
-    | Right b <- s = mk InR (toCV b)
+    | Left  a <- s = mk $ Left  (toCV a)
+    | Right b <- s = mk $ Right (toCV b)
     where k  = kindOf (Proxy @(Either a b))
 
-          mk side val = SBV $ SVal k $ Left $ CV k $ CSum side val
+          mk = SBV . SVal k . Left . CV k . CEither
 
-  fromCV (CV (KSum (Just k1) _ ) (CSum InL c)) = Left  $ fromCV $ CV k1 c
-  fromCV (CV (KSum (Just _)  k2) (CSum InR c)) = Right $ fromCV $ CV k2 c
-  fromCV bad                                   = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
+  fromCV (CV (KEither k1 _ ) (CEither (Left c)))  = Left  $ fromCV $ CV k1 c
+  fromCV (CV (KEither _  k2) (CEither (Right c))) = Right $ fromCV $ CV k2 c
+  fromCV bad                                   = error $ "SymVal.fromCV (Either): Malformed either received: " ++ show bad
 
 instance SymVal a => SymVal (Maybe a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))
 
   literal s
-    | Nothing <- s = mk InL (toCV ())
-    | Just  a <- s = mk InR (toCV a)
+    | Nothing <- s = mk Nothing
+    | Just  a <- s = mk $ Just (toCV a)
     where k = kindOf (Proxy @(Maybe a))
 
-          mk side val = SBV $ SVal k $ Left $ CV k $ CSum side val
+          mk = SBV . SVal k . Left . CV k . CMaybe
 
-  fromCV (CV (KSum _ _)  (CSum InL (CTuple []))) = Nothing
-  fromCV (CV (KSum _ k2) (CSum InR c))           = Just $ fromCV $ CV k2 c
-  fromCV bad                                     = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
+  fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
+  fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
+  fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
@@ -1137,7 +1137,8 @@ instance (SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KList{}          -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUninterpreted{} -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}         -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KSum{}           -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KMaybe{}         -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KEither{}        -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
