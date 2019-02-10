@@ -621,37 +621,37 @@ sTuple_ = Trans.sTuple_
 sTuples :: SymVal tup => [String] -> Symbolic [SBV tup]
 sTuples = Trans.sTuples
 
--- | Declare a named 'SEither'.
+-- | Declare a named 'Data.SBV.SEither'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEither'
 sEither :: (SymVal a, SymVal b) => String -> Symbolic (SEither a b)
 sEither = Trans.sEither
 
--- | Declare an unnamed 'SEither'.
+-- | Declare an unnamed 'Data.SBV.SEither'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEither_'
 sEither_ :: (SymVal a, SymVal b) => Symbolic (SEither a b)
 sEither_ = Trans.sEither_
 
--- | Declare a list of 'SEithers'.
+-- | Declare a list of 'Data.SBV.SEither' values.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEithers'
 sEithers :: (SymVal a, SymVal b) => [String] -> Symbolic [SEither a b]
 sEithers = Trans.sEithers
 
--- | Declare a named 'SMaybe'.
+-- | Declare a named 'Data.SBV.SMaybe'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybe'
 sMaybe :: SymVal a => String -> Symbolic (SMaybe a)
 sMaybe = Trans.sMaybe
 
--- | Declare an unnamed 'SMaybe'.
+-- | Declare an unnamed 'Data.SBV.SMaybe'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybe_'
 sMaybe_ :: SymVal a => Symbolic (SMaybe a)
 sMaybe_ = Trans.sMaybe_
 
--- | Declare a list of 'SMaybes'.
+-- | Declare a list of 'Data.SBV.SMaybe' values.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybes'
 sMaybes :: SymVal a => [String] -> Symbolic [SMaybe a]

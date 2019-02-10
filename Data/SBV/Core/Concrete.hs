@@ -26,7 +26,7 @@ import Data.SBV.Core.AlgReals
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
--- | For 'SEither' and 'SMaybe', we use the internal 'SumSide' type
+-- | For 'Data.SBV.SEither' and 'Data.SBV.SMaybe', we use the internal 'SumSide' type
 data SumSide = InL | InR
   deriving (Eq, Ord)
 
