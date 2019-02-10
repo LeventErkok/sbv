@@ -9,9 +9,9 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVSum2 2)) (
-         (par (X Y) ( (left (getLeft X)) (right (getRight Y)) ))
-       ))
+[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
+                                           ((left_SBVEither  (get_left_SBVEither  T1))
+                                            (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
@@ -22,11 +22,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () (SBVSum2 Int (_ BitVec 8)) (left s0))
-[GOOD] (define-fun s3 () Bool ((_ is left) s2))
+[GOOD] (define-fun s2 () (SBVEither Int (_ BitVec 8)) (left_SBVEither s0))
+[GOOD] (define-fun s3 () Bool ((_ is left_SBVEither) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 true false))
-[GOOD] (define-fun s5 () (SBVSum2 Int (_ BitVec 8)) (right s1))
-[GOOD] (define-fun s6 () Bool ((_ is left) s5))
+[GOOD] (define-fun s5 () (SBVEither Int (_ BitVec 8)) (right_SBVEither s1))
+[GOOD] (define-fun s6 () Bool ((_ is left_SBVEither) s5))
 [GOOD] (define-fun s7 () Bool (ite s6 false true))
 [GOOD] (assert s4)
 [GOOD] (assert s7)

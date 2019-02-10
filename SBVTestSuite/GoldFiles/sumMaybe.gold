@@ -8,37 +8,36 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes () ((SBVTuple0 SBVTuple0)))
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVSum2 2)) (
-         (par (X Y) ( (left (getLeft X)) (right (getRight Y)) ))
-       ))
+[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
+                                           (nothing_SBVMaybe
+                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s5 () Int 1)
 [GOOD] (define-fun s15 () Int 0)
-[GOOD] (define-fun s3 () (SBVSum2 SBVTuple0 Int) (left SBVTuple0))
+[GOOD] (define-fun s3 () (SBVMaybe Int) nothing_SBVMaybe)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVSum2 SBVTuple0 Int)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (SBVMaybe Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Bool ((_ is left) s0))
+[GOOD] (define-fun s1 () Bool ((_ is nothing_SBVMaybe) s0))
 [GOOD] (define-fun s2 () Bool (ite s1 true false))
-[GOOD] (define-fun s4 () Int (getRight s0))
+[GOOD] (define-fun s4 () Int (get_just_SBVMaybe  s0))
 [GOOD] (define-fun s6 () Int (+ s4 s5))
-[GOOD] (define-fun s7 () (SBVSum2 SBVTuple0 Int) (right s6))
-[GOOD] (define-fun s8 () (SBVSum2 SBVTuple0 Int) (ite s1 s3 s7))
-[GOOD] (define-fun s9 () Bool ((_ is left) s8))
+[GOOD] (define-fun s7 () (SBVMaybe Int) (just_SBVMaybe s6))
+[GOOD] (define-fun s8 () (SBVMaybe Int) (ite s1 s3 s7))
+[GOOD] (define-fun s9 () Bool ((_ is nothing_SBVMaybe) s8))
 [GOOD] (define-fun s10 () Bool (ite s9 true false))
 [GOOD] (define-fun s11 () Bool (= s2 s10))
 [GOOD] (define-fun s12 () Bool (ite s1 false true))
 [GOOD] (define-fun s13 () Bool (ite s9 false true))
 [GOOD] (define-fun s14 () Bool (= s12 s13))
 [GOOD] (define-fun s16 () Int (ite s1 s15 s4))
-[GOOD] (define-fun s17 () Int (getRight s8))
+[GOOD] (define-fun s17 () Int (get_just_SBVMaybe  s8))
 [GOOD] (define-fun s18 () Int (ite s9 s15 s17))
 [GOOD] (define-fun s19 () Int (- s18 s5))
 [GOOD] (define-fun s20 () Bool (= s16 s19))

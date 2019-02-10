@@ -9,27 +9,30 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
-                                           ((left_SBVEither  (get_left_SBVEither  T1))
-                                            (right_SBVEither (get_right_SBVEither T2))))))
+[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
+                                           (nothing_SBVMaybe
+                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () Int 0)
+[GOOD] (define-fun s2 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVEither Int Bool)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (SBVMaybe Int)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
-[GOOD] (define-fun s3 () Bool (> s1 s2))
-[GOOD] (define-fun s4 () Bool (get_right_SBVEither s0))
-[GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] (define-fun s6 () Bool ((_ is left_SBVEither) s0))
-[GOOD] (define-fun s7 () Bool (ite s6 s3 s5))
-[GOOD] (assert s7)
+[GOOD] (define-fun s1 () Int (get_just_SBVMaybe  s0))
+[GOOD] (define-fun s3 () Bool (= s1 s2))
+[GOOD] (define-fun s4 () Bool ((_ is nothing_SBVMaybe) s0))
+[GOOD] (define-fun s5 () Bool (ite s4 false s3))
+[GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 (just_SBVMaybe 1)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
+
+FINAL OUTPUT:
+Just 1

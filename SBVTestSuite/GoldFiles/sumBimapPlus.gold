@@ -9,33 +9,33 @@
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVSum2 2)) (
-         (par (X Y) ( (left (getLeft X)) (right (getRight Y)) ))
-       ))
+[GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
+                                           ((left_SBVEither  (get_left_SBVEither  T1))
+                                            (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s3 () Int 1)
+[GOOD] (define-fun s2 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVSum2 Int Int)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (SBVEither Int Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Bool ((_ is left) s0))
-[GOOD] (define-fun s2 () Int (getLeft s0))
-[GOOD] (define-fun s4 () Int (+ s2 s3))
-[GOOD] (define-fun s5 () (SBVSum2 Int Int) (left s4))
-[GOOD] (define-fun s6 () Int (getRight s0))
-[GOOD] (define-fun s7 () Int (+ s3 s6))
-[GOOD] (define-fun s8 () (SBVSum2 Int Int) (right s7))
-[GOOD] (define-fun s9 () (SBVSum2 Int Int) (ite s1 s5 s8))
-[GOOD] (define-fun s10 () Bool ((_ is left) s9))
-[GOOD] (define-fun s11 () Int (getLeft s9))
-[GOOD] (define-fun s12 () Int (getRight s9))
-[GOOD] (define-fun s13 () Int (ite s10 s11 s12))
-[GOOD] (define-fun s14 () Int (ite s1 s2 s6))
-[GOOD] (define-fun s15 () Int (+ s3 s14))
+[GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
+[GOOD] (define-fun s3 () Int (+ s1 s2))
+[GOOD] (define-fun s4 () (SBVEither Int Int) (left_SBVEither s3))
+[GOOD] (define-fun s5 () Int (get_right_SBVEither s0))
+[GOOD] (define-fun s6 () Int (+ s2 s5))
+[GOOD] (define-fun s7 () (SBVEither Int Int) (right_SBVEither s6))
+[GOOD] (define-fun s8 () Bool ((_ is left_SBVEither) s0))
+[GOOD] (define-fun s9 () (SBVEither Int Int) (ite s8 s4 s7))
+[GOOD] (define-fun s10 () Int (get_left_SBVEither s9))
+[GOOD] (define-fun s11 () Int (get_right_SBVEither s9))
+[GOOD] (define-fun s12 () Bool ((_ is left_SBVEither) s9))
+[GOOD] (define-fun s13 () Int (ite s12 s10 s11))
+[GOOD] (define-fun s14 () Int (ite s8 s1 s5))
+[GOOD] (define-fun s15 () Int (+ s2 s14))
 [GOOD] (define-fun s16 () Bool (= s13 s15))
 [GOOD] (assert s16)
 [SEND] (check-sat)

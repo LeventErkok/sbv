@@ -8,11 +8,10 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes () ((SBVTuple0 SBVTuple0)))
 [GOOD] ; --- sums ---
-[GOOD] (declare-datatypes ((SBVSum2 2)) (
-         (par (X Y) ( (left (getLeft X)) (right (getRight Y)) ))
-       ))
+[GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
+                                           (nothing_SBVMaybe
+                                            (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
@@ -22,7 +21,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () (SBVSum2 SBVTuple0 Int) (right s0))
+[GOOD] (define-fun s1 () (SBVMaybe Int) (just_SBVMaybe s0))
 [SEND] (check-sat)
 [RECV] sat
 *** Solver   : Z3
