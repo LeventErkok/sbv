@@ -350,7 +350,7 @@ showCV shk w               = liftCV show show show show show show snd shL shT sh
             shEither :: Either CVal CVal -> String
             shEither val
               | KEither k1 k2 <- kw = case val of
-                                        Left  x -> "Left  " ++ showCV False (CV k1 x)
+                                        Left  x -> "Left "  ++ showCV False (CV k1 x)
                                         Right y -> "Right " ++ showCV False (CV k2 y)
               | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
 
