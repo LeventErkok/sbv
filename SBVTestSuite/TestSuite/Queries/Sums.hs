@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  TestSuite.Queries.Sums
--- Copyright   :  (c) Levent Erkok
+-- Copyright   :  (c) Joel Burget
+--                    Levent Erkok
 -- License     :  BSD3
 -- Maintainer  :  erkokl@gmail.com
 -- Stability   :  experimental
@@ -17,6 +18,8 @@ module TestSuite.Queries.Sums (tests)  where
 import Data.SBV
 import Data.SBV.Control
 import Data.SBV.Either as E
+import Data.SBV.Maybe  as M
+
 import qualified Data.SBV.List as L
 
 import Utils.SBVTestFramework
@@ -25,8 +28,10 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QuerySums"
-    [ goldenCapturedIO "query_Sums"      $ testQuery querySums
-    , goldenCapturedIO "query_ListOfSum" $ testQuery queryListOfSum
+    [ goldenCapturedIO "query_Sums"        $ testQuery querySums
+    , goldenCapturedIO "query_ListOfSum"   $ testQuery queryListOfSum
+    , goldenCapturedIO "query_Maybe"       $ testQuery queryMaybe
+    , goldenCapturedIO "query_ListOfMaybe" $ testQuery queryListOfMaybe
     ]
 
 testQuery :: Show a => Symbolic a -> FilePath -> IO ()
@@ -37,7 +42,7 @@ querySums :: Symbolic (Either Integer Char)
 querySums = do
   a <- sEither @Integer @Char "a"
 
-  constrain $ E.either a (.== 1) (const sFalse)
+  constrain $ E.either (.== 1) (const sFalse) a
 
   query $ do
     _ <- checkSat
@@ -61,4 +66,34 @@ queryListOfSum = do
 
     case av of
       [Left _, Right _] -> return av
+      _                 -> error $ "Didn't expect this: " ++ show av
+
+queryMaybe :: Symbolic (Maybe Integer)
+queryMaybe = do
+  a <- sMaybe @Integer "a"
+
+  constrain $ M.maybe sFalse (.== 1) a
+
+  query $ do
+    _ <- checkSat
+
+    av <- getValue a
+
+    if av == Just 1
+       then return av
+       else error $ "Didn't expect this: " ++ show av
+
+queryListOfMaybe :: Symbolic [Maybe Char]
+queryListOfMaybe = do
+  lst <- sList @(Maybe Char) "lst"
+  constrain $ L.length lst .== 2
+  constrain $ isJust $ L.head lst
+  constrain $ isNothing $ L.head $ L.tail lst
+
+  query $ do
+    _  <- checkSat
+    av <- getValue lst
+
+    case av of
+      [Just _, Nothing] -> return av
       _                 -> error $ "Didn't expect this: " ++ show av

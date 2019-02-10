@@ -1,14 +1,16 @@
-{-# language TypeApplications #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module    : TestSuite.Basics.Sum
--- Author    : Joel Burget, Levent Erkok
+-- Copyright : (c) Joel Burget
+--                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
 -- Test the sum functions.
 -----------------------------------------------------------------------------
+
+{-# LANGUAGE TypeApplications #-}
 
 module TestSuite.Basics.Sum(tests)  where
 
@@ -25,11 +27,11 @@ import Data.SBV.Maybe  as M
 tests :: TestTree
 tests =
   testGroup "Basics.Sum" [
-      goldenCapturedIO "sumEitherSat"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumEitherSat    Sat
-    , goldenCapturedIO "sumBimapPlus"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumBimapPlus    Sat
+      goldenCapturedIO "sumEitherSat"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumEitherSat  Sat
+    , goldenCapturedIO "sumBimapPlus"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumBimapPlus  Sat
     , goldenCapturedIO "sumLiftEither" $ \rf -> checkWith z3{redirectVerbose=Just rf} sumLiftEither Sat
-    , goldenCapturedIO "sumMaybe"      $ \rf -> checkWith z3{redirectVerbose=Just rf} sumMaybe        Sat
-    , goldenCapturedIO "sumLiftMaybe"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumLiftMaybe    Sat
+    , goldenCapturedIO "sumMaybe"      $ \rf -> checkWith z3{redirectVerbose=Just rf} sumMaybe      Sat
+    , goldenCapturedIO "sumLiftMaybe"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumLiftMaybe  Sat
     ]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
@@ -46,15 +48,15 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
 sumEitherSat :: Symbolic ()
 sumEitherSat = do
   x <- sEither @Integer @Bool "x"
-  constrain $ either x (.>0) sNot
+  constrain $ either (.> 0) sNot x
 
 -- Test 'bimap' and 'either'
 sumBimapPlus :: Symbolic ()
 sumBimapPlus = do
   x <- sEither @Integer @Integer "x"
   let x'    = bimap (+1) (+1) x
-      xval  = either x  id id
-      x'val = either x' id id
+      xval  = either id id x
+      x'val = either id id x'
   constrain $ x'val .== xval + 1
 
 -- Test 'liftEither', 'left', 'right', 'isLeft', and 'isRight'
