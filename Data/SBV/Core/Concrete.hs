@@ -70,6 +70,15 @@ instance Eq CVal where
   CTuple    a == CTuple    b = a == b
   CSum   i1 a == CSum   i2 b = (i1, a) == (i2, b)
   _           == _           = False
+  a           == b           = if cvRank a == cvRank b
+                                  then error $ unlines [ ""
+                                                       , "*** Data.SBV.Eq.CVal: Impossible happened: same rank in comparison fallthru"
+                                                       , "***"
+                                                       , "***   Received: " ++ show (cvRank a, cvRank b)
+                                                       , "***"
+                                                       , "*** Please report this as a bug!"
+                                                       ]
+                                  else False
 
 -- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
 instance Ord CVal where
@@ -84,6 +93,17 @@ instance Ord CVal where
   CTuple    a `compare` CTuple    b = a        `compare`                  b
   CSum   i1 a `compare` CSum   i2 b = (i1, a)  `compare`                  (i2, b)
   a           `compare` b           = cvRank a `compare`                  cvRank b
+  a           `compare` b           = let ra = cvRank a
+                                          rb = cvRank b
+                                      in if ra == rb
+                                            then error $ unlines [ ""
+                                                                 , "*** Data.SBV.Ord.CVal: Impossible happened: same rank in comparison fallthru"
+                                                                 , "***"
+                                                                 , "***   Received: " ++ show (ra, rb)
+                                                                 , "***"
+                                                                 , "*** Please report this as a bug!"
+                                                                 ]
+                                            else cvRank a `compare` cvRank b
 
 -- | 'CV' represents a concrete word of a fixed size:
 -- For signed words, the most significant digit is considered to be the sign.
