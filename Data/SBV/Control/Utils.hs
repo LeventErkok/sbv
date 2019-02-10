@@ -748,22 +748,46 @@ defaultKindedValue k = CV k <$> cvt k
 
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
-recoverKindedValue k e = case e of
-                           ENum    i | isIntegralLike    -> Just $ mkConstCV k (fst i)
-                           ENum    i | isChar          k -> Just $ CV KChar    (CChar    (chr (fromIntegral (fst i))))
-                           EReal   i | isReal          k -> Just $ CV KReal    (CAlgReal i)
-                           EFloat  i | isFloat         k -> Just $ CV KFloat   (CFloat   i)
-                           EDouble i | isDouble        k -> Just $ CV KDouble  (CDouble  i)
-                           ECon    s | isString        k -> Just $ CV KString  (CString   (interpretString s))
-                           ECon    s | isUninterpreted k -> Just $ CV k        (CUserSort (getUIIndex k s, s))
-                           _         | isList          k -> Just $ CV k        (CList     (interpretList e))
-                           _         | isTuple         k -> Just $ CV k        (CTuple    (interpretTuple e))
+recoverKindedValue k e = case k of
+                           KBool            | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | True             -> Nothing
 
-                           _ -> Nothing
+                           KBounded{}       | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | True             -> Nothing
 
-  where isIntegralLike = or [f k | f <- [isBoolean, isBounded, isInteger, isReal, isFloat, isDouble]]
+                           KUnbounded       | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | True             -> Nothing
 
-        getUIIndex (KUninterpreted  _ (Right xs)) i = i `elemIndex` xs
+                           KReal            | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | EReal i     <- e -> Just $ CV KReal (CAlgReal i)
+                                            | True             -> Nothing
+
+                           KUninterpreted{} | ECon s <- e -> Just $ CV k $ CUserSort (getUIIndex k s, s)
+                                            | True             -> Nothing
+
+                           KFloat           | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | EFloat i    <- e -> Just $ CV KFloat (CFloat i)
+                                            | True             -> Nothing
+
+                           KDouble          | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                            | EDouble i   <- e -> Just $ CV KDouble (CDouble i)
+                                            | True             -> Nothing
+
+                           KChar            | ENum (i, _) <- e -> Just $ CV KChar $ CChar $ chr $ fromIntegral i
+                                            | True             -> Nothing
+
+                           KString          | ECon s      <- e -> Just $ CV KString $ CString $ interpretString s
+                                            | True             -> Nothing
+
+                           KList ek                            -> Just $ CV k $ CList $ interpretList ek e
+
+                           KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
+
+                           KMaybe{}                            -> Just $ CV k $ CMaybe $ interpretMaybe k e
+
+                           KEither{}                           -> Just $ CV k $ CEither $ interpretEither k e
+
+  where getUIIndex (KUninterpreted  _ (Right xs)) i = i `elemIndex` xs
         getUIIndex _                              _ = Nothing
 
         stringLike xs = length xs >= 2 && head xs == '"' && last xs == '"'
@@ -779,10 +803,10 @@ recoverKindedValue k e = case e of
         isStringSequence _                      = False
 
         -- Lists are tricky since z3 prints the 8-bit variants as strings. See: <http://github.com/Z3Prover/z3/issues/1808>
-        interpretList (ECon s)
+        interpretList _ (ECon s)
           | isStringSequence k && stringLike s
           = map (CInteger . fromIntegral . ord) $ interpretString s
-        interpretList topExpr = walk topExpr
+        interpretList ek topExpr = walk topExpr
           where walk (EApp [ECon "as", ECon "seq.empty", _]) = []
                 walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek v of
                                                                  Just w -> [cvVal w]
@@ -793,10 +817,6 @@ recoverKindedValue k e = case e of
                 extra cur | show cur == t = ""
                           | True          = "\nWhile parsing: " ++ t
                           where t = show topExpr
-
-                ek = case k of
-                       KList ik -> ik
-                       _        -> error $ "Impossible: Expected a sequence kind, but got: " ++ show k
 
         interpretTuple te = walk (1 :: Int) (zipWith recoverKindedValue ks args) []
                 where (ks, n) = case k of
@@ -813,6 +833,30 @@ recoverKindedValue k e = case e of
                                                                   , "Kind: " ++ show k
                                                                   , "Expr: " ++ show te
                                                                   ]
+
+        interpretMaybe (KMaybe _)  (ECon "nothing_SBVMaybe")        = Nothing
+        interpretMaybe (KMaybe ek) (EApp [ECon "just_SBVMaybe", a]) = case recoverKindedValue ek a of
+                                                                        Just (CV _ v) -> Just v
+                                                                        Nothing       -> error $ unlines [ "Couldn't parse a maybe just value"
+                                                                                                         , "Kind: " ++ show ek
+                                                                                                         , "Expr: " ++ show a
+                                                                                                         ]
+        interpretMaybe _          other                            = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
+
+        interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue k1 a of
+                                                                              Just (CV _ v) -> Left v
+                                                                              Nothing       -> error $ unlines [ "Couldn't parse an either value on the left"
+                                                                                                               , "Kind: " ++ show k1
+                                                                                                               , "Expr: " ++ show a
+                                                                                                               ]
+        interpretEither (KEither _ k2) (EApp [ECon "right_SBVEither", b]) = case recoverKindedValue k2 b of
+                                                                              Just (CV _ v) -> Left v
+                                                                              Nothing       -> error $ unlines [ "Couldn't parse an either value on the right"
+                                                                                                               , "Kind: " ++ show k2
+                                                                                                               , "Expr: " ++ show b
+                                                                                                               ]
+        interpretEither _              other                              = error $ "Expected an SEither sexpr, but received: " ++ show (k, other)
+
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
