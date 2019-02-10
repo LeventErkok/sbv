@@ -93,9 +93,8 @@ showBaseKind = sh
 kindParen :: String -> String
 kindParen s@('[':_) = s
 kindParen s@('(':_) = s
-kindParen s
-  | null (filter isSpace s) = s
-  | True                    = '(' : s ++ ")"
+kindParen s | any isSpace s = '(' : s ++ ")"
+            | True          = s
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
