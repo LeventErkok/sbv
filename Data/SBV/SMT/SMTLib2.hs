@@ -338,8 +338,8 @@ containsMaybe = not . Set.null . Set.filter isMaybe
 
 declSum :: [String]
 declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
-          , "                                    ((left_SBVSum2  (get_left_SBVSum2  T1))"
-          , "                                     (right_SBVSum2 (get_right_SBVSum2 T2))))))"
+          , "                                    ((left_SBVEither  (get_left_SBVEither  T1))"
+          , "                                     (right_SBVEither (get_right_SBVEither T2))))))"
           ]
 
 declMaybe :: [String]
