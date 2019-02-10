@@ -13,7 +13,6 @@
 {-# LANGUAGE DefaultSignatures   #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -234,27 +233,31 @@ fromCVTup i inp = error $ "SymVal.fromCVTup: Impossible happened. Non-tuple rece
 
 instance (SymVal a, SymVal b) => SymVal (Either a b) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Either a b)))
-  literal = \case
-    Left  a -> SBV $ SVal k $ Left $ CV k $ CSum InL $ toCV a
-    Right b -> SBV $ SVal k $ Left $ CV k $ CSum InR $ toCV b
-    where k = kindOf (Proxy @(Either a b))
-  fromCV (CV (KSum k1 _k2) (CSum InL c))
-    = Left  $ fromCV $ CV k1 c
-  fromCV (CV (KSum _k1 k2) (CSum InR c))
-    = Right $ fromCV $ CV k2 c
-  fromCV bad = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
+
+  literal s
+    | Left  a <- s = mk InL (toCV a)
+    | Right b <- s = mk InR (toCV b)
+    where k  = kindOf (Proxy @(Either a b))
+
+          mk side val = SBV $ SVal k $ Left $ CV k $ CSum side val
+
+  fromCV (CV (KSum k1 _ ) (CSum InL c)) = Left  $ fromCV $ CV k1 c
+  fromCV (CV (KSum _  k2) (CSum InR c)) = Right $ fromCV $ CV k2 c
+  fromCV bad                            = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
 
 instance SymVal a => SymVal (Maybe a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))
-  literal = \case
-    Nothing -> SBV $ SVal k $ Left $ CV k $ CSum InL $ toCV ()
-    Just  a -> SBV $ SVal k $ Left $ CV k $ CSum InR $ toCV a
+
+  literal s
+    | Nothing <- s = mk InL (toCV ())
+    | Just  a <- s = mk InR (toCV a)
     where k = kindOf (Proxy @(Maybe a))
-  fromCV (CV (KSum _k1 _k2) (CSum InL _c))
-    = Nothing
-  fromCV (CV (KSum _k1 k2) (CSum InR c))
-    = Just $ fromCV $ CV k2 c
-  fromCV bad = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
+
+          mk side val = SBV $ SVal k $ Left $ CV k $ CSum side val
+
+  fromCV (CV (KSum _ _)  (CSum InL (CTuple []))) = Nothing
+  fromCV (CV (KSum _ k2) (CSum InR c))           = Just $ fromCV $ CV k2 c
+  fromCV bad                                     = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
