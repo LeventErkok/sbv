@@ -43,7 +43,7 @@ import Control.Monad      (zipWithM)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe, isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.List          (intercalate, isPrefixOf)
+import Data.List          (intercalate, isPrefixOf, transpose)
 import Data.Word          (Word8, Word16, Word32, Word64)
 
 import Data.IORef (readIORef, writeIORef)
@@ -61,6 +61,7 @@ import qualified Data.Map.Strict as M
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
+import Data.SBV.Core.Concrete (showCV, showBaseKind)
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -350,10 +351,10 @@ class Modelable a where
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
   -- | Extract model uninterpreted-functions
-  getModelUIFuns :: a -> M.Map String ([([CV], CV)], CV)
+  getModelUIFuns :: a -> M.Map String (SBVType, ([([CV], CV)], CV))
 
   -- | Extract the value of an uninterpreted-function as an association list
-  getModelUIFunValue :: String -> a -> Maybe ([([CV], CV)], CV)
+  getModelUIFunValue :: String -> a -> Maybe (SBVType, ([([CV], CV)], CV))
   getModelUIFunValue v r = v `M.lookup` getModelUIFuns r
 
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
@@ -392,10 +393,10 @@ instance Modelable SatResult where
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
   getModelAssignment (Unsatisfiable _ _) = Left "SBV.getModelAssignment: Unsatisfiable result"
-  getModelAssignment (Satisfiable _ m)   = Right (False, parseModelOut m)
-  getModelAssignment (SatExtField _ _)   = Left "SBV.getModelAssignment: The model is in an extension field"
-  getModelAssignment (Unknown _ m)       = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
-  getModelAssignment (ProofError _ s)    = error $ unlines $ "Backend solver complains: " : s
+  getModelAssignment (Satisfiable   _ m) = Right (False, parseModelOut m)
+  getModelAssignment (SatExtField   _ _) = Left "SBV.getModelAssignment: The model is in an extension field"
+  getModelAssignment (Unknown       _ m) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
+  getModelAssignment (ProofError    _ s) = error $ unlines $ "Backend solver complains: " : s
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
@@ -442,7 +443,7 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
   Unsatisfiable _ uc               -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ [] []) -> satMsg
   Satisfiable _ m                  -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary cfg b
+  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
   Unknown     _ r                  -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
   ProofError  _ []                 -> "*** An error occurred. No additional information available. Try running in verbose mode"
   ProofError  _ ls                 -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
@@ -453,18 +454,28 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
 -- | Show a model in human readable form. Ignore bindings to those variables that start
 -- with "__internal_sbv_" and also those marked as "nonModelVar" in the config; as these are only for internal purposes
 showModel :: SMTConfig -> SMTModel -> String
-showModel cfg model = showModelDictionary cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+showModel cfg model
+   | null uiFuncs
+   = nonUIFuncs
+   | True
+   = sep nonUIFuncs ++ intercalate "\n\n" (map (showModelUI cfg) uiFuncs)
+   where nonUIFuncs = showModelDictionary (null uiFuncs) cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+         uiFuncs    = modelUIFuns model
+         sep ""     = ""
+         sep x      = x ++ "\n\n"
 
 -- | Show bindings in a generalized model dictionary, tabulated
-showModelDictionary :: SMTConfig -> [(String, GeneralizedCV)] -> String
-showModelDictionary cfg allVars
+showModelDictionary :: Bool -> SMTConfig -> [(String, GeneralizedCV)] -> String
+showModelDictionary warnEmpty cfg allVars
    | null allVars
-   = "[There are no variables bound by the model.]"
+   = warn "[There are no variables bound by the model.]"
    | null relevantVars
-   = "[There are no model-variables bound by the model.]"
+   = warn "[There are no model-variables bound by the model.]"
    | True
    = intercalate "\n" . display . map shM $ relevantVars
-  where relevantVars  = filter (not . ignore) allVars
+  where warn s = if warnEmpty then s else ""
+
+        relevantVars  = filter (not . ignore) allVars
         ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
@@ -486,6 +497,45 @@ showModelDictionary cfg allVars
         valPart (x:xs)      = x : valPart xs
 
         lTrimRight = length . dropWhile isSpace . reverse
+
+-- | Show an uninterpreted function
+showModelUI :: SMTConfig -> (String, (SBVType, ([([CV], CV)], CV))) -> String
+showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l | l <- sig : map align body]
+  where noOfArgs = length ts - 1
+
+        sig      = nm ++ " :: " ++ intercalate " -> " (map showBaseKind ts)
+
+        ls       = map line defs
+        defLine  = (nm : replicate noOfArgs "_", scv dflt)
+
+        body     = ls ++ [defLine]
+
+        colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
+
+        resWidth  = maximum  (0 : map (length . snd) body)
+
+        align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
+           where left i x = take i (x ++ repeat ' ')
+
+        scv = sh (printBase cfg)
+          where sh 2  = binP
+                sh 10 = showCV False
+                sh 16 = hexP
+                sh _  = show
+
+        -- NB. If we have a float NaN/Infinity/+0/-0 etc. these will
+        -- simply print as is, but will not be valid patterns. (We
+        -- have the semi-goal of being able to paste these definitions
+        -- in a Haskell file.) For the time being, punt on this, but
+        -- we might want to do this properly later somehow. (Perhaps
+        -- using some sort of a view pattern.)
+        line :: ([CV], CV) -> ([String], String)
+        line (args, r) = (nm : map (paren . scv) args, scv r)
+          where -- If negative, parenthesize. I think this is the only case
+                -- we need to worry about. Hopefully!
+                paren :: String -> String
+                paren x@('-':_) = '(' : x ++ ")"
+                paren x         = x
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> CV -> String

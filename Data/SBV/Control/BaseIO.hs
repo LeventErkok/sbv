@@ -404,6 +404,12 @@ getFunction = Trans.getFunction
 getValueCV :: Maybe Int -> SV -> Query CV
 getValueCV = Trans.getValueCV
 
+-- | Get the value of an uninterpreted function as an association list
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUIFunCVAssoc'
+getUIFunCVAssoc :: Maybe Int -> (String, SBVType) -> Query ([([CV], CV)], CV)
+getUIFunCVAssoc = Trans.getUIFunCVAssoc
+
 -- | Check for satisfiability.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.checkSat'

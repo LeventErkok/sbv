@@ -41,7 +41,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                              docFiles <- glob "Documentation/SBV/**/*.hs"
 
                                              let allFiles  = srcFiles ++ docFiles
-                                                 testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm)) allFiles
+                                                 testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm || skipLocal nm)) allFiles
 
                                                  args = ["--fast", "--no-magic"]
 
@@ -63,6 +63,13 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                  where skipList = [ "Interpolants.hs"  -- The following test requires mathSAT, so can't run on remote
                                   , "HexPuzzle.hs"     -- Doctest is way too slow on this with ghci loading, sigh
                                   , "MultMask.hs"      -- Also, quite slow
+                                  ]
+
+               -- These are the doctests we currently skip *everywhere* because there's some issue
+               -- with an external tool or some other issue that stops us from fixing it. NB. Each
+               -- of these should be accompanied by a ticket!
+               skipLocal nm = noGood nm skipList
+                 where skipList = [ "MultMask.hs"  -- https://github.com/LeventErkok/sbv/issues/449
                                   ]
 
 -- Pick (about) the given percentage of files

@@ -5,13 +5,21 @@
 
 ### Version 8.1, Not yet released
 
-  * Added functions `elem`/`notElem` to `Data.SBV.List`.
+  * SBV models now contain values for uninterpreted functions. This was a long
+    requested feature, but there was no previous support since SMTLib does not
+    have a standard way of querying such values. We now support this for z3 only,
+    using z3 specific syntax in responses, so other solvers may not work. The
+    calls to `sat` now include function models, and you can also get them
+    via `getFunction` in a query.
 
-  * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
-
-  * Rework the 'Queriable' class to allow projection/embedding pairs. Also
-    added a new 'Fresh' class, which is more usable in simpler scenarios
-    where the default projection/embedding definitions are suitable.
+  * The `allSat` function is similarly modified to return uninterpreted-function
+    models. There are a few technical restrictions, however: Only the values
+    of uninterpreted functions without any uninterpreted arguments will participate
+    in `allSat` computation. (For instance, `uninterpret "f" :: SInteger -> SInteger`
+    is OK, but `uninterpret "f" :: MyType -> SInteger` is not, where `MyType` itself
+    is uninterpreted.) The reason for this is again there is no SMTLib way of
+    reflecting uninterpreted model values back into the solver. This restriction should not
+    cause much trouble in practice, but do get in touch if it is a use-case for you.
 
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
     language and an engine for checking partial and total correctness of imperative programs.
@@ -22,6 +30,14 @@
     Checking input parameters for no-change is supported via stability checks. For example
     use cases, see the `Documentation.SBV.Examples.WeakestPreconditions` directory.
 
+  * Added functions `elem`/`notElem` to `Data.SBV.List`.
+
+  * Added `snoc` (appending a single element at the end) to `Data.SBV.List` and `Data.SBV.String`.
+
+  * Rework the 'Queriable' class to allow projection/embedding pairs. Also
+    added a new 'Fresh' class, which is more usable in simpler scenarios
+    where the default projection/embedding definitions are suitable.
+
   * Added strong-equality (.===) and inequality (./==) to the 'EqSymbolic' class. This
     method is equivalent to the usual (.==) and (./=) for all types except 'SFloat' and
     'SDouble'. For the floating types, it is object equality, that is 'NaN .=== Nan'
@@ -30,7 +46,15 @@
     way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
     except it works on all types.
 
-  * Add unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
+  * Added configuration option `allSatPrintAlong`. If set to True, calls to
+    allSat will print their models as they are found. The default is False.
+
+  * Added configuration parameter `allSatTrackUFs` (defaulting to True) to control
+    if changes to uninterpreted functions is considered as a different model. In
+    theory this should always be True, but for most practical problems we typically
+    don't care about the function itself but that it exists.
+
+  * Added unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
     'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,
     strings, lists, and tuples.
 

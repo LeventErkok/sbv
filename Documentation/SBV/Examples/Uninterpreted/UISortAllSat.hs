@@ -49,27 +49,41 @@ classify = uninterpret "classify"
 --
 -- As expected, we have:
 --
--- >>> genLs
+-- >>> allSat genLs
 -- Solution #1:
 --   l  = L!val!0 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
+-- <BLANKLINE>
+--   classify :: L -> Integer
+--   classify L!val!1 = 1
+--   classify L!val!2 = 2
+--   classify _       = 0
 -- Solution #2:
 --   l  = L!val!1 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
+-- <BLANKLINE>
+--   classify :: L -> Integer
+--   classify L!val!1 = 1
+--   classify L!val!2 = 2
+--   classify _       = 0
 -- Solution #3:
 --   l  = L!val!2 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
+-- <BLANKLINE>
+--   classify :: L -> Integer
+--   classify L!val!1 = 1
+--   classify L!val!2 = 2
+--   classify _       = 0
 -- Found 3 different solutions.
-genLs :: IO AllSatResult
-genLs = allSatWith z3
-               $ do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]
-                    constrain $ classify l0 .== 0
-                    constrain $ classify l1 .== 1
-                    constrain $ classify l2 .== 2
-                    return $ l .== l0 .|| l .== l1 .|| l .== l2
+genLs :: Predicate
+genLs = do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]
+           constrain $ classify l0 .== 0
+           constrain $ classify l1 .== 1
+           constrain $ classify l2 .== 2
+           return $ l .== l0 .|| l .== l1 .|| l .== l2

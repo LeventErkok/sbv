@@ -68,11 +68,9 @@ puzzle = do n <- sInteger "N"
 
             let valid = validPick n
 
-            -- Declare three existential flowers. We name these with
-            -- the suffix "_modelIgnore" as we don't consider variations
-            -- on them to be interesting for model construction purposes.
-            -- We'll use the 'isNonModelVar' parameter to ignore them
-            -- for that purpose.
+            -- Declare three existential flowers. We declar these with
+            -- _modelIgnore suffix, because we don't care different assignments
+            -- to them to be a different model. See 'isNonModelVar' below.
             ef1 <- exists "ef1_modelIgnore"
             ef2 <- exists "ef2_modelIgnore"
             ef3 <- exists "ef3_modelIgnore"
@@ -104,7 +102,7 @@ puzzle = do n <- sInteger "N"
 -- This is the only solution. (Unique up to prefix existentials.)
 --
 -- So, a garden with 3 flowers is the only solution. (Note that we simply skip
--- over the prefix existentials for model purposes here, as they don't represent
--- a different solution.)
+-- over the prefix existentials and the assignments to uninterpreted function 'col'
+-- for model purposes here, as they don't represent a different solution.)
 flowerCount :: IO ()
-flowerCount = print =<< allSatWith z3{isNonModelVar = ("_modelIgnore" `isSuffixOf`)} puzzle
+flowerCount = print =<< allSatWith z3{allSatTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)} puzzle

@@ -80,6 +80,8 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose             = False
                                             , smtLibVersion       = smtVersion
                                             , satCmd              = "(check-sat)"
                                             , allSatMaxModelCount = Nothing                -- i.e., return all satisfying models
+                                            , allSatPrintAlong    = False                  -- i.e., do not print models as they are found
+                                            , allSatTrackUFs      = True                   -- i.e., yes, do consider differing UI-functions as different models
                                             , isNonModelVar       = const False            -- i.e., everything is a model-variable by default
                                             , roundingMode        = RoundNearestTiesToEven
                                             , solverSetOptions    = startOpts

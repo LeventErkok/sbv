@@ -24,7 +24,8 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUnsatAssumptions, SMTValue(..), SMTFunction(..)
+     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUIFunCVAssoc, getUnsatAssumptions
+     , SMTValue(..), SMTFunction(..)
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
@@ -54,7 +55,7 @@ import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
 
-import Control.Monad            (join, unless)
+import Control.Monad            (join, unless, zipWithM, when)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
@@ -70,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType, forceSVArg
+                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -81,14 +82,19 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
+import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
+import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
+
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib (qfsToString, isKString)
+import Data.SBV.Utils.Lib       (qfsToString, isKString)
 import Data.SBV.Utils.SExpr
+import Data.SBV.Utils.PrettyNum (cvToSMTLib)
+
 import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (toList)
@@ -489,13 +495,21 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
                                     _                                                                                                     -> bad r Nothing
 
 -- | A class which allows for sexpr-conversion to functions
-class SMTValue r => SMTFunction fun a r | fun -> a r where
+class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
   smtFunSaturate :: (MonadIO m, MonadQuery m) => fun -> m (SBV r)
   smtFunName     :: (MonadIO m, MonadQuery m) => fun -> m String
+  smtFunDefault  :: fun -> Maybe r
   sexprToFun     :: fun -> SExpr -> Maybe ([(a, r)], r)
 
-  {-# MINIMAL sexprToArg, smtFunSaturate #-}
+  {-# MINIMAL sexprToArg, smtFunSaturate  #-}
+
+  -- Given the function, figure out a default "return value"
+  smtFunDefault _
+    | Just v <- defaultKindedValue (kindOf (Proxy @r)), Just (res, []) <- parseCVs [v]
+    = Just res
+    | True
+    = Nothing
 
   -- Given the function, determine what its name is and do some sanity checks
   smtFunName f = do st@State{rUIMap} <- queryState
@@ -530,13 +544,18 @@ class SMTValue r => SMTFunction fun a r | fun -> a r where
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind
 
-  sexprToFun f e = convert =<< parseStoreAssociations e
+  sexprToFun f e = case parseSExprFunction e of
+                      Nothing        -> Nothing
+                      -- Ideally, we'd check that the name returned in the Left case matches our name
+                      -- But let's not worry about that detail for now.
+                      Just (Left _)  -> smtFunDefault f >>= \v -> Just ([], v)
+                      Just (Right v) -> convert v
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
           sexprPoint (as, v) = (,) <$> sexprToArg f as <*> sexprToVal v
 
 -- | Functions of arity 1
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  HasKind r, SMTValue r
+instance ( SymVal a, HasKind a, SMTValue a
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV r) a r
          where
   sexprToArg _ [a0] = sexprToVal a0
@@ -545,9 +564,9 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_
 
 -- | Functions of arity 2
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,  HasKind a, SMTValue a
+         , SymVal b,  HasKind b, SMTValue b
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r
          where
   sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
@@ -556,10 +575,10 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_
 
 -- | Functions of arity 3
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r
          where
   sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
@@ -568,11 +587,11 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 4
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV r) (a, b, c, d) r
          where
   sexprToArg _ [a0, a1, a2, a3] = (,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3
@@ -581,12 +600,12 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 5
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV r) (a, b, c, d, e) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4] = (,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4
@@ -595,13 +614,13 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 6
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV r) (a, b, c, d, e, f) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5] = (,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5
@@ -610,14 +629,14 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 7
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  SymVal g, HasKind g, SMTValue g
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SymVal g,   HasKind g, SMTValue g
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV r) (a, b, c, d, e, f, g) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = (,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6
@@ -626,15 +645,15 @@ instance (  SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 8
-instance (  SymVal a, HasKind a, SMTValue a
-         ,  SymVal b, HasKind b, SMTValue b
-         ,  SymVal c, HasKind c, SMTValue c
-         ,  SymVal d, HasKind d, SMTValue d
-         ,  SymVal e, HasKind e, SMTValue e
-         ,  SymVal f, HasKind f, SMTValue f
-         ,  SymVal g, HasKind g, SMTValue g
-         ,  SymVal h, HasKind h, SMTValue h
-         ,  HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a, SMTValue a
+         , SymVal b,   HasKind b, SMTValue b
+         , SymVal c,   HasKind c, SMTValue c
+         , SymVal d,   HasKind d, SMTValue d
+         , SymVal e,   HasKind e, SMTValue e
+         , SymVal f,   HasKind f, SMTValue f
+         , SymVal g,   HasKind g, SMTValue g
+         , SymVal h,   HasKind h, SMTValue h
+         , SatModel r, HasKind r, SMTValue r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV h -> SBV r) (a, b, c, d, e, f, g, h) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = (,,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6 <*> sexprToVal a7
@@ -703,6 +722,27 @@ getValueCVHelper mbi s
                                                                     Just cv -> return cv
                                                                     Nothing -> bad r Nothing
                            _                                   -> bad r Nothing
+
+-- | "Make up" a CV for this type. Like zero, but smarter.
+defaultKindedValue :: Kind -> Maybe CV
+defaultKindedValue k = CV k <$> cvt k
+  where cvt :: Kind -> Maybe CVal
+        cvt KBool                 = Just $ CInteger 0
+        cvt KBounded{}            = Just $ CInteger 0
+        cvt KUnbounded            = Just $ CInteger 0
+        cvt KReal                 = Just $ CAlgReal 0
+        cvt (KUninterpreted _ ui) = uninterp ui
+        cvt KFloat                = Just $ CFloat 0
+        cvt KDouble               = Just $ CDouble 0
+        cvt KChar                 = Just $ CChar '\NUL'           -- why not?
+        cvt KString               = Just $ CString ""
+        cvt (KList  _)            = Just $ CList []
+        cvt (KTuple ks)           = CTuple <$> mapM cvt ks
+
+        -- Tricky case of uninterpreted
+        uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
+        uninterp (Right [])    = Nothing                       -- I don't think this can actually happen, but just in case
+        uninterp (Left _)      = Nothing                       -- Out of luck, truly uninterpreted; we don't even know if it's inhabited.
 
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
@@ -793,6 +833,40 @@ getValueCV mbi s
                     (CV KReal (CAlgReal a), CV KReal (CAlgReal b)) -> return $ CV KReal (CAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
                     _                                              -> bad
 
+-- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
+getUIFunCVAssoc :: (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m ([([CV], CV)], CV)
+getUIFunCVAssoc mbi (nm, t) = do let modelIndex = case mbi of
+                                                    Nothing -> ""
+                                                    Just i  -> " :model_index " ++ show i
+
+                                     cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+
+                                     bad        = unexpected "get-value" cmd "a function value" Nothing
+
+                                 r <- ask cmd
+
+                                 let (ats, rt) = case t of
+                                                   SBVType as | length as > 1 -> (init as, last as)
+                                                   _                          -> error $ "Data.SBV.getUIFunCVAssoc: Expected a function type, got: " ++ show t
+
+                                 let convert (vs, d) = (,) <$> mapM toPoint vs <*> toRes d
+                                     toPoint (as, v)
+                                        | length as == length ats = (,) <$> zipWithM recoverKindedValue ats as <*> toRes v
+                                        | True                    = error $ "Data.SBV.getUIFunCVAssoc: Mismatching type/value arity, got: " ++ show (as, ats)
+
+                                     toRes :: SExpr -> Maybe CV
+                                     toRes = recoverKindedValue rt
+
+                                 parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseSExprFunction e of
+                                                                                            Just (Right assocs)         -> case convert assocs of
+                                                                                                                              Just res -> return res
+                                                                                                                              Nothing  -> bad r Nothing
+                                                                                            Just (Left nm') | nm == nm' -> case defaultKindedValue rt of
+                                                                                                                              Just res -> return ([], res)
+                                                                                                                              _        -> bad r Nothing
+                                                                                            _                           -> bad r Nothing
+                                                     _                                 -> bad r Nothing
+
 -- | Generalization of 'Data.SBV.Control.checkSat'
 checkSat :: (MonadIO m, MonadQuery m) => m CheckSatResult
 checkSat = do cfg <- getConfig
@@ -855,10 +929,41 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
 
-                     State{rUsedKinds} <- queryState
+                     topState@State{rUsedKinds} <- queryState
 
                      ki    <- liftIO $ readIORef rUsedKinds
                      qinps <- getQuantifiedInputs
+
+                     allUninterpreteds <- getUIs
+
+                      -- Functions have at least two kinds in their type and all components must be "interpreted"
+                     let allUiFuns = [u | allSatTrackUFs cfg                                      -- config says consider UIFs
+                                        , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
+                                        , not (isNonModelVar cfg nm)                              -- make sure they aren't explicitly ignored
+                                     ]
+
+                         -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
+                         -- there is no way to reflect back the values to the solver.)
+                         collectAcceptable []                              sofar = return sofar
+                         collectAcceptable ((nm, t@(SBVType ats)):rest) sofar
+                           | not (any hasUninterpretedSorts ats)
+                           = collectAcceptable rest (nm : sofar)
+                           | True
+                           = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " ++ nm ++ " :: " ++ show t
+                                           , "*** Will *not* be used in allSat consideretions since its type"
+                                           , "*** has uninterpreted sorts present."
+                                           ]
+                                collectAcceptable rest sofar
+
+                     uiFuns <- reverse <$> collectAcceptable allUiFuns []
+
+                     -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
+                     -- as cex's tend to get larger
+                     unless (null uiFuns) $
+                        let solverCaps = capabilities (solver cfg)
+                        in case supportsFlattenedSequences solverCaps of
+                             Nothing   -> return ()
+                             Just cmds -> mapM_ (send True) cmds
 
                      let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
 
@@ -880,35 +985,53 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop vars cfg
+                     (sc, ms) <- loop topState (allUiFuns, uiFuns) vars cfg
                      return (sc, w, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop vars cfg = go (1::Int) []
+         loop topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+
+                        when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
+
                         return (True, sofar)
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
+
+                        let endMsg = when (allSatPrintAlong cfg && not (null sofar)) $ do
+                                             let msg 0 = "No solutions found."
+                                                 msg 1 = "This is the only solution."
+                                                 msg n = "Found " ++ show n ++ " different solutions."
+                                             io . putStrLn $ msg (cnt - 1)
+
                         cs <- checkSat
                         case cs of
-                          Unsat -> return (False, sofar)
+                          Unsat -> do endMsg
+                                      return (False, sofar)
                           Unk   -> do queryDebug ["*** Solver returned unknown, terminating query."]
+                                      endMsg
                                       return (False, sofar)
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
-                                      let m = Satisfiable cfg SMTModel { modelObjectives = []
-                                                                       , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
-                                                                       }
+                                      let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
+                                                                   return (nm, (t, cvs))
+                                      uiFunVals <- mapM getUIFun allUiFuns
+
+                                      let model = SMTModel { modelObjectives = []
+                                                           , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
+                                                           , modelUIFuns     = uiFunVals
+                                                           }
+                                          m = Satisfiable cfg model
 
                                           (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
 
-                                          -- For each "interpreted" variable, figure out the model equivalence
+                                          -- For each interpreted variable, figure out the model equivalence
                                           -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
                                           -- and equality don't get along!
                                           interpretedEqs :: [SVal]
@@ -918,11 +1041,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                     | True                    = a `svNotEqual` b
 
                                                    fpNotEq a b = SVal KBool $ Right $ cache r
-                                                       where r st = do swa <- svToSV st a
-                                                                       swb <- svToSV st b
-                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [swa, swb])
+                                                       where r st = do sva <- svToSV st a
+                                                                       svb <- svToSV st b
+                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
 
-                                          -- For each "uninterpreted" variable, use equivalence class
+                                          -- For each uninterpreted constant, use equivalence class
                                           uninterpretedEqs :: [SVal]
                                           uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
                                                            . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
@@ -933,19 +1056,129 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                             where pwDistinct :: [SVal] -> [SVal]
                                                   pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
 
+                                          -- For each uninterpreted function, create a disqualifying equation
+                                          -- We do this rather brute-force, since we need to create a new function
+                                          -- and do an existential assertion.
+                                          uninterpretedReject :: Maybe [String]
+                                          uninterpretedFuns    :: [String]
+                                          (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
+                                              where uiReject = case rejects of
+                                                                 []  -> Nothing
+                                                                 xs  -> Just xs
+
+                                                    (rejects, defs) = unzip $ map mkNotEq [ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
+
+                                                    -- Otherwise, we have things to refute, go for it:
+                                                    mkNotEq (nm, typ@(SBVType ts, vs)) = (reject, def ++ dif)
+                                                      where nm' = nm ++ "_model" ++ show cnt
+
+                                                            reject = nm' ++ "_reject"
+
+                                                            -- rounding mode doesn't matter here, just pick one
+                                                            scv = cvToSMTLib RoundNearestTiesToEven
+
+                                                            -- Is this just a fall-thru only case?
+                                                            isFallThru = null (fst vs)
+
+                                                            (ats, rt) = (init ts, last ts)
+
+                                                            args = unwords ["(x!" ++ show i ++ " " ++ smtType t ++ ")" | (t, i) <- zip ats [(0::Int)..]]
+                                                            res  = smtType rt
+
+                                                            params = ["x!" ++ show i | (_, i) <- zip ats [(0::Int)..]]
+
+                                                            uparams = unwords params
+
+                                                            chain (vals, fallThru) = walk vals
+                                                              where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
+                                                                    walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r ++ "") :  walk rest
+
+                                                                    cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
+                                                                    eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
+
+                                                            def
+                                                              | isFallThru
+                                                              = []
+                                                              | True
+                                                              =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
+                                                                  :  chain vs
+                                                                  ++ [")"]
+
+                                                            pad = replicate (1 + length nm' - length nm) ' '
+
+                                                            dif
+                                                              | not isFallThru
+                                                              = [ "(define-fun " ++  reject ++ " () Bool"
+                                                                , "   (exists (" ++ args ++ ")"
+                                                                , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
+                                                                , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                                ]
+                                                              | True
+                                                              = [ "(define-fun " ++ reject ++ " () Bool"
+                                                                , "   (distinct " ++ scv (snd vs)
+                                                                , "             (" ++ nm ++ " " ++ defaults ++ ")"
+                                                                , "   ))"
+                                                                ]
+                                                              where defaults = case mapM defaultKindedValue ats of
+                                                                                 Just xs -> unwords (map scv xs)
+                                                                                 Nothing -> error $ unlines [ ""
+                                                                                                            , "*** Data.SBV.getAllSatResult: Impossible happened!"
+                                                                                                            , "*** Cannot create a default parameter list for:"
+                                                                                                            , "***"
+                                                                                                            , "***   " ++  show typ
+                                                                                                            , "***"
+                                                                                                            , "*** Please report this as a bug!"
+                                                                                                            ]
+
+
                                           eqs = interpretedEqs ++ uninterpretedEqs
+
                                           disallow = case eqs of
                                                        [] -> Nothing
                                                        _  -> Just $ SBV $ foldr1 svOr eqs
 
+                                      when (allSatPrintAlong cfg) $ do
+                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
+                                        io $ putStrLn $ showModel cfg model
+
                                       let resultsSoFar = m : sofar
 
-                                      -- make sure there's some var. This happens! 'allSat true' is the pathetic example.
+                                          -- This is clunky, but let's not generate a rejector unless we really need it
+                                          needMoreIterations
+                                                | Just maxModels <- allSatMaxModelCount cfg, (cnt+1) > maxModels = False
+                                                | True                                                           = True
 
-                                      case disallow of
-                                        Nothing -> return (False, resultsSoFar)
-                                        Just d  -> do constrain d
-                                                      go (cnt+1) resultsSoFar
+                                      -- Send function disequalities, if any:
+                                      if not needMoreIterations
+                                         then go (cnt+1) resultsSoFar
+                                         else do let uiFunRejector   = "uiFunRejector_model_" ++ show cnt
+                                                     header          = "define-fun " ++ uiFunRejector ++ " () Bool "
+
+                                                     defineRejector []     = return ()
+                                                     defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
+                                                     defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
+                                                                                                            :  ("        (or " ++ x)
+                                                                                                            :  ["            " ++ e | e <- xs]
+                                                                                                            ++ ["        ))"]
+                                                 rejectFuncs <- case uninterpretedReject of
+                                                                  Nothing -> return Nothing
+                                                                  Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
+                                                                                defineRejector fs
+                                                                                return $ Just uiFunRejector
+
+                                                 -- send the disallow clause and the uninterpreted rejector:
+                                                 case (disallow, rejectFuncs) of
+                                                    (Nothing, Nothing) -> return (False, resultsSoFar)
+                                                    (Just d,  Nothing) -> do constrain d
+                                                                             go (cnt+1) resultsSoFar
+                                                    (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"
+                                                                             go (cnt+1) resultsSoFar
+                                                    (Just d,  Just f)  -> -- This is where it gets ugly. We have an SBV and a string and we need to "or" them.
+                                                                          -- But we need a way to force 'd' to be produced. So, go ahead and force it:
+                                                                          do constrain $ d .=> d  -- NB: Redundant, but it makes sure the corresponding constraint gets shown
+                                                                             svd <- io $ svToSV topState (unSBV d)
+                                                                             send True $ "(assert (or " ++ f ++ " " ++ show svd ++ "))"
+                                                                             go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
 getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
@@ -1182,4 +1415,5 @@ executeQuery queryContext (QueryT userQuery) = do
                              , "*** Query calls are only valid within runSMT/runSMTWith calls"
                              ]
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN module          ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN getAllSatResult ("HLint: ignore Use forM_"          :: String) #-}

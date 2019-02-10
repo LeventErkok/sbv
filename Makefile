@@ -70,15 +70,22 @@ lintTest:
 docTest:
 	@$(TIME) doctest --fast --no-magic $(DOCTESTSOURCES)
 
+vdocTest:
+	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
+
 regularTests:
 	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
 
-release: veryclean install docs test
-	cabal $(CSDIST)
+checkLinks:
+	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
+
+testInterfaces:
 	@make -C buildUtils veryclean
 	@make -C buildUtils
 	buildUtils/testInterfaces
-	buildUtils/checkLinks
+
+release: veryclean install docs test testInterfaces checkLinks
+	cabal $(CSDIST)
 	@echo "*** SBV is ready for release!"
 
 # use this as follows:

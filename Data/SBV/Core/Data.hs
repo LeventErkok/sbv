@@ -258,6 +258,9 @@ x .~| y = sNot (x .|| y)
 infixr 1 .=>
 (.=>) :: SBool -> SBool -> SBool
 x .=> y = sNot x .|| y
+-- NB. Do *not* try to optimize @x .=> x = True@ here! If constants go through, it'll get simplified.
+-- The case "x .=> x" can hit is extremely rare, and the getAllSatResult function relies on this
+-- trick to generate constraints in the unlucky case of ui-function models.
 
 -- | Symbolic boolean equivalence
 infixr 1 .<=>

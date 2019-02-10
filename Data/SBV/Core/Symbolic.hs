@@ -1622,7 +1622,9 @@ data SMTConfig = SMTConfig {
        , printBase           :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec       :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
        , satCmd              :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount :: Maybe Int      -- ^ In an allSat call, return at most this many models. If nothing, return all.
+       , allSatMaxModelCount :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
+       , allSatPrintAlong    :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
+       , allSatTrackUFs      :: Bool           -- ^ In a 'Data.SBV.allSat' call, should we consider differing uninterpreted-function values as producing new models?
        , isNonModelVar       :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , transcript          :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion       :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
@@ -1639,11 +1641,11 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]      -- ^ Mapping of symbolic values to objective values.
-     , modelAssocs     :: [(String, CV)]                 -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, ([([CV], CV)], CV))] -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                         -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                         -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                 -- ^ Mapping of symbolic values to objective values.
+     , modelAssocs     :: [(String, CV)]                            -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                    -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                    -- in the 'modelAssocs' field.
      }
      deriving Show
 
