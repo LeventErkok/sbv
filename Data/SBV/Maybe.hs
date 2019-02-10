@@ -33,30 +33,14 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
-
--- | Construct an @SBV (Maybe a)@ from a @Maybe a@
-liftMaybe :: SymVal a => Maybe (SBV a) -> SBV (Maybe a)
-liftMaybe = Prelude.maybe (literal Nothing) just
-
--- | Map over the 'Just' side of a 'Maybe'
-map :: forall a b.  (SymVal a, SymVal b)
-    => (SBV a -> SBV b)
-    -> SBV (Maybe a)
-    -> SBV (Maybe b)
-map f = maybe (literal Nothing) (just . f)
-
--- | Return 'sTrue' if the given symbolic value is 'Nothing', 'sFalse' otherwise
-isNothing :: SymVal a => SBV (Maybe a) -> SBV Bool
-isNothing = maybe sTrue (const sFalse)
-
--- | Return 'sTrue' if the given symbolic value is 'Just', 'sFalse' otherwise
-isJust :: SymVal a => SBV (Maybe a) -> SBV Bool
-isJust = maybe sFalse (const sTrue)
-
 -- | The symbolic 'Nothing'
 nothing :: forall a. SymVal a => SBV (Maybe a)
 nothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
   where k = kindOf (Proxy @(Maybe a))
+
+-- | Return 'sTrue' if the given symbolic value is 'Nothing', 'sFalse' otherwise
+isNothing :: SymVal a => SBV (Maybe a) -> SBV Bool
+isNothing = maybe sTrue (const sFalse)
 
 -- | Construct an @SBV (Maybe a)@ from an @SBV a@
 just :: forall a. SymVal a => SBV a -> SBV (Maybe a)
@@ -68,6 +52,21 @@ just sa
   where k = kindOf (Proxy @(Maybe a))
         res st = do asv <- sbvToSV st sa
                     newExpr st k $ SBVApp MaybeConstructor [asv]
+
+-- | Return 'sTrue' if the given symbolic value is 'Just', 'sFalse' otherwise
+isJust :: SymVal a => SBV (Maybe a) -> SBV Bool
+isJust = maybe sFalse (const sTrue)
+
+-- | Construct an @SBV (Maybe a)@ from a @Maybe a@
+liftMaybe :: SymVal a => Maybe (SBV a) -> SBV (Maybe a)
+liftMaybe = Prelude.maybe (literal Nothing) just
+
+-- | Map over the 'Just' side of a 'Maybe'
+map :: forall a b.  (SymVal a, SymVal b)
+    => (SBV a -> SBV b)
+    -> SBV (Maybe a)
+    -> SBV (Maybe b)
+map f = maybe (literal Nothing) (just . f)
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
