@@ -14,7 +14,6 @@ module Data.SBV.Core.Concrete
   ) where
 
 import Control.Monad (replicateM)
-import Data.Semigroup ((<>))
 
 import Data.Bits
 import System.Random (randomIO, randomRIO)
@@ -27,6 +26,7 @@ import Data.SBV.Core.AlgReals
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
+-- | For 'SEither' and 'SMaybe', we use the internal 'SumSide' type
 data SumSide = InL | InR
   deriving (Eq, Ord)
 
@@ -68,7 +68,7 @@ instance Eq CVal where
   CList     a == CList     b = a == b
   CUserSort a == CUserSort b = a == b
   CTuple    a == CTuple    b = a == b
-  CSum   i1 a == CSum   i2 b = i1 == i2 && a == b
+  CSum   i1 a == CSum   i2 b = (i1, a) == (i2, b)
   _           == _           = False
 
 -- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
@@ -82,7 +82,7 @@ instance Ord CVal where
   CList     a `compare` CList   b   = a        `compare`                  b
   CUserSort a `compare` CUserSort b = a        `compare`                  b
   CTuple    a `compare` CTuple    b = a        `compare`                  b
-  CSum   i1 a `compare` CSum   i2 b = i1 `compare` i2 <> a `compare` b
+  CSum   i1 a `compare` CSum   i2 b = (i1, a)  `compare`                  (i2, b)
   a           `compare` b           = cvRank a `compare`                  cvRank b
 
 -- | 'CV' represents a concrete word of a fixed size:
@@ -208,7 +208,7 @@ liftCV _ _ _ _ _ _ _ _ _ f (CV _ (CSum    i v)) = f i v
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal -> AlgReal -> b) -> (Integer -> Integer -> b) -> (Float -> Float -> b) -> (Double -> Double -> b) -> (Char -> Char -> b) -> (String -> String -> b) -> ([CVal] -> [CVal] -> b) -> ([CVal] -> [CVal] -> b) -> ((SumSide, CVal) -> (SumSide, CVal) -> b) -> ((Maybe Int, String) -> (Maybe Int, String) -> b) -> CV -> CV -> b
-liftCV2 r i f d c s u v v' w x y = case (cvVal x, cvVal y) of
+liftCV2 r i f d c s u v e w x y = case (cvVal x, cvVal y) of
                                    (CAlgReal  a, CAlgReal  b) -> r a b
                                    (CInteger  a, CInteger  b) -> i a b
                                    (CFloat    a, CFloat    b) -> f a b
@@ -217,7 +217,7 @@ liftCV2 r i f d c s u v v' w x y = case (cvVal x, cvVal y) of
                                    (CString   a, CString   b) -> s a b
                                    (CList     a, CList     b) -> u a b
                                    (CTuple    a, CTuple    b) -> v a b
-                                   (CSum   i1 a, CSum   i2 b) -> v' (i1, a) (i2, b)
+                                   (CSum   i1 a, CSum   i2 b) -> e (i1, a) (i2, b)
                                    (CUserSort a, CUserSort b) -> w a b
                                    _                          -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
 
@@ -261,45 +261,28 @@ instance Show GeneralizedCV where
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
 showCV shk w               = liftCV show show show show show show snd shL shT shSum w ++ kInfo
-      where kInfo | shk  = " :: " ++ showBaseKind (kindOf w)
+      where kw = kindOf w
+
+            kInfo | shk  = " :: " ++ showBaseKind kw
                   | True = ""
 
             shL xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
-              where ke = case kindOf w of
+              where ke = case kw of
                            KList k -> k
-                           kw      -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
+                           _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
 
             shT :: [CVal] -> String
             shT xs = "(" ++ intercalate "," xs' ++ ")"
-              where xs' = case kindOf w of
+              where xs' = case kw of
                             KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
-                            kw -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
+                            _   -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
 
             shSum :: SumSide -> CVal -> String
-            shSum side val = case kindOf w of
-              KSum k1 k2 -> case side of
-                InL -> "(InL " ++ showCV False (CV k1 val) ++ ")"
-                InR -> "(InR " ++ showCV False (CV k2 val) ++ ")"
-              kw -> error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
-
--- | A version of show for kinds that says Bool instead of SBool
-showBaseKind :: Kind -> String
-showBaseKind = sh
-  where sh k@KBool            = noS (show k)
-        sh k@KBounded{}       = noS (show k)
-        sh k@KUnbounded       = noS (show k)
-        sh k@KReal            = noS (show k)
-        sh k@KUninterpreted{} = show k     -- Leave user-sorts untouched!
-        sh k@KFloat           = noS (show k)
-        sh k@KDouble          = noS (show k)
-        sh k@KChar            = noS (show k)
-        sh k@KString          = noS (show k)
-        sh (KList k)          = "[" ++ sh k ++ "]"
-        sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
-
-        -- Drop the initial S if it's there
-        noS ('S':s) = s
-        noS s       = s
+            shSum side val
+              | KSum k1 k2 <- kw = case side of
+                                     InL -> "Left  " ++ showCV False (CV k1 val)
+                                     InR -> "Right " ++ showCV False (CV k2 val)
+              | True             = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
@@ -334,11 +317,10 @@ randomCVal k =
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KTuple ks          -> CTuple <$> traverse randomCVal ks
-    KSum k1 k2         -> do
-      i <- randomIO
-      if i
-      then CSum InL <$> randomCVal k1
-      else CSum InR <$> randomCVal k2
+    KSum k1 k2         -> do i <- randomIO
+                             if i
+                                then CSum InL <$> randomCVal k1
+                                else CSum InR <$> randomCVal k2
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

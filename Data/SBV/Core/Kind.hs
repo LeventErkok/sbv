@@ -18,9 +18,11 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts, showBaseKind) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
+
+import Data.Char (isSpace)
 
 import Data.Int
 import Data.Word
@@ -65,7 +67,35 @@ instance Show Kind where
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
-  show (KSum k1 k2)         = "(Either " ++ show k1 ++ " " ++ show k2 ++ ")"
+  show (KSum k1 k2)         = "SEither " ++ kindParen (show k1) ++ " " ++ kindParen (show k2)
+
+-- | A version of show for kinds that says Bool instead of SBool
+showBaseKind :: Kind -> String
+showBaseKind = sh
+  where sh k@KBool            = noS (show k)
+        sh k@KBounded{}       = noS (show k)
+        sh k@KUnbounded       = noS (show k)
+        sh k@KReal            = noS (show k)
+        sh k@KUninterpreted{} = show k     -- Leave user-sorts untouched!
+        sh k@KFloat           = noS (show k)
+        sh k@KDouble          = noS (show k)
+        sh k@KChar            = noS (show k)
+        sh k@KString          = noS (show k)
+        sh (KList k)          = "[" ++ sh k ++ "]"
+        sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
+        sh (KSum k1 k2)       = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
+
+        -- Drop the initial S if it's there
+        noS ('S':s) = s
+        noS s       = s
+
+-- | Put parens if necessary. This test is rather crummy, but seems to work ok
+kindParen :: String -> String
+kindParen s@('[':_) = s
+kindParen s@('(':_) = s
+kindParen s
+  | null (filter isSpace s) = s
+  | True                    = '(' : s ++ ")"
 
 -- | How the type maps to SMT land
 smtType :: Kind -> String
@@ -81,7 +111,7 @@ smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
 smtType (KUninterpreted s _) = s
 smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
-smtType (KSum k1 k2)         = "(SBVSum2" ++ " " ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
+smtType (KSum k1 k2)         = "(SBVSum2 " ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -245,6 +275,7 @@ hasUninterpretedSorts KChar                        = False
 hasUninterpretedSorts KString                      = False
 hasUninterpretedSorts (KList k)                    = hasUninterpretedSorts k
 hasUninterpretedSorts (KTuple ks)                  = any hasUninterpretedSorts ks
+hasUninterpretedSorts (KSum k1 k2)                 = any hasUninterpretedSorts [k1, k2]
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString
