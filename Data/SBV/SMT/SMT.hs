@@ -61,7 +61,8 @@ import qualified Data.Map.Strict as M
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
-import Data.SBV.Core.Concrete (showCV, showBaseKind)
+import Data.SBV.Core.Concrete (showCV)
+import Data.SBV.Core.Kind     (showBaseKind)
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
