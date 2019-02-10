@@ -332,11 +332,10 @@ containsSum :: Set Kind -> Bool
 containsSum = not . Set.null . Set.filter isSum
 
 declSum :: [String]
-declSum =
-  [ "(declare-datatypes ((SBVSum2 2)) ("
-  , "  (par (X Y) ( (left (getLeft X)) (right (getRight Y)) ))"
-  , "))"
-  ]
+declSum = [ "(declare-datatypes ((SBVSum2 2)) ((par (T1 T2)"
+          , "                                  ((left_SBVSum2  (get_left_SBVSum2  T1))"
+          , "                                   (right_SBVSum2 (get_right_SBVSum2 T2))))))"
+          ]
 
 -- | Convert in a query context.
 -- NB. We do not store everything in @newKs@ below, but only what we need
@@ -780,12 +779,12 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor 0)   [])    = "SBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
-        sh (SBVApp (SumConstructor   InL) [arg]) = "(left " ++ ssv arg ++ ")"
-        sh (SBVApp (SumConstructor   InR) [arg]) = "(right " ++ ssv arg ++ ")"
-        sh (SBVApp (SumIs            InL) [arg]) = "((_ is left) " ++ ssv arg ++ ")"
-        sh (SBVApp (SumIs            InR) [arg]) = "((_ is right) " ++ ssv arg ++ ")"
-        sh (SBVApp (SumAccess        InL) [arg]) = "(getLeft " ++ ssv arg ++ ")"
-        sh (SBVApp (SumAccess        InR) [arg]) = "(getRight " ++ ssv arg ++ ")"
+        sh (SBVApp (SumConstructor   InL) [arg]) = "(left_SBVSum2 "  ++ ssv arg ++ ")"
+        sh (SBVApp (SumConstructor   InR) [arg]) = "(right_SBVSum2 " ++ ssv arg ++ ")"
+        sh (SBVApp (SumIs            InL) [arg]) = "((_ is left_SBVSum2) "  ++ ssv arg ++ ")"
+        sh (SBVApp (SumIs            InR) [arg]) = "((_ is right_SBVSum2) " ++ ssv arg ++ ")"
+        sh (SBVApp (SumAccess        InL) [arg]) = "(get_left_SBVSum2 "  ++ ssv arg ++ ")"
+        sh (SBVApp (SumAccess        InR) [arg]) = "(get_right_SBVSum2 " ++ ssv arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

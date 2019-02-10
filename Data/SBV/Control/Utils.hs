@@ -71,7 +71,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
-                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
+                              , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>), SumSide(InL)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -407,14 +407,14 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
    sexprToVal _                                       = Nothing
 
 instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
-  sexprToVal (EApp [ECon "left",  a]) = Left <$> sexprToVal a
-  sexprToVal (EApp [ECon "right", b]) = Right <$> sexprToVal b
-  sexprToVal _                        = Nothing
+  sexprToVal (EApp [ECon "left_SBVSum2",  a]) = Left  <$> sexprToVal a
+  sexprToVal (EApp [ECon "right_SBVSum2", b]) = Right <$> sexprToVal b
+  sexprToVal _                                = Nothing
 
 instance SMTValue a => SMTValue (Maybe a) where
-  sexprToVal (EApp [ECon "left",  _]) = pure Nothing
-  sexprToVal (EApp [ECon "right", b]) = Just <$> sexprToVal b
-  sexprToVal _                        = Nothing
+  sexprToVal (EApp [ECon "left_SBVSum2",  _]) = pure Nothing
+  sexprToVal (EApp [ECon "right_SBVSum2", b]) = Just <$> sexprToVal b
+  sexprToVal _                                = Nothing
 
 instance SMTValue () where
    sexprToVal (ECon "SBVTuple0") = Just ()
@@ -738,6 +738,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
+        cvt (KSum kl _)           = CSum InL <$> cvt kl          -- why not?
 
         -- Tricky case of uninterpreted
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
