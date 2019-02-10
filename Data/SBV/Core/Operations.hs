@@ -1230,26 +1230,29 @@ liftSV2 opS k a b = cache c
                   sw2 <- svToSV st b
                   opS st k sw1 sw2
 
-liftSym2 :: (State -> Kind -> SV -> SV -> IO SV) -> (CV -> CV -> Bool) -> (AlgReal -> AlgReal -> AlgReal) -> (Integer -> Integer -> Integer) -> (Float -> Float -> Float) -> (Double -> Double -> Double) -> SVal -> SVal -> SVal
+liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
+         -> (CV      -> CV      -> Bool)
+         -> (AlgReal -> AlgReal -> AlgReal)
+         -> (Integer -> Integer -> Integer)
+         -> (Float   -> Float   -> Float)
+         -> (Double  -> Double  -> Double)
+         -> SVal     -> SVal    -> SVal
 liftSym2 _   okCV opCR opCI opCF opCD   (SVal k (Left a)) (SVal _ (Left b)) | okCV a b = SVal k . Left  $! mapCV2 opCR opCI opCF opCD noCharLift2 noStringLift2 noUnint2 a b
 liftSym2 opS _    _    _    _    _    a@(SVal k _)        b                            = SVal k $ Right $  liftSV2 opS k a b
 
-liftSym2B
-  :: (State -> Kind -> SV -> SV -> IO SV)
-  -> (CV -> CV -> Bool)
-  -> (AlgReal -> AlgReal -> Bool)
-  -> (Integer -> Integer -> Bool)
-  -> (Float -> Float -> Bool)
-  -> (Double -> Double -> Bool)
-  -> (Char -> Char -> Bool)
-  -> (String -> String -> Bool)
-  -> ([CVal] -> [CVal] -> Bool)
-  -> ([CVal] -> [CVal] -> Bool)
-  -> ((SumSide, CVal) -> (SumSide, CVal) -> Bool)
-  -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool)
-  -> SVal
-  -> SVal
-  -> SVal
+liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
+          -> (CV                  -> CV                  -> Bool)
+          -> (AlgReal             -> AlgReal             -> Bool)
+          -> (Integer             -> Integer             -> Bool)
+          -> (Float               -> Float               -> Bool)
+          -> (Double              -> Double              -> Bool)
+          -> (Char                -> Char                -> Bool)
+          -> (String              -> String              -> Bool)
+          -> ([CVal]              -> [CVal]              -> Bool)
+          -> ([CVal]              -> [CVal]              -> Bool)
+          -> ((SumSide, CVal)     -> (SumSide, CVal)     -> Bool)
+          -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool)
+          -> SVal                 -> SVal                -> SVal
 liftSym2B _   okCV opCR opCI opCF opCD opCC opCS opCSeq opCTup opCSum opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opCC opCS opCSeq opCTup opCSum opUI a b)
 liftSym2B opS _    _    _    _    _    _    _    _      _      _      _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
 
