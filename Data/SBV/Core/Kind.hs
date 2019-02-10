@@ -68,8 +68,8 @@ instance Show Kind where
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
-  show (KMaybe k)           = "SMaybe "  ++ kindParen (show k)
-  show (KEither k1 k2)      = "SEither " ++ kindParen (show k1) ++ " " ++ kindParen (show k2)
+  show (KMaybe k)           = "SMaybe "  ++ kindParen (showBaseKind k)
+  show (KEither k1 k2)      = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
