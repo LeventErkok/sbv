@@ -391,11 +391,11 @@ randomCVal k =
     KMaybe ke          -> do i <- randomIO
                              if i
                                 then return $ CMaybe Nothing
-                                else (CMaybe . Just) <$> randomCVal ke
+                                else CMaybe . Just <$> randomCVal ke
     KEither k1 k2      -> do i <- randomIO
                              if i
-                                then (CEither . Left)  <$> randomCVal k1
-                                else (CEither . Right) <$> randomCVal k2
+                                then CEither . Left  <$> randomCVal k1
+                                else CEither . Right <$> randomCVal k2
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)
@@ -404,3 +404,5 @@ randomCVal k =
 -- | Generate a random constant value ('CV') of the correct kind.
 randomCV :: Kind -> IO CV
 randomCV k = CV k <$> randomCVal k
+
+{-# ANN module ("HLint: ignore Redundant if" :: String) #-}

@@ -734,12 +734,12 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUninterpreted _ ui) = uninterp ui
         cvt KFloat                = Just $ CFloat 0
         cvt KDouble               = Just $ CDouble 0
-        cvt KChar                 = Just $ CChar '\NUL'           -- why not?
+        cvt KChar                 = Just $ CChar '\NUL'         -- why not?
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
         cvt (KMaybe _)            = Just $ CMaybe Nothing
-        cvt (KEither k1 _)        = (CEither . Left) <$> cvt k1   -- why not?
+        cvt (KEither k1 _)        = CEither . Left <$> cvt k1   -- why not?
 
         -- Tricky case of uninterpreted
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
