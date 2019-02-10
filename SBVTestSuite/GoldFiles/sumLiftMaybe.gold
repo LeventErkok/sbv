@@ -13,6 +13,7 @@
                                            (nothing_SBVMaybe
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
+[GOOD] (define-fun s2 () (SBVMaybe Int) nothing_SBVMaybe)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
 [GOOD] ; --- constant tables ---
@@ -22,6 +23,8 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s1 () (SBVMaybe Int) (just_SBVMaybe s0))
+[GOOD] (define-fun s3 () Bool (distinct s1 s2))
+[GOOD] (assert s3)
 [SEND] (check-sat)
 [RECV] sat
 *** Solver   : Z3
