@@ -587,15 +587,15 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         supportsPB = supportsPseudoBooleans caps
 
-        bvOp     = all isBounded arguments
-        intOp    = any isInteger arguments
-        realOp   = any isReal    arguments
-        doubleOp = any isDouble  arguments
-        floatOp  = any isFloat   arguments
-        boolOp   = all isBoolean arguments
-        charOp   = any isChar    arguments
-        stringOp = any isString  arguments
-        listOp   = any isList    arguments
+        bvOp     = all isBounded   arguments
+        intOp    = any isUnbounded arguments
+        realOp   = any isReal      arguments
+        doubleOp = any isDouble    arguments
+        floatOp  = any isFloat     arguments
+        boolOp   = all isBoolean   arguments
+        charOp   = any isChar      arguments
+        stringOp = any isString    arguments
+        listOp   = any isList      arguments
 
         bad | intOp = error $ "SBV.SMTLib2: Unsupported operation on unbounded integers: " ++ show expr
             | True  = error $ "SBV.SMTLib2: Unsupported operation on real values: " ++ show expr

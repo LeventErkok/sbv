@@ -178,7 +178,7 @@ class HasKind a where
   isReal          :: a -> Bool
   isFloat         :: a -> Bool
   isDouble        :: a -> Bool
-  isInteger       :: a -> Bool
+  isUnbounded     :: a -> Bool
   isUninterpreted :: a -> Bool
   isChar          :: a -> Bool
   isString        :: a -> Bool
@@ -220,8 +220,8 @@ class HasKind a where
   isDouble        (kindOf -> KDouble{})        = True
   isDouble        _                            = False
 
-  isInteger       (kindOf -> KUnbounded{})     = True
-  isInteger       _                            = False
+  isUnbounded     (kindOf -> KUnbounded{})     = True
+  isUnbounded     _                            = False
 
   isUninterpreted (kindOf -> KUninterpreted{}) = True
   isUninterpreted _                            = False

@@ -720,7 +720,7 @@ svShift toLeft x i
           | Just xv <- getConst x, Just iv <- getConst i
           = Just $ SVal kx . Left $! normCV $ CV kx (CInteger (xv `opC` shiftAmount iv))
 
-          | isInteger x || isInteger i
+          | isUnbounded x || isUnbounded i
           = bailOut $ "Not yet implemented unbounded/non-constants shifts for " ++ show (kx, ki) ++ ", please file a request!"
 
           | not (isBounded x && isBounded i)
@@ -740,12 +740,12 @@ svShift toLeft x i
                 -- like fromIntegral, but more paranoid
                 shiftAmount :: Integer -> Int
                 shiftAmount iv
-                  | iv <= 0                                          = 0
-                  | isInteger i, iv > fromIntegral (maxBound :: Int) = bailOut $ "Unsupported constant unbounded shift with amount: " ++ show iv
-                  | isInteger x                                      = fromIntegral iv
-                  | iv >= fromIntegral ub                            = ub
-                  | not (isBounded x && isBounded i)                 = bailOut $ "Unsupported kinds: " ++ show (kx, ki)
-                  | True                                             = fromIntegral iv
+                  | iv <= 0                                            = 0
+                  | isUnbounded i, iv > fromIntegral (maxBound :: Int) = bailOut $ "Unsupported constant unbounded shift with amount: " ++ show iv
+                  | isUnbounded x                                      = fromIntegral iv
+                  | iv >= fromIntegral ub                              = ub
+                  | not (isBounded x && isBounded i)                   = bailOut $ "Unsupported kinds: " ++ show (kx, ki)
+                  | True                                               = fromIntegral iv
                  where ub = intSizeOf x
 
         -- Overshift is not possible if the bit-size of x won't even fit into the bit-vector size
