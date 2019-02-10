@@ -48,7 +48,10 @@ data Kind = KBool
           | KString
           | KList Kind
           | KTuple [Kind]
-          | KSum Kind Kind
+          | KSum (Maybe Kind) Kind  -- We overload here: If the first kind doesn't exist; then this is a Maybe
+                                    -- otherwise, it's an Either. Note that we still map them to the same
+                                    -- SMT-Lib sum type; but distinguishing it here makes internal SBV coding
+                                    -- safer and helps with prettier printing
           deriving (Eq, Ord)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
@@ -67,23 +70,25 @@ instance Show Kind where
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
-  show (KSum k1 k2)         = "SEither " ++ kindParen (show k1) ++ " " ++ kindParen (show k2)
+  show (KSum Nothing   k)   = "SMaybe "  ++ kindParen (show k)
+  show (KSum (Just k1) k2)  = "SEither " ++ kindParen (show k1) ++ " " ++ kindParen (show k2)
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
 showBaseKind = sh
-  where sh k@KBool            = noS (show k)
-        sh k@KBounded{}       = noS (show k)
-        sh k@KUnbounded       = noS (show k)
-        sh k@KReal            = noS (show k)
-        sh k@KUninterpreted{} = show k     -- Leave user-sorts untouched!
-        sh k@KFloat           = noS (show k)
-        sh k@KDouble          = noS (show k)
-        sh k@KChar            = noS (show k)
-        sh k@KString          = noS (show k)
-        sh (KList k)          = "[" ++ sh k ++ "]"
-        sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
-        sh (KSum k1 k2)       = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
+  where sh k@KBool             = noS (show k)
+        sh k@KBounded{}        = noS (show k)
+        sh k@KUnbounded        = noS (show k)
+        sh k@KReal             = noS (show k)
+        sh k@KUninterpreted{}  = show k     -- Leave user-sorts untouched!
+        sh k@KFloat            = noS (show k)
+        sh k@KDouble           = noS (show k)
+        sh k@KChar             = noS (show k)
+        sh k@KString           = noS (show k)
+        sh (KList k)           = "[" ++ sh k ++ "]"
+        sh (KTuple ks)         = "(" ++ intercalate ", " (map sh ks) ++ ")"
+        sh (KSum Nothing   k)  = "Maybe " ++ kindParen (sh k)
+        sh (KSum (Just k1) k2) = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
 
         -- Drop the initial S if it's there
         noS ('S':s) = s
@@ -110,7 +115,8 @@ smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
 smtType (KUninterpreted s _) = s
 smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
-smtType (KSum k1 k2)         = "(SBVSum2 " ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
+smtType (KSum Nothing   k2)  = "(SBVSum2 SBVTuple0 "            ++ smtType k2 ++ ")"
+smtType (KSum (Just k1) k2)  = "(SBVSum2 " ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -274,7 +280,8 @@ hasUninterpretedSorts KChar                        = False
 hasUninterpretedSorts KString                      = False
 hasUninterpretedSorts (KList k)                    = hasUninterpretedSorts k
 hasUninterpretedSorts (KTuple ks)                  = any hasUninterpretedSorts ks
-hasUninterpretedSorts (KSum k1 k2)                 = any hasUninterpretedSorts [k1, k2]
+hasUninterpretedSorts (KSum Nothing   k)           = hasUninterpretedSorts k
+hasUninterpretedSorts (KSum (Just k1) k2)          = any hasUninterpretedSorts [k1, k2]
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString
@@ -308,7 +315,7 @@ instance (HasKind a, HasKind b, HasKind c, HasKind d, HasKind e, HasKind f, HasK
   kindOf _ = KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h)]
 
 instance (HasKind a, HasKind b) => HasKind (Either a b) where
-  kindOf _ = KSum (kindOf (Proxy @a)) (kindOf (Proxy @b))
+  kindOf _ = KSum (Just (kindOf (Proxy @a))) (kindOf (Proxy @b))
 
 instance HasKind a => HasKind (Maybe a) where
-  kindOf _ = KSum (kindOf (Proxy @())) (kindOf (Proxy @a))
+  kindOf _ = KSum Nothing (kindOf (Proxy @a))

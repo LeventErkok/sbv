@@ -279,9 +279,13 @@ showCV shk w               = liftCV show show show show show show snd shL shT sh
 
             shSum :: SumSide -> CVal -> String
             shSum side val
-              | KSum k1 k2 <- kw = case side of
-                                     InL -> "Left  " ++ showCV False (CV k1 val)
-                                     InR -> "Right " ++ showCV False (CV k2 val)
+              | KSum Nothing   k  <- kw = case (side, val) of
+                                            (InL, CTuple []) -> "Nothing"
+                                            (InL, _)         -> error $ "Data.SBV.showCV: Impossible happened, expected Maybe, got InL for: " ++ show (kw, CV k val)
+                                            (InR, _)         -> "Just  " ++ showCV False (CV k val)
+              | KSum (Just k1) k2 <- kw = case side of
+                                            InL -> "Left  " ++ showCV False (CV k1 val)
+                                            InR -> "Right " ++ showCV False (CV k2 val)
               | True             = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
 
 -- | Create a constant word from an integral.
@@ -317,7 +321,11 @@ randomCVal k =
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KTuple ks          -> CTuple <$> traverse randomCVal ks
-    KSum k1 k2         -> do i <- randomIO
+    KSum Nothing  ke   -> do i <- randomIO
+                             if i
+                                then return $ CSum InL (CTuple [])
+                                else CSum InR <$> randomCVal ke
+    KSum (Just k1) k2  -> do i <- randomIO
                              if i
                                 then CSum InL <$> randomCVal k1
                                 else CSum InR <$> randomCVal k2

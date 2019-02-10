@@ -241,9 +241,9 @@ instance (SymVal a, SymVal b) => SymVal (Either a b) where
 
           mk side val = SBV $ SVal k $ Left $ CV k $ CSum side val
 
-  fromCV (CV (KSum k1 _ ) (CSum InL c)) = Left  $ fromCV $ CV k1 c
-  fromCV (CV (KSum _  k2) (CSum InR c)) = Right $ fromCV $ CV k2 c
-  fromCV bad                            = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
+  fromCV (CV (KSum (Just k1) _ ) (CSum InL c)) = Left  $ fromCV $ CV k1 c
+  fromCV (CV (KSum (Just _)  k2) (CSum InR c)) = Right $ fromCV $ CV k2 c
+  fromCV bad                                   = error $ "SymVal.fromCV (Either): Malformed sum received: " ++ show bad
 
 instance SymVal a => SymVal (Maybe a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(Maybe a)))

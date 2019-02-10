@@ -738,7 +738,8 @@ defaultKindedValue k = CV k <$> cvt k
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
-        cvt (KSum kl _)           = CSum InL <$> cvt kl          -- why not?
+        cvt (KSum Nothing   _)    = Just $ CSum InL (CTuple [])  -- why not?
+        cvt (KSum (Just kl) _)    = CSum InL <$> cvt kl          -- why not?
 
         -- Tricky case of uninterpreted
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)

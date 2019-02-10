@@ -1052,18 +1052,19 @@ registerKind st k
 
        -- Don't forget to register subkinds!
        case k of
-         KBool          {}    -> return ()
-         KBounded       {}    -> return ()
-         KUnbounded     {}    -> return ()
-         KReal          {}    -> return ()
-         KUninterpreted {}    -> return ()
-         KFloat         {}    -> return ()
-         KDouble        {}    -> return ()
-         KChar          {}    -> return ()
-         KString        {}    -> return ()
-         KList          ek    -> registerKind st ek
-         KTuple         eks   -> mapM_ (registerKind st) eks
-         KSum           k1 k2 -> mapM_ (registerKind st) [k1, k2]
+         KBool          {}           -> return ()
+         KBounded       {}           -> return ()
+         KUnbounded     {}           -> return ()
+         KReal          {}           -> return ()
+         KUninterpreted {}           -> return ()
+         KFloat         {}           -> return ()
+         KDouble        {}           -> return ()
+         KChar          {}           -> return ()
+         KString        {}           -> return ()
+         KList          ek           -> registerKind st ek
+         KTuple         eks          -> mapM_ (registerKind st) eks
+         KSum           Nothing   ke -> mapM_ (registerKind st) [KTuple [], ke]  -- NB. Register 0-tuple here, as Maybe uses that
+         KSum           (Just k1) k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()

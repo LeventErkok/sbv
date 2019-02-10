@@ -448,9 +448,10 @@ cvToSMTLib rm x
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         smtLibSum :: Kind -> SumSide -> CVal -> String
-        smtLibSum (KSum k _) InL c = "(left_SBVSum2 "  ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibSum (KSum _ k) InR c = "(right_SBVSum2 " ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibSum k          _   _ = error $ "SBV.cvToSMTLib: Impossible case (smtLibSum), received kind: " ++ show k
+        smtLibSum (KSum Nothing  _) InL c = "(left_SBVSum2 "  ++ cvToSMTLib rm (CV (KTuple []) c) ++ ")"
+        smtLibSum (KSum (Just k) _) InL c = "(left_SBVSum2 "  ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibSum (KSum _        k) InR c = "(right_SBVSum2 " ++ cvToSMTLib rm (CV k c) ++ ")"
+        smtLibSum k                 _   _ = error $ "SBV.cvToSMTLib: Impossible case (smtLibSum), received kind: " ++ show k
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
