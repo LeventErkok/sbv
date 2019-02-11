@@ -92,6 +92,21 @@ isJust = maybe sFalse (const sTrue)
 -- Q.E.D.
 fromMaybe :: SymVal a => SBV a -> SMaybe a -> SBV a
 fromMaybe def = maybe def id
+
+-- | Return the value of an optional value. The behavior is undefined if
+-- passed Nothing. Compare to 'fromMaybe'.
+--
+-- >>> fromJust (sJust (literal 'a'))
+-- 'a' :: SChar
+-- >>> prove $ \x -> fromJust (sJust x) .== (x :: SChar)
+-- Q.E.D.
+-- >>> sat $ \x -> x .== (fromJust sNothing :: SChar)
+-- Satisfiable. Model:
+--   s0 = '\NUL' :: Char
+--
+-- Note how we get a satisfying assignment in the last case: The behavior
+-- is unspecified, thus the SMT solver picks whatever satisfies the
+-- constraints, if there is one.
 fromJust :: forall a. SymVal a => SMaybe a -> SBV a
 fromJust ma
   | Just (Just x) <- unliteral ma
