@@ -78,15 +78,15 @@ fromJust ma
                     internalConstraint st False [] $ unSBV $ isJust ma .=> esSBV .== ma
                     return e
 
--- | Construct an @SBV (Maybe a)@ from a @Maybe a@
-liftMaybe :: SymVal a => Maybe (SBV a) -> SBV (Maybe a)
+-- | Construct an @SMaybe a@ from a @Maybe a@
+liftMaybe :: SymVal a => Maybe (SBV a) -> SMaybe a
 liftMaybe = Prelude.maybe (literal Nothing) sJust
 
 -- | Map over the 'Just' side of a 'Maybe'
 map :: forall a b.  (SymVal a, SymVal b)
     => (SBV a -> SBV b)
-    -> SBV (Maybe a)
-    -> SBV (Maybe b)
+    -> SMaybe a
+    -> SMaybe b
 map f = maybe (literal Nothing) (sJust . f)
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
@@ -94,7 +94,7 @@ map f = maybe (literal Nothing) (sJust . f)
 maybe :: forall a b.  (SymVal a, SymVal b)
       => SBV b
       -> (SBV a -> SBV b)
-      -> SBV (Maybe a)
+      -> SMaybe a
       -> SBV b
 maybe brNothing brJust ma
   | Just (Just a) <- unliteral ma
