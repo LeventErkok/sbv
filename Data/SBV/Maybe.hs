@@ -22,7 +22,7 @@ module Data.SBV.Maybe (
   -- * Mapping functions
   , maybe, map
   -- * Scrutinizing the branches of an option
-  , isNothing, isJust
+  , isNothing, isJust, fromMaybe, fromJust
   ) where
 
 import           Prelude hiding (maybe, map)
@@ -57,6 +57,27 @@ sJust sa
 isJust :: SymVal a => SBV (Maybe a) -> SBV Bool
 isJust = maybe sFalse (const sTrue)
 
+fromMaybe :: SymVal a => SBV a -> SBV (Maybe a) -> SBV a
+fromMaybe def = maybe def id
+fromJust :: forall a. SymVal a => SBV (Maybe a) -> SBV a
+fromJust ma
+  | Just (Just x) <- unliteral ma
+  = literal x
+  | True
+  = SBV $ SVal ka $ Right $ cache res
+  where ka     = kindOf (Proxy @a)
+        kMaybe = KMaybe ka
+
+        -- We play the usual trick here of creating a just value
+        -- and asserting equivalence under implication. This will
+        -- be underspecified as required should the value
+        -- received be `Nothing`.
+        res st = do e   <- internalVariable st ka
+                    es  <- newExpr st kMaybe (SBVApp MaybeConstructor [e])
+                    let esSBV = SBV $ SVal kMaybe $ Right $ cache $ \_ -> return es
+                    internalConstraint st False [] $ unSBV $ isJust ma .=> esSBV .== ma
+                    return e
+
 -- | Construct an @SBV (Maybe a)@ from a @Maybe a@
 liftMaybe :: SymVal a => Maybe (SBV a) -> SBV (Maybe a)
 liftMaybe = Prelude.maybe (literal Nothing) just
@@ -66,7 +87,7 @@ map :: forall a b.  (SymVal a, SymVal b)
     => (SBV a -> SBV b)
     -> SBV (Maybe a)
     -> SBV (Maybe b)
-map f = maybe (literal Nothing) (just . f)
+map f = maybe (literal Nothing) (sJust . f)
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
