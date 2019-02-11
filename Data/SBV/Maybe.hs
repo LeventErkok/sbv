@@ -18,7 +18,7 @@
 
 module Data.SBV.Maybe (
   -- * Constructing optional values
-  just, nothing, liftMaybe
+    sJust, sNothing, liftMaybe
   -- * Mapping functions
   , maybe, map
   -- * Scrutinizing the branches of an option
@@ -34,8 +34,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
 -- | The symbolic 'Nothing'
-nothing :: forall a. SymVal a => SBV (Maybe a)
-nothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
+sNothing :: forall a. SymVal a => SBV (Maybe a)
+sNothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
   where k = kindOf (Proxy @(Maybe a))
 
 -- | Return 'sTrue' if the given symbolic value is 'Nothing', 'sFalse' otherwise
@@ -43,8 +43,8 @@ isNothing :: SymVal a => SBV (Maybe a) -> SBV Bool
 isNothing = maybe sTrue (const sFalse)
 
 -- | Construct an @SBV (Maybe a)@ from an @SBV a@
-just :: forall a. SymVal a => SBV a -> SBV (Maybe a)
-just sa
+sJust :: forall a. SymVal a => SBV a -> SBV (Maybe a)
+sJust sa
   | Just a <- unliteral sa
   = literal (Just a)
   | True

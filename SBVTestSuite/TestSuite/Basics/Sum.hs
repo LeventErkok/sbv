@@ -86,5 +86,5 @@ sumMaybe = do
 sumLiftMaybe :: Symbolic ()
 sumLiftMaybe = do
   i <- sInteger "i"
-  constrain $ liftMaybe (Just i) .== just i
-  constrain $ nothing ./= just i
+  constrain $ liftMaybe (Just i) .== sJust i
+  constrain $ sNothing ./= sJust i
