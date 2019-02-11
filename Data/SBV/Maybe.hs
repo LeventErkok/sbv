@@ -33,17 +33,33 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model ((.==))
 
+-- For doctest use only
+--
+-- $setup
+-- >>> import Data.SBV.Provers.Prover (prove, sat)
+
 -- | The symbolic 'Nothing'
-sNothing :: forall a. SymVal a => SBV (Maybe a)
+--
+-- >>> sNothing :: SMaybe Integer
+-- Nothing :: SMaybe Integer
+sNothing :: forall a. SymVal a => SMaybe a
 sNothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
   where k = kindOf (Proxy @(Maybe a))
 
--- | Return 'sTrue' if the given symbolic value is 'Nothing', 'sFalse' otherwise
-isNothing :: SymVal a => SBV (Maybe a) -> SBV Bool
+-- | Check if the symbolic value is nothing.
+--
+-- >>> isNothing (sNothing :: SMaybe Integer)
+-- True
+-- >>> isNothing (sJust (literal "nope"))
+-- False
+isNothing :: SymVal a => SMaybe a -> SBV Bool
 isNothing = maybe sTrue (const sFalse)
 
--- | Construct an @SBV (Maybe a)@ from an @SBV a@
-sJust :: forall a. SymVal a => SBV a -> SBV (Maybe a)
+-- | Construct an @SMaybe a@ from an @SBV a@
+--
+-- >>> sJust 3
+-- Just 3 :: SMaybe Integer
+sJust :: forall a. SymVal a => SBV a -> SMaybe a
 sJust sa
   | Just a <- unliteral sa
   = literal (Just a)
@@ -53,11 +69,28 @@ sJust sa
         res st = do asv <- sbvToSV st sa
                     newExpr st k $ SBVApp MaybeConstructor [asv]
 
--- | Return 'sTrue' if the given symbolic value is 'Just', 'sFalse' otherwise
-isJust :: SymVal a => SBV (Maybe a) -> SBV Bool
+-- | Check if the symbolic value is not nothing.
+--
+-- >>> isJust (sNothing :: SMaybe Integer)
+-- False
+-- >>> isJust (sJust (literal "yep"))
+-- True
+-- >>> prove $ \x -> isJust (sJust (x :: SInteger))
+-- Q.E.D.
+isJust :: SymVal a => SMaybe a -> SBV Bool
 isJust = maybe sFalse (const sTrue)
 
-fromMaybe :: SymVal a => SBV a -> SBV (Maybe a) -> SBV a
+-- | Return the value of an optional value. The default is returned if Nothing. Compare to 'fromJust'.
+--
+-- >>> fromMaybe 2 (sNothing :: SMaybe Integer)
+-- 2 :: SInteger
+-- >>> fromMaybe 2 (sJust 5 :: SMaybe Integer)
+-- 5 :: SInteger
+-- >>> prove $ \x -> fromMaybe x (sNothing :: SMaybe Integer) .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fromMaybe (x+1) (sJust x :: SMaybe Integer) .== x
+-- Q.E.D.
+fromMaybe :: SymVal a => SBV a -> SMaybe a -> SBV a
 fromMaybe def = maybe def id
 fromJust :: forall a. SymVal a => SBV (Maybe a) -> SBV a
 fromJust ma
