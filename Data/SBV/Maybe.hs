@@ -7,7 +7,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Symbolic option type, similar to Haskell's 'Maybe' type.
+-- Symbolic option type, symbolic version of Haskell's 'Maybe' type.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE KindSignatures      #-}
@@ -36,6 +36,7 @@ import Data.SBV.Core.Model ((.==))
 -- For doctest use only
 --
 -- $setup
+-- >>> import Data.SBV.Core.Model     (Uninterpreted(uninterpret), sMod)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 
 -- | The symbolic 'Nothing'
@@ -127,10 +128,23 @@ fromJust ma
                     return e
 
 -- | Construct an @SMaybe a@ from a @Maybe a@
+--
+-- >>> liftMaybe (Just (3 :: SInteger))
+-- Just 3 :: SMaybe Integer
+-- >>> liftMaybe (Nothing :: Maybe SInteger)
+-- Nothing :: SMaybe Integer
 liftMaybe :: SymVal a => Maybe (SBV a) -> SMaybe a
 liftMaybe = Prelude.maybe (literal Nothing) sJust
 
 -- | Map over the 'Just' side of a 'Maybe'
+--
+-- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+(1::SInteger)
+-- Q.E.D.
+-- >>> let f = uninterpret "f" :: SInteger -> SBool
+-- >>> prove $ \x -> map f (sJust x) .== sJust (f x)
+-- Q.E.D.
+-- >>> map f sNothing .== sNothing
+-- True
 map :: forall a b.  (SymVal a, SymVal b)
     => (SBV a -> SBV b)
     -> SMaybe a
@@ -139,6 +153,16 @@ map f = maybe (literal Nothing) (sJust . f)
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
+--
+-- >>> maybe 0 (`sMod` 2) (sJust (3 :: SInteger))
+-- 1 :: SInteger
+-- >>> maybe 0 (`sMod` 2) (sNothing :: SMaybe Integer)
+-- 0 :: SInteger
+-- >>> let f = uninterpret "f" :: SInteger -> SBool
+-- >>> prove $ \x d -> maybe d f (sJust x) .== f x
+-- Q.E.D.
+-- >>> prove $ \d -> maybe d f sNothing .== d
+-- Q.E.D.
 maybe :: forall a b.  (SymVal a, SymVal b)
       => SBV b
       -> (SBV a -> SBV b)
