@@ -10,10 +10,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
-                                           (nothing_SBVMaybe
+                                           ((nothing_SBVMaybe)
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (SBVMaybe Int) nothing_SBVMaybe)
+[GOOD] (define-fun s2 () (SBVMaybe Int) (as nothing_SBVMaybe (SBVMaybe Int)))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
 [GOOD] ; --- constant tables ---
