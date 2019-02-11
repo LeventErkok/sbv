@@ -31,7 +31,7 @@ import qualified Prelude
 import Data.Proxy (Proxy(Proxy))
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model ((.==))
 
 -- | The symbolic 'Nothing'
 sNothing :: forall a. SymVal a => SBV (Maybe a)
@@ -80,7 +80,7 @@ fromJust ma
 
 -- | Construct an @SBV (Maybe a)@ from a @Maybe a@
 liftMaybe :: SymVal a => Maybe (SBV a) -> SBV (Maybe a)
-liftMaybe = Prelude.maybe (literal Nothing) just
+liftMaybe = Prelude.maybe (literal Nothing) sJust
 
 -- | Map over the 'Just' side of a 'Maybe'
 map :: forall a b.  (SymVal a, SymVal b)
