@@ -92,7 +92,7 @@ isJust = maybe sFalse (const sTrue)
 -- Q.E.D.
 fromMaybe :: SymVal a => SBV a -> SMaybe a -> SBV a
 fromMaybe def = maybe def id
-fromJust :: forall a. SymVal a => SBV (Maybe a) -> SBV a
+fromJust :: forall a. SymVal a => SMaybe a -> SBV a
 fromJust ma
   | Just (Just x) <- unliteral ma
   = literal x
