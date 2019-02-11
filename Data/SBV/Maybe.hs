@@ -65,10 +65,12 @@ sJust sa
   | Just a <- unliteral sa
   = literal (Just a)
   | True
-  = SBV $ SVal k $ Right $ cache res
-  where k = kindOf (Proxy @(Maybe a))
+  = SBV $ SVal kMaybe $ Right $ cache res
+  where ka     = kindOf (Proxy @a)
+        kMaybe = KMaybe ka
+
         res st = do asv <- sbvToSV st sa
-                    newExpr st k $ SBVApp MaybeConstructor [asv]
+                    newExpr st kMaybe $ SBVApp (MaybeConstructor ka True) [asv]
 
 -- | Check if the symbolic value is not nothing.
 --
@@ -122,7 +124,7 @@ fromJust ma
         -- be underspecified as required should the value
         -- received be `Nothing`.
         res st = do e   <- internalVariable st ka
-                    es  <- newExpr st kMaybe (SBVApp MaybeConstructor [e])
+                    es  <- newExpr st kMaybe (SBVApp (MaybeConstructor ka True) [e])
                     let esSBV = SBV $ SVal kMaybe $ Right $ cache $ \_ -> return es
                     internalConstraint st False [] $ unSBV $ isJust ma .=> esSBV .== ma
                     return e

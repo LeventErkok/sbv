@@ -18,7 +18,7 @@
 
 module Data.SBV.Either (
     -- * Constructing sums
-    sLeft, sRight, liftEither
+      sLeft, sRight, liftEither
     -- * Destructing sums
     , either
     -- * Mapping functions
@@ -42,9 +42,12 @@ sLeft sa
   = literal (Left a)
   | True
   = SBV $ SVal k $ Right $ cache res
-  where k = kindOf (Proxy @(Either a b))
+  where k1 = kindOf (Proxy @a)
+        k2 = kindOf (Proxy @b)
+        k  = KEither k1 k2
+
         res st = do asv <- sbvToSV st sa
-                    newExpr st k $ SBVApp (EitherConstructor False) [asv]
+                    newExpr st k $ SBVApp (EitherConstructor k1 k2 False) [asv]
 
 -- | Construct an @SEither a b@ from an @SBV b@
 sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SEither a b
@@ -53,9 +56,12 @@ sRight sb
   = literal (Right b)
   | True
   = SBV $ SVal k $ Right $ cache res
-  where k = kindOf (Proxy @(Either a b))
+  where k1 = kindOf (Proxy @a)
+        k2 = kindOf (Proxy @b)
+        k  = KEither k1 k2
+
         res st = do bsv <- sbvToSV st sb
-                    newExpr st k $ SBVApp (EitherConstructor True) [bsv]
+                    newExpr st k $ SBVApp (EitherConstructor k1 k2 True) [bsv]
 
 -- | Construct an @SEither a b@ from an @Either a b@
 liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SEither a b
@@ -117,3 +123,5 @@ isLeft = either (const sTrue) (const sFalse)
 -- | Return 'sTrue' if the given symbolic value is 'Right', 'sFalse' otherwise
 isRight :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
 isRight = either (const sFalse) (const sTrue)
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

@@ -715,8 +715,22 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
+        -- We fully qualify the constructor with their types to work around type checking issues.
+        dtConstructor fld args res = result
+          where body = parIfArgs (unwords (fld : map ssv args))
+                parIfArgs r | null args = r
+                            | True      = "(" ++ r ++ ")"
+
+                -- Sigh; z3 is OK with the body as is, but cvc4 requires an ascription
+                -- Furthermore, z3 doesn't like cvc4's version. So we pick based on capabilities.
+                accessor = body
+                withSig  = "(as " ++ accessor ++ " " ++ smtType res ++ ")"
+
+                result | supportsDTAccessorSigs caps = withSig
+                       | True                        = accessor
+
         -- We fully qualify the field-accessors with their types to work around type checking issues.
-        fieldAccessor fld params res = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
+        dtAccessor fld params res = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
           where ps = " (" ++ unwords (map smtType params) ++ ") "
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
@@ -826,17 +840,18 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
 
-        sh (SBVApp (EitherConstructor False) [arg]) = "(left_SBVEither "                                         ++ ssv arg ++ ")"
-        sh (SBVApp (EitherConstructor True ) [arg]) = "(right_SBVEither "                                        ++ ssv arg ++ ")"
-        sh (SBVApp (EitherIs  k1 k2   False) [arg]) = '(' : fieldAccessor "left_SBVEither"  [k1] (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (EitherIs  k1 k2   True ) [arg]) = '(' : fieldAccessor "right_SBVEither" [k2] (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess      False) [arg]) = "(get_left_SBVEither "                                     ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess      True ) [arg]) = "(get_right_SBVEither "                                    ++ ssv arg ++ ")"
+        sh (SBVApp (EitherConstructor k1 k2 False) [arg]) =       dtConstructor "left_SBVEither"  [arg] (KEither k1 k2)
+        sh (SBVApp (EitherConstructor k1 k2 True ) [arg]) =       dtConstructor "right_SBVEither" [arg] (KEither k1 k2)
+        sh (SBVApp (EitherIs          k1 k2 False) [arg]) = '(' : dtAccessor    "left_SBVEither"  [k1]  (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          k1 k2 True ) [arg]) = '(' : dtAccessor    "right_SBVEither" [k2]  (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess            False) [arg]) = "(get_left_SBVEither "  ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess            True ) [arg]) = "(get_right_SBVEither " ++ ssv arg ++ ")"
 
-        sh (SBVApp MaybeConstructor   [arg]) = "(just_SBVMaybe "                                            ++ ssv arg ++ ")"
-        sh (SBVApp (MaybeIs k False)  [arg]) = '(' : fieldAccessor "nothing_SBVMaybe" []  (KMaybe k) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (MaybeIs k True )  [arg]) = '(' : fieldAccessor "just_SBVMaybe"    [k] (KMaybe k) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp MaybeAccess        [arg]) = "(get_just_SBVMaybe "                                        ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeConstructor k False) [])    =       dtConstructor "nothing_SBVMaybe" []    (KMaybe k)
+        sh (SBVApp (MaybeConstructor k True)  [arg]) =       dtConstructor "just_SBVMaybe"    [arg] (KMaybe k)
+        sh (SBVApp (MaybeIs          k False) [arg]) = '(' : dtAccessor    "nothing_SBVMaybe" []    (KMaybe k) ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs          k True ) [arg]) = '(' : dtAccessor    "just_SBVMaybe"    [k]   (KMaybe k) ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp MaybeAccess                [arg]) = "(get_just_SBVMaybe " ++ ssv arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

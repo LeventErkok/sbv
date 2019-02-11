@@ -174,10 +174,10 @@ data Op = Plus
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
-        | EitherConstructor Bool                -- Construct a sum; False: left, True: right
+        | EitherConstructor Kind Kind Bool      -- Construct a sum; False: left, True: right
         | EitherIs Kind Kind Bool               -- Either branch tester; False: left, True: right
         | EitherAccess Bool                     -- Either branch access; False: left, True: right
-        | MaybeConstructor                      -- Construct a maybe just value
+        | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
         deriving (Eq, Ord)
@@ -418,16 +418,17 @@ instance Show Op where
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
-  show (EitherConstructor        False) = "left_SBVEither"
-  show (EitherConstructor        True ) = "right_SBVEither"
+  show (EitherConstructor k1 k2  False) = "(_ left_SBVEither "  ++ show (KEither k1 k2) ++ ")"
+  show (EitherConstructor k1 k2  True ) = "(_ right_SBVEither " ++ show (KEither k1 k2) ++ ")"
   show (EitherIs          k1 k2  False) = "(_ is (left_SBVEither ("  ++ show k1 ++ ") " ++ show (KEither k1 k2) ++ "))"
   show (EitherIs          k1 k2  True ) = "(_ is (right_SBVEither (" ++ show k2 ++ ") " ++ show (KEither k1 k2) ++ "))"
   show (EitherAccess             False) = "get_left_SBVEither"
   show (EitherAccess             True ) = "get_right_SBVEither"
 
-  show MaybeConstructor          = "just_SBVMaybe"
-  show (MaybeIs         k False) = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
-  show (MaybeIs         k True ) = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
+  show (MaybeConstructor k False) = "(_ nothing_SBVMaybe " ++ show (KMaybe k) ++ ")"
+  show (MaybeConstructor k True)  = "(_ just_SBVMaybe "    ++ show (KMaybe k) ++ ")"
+  show (MaybeIs          k False) = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
+  show (MaybeIs          k True ) = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
   show MaybeAccess               = "get_just_SBVMaybe"
 
   show op
@@ -1591,6 +1592,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
        , supportsGlobalDecls        :: Bool           -- ^ Supports global decls, needed for push-pop.
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes
+       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessors. (Z3 and cvc4 differ!)
        , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output, with given config lines
        }
 
