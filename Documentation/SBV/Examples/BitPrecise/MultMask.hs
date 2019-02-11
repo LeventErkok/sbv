@@ -30,6 +30,7 @@
 module Documentation.SBV.Examples.BitPrecise.MultMask where
 
 import Data.SBV
+import Data.SBV.Control
 
 -- | Find the multiplier and the mask as described. We have:
 --
@@ -41,9 +42,17 @@ import Data.SBV
 -- That is, any 64 bit value masked by the first and multipled by the second
 -- value above will have its bits at positions @[7,15,23,31,39,47,55,63]@ moved
 -- to positions @[56,57,58,59,60,61,62,63]@ respectively.
+--
+-- Note that we have to send z3 custom configuration for this problem as
+-- otherwise it takes too long. See https://github.com/Z3Prover/z3/issues/2075
+-- for details.
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
-  where find = do mask <- exists "mask"
+  where find = do -- The magic incantations that make z3 go faster on this
+                  setOption $ OptionKeyword ":smt.auto_config" ["false"]
+                  setOption $ OptionKeyword ":smt.relevancy"   ["0"]
+
+                  mask <- exists "mask"
                   mult <- exists "mult"
                   inp  <- forall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)
