@@ -84,8 +84,10 @@ testInterfaces:
 	@make -C buildUtils
 	buildUtils/testInterfaces
 
-release: veryclean install docs test testInterfaces checkLinks
-	cabal $(CSDIST)
+mkDistro:
+	$(TIME) cabal $(CSDIST)
+
+release: veryclean install docs test testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 
 # use this as follows:
