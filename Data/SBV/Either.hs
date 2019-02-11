@@ -35,8 +35,8 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
--- | Construct an @SBV (Either a b)@ from an @SBV a@
-sLeft :: forall a b. (SymVal a, SymVal b) => SBV a -> SBV (Either a b)
+-- | Construct an @SEither a b@ from an @SBV a@
+sLeft :: forall a b. (SymVal a, SymVal b) => SBV a -> SEither a b
 sLeft sa
   | Just a <- unliteral sa
   = literal (Left a)
@@ -46,8 +46,8 @@ sLeft sa
         res st = do asv <- sbvToSV st sa
                     newExpr st k $ SBVApp (EitherConstructor False) [asv]
 
--- | Construct an @SBV (Either a b)@ from an @SBV b@
-sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SBV (Either a b)
+-- | Construct an @SEither a b@ from an @SBV b@
+sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SEither a b
 sRight sb
   | Just b <- unliteral sb
   = literal (Right b)
@@ -57,8 +57,8 @@ sRight sb
         res st = do bsv <- sbvToSV st sb
                     newExpr st k $ SBVApp (EitherConstructor True) [bsv]
 
--- | Construct an @SBV (Either a b)@ from an @Either a b@
-liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SBV (Either a b)
+-- | Construct an @SEither a b@ from an @Either a b@
+liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SEither a b
 liftEither = Prelude.either sLeft sRight
 
 -- | Case analysis for symbolic 'Either's. If the value 'isLeft', apply the
@@ -66,7 +66,7 @@ liftEither = Prelude.either sLeft sRight
 either :: forall a b c. (SymVal a, SymVal b, SymVal c)
        => (SBV a -> SBV c)
        -> (SBV b -> SBV c)
-       -> SBV (Either a b)
+       -> SEither a b
        -> SBV c
 either brA brB sab
   | Just (Left  a) <- unliteral sab
@@ -98,22 +98,22 @@ either brA brB sab
 bimap :: forall a b c d.  (SymVal a, SymVal b, SymVal c, SymVal d)
       => (SBV a -> SBV b)
       -> (SBV c -> SBV d)
-      -> SBV (Either a c)
-      -> SBV (Either b d)
+      -> SEither a c
+      -> SEither b d
 bimap brA brC = either (sLeft . brA) (sRight . brC)
 
 -- | Map over the left side of an 'Either'
-first :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> SBV (Either a c) -> SBV (Either b c)
+first :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> SEither a c -> SEither b c
 first f = bimap f id
 
 -- | Map over the right side of an 'Either'
-second :: (SymVal a, SymVal b, SymVal c) => (SBV b -> SBV c) -> SBV (Either a b) -> SBV (Either a c)
+second :: (SymVal a, SymVal b, SymVal c) => (SBV b -> SBV c) -> SEither a b -> SEither a c
 second = bimap id
 
 -- | Return 'sTrue' if the given symbolic value is 'Left', 'sFalse' otherwise
-isLeft :: (SymVal a, SymVal b) => SBV (Either a b) -> SBV Bool
+isLeft :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
 isLeft = either (const sTrue) (const sFalse)
 
 -- | Return 'sTrue' if the given symbolic value is 'Right', 'sFalse' otherwise
-isRight :: (SymVal a, SymVal b) => SBV (Either a b) -> SBV Bool
+isRight :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
 isRight = either (const sFalse) (const sTrue)
