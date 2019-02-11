@@ -449,7 +449,7 @@ cvToSMTLib rm x
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
         smtLibMaybe :: Kind -> Maybe CVal -> String
-        smtLibMaybe (KMaybe _) Nothing   = "nothing_SBVMaybe"
+        smtLibMaybe (KMaybe k) Nothing   = "(as nothing_SBVMaybe " ++ smtType (KMaybe k) ++ ")"
         smtLibMaybe (KMaybe k) (Just  c) = "(just_SBVMaybe " ++ cvToSMTLib rm (CV k c) ++ ")"
         smtLibMaybe k          _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
 

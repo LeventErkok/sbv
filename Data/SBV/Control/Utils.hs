@@ -841,7 +841,10 @@ recoverKindedValue k e = case k of
                                                                                                          , "Kind: " ++ show ek
                                                                                                          , "Expr: " ++ show a
                                                                                                          ]
-        interpretMaybe _          other                            = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
+        -- CVC4 puts in full ascriptions, handle those:
+        interpretMaybe mk (EApp [EApp [ECon "as", ECon "just_SBVMaybe", _], a]) = interpretMaybe mk (EApp [ECon "just_SBVMaybe", a])
+
+        interpretMaybe _  other = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
 
         interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue k1 a of
                                                                               Just (CV _ v) -> Left v

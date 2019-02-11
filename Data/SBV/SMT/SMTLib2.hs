@@ -372,7 +372,7 @@ declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
 
 declMaybe :: [String]
 declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
-            , "                                    (nothing_SBVMaybe"
+            , "                                    ((nothing_SBVMaybe)"
             , "                                     (just_SBVMaybe (get_just_SBVMaybe T))))))"
             ]
 
