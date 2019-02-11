@@ -26,7 +26,7 @@
 [GOOD] (define-fun s3 () Bool (> s1 s2))
 [GOOD] (define-fun s4 () Bool (get_right_SBVEither s0))
 [GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] (define-fun s6 () Bool ((_ is left_SBVEither) s0))
+[GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Bool))) s0))
 [GOOD] (define-fun s7 () Bool (ite s6 s3 s5))
 [GOOD] (assert s7)
 [SEND] (check-sat)

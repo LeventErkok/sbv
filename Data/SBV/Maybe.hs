@@ -164,5 +164,5 @@ maybe brNothing brJust ma
                     br2 <- sbvToSV st justRes
 
                     -- Do we have a value?
-                    noVal <- newExpr st KBool $ SBVApp (MaybeIs False) [mav]
+                    noVal <- newExpr st KBool $ SBVApp (MaybeIs ka False) [mav]
                     newExpr st kb $ SBVApp Ite [noVal, br1, br2]

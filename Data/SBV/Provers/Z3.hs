@@ -37,13 +37,10 @@ z3 = SMTSolver {
                               , supportsPseudoBooleans     = True
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
+                              , supportsDataTypes          = True
                               , supportsFlattenedSequences = Just [ "(set-option :pp.max_depth      4294967295)"
                                                                   , "(set-option :pp.min_alias_size 4294967295)"
                                                                   ]
-                                -- Z3 supports both the (_ is X) and is-X syntax for field accessors
-                                -- but the former has type-checking issues. So we use the latter.
-                                -- See https://github.com/Z3Prover/z3/issues/2134 for details
-                              , supportsDataTypes          = Just ("is-" ++)
                               }
          }
 

@@ -175,10 +175,10 @@ data Op = Plus
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
         | EitherConstructor Bool                -- Construct a sum; False: left, True: right
-        | EitherIs Bool                         -- Either branch tester; False: left, True: right
+        | EitherIs Kind Kind Bool               -- Either branch tester; False: left, True: right
         | EitherAccess Bool                     -- Either branch access; False: left, True: right
         | MaybeConstructor                      -- Construct a maybe just value
-        | MaybeIs Bool                          -- Maybe tester; False: nothing, True: just
+        | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
         deriving (Eq, Ord)
 
@@ -418,17 +418,17 @@ instance Show Op where
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
-  show (EitherConstructor   False) = "left_SBVEither"
-  show (EitherConstructor   True ) = "right_SBVEither"
-  show (EitherIs            False) = "(_ is left_SBVEither)"
-  show (EitherIs            True ) = "(_ is right_SBVEither)"
-  show (EitherAccess        False) = "get_left_SBVEither"
-  show (EitherAccess        True ) = "get_right_SBVEither"
+  show (EitherConstructor        False) = "left_SBVEither"
+  show (EitherConstructor        True ) = "right_SBVEither"
+  show (EitherIs          k1 k2  False) = "(_ is (left_SBVEither ("  ++ show k1 ++ ") " ++ show (KEither k1 k2) ++ "))"
+  show (EitherIs          k1 k2  True ) = "(_ is (right_SBVEither (" ++ show k2 ++ ") " ++ show (KEither k1 k2) ++ "))"
+  show (EitherAccess             False) = "get_left_SBVEither"
+  show (EitherAccess             True ) = "get_right_SBVEither"
 
-  show MaybeConstructor        = "just_SBVMaybe"
-  show (MaybeIs         False) = "(_ is nothing_SBVMaybe)"
-  show (MaybeIs         True ) = "(_ is just_SBVMaybe )"
-  show MaybeAccess             = "get_just_SBVMaybe"
+  show MaybeConstructor          = "just_SBVMaybe"
+  show (MaybeIs         k False) = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
+  show (MaybeIs         k True ) = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
+  show MaybeAccess               = "get_just_SBVMaybe"
 
   show op
     | Just s <- op `lookup` syms = s
@@ -1580,18 +1580,18 @@ instance NFData SMTScript where
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
-         supportsQuantifiers        :: Bool                     -- ^ Supports SMT-Lib2 style quantifiers?
-       , supportsUninterpretedSorts :: Bool                     -- ^ Supports SMT-Lib2 style uninterpreted-sorts
-       , supportsUnboundedInts      :: Bool                     -- ^ Supports unbounded integers?
-       , supportsReals              :: Bool                     -- ^ Supports reals?
-       , supportsApproxReals        :: Bool                     -- ^ Supports printing of approximations of reals?
-       , supportsIEEE754            :: Bool                     -- ^ Supports floating point numbers?
-       , supportsOptimization       :: Bool                     -- ^ Supports optimization routines?
-       , supportsPseudoBooleans     :: Bool                     -- ^ Supports pseudo-boolean operations?
-       , supportsCustomQueries      :: Bool                     -- ^ Supports interactive queries per SMT-Lib?
-       , supportsGlobalDecls        :: Bool                     -- ^ Supports global decls, needed for push-pop.
-       , supportsFlattenedSequences :: Maybe [String]           -- ^ Supports flattened sequence output, with given config lines
-       , supportsDataTypes          :: Maybe (String -> String) -- ^ Supports datatypes, with the given syntax for field accessors
+         supportsQuantifiers        :: Bool           -- ^ Supports SMT-Lib2 style quantifiers?
+       , supportsUninterpretedSorts :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts
+       , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
+       , supportsReals              :: Bool           -- ^ Supports reals?
+       , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
+       , supportsIEEE754            :: Bool           -- ^ Supports floating point numbers?
+       , supportsOptimization       :: Bool           -- ^ Supports optimization routines?
+       , supportsPseudoBooleans     :: Bool           -- ^ Supports pseudo-boolean operations?
+       , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
+       , supportsGlobalDecls        :: Bool           -- ^ Supports global decls, needed for push-pop.
+       , supportsDataTypes          :: Bool           -- ^ Supports datatypes
+       , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output, with given config lines
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

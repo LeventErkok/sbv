@@ -39,9 +39,8 @@ cvc4 = SMTSolver {
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
+                              , supportsDataTypes          = True
                               , supportsFlattenedSequences = Nothing
-                                -- CVC4 uses the SMTLib sanctioned syntax for field accessors
-                              , supportsDataTypes          = Just (\s -> "(_ is " ++ s ++ ")")
                               }
          }
   where -- CVC4 wants all input on one line

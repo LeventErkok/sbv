@@ -39,8 +39,8 @@ mathSAT = SMTSolver {
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = False
+                              , supportsDataTypes          = True
                               , supportsFlattenedSequences = Nothing
-                              , supportsDataTypes          = Nothing
                               }
          }
 

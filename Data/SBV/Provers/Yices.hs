@@ -37,7 +37,7 @@ yices = SMTSolver {
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = False
+                              , supportsDataTypes          = False
                               , supportsFlattenedSequences = Nothing
-                              , supportsDataTypes          = Nothing
                               }
          }

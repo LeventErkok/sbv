@@ -91,7 +91,7 @@ either brA brB sab
                     br2 <- sbvToSV st rightRes
 
                     --  Which branch are we in? Return the appropriate value:
-                    onLeft <- newExpr st KBool $ SBVApp (EitherIs False) [abv]
+                    onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
                     newExpr st kc $ SBVApp Ite [onLeft, br1, br2]
 
 -- | Map over both sides of a symbolic 'Either' at the same time
