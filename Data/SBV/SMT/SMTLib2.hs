@@ -715,9 +715,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
-        fieldAccessor = case supportsDataTypes caps of
-                          Nothing -> \s -> "(_ is " ++ s ++ ")"  -- Can't really happen if we get here, but just use the default.
-                          Just f  -> f
+        fieldAccessor
+          | Just f <- supportsDataTypes caps = f
+          | True                             = \s -> "(_ is " ++ s ++ ")"  -- Can't really happen if we get here, but just use the default.
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
 
