@@ -59,17 +59,17 @@ sumBimapPlus = do
       x'val = either id id x'
   constrain $ x'val .== xval + 1
 
--- Test 'liftEither', 'left', 'right', 'isLeft', and 'isRight'
+-- Test 'liftEither', 'sLeft', 'right', 'isLeft', and 'isRight'
 sumLiftEither :: Symbolic ()
 sumLiftEither = do
   i <- sInteger "i"
   c <- sChar "c"
 
-  constrain $ liftEither @Integer @Char (Left i) .== left i
-  constrain $ isLeft     @Integer @Char (left i)
+  constrain $ liftEither @Integer @Char (Left i) .== sLeft i
+  constrain $ isLeft     @Integer @Char (sLeft i)
 
-  constrain $ liftEither @Integer @Char (Right c) .== right c
-  constrain $ isRight    @Integer @Char (right c)
+  constrain $ liftEither @Integer @Char (Right c) .== sRight c
+  constrain $ isRight    @Integer @Char (sRight c)
 
 -- Test 'sMaybe', 'map', 'isNothing', 'isJust', and 'maybe'
 sumMaybe :: Symbolic ()

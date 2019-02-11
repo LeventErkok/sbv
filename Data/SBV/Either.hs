@@ -18,7 +18,7 @@
 
 module Data.SBV.Either (
     -- * Constructing sums
-    left, right, liftEither
+    sLeft, sRight, liftEither
     -- * Destructing sums
     , either
     -- * Mapping functions
@@ -36,8 +36,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
 -- | Construct an @SBV (Either a b)@ from an @SBV a@
-left :: forall a b. (SymVal a, SymVal b) => SBV a -> SBV (Either a b)
-left sa
+sLeft :: forall a b. (SymVal a, SymVal b) => SBV a -> SBV (Either a b)
+sLeft sa
   | Just a <- unliteral sa
   = literal (Left a)
   | True
@@ -47,8 +47,8 @@ left sa
                     newExpr st k $ SBVApp (EitherConstructor False) [asv]
 
 -- | Construct an @SBV (Either a b)@ from an @SBV b@
-right :: forall a b. (SymVal a, SymVal b) => SBV b -> SBV (Either a b)
-right sb
+sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SBV (Either a b)
+sRight sb
   | Just b <- unliteral sb
   = literal (Right b)
   | True
@@ -59,7 +59,7 @@ right sb
 
 -- | Construct an @SBV (Either a b)@ from an @Either a b@
 liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SBV (Either a b)
-liftEither = Prelude.either left right
+liftEither = Prelude.either sLeft sRight
 
 -- | Case analysis for symbolic 'Either's. If the value 'isLeft', apply the
 -- first function; if it 'isRight', apply the second function.
@@ -100,7 +100,7 @@ bimap :: forall a b c d.  (SymVal a, SymVal b, SymVal c, SymVal d)
       -> (SBV c -> SBV d)
       -> SBV (Either a c)
       -> SBV (Either b d)
-bimap brA brC = either (left . brA) (right . brC)
+bimap brA brC = either (sLeft . brA) (sRight . brC)
 
 -- | Map over the left side of an 'Either'
 first :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> SBV (Either a c) -> SBV (Either b c)
