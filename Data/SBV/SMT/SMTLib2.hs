@@ -15,7 +15,7 @@ module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition, unzip3, nub, sort)
-import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
+import Data.Maybe (listToMaybe, fromMaybe, catMaybes, isJust)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map.Strict      as M
@@ -55,6 +55,19 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
+        -- Is there a reason why we can't handle this problem?
+        -- NB. There's probably a lot more checking we can do here, but this is a start:
+        doesntHandle
+           | not datatypesOK
+           = Just [ "***     Given problem requires support for data types"
+                  , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
+                  ]
+           | True
+           = Nothing
+           where datatypesOK = not needsDatatypes || hasDatatypes
+                    where needsDatatypes = hasTuples || hasEither || hasMaybe
+                          hasDatatypes   = isJust (supportsDataTypes solverCaps)
+
         -- Determining the logic is surprisingly tricky!
         logic
            -- user told us what to do: so just take it:
@@ -68,6 +81,17 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
            = case l of
                Logic_NONE -> ["; NB. Not setting the logic per user request of Logic_NONE"]
                _          -> ["(set-logic " ++ show l ++ ") ; NB. User specified."]
+
+           -- There's a reason why we can't handle this problem:
+           | Just cantDo <- doesntHandle
+           = error $ unlines $   [ ""
+                                 , "*** SBV is unable to choose a proper solver configuration:"
+                                 , "***"
+                                 ]
+                             ++ cantDo
+                             ++ [ "***"
+                                , "*** Please report this as a feature request, either for SBV or the backend solver."
+                                ]
 
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
@@ -691,6 +715,10 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
+        fieldAccessor = case supportsDataTypes caps of
+                          Nothing -> \s -> "(_ is " ++ s ++ ")"  -- Can't really happen if we get here, but just use the default.
+                          Just f  -> f
+
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
 
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
@@ -798,17 +826,17 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
 
-        sh (SBVApp (EitherConstructor False) [arg]) = "(left_SBVEither "         ++ ssv arg ++ ")"
-        sh (SBVApp (EitherConstructor True ) [arg]) = "(right_SBVEither "        ++ ssv arg ++ ")"
-        sh (SBVApp (EitherIs          False) [arg]) = "((_ is left_SBVEither) "  ++ ssv arg ++ ")"
-        sh (SBVApp (EitherIs          True ) [arg]) = "((_ is right_SBVEither) " ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess      False) [arg]) = "(get_left_SBVEither "     ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess      True ) [arg]) = "(get_right_SBVEither "    ++ ssv arg ++ ")"
+        sh (SBVApp (EitherConstructor False) [arg]) = "(left_SBVEither "                           ++ ssv arg ++ ")"
+        sh (SBVApp (EitherConstructor True ) [arg]) = "(right_SBVEither "                          ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          False) [arg]) = '(' : fieldAccessor "left_SBVEither"  ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          True ) [arg]) = '(' : fieldAccessor "right_SBVEither" ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess      False) [arg]) = "(get_left_SBVEither "                       ++ ssv arg ++ ")"
+        sh (SBVApp (EitherAccess      True ) [arg]) = "(get_right_SBVEither "                      ++ ssv arg ++ ")"
 
-        sh (SBVApp MaybeConstructor [arg]) = "(just_SBVMaybe "           ++ ssv arg ++ ")"
-        sh (SBVApp (MaybeIs False)  [arg]) = "((_ is nothing_SBVMaybe) " ++ ssv arg ++ ")"
-        sh (SBVApp (MaybeIs True )  [arg]) = "((_ is just_SBVMaybe) "    ++ ssv arg ++ ")"
-        sh (SBVApp MaybeAccess      [arg]) = "(get_just_SBVMaybe  "      ++ ssv arg ++ ")"
+        sh (SBVApp MaybeConstructor [arg]) = "(just_SBVMaybe "                             ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs False)  [arg]) = '(' : fieldAccessor "nothing_SBVMaybe" ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs True )  [arg]) = '(' : fieldAccessor "just_SBVMaybe"    ++ " " ++ ssv arg ++ ")"
+        sh (SBVApp MaybeAccess      [arg]) = "(get_just_SBVMaybe "                         ++ ssv arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable

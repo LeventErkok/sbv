@@ -38,5 +38,6 @@ yices = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = False
                               , supportsFlattenedSequences = Nothing
+                              , supportsDataTypes          = Nothing
                               }
          }
