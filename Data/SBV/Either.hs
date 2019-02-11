@@ -7,7 +7,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Symbolic sums, similar to Haskell's 'Either' type.
+-- Symbolic coproduct, symbolic version of Haskell's 'Either' type.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE KindSignatures      #-}
