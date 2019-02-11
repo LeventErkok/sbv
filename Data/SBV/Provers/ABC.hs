@@ -38,6 +38,7 @@ abc = SMTSolver {
                               , supportsCustomQueries      = False
                               , supportsGlobalDecls        = False
                               , supportsDataTypes          = False
+                              , supportsDTAccessorSigs     = False
                               , supportsFlattenedSequences = Nothing
                               }
          }
