@@ -50,6 +50,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         hasList        = any isList kindInfo
         hasTuples      = not . null $ tupleArities
+        hasEither      = any isEither kindInfo
+        hasMaybe       = any isMaybe  kindInfo
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -84,12 +86,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              else if hasBVs
                   then ["(set-logic QF_FPBV)"]
                   else ["(set-logic QF_FP)"]
-           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples
+           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe
            = let why | hasInteger        = "has unbounded values"
                      | hasReal           = "has algebraic reals"
                      | not (null usorts) = "has user-defined sorts"
                      | hasNonBVArrays    = "has non-bitvector arrays"
                      | hasTuples         = "has tuples"
+                     | hasEither         = "has either type"
+                     | hasMaybe          = "has maybe type"
                      | True              = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
 
