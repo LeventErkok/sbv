@@ -1592,7 +1592,8 @@ data SolverCapabilities = SolverCapabilities {
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
        , supportsGlobalDecls        :: Bool           -- ^ Supports global decls, needed for push-pop.
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes
-       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessors. (Z3 and cvc4 differ!)
+       , supportsDTConstructorSigs  :: Bool           -- ^ Supports full ascription on data-type constructors. (Z3 and cvc4 differ!)
+       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessors.    (Z3 and cvc4 differ!)
        , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output, with given config lines
        }
 

@@ -715,23 +715,29 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ [x]    = "(" ++ o ++ " " ++ x ++ ")"
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
-        -- We fully qualify the constructor with their types to work around type checking issues.
+        -- We fully qualify the constructor with their types to work around type checking issues
+        -- if the solver requires it, as specified by the 'supportsDTConstructorSigs' capability.
         dtConstructor fld args res = result
           where body = parIfArgs (unwords (fld : map ssv args))
                 parIfArgs r | null args = r
                             | True      = "(" ++ r ++ ")"
 
-                -- Sigh; z3 is OK with the body as is, but cvc4 requires an ascription
-                -- Furthermore, z3 doesn't like cvc4's version. So we pick based on capabilities.
-                accessor = body
-                withSig  = "(as " ++ accessor ++ " " ++ smtType res ++ ")"
+                constructor = body
+                withSig     = "(as " ++ constructor ++ " " ++ smtType res ++ ")"
+
+                result | supportsDTConstructorSigs caps = withSig
+                       | True                           = constructor
+
+        -- We fully qualify the accessors with their types to work around type checking issues
+        -- if the solver requires it, as specified by the 'supportsDTAccessorSigs' capability.
+        dtAccessor fld params res = result
+          where accessor = "(_ is " ++ fld ++ ")"
+
+                ps       = " (" ++ unwords (map smtType params) ++ ") "
+                withSig  = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
 
                 result | supportsDTAccessorSigs caps = withSig
                        | True                        = accessor
-
-        -- We fully qualify the field-accessors with their types to work around type checking issues.
-        dtAccessor fld params res = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
-          where ps = " (" ++ unwords (map smtType params) ++ ") "
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
 

@@ -40,7 +40,8 @@ cvc4 = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
-                              , supportsDTAccessorSigs     = True
+                              , supportsDTConstructorSigs  = True
+                              , supportsDTAccessorSigs     = False
                               , supportsFlattenedSequences = Nothing
                               }
          }

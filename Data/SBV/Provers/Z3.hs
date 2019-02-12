@@ -38,7 +38,8 @@ z3 = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
-                              , supportsDTAccessorSigs     = False
+                              , supportsDTConstructorSigs  = False
+                              , supportsDTAccessorSigs     = True
                               , supportsFlattenedSequences = Just [ "(set-option :pp.max_depth      4294967295)"
                                                                   , "(set-option :pp.min_alias_size 4294967295)"
                                                                   ]
