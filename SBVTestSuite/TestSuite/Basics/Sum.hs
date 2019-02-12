@@ -10,7 +10,8 @@
 -- Test the sum functions.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 module TestSuite.Basics.Sum(tests)  where
 
@@ -32,6 +33,7 @@ tests =
     , goldenCapturedIO "sumLiftEither" $ \rf -> checkWith z3{redirectVerbose=Just rf} sumLiftEither Sat
     , goldenCapturedIO "sumMaybe"      $ \rf -> checkWith z3{redirectVerbose=Just rf} sumMaybe      Sat
     , goldenCapturedIO "sumLiftMaybe"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumLiftMaybe  Sat
+    , goldenCapturedIO "sumMaybeBoth"  $ \rf -> checkWith z3{redirectVerbose=Just rf} sumMaybeBoth  Sat
     ]
 
 checkWith :: SMTConfig -> Symbolic () -> CheckSatResult -> IO ()
@@ -88,3 +90,12 @@ sumLiftMaybe = do
   i <- sInteger "i"
   constrain $ liftMaybe (Just i) .== sJust i
   constrain $ sNothing ./= sJust i
+
+-- Test either/maybe together
+sumMaybeBoth :: Symbolic ()
+sumMaybeBoth = do
+   (x :: SEither Integer Integer) <- sEither_
+   (y :: SMaybe Integer)          <- sMaybe_
+
+   constrain $ isLeft x
+   constrain $ isJust y

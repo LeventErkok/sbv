@@ -28,10 +28,11 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QuerySums"
-    [ goldenCapturedIO "query_Sums"        $ testQuery querySums
-    , goldenCapturedIO "query_ListOfSum"   $ testQuery queryListOfSum
-    , goldenCapturedIO "query_Maybe"       $ testQuery queryMaybe
-    , goldenCapturedIO "query_ListOfMaybe" $ testQuery queryListOfMaybe
+    [ goldenCapturedIO "query_Sums"         $ testQuery querySums
+    , goldenCapturedIO "query_ListOfSum"    $ testQuery queryListOfSum
+    , goldenCapturedIO "query_Maybe"        $ testQuery queryMaybe
+    , goldenCapturedIO "query_ListOfMaybe"  $ testQuery queryListOfMaybe
+    , goldenCapturedIO "query_SumMaybeBoth" $ testQuery querySumMaybeBoth
     ]
 
 testQuery :: Show a => Symbolic a -> FilePath -> IO ()
@@ -97,3 +98,16 @@ queryListOfMaybe = do
     case av of
       [Just _, Nothing] -> return av
       _                 -> error $ "Didn't expect this: " ++ show av
+
+querySumMaybeBoth :: Symbolic (Either Integer Integer, Maybe Integer)
+querySumMaybeBoth = query $ do
+        (x :: SEither Integer Integer) <- freshVar_
+        (y :: SMaybe Integer)          <- freshVar_
+
+        constrain $ isLeft x
+        constrain $ isJust y
+
+        _ <- checkSat
+        xv <- getValue x
+        yv <- getValue y
+        return (xv, yv)
