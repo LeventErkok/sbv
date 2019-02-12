@@ -5,6 +5,16 @@
 
 ### Version 8.1, Not yet released
 
+  * Added support for `SEither` and `SMaybe` types: symbolic sums and symbolic
+    optional values. These can be accessed by importing `Data.SBV.Either` and
+    `Data.SBV.Maybe` respectively. They translate to SMTLib's data-type syntax,
+    and thus require a solver capable of handling datatypes. (Currently z3 and
+    cvc4 are the only solvers that do.) All the typical introduction and
+    elimination functions are provided, and these types integrate with all
+    other symbolic types. (So you can have a list of SMaybe of SEither
+    values, or at any nesting level.) Thanks to Joel Burget for the initial
+    implementation of this idea and his contributions.
+
   * SBV models now contain values for uninterpreted functions. This was a long
     requested feature, but there was no previous support since SMTLib does not
     have a standard way of querying such values. We now support this for z3 only,
