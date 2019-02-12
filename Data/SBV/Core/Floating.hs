@@ -31,6 +31,13 @@ import Data.SBV.Core.Model
 import Data.SBV.Core.AlgReals (isExactRational)
 import Data.SBV.Utils.Numeric
 
+-- For doctest use only
+--
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> :set -XRankNTypes
+-- >>> import Data.SBV.Provers.Prover (prove)
+
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
 -- the rounding mode is concretely RoundNearestTiesToEven, we will
@@ -146,10 +153,71 @@ instance IEEEFloating Double
 -- when given a @NaN@, @+oo@, or @-oo@ value that cannot be represented
 -- in the target domain. For these inputs, we define the result to be +0, arbitrarily.
 class IEEEFloatConvertable a where
-  fromSFloat  :: SRoundingMode -> SFloat  -> SBV a
-  toSFloat    :: SRoundingMode -> SBV a   -> SFloat
+  -- | Convert from an IEEE74 single precision float.
+  --
+  -- :{
+  -- roundTrip :: forall a. IEEEFloatConvertable a => Proxy a -> SRoundingMode -> SBV a -> SBool
+  -- roundTrip _p m x = fromSFloat m (toSFloat m x) .== (x :: SBV a)
+  -- :}
+  --
+  -- prove $ roundTrip (Proxy @Int64)
+  -- Q.E.D.
+  -- prove $ roundTrip (Proxy @Word64)
+  -- Q.E.D.
+  fromSFloat :: SRoundingMode -> SFloat -> SBV a
+
+  -- | Convert to an IEEE-754 Single-precision float.
+  --
+  -- >>> :{
+  -- roundTrip :: forall a. IEEEFloatConvertable a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip m x = fromSFloat m (toSFloat m x) .== (x :: SBV a)
+  -- :}
+  --
+  -- >>> prove $ roundTrip @Int8
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Word8
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Int16
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Word16
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Int32
+  -- Falsifiable. Counter-example:
+  --   s0 = RoundNearestTiesToEven :: RoundingMode
+  --   s1 =            -1074922688 :: Int32
+  --
+  -- Note how we get a failure on `Int32`. The value @-1074922688@ is not representable exactly
+  -- as a single precision float.
+  toSFloat    :: SRoundingMode -> SBV a -> SFloat
   fromSDouble :: SRoundingMode -> SDouble -> SBV a
-  toSDouble   :: SRoundingMode -> SBV a   -> SDouble
+
+  -- | Convert to an IEEE-754 Double-precision float.
+  --
+  -- >>> :{
+  -- roundTrip :: forall a. IEEEFloatConvertable a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip m x = fromSDouble m (toSDouble m x) .== x
+  -- :}
+  --
+  -- >>> prove $ roundTrip @Int8
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Word8
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Int16
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Word16
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Int32
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Word32
+  -- Q.E.D.
+  -- >>> prove $ roundTrip @Int64
+  -- Falsifiable. Counter-example:
+  --   s0 = RoundNearestTiesToEven :: RoundingMode
+  --   s1 =   -1152919305583591360 :: Int64
+  --
+  -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the integer value
+  -- for all possible values.
+  toSDouble   :: SRoundingMode -> SBV a -> SDouble
 
 -- | A generic converter that will work for most of our instances. (But not all!)
 genericFPConverter :: forall a r. (SymVal a, HasKind r, SymVal r, Num r) => Maybe (a -> Bool) -> Maybe (SBV a -> SBool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
