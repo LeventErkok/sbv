@@ -24,7 +24,7 @@ module Data.SBV.Either (
     -- * Mapping functions
     , bimap, first, second
     -- * Scrutinizing branches of a sum
-    , isLeft, isRight
+    , isLeft, isRight, fromLeft, fromRight
   ) where
 
 import           Prelude hiding (either)
@@ -39,7 +39,7 @@ import Data.SBV.Core.Model ((.==))
 --
 -- $setup
 -- >>> import Data.SBV.Core.Model     (Uninterpreted(uninterpret))
--- >>> import Data.SBV.Provers.Prover (prove)
+-- >>> import Data.SBV.Provers.Prover (prove, sat)
 
 -- | Construct an @SEither a b@ from an @SBV a@
 --
@@ -181,5 +181,72 @@ first f = bimap f id
 second :: (SymVal a, SymVal b, SymVal c) => (SBV b -> SBV c) -> SEither a b -> SEither a c
 second = bimap id
 
+-- | Return the value from the left component. The behavior is undefined if
+-- passed a right value.
+--
+-- >>> fromLeft (sLeft (literal 'a') :: SEither Char Integer)
+-- 'a' :: SChar
+-- >>> prove $ \x -> fromLeft (sLeft x :: SEither Char Integer) .== (x :: SChar)
+-- Q.E.D.
+-- >>> sat $ \x -> x .== (fromLeft (sRight 4 :: SEither Char Integer))
+-- Satisfiable. Model:
+--   s0 = '\NUL' :: Char
+--
+-- Note how we get a satisfying assignment in the last case: The behavior
+-- is unspecified, thus the SMT solver picks whatever satisfies the
+-- constraints, if there is one.
+fromLeft :: forall a b. (SymVal a, SymVal b) => SEither a b -> SBV a
+fromLeft sab
+  | Just (Left a) <- unliteral sab
+  = literal a
+  | True
+  = SBV $ SVal ka $ Right $ cache res
+  where ka      = kindOf (Proxy @a)
+        kb      = kindOf (Proxy @b)
+        kEither = KEither ka kb
+
+        -- We play the usual trick here of creating a left value
+        -- and asserting equivalence under implication. This will
+        -- be underspecified as required should the value
+        -- received be a right thing.
+        res st = do e   <- internalVariable st ka
+                    es  <- newExpr st kEither (SBVApp (EitherConstructor ka kb False) [e])
+                    let esSBV = SBV $ SVal kEither $ Right $ cache $ \_ -> return es
+                    internalConstraint st False [] $ unSBV $ isLeft sab .=> esSBV .== sab
+                    return e
+
+-- | Return the value from the right component. The behavior is undefined if
+-- passed a left value.
+--
+-- >>> fromRight (sRight (literal 'a') :: SEither Integer Char)
+-- 'a' :: SChar
+-- >>> prove $ \x -> fromRight (sRight x :: SEither Char Integer) .== (x :: SInteger)
+-- Q.E.D.
+-- >>> sat $ \x -> x .== (fromRight (sLeft (literal 'a') :: SEither Char Integer))
+-- Satisfiable. Model:
+--   s0 = 0 :: Integer
+--
+-- Note how we get a satisfying assignment in the last case: The behavior
+-- is unspecified, thus the SMT solver picks whatever satisfies the
+-- constraints, if there is one.
+fromRight :: forall a b. (SymVal a, SymVal b) => SEither a b -> SBV b
+fromRight sab
+  | Just (Right b) <- unliteral sab
+  = literal b
+  | True
+  = SBV $ SVal kb $ Right $ cache res
+  where ka      = kindOf (Proxy @a)
+        kb      = kindOf (Proxy @b)
+        kEither = KEither ka kb
+
+        -- We play the usual trick here of creating a right value
+        -- and asserting equivalence under implication. This will
+        -- be underspecified as required should the value
+        -- received be a left thing.
+        res st = do e   <- internalVariable st kb
+                    es  <- newExpr st kEither (SBVApp (EitherConstructor ka kb True) [e])
+                    let esSBV = SBV $ SVal kEither $ Right $ cache $ \_ -> return es
+                    internalConstraint st False [] $ unSBV $ isRight sab .=> esSBV .== sab
+                    return e
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
