@@ -33,9 +33,18 @@ import qualified Prelude
 import Data.Proxy (Proxy(Proxy))
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model ((.==))
+
+-- For doctest use only
+--
+-- $setup
+-- >>> import Data.SBV.Core.Model     (Uninterpreted(uninterpret))
+-- >>> import Data.SBV.Provers.Prover (prove)
 
 -- | Construct an @SEither a b@ from an @SBV a@
+--
+-- >>> sLeft 3 :: SEither Integer Bool
+-- Left 3 :: SEither Integer Bool
 sLeft :: forall a b. (SymVal a, SymVal b) => SBV a -> SEither a b
 sLeft sa
   | Just a <- unliteral sa
@@ -49,7 +58,19 @@ sLeft sa
         res st = do asv <- sbvToSV st sa
                     newExpr st k $ SBVApp (EitherConstructor k1 k2 False) [asv]
 
+-- | Return 'sTrue' if the given symbolic value is 'Left', 'sFalse' otherwise
+--
+-- >>> isLeft (sLeft 3 :: SEither Integer Bool)
+-- True
+-- >>> isLeft (sRight sTrue :: SEither Integer Bool)
+-- False
+isLeft :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
+isLeft = either (const sTrue) (const sFalse)
+
 -- | Construct an @SEither a b@ from an @SBV b@
+--
+-- >>> sRight sFalse :: SEither Integer Bool
+-- Right False :: SEither Integer Bool
 sRight :: forall a b. (SymVal a, SymVal b) => SBV b -> SEither a b
 sRight sb
   | Just b <- unliteral sb
@@ -63,12 +84,37 @@ sRight sb
         res st = do bsv <- sbvToSV st sb
                     newExpr st k $ SBVApp (EitherConstructor k1 k2 True) [bsv]
 
--- | Construct an @SEither a b@ from an @Either a b@
+-- | Return 'sTrue' if the given symbolic value is 'Right', 'sFalse' otherwise
+--
+-- >>> isRight (sLeft 3 :: SEither Integer Bool)
+-- False
+-- >>> isRight (sRight sTrue :: SEither Integer Bool)
+-- True
+isRight :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
+isRight = either (const sFalse) (const sTrue)
+
+-- | Construct an @SEither a b@ from an @Either (SBV a) (SBV b)@
+--
+-- >>> liftEither (Left 3 :: Either SInteger SBool)
+-- Left 3 :: SEither Integer Bool
+-- >>> liftEither (Right sTrue :: Either SInteger SBool)
+-- Right True :: SEither Integer Bool
 liftEither :: (SymVal a, SymVal b) => Either (SBV a) (SBV b) -> SEither a b
 liftEither = Prelude.either sLeft sRight
 
 -- | Case analysis for symbolic 'Either's. If the value 'isLeft', apply the
 -- first function; if it 'isRight', apply the second function.
+--
+-- >>> either (*2) (*3) (sLeft 3)
+-- 6 :: SInteger
+-- >>> either (*2) (*3) (sRight 3)
+-- 9 :: SInteger
+-- >>> let f = uninterpret "f" :: SInteger -> SInteger
+-- >>> let g = uninterpret "g" :: SInteger -> SInteger
+-- >>> prove $ \x -> either f g (sLeft x) .== f x
+-- Q.E.D.
+-- >>> prove $ \x -> either f g (sRight x) .== g x
+-- Q.E.D.
 either :: forall a b c. (SymVal a, SymVal b, SymVal c)
        => (SBV a -> SBV c)
        -> (SBV b -> SBV c)
@@ -101,6 +147,13 @@ either brA brB sab
                     newExpr st kc $ SBVApp Ite [onLeft, br1, br2]
 
 -- | Map over both sides of a symbolic 'Either' at the same time
+--
+-- >>> let f = uninterpret "f" :: SInteger -> SInteger
+-- >>> let g = uninterpret "g" :: SInteger -> SInteger
+-- >>> prove $ \x -> fromLeft (bimap f g (sLeft x)) .== f x
+-- Q.E.D.
+-- >>> prove $ \x -> fromRight (bimap f g (sRight x)) .== g x
+-- Q.E.D.
 bimap :: forall a b c d.  (SymVal a, SymVal b, SymVal c, SymVal d)
       => (SBV a -> SBV b)
       -> (SBV c -> SBV d)
@@ -109,19 +162,24 @@ bimap :: forall a b c d.  (SymVal a, SymVal b, SymVal c, SymVal d)
 bimap brA brC = either (sLeft . brA) (sRight . brC)
 
 -- | Map over the left side of an 'Either'
+--
+-- >>> let f = uninterpret "f" :: SInteger -> SInteger
+-- >>> prove $ \x -> first f (sLeft x :: SEither Integer Integer) .== sLeft (f x)
+-- Q.E.D.
+-- >>> prove $ \x -> first f (sRight x :: SEither Integer Integer) .== sRight x
+-- Q.E.D.
 first :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b) -> SEither a c -> SEither b c
 first f = bimap f id
 
 -- | Map over the right side of an 'Either'
+--
+-- >>> let f = uninterpret "f" :: SInteger -> SInteger
+-- >>> prove $ \x -> second f (sRight x :: SEither Integer Integer) .== sRight (f x)
+-- Q.E.D.
+-- >>> prove $ \x -> second f (sLeft x :: SEither Integer Integer) .== sLeft x
+-- Q.E.D.
 second :: (SymVal a, SymVal b, SymVal c) => (SBV b -> SBV c) -> SEither a b -> SEither a c
 second = bimap id
 
--- | Return 'sTrue' if the given symbolic value is 'Left', 'sFalse' otherwise
-isLeft :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
-isLeft = either (const sTrue) (const sFalse)
-
--- | Return 'sTrue' if the given symbolic value is 'Right', 'sFalse' otherwise
-isRight :: (SymVal a, SymVal b) => SEither a b -> SBV Bool
-isRight = either (const sFalse) (const sTrue)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
