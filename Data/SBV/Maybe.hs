@@ -19,8 +19,10 @@
 module Data.SBV.Maybe (
   -- * Constructing optional values
     sJust, sNothing, liftMaybe
+  -- * Destructing optionals
+  , maybe
   -- * Mapping functions
-  , maybe, map
+  , map
   -- * Scrutinizing the branches of an option
   , isNothing, isJust, fromMaybe, fromJust
   ) where
