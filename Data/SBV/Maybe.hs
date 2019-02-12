@@ -131,7 +131,7 @@ fromJust ma
                     internalConstraint st False [] $ unSBV $ isJust ma .=> esSBV .== ma
                     return e
 
--- | Construct an @SMaybe a@ from a @Maybe a@
+-- | Construct an @SMaybe a@ from a @Maybe (SBV a)@
 --
 -- >>> liftMaybe (Just (3 :: SInteger))
 -- Just 3 :: SMaybe Integer
@@ -142,7 +142,7 @@ liftMaybe = Prelude.maybe (literal Nothing) sJust
 
 -- | Map over the 'Just' side of a 'Maybe'
 --
--- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+(1::SInteger)
+-- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+1
 -- Q.E.D.
 -- >>> let f = uninterpret "f" :: SInteger -> SBool
 -- >>> prove $ \x -> map f (sJust x) .== sJust (f x)
