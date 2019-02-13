@@ -22,14 +22,16 @@
     calls to `sat` now include function models, and you can also get them
     via `getFunction` in a query.
 
-  * The `allSat` function is similarly modified to return uninterpreted-function
-    models. There are a few technical restrictions, however: Only the values
-    of uninterpreted functions without any uninterpreted arguments will participate
-    in `allSat` computation. (For instance, `uninterpret "f" :: SInteger -> SInteger`
-    is OK, but `uninterpret "f" :: MyType -> SInteger` is not, where `MyType` itself
+  * [BACKWARDS COMPATIBILITY] The `allSat` function is similarly modified to
+    return uninterpreted-function models. There are a few technical restrictions,
+    however: Only the values of uninterpreted functions without any uninterpreted
+    arguments will participate in `allSat` computation. (For instance,
+    `uninterpret "f" :: SInteger -> SInteger` is OK, but
+    `uninterpret "f" :: MyType -> SInteger` is not, where `MyType` itself
     is uninterpreted.) The reason for this is again there is no SMTLib way of
-    reflecting uninterpreted model values back into the solver. This restriction should not
-    cause much trouble in practice, but do get in touch if it is a use-case for you.
+    reflecting uninterpreted model values back into the solver. This restriction
+    should not cause much trouble in practice, but do get in touch if it is a
+    use-case for you.
 
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
     language and an engine for checking partial and total correctness of imperative programs.
