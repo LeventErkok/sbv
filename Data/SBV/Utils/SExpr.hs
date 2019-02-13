@@ -260,18 +260,33 @@ parseLambdaExpression funExpr = case funExpr of
 
         lambda :: [String] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
         lambda params body = reverse <$> go [] body
-          where go :: [Either ([SExpr], SExpr) SExpr] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
-                go sofar (EApp [ECon "ite", selector, thenBranch, elseBranch]) = do mbS <- select selector
-                                                                                    tB  <- go [] thenBranch
-                                                                                    case cond mbS tB of
-                                                                                       Just s  -> go (Left s : sofar) elseBranch
-                                                                                       _       -> Nothing
-                go sofar e                                                     = Just $ Right e : sofar
+          where true  = ENum (1, Nothing)
+                false = ENum (0, Nothing)
+
+                go :: [Either ([SExpr], SExpr) SExpr] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+                go sofar (EApp [ECon "ite", selector, thenBranch, elseBranch])
+                  = do s  <- select selector
+                       tB <- go [] thenBranch
+                       case cond s tB of
+                          Just sv -> go (Left sv : sofar) elseBranch
+                          _       -> Nothing
+
+                -- z3 sometimes puts together a bunch of booleans as final expression,
+                -- see if we can catch that.
+                go sofar e
+                 | Just s <- select e
+                 = go (Left (s, true) : sofar) false
+
+                -- Otherwise, just treat it as an "unknown" arbitrary expression
+                -- as the default. We can only handly so many things here, but
+                -- hopefully it's good enogh.
+                go sofar e = Just $ Right e : sofar
 
                 cond :: [SExpr] -> [Either ([SExpr], SExpr) SExpr] -> Maybe ([SExpr], SExpr)
                 cond s [Right v] = Just (s, v)
                 cond _ _         = Nothing
 
+                -- select takes the condition of an ite, and returns precisely what match is done to the parameters
                 select :: SExpr -> Maybe [SExpr]
                 select e
                    | Just dict <- build e [] = mapM (`lookup` dict) params
@@ -289,8 +304,8 @@ parseLambdaExpression funExpr = case funExpr of
                         -- mapping covers everything we can see:
                         grok (EApp [ECon "=", ECon v, r]) = Just (v, r)
                         grok (EApp [ECon "=", r, ECon v]) = Just (v, r)
-                        grok (EApp [ECon "not", ECon v])  = Just (v, ENum (0, Nothing)) -- boolean negation, require it to be 0
-                        grok (ECon v)                     = Just (v, ENum (1, Nothing)) -- boolean identity, require it to be 1
+                        grok (EApp [ECon "not", ECon v])  = Just (v, false) -- boolean negation, require it to be false
+                        grok (ECon v)                     = Just (v, true)  -- boolean identity, require it to be true
 
                         -- Tough luck, we couldn't understand:
                         grok _ = Nothing
