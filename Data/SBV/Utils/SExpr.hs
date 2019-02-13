@@ -263,7 +263,7 @@ parseLambdaExpression funExpr = case funExpr of
           where go :: [Either ([SExpr], SExpr) SExpr] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
                 go sofar (EApp [ECon "ite", selector, thenBranch, elseBranch]) = do mbS <- select selector
                                                                                     tB  <- go [] thenBranch
-                                                                                    case cond  mbS tB of
+                                                                                    case cond mbS tB of
                                                                                        Just s  -> go (Left s : sofar) elseBranch
                                                                                        _       -> Nothing
                 go sofar e                                                     = Just $ Right e : sofar
