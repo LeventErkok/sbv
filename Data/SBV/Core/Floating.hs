@@ -154,23 +154,13 @@ instance IEEEFloating Double
 -- in the target domain. For these inputs, we define the result to be +0, arbitrarily.
 class IEEEFloatConvertable a where
   -- | Convert from an IEEE74 single precision float.
-  --
-  -- :{
-  -- roundTrip :: forall a. IEEEFloatConvertable a => Proxy a -> SRoundingMode -> SBV a -> SBool
-  -- roundTrip _p m x = fromSFloat m (toSFloat m x) .== (x :: SBV a)
-  -- :}
-  --
-  -- prove $ roundTrip (Proxy @Int64)
-  -- Q.E.D.
-  -- prove $ roundTrip (Proxy @Word64)
-  -- Q.E.D.
   fromSFloat :: SRoundingMode -> SFloat -> SBV a
 
   -- | Convert to an IEEE-754 Single-precision float.
   --
   -- >>> :{
-  -- roundTrip :: forall a. IEEEFloatConvertable a => SRoundingMode -> SBV a -> SBool
-  -- roundTrip m x = fromSFloat m (toSFloat m x) .== (x :: SBV a)
+  -- roundTrip :: forall a. IEEEFloatConvertible a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip m x = fromSFloat m (toSFloat m x) .== x
   -- :}
   --
   -- >>> prove $ roundTrip @Int8
@@ -189,12 +179,14 @@ class IEEEFloatConvertable a where
   -- Note how we get a failure on `Int32`. The value @-1074922688@ is not representable exactly
   -- as a single precision float.
   toSFloat    :: SRoundingMode -> SBV a -> SFloat
+
+  -- | Convert from an IEEE74 double precision float.
   fromSDouble :: SRoundingMode -> SDouble -> SBV a
 
   -- | Convert to an IEEE-754 Double-precision float.
   --
   -- >>> :{
-  -- roundTrip :: forall a. IEEEFloatConvertable a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip :: forall a. IEEEFloatConvertible a => SRoundingMode -> SBV a -> SBool
   -- roundTrip m x = fromSDouble m (toSDouble m x) .== x
   -- :}
   --
