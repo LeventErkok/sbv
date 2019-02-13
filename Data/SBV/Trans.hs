@@ -69,7 +69,7 @@ module Data.SBV.Trans (
   -- ** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
   -- ** Conversion to/from floats
-  , IEEEFloatConvertable(..)
+  , IEEEFloatConvertible(..)
   -- ** Bit-pattern conversions
   , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
 
