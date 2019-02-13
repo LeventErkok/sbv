@@ -59,9 +59,9 @@ type S = SumS SInteger
 -- @
 --    i = 0
 --    s = 0
---    while i <= n
---      s = s+i
+--    while i < n
 --      i = i+1
+--      s = s+i
 -- @
 --
 -- Note that we need to explicitly annotate each loop with its invariant and the termination
@@ -69,12 +69,12 @@ type S = SumS SInteger
 algorithm :: Invariant S -> Maybe (Measure S) -> Stmt S
 algorithm inv msr = Seq [ Assign $ \st -> st{i = 0, s = 0}
                         , assert "n >= 0" $ \SumS{n} -> n .>= 0
-                        , While "i <= n"
+                        , While "i < n"
                                 inv
                                 msr
-                                (\SumS{i, n} -> i .<= n)
-                                $ Seq [ Assign $ \st@SumS{i, s} -> st{s = s+i}
-                                      , Assign $ \st@SumS{i}    -> st{i = i+1}
+                                (\SumS{i, n} -> i .< n)
+                                $ Seq [ Assign $ \st@SumS{i}    -> st{i = i+1}
+                                      , Assign $ \st@SumS{i, s} -> st{s = s+i}
                                       ]
                         ]
 
@@ -116,12 +116,11 @@ imperativeSum inv msr = Program { setup         = return ()
 -- a list of one element.
 --
 -- The correct invariant is a conjunction of two facts. First, @s@ is
--- equivalent to the sum of numbers @0@ upto but not including @i@.
--- (When @i=0@, we define this sum to be @0@.) This clearly holds at
+-- equivalent to the sum of numbers @0@ upto @i@.  This clearly holds at
 -- the beginning when @i = s = 0@, and is maintained in each iteration
--- of the body. Second, it always holds that @i <= n+1@ as long as the
+-- of the body. Second, it always holds that @i <= n@ as long as the
 -- loop executes, both before and after each execution of the body.
--- When the loop terminates, it holds that @i = n+1@. Since the invariant says
+-- When the loop terminates, it holds that @i = n@. Since the invariant says
 -- @s@ is the sum of all numbers up to but not including @i@, we
 -- conclude that @s@ is the sum of all numbers up to and including @n@,
 -- as requested.
@@ -134,7 +133,7 @@ imperativeSum inv msr = Program { setup         = return ()
 -- We have:
 --
 -- >>> :set -XNamedFieldPuns
--- >>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+-- >>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 -- >>> let measure   SumS{n, i}    = [n - i]
 -- >>> correctness invariant (Just measure)
 -- Total correctness is established.
@@ -162,7 +161,7 @@ will simply use 'Nothing' for the measures.
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Invariant for loop "i <= n" fails upon entry:
+  Invariant for loop "i < n" fails upon entry:
     SumS {n = 0, i = 0, s = 0}
 
 When the invariant is constant false, it fails upon entry to the loop, and thus the
@@ -180,17 +179,17 @@ Following proof obligation failed:
 ==================================
   Postcondition fails:
     Start: SumS {n = 0, i = 0, s = 0}
-    End  : SumS {n = 0, i = 1, s = 1}
+    End  : SumS {n = 0, i = 0, s = 1}
 
 In this case, we are told that the end state does not establish the
 post-condition. Indeed when @n=0@, we would expect @s=0@, not @s=1@.
 
 The natural question to ask is how did SBV come up with this unexpected
 state at the end of the program run? If you think about the program execution, indeed this
-state is unreachable: We know that @s@ represents the sum of all numbers up to @i-1@,
-so if @i=1@, we would expect @s@ to be @0@. Our invariant is clearly an overapproximation
-of the reachable space, and SBV is telling us that it needs to constrain and outlaw
-the state @{n = 0, i = 1, s = 1}@. Clearly, the invariant has to state something
+state is unreachable: We know that @s@ represents the sum of all numbers up to @i@,
+so if @i=0@, we would expect @s@ to be @0@. Our invariant is clearly an overapproximation
+of the reachable space, and SBV is telling us that we need to constrain and outlaw
+the state @{n = 0, i = 0, s = 1}@. Clearly, the invariant has to state something
 about the relationship between @i@ and @s@, which we are missing in this case.
 
 == Failing to maintain the invariant
@@ -198,28 +197,29 @@ about the relationship between @i@ and @s@, which we are missing in this case.
 What happens if we pose an invariant that the loop actually does not maintain? Here
 is an example:
 
->>> let invariant SumS{n, i, s} = s .== i .&& s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let invariant SumS{n, i, s} = s .<= i .&& s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Invariant for loop "i <= n" is not maintaned by the body:
-    Before: SumS {n = 0, i = 0, s = 0}
-    After : SumS {n = 0, i = 1, s = 0}
+  Invariant for loop "i < n" is not maintaned by the body:
+    Before: SumS {n = 2, i = 1, s = 1}
+    After : SumS {n = 2, i = 2, s = 3}
 
-Here, we posed the extra incorrect invariant that @s@ must equal @i@, and SBV found us a reachable state that violates the invariant. Note that
-the proof fails in this case not because the program is incorrect, but the stipulated invariant is not valid.
+Here, we posed the extra incorrect invariant that @s <= i@ must be maintained, and SBV found us a reachable state that violates the invariant. The
+show /before/ state indeed satisfies @s <= i@, but the /after/ state does not. Note that the proof fails in this case not because the program
+is incorrect, but the stipulated invariant is not valid.
 
 == Having a bad measure, Part I
 
 The termination measure must always be non-negative:
 
->>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> let measure   SumS{n, i}    = [- i]
 >>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
 ==================================
-  Measure for loop "i <= n" is negative:
-    State  : SumS {n = 1, i = 1, s = 0}
+  Measure for loop "i < n" is negative:
+    State  : SumS {n = 2, i = 1, s = 1}
     Measure: -1
 
 The failure is pretty obvious in this case: Measure produces a negative value.
@@ -228,16 +228,16 @@ The failure is pretty obvious in this case: Measure produces a negative value.
 
 The other way we can have a bad measure is if it fails to decrease through the loop body:
 
->>> let invariant SumS{n, i, s} = s .== (i*(i-1)) `sDiv` 2 .&& i .<= n+1
+>>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> let measure   SumS{n, i}    = [n + i]
 >>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
 ==================================
-  Measure for loop "i <= n" does not decrease:
-    Before : SumS {n = 0, i = 0, s = 0}
-    Measure: 0
-    After  : SumS {n = 0, i = 1, s = 0}
-    Measure: 1
+  Measure for loop "i < n" does not decrease:
+    Before : SumS {n = 2, i = 1, s = 1}
+    Measure: 3
+    After  : SumS {n = 2, i = 2, s = 3}
+    Measure: 4
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@.
 -}
