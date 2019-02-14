@@ -175,10 +175,15 @@ class IEEEFloatConvertible a where
   -- >>> prove $ roundTrip @Int32
   -- Falsifiable. Counter-example:
   --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =            -1074922688 :: Int32
+  --   s1 =            -2147483584 :: Int32
   --
-  -- Note how we get a failure on `Int32`. The value @-1074922688@ is not representable exactly
-  -- as a single precision float.
+  -- Note how we get a failure on `Int32`. The value @-2147483584@ is not representable exactly
+  -- as a single precision float:
+  --
+  -- >>> toRational (-2147483584 :: Float)
+  -- (-2147483648) % 1
+  --
+  -- Note how the numerator is different!
   toSFloat    :: SRoundingMode -> SBV a -> SFloat
 
   -- | Convert from an IEEE74 double precision float.
@@ -208,8 +213,13 @@ class IEEEFloatConvertible a where
   --   s0 = RoundNearestTiesToEven :: RoundingMode
   --   s1 =   -1152919305583591360 :: Int64
   --
-  -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the integer value
-  -- for all possible values.
+  -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
+  -- integer value for all possible values:
+  --
+  -- >>> toRational (-1152919305583591360 :: Double)
+  -- (-1152919305583591424) % 1
+  --
+  -- Again the numerator is quite different!
   toSDouble   :: SRoundingMode -> SBV a -> SDouble
 
 -- | A generic converter that will work for most of our instances. (But not all!)
