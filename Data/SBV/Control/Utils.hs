@@ -407,14 +407,18 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
    sexprToVal _                                       = Nothing
 
 instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
-  sexprToVal (EApp [ECon "left_SBVEither",  a]) = Left  <$> sexprToVal a
-  sexprToVal (EApp [ECon "right_SBVEither", b]) = Right <$> sexprToVal b
-  sexprToVal _                                  = Nothing
+  sexprToVal (EApp [ECon "left_SBVEither",  a])                      = Left  <$> sexprToVal a
+  sexprToVal (EApp [ECon "right_SBVEither", b])                      = Right <$> sexprToVal b
+  sexprToVal (EApp [EApp [ECon "as", ECon "left_SBVEither",  _], a]) = Left  <$> sexprToVal a   -- CVC4 puts full ascriptions
+  sexprToVal (EApp [EApp [ECon "as", ECon "right_SBVEither", _], b]) = Right <$> sexprToVal b   -- CVC4 puts full ascriptions
+  sexprToVal _                                                       = Nothing
 
 instance SMTValue a => SMTValue (Maybe a) where
-  sexprToVal (ECon "nothing_SBVMaybe")        = pure Nothing
-  sexprToVal (EApp [ECon "just_SBVMaybe", a]) = Just <$> sexprToVal a
-  sexprToVal _                                = Nothing
+  sexprToVal (ECon "nothing_SBVMaybe")                                = return Nothing
+  sexprToVal (EApp [ECon "just_SBVMaybe", a])                         = Just <$> sexprToVal a
+  sexprToVal (      EApp [ECon "as", ECon "nothing_SBVMaybe", _])     = return Nothing          -- Ditto here for CVC4
+  sexprToVal (EApp [EApp [ECon "as", ECon "just_SBVMaybe",    _], a]) = Just <$> sexprToVal a
+  sexprToVal _                                                        = Nothing
 
 instance SMTValue () where
    sexprToVal (ECon "SBVTuple0") = Just ()
@@ -842,10 +846,12 @@ recoverKindedValue k e = case k of
                                                                                                          , "Expr: " ++ show a
                                                                                                          ]
         -- CVC4 puts in full ascriptions, handle those:
-        interpretMaybe mk (EApp [EApp [ECon "as", ECon "just_SBVMaybe", _], a]) = interpretMaybe mk (EApp [ECon "just_SBVMaybe", a])
+        interpretMaybe _  (      EApp [ECon "as", ECon "nothing_SBVMaybe", _])     = Nothing
+        interpretMaybe mk (EApp [EApp [ECon "as", ECon "just_SBVMaybe",    _], a]) = interpretMaybe mk (EApp [ECon "just_SBVMaybe", a])
 
         interpretMaybe _  other = error $ "Expected an SMaybe sexpr, but received: " ++ show (k, other)
 
+        -- SEither
         interpretEither (KEither k1 _) (EApp [ECon "left_SBVEither",  a]) = case recoverKindedValue k1 a of
                                                                               Just (CV _ v) -> Left v
                                                                               Nothing       -> error $ unlines [ "Couldn't parse an either value on the left"
@@ -858,7 +864,12 @@ recoverKindedValue k e = case k of
                                                                                                                , "Kind: " ++ show k2
                                                                                                                , "Expr: " ++ show b
                                                                                                                ]
-        interpretEither _              other                              = error $ "Expected an SEither sexpr, but received: " ++ show (k, other)
+
+        -- CVC4 puts full ascriptions:
+        interpretEither ek (EApp [EApp [ECon "as", ECon "left_SBVEither",  _], a]) = interpretEither ek (EApp [ECon "left_SBVEither", a])
+        interpretEither ek (EApp [EApp [ECon "as", ECon "right_SBVEither", _], b]) = interpretEither ek (EApp [ECon "right_SBVEither", b])
+
+        interpretEither _ other = error $ "Expected an SEither sexpr, but received: " ++ show (k, other)
 
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
