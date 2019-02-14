@@ -838,6 +838,7 @@ recoverKindedValue k e = case k of
                                                                   , "Expr: " ++ show te
                                                                   ]
 
+        -- SMaybe
         interpretMaybe (KMaybe _)  (ECon "nothing_SBVMaybe")        = Nothing
         interpretMaybe (KMaybe ek) (EApp [ECon "just_SBVMaybe", a]) = case recoverKindedValue ek a of
                                                                         Just (CV _ v) -> Just v
