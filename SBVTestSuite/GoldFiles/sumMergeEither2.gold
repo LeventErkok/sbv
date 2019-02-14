@@ -13,27 +13,29 @@
                                            ((left_SBVEither  (get_left_SBVEither  T1))
                                             (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () Int 0)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVEither Int Bool)) ; tracks user variable "x"
+[GOOD] (declare-fun s0 () (SBVEither Int Bool))
+[GOOD] (declare-fun s1 () (SBVEither Int Bool))
+[GOOD] (declare-fun s2 () Bool)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
-[GOOD] (define-fun s3 () Bool (> s1 s2))
-[GOOD] (define-fun s4 () Bool (get_right_SBVEither s0))
-[GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Bool))) s0))
-[GOOD] (define-fun s7 () Bool (ite s6 s3 s5))
-[GOOD] (assert s7)
+[GOOD] (define-fun s3 () (SBVEither Int Bool) (ite s2 s0 s1))
+[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Bool))) s3))
+[GOOD] (define-fun s5 () Bool (ite s4 false true))
+[GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (right_SBVEither false)))
+[SEND] (get-value (s1))
+[RECV] ((s1 (right_SBVEither false)))
+[SEND] (get-value (s2))
+[RECV] ((s2 true))
 
-MODEL: SMTModel {modelObjectives = [], modelAssocs = [("x",Right False :: Either Integer Bool)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelAssocs = [("s0",Right False :: Either Integer Bool),("s1",Right False :: Either Integer Bool),("s2",True :: Bool)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

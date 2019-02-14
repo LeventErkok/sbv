@@ -40,5 +40,9 @@
 [GOOD] (assert s16)
 [SEND] (check-sat)
 [RECV] sat
-*** Solver   : Z3
+[SEND] (get-value (s0))
+[RECV] ((s0 (left_SBVEither 0)))
+
+MODEL: SMTModel {modelObjectives = [], modelAssocs = [("x",Left 0 :: Either Integer Integer)], modelUIFuns = []}
+DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

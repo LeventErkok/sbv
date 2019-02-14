@@ -28,11 +28,15 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.QuerySums"
-    [ goldenCapturedIO "query_Sums"         $ testQuery querySums
-    , goldenCapturedIO "query_ListOfSum"    $ testQuery queryListOfSum
-    , goldenCapturedIO "query_Maybe"        $ testQuery queryMaybe
-    , goldenCapturedIO "query_ListOfMaybe"  $ testQuery queryListOfMaybe
-    , goldenCapturedIO "query_SumMaybeBoth" $ testQuery querySumMaybeBoth
+    [ goldenCapturedIO "query_Sums"            $ testQuery querySums
+    , goldenCapturedIO "query_ListOfSum"       $ testQuery queryListOfSum
+    , goldenCapturedIO "query_Maybe"           $ testQuery queryMaybe
+    , goldenCapturedIO "query_ListOfMaybe"     $ testQuery queryListOfMaybe
+    , goldenCapturedIO "query_SumMaybeBoth"    $ testQuery querySumMaybeBoth
+    , goldenCapturedIO "query_sumMergeMaybe1"  $ testQuery querySumMergeMaybe1
+    , goldenCapturedIO "query_sumMergeMaybe2"  $ testQuery querySumMergeMaybe2
+    , goldenCapturedIO "query_sumMergeEither1" $ testQuery querySumMergeEither1
+    , goldenCapturedIO "query_sumMergeEither2" $ testQuery querySumMergeEither2
     ]
 
 testQuery :: Show a => Symbolic a -> FilePath -> IO ()
@@ -111,3 +115,61 @@ querySumMaybeBoth = query $ do
         xv <- getValue x
         yv <- getValue y
         return (xv, yv)
+
+querySumMergeMaybe1 :: Symbolic (Maybe Integer, Maybe Integer, Bool)
+querySumMergeMaybe1 = query $ do
+   (x :: SMaybe Integer) <- freshVar_
+   (y :: SMaybe Integer) <- freshVar_
+   b  <- freshVar_
+
+   constrain $ isNothing $ ite b x y
+
+   _ <- checkSat
+   xv <- getValue x
+   yv <- getValue y
+   bv <- getValue b
+   return (xv, yv, bv)
+
+querySumMergeMaybe2 :: Symbolic (Maybe Integer, Maybe Integer, Bool)
+querySumMergeMaybe2 = query $ do
+   (x :: SMaybe Integer) <- freshVar_
+   (y :: SMaybe Integer) <- freshVar_
+   b  <- freshVar_
+
+   constrain $ isJust $ ite b x y
+
+   _ <- checkSat
+   xv <- getValue x
+   yv <- getValue y
+   bv <- getValue b
+   return (xv, yv, bv)
+
+querySumMergeEither1 :: Symbolic (Either Integer Bool, Either Integer Bool, Bool)
+querySumMergeEither1 = query $ do
+   (x :: SEither Integer Bool) <- freshVar_
+   (y :: SEither Integer Bool) <- freshVar_
+   b  <- freshVar_
+
+   constrain $ isLeft $ ite b x y
+
+   _ <- checkSat
+   xv <- getValue x
+   yv <- getValue y
+   bv <- getValue b
+   return (xv, yv, bv)
+
+querySumMergeEither2 :: Symbolic (Either Integer Bool, Either Integer Bool, Bool)
+querySumMergeEither2 = query $ do
+   (x :: SEither Integer Bool) <- freshVar_
+   (y :: SEither Integer Bool) <- freshVar_
+   b  <- freshVar_
+
+   constrain $ isRight $ ite b x y
+
+   _ <- checkSat
+   xv <- getValue x
+   yv <- getValue y
+   bv <- getValue b
+   return (xv, yv, bv)
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
