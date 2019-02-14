@@ -138,3 +138,5 @@ sumMergeEither2 = do
    b  <- sBool_
 
    constrain $ isRight $ ite b x y
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
