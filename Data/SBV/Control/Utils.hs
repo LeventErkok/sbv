@@ -859,7 +859,7 @@ recoverKindedValue k e = case k of
                                                                                                                , "Expr: " ++ show a
                                                                                                                ]
         interpretEither (KEither _ k2) (EApp [ECon "right_SBVEither", b]) = case recoverKindedValue k2 b of
-                                                                              Just (CV _ v) -> Left v
+                                                                              Just (CV _ v) -> Right v
                                                                               Nothing       -> error $ unlines [ "Couldn't parse an either value on the right"
                                                                                                                , "Kind: " ++ show k2
                                                                                                                , "Expr: " ++ show b
