@@ -502,10 +502,11 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
   sexprToArg     :: fun -> [SExpr] -> Maybe a
   smtFunSaturate :: (MonadIO m, MonadQuery m) => fun -> m (SBV r)
   smtFunName     :: (MonadIO m, MonadQuery m) => fun -> m String
+  smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
-  sexprToFun     :: fun -> SExpr -> Maybe ([(a, r)], r)
+  sexprToFun     :: (MonadIO m, MonadQuery m) => fun -> SExpr -> m (Maybe ([(a, r)], r))
 
-  {-# MINIMAL sexprToArg, smtFunSaturate  #-}
+  {-# MINIMAL sexprToArg, smtFunSaturate, smtFunType  #-}
 
   -- Given the function, figure out a default "return value"
   smtFunDefault _
@@ -547,14 +548,71 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind
 
-  sexprToFun f e = case parseSExprFunction e of
-                      Nothing        -> Nothing
-                      -- Ideally, we'd check that the name returned in the Left case matches our name
-                      -- But let's not worry about that detail for now.
-                      Just (Left _)  -> smtFunDefault f >>= \v -> Just ([], v)
-                      Just (Right v) -> convert v
+  sexprToFun f e = do nm <- smtFunName f
+                      case parseSExprFunction e of
+                        Just (Left nm') -> case (nm == nm', smtFunDefault f) of
+                                             (True, Just v)  -> return $ Just ([], v)
+                                             _               -> bailOut nm
+                        Just (Right v)  -> return $ convert v
+                        Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
+                                              return $ mbPVS >>= convert
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
-          sexprPoint (as, v) = (,) <$> sexprToArg f as <*> sexprToVal v
+          sexprPoint (as, v) = (,) <$> sexprToArg f as    <*> sexprToVal v
+
+          bailOut nm = error $ unlines [ ""
+                                       , "*** Data.SBV.getFunction: Unable to extract an interpretation for function " ++ show nm
+                                       , "***"
+                                       , "*** Failed while trying to extract a pointwise interpretation."
+                                       , "***"
+                                       , "*** This could be a bug with SBV or the backend solver. Please report!"
+                                       ]
+
+-- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
+-- when we have all booleans and z3 decides to spit out an expression), just brute force our
+-- way out of it. Note that we only do this if we have a pure boolean type, as otherwise we'd blow
+-- up. And I think it'll only be necessary then, I haven't seen z3 try anything smarter in other scenarios.
+pointWiseExtract ::  forall m. (MonadIO m, MonadQuery m) => String -> SBVType -> m (Maybe ([([SExpr], SExpr)], SExpr))
+pointWiseExtract nm typ = tryPointWise
+  where trueSExpr  = ENum (1, Nothing)
+        falseSExpr = ENum (0, Nothing)
+
+        isTrueSExpr (ENum (1, Nothing)) = True
+        isTrueSExpr (ENum (0, Nothing)) = False
+        isTrueSExpr s                   = error $ "Data.SBV.pointWiseExtract: Impossible happened: Received: " ++ show s
+
+        (nArgs, isBoolFunc) = case typ of
+                                SBVType ts -> (length ts - 1, all (== KBool) ts)
+
+        getBVal :: [SExpr] -> m ([SExpr], SExpr)
+        getBVal args = do let shc c | isTrueSExpr c = "true"
+                                    | True          = "false"
+
+                              as = unwords $ map shc args
+
+                              cmd   = "(get-value ((" ++ nm ++ " " ++ as ++ ")))"
+
+                              bad   = unexpected "get-value" cmd ("pointwise value of boolean function " ++ nm ++ " on " ++ show as) Nothing
+
+                          r <- ask cmd
+
+                          parse r bad $ \case EApp [EApp [_, e]] -> return (args, e)
+                                              _                  -> bad r Nothing
+
+        getBVals :: m [([SExpr], SExpr)]
+        getBVals = mapM getBVal $ replicateM nArgs [falseSExpr, trueSExpr]
+
+        tryPointWise
+          | not isBoolFunc
+          = return Nothing
+          | nArgs < 1
+          = error $ "Data.SBV.pointWiseExtract: Impossible happened, nArgs < 1: " ++ show nArgs ++ " type: " ++ show typ
+          | True
+          = do vs <- getBVals
+               -- Pick the value that will give us the fewer entries
+               let (trues, falses) = partition (\(_, v) -> isTrueSExpr v) vs
+               return $ Just $ if length trues <= length falses
+                               then (trues,  falseSExpr)
+                               else (falses, trueSExpr)
 
 -- | Functions of arity 1
 instance ( SymVal a, HasKind a, SMTValue a
@@ -563,6 +621,8 @@ instance ( SymVal a, HasKind a, SMTValue a
          where
   sexprToArg _ [a0] = sexprToVal a0
   sexprToArg _ _    = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
 
   smtFunSaturate f = f <$> freshVar_
 
@@ -575,6 +635,8 @@ instance ( SymVal a,  HasKind a, SMTValue a
   sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
   sexprToArg _ _        = Nothing
 
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
+
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_
 
 -- | Functions of arity 3
@@ -586,6 +648,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
          where
   sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
   sexprToArg _ _            = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
 
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_
 
@@ -600,6 +664,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
   sexprToArg _ [a0, a1, a2, a3] = (,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3
   sexprToArg _ _               = Nothing
 
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
+
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 5
@@ -613,6 +679,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
          where
   sexprToArg _ [a0, a1, a2, a3, a4] = (,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4
   sexprToArg _ _                    = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
 
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
@@ -629,6 +697,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
   sexprToArg _ [a0, a1, a2, a3, a4, a5] = (,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5
   sexprToArg _ _                        = Nothing
 
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
+
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Functions of arity 7
@@ -644,6 +714,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = (,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6
   sexprToArg _ _                            = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
 
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
@@ -662,6 +734,8 @@ instance ( SymVal a,   HasKind a, SMTValue a
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = (,,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6 <*> sexprToVal a7
   sexprToArg _ _                                = Nothing
 
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
+
   smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
@@ -673,8 +747,16 @@ getFunction f = do nm <- smtFunName f
 
                    r <- ask cmd
 
-                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm, Just assocs <- sexprToFun f e -> return assocs
-                                       _ -> bad r Nothing
+                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f e
+                                                                               case mbAssocs of
+                                                                                 Just assocs -> return assocs
+                                                                                 Nothing     -> do mbPVS <- pointWiseExtract nm (smtFunType f)
+                                                                                                   case mbPVS >>= convert of
+                                                                                                     Just x  -> return x
+                                                                                                     Nothing -> bad r Nothing
+                                       _                                 -> bad r Nothing
+    where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
+          sexprPoint (as, v) = (,) <$> sexprToArg f as    <*> sexprToVal v
 
 -- | Generalization of 'Data.SBV.Control.getUninterpretedValue'
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
