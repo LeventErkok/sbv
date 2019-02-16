@@ -89,7 +89,6 @@ import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel)
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
-
 import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.Lib       (qfsToString, isKString)
 import Data.SBV.Utils.SExpr
@@ -939,18 +938,21 @@ getUIFunCVAssoc mbi (nm, typ) = do
 
         getBVal :: [CV] -> m ([CV], CV)
         getBVal args = do let shc v
-                                | v == trueCV = "true"
-                                | True        = "false"
+                               | v == trueCV = "true"
+                               | True        = "false"
 
-                              as    = unwords $ map shc args
-                              cmd   = "(eval (" ++ nm ++ " " ++ as ++ "))"
-                              bad   = unexpected "eval" cmd ("pointwise value of boolean function " ++ nm ++ " on " ++ show as) Nothing
+                              as = unwords $ map shc args
+
+                              cmd   = "(get-value ((" ++ nm ++ " " ++ as ++ ")))"
+
+                              bad   = unexpected "get-value" cmd ("pointwise value of boolean function " ++ nm ++ " on " ++ show as) Nothing
 
                           r <- ask cmd
 
-                          parse r bad $ \e -> case sexprToVal e :: Maybe Bool of
-                                                Nothing -> bad r Nothing
-                                                Just b  -> return (args, if b then trueCV else falseCV)
+                          parse r bad $ \case EApp [EApp [_, e]] -> case sexprToVal e :: Maybe Bool of
+                                                                      Nothing -> bad r Nothing
+                                                                      Just b  -> return (args, if b then trueCV else falseCV)
+                                              _                  -> bad r Nothing
 
         getBVals :: m [([CV], CV)]
         getBVals = mapM getBVal $ replicateM nArgs [falseCV, trueCV]
@@ -1170,16 +1172,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                     (rejects, defs) = unzip $ map mkNotEq [ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
                                                     -- Otherwise, we have things to refute, go for it:
-                                                    mkNotEq (nm, typ@(SBVType ts, vs)) = (reject, def ++ dif)
+                                                    mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
                                                       where nm' = nm ++ "_model" ++ show cnt
 
                                                             reject = nm' ++ "_reject"
 
                                                             -- rounding mode doesn't matter here, just pick one
                                                             scv = cvToSMTLib RoundNearestTiesToEven
-
-                                                            -- Is this just a fall-thru only case?
-                                                            isFallThru = null (fst vs)
 
                                                             (ats, rt) = (init ts, last ts)
 
@@ -1197,40 +1196,17 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                     cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
                                                                     eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
 
-                                                            def
-                                                              | isFallThru
-                                                              = []
-                                                              | True
-                                                              =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
+                                                            def =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
                                                                   :  chain vs
                                                                   ++ [")"]
 
                                                             pad = replicate (1 + length nm' - length nm) ' '
 
-                                                            dif
-                                                              | not isFallThru
-                                                              = [ "(define-fun " ++  reject ++ " () Bool"
-                                                                , "   (exists (" ++ args ++ ")"
-                                                                , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
-                                                                , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
-                                                                ]
-                                                              | True
-                                                              = [ "(define-fun " ++ reject ++ " () Bool"
-                                                                , "   (distinct " ++ scv (snd vs)
-                                                                , "             (" ++ nm ++ " " ++ defaults ++ ")"
-                                                                , "   ))"
-                                                                ]
-                                                              where defaults = case mapM defaultKindedValue ats of
-                                                                                 Just xs -> unwords (map scv xs)
-                                                                                 Nothing -> error $ unlines [ ""
-                                                                                                            , "*** Data.SBV.getAllSatResult: Impossible happened!"
-                                                                                                            , "*** Cannot create a default parameter list for:"
-                                                                                                            , "***"
-                                                                                                            , "***   " ++  show typ
-                                                                                                            , "***"
-                                                                                                            , "*** Please report this as a bug!"
-                                                                                                            ]
-
+                                                            dif = [ "(define-fun " ++  reject ++ " () Bool"
+                                                                  , "   (exists (" ++ args ++ ")"
+                                                                  , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
+                                                                  , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                                  ]
 
                                           eqs = interpretedEqs ++ uninterpretedEqs
 
