@@ -104,6 +104,7 @@ import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Sums
 import qualified TestSuite.Queries.Tuples
 import qualified TestSuite.Queries.UISat
+import qualified TestSuite.Queries.UISatEx
 import qualified TestSuite.Queries.Uninterpreted
 import qualified TestSuite.QuickCheck.QC
 import qualified TestSuite.Transformers.SymbolicEval
@@ -238,6 +239,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Sums.tests
                , TestSuite.Queries.Tuples.tests
                , TestSuite.Queries.UISat.tests
+               , TestSuite.Queries.UISatEx.tests
                , TestSuite.Queries.Uninterpreted.tests
                , TestSuite.Transformers.SymbolicEval.tests
                , TestSuite.Uninterpreted.AUF.tests

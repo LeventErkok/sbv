@@ -312,6 +312,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Tuples
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.Queries.UISat
+                  , TestSuite.Queries.UISatEx
                   , TestSuite.QuickCheck.QC
                   , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
