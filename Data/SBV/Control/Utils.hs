@@ -572,7 +572,24 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
 -- way out of it. Note that we only do this if we have a pure boolean type, as otherwise we'd blow
 -- up. And I think it'll only be necessary then, I haven't seen z3 try anything smarter in other scenarios.
 pointWiseExtract ::  forall m. (MonadIO m, MonadQuery m) => String -> SBVType -> m (Maybe ([([SExpr], SExpr)], SExpr))
-pointWiseExtract nm typ = tryPointWise
+pointWiseExtract nm typ
+   | isBoolFunc
+   = tryPointWise
+   | True
+   = error $ unlines [ ""
+                     , "*** Data.SBV.getFunction: Unsupported: Extracting interpretation for function:"
+                     , "***"
+                     , "***     " ++ nm ++ " :: " ++ show typ
+                     , "***"
+                     , "*** At this time, SBV does not support models for functions of this type."
+                     , "***"
+                     , "*** You can ignore uninterpreted function models for sat models using the 'satTrackUFs' parameter:"
+                     , "***"
+                     , "***             satWith    z3{satTrackUFs = False}"
+                     , "***             allSatWith z3{satTrackUFs = False}"
+                     , "***"
+                     , "*** Or, if this is a use case you'd like SBV to support, please get in touch!"
+                     ]
   where trueSExpr  = ENum (1, Nothing)
         falseSExpr = ENum (0, Nothing)
 
@@ -1000,57 +1017,26 @@ getUIFunCVAssoc mbi (nm, typ) = do
       toRes :: SExpr -> Maybe CV
       toRes = recoverKindedValue rt
 
+      -- In case we end up in the pointwise scenerio, boolify the result
+      -- as that's the only type we support here.
+      tryPointWise bailOut = do mbSExprs <- pointWiseExtract nm typ
+                                case mbSExprs of
+                                  Nothing     -> bailOut
+                                  Just sExprs -> case convert sExprs of
+                                                   Just res -> return res
+                                                   Nothing  -> bailOut
+
   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> let bailOut = bad r Nothing
                                                            in case parseSExprFunction e of
-                                                                Just (Right assocs)         -> case convert assocs of
-                                                                                                  Just res -> return res
-                                                                                                  Nothing  -> tryPointWise bailOut
-                                                                Just (Left nm') | nm == nm' -> case defaultKindedValue rt of
-                                                                                                  Just res -> return ([], res)
-                                                                                                  _        -> bailOut
-                                                                                | True      -> bad r Nothing
-                                                                Nothing                     -> tryPointWise bailOut
+                                                                Just (Right assocs) | Just res <- convert assocs                   -> return res
+                                                                                    | True                                         -> tryPointWise bailOut
+
+                                                                Just (Left nm')     | nm == nm', Just res <- defaultKindedValue rt -> return ([], res)
+                                                                                    | True                                         -> bad r Nothing
+
+                                                                Nothing                                                            -> tryPointWise bailOut
+
                       _                                 -> bad r Nothing
-  where -- If we get unlucky and can't parse z3's output (happens when we have all booleans and z3 decides
-        -- to spit out an expression), just brute force our way out of it. Note that we only do this if
-        -- we have a pure boolean type, as otherwise we'd blow up. And I think it'll only be necessary
-        -- then, I haven't seen z3 try anything smarter in other scenarios.
-        (nArgs, isBoolFunc) = case typ of
-                                SBVType ts -> (length ts - 1, all (== KBool) ts)
-
-        getBVal :: [CV] -> m ([CV], CV)
-        getBVal args = do let shc v
-                               | v == trueCV = "true"
-                               | True        = "false"
-
-                              as = unwords $ map shc args
-
-                              cmd   = "(get-value ((" ++ nm ++ " " ++ as ++ ")))"
-
-                              bad   = unexpected "get-value" cmd ("pointwise value of boolean function " ++ nm ++ " on " ++ show as) Nothing
-
-                          r <- ask cmd
-
-                          parse r bad $ \case EApp [EApp [_, e]] -> case sexprToVal e :: Maybe Bool of
-                                                                      Nothing -> bad r Nothing
-                                                                      Just b  -> return (args, if b then trueCV else falseCV)
-                                              _                  -> bad r Nothing
-
-        getBVals :: m [([CV], CV)]
-        getBVals = mapM getBVal $ replicateM nArgs [falseCV, trueCV]
-
-        tryPointWise bailOut
-          | not isBoolFunc
-          = bailOut -- giving up..
-          | nArgs < 1
-          = error $ "Data.SBV.getUIFunCVAssoc: Impossible happened, nArgs < 1: " ++ show nArgs ++ " type: " ++ show typ
-          | True
-          = do vs <- getBVals
-               -- Pick the value that will give us the fewer entries
-               let (trues, falses) = partition (\(_, v) -> v == trueCV) vs
-               return $ if length trues <= length falses
-                        then (trues,  falseCV)
-                        else (falses, trueCV)
 
 -- | Generalization of 'Data.SBV.Control.checkSat'
 checkSat :: (MonadIO m, MonadQuery m) => m CheckSatResult
