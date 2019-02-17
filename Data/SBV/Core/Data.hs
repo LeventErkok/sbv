@@ -394,6 +394,8 @@ class SolverContext m where
    -- control of time-outs, directly from SBV.
    setTimeOut :: Integer -> m ()
 
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption #-}
+
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
    setLogic     = setOption . SetLogic
