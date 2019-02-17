@@ -581,14 +581,16 @@ pointWiseExtract nm typ
                      , "***"
                      , "***     " ++ nm ++ " :: " ++ show typ
                      , "***"
-                     , "*** At this time, SBV does not support models for functions of this type."
+                     , "*** At this time, the expression returned by the solver is too complicated for SBV!"
                      , "***"
                      , "*** You can ignore uninterpreted function models for sat models using the 'satTrackUFs' parameter:"
                      , "***"
                      , "***             satWith    z3{satTrackUFs = False}"
                      , "***             allSatWith z3{satTrackUFs = False}"
                      , "***"
-                     , "*** Or, if this is a use case you'd like SBV to support, please get in touch!"
+                     , "*** You can see the response from the solver by running with '{verbose = True}' option."
+                     , "***"
+                     , "*** NB. If this is a use case you'd like SBV to support, please get in touch!"
                      ]
   where trueSExpr  = ENum (1, Nothing)
         falseSExpr = ENum (0, Nothing)

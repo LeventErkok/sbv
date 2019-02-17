@@ -17,9 +17,11 @@
 
   * SBV models now contain values for uninterpreted functions. This was a long
     requested feature, but there was no previous support since SMTLib does not
-    have a standard way of querying such values. We now support this for z3 only,
-    using z3 specific syntax in responses, so other solvers may not work. The
-    calls to `sat` now include function models, and you can also get them
+    have a standard way of querying such values. We now support this for z3 and
+    cvc4: Note that SBV tries its best to interpret the output from these
+    solvers, but it may give up if the response is too complicated (or something
+    I haven't seen before!) due to non-standard format. Barring these details,
+    the calls to `sat` now include function models, and you can also get them
     via `getFunction` in a query.
 
   * [BACKWARDS COMPATIBILITY] The `allSat` function is similarly modified to
