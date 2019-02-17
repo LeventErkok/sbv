@@ -253,7 +253,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
         -- same order and thus not mess up our test suite if the
         -- solver decides to return them in the alternate order
         rearrange :: AllSatResult -> AllSatResult
-        rearrange (AllSatResult (b1, b2, ms)) = AllSatResult (b1, b2, sortOn (show . SatResult) ms)
+        rearrange (AllSatResult (b1, b2, b3, ms)) = AllSatResult (b1, b2, b3, sortOn (show . SatResult) ms)
 
 -- | Solve the U2-bridge crossing puzzle, starting by testing solutions with
 -- increasing number of steps, until we find one. We have:

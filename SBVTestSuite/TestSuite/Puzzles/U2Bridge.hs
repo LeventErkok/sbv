@@ -31,4 +31,4 @@ tests =
  where act     = do b <- exists_; p1 <- exists_; p2 <- exists_; return (b, p1, p2)
        count n = numberOfModels $ isValid `fmap` mapM (const act) [1..(n::Int)]
        slv n   = rearrange `fmap` allSat (isValid `fmap` mapM (const act) [1..(n::Int)])
-       rearrange (AllSatResult (b1, b2, ms)) = AllSatResult (b1, b2, sortOn (show . SatResult) ms)
+       rearrange (AllSatResult (b1, b2, b3, ms)) = AllSatResult (b1, b2, b3, sortOn (show . SatResult) ms)

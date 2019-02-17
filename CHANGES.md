@@ -84,6 +84,10 @@
   * [BACKWARDS COMPATIBILITY] Renamed the class `IEEEFloatConvertable` to
     `IEEEFloatConvertible`. (Typo in name!)
 
+  * [BACKWARDS COMPATIBILITY] The 'AllSat' result now tracks if search has stopped
+    because the solver returned 'Unknown'. Previously this information was not
+    displayed.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking

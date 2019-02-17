@@ -1109,7 +1109,7 @@ getUIs = do State{rUIMap, rIncState} <- queryState
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
 -- The bool is true if the model is unique upto prefix existentials.
-getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m (Bool, Bool, [SMTResult])
+getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m (Bool, Bool, Bool, [SMTResult])
 getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
@@ -1170,21 +1170,21 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, ms) <- loop topState (allUiFuns, uiFuns) vars cfg
-                     return (sc, w, reverse ms)
+                     (sc, unk, ms) <- loop topState (allUiFuns, uiFuns) vars cfg
+                     return (sc, w, unk, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
          loop topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
-           where go :: Int -> [SMTResult] -> m (Bool, [SMTResult])
+           where go :: Int -> [SMTResult] -> m (Bool, Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
 
                         when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
 
-                        return (True, sofar)
+                        return (True, False, sofar)
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
 
@@ -1197,10 +1197,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                         cs <- checkSat
                         case cs of
                           Unsat -> do endMsg
-                                      return (False, sofar)
+                                      return (False, False, sofar)
                           Unk   -> do queryDebug ["*** Solver returned unknown, terminating query."]
                                       endMsg
-                                      return (False, sofar)
+                                      return (False, True, sofar)
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
@@ -1327,7 +1327,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                  -- send the disallow clause and the uninterpreted rejector:
                                                  case (disallow, rejectFuncs) of
-                                                    (Nothing, Nothing) -> return (False, resultsSoFar)
+                                                    (Nothing, Nothing) -> return (False, False, resultsSoFar)
                                                     (Just d,  Nothing) -> do constrain d
                                                                              go (cnt+1) resultsSoFar
                                                     (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"

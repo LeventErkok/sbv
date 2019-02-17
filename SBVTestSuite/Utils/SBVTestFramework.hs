@@ -161,10 +161,17 @@ doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile n
          cleanUp = BS.filter (/= slashr)
          slashr  = fromIntegral (ord '\r')
 
--- | Count the number of models
+-- | Count the number of models. It's not kosher to
+-- call this function if you provided a max-model count
+-- that was hit, or the search was stopped because the
+-- solver said 'Unknown' at some point.
 numberOfModels :: Provable a => a -> IO Int
-numberOfModels p = do AllSatResult (_, _, rs) <- allSat p
-                      return $ length rs
+numberOfModels p = do AllSatResult (maxHit, _, unk, rs) <- allSat p
+                      let l = length rs
+                      case (unk, maxHit) of
+                        (True, _)   -> error $ "Data.SBV.numberOfModels: Search was stopped because solver said 'Unknown'. At this point, we saw: " ++ show l ++ " model(s)."
+                        (_,   True) -> error $ "Data.SBV.numberOfModels: Search was stopped because the user-specified max-model count was hit at " ++ show l ++ " model(s)."
+                        _           -> return l
 
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
