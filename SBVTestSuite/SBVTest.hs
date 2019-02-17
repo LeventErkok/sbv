@@ -46,6 +46,7 @@ import qualified TestSuite.Basics.String
 import qualified TestSuite.Basics.Sum
 import qualified TestSuite.Basics.TOut
 import qualified TestSuite.Basics.Tuple
+import qualified TestSuite.Basics.UISat
 import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
 import qualified TestSuite.BitPrecise.MergeSort
@@ -186,6 +187,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.Sum.tests
                , TestSuite.Basics.TOut.tests
                , TestSuite.Basics.Tuple.tests
+               , TestSuite.Basics.UISat.tests
                , TestSuite.BitPrecise.BitTricks.tests
                , TestSuite.BitPrecise.Legato.tests
                , TestSuite.BitPrecise.MergeSort.tests
