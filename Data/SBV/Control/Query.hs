@@ -327,6 +327,15 @@ getModelAtIndex mbi = do
 
                               -- collect UIs if requested
                               let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
+
+                              -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
+                              -- as cex's tend to get larger
+                              unless (null uiFuns) $
+                                 let solverCaps = capabilities (solver cfg)
+                                 in case supportsFlattenedSequences solverCaps of
+                                      Nothing   -> return ()
+                                      Just cmds -> mapM_ (send True) cmds
+
                               uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
                               return SMTModel { modelObjectives = []
