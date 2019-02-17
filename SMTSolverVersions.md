@@ -10,7 +10,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jul 2 2018
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version as downloaded from the above site on April 15, 2018
+      * Version as downloaded from the above site on Feb 17, 2019
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.5.3
