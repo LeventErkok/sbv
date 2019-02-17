@@ -24,6 +24,9 @@
     the calls to `sat` now include function models, and you can also get them
     via `getFunction` in a query.
 
+    For an example use case demonstrating how to use UF-models to synthesize a
+    simple multiplier, see "Documentation/SBV/Examples/Uninterpreted/Multiply.hs".
+
   * [BACKWARDS COMPATIBILITY] The `allSat` function is similarly modified to
     return uninterpreted-function models. There are a few technical restrictions,
     however: Only the values of uninterpreted functions without any uninterpreted
