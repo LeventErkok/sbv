@@ -373,10 +373,10 @@ sbvToSymSV sbv = do
 -- two instances of this class. Note that we use this mechanism
 -- internally and do not export it from SBV.
 class SolverContext m where
-   -- | Add a constraint, any satisfying instance must satisfy this condition
-   constrain       :: SBool -> m ()
-   -- | Add a soft constraint. The solver will try to satisfy this condition if possible, but won't if it cannot
-   softConstrain   :: SBool -> m ()
+   -- | Add a constraint, any satisfying instance must satisfy this condition.
+   constrain :: SBool -> m ()
+   -- | Add a soft constraint. The solver will try to satisfy this condition if possible, but won't if it cannot.
+   softConstrain :: SBool -> m ()
    -- | Add a named constraint. The name is used in unsat-core extraction.
    namedConstraint :: String -> SBool -> m ()
    -- | Add a constraint, with arbitrary attributes. Used in interpolant generation.
