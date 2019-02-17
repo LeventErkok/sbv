@@ -311,6 +311,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Sums
                   , TestSuite.Queries.Tuples
                   , TestSuite.Queries.Uninterpreted
+                  , TestSuite.Queries.UISat
                   , TestSuite.QuickCheck.QC
                   , TestSuite.Transformers.SymbolicEval
                   , TestSuite.Uninterpreted.AUF
