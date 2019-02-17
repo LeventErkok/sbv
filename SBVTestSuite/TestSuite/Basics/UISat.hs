@@ -56,3 +56,5 @@ test3 = do setLogic Logic_ALL
            y <- free "ny"
            constrain $ q1 x   .== q1 x
            constrain $ q2 x y .== q2 x y
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
