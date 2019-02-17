@@ -1640,7 +1640,7 @@ data SMTConfig = SMTConfig {
        , satCmd              :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , allSatMaxModelCount :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
        , allSatPrintAlong    :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
-       , allSatTrackUFs      :: Bool           -- ^ In a 'Data.SBV.allSat' call, should we consider differing uninterpreted-function values as producing new models?
+       , satTrackUFs         :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
        , isNonModelVar       :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , transcript          :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion       :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool

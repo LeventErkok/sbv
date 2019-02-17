@@ -105,4 +105,4 @@ puzzle = do n <- sInteger "N"
 -- over the prefix existentials and the assignments to uninterpreted function 'col'
 -- for model purposes here, as they don't represent a different solution.)
 flowerCount :: IO ()
-flowerCount = print =<< allSatWith z3{allSatTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)} puzzle
+flowerCount = print =<< allSatWith z3{satTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)} puzzle

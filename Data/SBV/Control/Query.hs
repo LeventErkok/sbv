@@ -325,8 +325,8 @@ getModelAtIndex mbi = do
                               let assocs =  sortOn fst prefixObservables
                                          ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
 
-                              -- collect UIs
-                              let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1] -- functions have at least two things in their type!
+                              -- collect UIs if requested
+                              let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
                               uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
                               return SMTModel { modelObjectives = []

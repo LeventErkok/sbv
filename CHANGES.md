@@ -61,10 +61,12 @@
   * Added configuration option `allSatPrintAlong`. If set to True, calls to
     allSat will print their models as they are found. The default is False.
 
-  * Added configuration parameter `allSatTrackUFs` (defaulting to True) to control
-    if changes to uninterpreted functions is considered as a different model. In
-    theory this should always be True, but for most practical problems we typically
-    don't care about the function itself but that it exists.
+  * Added configuration parameter `satTrackUFs` (defaulting to True) to control
+    if SBV should try to extract models for uninterpreted functions. In theory,
+    this should always be True, but for most practical problems we typically
+    don't care about the function values itself but that it exists. Set to 'False'
+    if this is the case for your problem. Note that this setting is also respected
+    in 'allSat' calls.
 
   * Added unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
     'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,

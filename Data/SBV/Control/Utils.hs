@@ -1122,7 +1122,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      allUninterpreteds <- getUIs
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
-                     let allUiFuns = [u | allSatTrackUFs cfg                                      -- config says consider UIFs
+                     let allUiFuns = [u | satTrackUFs cfg                                         -- config says consider UIFs
                                         , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
                                         , not (isNonModelVar cfg nm)                              -- make sure they aren't explicitly ignored
                                      ]
