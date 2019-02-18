@@ -25,6 +25,8 @@
 [GOOD] (assert s2)
 [SEND] (check-sat)
 [RECV] sat
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [SEND] (get-value (q1))
 [RECV] ((q1 (lambda ((x!1 Bool)) x!1)))
 

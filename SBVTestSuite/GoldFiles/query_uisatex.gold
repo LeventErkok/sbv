@@ -111,6 +111,8 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 0))
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [SEND] (get-value (q1))
 [RECV] ((q1 (lambda ((x!1 Int))
          (ite (= x!1 0) 1 (ite (= x!1 (- 3)) 9 (ite (= x!1 3) 75 12))))))
