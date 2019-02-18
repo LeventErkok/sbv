@@ -110,6 +110,7 @@ instance MonadIO m => SolverContext (QueryT m) where
    softConstrain          = addQueryConstraint True  []
    namedConstraint nm     = addQueryConstraint False [(":named", nm)]
    constrainWithAttribute = addQueryConstraint False
+   contextState           = queryState
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -500,11 +501,11 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
-  smtFunSaturate :: (MonadIO m, MonadQuery m) => fun -> m (SBV r)
-  smtFunName     :: (MonadIO m, MonadQuery m) => fun -> m String
+  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m String
+  smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
-  sexprToFun     :: (MonadIO m, MonadQuery m) => fun -> SExpr -> m (Maybe ([(a, r)], r))
+  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m) => fun -> SExpr -> m (Maybe ([(a, r)], r))
 
   {-# MINIMAL sexprToArg, smtFunSaturate, smtFunType  #-}
 
@@ -516,12 +517,11 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
     = Nothing
 
   -- Given the function, determine what its name is and do some sanity checks
-  smtFunName f = do st@State{rUIMap} <- queryState
+  smtFunName f = do st@State{rUIMap} <- contextState
                     uiMap <- liftIO $ readIORef rUIMap
                     findName st uiMap
     where findName st@State{spgm} uiMap = do
-             res <- smtFunSaturate f
-             r <- liftIO $ sbvToSV st res
+             r <- liftIO $ sbvToSV st (smtFunSaturate f)
              liftIO $ forceSVArg r
              SBVPgm asgns <- liftIO $ readIORef spgm
 
@@ -633,6 +633,18 @@ pointWiseExtract nm typ
                                then (trues,  falseSExpr)
                                else (falses, trueSExpr)
 
+-- | For saturation purposes, get a proper argument. The forall quantification
+-- is safe here since we only use in smtFunSaturate calls, which looks at the
+-- kind stored inside only.
+mkArg :: forall a. Kind -> SBV a
+mkArg k = case defaultKindedValue k of
+            Nothing -> error $ unlines [ ""
+                                       , "*** Data.SBV.smtFunSaturate: Impossible happened!"
+                                       , "*** Unable to create a valid parameter for kind: " ++ show k
+                                       , "*** Please report this as an SBV bug!"
+                                       ]
+            Just c -> SBV $ SVal k (Left c)
+
 -- | Functions of arity 1
 instance ( SymVal a, HasKind a, SMTValue a
          , SatModel r, HasKind r, SMTValue r
@@ -643,7 +655,7 @@ instance ( SymVal a, HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_
+  smtFunSaturate f = f $ mkArg (kindOf (Proxy @a))
 
 -- | Functions of arity 2
 instance ( SymVal a,  HasKind a, SMTValue a
@@ -656,7 +668,8 @@ instance ( SymVal a,  HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
 
 -- | Functions of arity 3
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -670,7 +683,9 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
 
 -- | Functions of arity 4
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -685,7 +700,10 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
+                       (mkArg (kindOf (Proxy @d)))
 
 -- | Functions of arity 5
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -701,7 +719,11 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
+                       (mkArg (kindOf (Proxy @d)))
+                       (mkArg (kindOf (Proxy @e)))
 
 -- | Functions of arity 6
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -718,7 +740,12 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
+                       (mkArg (kindOf (Proxy @d)))
+                       (mkArg (kindOf (Proxy @e)))
+                       (mkArg (kindOf (Proxy @f)))
 
 -- | Functions of arity 7
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -736,7 +763,13 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
+                       (mkArg (kindOf (Proxy @d)))
+                       (mkArg (kindOf (Proxy @e)))
+                       (mkArg (kindOf (Proxy @f)))
+                       (mkArg (kindOf (Proxy @g)))
 
 -- | Functions of arity 8
 instance ( SymVal a,   HasKind a, SMTValue a
@@ -755,10 +788,17 @@ instance ( SymVal a,   HasKind a, SMTValue a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
+                       (mkArg (kindOf (Proxy @b)))
+                       (mkArg (kindOf (Proxy @c)))
+                       (mkArg (kindOf (Proxy @d)))
+                       (mkArg (kindOf (Proxy @e)))
+                       (mkArg (kindOf (Proxy @f)))
+                       (mkArg (kindOf (Proxy @g)))
+                       (mkArg (kindOf (Proxy @h)))
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: (MonadIO m, MonadQuery m, SMTFunction fun a r) => fun -> m ([(a, r)], r)
+getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SMTFunction fun a r) => fun -> m ([(a, r)], r)
 getFunction f = do nm <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
