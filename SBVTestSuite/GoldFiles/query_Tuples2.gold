@@ -8,7 +8,7 @@
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
-[GOOD] (declare-datatypes () ((SBVTuple0 SBVTuple0)))
+[GOOD] (declare-datatypes ((SBVTuple0 0)) (((mkSBVTuple0))))
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
                                            ((mkSBVTuple2 (proj_1_SBVTuple2 T1)
                                                          (proj_2_SBVTuple2 T2))))))
@@ -30,7 +30,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 0 (mkSBVTuple2 #x63 SBVTuple0))))
+[RECV] ((s0 (mkSBVTuple2 0 (mkSBVTuple2 #x63 mkSBVTuple0))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
