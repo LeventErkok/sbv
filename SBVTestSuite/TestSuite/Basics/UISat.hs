@@ -11,6 +11,7 @@
 
 module TestSuite.Basics.UISat(tests)  where
 
+import Data.SBV.Control
 import Utils.SBVTestFramework
 
 -- Test suite
@@ -41,20 +42,15 @@ q2 = uninterpret "q2"
 
 test1 :: Goal
 test1 = do setLogic Logic_ALL
-           x <- free "nx"
-           constrain $ q1 x .== q1 x
+           registerUISMTFunction q1
 
 test2 :: Goal
 test2 = do setLogic Logic_ALL
-           x <- free "nx"
-           y <- free "ny"
-           constrain $ q2 x y .== q2 x y
+           registerUISMTFunction q2
 
 test3 :: Goal
 test3 = do setLogic Logic_ALL
-           x <- free "nx"
-           y <- free "ny"
-           constrain $ q1 x   .== q1 x
-           constrain $ q2 x y .== q2 x y
+           registerUISMTFunction q1
+           registerUISMTFunction q2
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
