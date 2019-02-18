@@ -11,7 +11,6 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () Bool) ; tracks user variable "nx"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -19,7 +18,7 @@
 [GOOD] (declare-fun q1 (Bool) Bool)
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Bool (q1 s0))
+[GOOD] (define-fun s0 () Bool (q1 false))
 *** Checking Satisfiability, all solutions..
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
