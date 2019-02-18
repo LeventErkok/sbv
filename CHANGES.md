@@ -38,6 +38,16 @@
     should not cause much trouble in practice, but do get in touch if it is a
     use-case for you.
 
+  * Added configuration option `allSatPrintAlong`. If set to True, calls to
+    allSat will print their models as they are found. The default is False.
+
+  * Added configuration parameter `satTrackUFs` (defaulting to True) to control
+    if SBV should try to extract models for uninterpreted functions. In theory,
+    this should always be True, but for most practical problems we typically
+    don't care about the function values itself but that it exists. Set to 'False'
+    if this is the case for your problem. Note that this setting is also respected
+    in 'allSat' calls.
+
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
     language and an engine for checking partial and total correctness of imperative programs.
     It uses Dijkstra's weakest preconditions methodology to establish correctness claims.
@@ -62,16 +72,6 @@
     IEEE754 rules, but occasionally we need to express object equality in a polymorphic
     way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
     except it works on all types.
-
-  * Added configuration option `allSatPrintAlong`. If set to True, calls to
-    allSat will print their models as they are found. The default is False.
-
-  * Added configuration parameter `satTrackUFs` (defaulting to True) to control
-    if SBV should try to extract models for uninterpreted functions. In theory,
-    this should always be True, but for most practical problems we typically
-    don't care about the function values itself but that it exists. Set to 'False'
-    if this is the case for your problem. Note that this setting is also respected
-    in 'allSat' calls.
 
   * Added unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
     'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,
