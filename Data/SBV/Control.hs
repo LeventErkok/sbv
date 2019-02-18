@@ -29,7 +29,7 @@ module Data.SBV.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , SMTValue(..), getValue, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
+     , SMTValue(..), getValue, registerUISMTFunction, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -94,7 +94,7 @@ import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, ge
                                       , freshArray, freshArray_, checkSat, ensureSat
                                       , checkSatUsing, getValue
                                       , getUninterpretedValue, timeout, io)
-import Data.SBV.Control.Utils (SMTValue)
+import Data.SBV.Control.Utils (SMTValue, registerUISMTFunction)
 
 import Data.SBV.Utils.ExtractIO (ExtractIO(..))
 

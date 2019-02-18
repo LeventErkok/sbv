@@ -24,9 +24,11 @@
 
 module Data.SBV.Control.Utils (
        io
-     , ask, send, getValue, getFunction, getUninterpretedValue, getValueCV, getUIFunCVAssoc, getUnsatAssumptions
-     , SMTValue(..), SMTFunction(..)
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs, getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
+     , ask, send, getValue, getFunction, getUninterpretedValue
+     , getValueCV, getUIFunCVAssoc, getUnsatAssumptions
+     , SMTValue(..), SMTFunction(..), registerUISMTFunction
+     , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
+     , getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_
      , parse
@@ -78,7 +80,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..)
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
-                              , extractSymbolicSimulationState
+                              , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
@@ -566,6 +568,14 @@ class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r wh
                                        , "***"
                                        , "*** This could be a bug with SBV or the backend solver. Please report!"
                                        ]
+
+-- | Registering an uninterpreted SMT function. This is typically not necessary as uses of the UI
+-- function itself will register it automatically. But there are cases where doing this explicitly can
+-- come in handy.
+registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
+registerUISMTFunction f = do st <- contextState
+                             nm <- smtFunName f
+                             io $ newUninterpreted st nm (smtFunType f) Nothing
 
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our

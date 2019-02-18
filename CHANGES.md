@@ -48,6 +48,11 @@
     if this is the case for your problem. Note that this setting is also respected
     in 'allSat' calls.
 
+  * Added function `registerUISMTFunction`, which can be used to directly register uninterpreted
+    functions. This is typically not necessary as uses of UI-functions do register them
+    automatically, but it can come in handy in certain scenarios where there are no
+    constraints on a UI-function other than its existence.
+
   * Added `Data.SBV.Tools.WeakestPreconditions` module, which provides a toy imperative
     language and an engine for checking partial and total correctness of imperative programs.
     It uses Dijkstra's weakest preconditions methodology to establish correctness claims.
