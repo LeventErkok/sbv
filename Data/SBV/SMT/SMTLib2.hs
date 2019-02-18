@@ -330,7 +330,7 @@ declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (ma
 -- @
 declTuple :: Int -> [String]
 declTuple arity
-  | arity == 0 = ["(declare-datatypes () ((SBVTuple0 SBVTuple0)))"]
+  | arity == 0 = ["(declare-datatypes ((SBVTuple0 0)) (((mkSBVTuple0))))"]
   | arity == 1 = error "Data.SBV.declTuple: Unexpected one-tuple"
   | True       =    (l1 ++ "(par (" ++ unwords [param i | i <- [1..arity]] ++ ")")
                  :  [pre i ++ proj i ++ post i    | i <- [1..arity]]
@@ -842,7 +842,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
-        sh (SBVApp (TupleConstructor 0)   [])    = "SBVTuple0"
+        sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
 
