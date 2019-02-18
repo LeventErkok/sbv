@@ -191,6 +191,7 @@ specifier cfg sv = case kindOf sv of
                      KString            -> text "%s"
                      KChar              -> text "%c"
                      KList k            -> die $ "list sort: " ++ show k
+                     KSet  k            -> die $ "set sort: " ++ show k
                      KUninterpreted s _ -> die $ "uninterpreted sort: " ++ s
                      KTuple k           -> die $ "tuple sort: " ++ show k
                      KMaybe  k          -> die $ "maybe sort: "  ++ show k
@@ -490,6 +491,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                       len (KBounded False n)   = 5 + length (show n) -- SWordN
                       len (KBounded True  n)   = 4 + length (show n) -- SIntN
                       len (KList s)            = die $ "List sort: " ++ show s
+                      len (KSet  s)            = die $ "Set sort: " ++ show s
                       len (KTuple s)           = die $ "Tuple sort: " ++ show s
                       len (KMaybe k)           = die $ "Maybe sort: " ++ show k
                       len (KEither k1 k2)      = die $ "Either sort: " ++ show (k1, k2)
@@ -750,6 +752,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                                        Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                        Just i  -> (True, canOverflow True i)
                                                KList     s        -> die $ "List sort " ++ show s
+                                               KSet      s        -> die $ "Set sort " ++ show s
                                                KTuple    s        -> die $ "Tuple sort " ++ show s
                                                KMaybe    ek       -> die $ "Maybe sort " ++ show ek
                                                KEither   k1 k2    -> die $ "Either sort " ++ show (k1, k2)

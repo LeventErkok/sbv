@@ -47,6 +47,7 @@ data Kind = KBool
           | KChar
           | KString
           | KList Kind
+          | KSet  Kind
           | KTuple [Kind]
           | KMaybe  Kind
           | KEither Kind Kind
@@ -67,6 +68,7 @@ instance Show Kind where
   show KString              = "SString"
   show KChar                = "SChar"
   show (KList e)            = "[" ++ show e ++ "]"
+  show (KSet  e)            = "{" ++ show e ++ "}"
   show (KTuple m)           = "(" ++ intercalate ", " (show <$> m) ++ ")"
   show (KMaybe k)           = "SMaybe "  ++ kindParen (showBaseKind k)
   show (KEither k1 k2)      = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
@@ -84,6 +86,7 @@ showBaseKind = sh
         sh k@KChar             = noS (show k)
         sh k@KString           = noS (show k)
         sh (KList k)           = "[" ++ sh k ++ "]"
+        sh (KSet k)            = "{" ++ sh k ++ "}"
         sh (KTuple ks)         = "(" ++ intercalate ", " (map sh ks) ++ ")"
         sh (KMaybe k)          = "Maybe "  ++ kindParen (sh k)
         sh (KEither k1 k2)     = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
@@ -109,7 +112,8 @@ smtType KFloat               = "(_ FloatingPoint  8 24)"
 smtType KDouble              = "(_ FloatingPoint 11 53)"
 smtType KString              = "String"
 smtType KChar                = "(_ BitVec 8)"
-smtType (KList k)            = "(Seq " ++ smtType k ++ ")"
+smtType (KList k)            = "(Seq "   ++ smtType k ++ ")"
+smtType (KSet  k)            = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUninterpreted s _) = s
 smtType (KTuple [])          = "SBVTuple0"
 smtType (KTuple kinds)       = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
@@ -134,6 +138,7 @@ kindHasSign = \case KBool            -> False
                     KString          -> False
                     KChar            -> False
                     KList{}          -> False
+                    KSet{}           -> False
                     KTuple{}         -> False
                     KMaybe{}         -> False
                     KEither{}        -> False
@@ -183,6 +188,7 @@ class HasKind a where
   isChar          :: a -> Bool
   isString        :: a -> Bool
   isList          :: a -> Bool
+  isSet           :: a -> Bool
   isTuple         :: a -> Bool
   isMaybe         :: a -> Bool
   isEither        :: a -> Bool
@@ -201,6 +207,7 @@ class HasKind a where
                   KString            -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar              -> error "SBV.HasKind.intSizeOf((S)Char)"
                   KList ek           -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
+                  KSet  ek           -> error $ "SBV.HasKind.intSizeOf((S)Set)"  ++ show ek
                   KTuple tys         -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
                   KMaybe k           -> error $ "SBV.HasKind.intSizeOf((S)Maybe)" ++ show k
                   KEither k1 k2      -> error $ "SBV.HasKind.intSizeOf((S)Either)" ++ show (k1, k2)
@@ -234,6 +241,9 @@ class HasKind a where
 
   isList          (kindOf -> KList{})          = True
   isList          _                            = False
+
+  isSet           (kindOf -> KSet{})           = True
+  isSet           _                            = False
 
   isTuple         (kindOf -> KTuple{})         = True
   isTuple         _                            = False
@@ -283,6 +293,7 @@ hasUninterpretedSorts KDouble                      = False
 hasUninterpretedSorts KChar                        = False
 hasUninterpretedSorts KString                      = False
 hasUninterpretedSorts (KList k)                    = hasUninterpretedSorts k
+hasUninterpretedSorts (KSet k)                     = hasUninterpretedSorts k
 hasUninterpretedSorts (KTuple ks)                  = any hasUninterpretedSorts ks
 hasUninterpretedSorts (KMaybe k)                   = hasUninterpretedSorts k
 hasUninterpretedSorts (KEither k1 k2)              = any hasUninterpretedSorts [k1, k2]

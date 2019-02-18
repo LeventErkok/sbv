@@ -26,6 +26,9 @@ import Data.SBV.Core.AlgReals
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
+import Data.Set (Set)
+import qualified Data.Set as Set
+
 -- | A constant value
 data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
           | CInteger  !Integer             -- ^ bit-vector/unbounded integer
@@ -34,6 +37,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
           | CChar     !Char                -- ^ character
           | CString   !String              -- ^ string
           | CList     ![CVal]              -- ^ list
+          | CSet      !(Set CVal)          -- ^ set
           | CUserSort !(Maybe Int, String) -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
           | CTuple    ![CVal]              -- ^ tuple
           | CMaybe    !(Maybe CVal)        -- ^ a maybe
@@ -48,10 +52,11 @@ cvRank CDouble   {} =  3
 cvRank CChar     {} =  4
 cvRank CString   {} =  5
 cvRank CList     {} =  6
-cvRank CUserSort {} =  7
-cvRank CTuple    {} =  8
-cvRank CMaybe    {} =  9
-cvRank CEither   {} = 10
+cvRank CSet      {} =  7
+cvRank CUserSort {} =  8
+cvRank CTuple    {} =  9
+cvRank CMaybe    {} = 10
+cvRank CEither   {} = 11
 
 -- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -64,6 +69,7 @@ instance Eq CVal where
   CChar     a == CChar     b = a == b
   CString   a == CString   b = a == b
   CList     a == CList     b = a == b
+  CSet      a == CSet      b = a == b
   CUserSort a == CUserSort b = a == b
   CTuple    a == CTuple    b = a == b
   CMaybe    a == CMaybe    b = a == b
@@ -87,6 +93,7 @@ instance Ord CVal where
   CChar     a `compare` CChar b     = a        `compare`                  b
   CString   a `compare` CString b   = a        `compare`                  b
   CList     a `compare` CList   b   = a        `compare`                  b
+  CSet      a `compare` CSet    b   = a        `compare`                  b
   CUserSort a `compare` CUserSort b = a        `compare`                  b
   CTuple    a `compare` CTuple    b = a        `compare`                  b
   CMaybe    a `compare` CMaybe    b = a        `compare`                  b
@@ -220,22 +227,24 @@ liftCV :: (AlgReal -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)
        -> ([CVal]              -> b)
+       -> (Set CVal            -> b)
        -> ([CVal]              -> b)
        -> (Maybe CVal          -> b)
        -> (Either CVal CVal    -> b)
        -> CV
        -> b
-liftCV f _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ f _ _ _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ f _ _ _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ f _ _ _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
+liftCV f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -283,6 +292,7 @@ mapCV r i f d c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CString   a -> CString   (s a)
                                                     CUserSort a -> CUserSort (u a)
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
+                                                    CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
                                                     CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
                                                     CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
                                                     CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
@@ -324,7 +334,7 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show snd shL shT shMaybe shEither w ++ kInfo
+showCV shk w               = liftCV show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
       where kw = kindOf w
 
             kInfo | shk  = " :: " ++ showBaseKind kw
@@ -334,6 +344,12 @@ showCV shk w               = liftCV show show show show show show snd shL shT sh
               where ke = case kw of
                            KList k -> k
                            _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
+
+            shS :: Set CVal -> String
+            shS xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ ")"
+              where ke = case kw of
+                           KSet k -> k
+                           _      -> error $ "Data.SBV.showCV: Impossible happened, expected set, got: " ++ show kw
 
             shT :: [CVal] -> String
             shT xs = "(" ++ intercalate "," xs' ++ ")"
@@ -366,6 +382,7 @@ mkConstCV KChar                a = error $ "Unexpected call to mkConstCV (Char) 
 mkConstCV KString              a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUninterpreted s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}            a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KSet{}             a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KTuple{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KMaybe{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KEither{}          a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
@@ -387,6 +404,8 @@ randomCVal k =
     KUninterpreted s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
+    KSet  ek           -> do l <- randomRIO (0, 100)
+                             CSet . Set.fromList <$> replicateM l (randomCVal ek)
     KTuple ks          -> CTuple <$> traverse randomCVal ks
     KMaybe ke          -> do i <- randomIO
                              if i

@@ -1135,6 +1135,7 @@ instance (SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KString          -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KChar            -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KList{}          -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KSet{}           -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUninterpreted{} -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KTuple{}         -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KMaybe{}         -> error $ "Unexpected Fractional case for: " ++ show k

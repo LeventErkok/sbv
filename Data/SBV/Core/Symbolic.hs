@@ -1076,6 +1076,7 @@ registerKind st k
          KChar          {}    -> return ()
          KString        {}    -> return ()
          KList          ek    -> registerKind st ek
+         KSet           ek    -> registerKind st ek
          KTuple         eks   -> mapM_ (registerKind st) eks
          KMaybe         ke    -> registerKind st ke
          KEither        k1 k2 -> mapM_ (registerKind st) [k1, k2]

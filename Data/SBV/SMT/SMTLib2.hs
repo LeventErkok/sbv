@@ -49,6 +49,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
         hasList        = any isList kindInfo
+        hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
         hasEither      = any isEither kindInfo
         hasMaybe       = any isMaybe  kindInfo
@@ -130,7 +131,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                QueryInternal -> ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
-                as  | null arrs                = ""
+                as  | null arrs && not hasSets = ""
                     | True                     = "A"
                 ufs | null uis && null tbls    = ""     -- we represent tables as UFs
                     | True                     = "UF"
@@ -754,6 +755,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
                               KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
+                              KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
                               KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
                               KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
                               KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
@@ -775,6 +777,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
+                                KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
                                 KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
                                 KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)

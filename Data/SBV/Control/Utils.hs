@@ -98,7 +98,7 @@ import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.SBV.Control.Types
 
-import qualified Data.Set as Set (toList)
+import qualified Data.Set as Set (toList, empty)
 
 import qualified Control.Exception as C
 
@@ -891,6 +891,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt KChar                 = Just $ CChar '\NUL'         -- why not?
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
+        cvt (KSet  _)             = Just $ CSet Set.empty
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
         cvt (KMaybe _)            = Just $ CMaybe Nothing
         cvt (KEither k1 _)        = CEither . Left <$> cvt k1   -- why not?
@@ -934,6 +935,8 @@ recoverKindedValue k e = case k of
                                             | True             -> Nothing
 
                            KList ek                            -> Just $ CV k $ CList $ interpretList ek e
+
+                           KSet _                              -> error "interpretSet: TBD"
 
                            KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
 
