@@ -1597,7 +1597,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
        , supportsDTConstructorSigs  :: Bool           -- ^ Supports full ascription on data-type constructors? (Z3 and cvc4 differ!)
-       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessor?.    (Z3 and cvc4 differ!)
+       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessor?     (Z3 and cvc4 differ!)
        , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output? (With given config lines.)
        }
 
