@@ -2076,6 +2076,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    softConstrain               (SBV c) = imposeConstraint True  []               c
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
    constrainWithAttribute atts (SBV c) = imposeConstraint False atts             c
+   contextState                        = symbolicEnv
 
    setOption o = addNewSMTOption  o
 

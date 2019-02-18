@@ -393,8 +393,10 @@ class SolverContext m where
    -- is in milliseconds. Also see the function 'Data.SBV.Control.timeOut' for finer level
    -- control of time-outs, directly from SBV.
    setTimeOut :: Integer -> m ()
+   -- | Get the state associated with this context
+   contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption #-}
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]

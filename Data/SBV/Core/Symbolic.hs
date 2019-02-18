@@ -588,6 +588,9 @@ instance MonadReader r m => MonadReader r (QueryT m) where
 -- results from the solver.
 type Query = QueryT IO
 
+instance MonadSymbolic Query where
+   symbolicEnv = queryState
+
 instance NFData OptimizeStyle where
    rnf x = x `seq` ()
 
