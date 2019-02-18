@@ -7,7 +7,7 @@
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes () ((BinOp (Plus) (Minus) (Times))))
+[GOOD] (declare-datatypes ((BinOp 0)) (((Plus) (Minus) (Times))))
 [GOOD] (define-fun BinOp_constrIndex ((x BinOp)) Int
           (ite (= x Plus) 0 (ite (= x Minus) 1 2))
        )

@@ -9,7 +9,7 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-logic ALL)
 [GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes () ((E (A) (B) (C))))
+[GOOD] (declare-datatypes ((E 0)) (((A) (B) (C))))
 [GOOD] (define-fun E_constrIndex ((x E)) Int
           (ite (= x A) 0 (ite (= x B) 1 2))
        )

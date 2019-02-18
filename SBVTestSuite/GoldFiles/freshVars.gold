@@ -36,7 +36,7 @@
 [GOOD] (declare-fun s13 () (_ FloatingPoint 11 53))
 [GOOD] (declare-fun s14 () Real)
 [GOOD] (declare-fun s15 () Int)
-[GOOD] (declare-datatypes () ((BinOp (Plus) (Minus) (Times))))
+[GOOD] (declare-datatypes ((BinOp 0)) (((Plus) (Minus) (Times))))
 [GOOD] (define-fun BinOp_constrIndex ((x BinOp)) Int
           (ite (= x Plus) 0 (ite (= x Minus) 1 2))
        )
