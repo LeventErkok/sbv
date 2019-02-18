@@ -1594,11 +1594,11 @@ data SolverCapabilities = SolverCapabilities {
        , supportsOptimization       :: Bool           -- ^ Supports optimization routines?
        , supportsPseudoBooleans     :: Bool           -- ^ Supports pseudo-boolean operations?
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
-       , supportsGlobalDecls        :: Bool           -- ^ Supports global decls, needed for push-pop.
-       , supportsDataTypes          :: Bool           -- ^ Supports datatypes
-       , supportsDTConstructorSigs  :: Bool           -- ^ Supports full ascription on data-type constructors. (Z3 and cvc4 differ!)
-       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessors.    (Z3 and cvc4 differ!)
-       , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output, with given config lines
+       , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
+       , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
+       , supportsDTConstructorSigs  :: Bool           -- ^ Supports full ascription on data-type constructors? (Z3 and cvc4 differ!)
+       , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessor?.    (Z3 and cvc4 differ!)
+       , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output? (With given config lines.)
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.
