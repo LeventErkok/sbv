@@ -312,7 +312,7 @@ declSort (s, _)
   | s == "RoundingMode" -- built-in-sort; so don't declare.
   = []
 declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
-declSort (s, Right fs) = [ "(declare-datatypes () ((" ++ s ++ " " ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+declSort (s, Right fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
                          , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
                          ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
         where body []     _ = ""
