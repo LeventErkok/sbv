@@ -806,3 +806,5 @@ mkSMTResult asgns = do
                               }
 
              return $ Satisfiable queryConfig m
+
+{-# ANN getModelAtIndex ("HLint: ignore Use forM_"          :: String) #-}
