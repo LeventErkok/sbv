@@ -90,6 +90,9 @@
     but it was possible to exploit it in the Dynamic interface. Thanks to Brian Huffman
     for reporting and diagnosing the issue.
 
+  * Fixed a bug where SBV was reporting incorrect "elapsed" time values, which are
+    printed when the 'timing' configuration parameter is specified.
+
   * Documentation: Jan Path kindly fixed module headers of all the files to produce
     much better looking Haddock documents. Thanks Jan!
 
