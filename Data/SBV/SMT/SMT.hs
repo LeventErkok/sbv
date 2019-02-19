@@ -752,6 +752,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                 ++ [ "Std-out  : " ++ intercalate "\n           " (lines out) | not (null out)]
                                 ++ [ "Std-err  : " ++ intercalate "\n           " (lines err) | not (null err)]
 
+                           finalizeTranscript (transcript cfg) ex
+                           recordEndTime cfg ctx
+
                            case ex of
                              ExitSuccess -> return ()
                              _           -> if ignoreExitCode cfg
@@ -887,17 +890,14 @@ runSolver cfg ctx execPath opts pgm continuation
                              continuation ctx
 
       -- NB. Don't use 'bracket' here, as it wouldn't have access to the exception.
-      let launchSolver = do startTranscript    (transcript cfg) cfg
-                            r <- executeSolver
-                            finalizeTranscript (transcript cfg) Nothing
-                            recordEndTime      cfg ctx
-                            return r
+      let launchSolver = do startTranscript (transcript cfg) cfg
+                            executeSolver
 
       launchSolver `C.catch` (\(e :: C.SomeException) -> handleAsync e $ do terminateProcess pid
                                                                             ec <- waitForProcess pid
                                                                             recordException    (transcript cfg) (show e)
-                                                                            finalizeTranscript (transcript cfg) (Just ec)
-                                                                            recordEndTime      cfg ctx
+                                                                            finalizeTranscript (transcript cfg) ec
+                                                                            recordEndTime cfg ctx
                                                                             C.throwIO e)
 
 -- | Compute and report the end time
@@ -929,19 +929,19 @@ startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
                                   ]
 
 -- | Finish up the transcript file.
-finalizeTranscript :: Maybe FilePath -> Maybe ExitCode -> IO ()
-finalizeTranscript Nothing  _    = return ()
-finalizeTranscript (Just f) mbEC = do ts <- show <$> getZonedTime
-                                      appendFile f $ end ts
-  where end ts = unlines $ [ ""
-                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                           , ";;;"
-                           , ";;; SBV: Finished at " ++ ts
-                           ]
-                       ++  [ ";;;\n;;; Exit code: " ++ show ec | Just ec <- [mbEC] ]
-                       ++  [ ";;;"
-                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                           ]
+finalizeTranscript :: Maybe FilePath -> ExitCode -> IO ()
+finalizeTranscript Nothing  _  = return ()
+finalizeTranscript (Just f) ec = do ts <- show <$> getZonedTime
+                                    appendFile f $ end ts
+  where end ts = unlines [ ""
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         , ";;;"
+                         , ";;; SBV: Finished at " ++ ts
+                         , ";;;"
+                         , ";;; Exit code: " ++ show ec
+                         , ";;;"
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         ]
 
 -- If requested, record in the transcript file
 recordTranscript :: Maybe FilePath -> Either (String, Maybe Int) String -> IO ()

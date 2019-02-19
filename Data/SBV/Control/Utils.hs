@@ -1556,8 +1556,7 @@ executeQuery queryContext (QueryT userQuery) = do
 
                                                 liftIO $ writeIORef (runMode st) $ SMTMode IRun isSAT cfg
 
-                                                lift $ join $ liftIO $ backend cfg' st (show pgm) $
-                                                    extractIO . runReaderT userQuery
+                                                lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with

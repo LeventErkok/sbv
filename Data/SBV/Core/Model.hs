@@ -1277,13 +1277,13 @@ sSignedShiftArithRight x i
 -- | Generalization of 'rotateL', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateL' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The first argument should be a bounded quantity.
-sRotateLeft :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sRotateLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sRotateLeft = liftViaSVal svRotateLeft
 
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The first argument should be a bounded quantity.
-sRotateRight :: (SIntegral a, SIntegral b, SDivisible (SBV b)) => SBV a -> SBV b -> SBV a
+sRotateRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sRotateRight = liftViaSVal svRotateRight
 
 -- Enum instance. These instances are suitable for use with concrete values,

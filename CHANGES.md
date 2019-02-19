@@ -78,6 +78,8 @@
     way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
     except it works on all types.
 
+  * Removed the redundant 'SDivisible' constraint on rotate-left and rotate-right operations.
+
   * Added unnamed equivalents of 'sBool', 'sWord8' etc; with a following underscore, i.e.,
     'sBool_', 'sWord8_'. The new functions are supported for all base types, chars,
     strings, lists, and tuples.
@@ -85,10 +87,13 @@
   * SBV now supports implicit constraints in the query mode, which were previously only
     available before user queries started.
 
-  * Fix a bug where hash-consing might reuse an expression even though the request might
+  * Fixed a bug where hash-consing might reuse an expression even though the request might
     have been made at a different type. This is a rare case in SBV to happen due to types,
     but it was possible to exploit it in the Dynamic interface. Thanks to Brian Huffman
     for reporting and diagnosing the issue.
+
+  * Fixed a bug where SBV was reporting incorrect "elapsed" time values, which are
+    printed when the 'timing' configuration parameter is specified.
 
   * Documentation: Jan Path kindly fixed module headers of all the files to produce
     much better looking Haddock documents. Thanks Jan!
