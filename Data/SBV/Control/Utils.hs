@@ -74,6 +74,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
+                              , RCSet(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -98,7 +99,7 @@ import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.SBV.Control.Types
 
-import qualified Data.Set as Set (toList, empty)
+import qualified Data.Set as Set (toList, empty, fromList)
 
 import qualified Control.Exception as C
 
@@ -888,13 +889,13 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUninterpreted _ ui) = uninterp ui
         cvt KFloat                = Just $ CFloat 0
         cvt KDouble               = Just $ CDouble 0
-        cvt KChar                 = Just $ CChar '\NUL'         -- why not?
+        cvt KChar                 = Just $ CChar '\NUL'                -- why not?
         cvt KString               = Just $ CString ""
         cvt (KList  _)            = Just $ CList []
-        cvt (KSet  _)             = Just $ CSet Set.empty
+        cvt (KSet  _)             = Just $ CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
         cvt (KTuple ks)           = CTuple <$> mapM cvt ks
         cvt (KMaybe _)            = Just $ CMaybe Nothing
-        cvt (KEither k1 _)        = CEither . Left <$> cvt k1   -- why not?
+        cvt (KEither k1 _)        = CEither . Left <$> cvt k1          -- why not?
 
         -- Tricky case of uninterpreted
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
@@ -936,7 +937,7 @@ recoverKindedValue k e = case k of
 
                            KList ek                            -> Just $ CV k $ CList $ interpretList ek e
 
-                           KSet _                              -> error "interpretSet: TBD"
+                           KSet ek                             -> Just $ CV k $ CSet $ interpretSet ek e
 
                            KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
 
@@ -974,6 +975,48 @@ recoverKindedValue k e = case k of
                 extra cur | show cur == t = ""
                           | True          = "\nWhile parsing: " ++ t
                           where t = show topExpr
+
+        -- Essentially treat sets as functions, since we do allow for store associations
+        interpretSet ke setExpr
+             | isUniversal setExpr             = ComplementSet Set.empty
+             | isEmpty     setExpr             = RegularSet    Set.empty
+             | Nothing             <- mbAssocs = error $ "Expected a set value, but received: " ++ show setExpr
+             | Just (Left _)       <- mbAssocs = error $ "Expected a set value, but received: " ++ show setExpr
+             | Just (Right assocs) <- mbAssocs = decode assocs
+             | True                            = tbd "Cannot decipher solver output for set expression."
+
+           where tbd w = error $ unlines [ ""
+                                         , "*** Data.SBV.interpretSet: Unable to process solver output."
+                                         , "***"
+                                         , "*** Kind    : " ++ show (KSet ke)
+                                         , "*** Received: " ++ show setExpr
+                                         , "*** Reason  : " ++ w
+                                         , "***"
+                                         , "*** This is either a bug or something SBV currently does not support."
+                                         , "*** Please report this as a feature request!"
+                                         ]
+
+                 isTrue (ENum (1, Nothing)) = True
+                 isTrue (ENum (0, Nothing)) = False
+                 isTrue bad                 = tbd $ "Non-boolean membership value seen: " ++ show bad
+
+                 isUniversal (EApp [EApp [ECon "as", ECon "const", EApp [ECon "Array", _, ECon "Bool"]], r]) = isTrue r
+                 isUniversal _                                                                               = False
+
+                 isEmpty     (EApp [EApp [ECon "as", ECon "const", EApp [ECon "Array", _, ECon "Bool"]], r]) = not $ isTrue r
+                 isEmpty     _                                                                               = False
+
+                 mbAssocs = parseSExprFunction setExpr
+
+                 decode (args, r) | isTrue r = ComplementSet $ Set.fromList [x | (x, False) <- map contents args]  -- deletions from universal
+                                  | True     = RegularSet    $ Set.fromList [x | (x, True)  <- map contents args]  -- additions to empty
+
+                 contents ([v], r) = (element v, isTrue r)
+                 contents bad      = tbd $ "Multi-valued set member seen: " ++ show bad
+
+                 element x = case recoverKindedValue ke x of
+                               Just v  -> cvVal v
+                               Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
 
         interpretTuple te = walk (1 :: Int) (zipWith recoverKindedValue ks args) []
                 where (ks, n) = case k of

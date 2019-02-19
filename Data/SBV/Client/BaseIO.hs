@@ -19,7 +19,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SMaybe)
+                                SWord64, SEither, SMaybe, SSet)
 import Data.SBV.Core.Model     (Metric)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
@@ -656,6 +656,24 @@ sMaybe_ = Trans.sMaybe_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sMaybes'
 sMaybes :: SymVal a => [String] -> Symbolic [SMaybe a]
 sMaybes = Trans.sMaybes
+
+-- | Declare a named 'Data.SBV.SSet'.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSet'
+sSet :: SymVal a => String -> Symbolic (SSet a)
+sSet = Trans.sSet
+
+-- | Declare an unnamed 'Data.SBV.SSet'.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSet_'
+sSet_ :: SymVal a => Symbolic (SSet a)
+sSet_ = Trans.sSet_
+
+-- | Declare a list of 'Data.SBV.SSet' values.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSets'
+sSets :: SymVal a => [String] -> Symbolic [SSet a]
+sSets = Trans.sSets
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:

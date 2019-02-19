@@ -27,7 +27,11 @@ module Data.SBV.Core.Model (
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
-  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles, sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists, sTuple, sTuple_, sTuples, sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
+  , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
+  , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
+  , sTuple, sTuple_, sTuples
+  , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
+  , sSet, sSet_, sSets
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf
@@ -55,6 +59,8 @@ import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, un
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
+
+import qualified Data.Set as Set
 
 import Data.Proxy
 import Data.Dynamic (fromDynamic, toDyn)
@@ -258,6 +264,19 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
+
+instance SymVal a => SymVal (RCSet a) where
+  mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
+
+  literal eur = SBV $ SVal k $ Left $ CV k $ CSet $ dir $ Set.map toCV s
+    where (dir, s) = case eur of
+                      RegularSet x    -> (RegularSet,    x)
+                      ComplementSet x -> (ComplementSet, x)
+          k        = kindOf (Proxy @(RCSet a))
+
+  fromCV (CV (KSet a) (CSet (RegularSet    s))) = RegularSet    $ Set.map (fromCV . CV a) s
+  fromCV (CV (KSet a) (CSet (ComplementSet s))) = ComplementSet $ Set.map (fromCV . CV a) s
+  fromCV bad                                    = error $ "SymVal.fromCV (Set): Malformed set received: " ++ show bad
 
 -- | SymVal for 0-tuple (i.e., unit)
 instance SymVal () where
@@ -550,6 +569,18 @@ sMaybe_ = free_
 -- | Generalization of 'Data.SBV.sMaybes'
 sMaybes :: (SymVal a, MonadSymbolic m) => [String] -> m [SMaybe a]
 sMaybes = symbolics
+
+-- | Generalization of 'Data.SBV.sSet'
+sSet :: (SymVal a, MonadSymbolic m) => String -> m (SSet a)
+sSet = symbolic
+
+-- | Generalization of 'Data.SBV.sMaybe_'
+sSet_ :: (SymVal a, MonadSymbolic m) => m (SSet a)
+sSet_ = free_
+
+-- | Generalization of 'Data.SBV.sMaybes'
+sSets :: (SymVal a, MonadSymbolic m) => [String] -> m [SSet a]
+sSets = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
 solve :: MonadSymbolic m => [SBool] -> m SBool

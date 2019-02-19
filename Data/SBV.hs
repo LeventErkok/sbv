@@ -58,6 +58,8 @@
 --
 --   * 'SMaybe': Symbolic optional values
 --
+--   * 'SSet': Symbolic sets
+--
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
@@ -154,6 +156,8 @@ module Data.SBV (
   , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
   -- ** Sum types
   , SMaybe, SEither
+  -- ** Sets
+  , RCSet(..), SSet
   -- * Arrays of symbolic values
   , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
 
@@ -173,6 +177,7 @@ module Data.SBV (
   , sTuple, sTuple_
   , sEither, sEither_
   , sMaybe, sMaybe_
+  , sSet, sSet_
 
   -- ** List of values
   -- $createSyms
@@ -189,6 +194,7 @@ module Data.SBV (
   , sTuples
   , sEithers
   , sMaybes
+  , sSets
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
@@ -343,7 +349,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sReal, sReal_, sReals, sString, sString_, sStrings,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
-                                        sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers)
+                                        sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)

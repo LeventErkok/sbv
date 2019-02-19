@@ -9,6 +9,9 @@
 -- Operations on concrete values
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+
 module Data.SBV.Core.Concrete
   ( module Data.SBV.Core.Concrete
   ) where
@@ -24,24 +27,39 @@ import Data.List (isPrefixOf, intercalate)
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
 
+import Data.Proxy
+
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+-- | A 'RCSet' is either a regular set or a set given by its complement from the corresponding universal set.
+-- NB. The Eq/Ord instances for RCSet is suspicious: We do *not* really want to create an these instances for RCSet,
+-- since the same set can have multiple representations if the underlying type is finite. For instance,
+-- @{True} = U - {False}@ for boolean sets! But we do need eq/ord becase we store these in maps/tables and
+-- also the 'Data.SBV.Core.Data.SymVal' instance needs it. So, we go ahead with it. I'm sure one can exploit this to do something
+-- nefarious, but we'll cross that bridge when we get to it.
+data RCSet a = RegularSet    (Set a)
+             | ComplementSet (Set a)
+             deriving (Eq, Ord)
+
+instance HasKind a => HasKind (RCSet a) where
+  kindOf _ = KSet (kindOf (Proxy @a))
+
 -- | A constant value
-data CVal = CAlgReal  !AlgReal             -- ^ algebraic real
-          | CInteger  !Integer             -- ^ bit-vector/unbounded integer
-          | CFloat    !Float               -- ^ float
-          | CDouble   !Double              -- ^ double
-          | CChar     !Char                -- ^ character
-          | CString   !String              -- ^ string
-          | CList     ![CVal]              -- ^ list
-          | CSet      !(Set CVal)          -- ^ set
-          | CUserSort !(Maybe Int, String) -- ^ value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CTuple    ![CVal]              -- ^ tuple
-          | CMaybe    !(Maybe CVal)        -- ^ a maybe
-          | CEither   !(Either CVal CVal)  -- ^ disjoint union
+data CVal = CAlgReal  !AlgReal              -- ^ Algebraic real
+          | CInteger  !Integer              -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float                -- ^ Float
+          | CDouble   !Double               -- ^ Double
+          | CChar     !Char                 -- ^ Character
+          | CString   !String               -- ^ String
+          | CList     ![CVal]               -- ^ List
+          | CSet      !(RCSet CVal)         -- ^ Set. Can be regular or complemented.
+          | CUserSort !(Maybe Int, String)  -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CTuple    ![CVal]               -- ^ Tuple
+          | CMaybe    !(Maybe CVal)         -- ^ Maybe
+          | CEither   !(Either CVal CVal)   -- ^ Disjoint union
 
 -- | Assing a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -219,7 +237,7 @@ trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
 -- | Lift a unary function through a 'CV'.
-liftCV :: (AlgReal -> b)
+liftCV :: (AlgReal             -> b)
        -> (Integer             -> b)
        -> (Float               -> b)
        -> (Double              -> b)
@@ -227,7 +245,7 @@ liftCV :: (AlgReal -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)
        -> ([CVal]              -> b)
-       -> (Set CVal            -> b)
+       -> (RCSet CVal          -> b)
        -> ([CVal]              -> b)
        -> (Maybe CVal          -> b)
        -> (Either CVal CVal    -> b)
@@ -345,9 +363,15 @@ showCV shk w               = liftCV show show show show show show snd shL shS sh
                            KList k -> k
                            _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
 
-            shS :: Set CVal -> String
-            shS xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ ")"
-              where ke = case kw of
+            -- we represent complements as @U - set@. This might be confusing, but is utterly cute!
+            shS :: RCSet CVal -> String
+            shS eru = case eru of
+                        RegularSet    e -> sh e
+                        ComplementSet e -> if Set.null e
+                                           then "U - " ++ sh e
+                                           else "U"
+              where sh xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ "}"
+                    ke = case kw of
                            KSet k -> k
                            _      -> error $ "Data.SBV.showCV: Impossible happened, expected set, got: " ++ show kw
 
@@ -404,8 +428,10 @@ randomCVal k =
     KUninterpreted s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
-    KSet  ek           -> do l <- randomRIO (0, 100)
-                             CSet . Set.fromList <$> replicateM l (randomCVal ek)
+    KSet  ek           -> do i <- randomIO                           -- regular or complement
+                             l <- randomRIO (0, 100)                 -- some set upto 100 elements
+                             vals <- Set.fromList <$> replicateM l (randomCVal ek)
+                             return $ CSet $ if i then RegularSet vals else ComplementSet vals
     KTuple ks          -> CTuple <$> traverse randomCVal ks
     KMaybe ke          -> do i <- randomIO
                              if i

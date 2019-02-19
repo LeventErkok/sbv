@@ -29,6 +29,7 @@ module Data.SBV.Core.Data
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString, SList
  , SEither, SMaybe
  , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
+ , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
  , sRNE, sRNA, sRTP, sRTN, sRTZ
@@ -166,6 +167,11 @@ type SEither a b = SBV (Either a b)
 
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
+
+-- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
+-- both regular sets and complements, i.e., those obtained from the
+-- universal set (of the right type) by removing elements.
+type SSet a = SBV (RCSet a)
 
 -- | Symbolic 2-tuple.
 type STuple2 a b = SBV (a, b)
