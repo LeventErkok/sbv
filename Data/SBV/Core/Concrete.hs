@@ -49,8 +49,8 @@ eqRCSet _                 _                 = False
 
 compareRCSet :: Ord a => RCSet a -> RCSet a -> Ordering
 compareRCSet (RegularSet    a) (RegularSet    b) = a `compare` b
-compareRCSet (RegularSet{})    (ComplementSet{}) = LT
-compareRCSet (ComplementSet{}) (RegularSet{})    = GT
+compareRCSet (RegularSet    _) (ComplementSet _) = LT
+compareRCSet (ComplementSet _) (RegularSet    _) = GT
 compareRCSet (ComplementSet a) (ComplementSet b) = a `compare` b
 
 instance HasKind a => HasKind (RCSet a) where
