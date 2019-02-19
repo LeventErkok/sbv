@@ -52,6 +52,12 @@
 --
 --   * 'SList': Symbolic lists (which can be nested)
 --
+--   * 'STuple': Symbolic tuples (upto 8-tuples, can be nested)
+--
+--   * 'SEither': Symbolic sums
+--
+--   * 'SMaybe': Symbolic optional values
+--
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
