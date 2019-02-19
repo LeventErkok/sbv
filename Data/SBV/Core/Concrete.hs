@@ -35,14 +35,23 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 
 -- | A 'RCSet' is either a regular set or a set given by its complement from the corresponding universal set.
--- NB. The Eq/Ord instances for RCSet is suspicious: We do *not* really want to create an these instances for RCSet,
--- since the same set can have multiple representations if the underlying type is finite. For instance,
--- @{True} = U - {False}@ for boolean sets! But we do need eq/ord becase we store these in maps/tables and
--- also the 'Data.SBV.Core.Data.SymVal' instance needs it. So, we go ahead with it. I'm sure one can exploit this to do something
--- nefarious, but we'll cross that bridge when we get to it.
 data RCSet a = RegularSet    (Set a)
              | ComplementSet (Set a)
-             deriving (Eq, Ord)
+
+-- We need Eq/Ord instances for RCSet because we want to put them in maps/tables. But we don't want to derive
+-- these, nor make it an instance! Why? Because the same set can have multiple representations if the underlying
+-- type is finite. For instance, @{True} = U - {False}@ for boolean sets! Instead, we use the following two functions,
+-- which are equivalent to Eq/Ord instances and work for our purposes, but we do not export these to the user.
+eqRCSet :: Eq a => RCSet a -> RCSet a -> Bool
+eqRCSet (RegularSet    a) (RegularSet    b) = a == b
+eqRCSet (ComplementSet a) (ComplementSet b) = a == b
+eqRCSet _                 _                 = False
+
+compareRCSet :: Ord a => RCSet a -> RCSet a -> Ordering
+compareRCSet (RegularSet    a) (RegularSet    b) = a `compare` b
+compareRCSet (RegularSet{})    (ComplementSet{}) = LT
+compareRCSet (ComplementSet{}) (RegularSet{})    = GT
+compareRCSet (ComplementSet a) (ComplementSet b) = a `compare` b
 
 instance HasKind a => HasKind (RCSet a) where
   kindOf _ = KSet (kindOf (Proxy @a))
@@ -87,7 +96,7 @@ instance Eq CVal where
   CChar     a == CChar     b = a == b
   CString   a == CString   b = a == b
   CList     a == CList     b = a == b
-  CSet      a == CSet      b = a == b
+  CSet      a == CSet      b = a `eqRCSet` b
   CUserSort a == CUserSort b = a == b
   CTuple    a == CTuple    b = a == b
   CMaybe    a == CMaybe    b = a == b
@@ -111,7 +120,7 @@ instance Ord CVal where
   CChar     a `compare` CChar b     = a        `compare`                  b
   CString   a `compare` CString b   = a        `compare`                  b
   CList     a `compare` CList   b   = a        `compare`                  b
-  CSet      a `compare` CSet    b   = a        `compare`                  b
+  CSet      a `compare` CSet    b   = a        `compareRCSet`             b
   CUserSort a `compare` CUserSort b = a        `compare`                  b
   CTuple    a `compare` CTuple    b = a        `compare`                  b
   CMaybe    a `compare` CMaybe    b = a        `compare`                  b

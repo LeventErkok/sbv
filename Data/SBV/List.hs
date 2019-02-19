@@ -206,11 +206,11 @@ infixr 5 .++
 (.++) = concat
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
-elem :: SymVal a => SBV a -> SList a -> SBool
+elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
 e `elem` l = singleton e `isInfixOf` l
 
 -- | @`notElem` e l@. Does @l@ not contain the element @e@?
-notElem :: SymVal a => SBV a -> SList a -> SBool
+notElem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
 e `notElem` l = sNot (e `elem` l)
 
 -- | @`isInfixOf` sub l@. Does @l@ contain the subsequence @sub@?
@@ -219,7 +219,7 @@ e `notElem` l = sNot (e `elem` l)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 .&& l2 `isInfixOf` l1 .<=> l1 .== l2
 -- Q.E.D.
-isInfixOf :: SymVal a => SList a -> SList a -> SBool
+isInfixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
 sub `isInfixOf` l
   | isConcretelyEmpty sub
   = literal True
@@ -232,7 +232,7 @@ sub `isInfixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 .=> subList l2 0 (length l1) .== l1
 -- Q.E.D.
-isPrefixOf :: SymVal a => SList a -> SList a -> SBool
+isPrefixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
 pre `isPrefixOf` l
   | isConcretelyEmpty pre
   = literal True
@@ -245,7 +245,7 @@ pre `isPrefixOf` l
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 .=> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
-isSuffixOf :: SymVal a => SList a -> SList a -> SBool
+isSuffixOf :: (Eq a, SymVal a) => SList a -> SList a -> SBool
 suf `isSuffixOf` l
   | isConcretelyEmpty suf
   = literal True
@@ -305,7 +305,7 @@ subList l offset len
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
 -- Q.E.D.
-replace :: SymVal a => SList a -> SList a -> SList a -> SList a
+replace :: (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
 replace l src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
   = dst .++ l
@@ -332,7 +332,7 @@ replace l src dst
 --   s1 =                3 :: Integer
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 .=> indexOf l1 l2 .== -1
 -- Q.E.D.
-indexOf :: SymVal a => SList a -> SList a -> SInteger
+indexOf :: (Eq a, SymVal a) => SList a -> SList a -> SInteger
 indexOf s sub = offsetIndexOf s sub 0
 
 -- | @`offsetIndexOf` l sub offset@. Retrieves first position of @sub@ at or
@@ -344,7 +344,7 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Int8) sub i -> i .> length l .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
-offsetIndexOf :: SymVal a => SList a -> SList a -> SInteger -> SInteger
+offsetIndexOf :: (Eq a, SymVal a) => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
   | Just c <- unliteral s        -- a constant list
   , Just n <- unliteral sub      -- a constant search pattern

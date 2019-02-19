@@ -67,11 +67,11 @@ bfoldlM cnt f = go (cnt `max` 0)
         go i b s = lcase s (return b) (\h t -> do { fbh <- f b h; go (i-1) fbh t })
 
 -- | Bounded sum.
-bsum :: (SymVal a, Num a) => Int -> SList a -> SBV a
+bsum :: (SymVal a, Num a, Ord a) => Int -> SList a -> SBV a
 bsum i = bfoldl i (+) 0
 
 -- | Bounded product.
-bprod :: (SymVal a, Num a) => Int -> SList a -> SBV a
+bprod :: (SymVal a, Num a, Ord a) => Int -> SList a -> SBV a
 bprod i = bfoldl i (*) 1
 
 -- | Bounded map.

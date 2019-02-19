@@ -173,7 +173,7 @@ genShiftMixSize = map mkTest $
         ++ map pair [(show x, show y, "shr_i8_w16", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i8s,  y <- yw16s]
         ++ map pair [(show x, show y, "shl_i16_w8", literal x `sShiftLeft`  literal y,  x `shiftL` fromIntegral y) | x <- i16s, y <- w8s]
         ++ map pair [(show x, show y, "shr_i16_w8", literal x `sShiftRight` literal y,  x `shiftR` fromIntegral y) | x <- i16s, y <- w8s]
-   where pair :: (SymVal a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
+   where pair :: (Eq a, SymVal a, Show a) => (String, String, String, SBV a, a) -> (String, Bool)
          pair (x, y, l, sr, lr) = (l ++ "." ++ x ++ "_" ++ y ++ "_" ++  show (unliteral sr) ++ "_" ++ show lr, isJust (unliteral sr) && unliteral sr == Just lr)
          mkTest (l, s) = testCase ("arithCF-genShiftMixSize" ++ l) (s `showsAs` "True")
 
