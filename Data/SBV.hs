@@ -52,7 +52,7 @@
 --
 --   * 'SList': Symbolic lists (which can be nested)
 --
---   * 'STuple': Symbolic tuples (upto 8-tuples, can be nested)
+--   * 'STuple2', 'STuple3', .., 'STuple8' : Symbolic tuples (upto 8-tuples, can be nested)
 --
 --   * 'SEither': Symbolic sums
 --
