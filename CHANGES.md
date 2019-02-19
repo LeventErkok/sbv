@@ -85,7 +85,7 @@
   * SBV now supports implicit constraints in the query mode, which were previously only
     available before user queries started.
 
-  * Fix a bug where hash-consing might reuse an expression even though the request might
+  * Fixed a bug where hash-consing might reuse an expression even though the request might
     have been made at a different type. This is a rare case in SBV to happen due to types,
     but it was possible to exploit it in the Dynamic interface. Thanks to Brian Huffman
     for reporting and diagnosing the issue.
