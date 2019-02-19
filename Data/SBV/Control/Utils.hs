@@ -980,10 +980,8 @@ recoverKindedValue k e = case k of
         interpretSet ke setExpr
              | isUniversal setExpr             = ComplementSet Set.empty
              | isEmpty     setExpr             = RegularSet    Set.empty
-             | Nothing             <- mbAssocs = error $ "Expected a set value, but received: " ++ show setExpr
-             | Just (Left _)       <- mbAssocs = error $ "Expected a set value, but received: " ++ show setExpr
              | Just (Right assocs) <- mbAssocs = decode assocs
-             | True                            = tbd "Cannot decipher solver output for set expression."
+             | True                            = tbd "Expected a set value, but couldn't decipher the solver output."
 
            where tbd w = error $ unlines [ ""
                                          , "*** Data.SBV.interpretSet: Unable to process solver output."
@@ -995,6 +993,7 @@ recoverKindedValue k e = case k of
                                          , "*** This is either a bug or something SBV currently does not support."
                                          , "*** Please report this as a feature request!"
                                          ]
+
 
                  isTrue (ENum (1, Nothing)) = True
                  isTrue (ENum (0, Nothing)) = False

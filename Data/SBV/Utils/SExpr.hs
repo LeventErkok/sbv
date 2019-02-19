@@ -328,10 +328,11 @@ parseStoreAssociations :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SEx
 parseStoreAssociations (EApp [ECon "_", ECon "as-array", ECon nm]) = Just $ Left nm
 parseStoreAssociations e                                           = Right <$> (chainAssigns =<< vals e)
     where vals :: SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
-          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"], defVal]) = return [Right defVal]
-          vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2  = do rest <- vals prev
-                                                                                  return $ Left (init argsVal, last argsVal) : rest
-          vals _                                                             = Nothing
+          vals (EApp [EApp [ECon "as", ECon "const", ECon "Array"],            defVal]) = return [Right defVal]
+          vals (EApp [EApp [ECon "as", ECon "const", EApp (ECon "Array" : _)], defVal]) = return [Right defVal]
+          vals (EApp (ECon "store" : prev : argsVal)) | length argsVal >= 2             = do rest <- vals prev
+                                                                                             return $ Left (init argsVal, last argsVal) : rest
+          vals _                                                                        = Nothing
 
 -- | Turn a sequence of left-right chain assignments (condition + free) into a single chain
 chainAssigns :: [Either ([SExpr], SExpr) SExpr] -> Maybe ([([SExpr], SExpr)], SExpr)
