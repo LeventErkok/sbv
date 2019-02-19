@@ -660,19 +660,19 @@ sMaybes = Trans.sMaybes
 -- | Declare a named 'Data.SBV.SSet'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSet'
-sSet :: SymVal a => String -> Symbolic (SSet a)
+sSet :: (Ord a, SymVal a) => String -> Symbolic (SSet a)
 sSet = Trans.sSet
 
 -- | Declare an unnamed 'Data.SBV.SSet'.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSet_'
-sSet_ :: SymVal a => Symbolic (SSet a)
+sSet_ :: (Ord a, SymVal a) => Symbolic (SSet a)
 sSet_ = Trans.sSet_
 
 -- | Declare a list of 'Data.SBV.SSet' values.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSets'
-sSets :: SymVal a => [String] -> Symbolic [SSet a]
+sSets :: (Ord a, SymVal a) => [String] -> Symbolic [SSet a]
 sSets = Trans.sSets
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing

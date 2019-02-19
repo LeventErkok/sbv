@@ -265,7 +265,7 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
-instance SymVal a => SymVal (RCSet a) where
+instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
 
   literal eur = SBV $ SVal k $ Left $ CV k $ CSet $ dir $ Set.map toCV s
@@ -571,15 +571,15 @@ sMaybes :: (SymVal a, MonadSymbolic m) => [String] -> m [SMaybe a]
 sMaybes = symbolics
 
 -- | Generalization of 'Data.SBV.sSet'
-sSet :: (SymVal a, MonadSymbolic m) => String -> m (SSet a)
+sSet :: (Ord a, SymVal a, MonadSymbolic m) => String -> m (SSet a)
 sSet = symbolic
 
 -- | Generalization of 'Data.SBV.sMaybe_'
-sSet_ :: (SymVal a, MonadSymbolic m) => m (SSet a)
+sSet_ :: (Ord a, SymVal a, MonadSymbolic m) => m (SSet a)
 sSet_ = free_
 
 -- | Generalization of 'Data.SBV.sMaybes'
-sSets :: (SymVal a, MonadSymbolic m) => [String] -> m [SSet a]
+sSets :: (Ord a, SymVal a, MonadSymbolic m) => [String] -> m [SSet a]
 sSets = symbolics
 
 -- | Generalization of 'Data.SBV.solve'
@@ -879,7 +879,7 @@ instance SIntegral Integer
 -- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Loosely
 -- based on Haskell's @FiniteBits@ class, but with more methods defined and structured differently to fit into the
 -- symbolic world view. Minimal complete definition: 'sFiniteBitSize'.
-class (SymVal a, Num a, Bits a) => SFiniteBits a where
+class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
     -- | Bit size.
     sFiniteBitSize      :: SBV a -> Int
     -- | Least significant bit of a word, always stored at index 0.
@@ -1000,7 +1000,7 @@ instance SFiniteBits Int32  where sFiniteBitSize _ = 32
 instance SFiniteBits Int64  where sFiniteBitSize _ = 64
 
 -- | Returns 1 if the boolean is 'sTrue', otherwise 0.
-oneIf :: (Num a, SymVal a) => SBool -> SBV a
+oneIf :: (Ord a, Num a, SymVal a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
 -- | Lift a pseudo-boolean op, performing checks
@@ -1149,7 +1149,7 @@ b .^ e
                           blasted
                           (iterate (\x -> x*x) b)
 
-instance (SymVal a, Fractional a) => Fractional (SBV a) where
+instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
   fromRational  = literal . fromRational
   SBV x / sy@(SBV y) | div0 = ite (sy .== 0) 0 res
                      | True = res
@@ -1175,7 +1175,7 @@ instance (SymVal a, Fractional a) => Fractional (SBV a) where
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
 -- Currently, the only symbolicly available function in this class is sqrt.
-instance (SymVal a, Fractional a, Floating a) => Floating (SBV a) where
+instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
     pi      = literal pi
     exp     = lift1FNS "exp"     exp
     log     = lift1FNS "log"     log
@@ -1224,7 +1224,7 @@ lift2FNS nm f sv1 sv2
 -- -1 has all bits set to True for both signed and unsigned values
 -- | Using 'popCount' or 'testBit' on non-concrete values will result in an
 -- error. Use 'sPopCount' or 'sTestBit' instead.
-instance (Num a, Bits a, SymVal a) => Bits (SBV a) where
+instance (Ord a, Num a, Bits a, SymVal a) => Bits (SBV a) where
   SBV x .&. SBV y    = SBV (svAnd x y)
   SBV x .|. SBV y    = SBV (svOr x y)
   SBV x `xor` SBV y  = SBV (svXOr x y)
@@ -1522,7 +1522,7 @@ liftQRem x y
 -- | Lift 'divMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
 -- (truncate to 0) to divMod (truncate towards negative infinity)
-liftDMod :: (SymVal a, Num a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
+liftDMod :: (Ord a, SymVal a, Num a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y
   | isConcreteZero x
   = (x, x)
@@ -1588,7 +1588,7 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- underflows/overflows.
-   select :: (SymVal b, Num b) => [a] -> a -> SBV b -> a
+   select :: (Ord b, SymVal b, Num b) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of

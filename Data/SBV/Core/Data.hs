@@ -450,7 +450,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- * Symbolic Values
 -------------------------------------------------------------------------------
 -- | A 'SymVal' is a potential symbolic value that can be created instances of to be fed to a symbolic program.
-class (HasKind a, Ord a, Typeable a) => SymVal a where
+class (HasKind a, Typeable a) => SymVal a where
   -- | Generalization of 'Data.SBV.mkSymVal'
   mkSymVal :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
