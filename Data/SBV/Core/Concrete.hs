@@ -375,10 +375,9 @@ showCV shk w               = liftCV show show show show show show snd shL shS sh
             -- we represent complements as @U - set@. This might be confusing, but is utterly cute!
             shS :: RCSet CVal -> String
             shS eru = case eru of
-                        RegularSet    e -> sh e
-                        ComplementSet e -> if Set.null e
-                                           then "U - " ++ sh e
-                                           else "U"
+                        RegularSet    e              -> sh e
+                        ComplementSet e | Set.null e -> "U"
+                                        | True       -> "U - " ++ sh e
               where sh xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ "}"
                     ke = case kw of
                            KSet k -> k
