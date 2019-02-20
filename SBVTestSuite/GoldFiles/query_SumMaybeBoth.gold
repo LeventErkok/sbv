@@ -17,10 +17,14 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (declare-datatypes ((SBVEither 2)) ((par (T1 T2)
                                            ((left_SBVEither  (get_left_SBVEither  T1))
                                             (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] (declare-fun s0 () (SBVEither Int Int))
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
                                            ((nothing_SBVMaybe)
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))

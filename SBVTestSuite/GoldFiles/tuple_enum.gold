@@ -77,6 +77,8 @@
 [GOOD] (assert s33)
 [GOOD] (assert s41)
 [GOOD] (assert s34)
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (declare-datatypes ((SBVTuple3 3)) ((par (T1 T2 T3)
                                            ((mkSBVTuple3 (proj_1_SBVTuple3 T1)
                                                          (proj_2_SBVTuple3 T2)
