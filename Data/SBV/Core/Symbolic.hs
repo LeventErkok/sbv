@@ -910,8 +910,22 @@ instance Show SVal where
 -- | This instance is only defined so that we can define an instance for
 -- 'Data.Bits.Bits'. '==' and '/=' simply throw an error.
 instance Eq SVal where
-  a == b = error $ "Comparing symbolic bit-vectors; Use (.==) instead. Received: " ++ show (a, b)
-  a /= b = error $ "Comparing symbolic bit-vectors; Use (./=) instead. Received: " ++ show (a, b)
+  a == b = noEquals "==" ".==" (show a, show b)
+  a /= b = noEquals "/=" "./=" (show a, show b)
+
+-- Bail out nicely.
+noEquals :: String -> String -> (String, String) -> a
+noEquals o n (l, r) = error $ unlines $ [ ""
+                                        , "*** Data.SBV: Comparing symbolic values using Haskell's Eq class!"
+                                        , "***"
+                                        , "*** Received:    " ++ l ++ "  " ++ o ++ " " ++ r
+                                        , "*** Instead use: " ++ l ++ " "  ++ n ++ " " ++ r
+                                        , "***"
+                                        , "*** The Eq instance for symbolic values are necessiated only because"
+                                        , "*** of the Bits class requirement. You must use symbolic equality"
+                                        , "*** operators instead. (And complain to Haskell folks that they"
+                                        , "*** remove the 'Eq' superclass from 'Bits'!.)"
+                                        ]
 
 -- | Things we do not support in interactive mode, at least for now!
 noInteractive :: [String] -> a
