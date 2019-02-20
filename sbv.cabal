@@ -76,6 +76,7 @@ Library
                   , Data.SBV.Internals
                   , Data.SBV.List
                   , Data.SBV.Maybe
+                  , Data.SBV.Set
                   , Data.SBV.String
                   , Data.SBV.Tuple
                   , Data.SBV.Char
