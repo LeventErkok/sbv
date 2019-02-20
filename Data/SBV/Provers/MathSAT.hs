@@ -42,7 +42,7 @@ mathSAT = SMTSolver {
                               , supportsDataTypes          = True
                               , supportsDTConstructorSigs  = False
                               , supportsDTAccessorSigs     = False
-                              , supportsFlattenedSequences = Nothing
+                              , supportsFlattenedModels    = Nothing
                               }
          }
 

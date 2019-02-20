@@ -40,7 +40,7 @@ z3 = SMTSolver {
                               , supportsDataTypes          = True
                               , supportsDTConstructorSigs  = False
                               , supportsDTAccessorSigs     = True
-                              , supportsFlattenedSequences = Just [ "(set-option :pp.max_depth      4294967295)"
+                              , supportsFlattenedModels    = Just [ "(set-option :pp.max_depth      4294967295)"
                                                                   , "(set-option :pp.min_alias_size 4294967295)"
                                                                   ]
                               }

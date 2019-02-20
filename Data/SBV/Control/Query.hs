@@ -332,7 +332,7 @@ getModelAtIndex mbi = do
                               -- as cex's tend to get larger
                               unless (null uiFuns) $
                                  let solverCaps = capabilities (solver cfg)
-                                 in case supportsFlattenedSequences solverCaps of
+                                 in case supportsFlattenedModels solverCaps of
                                       Nothing   -> return ()
                                       Just cmds -> mapM_ (send True) cmds
 

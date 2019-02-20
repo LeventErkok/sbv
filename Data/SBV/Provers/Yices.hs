@@ -40,6 +40,6 @@ yices = SMTSolver {
                               , supportsDataTypes          = False
                               , supportsDTConstructorSigs  = False
                               , supportsDTAccessorSigs     = False
-                              , supportsFlattenedSequences = Nothing
+                              , supportsFlattenedModels    = Nothing
                               }
          }

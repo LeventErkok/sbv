@@ -42,7 +42,7 @@ cvc4 = SMTSolver {
                               , supportsDataTypes          = True
                               , supportsDTConstructorSigs  = True
                               , supportsDTAccessorSigs     = False
-                              , supportsFlattenedSequences = Nothing
+                              , supportsFlattenedModels    = Nothing
                               }
          }
   where -- CVC4 wants all input on one line

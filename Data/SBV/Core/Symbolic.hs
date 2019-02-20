@@ -1598,7 +1598,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
        , supportsDTConstructorSigs  :: Bool           -- ^ Supports full ascription on data-type constructors? (CVC4 and z3 differ!)
        , supportsDTAccessorSigs     :: Bool           -- ^ Supports full ascription on data-type accessor?     (CVC4 and z3 differ!)
-       , supportsFlattenedSequences :: Maybe [String] -- ^ Supports flattened sequence output? (With given config lines.)
+       , supportsFlattenedModels    :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
        }
 
 -- | Rounding mode to be used for the IEEE floating-point operations.

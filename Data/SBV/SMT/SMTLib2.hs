@@ -25,7 +25,7 @@ import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (QueryContext(..))
-import Data.SBV.Core.Kind (smtType)
+import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
@@ -138,7 +138,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         -- SBV always requires the production of models!
         getModels   = "(set-option :produce-models true)"
-                    : concat [flattenConfig | hasList, Just flattenConfig <- [supportsFlattenedSequences solverCaps]]
+                    : concat [flattenConfig | any needsFlattening kindInfo, Just flattenConfig <- [supportsFlattenedModels solverCaps]]
 
         -- process all other settings we're given
         userSettings = concatMap opts $ solverSetOptions cfg
@@ -433,10 +433,10 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
         hardAsserts = [(attr, v) | (False, attr, v) <- cstrs]
         softAsserts = [(attr, v) | (True,  attr, v) <- cstrs]
 
-        -- If lists are newly introduced, put in the flatten commands:
+        -- If we need flattening in models, do emit the required lines if preset
         settings
-          | not (null [() | KList{} <- newKinds])
-          = concat (catMaybes [supportsFlattenedSequences solverCaps])
+          | any needsFlattening newKinds
+          = concat (catMaybes [supportsFlattenedModels solverCaps])
           | True
           = []
           where solverCaps = capabilities (solver cfg)

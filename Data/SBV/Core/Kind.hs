@@ -18,7 +18,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts, showBaseKind) where
+module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts, showBaseKind, needsFlattening) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
@@ -334,3 +334,22 @@ instance (HasKind a, HasKind b) => HasKind (Either a b) where
 
 instance HasKind a => HasKind (Maybe a) where
   kindOf _ = KMaybe (kindOf (Proxy @a))
+
+-- | Should we ask the solver to flatten the output? This comes in handy so output is parseable
+-- Essentially, we're being conservative here and simply requesting flattening anything that has
+-- some structure to it.
+needsFlattening :: Kind -> Bool
+needsFlattening KBool            = False
+needsFlattening KBounded{}       = False
+needsFlattening KUnbounded       = False
+needsFlattening KReal            = False
+needsFlattening KUninterpreted{} = False
+needsFlattening KFloat           = False
+needsFlattening KDouble          = False
+needsFlattening KChar            = False
+needsFlattening KString          = False
+needsFlattening KList{}          = True
+needsFlattening KSet{}           = True
+needsFlattening KTuple{}         = True
+needsFlattening KMaybe{}         = True
+needsFlattening KEither{}        = True
