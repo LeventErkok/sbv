@@ -24,7 +24,10 @@ import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
 import Data.Ratio (numerator, denominator)
 import Data.Word  (Word8, Word16, Word32, Word64)
-import Numeric    (showIntAtBase, showHex, readInt)
+
+import qualified Data.Set as Set
+
+import Numeric (showIntAtBase, showHex, readInt)
 
 import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 
@@ -416,6 +419,7 @@ cvToSMTLib rm x
   | isChar x         , CChar c          <- cvVal x = smtLibHex 8 (fromIntegral (ord c))
   | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
+  | isSet x          , CSet s           <- cvVal x = smtLibSet (kindOf x) s
   | isTuple x        , CTuple xs        <- cvVal x = smtLibTup (kindOf x) xs
   | isMaybe x        , CMaybe mc        <- cvVal x = smtLibMaybe  (kindOf x) mc
   | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
@@ -442,6 +446,18 @@ cvToSMTLib rm x
                                       mkUnit inner = "(seq.unit " ++ inner ++ ")"
                                   in mkSeq (mkUnit . cvToSMTLib rm . CV ek <$> xs)
         smtLibSeq k _ = error "SBV.cvToSMTLib: Impossible case (smtLibSeq), received kind: " ++ show k
+
+        smtLibSet :: Kind -> RCSet CVal -> String
+        smtLibSet k set = case set of
+                            RegularSet    rs -> Set.foldr' (modify "true")  (start "false") rs
+                            ComplementSet rs -> Set.foldr' (modify "false") (start "true")  rs
+          where ke = case k of
+                       KSet ek -> ek
+                       _       -> error $ "SBV.cvToSMTLib: Impossible case (smtLibSet), received kind: " ++ show k
+
+                start def = "((as const " ++ smtType k ++ ") " ++ def ++ ")"
+
+                modify how e s = "(store " ++ s ++ " " ++ cvToSMTLib rm (CV ke e) ++ " " ++ how ++ ")"
 
         smtLibTup :: Kind -> [CVal] -> String
         smtLibTup (KTuple []) _  = "mkSBVTuple0"
