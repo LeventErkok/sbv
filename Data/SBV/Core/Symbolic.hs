@@ -172,6 +172,7 @@ data Op = Plus
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
+        | SetOp SetOp                           -- Set operations, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
         | TupleAccess Int Int                   -- Access element i of an n-tuple; second argument is n
         | EitherConstructor Kind Kind Bool      -- Construct a sum; False: left, True: right
@@ -381,6 +382,14 @@ instance Show SeqOp where
   show SeqPrefixOf = "seq.prefixof"
   show SeqSuffixOf = "seq.suffixof"
   show SeqReplace  = "seq.replace"
+
+-- | Set operations.
+data SetOp = SetEqual
+        deriving (Eq, Ord)
+
+-- The show instance for 'SetOp' is merely for debugging
+instance Show SetOp where
+  show SetEqual = "=="
 
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
