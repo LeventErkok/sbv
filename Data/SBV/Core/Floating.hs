@@ -160,7 +160,7 @@ class IEEEFloatConvertible a where
   -- | Convert to an IEEE-754 Single-precision float.
   --
   -- >>> :{
-  -- roundTrip :: forall a. IEEEFloatConvertible a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip :: forall a. (Eq a, IEEEFloatConvertible a) => SRoundingMode -> SBV a -> SBool
   -- roundTrip m x = fromSFloat m (toSFloat m x) .== x
   -- :}
   --
@@ -192,7 +192,7 @@ class IEEEFloatConvertible a where
   -- | Convert to an IEEE-754 Double-precision float.
   --
   -- >>> :{
-  -- roundTrip :: forall a. IEEEFloatConvertible a => SRoundingMode -> SBV a -> SBool
+  -- roundTrip :: forall a. (Eq a, IEEEFloatConvertible a) => SRoundingMode -> SBV a -> SBool
   -- roundTrip m x = fromSDouble m (toSDouble m x) .== x
   -- :}
   --
