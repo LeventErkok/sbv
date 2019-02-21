@@ -67,8 +67,8 @@ full = SBV $ SVal k $ Left $ CV k $ CSet $ ComplementSet Set.empty
 -- {} :: {SInteger}
 -- >>> fromList [1,2,3]
 -- {1,2,3} :: {SInteger}
--- >>> fromList [5,5,5]
--- {5} :: {SInteger}
+-- >>> fromList [5,5,5,12,12,3]
+-- {3,5,12} :: {SInteger}
 fromList :: forall a. SymVal a => [a] -> SSet a
 fromList = SBV . SVal k . Left . CV k . CSet . RegularSet . Set.fromList . map toCV
   where ka = kindOf (Proxy @a)
