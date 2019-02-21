@@ -26,14 +26,22 @@
 
 module Data.SBV.Set (
         -- * Constructing sets
-          empty, full
+          empty, full, fromList
+        -- * Equality of sets
+        -- $setEquality
         ) where
 
-import Data.SBV.Core.Data
-
+import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
-import Data.Proxy
+import Data.SBV.Core.Data
+import Data.SBV.Core.Model
+
+-- For doctest use only
+--
+-- $setup
+-- >>> import Data.SBV.Core.Model
+-- >>> import Data.SBV.Provers.Prover
 
 -- | Empty set.
 --
@@ -52,3 +60,44 @@ empty = SBV $ SVal k $ Left $ CV k $ CSet $ RegularSet Set.empty
 full :: forall a. HasKind a => SSet a
 full = SBV $ SVal k $ Left $ CV k $ CSet $ ComplementSet Set.empty
   where k = KSet $ kindOf (Proxy @a)
+
+-- | Conversion from a list.
+--
+-- >>> fromList ([] :: [Integer])
+-- {} :: {SInteger}
+-- >>> fromList [1,2,3]
+-- {1,2,3} :: {SInteger}
+-- >>> fromList [5,5,5]
+-- {5} :: {SInteger}
+fromList :: forall a. SymVal a => [a] -> SSet a
+fromList = SBV . SVal k . Left . CV k . CSet . RegularSet . Set.fromList . map toCV
+  where ka = kindOf (Proxy @a)
+        k  = KSet ka
+
+{- $setEquality
+We can compare sets for equality:
+
+>>> empty .== (empty :: SSet Integer)
+True
+>>> full .== (full :: SSet Integer)
+True
+>>> full ./= (full :: SSet Integer)
+False
+
+However, if we compare two sets that are constructed as regular or in the complement
+form, we have to use a proof to establish equality:
+
+>>> prove $ full .== (empty :: SSet Integer)
+Falsifiable
+
+The reason for this is that there is no way in Haskell to compare an infinite
+set to any other set, as infinite sets are not representable at all! So, we have
+to delay the judgment to the SMT solver. If you try to constant fold, you
+will get:
+
+>>> full .== (empty :: SSet Integer)
+<symbolic> :: SBool
+
+indicating that the result is a symbolic value that needs a decision
+procedure to be determined!
+-}
