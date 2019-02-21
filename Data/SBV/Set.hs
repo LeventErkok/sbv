@@ -7,14 +7,17 @@
 -- Stability : experimental
 --
 -- A collection of set utilities, useful when working with symbolic sets.
--- To the extent possible, the functions in this module follow those of "Data.Set"
--- so importing qualified is the recommended workflow.
+-- To the extent possible, the functions in this module follow those
+-- of "Data.Set" so importing qualified is the recommended workflow.
 --
--- Note that unlike "Data.Set", SBV sets can be infinite, represented as a
--- complement of some finite set. This means that a symbolic set is either finite,
--- or its complement is finite. Therefore, there are some differences in the API
--- from Haskell sets. For instance, you can take the complement of any set, which
--- is something you cannot do in Haskell!
+-- Note that unlike "Data.Set", SBV sets can be infinite, represented
+-- as a complement of some finite set. This means that a symbolic set
+-- is either finite, or its complement is finite. Therefore, there are
+-- some differences in the API from Haskell sets. For instance, you can
+-- take the complement of any set, which is something you cannot do
+-- in Haskell! Conversely, you cannot compute the size of a symbolic
+-- set (as it can be infinite!), nor you can turn it into a list or
+-- necessarily enumerate its elements.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
