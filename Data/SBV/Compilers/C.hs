@@ -430,6 +430,16 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
   = error "SBV->C: Strings are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
   | KChar `Set.member` kindInfo
   = error "SBV->C: Characters are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | any isSet kindInfo
+  = error "SBV->C: Sets (SSet) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | any isList kindInfo
+  = error "SBV->C: Lists (SList) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | any isTuple kindInfo
+  = error "SBV->C: Tuples (STupleN) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | any isMaybe kindInfo
+  = error "SBV->C: Optional (SMaybe) values are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  | any isEither kindInfo
+  = error "SBV->C: Either (SEither) values are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
   | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
   = error $ "SBV->C: SReal values are not supported by the C compiler."
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
