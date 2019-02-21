@@ -1239,10 +1239,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
                                                        ]
 
-                     let vars :: [(SVal, NamedSymVar)]
-                         vars = let allModelInputs = takeWhile ((/= ALL) . fst) qinps
+                     let allModelInputs  = takeWhile ((/= ALL) . fst) qinps
+                         -- Add on observables only if we're not in a quantified context:
+                         grabObservables = length allModelInputs == length qinps -- i.e., we didn't drop anything
 
-                                    sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
+                         vars :: [(SVal, NamedSymVar)]
+                         vars = let sortByNodeId :: [NamedSymVar] -> [NamedSymVar]
                                     sortByNodeId = sortBy (compare `on` (\(SV _ n, _) -> n))
 
                                     mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
@@ -1253,13 +1255,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, unk, ms) <- loop topState (allUiFuns, uiFuns) vars cfg
+                     (sc, unk, ms) <- loop grabObservables topState (allUiFuns, uiFuns) vars cfg
                      return (sc, w, unk, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
+         loop grabObservables topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -1278,12 +1280,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                              io . putStrLn $ msg (cnt - 1)
 
                         cs <- checkSat
+
                         case cs of
                           Unsat -> do endMsg
                                       return (False, False, sofar)
+
                           Unk   -> do queryDebug ["*** Solver returned unknown, terminating query."]
                                       endMsg
                                       return (False, True, sofar)
+
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (n, (sval, cv))) vars
 
@@ -1291,8 +1296,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                    return (nm, (t, cvs))
                                       uiFunVals <- mapM getUIFun allUiFuns
 
+                                      -- Add on observables if we're asked to do so:
+                                      obsvs <- if grabObservables
+                                                  then getObservables
+                                                  else return []
+
                                       let model = SMTModel { modelObjectives = []
-                                                           , modelAssocs     = [(n, cv) | (n, (_, cv)) <- assocs]
+                                                           , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (n, (_, cv)) <- assocs]
                                                            , modelUIFuns     = uiFunVals
                                                            }
                                           m = Satisfiable cfg model
