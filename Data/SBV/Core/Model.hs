@@ -37,7 +37,7 @@ module Data.SBV.Core.Model (
   , sRealToSInteger, label, observe, observeIf
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
-  , genLiteral, genFromCV, genMkSymVar
+  , genLiteral, genFromCV, genMkSymVar, toCV
   , sbvQuickCheck
   )
   where
@@ -724,7 +724,10 @@ the right choice obviously; as the Eq instance is bogus for SBV
 for natural reasons..
 -}
 
-instance Eq a => EqSymbolic (SBV a) where
+-- It is tempting to put in an @Eq a@ superclass here. But doing so
+-- is complicated, as it requires all underlying types to have equality,
+-- which is at best shaky for algebraic reals and sets. So, leave it out.
+instance EqSymbolic (SBV a) where
   SBV x .== SBV y = SBV (svEqual x y)
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
