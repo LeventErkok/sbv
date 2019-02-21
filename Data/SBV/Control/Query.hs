@@ -306,7 +306,7 @@ getModelAtIndex mbi = do
 
                                -- for "sat", display the prefix existentials. for "proof", display the prefix universals
                               let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                                        else takeWhile ((== ALL) . fst) inps
+                                                            else takeWhile ((== ALL) . fst) inps
 
                                   -- are we inside a quantifier
                                   insideQuantifier = length allModelInputs < length inps
