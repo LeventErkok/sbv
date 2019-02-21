@@ -33,7 +33,7 @@ import qualified Prelude
 import Data.Proxy (Proxy(Proxy))
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model ((.==))
+import Data.SBV.Core.Model () -- instances only
 
 -- For doctest use only
 --
@@ -55,7 +55,7 @@ sNothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
 -- True
 -- >>> isNothing (sJust (literal "nope"))
 -- False
-isNothing :: SymVal a => SMaybe a -> SBV Bool
+isNothing :: SymVal a => SMaybe a -> SBool
 isNothing = maybe sTrue (const sFalse)
 
 -- | Construct an @SMaybe a@ from an @SBV a@
@@ -82,7 +82,7 @@ sJust sa
 -- True
 -- >>> prove $ \x -> isJust (sJust (x :: SInteger))
 -- Q.E.D.
-isJust :: SymVal a => SMaybe a -> SBV Bool
+isJust :: SymVal a => SMaybe a -> SBool
 isJust = maybe sFalse (const sTrue)
 
 -- | Return the value of an optional value. The default is returned if Nothing. Compare to 'fromJust'.
@@ -125,10 +125,22 @@ fromJust ma
         -- and asserting equivalence under implication. This will
         -- be underspecified as required should the value
         -- received be `Nothing`.
-        res st = do e   <- internalVariable st ka
-                    es  <- newExpr st kMaybe (SBVApp (MaybeConstructor ka True) [e])
-                    let esSBV = SBV $ SVal kMaybe $ Right $ cache $ \_ -> return es
-                    internalConstraint st False [] $ unSBV $ isJust ma .=> esSBV .== ma
+        res st = do -- grab an internal variable and make a Maybe out of it
+                    e  <- internalVariable st ka
+                    es <- newExpr st kMaybe (SBVApp (MaybeConstructor ka True) [e])
+
+                    -- Create the condition that it is equal to the input
+                    ms <- sbvToSV st ma
+                    eq <- newExpr st KBool (SBVApp Equal [es, ms])
+
+                    -- Gotta make sure we do this only when input is not nothing
+                    caseNothing <- sbvToSV st (isNothing ma)
+                    require     <- newExpr st KBool (SBVApp Or [caseNothing, eq])
+
+                    -- register the constraint:
+                    internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
+
+                    -- We're good to go:
                     return e
 
 -- | Construct an @SMaybe a@ from a @Maybe (SBV a)@

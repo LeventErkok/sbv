@@ -73,7 +73,7 @@ null l
   | Just cs <- unliteral l
   = literal (P.null cs)
   | True
-  = l .== literal []
+  = length l .== 0
 
 -- | @`head`@ returns the first element of a list. Unspecified if the list is empty.
 --
@@ -147,14 +147,27 @@ elemAt l i
   = SBV (SVal kElem (Right (cache (y (l `listToListAt` i)))))
   where kElem = kindOf (Proxy @a)
         kSeq  = KList kElem
+
         -- This is trickier than it needs to be, but necessary since there's
         -- no SMTLib function to extract the element from a list. Instead,
         -- we form a singleton list, and assert that it is equivalent to
         -- the extracted value. See <http://github.com/Z3Prover/z3/issues/1302>
-        y si st = do e <- internalVariable st kElem
+        y si st = do -- grab an internal variable and make a unit list out of it
+                     e <- internalVariable st kElem
                      es <- newExpr st kSeq (SBVApp (SeqOp SeqUnit) [e])
-                     let esSBV = SBV (SVal kSeq (Right (cache (\_ -> return es))))
-                     internalConstraint st False [] $ unSBV $ length l .> i .=> esSBV .== si
+
+                     -- Create the condition that it is equal to si
+                     li <- sbvToSV st si
+                     eq <- newExpr st KBool (SBVApp Equal [es, li])
+
+                     -- Gotta make sure we do this only when length is at least > i
+                     caseTooShort <- sbvToSV st (length l .<= i)
+                     require      <- newExpr st KBool (SBVApp Or [caseTooShort, eq])
+
+                     -- register the constraint:
+                     internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
+
+                     -- We're good to go:
                      return e
 
 -- | Short cut for 'elemAt'

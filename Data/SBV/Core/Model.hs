@@ -724,7 +724,7 @@ the right choice obviously; as the Eq instance is bogus for SBV
 for natural reasons..
 -}
 
-instance EqSymbolic (SBV a) where
+instance Eq a => EqSymbolic (SBV a) where
   SBV x .== SBV y = SBV (svEqual x y)
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
@@ -762,7 +762,7 @@ instance EqSymbolic (SBV a) where
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
 
-instance SymVal a => OrdSymbolic (SBV a) where
+instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
   SBV x .<  SBV y = SBV (svLessThan x y)
   SBV x .<= SBV y = SBV (svLessEq x y)
   SBV x .>  SBV y = SBV (svGreaterThan x y)
@@ -1498,7 +1498,7 @@ instance SDivisible SInt8 where
 
 -- | Lift 'quotRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself.
-liftQRem :: SymVal a => SBV a -> SBV a -> (SBV a, SBV a)
+liftQRem :: (Eq a, SymVal a) => SBV a -> SBV a -> (SBV a, SBV a)
 liftQRem x y
   | isConcreteZero x
   = (x, x)

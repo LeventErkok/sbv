@@ -104,11 +104,11 @@ ball :: SymVal a => Int -> (SBV a -> SBool) -> SList a -> SBool
 ball i f = band i . bmap i f
 
 -- | Bounded maximum. Undefined if list is empty.
-bmaximum :: SymVal a => Int -> SList a -> SBV a
+bmaximum :: (Ord a, SymVal a) => Int -> SList a -> SBV a
 bmaximum i l = bfoldl (i-1) smax (L.head l) (L.tail l)
 
 -- | Bounded minimum. Undefined if list is empty.
-bminimum :: SymVal a => Int -> SList a -> SBV a
+bminimum :: (Ord a, SymVal a) => Int -> SList a -> SBV a
 bminimum i l = bfoldl (i-1) smin (L.head l) (L.tail l)
 
 -- | Bounded zipWith
@@ -120,7 +120,7 @@ bzipWith cnt f = go (cnt `max` 0)
                           (f (L.head xs) (L.head ys) .: go (i-1) (L.tail xs) (L.tail ys))
 
 -- | Bounded element check
-belem :: SymVal a => Int -> SBV a -> SList a -> SBool
+belem :: (Eq a, SymVal a) => Int -> SBV a -> SList a -> SBool
 belem i e = bany i (e .==)
 
 -- | Bounded reverse
@@ -134,12 +134,12 @@ bpara cnt f b = go (cnt `max` 0)
         go i s = lcase s b (\h t -> f h t (go (i-1) t))
 
 -- | Insert an element into a sorted list (not exported).
-binsert :: SymVal a => Int -> SBV a -> SList a -> SList a
+binsert :: (Ord a, SymVal a) => Int -> SBV a -> SList a -> SList a
 binsert cnt a = bpara cnt f (L.singleton a)
   where f sortedHd sortedTl sortedTl' = ite (a .< sortedHd)
                                             (a .: sortedHd .: sortedTl)
                                             (sortedHd .: sortedTl')
 
 -- | Bounded insertion sort
-bsort :: SymVal a => Int -> SList a -> SList a
+bsort :: (Ord a, SymVal a) => Int -> SList a -> SList a
 bsort cnt = bfoldr cnt (binsert cnt) []

@@ -105,12 +105,12 @@
     because the solver returned 'Unknown'. Previously this information was not
     displayed.
 
-  * [BACKWARDS COMPATIBILITY, Internal] The 'Ord' superclass requirement for
-    the 'SymVal' class was dropped, as it wasn't strictly necessary, and wasn't
-    satisfiable for symbolic sets due to the presence of universals. This led to
-    changes in a bunch of signatures to add 'Ord' as a constraint. Strictly
-    speaking this is a backwards compatibility breaking change, but I doubt
-    it'll impact any user code. Yell if that's not the case!
+  * [BACKWARDS COMPATIBILITY, Internal] Several constraints on internal
+    classes (such as SymVal, EqSymbolic, OrdSymbolic) were reworked to
+    reflect the dependencies better. Strictly speaking this is a backwards
+    compatibility breaking change, but I doubt it'll impact any user
+    code; though you might have to add some extra constraints if you were
+    writing sufficiently polymorphic SBV code. Yell if you find otherwise!
 
 ### Version 8.0, 2019-01-14
 

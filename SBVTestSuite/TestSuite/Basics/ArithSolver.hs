@@ -203,7 +203,7 @@ genShiftMixSize = map mkTest $  [(show x, show y, "shl_w8_w16", mk sShiftLeft  x
          yw16s = [0, 255, 256, 257, maxBound]
 
          mkTest (x, y, l, t) = testCase ("genShiftMixSize." ++ l ++ "." ++ x ++ "_" ++ y) (assert t)
-         mk :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
+         mk :: (Eq a, Eq b, SymVal a, SymVal b) => (SBV a -> SBV b -> SBV a) -> a -> b -> a -> IO Bool
          mk o x y r
           = isTheorem $ do a <- free "x"
                            b <- free "y"
