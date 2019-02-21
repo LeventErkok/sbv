@@ -30,7 +30,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), SeqOp(..), RegExp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, newUninterpreted, addAxiom
@@ -371,7 +371,7 @@ data SeqOp = SeqConcat    -- ^ See StrConcat
            | SeqReplace   -- ^ See StrReplace
   deriving (Eq, Ord)
 
--- | Show instance for @SeqOp@. Again, mapping is important.
+-- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
   show SeqConcat   = "seq.++"
   show SeqLen      = "seq.len"
@@ -387,7 +387,8 @@ instance Show SeqOp where
 data SetOp = SetEqual
         deriving (Eq, Ord)
 
--- The show instance for 'SetOp' is merely for debugging
+-- The show instance for 'SetOp' is merely for debugging, we map them separately so
+-- the mapped strings are less important here.
 instance Show SetOp where
   show SetEqual = "=="
 
@@ -422,6 +423,7 @@ instance Show Op where
 
   show (StrOp s)            = show s
   show (SeqOp s)            = show s
+  show (SetOp s)            = show s
 
   show (TupleConstructor   0) = "mkSBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n

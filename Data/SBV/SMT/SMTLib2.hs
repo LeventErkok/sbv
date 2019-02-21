@@ -24,7 +24,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..))
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..))
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -844,6 +844,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+
+        sh (SBVApp (SetOp SetEqual) args) = "(= " ++ unwords (map ssv args) ++ ")"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"
