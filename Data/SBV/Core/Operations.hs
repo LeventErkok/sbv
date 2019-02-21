@@ -21,7 +21,7 @@ module Data.SBV.Core.Operations
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svQuotRem
-  , svEqual, svNotEqual, svStrongEqual
+  , svEqual, svNotEqual, svStrongEqual, svSetEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
@@ -282,11 +282,38 @@ eqOptBool op w x y
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
-svEqual = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==)
+svEqual a b
+  | isSet a && isSet b
+  = svSetEqual a b
+  | True
+  = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
-svNotEqual = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=)
+svNotEqual a b
+  | isSet a && isSet b
+  = svNot $ svEqual a b
+  | True
+  = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) a b
+
+-- | Set equality. Note that we only do constant folding if we get both a regular or both a
+-- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
+svSetEqual :: SVal -> SVal -> SVal
+svSetEqual sa sb
+  | not (isSet sa && isSet sb && kindOf sa == kindOf sb)
+  = error $ "Data.SBV.svSetEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
+  | Just (RegularSet a)    <- getSet sa, Just (RegularSet b)    <- getSet sb
+  = svBool (a == b)
+  | Just (ComplementSet a) <- getSet sa, Just (ComplementSet b) <- getSet sb
+  = svBool (a == b)
+  | True
+  = SVal KBool $ Right $ cache r
+  where getSet (SVal _ (Left (CV _ (CSet s)))) = Just s
+        getSet _                               = Nothing
+
+        r st = do sva <- svToSV st sa
+                  svb <- svToSV st sb
+                  newExpr st KBool $ SBVApp (SetOp SetEqual) [sva, svb]
 
 -- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
 -- Otherwise equivalent to `svEqual`.
