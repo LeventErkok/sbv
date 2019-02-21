@@ -38,8 +38,8 @@ import Data.SBV.Core.Model () -- instances only
 -- For doctest use only
 --
 -- $setup
--- >>> import Data.SBV.Core.Model     (Uninterpreted(uninterpret), sMod)
--- >>> import Data.SBV.Provers.Prover (prove, sat)
+-- >>> import Data.SBV.Core.Model
+-- >>> import Data.SBV.Provers.Prover
 
 -- | The symbolic 'Nothing'
 --
