@@ -140,6 +140,28 @@ insert se ss
                   newExpr st k $ SBVApp (SetOp SetInsert) [sve, svs]
 
 -- | Delete an element from a set.
+--
+-- Deletion is order independent:
+--
+-- >>> prove $ \x y (s :: SSet Integer) -> x `delete` (y `delete` s) .== y `delete` (x `delete` s)
+-- Q.E.D.
+--
+-- Insertion after deletion is not necessarily identity:
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `insert` (x `delete` s) .== s
+-- Falsifiable. Counter-example:
+--   s0 =  0 :: Integer
+--   s1 = {} :: {Integer}
+--
+-- But the above is true if the element is in the set to start with:
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `member` s .=> x `insert` (x `delete` s) .== s
+-- Q.E.D.
+--
+-- Deletion from an empty set does nothing:
+--
+-- >>> prove $ \x -> delete x empty .== (empty :: SSet Integer)
+-- Q.E.D.
 delete :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SSet a
 delete se ss
   -- Case 1: Constant regular set, just remove it:
@@ -183,6 +205,18 @@ notMember :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 notMember se ss = sNot $ member se ss
 
 -- | Complement.
+--
+-- NB. Complement is hard to reason with. I have observed that z3 mostly returns unknown
+-- for problems involving complement. Use with care.
+--
+-- >>> empty .== complement (full :: SSet Integer)
+-- True
+--
+-- Here's an example where we would expect proof, but currently causes an unknown result:
+--
+-- >>> prove $ \s -> complement (complement s) .== (s :: SSet Integer)
+-- Unknown.
+-- Reason: smt tactic failed to show goal to be sat/unsat (incomplete (theory array))
 complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
 complement ss
   | Just (RegularSet rs) <- unliteral ss
