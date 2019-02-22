@@ -26,22 +26,31 @@
 
 module Data.SBV.Set (
         -- * Constructing sets
-          empty, full, fromList
+          empty, full, singleton, fromList
+
         -- * Equality of sets
         -- $setEquality
-        -- * Insertion
-        , insert
-        -- * Deletion
-        , delete
-        -- * Membership
-        -- , member, notMember
+
+        -- * Insertion and deletion
+        , insert, delete
+
+        -- * Query
+        , member, notMember, null, isSubsetOf, isProperSubsetOf, disjoint
+
+        -- * Complement
+        , complement
+
+        -- * Combinations
+        , union, unions, difference, (\\), intersection, cartesianProduct, disjointUnion, 
+
         ) where
 
 import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model
+import Data.SBV.Core.Model () -- instances only
+
 import Data.SBV.Core.Symbolic (SetOp(..))
 
 -- For doctest use only
@@ -69,6 +78,13 @@ full :: forall a. HasKind a => SSet a
 full = SBV $ SVal k $ Left $ CV k $ CSet $ ComplementSet Set.empty
   where k = KSet $ kindOf (Proxy @a)
 
+-- | Singleton list.
+--
+-- >>> singleton 2 :: SSet Integer
+-- {2} :: {SInteger}
+singleton :: forall a. (Ord a, SymVal a) => SBV a -> SSet a
+singleton = (`insert` (empty :: SSet a))
+
 -- | Conversion from a list.
 --
 -- >>> fromList ([] :: [Integer])
@@ -77,33 +93,47 @@ full = SBV $ SVal k $ Left $ CV k $ CSet $ ComplementSet Set.empty
 -- {1,2,3} :: {SInteger}
 -- >>> fromList [5,5,5,12,12,3]
 -- {3,5,12} :: {SInteger}
-fromList :: forall a. SymVal a => [a] -> SSet a
-fromList = SBV . SVal k . Left . CV k . CSet . RegularSet . Set.fromList . map toCV
-  where ka = kindOf (Proxy @a)
-        k  = KSet ka
+fromList :: forall a. (Ord a, SymVal a) => [a] -> SSet a
+fromList = literal . RegularSet . Set.fromList
 
 -- | Insert an element into a set.
+--
+-- Insertion is order independent:
+--
+-- >>> prove $ \x y (s :: SSet Integer) -> x `insert` (y `insert` s) .== y `insert` (x `insert` s)
+-- Q.E.D.
+--
+-- Delete after insert is identity, if the set didn't contain that element:
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> x `delete` (x `insert` s) .== s
+-- Q.E.D.
+--
+-- But the above is not true in general:
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
+-- Falsifiable. Counter-example:
+--   s0 =   0 :: Integer
+--   s1 = {0} :: {Integer}
+--
+-- Insertion into a full set does nothing:
+--
+-- >>> prove $ \x -> insert x full .== (full :: SSet Integer)
+-- Q.E.D.
 insert :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SSet a
 insert se ss
   -- Case 1: Constant regular set, just add it:
   | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
-  = mkS $ RegularSet $ toCV e `Set.insert` Set.map toCV rs
+  = literal $ RegularSet $ e `Set.insert` rs
 
   -- Case 2: Constant complement set, with element in the complement, just remove it:
-  | Just e <- unliteral se
-  , Just (ComplementSet cs) <- unliteral ss
-  , let cvE = toCV e
-  , let cvS = Set.map toCV cs
-  , cvE `Set.member` cvS
-  = mkS $ ComplementSet $ cvE `Set.delete` cvS
+  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.member` cs
+  = literal $ ComplementSet $ e `Set.delete` cs
 
   -- Otherwise, go symbolic
   | True
   = SBV $ SVal k $ Right $ cache r
   where ka = kindOf (Proxy @a)
         k  = KSet ka
-
-        mkS = SBV . SVal k . Left . CV k . CSet
 
         r st = do svs <- sbvToSV st ss
                   sve <- sbvToSV st se
@@ -114,15 +144,11 @@ delete :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SSet a
 delete se ss
   -- Case 1: Constant regular set, just remove it:
   | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
-  = mkS $ RegularSet $ toCV e `Set.delete` Set.map toCV rs
+  = literal $ RegularSet $ e `Set.delete` rs
 
   -- Case 2: Constant complement set, with element missing in the complement, just add it:
-  | Just e <- unliteral se
-  , Just (ComplementSet cs) <- unliteral ss
-  , let cvE = toCV e
-  , let cvS = Set.map toCV cs
-  , cvE `Set.notMember` cvS
-  = mkS $ ComplementSet $ cvE `Set.insert` cvS
+  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.notMember` cs
+  = literal $ ComplementSet $ e `Set.insert` cs
 
   -- Otherwise, go symbolic
   | True
@@ -130,24 +156,86 @@ delete se ss
   where ka = kindOf (Proxy @a)
         k  = KSet ka
 
-        mkS = SBV . SVal k . Left . CV k . CSet
-
         r st = do svs <- sbvToSV st ss
                   sve <- sbvToSV st se
                   newExpr st k $ SBVApp (SetOp SetDelete) [sve, svs]
 
-{-
 -- | Test for membership.
-member :: SBV a -> SSet a -> SBool
+member :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 member se ss
   -- Case 1: Constant regular set, just check:
-  | Just e <- unliteral se, Just (RegularSet 
+  | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
+  = literal $ e `Set.member` rs
 
+  -- Case 2: Constant complement set, check for non-member
+  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss
+  = literal $ e `Set.notMember` cs
+
+  -- Otherwise, go symbolic
+  | True
+  = SBV $ SVal KBool $ Right $ cache r
+  where r st = do svs <- sbvToSV st ss
+                  sve <- sbvToSV st se
+                  newExpr st KBool $ SBVApp (SetOp SetMember) [sve, svs]
 
 -- | Test for non-membership.
-notMember :: SBV a -> SSet a -> SBool
-notMember = notMember
-  -}
+notMember :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
+notMember se ss = sNot $ member se ss
+
+-- | Complement.
+complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
+complement ss
+  | Just (RegularSet rs) <- unliteral ss
+  = literal $ ComplementSet rs
+  | Just (ComplementSet cs) <- unliteral ss
+  = literal $ RegularSet cs
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = KSet (kindOf (Proxy @a))
+
+        r st = do svs <- sbvToSV st ss
+                  newExpr st k $ SBVApp (SetOp SetComplement) [svs]
+
+-- | Subset test.
+isSubsetOf :: SSet a -> SSet a -> SBool
+isSubsetOf = error "TBD: isSubsetOf"
+
+-- | Proper subset test.
+isProperSubsetOf :: SSet a -> SSet a -> SBool
+isProperSubsetOf = error "TBD: isProperSubsetOf"
+
+-- | Disjoint test.
+disjoint :: SSet a -> SSet a -> SBool
+disjoint = error "TBD: disjoint"
+
+-- | Union.
+union :: SSet a -> SSet a -> SSet a
+union = error "TBD: union"
+
+-- | Unions.
+unions :: [SSet a] -> SSet a
+unions = error "TBD: unions"
+
+-- | Intersection.
+intersection :: SSet a -> SSet a -> SSet a
+intersection = error "TBD: union"
+
+-- | Difference.
+difference :: SSet a -> SSet a -> SSet a
+difference = error "TBD: difference"
+
+-- | Difference, synonym for 'difference'.
+infixl 9 \\
+(\\) :: SSet a -> SSet a -> SSet a
+(\\) = difference
+
+-- | Cartesian product.
+cartesianProduct :: SSet a -> SSet a -> SSet (STuple a b)
+cartesianProduct = error "TBD: cartesianProduct"
+
+-- | Disjoin union.
+disjointUnion :: SSet a -> SSet b -> SSet (SEither a b)
+disjointUnion = error "TBD: disjointUnion"
 
 {- $setEquality
 We can compare sets for equality:
