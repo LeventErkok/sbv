@@ -28,7 +28,7 @@ module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SChar, SString, SList
  , SEither, SMaybe
- , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
+ , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
  , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero
@@ -173,7 +173,10 @@ type SMaybe a = SBV (Maybe a)
 -- universal set (of the right type) by removing elements.
 type SSet a = SBV (RCSet a)
 
--- | Symbolic 2-tuple.
+-- | Symbolic 2-tuple. NB. 'STuple' and 'STuple2' are equivalent.
+type STuple a b = SBV (a, b)
+
+-- | Symbolic 2-tuple. NB. 'STuple' and 'STuple2' are equivalent.
 type STuple2 a b = SBV (a, b)
 
 -- | Symbolic 3-tuple.

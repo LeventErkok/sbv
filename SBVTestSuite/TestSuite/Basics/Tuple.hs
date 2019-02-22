@@ -100,7 +100,7 @@ enum = do
                   constrain $ b .!! 4 .== sTrue
 
    query $ do
-     vTup2 :: STuple2 Word8 (E, Char, Float) <- freshVar "v2"
+     vTup2 :: STuple Word8 (E, Char, Float) <- freshVar "v2"
      constrain $ vTup2 .== literal (5, (C, 'A', 8.12))
 
      constrain $ vTup1 .== literal [(B, []), (A, [True, False]), (C, [False, False, False, False, True, False])]

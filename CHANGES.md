@@ -141,12 +141,12 @@
     8-tuples), and allows mixing and matching of lists and tuples arbitrarily
     as symbolic values. For instance `SBV [(Integer, String)]` is a valid type as
     is `SBV [(Integer, [(Char, (Float, String))])]`, with each component symbolically
-    represented. There are new type synonyms for `STupleN` for `N` between 2 to 8,
-    along with `untuple` destructor, and field accessors similar to lens: For instance
-    `p^._4` would project the 4th element of a tuple that has at least 4 fields.
-    The mixing and matching of field types and nesting allows for very rich
-    symbolic value representations. See `Documentation.SBV.Examples.Misc.Tuple` for
-    an example.
+    represented. Along with `STuple` for regular 2-tuples, there are new types
+    for `STupleN` for `N` between 2 to 8, along with `untuple` destructor, and field
+    accessors similar to lens: For instance `p^._4` would project the 4th element of
+    a tuple that has at least 4 fields. The mixing and matching of field types and
+    nesting allows for very rich symbolic value representations. See
+    `Documentation.SBV.Examples.Misc.Tuple` for an example.
 
   * [BACKWARDS COMPATIBILITY] The `Boolean` class is removed, which used to abstract
     over logical connectives. Previously, this class handled 'SBool' and 'Bool', but

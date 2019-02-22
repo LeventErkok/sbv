@@ -52,7 +52,7 @@
 --
 --   * 'SList': Symbolic lists (which can be nested)
 --
---   * 'STuple2', 'STuple3', .., 'STuple8' : Symbolic tuples (upto 8-tuples, can be nested)
+--   * 'STuple', 'STuple2', 'STuple3', .., 'STuple8' : Symbolic tuples (upto 8-tuples, can be nested)
 --
 --   * 'SEither': Symbolic sums
 --
@@ -153,7 +153,7 @@ module Data.SBV (
   , SList
   -- ** Tuples
   -- $tuples
-  , STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
+  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
   -- ** Sum types
   , SMaybe, SEither
   -- ** Sets
