@@ -37,7 +37,7 @@ module Data.SBV.Core.Model (
   , sRealToSInteger, label, observe, observeIf
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
-  , genLiteral, genFromCV, genMkSymVar, toCV
+  , genLiteral, genFromCV, genMkSymVar
   , sbvQuickCheck
   )
   where
