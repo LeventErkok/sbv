@@ -142,12 +142,12 @@ member :: SBV a -> SSet a -> SBool
 member se ss
   -- Case 1: Constant regular set, just check:
   | Just e <- unliteral se, Just (RegularSet 
-  -}
 
 
 -- | Test for non-membership.
 notMember :: SBV a -> SSet a -> SBool
 notMember = notMember
+  -}
 
 {- $setEquality
 We can compare sets for equality:
