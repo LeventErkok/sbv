@@ -846,10 +846,15 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
-        sh (SBVApp (SetOp SetEqual)  args)   = "(= " ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetMember) [e, s]) = "(select " ++ ssv s ++ " " ++ ssv e ++ ")"
-        sh (SBVApp (SetOp SetInsert) [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " true)"
-        sh (SBVApp (SetOp SetDelete) [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " false)"
+        sh (SBVApp (SetOp SetEqual)      args)        = "(= "      ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetMember)     [e, s])      = "(select " ++ ssv s ++ " " ++ ssv e ++ ")"
+        sh (SBVApp (SetOp SetInsert)     [e, s])      = "(store "  ++ ssv s ++ " " ++ ssv e ++ " true)"
+        sh (SBVApp (SetOp SetDelete)     [e, s])      = "(store "  ++ ssv s ++ " " ++ ssv e ++ " false)"
+        sh (SBVApp (SetOp SetIntersect)  args@(a:_))  = "((as intersect "  ++ smtType (kindOf a) ++ ") " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetUnion)      args@(a:_))  = "((as union "      ++ smtType (kindOf a) ++ ") " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetSubset)     args@[a, _]) = "((as subset "     ++ smtType (kindOf a) ++ ") " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetDifference) args@[a, _]) = "((as difference " ++ smtType (kindOf a) ++ ") " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetComplement) args@[a])    = "((as complement " ++ smtType (kindOf a) ++ ") " ++ unwords (map ssv args) ++ ")"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"

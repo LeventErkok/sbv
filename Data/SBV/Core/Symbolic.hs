@@ -388,15 +388,25 @@ data SetOp = SetEqual
            | SetMember
            | SetInsert
            | SetDelete
+           | SetIntersect
+           | SetUnion
+           | SetSubset
+           | SetDifference
+           | SetComplement
         deriving (Eq, Ord)
 
 -- The show instance for 'SetOp' is merely for debugging, we map them separately so
 -- the mapped strings are less important here.
 instance Show SetOp where
-  show SetEqual  = "=="
-  show SetMember = "Set.member"
-  show SetInsert = "Set.insert"
-  show SetDelete = "Set.delete"
+  show SetEqual      = "=="
+  show SetMember     = "Set.member"
+  show SetInsert     = "Set.insert"
+  show SetDelete     = "Set.delete"
+  show SetIntersect  = "Set.intersect"
+  show SetUnion      = "Set.union"
+  show SetSubset     = "Set.subset"
+  show SetDifference = "Set.difference"
+  show SetComplement = "Set.complement"
 
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
