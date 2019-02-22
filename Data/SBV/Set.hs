@@ -216,7 +216,7 @@ notMember se ss = sNot $ member se ss
 --
 -- >>> prove $ \s -> complement (complement s) .== (s :: SSet Integer)
 -- Unknown.
--- Reason: smt tactic failed to show goal to be sat/unsat (incomplete (theory array))
+--   Reason: smt tactic failed to show goal to be sat/unsat (incomplete (theory array))
 complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
 complement ss
   | Just (RegularSet rs) <- unliteral ss
