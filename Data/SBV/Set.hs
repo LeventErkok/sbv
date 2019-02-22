@@ -103,17 +103,17 @@ fromList = literal . RegularSet . Set.fromList
 -- >>> prove $ \x y (s :: SSet Integer) -> x `insert` (y `insert` s) .== y `insert` (x `insert` s)
 -- Q.E.D.
 --
--- Delete after insert is identity, if the set didn't contain that element:
---
--- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> x `delete` (x `insert` s) .== s
--- Q.E.D.
---
--- But the above is not true in general:
+-- Deletion after insertion is not necessarily identity:
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
 -- Falsifiable. Counter-example:
 --   s0 =   0 :: Integer
 --   s1 = {0} :: {Integer}
+--
+-- But the above is true if the element isn't in the set to start with:
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> x `delete` (x `insert` s) .== s
+-- Q.E.D.
 --
 -- Insertion into a full set does nothing:
 --
