@@ -845,7 +845,10 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
-        sh (SBVApp (SetOp SetEqual) args) = "(= " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetEqual)  args)   = "(= " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetMember) [e, s]) = "(select " ++ ssv s ++ " " ++ ssv e ++ ")"
+        sh (SBVApp (SetOp SetInsert) [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " true)"
+        sh (SBVApp (SetOp SetDelete) [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " false)"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "(mkSBVTuple" ++ show n ++ " " ++ unwords (map ssv args) ++ ")"

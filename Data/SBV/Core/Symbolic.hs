@@ -385,12 +385,18 @@ instance Show SeqOp where
 
 -- | Set operations.
 data SetOp = SetEqual
+           | SetMember
+           | SetInsert
+           | SetDelete
         deriving (Eq, Ord)
 
 -- The show instance for 'SetOp' is merely for debugging, we map them separately so
 -- the mapped strings are less important here.
 instance Show SetOp where
-  show SetEqual = "=="
+  show SetEqual  = "=="
+  show SetMember = "Set.member"
+  show SetInsert = "Set.insert"
+  show SetDelete = "Set.delete"
 
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.
