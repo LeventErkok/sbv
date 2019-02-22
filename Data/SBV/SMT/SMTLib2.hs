@@ -111,7 +111,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              else if hasBVs
                   then ["(set-logic QF_FPBV)"]
                   else ["(set-logic QF_FP)"]
-           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe
+           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets
            = let why | hasInteger        = "has unbounded values"
                      | hasReal           = "has algebraic reals"
                      | not (null usorts) = "has user-defined sorts"
@@ -119,6 +119,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                      | hasTuples         = "has tuples"
                      | hasEither         = "has either type"
                      | hasMaybe          = "has maybe type"
+                     | hasSets           = "has sets"
                      | True              = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
 
@@ -131,7 +132,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                QueryInternal -> ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
-                as  | null arrs && not hasSets = ""
+                as  | null arrs                = ""
                     | True                     = "A"
                 ufs | null uis && null tbls    = ""     -- we represent tables as UFs
                     | True                     = "UF"
