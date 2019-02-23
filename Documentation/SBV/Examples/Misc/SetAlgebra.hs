@@ -96,4 +96,10 @@ Q.E.D.
 >>> prove $ \(a :: SI) b -> a `intersection` (a `union` b) .== a
 Q.E.D.
 -}
+
+-- * Intersection and set difference
+-- $intdiff
+{- $intdiff
+>>> prove $ \(a :: SI) b -> a `intersection` b .== a `difference` (a `difference` b)
+Q.E.D.
 -}
