@@ -25,7 +25,6 @@ type SI = SSet Integer
 
 -- * Commutativity
 -- $commutativity
-
 {- $commutativity
 >>> prove $ \(a :: SI) b -> a `union` b .== b `union` a
 Q.E.D.
@@ -35,7 +34,6 @@ Q.E.D.
 
 -- * Associativity
 -- $associativity
-
 {- $associativity
 >>> prove $ \(a :: SI) b c -> a `union` (b `union` c) .== (a `union` b) `union` c
 Q.E.D.
@@ -45,10 +43,18 @@ Q.E.D.
 
 -- * Distributivity
 -- $distributivity
-
 {- $distributivity
 >>> prove $ \(a :: SI) b c -> a `union` (b `intersection` c) .== (a `union` b) `intersection` (a `union` c)
 Q.E.D.
 >>> prove $ \(a :: SI) b c -> a `intersection` (b `union` c) .== (a `intersection` b) `union` (a `intersection` c)
+Q.E.D.
+-}
+
+-- * Identity laws
+-- $identity
+{- $identity
+>>> prove $ \(a :: SI) -> a `union` empty .== a
+Q.E.D.
+>>> prove $ \(a :: SI) -> a `intersection` full .== a
 Q.E.D.
 -}
