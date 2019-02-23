@@ -171,3 +171,35 @@ Q.E.D.
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> complement b `isSubsetOf` complement a
 Q.E.D.
 -}
+
+-- * Relative complements
+-- $relComp
+{- $relComp
+
+>>> prove $ \(a :: SI) b c -> c \\ (a `intersection` b) .== (c \\ a) `union` (c \\ b)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> c \\ (a `union` b) .== (c \\ a) `intersection` (c \\ b)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> c \\ (b \\ a) .== (a `intersection` c) `union` (c \\ b)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> (b \\ a) `intersection` c .== (b `intersection` c) \\ a
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> (b \\ a) `intersection` c .== b `intersection` (c \\ a)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> (b \\ a) `union` c .== (b `union` c) \\ (a \\ c)
+Q.E.D.
+>>> prove $ \(a :: SI) -> a \\ a .== empty
+Q.E.D.
+>>> prove $ \(a :: SI) -> empty \\ a .== empty
+Q.E.D.
+>>> prove $ \(a :: SI) -> a \\ empty .== a
+Q.E.D.
+>>> prove $ \(a :: SI) b -> b \\ a .== complement a `intersection` b
+Q.E.D.
+>>> prove $ \(a :: SI) b -> complement (b \\ a) .== a `union` complement b
+Q.E.D.
+>>> prove $ \(a :: SI) -> full \\ a .== complement a
+Q.E.D.
+>>> prove $ \(a :: SI) -> a \\ full .== empty
+Q.E.D.
+-}
