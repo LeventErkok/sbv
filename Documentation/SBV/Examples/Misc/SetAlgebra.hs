@@ -140,3 +140,18 @@ Q.E.D.
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` b .&& b `isSubsetOf` c .=> a `isSubsetOf` c
 Q.E.D.
 -}
+
+-- * Joins and meets
+-- $joinMeet
+{- $joinMeet
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` (a `union` b)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> a `isSubsetOf` c .&& b `isSubsetOf` c .=> (a `union` b) `isSubsetOf` c
+Q.E.D.
+>>> prove $ \(a :: SI) b -> (a `intersection` b) `isSubsetOf` a
+Q.E.D.
+>>> prove $ \(a :: SI) b -> (a `intersection` b) `isSubsetOf` b
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> c `isSubsetOf` a .&& c `isSubsetOf` b .=> c `isSubsetOf` (a `intersection` b)
+Q.E.D.
+-}
