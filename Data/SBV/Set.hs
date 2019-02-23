@@ -370,6 +370,8 @@ disjoint a b = a `intersection` b .== empty
 
 -- | Union.
 --
+-- >>> union (fromList [1..10]) (fromList [5..15]) .== (fromList [1..15] :: SSet Integer)
+-- True
 -- >>> prove $ \(a :: SSet Integer) b -> a `union` b .== b `union` a
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) b c -> a `union` (b `union` c) .== (a `union` b) `union` c
@@ -407,6 +409,8 @@ unions = foldr union empty
 
 -- | Intersection.
 --
+-- >>> intersection (fromList [1..10]) (fromList [5..15]) .== (fromList [5..10] :: SSet Integer)
+-- True
 -- >>> prove $ \(a :: SSet Integer) b -> a `intersection` b .== b `intersection` a
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) b c -> a `intersection` (b `intersection` c) .== (a `intersection` b) `intersection` c
@@ -416,6 +420,8 @@ unions = foldr union empty
 -- >>> prove $ \(a :: SSet Integer) -> a `intersection` empty .== empty
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) -> a `intersection` complement a .== empty
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) b -> a `disjoint` b .=> a `intersection` b .== empty
 -- Q.E.D.
 intersection :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 intersection sa sb
@@ -445,6 +451,15 @@ intersections :: (Ord a, SymVal a) => [SSet a] -> SSet a
 intersections = foldr intersection full
 
 -- | Difference.
+--
+-- >>> prove $ \(a :: SSet Integer) -> empty `difference` a .== empty
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `difference` empty .== a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> full `difference` a .== complement a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `difference` a .== empty
+-- Q.E.D.
 difference :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 difference sa sb
   -- Only constant fold the regular case, others are left symbolic
