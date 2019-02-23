@@ -340,6 +340,27 @@ isProperSubsetOf :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
 isProperSubsetOf a b = a `isSubsetOf` b .&& a ./= b
 
 -- | Disjoint test.
+--
+-- >>> disjoint (fromList [2,4,6])   (fromList [1,3])
+-- True
+-- >>> disjoint (fromList [2,4,6,8]) (fromList [2,3,5,7])
+-- False
+-- >>> disjoint (fromList [1,2])     (fromList [1,2,3,4])
+-- False
+-- >>> prove $ \(s :: SSet Integer) -> s `disjoint` complement s
+-- Q.E.D.
+-- >>> allSat $ \(s :: SSet Integer) -> s `disjoint` s
+-- Solution #1:
+--   s0 = {} :: {Integer}
+-- This is the only solution.
+--
+-- The last example is particularly interesting: The empty set is the
+-- only set where `disjoint` is not reflexive!
+--
+-- Note that disjointness of a set from its complement is guaranteed
+-- by the fact that all types are inhabited; an implicit assumption
+-- we have in classic logic which is also enjoyed by Haskell due to
+-- the presence of bottom!
 disjoint :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
 disjoint a b = a `intersection` b .== empty
 
