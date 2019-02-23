@@ -35,18 +35,20 @@ module Data.SBV.Set (
         , insert, delete
 
         -- * Query
-        , member, notMember, null, isSubsetOf, isProperSubsetOf, disjoint
+        , member, notMember, null, isEmpty, isFull, isUniversal, isSubsetOf, isProperSubsetOf, disjoint
 
         -- * Combinations
         , union, unions, difference, (\\), intersection, cartesianProduct, disjointUnion, 
 
         ) where
 
+import Prelude hiding (null)
+
 import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model ((.==))
 
 import Data.SBV.Core.Symbolic (SetOp(..))
 
@@ -202,6 +204,15 @@ delete se ss
                   newExpr st k $ SBVApp (SetOp SetDelete) [sve, svs]
 
 -- | Test for membership.
+--
+-- >>> prove $ \x -> x `member` singleton (x :: SInteger)
+-- Q.E.D.
+--
+-- >>> prove $ \x s -> x `member` (x `insert` (s :: SSet Integer))
+-- Q.E.D.
+--
+-- >>> prove $ \x -> x `member` (full :: SSet Integer)
+-- Q.E.D.
 member :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 member se ss
   -- Case 1: Constant regular set, just check:
@@ -220,8 +231,63 @@ member se ss
                   newExpr st KBool $ SBVApp (SetOp SetMember) [sve, svs]
 
 -- | Test for non-membership.
+--
+-- >>> prove $ \x -> x `notMember` observe "set" (singleton (x :: SInteger))
+-- Falsifiable. Counter-example:
+--   set = {0} :: {Integer}
+--   s0  =   0 :: Integer
+--
+-- >>> prove $ \x s -> x `notMember` (x `delete` (s :: SSet Integer))
+-- Q.E.D.
+--
+-- >>> prove $ \x -> x `notMember` (empty :: SSet Integer)
+-- Q.E.D.
 notMember :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 notMember se ss = sNot $ member se ss
+
+-- | Is this the empty set?
+--
+-- >>> null (empty :: SSet Integer)
+-- True
+--
+-- >>> prove $ \x -> null (x `delete` singleton (x :: SInteger))
+-- Q.E.D.
+--
+-- >>> prove $ null (full :: SSet Integer)
+-- Falsifiable
+--
+-- Note how we have to call `Data.SBV.prove` in the last case since dealing
+-- with infinite sets requires a call to the solver and cannot be
+-- constant folded.
+null :: HasKind a => SSet a -> SBool
+null = (.== empty)
+
+-- | Synonym for 'Data.SBV.Set.null'.
+isEmpty :: HasKind a => SSet a -> SBool
+isEmpty = null
+
+-- | Is this the full set?
+--
+-- >>> prove $ isFull (empty :: SSet Integer)
+-- Falsifiable
+--
+-- >>> prove $ \x -> isFull (observe "set" (x `delete` (full :: SSet Integer)))
+-- Falsifiable. Counter-example:
+--   set = U - {0} :: {Integer}
+--   s0  =       0 :: Integer
+--
+-- >>> isFull (full :: SSet Integer)
+-- True
+--
+-- Note how we have to call `Data.SBV.prove` in the first case since dealing
+-- with infinite sets requires a call to the solver and cannot be
+-- constant folded.
+isFull :: HasKind a => SSet a -> SBool
+isFull = (.== full)
+
+-- | Synonym for 'Data.SBV.Set.isFull'.
+isUniversal :: HasKind a => SSet a -> SBool
+isUniversal = isFull
 
 -- | Subset test.
 isSubsetOf :: SSet a -> SSet a -> SBool
