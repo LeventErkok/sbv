@@ -78,4 +78,14 @@ Q.E.D.
 >>> prove $ \(a :: SI) -> a `intersection` a .== a
 Q.E.D.
 -}
+
+-- * Domination properties
+-- $domination
+{- $domination
+>>> prove $ \(a :: SI) -> a `union` full .== full
+Q.E.D.
+>>> prove $ \(a :: SI) -> a `intersection` empty .== empty
+Q.E.D.
+-}
+
 -}
