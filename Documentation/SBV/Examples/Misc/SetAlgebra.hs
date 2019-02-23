@@ -155,3 +155,18 @@ Q.E.D.
 >>> prove $ \(a :: SI) b c -> c `isSubsetOf` a .&& c `isSubsetOf` b .=> c `isSubsetOf` (a `intersection` b)
 Q.E.D.
 -}
+
+-- * Subset characterization
+-- $subsetChar
+{- $subsetChar
+There are multiple equivalent ways of characterizing the subset relationship:
+
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `intersection` b .== a
+Q.E.D.
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `union` b .== b
+Q.E.D.
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `difference` b .== empty
+Q.E.D.
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> complement b `isSubsetOf` complement a
+Q.E.D.
+-}
