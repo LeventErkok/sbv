@@ -39,7 +39,7 @@ module Data.SBV.Set (
         , member, notMember, null, isEmpty, isFull, isUniversal, isSubsetOf, isProperSubsetOf, disjoint
 
         -- * Combinations
-        , union, unions, difference, (\\), intersection, intersections
+        , union, unions, intersection, intersections, difference, (\\)
 
         ) where
 
@@ -365,6 +365,17 @@ disjoint :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
 disjoint a b = a `intersection` b .== empty
 
 -- | Union.
+--
+-- >>> prove $ \(a :: SSet Integer) b -> a `union` b .== b `union` a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) b c -> a `union` (b `union` c) .== (a `union` b) `union` c
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `union` full .== full
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `union` empty .== a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `union` complement a .== full
+-- Q.E.D.
 union :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 union sa sb
   -- Case 1: Constant regular sets, just compute
@@ -383,11 +394,25 @@ union sa sb
                   svb <- sbvToSV st sb
                   newExpr st k $ SBVApp (SetOp SetUnion) [sva, svb]
 
--- | Unions.
+-- | Unions. Equivalent to @'foldr' 'union' 'empty'@.
+--
+-- >>> prove $ unions [] .== (empty :: SSet Integer)
+-- Q.E.D.
 unions :: (Ord a, SymVal a) => [SSet a] -> SSet a
 unions = foldr union empty
 
 -- | Intersection.
+--
+-- >>> prove $ \(a :: SSet Integer) b -> a `intersection` b .== b `intersection` a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) b c -> a `intersection` (b `intersection` c) .== (a `intersection` b) `intersection` c
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `intersection` full .== a
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `intersection` empty .== empty
+-- Q.E.D.
+-- >>> prove $ \(a :: SSet Integer) -> a `intersection` complement a .== empty
+-- Q.E.D.
 intersection :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 intersection sa sb
   -- Case 1: Constant regular sets, just compute
@@ -406,7 +431,12 @@ intersection sa sb
                   svb <- sbvToSV st sb
                   newExpr st k $ SBVApp (SetOp SetIntersect) [sva, svb]
 
--- | Intersections.
+-- | Intersections. Equivalent to @'foldr' 'intersection' 'full'@. Note that
+-- Haskell's 'Data.Set' does not support this operation as it does not have a
+-- way of representing universal sets.
+--
+-- >>> prove $ intersections [] .== (full :: SSet Integer)
+-- Q.E.D.
 intersections :: (Ord a, SymVal a) => [SSet a] -> SSet a
 intersections = foldr intersection full
 
