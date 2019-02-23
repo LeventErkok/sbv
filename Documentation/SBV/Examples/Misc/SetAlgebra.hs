@@ -6,7 +6,8 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proves various algebraic properties of sets using SBV.
+-- Proves various algebraic properties of sets using SBV. The properties we
+-- prove all come from <http://en.wikipedia.org/wiki/Algebra_of_sets>.
 -----------------------------------------------------------------------------
 
 module Documentation.SBV.Examples.Misc.SetAlgebra where
