@@ -365,14 +365,6 @@ infixl 9 \\
 (\\) :: SSet a -> SSet a -> SSet a
 (\\) = difference
 
--- | Cartesian product.
-cartesianProduct :: SSet a -> SSet a -> SSet (STuple a b)
-cartesianProduct = error "TBD: cartesianProduct"
-
--- | Disjoin union.
-disjointUnion :: SSet a -> SSet b -> SSet (SEither a b)
-disjointUnion = error "TBD: disjointUnion"
-
 {- $setEquality
 We can compare sets for equality:
 
