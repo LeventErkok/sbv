@@ -27,7 +27,7 @@
 
 module Data.SBV.Set (
         -- * Constructing sets
-          empty, full, singleton, fromList, complement
+          empty, full, universal, singleton, fromList, complement
 
         -- * Equality of sets
         -- $setEquality
@@ -76,6 +76,10 @@ empty = SBV $ SVal k $ Left $ CV k $ CSet $ RegularSet Set.empty
 full :: forall a. HasKind a => SSet a
 full = SBV $ SVal k $ Left $ CV k $ CSet $ ComplementSet Set.empty
   where k = KSet $ kindOf (Proxy @a)
+
+-- | Synonym for 'full'.
+universal :: forall a. HasKind a => SSet a
+universal = full
 
 -- | Singleton list.
 --
