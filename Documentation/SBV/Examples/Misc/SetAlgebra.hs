@@ -50,7 +50,7 @@ Q.E.D.
 Q.E.D.
 -}
 
--- * Identity laws
+-- * Identity properties
 -- $identity
 {- $identity
 >>> prove $ \(a :: SI) -> a `union` empty .== a
@@ -59,7 +59,7 @@ Q.E.D.
 Q.E.D.
 -}
 
--- * Complement laws
+-- * Complement properties
 -- $complement
 {- $complement
 >>> prove $ \(a :: SI) -> a `union` complement a .== full
