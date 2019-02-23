@@ -42,3 +42,13 @@ Q.E.D.
 >>> prove $ \(a :: SI) b c -> a `intersection` (b `intersection` c) .== (a `intersection` b) `intersection` c
 Q.E.D.
 -}
+
+-- * Distributivity
+-- $distributivity
+
+{- $distributivity
+>>> prove $ \(a :: SI) b c -> a `union` (b `intersection` c) .== (a `union` b) `intersection` (a `union` c)
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> a `intersection` (b `union` c) .== (a `intersection` b) `union` (a `intersection` c)
+Q.E.D.
+-}
