@@ -103,7 +103,7 @@ fromList = literal . RegularSet . Set.fromList
 --
 -- Complementing twice gets us back the original set:
 --
--- >>> prove $ \s -> complement (complement s) .== (s :: SSet Integer)
+-- >>> prove $ \(s :: SSet Integer) -> complement (complement s) .== s
 -- Q.E.D.
 complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
 complement ss
@@ -209,7 +209,7 @@ delete se ss
 -- >>> prove $ \x -> x `member` singleton (x :: SInteger)
 -- Q.E.D.
 --
--- >>> prove $ \x s -> x `member` (x `insert` (s :: SSet Integer))
+-- >>> prove $ \x (s :: SSet Integer) -> x `member` (x `insert` s)
 -- Q.E.D.
 --
 -- >>> prove $ \x -> x `member` (full :: SSet Integer)
@@ -238,7 +238,7 @@ member se ss
 --   set = {0} :: {Integer}
 --   s0  =   0 :: Integer
 --
--- >>> prove $ \x s -> x `notMember` (x `delete` (s :: SSet Integer))
+-- >>> prove $ \x (s :: SSet Integer) -> x `notMember` (x `delete` s)
 -- Q.E.D.
 --
 -- >>> prove $ \x -> x `notMember` (empty :: SSet Integer)
