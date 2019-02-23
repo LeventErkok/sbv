@@ -26,7 +26,7 @@
 
 module Data.SBV.Set (
         -- * Constructing sets
-          empty, full, singleton, fromList
+          empty, full, singleton, fromList, complement
 
         -- * Equality of sets
         -- $setEquality
@@ -36,9 +36,6 @@ module Data.SBV.Set (
 
         -- * Query
         , member, notMember, null, isSubsetOf, isProperSubsetOf, disjoint
-
-        -- * Complement
-        , complement
 
         -- * Combinations
         , union, unions, difference, (\\), intersection, cartesianProduct, disjointUnion, 
@@ -95,6 +92,28 @@ singleton = (`insert` (empty :: SSet a))
 -- {3,5,12} :: {SInteger}
 fromList :: forall a. (Ord a, SymVal a) => [a] -> SSet a
 fromList = literal . RegularSet . Set.fromList
+
+-- | Complement.
+--
+-- >>> empty .== complement (full :: SSet Integer)
+-- True
+--
+-- Complementing twice gets us back the original set:
+--
+-- >>> prove $ \s -> complement (complement s) .== (s :: SSet Integer)
+-- Q.E.D.
+complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
+complement ss
+  | Just (RegularSet rs) <- unliteral ss
+  = literal $ ComplementSet rs
+  | Just (ComplementSet cs) <- unliteral ss
+  = literal $ RegularSet cs
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = KSet (kindOf (Proxy @a))
+
+        r st = do svs <- sbvToSV st ss
+                  newExpr st k $ SBVApp (SetOp SetComplement) [svs]
 
 -- | Insert an element into a set.
 --
@@ -203,32 +222,6 @@ member se ss
 -- | Test for non-membership.
 notMember :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 notMember se ss = sNot $ member se ss
-
--- | Complement.
---
--- NB. Complement is hard to reason with. I have observed that z3 mostly returns unknown
--- for problems involving complement. Use with care.
---
--- >>> empty .== complement (full :: SSet Integer)
--- True
---
--- Here's an example where we would expect proof, but currently causes an unknown result:
---
--- >>> prove $ \s -> complement (complement s) .== (s :: SSet Integer)
--- Unknown.
---   Reason: smt tactic failed to show goal to be sat/unsat (incomplete (theory array))
-complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
-complement ss
-  | Just (RegularSet rs) <- unliteral ss
-  = literal $ ComplementSet rs
-  | Just (ComplementSet cs) <- unliteral ss
-  = literal $ RegularSet cs
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = KSet (kindOf (Proxy @a))
-
-        r st = do svs <- sbvToSV st ss
-                  newExpr st k $ SBVApp (SetOp SetComplement) [svs]
 
 -- | Subset test.
 isSubsetOf :: SSet a -> SSet a -> SBool
