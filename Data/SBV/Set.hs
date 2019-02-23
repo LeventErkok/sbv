@@ -49,7 +49,7 @@ import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model ((.==))
+import Data.SBV.Core.Model ((.==), (./=))
 
 import Data.SBV.Core.Symbolic (SetOp(..))
 
@@ -291,12 +291,54 @@ isUniversal :: HasKind a => SSet a -> SBool
 isUniversal = isFull
 
 -- | Subset test.
-isSubsetOf :: SSet a -> SSet a -> SBool
-isSubsetOf = error "TBD: isSubsetOf"
+--
+-- >>> prove $ empty `isSubsetOf` (full :: SSet Integer)
+-- Q.E.D.
+--
+-- >>> prove $ \x (s :: SSet Integer) -> s `isSubsetOf` (x `insert` s)
+-- Q.E.D.
+--
+-- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isSubsetOf` s
+-- Q.E.D.
+isSubsetOf :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
+isSubsetOf sa sb
+  -- Case 1: Constant regular sets, just check:
+  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ a `Set.isSubsetOf` b
+
+  -- Case 2: Constant complement sets, check in the reverse direction:
+  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ b `Set.isSubsetOf` a
+
+  -- Otherwise, go symbolic
+  | True
+  = SBV $ SVal KBool $ Right $ cache r
+  where r st = do sva <- sbvToSV st sa
+                  svb <- sbvToSV st sb
+                  newExpr st KBool $ SBVApp (SetOp SetSubset) [sva, svb]
 
 -- | Proper subset test.
-isProperSubsetOf :: SSet a -> SSet a -> SBool
-isProperSubsetOf = error "TBD: isProperSubsetOf"
+--
+-- >>> prove $ empty `isProperSubsetOf` (full :: SSet Integer)
+-- Q.E.D.
+--
+-- >>> prove $ \x (s :: SSet Integer) -> s `isProperSubsetOf` (x `insert` s)
+-- Falsifiable. Counter-example:
+--   s0 =       0 :: Integer
+--   s1 = U - {1} :: {Integer}
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> s `isProperSubsetOf` (x `insert` s)
+-- Q.E.D.
+--
+-- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isProperSubsetOf` s
+-- Falsifiable. Counter-example:
+--   s0 =   0 :: Integer
+--   s1 = {1} :: {Integer}
+--
+-- >>> prove $ \x (s :: SSet Integer) -> x `member` s .=> (x `delete` s) `isProperSubsetOf` s
+-- Q.E.D.
+isProperSubsetOf :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
+isProperSubsetOf a b = a `isSubsetOf` b .&& a ./= b
 
 -- | Disjoint test.
 disjoint :: SSet a -> SSet a -> SBool
