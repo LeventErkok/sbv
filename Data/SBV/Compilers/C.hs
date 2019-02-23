@@ -599,16 +599,8 @@ handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
         named fnm dnm f          = (f fnm, f dnm)
 
-        castToUnsigned f to = parens (text "!isnan" P.<> parens a <+> text "&&" <+> text "signbit" P.<> parens a) <+> text "?" <+> cvt1 <+> text ":" <+> cvt2
-          where [a]  = map snd fpArgs
-                absA = text (if f == KFloat then "fabsf" else "fabs") P.<> parens a
-                cvt1 = parens (text "-" <+> parens (parens (text (show to)) <+> absA))
-                cvt2 =                      parens (parens (text (show to)) <+> a)
-
-        cvt (FP_Cast f to m)     = case checkRM (m `lookup` consts) of
-                                     Nothing          -> if f `elem` [KFloat, KDouble] && not (hasSign to)
-                                                         then castToUnsigned f to
-                                                         else cast $ \[a] -> parens (text (show to)) <+> a
+        cvt (FP_Cast _ to m)     = case checkRM (m `lookup` consts) of
+                                     Nothing          -> cast $ \[a] -> parens (text (show to)) <+> a
                                      Just (Left  msg) -> die msg
                                      Just (Right msg) -> tbd msg
         cvt (FP_Reinterpret f t) = case (f, t) of
