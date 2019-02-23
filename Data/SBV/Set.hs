@@ -39,7 +39,7 @@ module Data.SBV.Set (
         , member, notMember, null, isEmpty, isFull, isUniversal, isSubsetOf, isProperSubsetOf, disjoint
 
         -- * Combinations
-        , union, unions, difference, (\\), intersection, cartesianProduct, disjointUnion, 
+        , union, unions, difference, (\\), intersection, intersections
 
         ) where
 
@@ -49,8 +49,7 @@ import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model ((.==), (./=))
-
+import Data.SBV.Core.Model    ((.==), (./=))
 import Data.SBV.Core.Symbolic (SetOp(..))
 
 -- For doctest use only
@@ -341,28 +340,73 @@ isProperSubsetOf :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
 isProperSubsetOf a b = a `isSubsetOf` b .&& a ./= b
 
 -- | Disjoint test.
-disjoint :: SSet a -> SSet a -> SBool
-disjoint = error "TBD: disjoint"
+disjoint :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
+disjoint a b = a `intersection` b .== empty
 
 -- | Union.
-union :: SSet a -> SSet a -> SSet a
-union = error "TBD: union"
+union :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+union sa sb
+  -- Case 1: Constant regular sets, just compute
+  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ RegularSet $ a `Set.union` b
+
+  -- Case 2: Constant complement sets, complement the intersection:
+  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ ComplementSet $ a `Set.intersection` b
+
+  -- Otherwise, go symbolic
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf sa
+        r st = do sva <- sbvToSV st sa
+                  svb <- sbvToSV st sb
+                  newExpr st k $ SBVApp (SetOp SetUnion) [sva, svb]
 
 -- | Unions.
-unions :: [SSet a] -> SSet a
-unions = error "TBD: unions"
+unions :: (Ord a, SymVal a) => [SSet a] -> SSet a
+unions = foldr union empty
 
 -- | Intersection.
-intersection :: SSet a -> SSet a -> SSet a
-intersection = error "TBD: union"
+intersection :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+intersection sa sb
+  -- Case 1: Constant regular sets, just compute
+  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ RegularSet $ a `Set.intersection` b
+
+  -- Case 2: Constant complement sets, complement the union:
+  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  = literal $ ComplementSet $ a `Set.union` b
+
+  -- Otherwise, go symbolic
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf sa
+        r st = do sva <- sbvToSV st sa
+                  svb <- sbvToSV st sb
+                  newExpr st k $ SBVApp (SetOp SetIntersect) [sva, svb]
+
+-- | Intersections.
+intersections :: (Ord a, SymVal a) => [SSet a] -> SSet a
+intersections = foldr intersection full
 
 -- | Difference.
-difference :: SSet a -> SSet a -> SSet a
-difference = error "TBD: difference"
+difference :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+difference sa sb
+  -- Only constant fold the regular case, others are left symbolic
+  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  = literal $ RegularSet $ a `Set.difference` b
 
--- | Difference, synonym for 'difference'.
+  -- Otherwise, go symbolic
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf sa
+        r st = do sva <- sbvToSV st sa
+                  svb <- sbvToSV st sb
+                  newExpr st k $ SBVApp (SetOp SetDifference) [sva, svb]
+
+-- | Synonym for 'Data.SBV.Set.difference'.
 infixl 9 \\
-(\\) :: SSet a -> SSet a -> SSet a
+(\\) :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 (\\) = difference
 
 {- $setEquality
