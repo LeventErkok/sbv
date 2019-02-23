@@ -35,6 +35,7 @@ cvc4 = SMTSolver {
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
                               , supportsApproxReals        = False
                               , supportsIEEE754            = False
+                              , supportsSets               = False
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True

@@ -33,6 +33,7 @@ z3 = SMTSolver {
                               , supportsReals              = True
                               , supportsApproxReals        = True
                               , supportsIEEE754            = True
+                              , supportsSets               = True
                               , supportsOptimization       = True
                               , supportsPseudoBooleans     = True
                               , supportsCustomQueries      = True

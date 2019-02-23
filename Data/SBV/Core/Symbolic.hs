@@ -1632,6 +1632,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsReals              :: Bool           -- ^ Supports reals?
        , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
        , supportsIEEE754            :: Bool           -- ^ Supports floating point numbers?
+       , supportsSets               :: Bool           -- ^ Supports set operations?
        , supportsOptimization       :: Bool           -- ^ Supports optimization routines?
        , supportsPseudoBooleans     :: Bool           -- ^ Supports pseudo-boolean operations?
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?

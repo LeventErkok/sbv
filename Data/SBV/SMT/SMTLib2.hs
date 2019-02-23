@@ -58,16 +58,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
-        doesntHandle
-           | not datatypesOK
-           = Just [ "***     Given problem requires support for data types"
-                  , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
-                  ]
-           | True
-           = Nothing
-           where datatypesOK = not needsDatatypes || hasDatatypes
-                    where needsDatatypes = hasTuples || hasEither || hasMaybe
-                          hasDatatypes   = supportsDataTypes solverCaps
+        doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not have]
+           where checks = [ ("data types",     supportsDataTypes solverCaps, hasTuples || hasEither || hasMaybe)
+                          , ("set operations", supportsSets      solverCaps, hasSets)
+                          ]
+
+                 nope w = [ "***     Given problem requires support for " ++ w
+                          , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
+                          ]
 
         -- Determining the logic is surprisingly tricky!
         logic
