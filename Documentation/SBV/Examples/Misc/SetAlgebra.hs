@@ -69,4 +69,13 @@ Q.E.D.
 >>> prove $ \(a :: SI) -> complement (complement a) .== a
 Q.E.D.
 -}
+
+-- * Idempotency
+-- $idempotent
+{- $idempotent
+>>> prove $ \(a :: SI) -> a `union` a .== a
+Q.E.D.
+>>> prove $ \(a :: SI) -> a `intersection` a .== a
+Q.E.D.
+-}
 -}
