@@ -12,12 +12,13 @@
 --
 -- Note that unlike "Data.Set", SBV sets can be infinite, represented
 -- as a complement of some finite set. This means that a symbolic set
--- is either finite, or its complement is finite. Therefore, there are
--- some differences in the API from Haskell sets. For instance, you can
--- take the complement of any set, which is something you cannot do
--- in Haskell! Conversely, you cannot compute the size of a symbolic
--- set (as it can be infinite!), nor you can turn it into a list or
--- necessarily enumerate its elements.
+-- is either finite, or its complement is finite. (If the underlying
+-- domain is finite, then obviously both the set itself and its complement
+-- will always be finite.) Therefore, there are some differences in the API
+-- from Haskell sets. For instance, you can take the complement of any set,
+-- which is something you cannot do in Haskell! Conversely, you cannot compute
+-- the size of a symbolic set (as it can be infinite!), nor you can turn
+-- it into a list or necessarily enumerate its elements.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
