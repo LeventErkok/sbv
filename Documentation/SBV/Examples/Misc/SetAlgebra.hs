@@ -11,12 +11,12 @@
 
 module Documentation.SBV.Examples.Misc.SetAlgebra where
 
-import Data.SBV
+import Data.SBV hiding (complement)
 import Data.SBV.Set ()   -- This import shouldn't be necessary, but I can't get doctest to work otherwise. Sigh.
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV
+-- >>> import Data.SBV hiding (complement)
 -- >>> import Data.SBV.Set
 -- >>> :set -XScopedTypeVariables
 
@@ -56,5 +56,14 @@ Q.E.D.
 >>> prove $ \(a :: SI) -> a `union` empty .== a
 Q.E.D.
 >>> prove $ \(a :: SI) -> a `intersection` full .== a
+Q.E.D.
+-}
+
+-- * Complement laws
+-- $complement
+{- $complement
+>>> prove $ \(a :: SI) -> a `union` complement a .== full
+Q.E.D.
+>>> prove $ \(a :: SI) -> a `intersection` complement a .== empty
 Q.E.D.
 -}
