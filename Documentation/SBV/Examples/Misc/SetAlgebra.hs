@@ -68,6 +68,21 @@ Q.E.D.
 Q.E.D.
 >>> prove $ \(a :: SI) -> complement (complement a) .== a
 Q.E.D.
+>>> prove $ complement (empty :: SI) .== full
+Q.E.D.
+>>> prove $ complement (full :: SI) .== empty
+Q.E.D.
+-}
+
+-- * Uniqueness of the complement
+--
+-- $compUnique
+{- $compUnique
+The complement of a set is the only set that satisfies the first two complement properties above. That
+is complementation is characterized by those two laws, as we can formally establish:
+
+>>> prove $ \(a :: SI) b -> a `union` b .== full .&& a `intersection` b .== empty .<=> b .== complement a
+Q.E.D.
 -}
 
 -- * Idempotency
@@ -101,5 +116,14 @@ Q.E.D.
 -- $intdiff
 {- $intdiff
 >>> prove $ \(a :: SI) b -> a `intersection` b .== a `difference` (a `difference` b)
+Q.E.D.
+-}
+
+-- * De Morgan's laws
+-- $deMorgan
+{- $deMorgan
+>>> prove $ \(a :: SI) b -> complement (a `union` b) .== complement a `intersection` complement b
+Q.E.D.
+>>> prove $ \(a :: SI) b -> complement (a `intersection` b) .== complement a `union` complement b
 Q.E.D.
 -}
