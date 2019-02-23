@@ -15,6 +15,16 @@
     values, or at any nesting level.) Thanks to Joel Burget for the initial
     implementation of this idea and his contributions.
 
+  * Added support for symbolic sets. The API closely follows that of `Data.Set`
+    of Haskell, with some major differences: Symbolic sets can be co-finite.
+    (That is, we can represent not only finite sets, but also sets whose complements
+    are finite.) The distinction shows up in the `complement` operation, which
+    is not supported in Haskell. All SBV sets can be complemented. On the flip
+    side, SBV sets do not support a size operation (as they can be infinite),
+    nor they can be converted to lists. See 'Data.SBV.Set' for the API documentation
+    and "Documentation/SBV/Examples/Misc/SetAlgebra.hs" for an example that proves
+    many familiar set properties.
+
   * SBV models now contain values for uninterpreted functions. This was a long
     requested feature, but there was no previous support since SMTLib does not
     have a standard way of querying such values. We now support this for z3 and
