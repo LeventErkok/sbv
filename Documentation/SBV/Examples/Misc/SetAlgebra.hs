@@ -66,4 +66,7 @@ Q.E.D.
 Q.E.D.
 >>> prove $ \(a :: SI) -> a `intersection` complement a .== empty
 Q.E.D.
+>>> prove $ \(a :: SI) -> complement (complement a) .== a
+Q.E.D.
+-}
 -}
