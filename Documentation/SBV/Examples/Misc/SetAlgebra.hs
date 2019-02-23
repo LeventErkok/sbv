@@ -88,4 +88,12 @@ Q.E.D.
 Q.E.D.
 -}
 
+-- * Absorption properties
+-- $absorption
+{- $absorption
+>>> prove $ \(a :: SI) b -> a `union` (a `intersection` b) .== a
+Q.E.D.
+>>> prove $ \(a :: SI) b -> a `intersection` (a `union` b) .== a
+Q.E.D.
+-}
 -}
