@@ -127,3 +127,16 @@ Q.E.D.
 >>> prove $ \(a :: SI) b -> complement (a `intersection` b) .== complement a `union` complement b
 Q.E.D.
 -}
+
+-- * Inclusion is a partial order
+-- $incPO
+{- $incPO
+Subset inclusion is a partial order, i.e., it is reflexive, antisymmetric, and transitive:
+
+>>> prove $ \(a :: SI) -> a `isSubsetOf` a
+Q.E.D.
+>>> prove $ \(a :: SI) b -> a `isSubsetOf` b .&& b `isSubsetOf` a .<=> a .== b
+Q.E.D.
+>>> prove $ \(a :: SI) b c -> a `isSubsetOf` b .&& b `isSubsetOf` c .=> a `isSubsetOf` c
+Q.E.D.
+-}
