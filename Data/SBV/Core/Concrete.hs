@@ -38,6 +38,15 @@ import qualified Data.Set as Set
 data RCSet a = RegularSet    (Set a)
              | ComplementSet (Set a)
 
+-- | Show instance. Regular sets are shown as usual.
+-- Complements are shown "U -" notation.
+instance Show a => Show (RCSet a) where
+  show rcs = case rcs of
+               ComplementSet s | Set.null s -> "U"
+                               | True       -> "U - " ++ sh (Set.toAscList s)
+               RegularSet    s              ->           sh (Set.toAscList s)
+   where sh xs = '{' : intercalate "," (map show xs) ++ "}"
+
 -- We need Eq/Ord instances for RCSet because we want to put them in maps/tables. But we don't want to derive
 -- these, nor make it an instance! Why? Because the same set can have multiple representations if the underlying
 -- type is finite. For instance, @{True} = U - {False}@ for boolean sets! Instead, we use the following two functions,
