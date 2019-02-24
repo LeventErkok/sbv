@@ -1242,7 +1242,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing   -> return ()
                              Just cmds -> mapM_ (send True) cmds
 
-                     let usorts = [s | us@(KUninterpreted s _) <- Set.toList ki, isFree us]
+                     let usorts = [s | us@(KUninterpreted s _) <- Set.toAscList ki, isFree us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
