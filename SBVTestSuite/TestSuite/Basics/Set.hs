@@ -9,13 +9,11 @@
 -- Test sets.
 -----------------------------------------------------------------------------
 
--- {-# LANGUAGE DataKinds           #-}
--- {-# LANGUAGE DeriveAnyClass      #-}
--- {-# LANGUAGE DeriveDataTypeable  #-}
--- {-# LANGUAGE ScopedTypeVariables #-}
--- {-# LANGUAGE StandaloneDeriving  #-}
--- {-# LANGUAGE TemplateHaskell     #-}
--- {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 module TestSuite.Basics.Set (tests)  where
 
@@ -28,8 +26,8 @@ import Data.SBV.Control
 
 import Utils.SBVTestFramework hiding (complement)
 
--- data E = A | B | C
--- mkSymbolicEnumeration ''E
+data E = A | B | C
+mkSymbolicEnumeration ''E
 
 c :: (SymVal a, Ord a) => SSet a -> SSet a
 c = complement
@@ -49,11 +47,26 @@ sIdentifier nm = do n <- sChar nm
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Set" [
-          goldenCapturedIO "set_union1"     $ t setU1
-        , goldenCapturedIO "set_intersect1" $ t setI1
+          goldenCapturedIO "set_uninterp1"  $ ta setE1
+        , goldenCapturedIO "set_uninterp2"  $ tq setE2
+        , goldenCapturedIO "set_union1"     $ tq setU1
+        , goldenCapturedIO "set_intersect1" $ tq setI1
         ]
-    where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
-                             appendFile goldFile ("\nFINAL:\n" ++ show r ++ "\nDONE!\n")
+    where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
+          tq tc goldFile    = record goldFile =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
+          record goldFile r = appendFile goldFile ("\nFINAL:\n" ++ show r ++ "\nDONE!\n")
+
+setE1 :: SMTConfig -> IO AllSatResult
+setE1 cfg = allSatWith cfg $ \(_ :: SSet E) -> sTrue
+
+setE2 :: Symbolic (RCSet E, RCSet E)
+setE2 = do a :: SSet E <- sSet "a"
+           b :: SSet E <- sSet "b"
+
+           constrain $ distinct [a, b]
+
+           query $ do ensureSat
+                      (,) <$> getValue a <*> getValue b
 
 setU1 :: Symbolic (Char, Char, RCSet Char, RCSet Char, RCSet Char, RCSet Char)
 setU1 = do a <- sIdentifier "a"
