@@ -203,3 +203,27 @@ Q.E.D.
 >>> prove $ \(a :: SI) -> a \\ full .== empty
 Q.E.D.
 -}
+
+-- * Distributing subset relation
+-- $distSubset
+{- $distSubset
+
+A common mistake newcomers to set theory make is to distribute the subset relationship over intersection
+and unions, which is only true as described above. Here, we use SBV to show two incorrect cases:
+
+Subset relation does /not/ distribute over union on the left:
+
+>>> prove $ \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
+Falsifiable. Counter-example:
+  s0 =     {0} :: {Integer}
+  s1 =       U :: {Integer}
+  s2 = U - {0} :: {Integer}
+
+Similarly, subset relation does /not/ distribute over intersection on the right:
+
+>>> prove $ \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
+Falsifiable. Counter-example:
+  s0 =      {} :: {Integer}
+  s1 = U - {0} :: {Integer}
+  s2 =     {0} :: {Integer}
+-}
