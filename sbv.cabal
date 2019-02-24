@@ -244,6 +244,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.IteTest
+                  , TestSuite.Basics.List
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.PseudoBoolean
                   , TestSuite.Basics.QRem
@@ -253,7 +254,6 @@ Test-Suite SBVTest
                   , TestSuite.Basics.SquashReals
                   , TestSuite.Basics.String
                   , TestSuite.Basics.Sum
-                  , TestSuite.Basics.List
                   , TestSuite.Basics.TOut
                   , TestSuite.Basics.Tuple
                   , TestSuite.Basics.UISat
