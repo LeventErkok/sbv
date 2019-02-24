@@ -99,7 +99,7 @@ import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.SBV.Control.Types
 
-import qualified Data.Set as Set (toList, empty, fromList)
+import qualified Data.Set as Set (empty, fromList, toAscList, map)
 
 import qualified Control.Exception as C
 
@@ -426,6 +426,15 @@ instance SMTValue a => SMTValue (Maybe a) where
 instance SMTValue () where
    sexprToVal (ECon "mkSBVTuple0") = Just ()
    sexprToVal _                    = Nothing
+
+instance (Ord a, SymVal a) => SMTValue (RCSet a) where
+   sexprToVal e = recoverKindedValue k e >>= cvt . cvVal
+     where ke = kindOf (Proxy @a)
+           k  = KSet ke
+
+           cvt (CSet (RegularSet s))    = Just $ RegularSet    $ Set.map (fromCV . CV ke) s
+           cvt (CSet (ComplementSet s)) = Just $ ComplementSet $ Set.map (fromCV . CV ke) s
+           cvt _                        = Nothing
 
 -- | Convert a sexpr of n-tuple to constituent sexprs. Z3 and CVC4 differ here on how they
 -- present tuples, so we accommodate both:
