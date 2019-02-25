@@ -51,6 +51,7 @@ tests = testGroup "Basics.Set" [
         , goldenCapturedIO "set_uninterp2"  $ tq setE2
         , goldenCapturedIO "set_union1"     $ tq setU1
         , goldenCapturedIO "set_intersect1" $ tq setI1
+        , goldenCapturedIO "set_compl1"     $ tq setC1
         ]
     where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
           tq tc goldFile    = record goldFile =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
@@ -107,3 +108,16 @@ setI1 = do a <- sIdentifier "a"
 
            query $ do ensureSat
                       (,,,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
+
+setC1 :: Symbolic (Char, RCSet Char, RCSet Char, RCSet Char, RCSet Char)
+setC1 = do a <- sIdentifier "a"
+
+           let sa = singleton a
+
+               o1 = c sa
+               o2 = c o1
+               o3 = o1 `i` sa
+               o4 = o1 `u` sa
+
+           query $ do ensureSat
+                      (,,,,) <$> getValue a <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
