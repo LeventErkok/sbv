@@ -54,6 +54,8 @@ tests = testGroup "Basics.Set" [
         , goldenCapturedIO "set_subset1"    $ tq $ templateBB isSubsetOf
         , goldenCapturedIO "set_psubset1"   $ tq $ templateBB isProperSubsetOf
         , goldenCapturedIO "set_disj1"      $ tq $ templateBB disjoint
+        , goldenCapturedIO "set_member1"    $ tq $ templateBE member
+        , goldenCapturedIO "set_notMember1" $ tq $ templateBE notMember
         ]
     where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
           tq tc goldFile    = record goldFile =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
@@ -124,5 +126,18 @@ templateBB f = do a <- sSet "a"
 
                   query $ do ensureSat
                              (,,,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
+
+templateBE :: (SChar -> SC -> SBool) -> Symbolic (Char, RC, Bool, Bool)
+templateBE f = do a <- sChar "a"
+                  b <- sSet  "b"
+
+                  constrain $ a .== literal 'a'
+                  constrain $ b .== cSetB
+
+                  let o1 = a `f`            b
+                      o2 = a `f` complement b
+
+                  query $ do ensureSat
+                             (,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
