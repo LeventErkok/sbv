@@ -57,7 +57,7 @@ module Data.SBV.Trans (
   -- ** Conversions
   , sFromIntegral
   -- ** Shifts and rotates
-  , sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight
+  , sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight
   -- ** Finite bit-vector operations
   , SFiniteBits(..)
   -- ** Splitting, joining, and extending

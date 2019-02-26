@@ -36,6 +36,7 @@ module Data.SBV.Core.Operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
   , svRotateLeft, svRotateRight
+  , svBarrelRotateLeft, svBarrelRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
   -- ** Basic array operations
@@ -832,6 +833,54 @@ svRotateLeft x i
           z  = svInteger (kindOf x) 0
           zi = svInteger (kindOf i) 0
           n  = svInteger (kindOf i) (toInteger sx)
+
+-- | A variant of 'svRotateLeft' that uses a barrel-rotate design, which can lead to
+-- better verification code. Only works when both arguments are finite and the second
+-- argument is unsigned.
+svBarrelRotateLeft :: SVal -> SVal -> SVal
+svBarrelRotateLeft x i
+  | not (isBounded x && isBounded i && not (hasSign i))
+  = error $ "Data.SBV.Dynamic.svBarrelRotateLeft: Arguments must be bounded with second argument unsigned. Received: " ++ show (x, i)
+  | Just iv <- svAsInteger i
+  = svRol x $ fromIntegral (iv `rem` fromIntegral (intSizeOf x))
+  | True
+  = barrelRotate svRol x i
+
+-- | A variant of 'svRotateLeft' that uses a barrel-rotate design, which can lead to
+-- better verification code. Only works when both arguments are finite and the second
+-- argument is unsigned.
+svBarrelRotateRight :: SVal -> SVal -> SVal
+svBarrelRotateRight x i
+  | not (isBounded x && isBounded i && not (hasSign i))
+  = error $ "Data.SBV.Dynamic.svBarrelRotateRight: Arguments must be bounded with second argument unsigned. Received: " ++ show (x, i)
+  | Just iv <- svAsInteger i
+  = svRor x $ fromIntegral (iv `rem` fromIntegral (intSizeOf x))
+  | True
+  = barrelRotate svRor x i
+
+-- Barrel rotation, by bit-blasting the argument:
+barrelRotate :: (SVal -> Int -> SVal) -> SVal -> SVal -> SVal
+barrelRotate f a c = loop blasted a
+  where loop :: [(SVal, Integer)] -> SVal -> SVal
+        loop []              acc = acc
+        loop ((b, v) : rest) acc = loop rest (svIte b (f acc (fromInteger v)) acc)
+
+        sa = toInteger $ intSizeOf a
+        n  = svInteger (kindOf c) sa
+
+        -- Reduce by the modulus amount, we need not care about the
+        -- any part larger than the value of the bit-size of the
+        -- argument as it is identity for rotations
+        reducedC = c `svRem` n
+
+        -- blast little-endian, and zip with bit-position
+        blasted = takeWhile significant $ zip (svBlastLE reducedC) [2^i | i <- [(0::Integer)..]]
+
+        -- Any term whose bit-position is larger than our input size
+        -- is insignificant, since the reduction would've put 0's in those
+        -- bits. For instance, if a is 32 bits, and c is 5 bits, then we
+        -- need not look at any position i s.t. 2^i > 32
+        significant (_, pos) = pos < sa
 
 -- | Generalization of 'svRor', where the rotation amount is symbolic.
 -- If the first argument is not bounded, then the this is the same as shift.

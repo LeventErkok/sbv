@@ -22,7 +22,7 @@
 
 module Data.SBV.Core.Model (
     Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
-  , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sRotateRight, sSignedShiftArithRight, (.^)
+  , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
@@ -1314,11 +1314,25 @@ sSignedShiftArithRight x i
 sRotateLeft :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sRotateLeft = liftViaSVal svRotateLeft
 
+-- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
+-- arguments are finite bitvectors, and furthermore when the second argument is unsigned.
+-- The first condition is enforced by the type, but the second is dynamically checked.
+-- We provide this implementation as an alternative to `sRotateLeft` since SMTLib logic
+-- does not support variable argument rotates (as opposed to shifts), and thus this
+-- implementation can produce better code for verification compared to `sRotateLeft`.
+sBarrelRotateLeft :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
+sBarrelRotateLeft = liftViaSVal svBarrelRotateLeft
+
 -- | Generalization of 'rotateR', when the shift-amount is symbolic. Since Haskell's
 -- 'rotateR' only takes an 'Int' as the shift amount, it cannot be used when we have
 -- a symbolic amount to shift with. The first argument should be a bounded quantity.
 sRotateRight :: (SIntegral a, SIntegral b) => SBV a -> SBV b -> SBV a
 sRotateRight = liftViaSVal svRotateRight
+
+-- | An implementation of rotate-right, using a barrel shifter like design. See comments
+-- for `sBarrelRotateLeft` for details.
+sBarrelRotateRight :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
+sBarrelRotateRight = liftViaSVal svBarrelRotateRight
 
 -- Enum instance. These instances are suitable for use with concrete values,
 -- and will be less useful for symbolic values around. Note that `fromEnum` requires

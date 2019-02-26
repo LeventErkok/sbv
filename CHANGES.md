@@ -108,6 +108,13 @@
   * Documentation: Jan Path kindly fixed module headers of all the files to produce
     much better looking Haddock documents. Thanks Jan!
 
+  * Added barrel-rotations (sBarrelRotateLeft-Right, svBarrelRotateLeft-Right) which
+    can produce better code for verification by bit-blasting the rotation amount.
+    It accepts bit-vectors as arguments and an unsigned rotation quantity to keep
+    things simple.
+
+  * Fixed issues around negative shifts/rotates in the existing code.
+
   * [BACKWARDS COMPATIBILITY] Renamed the class `IEEEFloatConvertable` to
     `IEEEFloatConvertible`. (Typo in name!)
 
