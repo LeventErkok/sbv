@@ -27,21 +27,17 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
-[SEND] (get-value (s3))
-[RECV] ((s3 (store ((as const (Array (_ BitVec 8) Bool)) true) #x61 false)))
-[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) ((_ map not) s3))
+[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) ((as const (Array (_ BitVec 8) Bool)) true))
+[GOOD] (define-fun s4 () Bool (= s0 s3))
 [SEND] (get-value (s4))
-[RECV] ((s4 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map and) s3 s0))
-[SEND] (get-value (s5))
-[RECV] ((s5 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((_ map or) s3 s0))
+[RECV] ((s4 false))
+[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
+[GOOD] (define-fun s6 () Bool (= s5 s3))
 [SEND] (get-value (s6))
-[RECV] ((s6 ((as const (Array (_ BitVec 8) Bool)) true)))
+[RECV] ((s6 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL:
-({'a'},U - {'a'},{'a'},{},U)
+({'a'},False,False)
 DONE!

@@ -20,8 +20,6 @@ module TestSuite.Basics.Set (tests)  where
 import Data.SBV hiding (complement)
 import Data.SBV.Set
 
-import Data.SBV.RegExp (RegExpMatchable, match, identifier)
-
 import Data.SBV.Control
 
 import Utils.SBVTestFramework hiding (complement)
@@ -29,26 +27,33 @@ import Utils.SBVTestFramework hiding (complement)
 data E = A | B | C
 mkSymbolicEnumeration ''E
 
-isIdentifier :: RegExpMatchable a => a -> SBool
-isIdentifier = (`match` identifier)
-
-sIdentifier :: String -> Symbolic SChar
-sIdentifier nm = do n <- sChar nm
-                    constrain $ isIdentifier n
-                    return n
-
 type SC = SSet  Char
 type RC = RCSet Char
+
+-- I'd love to have these more complicated sets. But
+-- there's a z3 bug in set-model generation that spits
+-- out models that we cannot parse. So, we're sticking
+-- to really simple examples here. In particular, I'd
+-- at least like the sets to be different, but even
+-- that's enough to trip z3.
+cSetA, cSetB :: SC
+cSetA = singleton $ literal 'a'
+cSetB = singleton $ literal 'a'
 
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Set" [
           goldenCapturedIO "set_uninterp1"  $ ta setE1
         , goldenCapturedIO "set_uninterp2"  $ tq setE2
-        , goldenCapturedIO "set_compl1"     $ tq $ templateU complement
-        , goldenCapturedIO "set_union1"     $ tq $ templateB union
-        , goldenCapturedIO "set_intersect1" $ tq $ templateB intersection
-        , goldenCapturedIO "set_diff1"      $ tq $ templateB difference
+        , goldenCapturedIO "set_compl1"     $ tq $ templateU  complement
+        , goldenCapturedIO "set_union1"     $ tq $ templateB  union
+        , goldenCapturedIO "set_intersect1" $ tq $ templateB  intersection
+        , goldenCapturedIO "set_diff1"      $ tq $ templateB  difference
+        , goldenCapturedIO "set_empty1"     $ tq $ templateUB isEmpty
+        , goldenCapturedIO "set_full1"      $ tq $ templateUB isFull
+        , goldenCapturedIO "set_subset1"    $ tq $ templateBB isSubsetOf
+        , goldenCapturedIO "set_psubset1"   $ tq $ templateBB isProperSubsetOf
+        , goldenCapturedIO "set_disj1"      $ tq $ templateBB disjoint
         ]
     where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
           tq tc goldFile    = record goldFile =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
@@ -66,30 +71,58 @@ setE2 = do a :: SSet E <- sSet "a"
            query $ do ensureSat
                       (,) <$> getValue a <*> getValue b
 
-templateU :: (SC -> SC) -> Symbolic (Char, RC, RC, RC, RC)
-templateU f = do a <- sIdentifier "a"
+templateU :: (SC -> SC) -> Symbolic (RC, RC, RC, RC, RC)
+templateU f = do a <- sSet "a"
 
-                 let sa = singleton a
+                 constrain $ a .== cSetA
 
-                     o1 = f sa
+                 let o1 = f a
                      o2 = f o1
-                     o3 = o1 `intersection` sa
-                     o4 = o1 `union`        sa
+                     o3 = o1 `intersection` a
+                     o4 = o1 `union`        a
 
                  query $ do ensureSat
                             (,,,,) <$> getValue a <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
 
-templateB :: (SC -> SC -> SC) -> Symbolic (Char, Char, RC, RC, RC, RC)
-templateB f = do a <- sIdentifier "a"
-                 b <- sIdentifier "b"
+templateB :: (SC -> SC -> SC) -> Symbolic (RC, RC, RC, RC, RC, RC)
+templateB f = do a <- sSet "a"
+                 b <- sSet "b"
 
-                 let sa = singleton a
-                     sb = singleton b
+                 constrain $ a .== cSetA
+                 constrain $ b .== cSetB
 
-                     o1 =            sa `f`            sb
-                     o2 =            sa `f` complement sb
-                     o3 = complement sa `f`            sb
-                     o4 = complement sa `f` complement sb
+                 let o1 =            a `f`            b
+                     o2 =            a `f` complement b
+                     o3 = complement a `f`            b
+                     o4 = complement a `f` complement b
 
                  query $ do ensureSat
                             (,,,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
+
+templateUB :: (SC -> SBool) -> Symbolic (RC, Bool, Bool)
+templateUB f = do a <- sSet "a"
+
+                  constrain $ a .== cSetA
+
+                  let o1 = f a
+                      o2 = f (complement a)
+
+                  query $ do ensureSat
+                             (,,) <$> getValue a <*> getValue o1 <*> getValue o2
+
+templateBB :: (SC -> SC -> SBool) -> Symbolic (RC, RC, Bool, Bool, Bool, Bool)
+templateBB f = do a <- sSet "a"
+                  b <- sSet "b"
+
+                  constrain $ a .== cSetA
+                  constrain $ b .== cSetB
+
+                  let o1 =            a `f`            b
+                      o2 =            a `f` complement b
+                      o3 = complement a `f`            b
+                      o4 = complement a `f` complement b
+
+                  query $ do ensureSat
+                             (,,,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

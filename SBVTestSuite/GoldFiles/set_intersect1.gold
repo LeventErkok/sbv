@@ -5,52 +5,50 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL)
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-logic ALL) ; has sets, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
+[GOOD] (define-fun s2 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a"
-[GOOD] (declare-fun s3 () (_ BitVec 8)) ; tracks user variable "b"
+[GOOD] (declare-fun s0 () (Array (_ BitVec 8) Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s1 () (Array (_ BitVec 8) Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () String (seq.unit s0))
-[GOOD] (define-fun s2 () Bool (str.in.re s1 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9") (str.to.re "_") (str.to.re "'"))))))
-[GOOD] (define-fun s4 () String (seq.unit s3))
-[GOOD] (define-fun s5 () Bool (str.in.re s4 (re.++ (re.range "a" "z") (re.* (re.union (re.range "a" "z") (re.range "A" "Z") (re.range "0" "9") (str.to.re "_") (str.to.re "'"))))))
-[GOOD] (assert s2)
-[GOOD] (assert s5)
+[GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () Bool (= s1 s2))
+[GOOD] (assert s3)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #x62))
-[SEND] (get-value (s3))
-[RECV] ((s3 #x62))
-[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((as const (Array (_ BitVec 8) Bool)) false))
-[GOOD] (define-fun s7 () (Array (_ BitVec 8) Bool) (store s6 s0 true))
-[GOOD] (define-fun s8 () (Array (_ BitVec 8) Bool) (store s6 s3 true))
-[GOOD] (define-fun s9 () (Array (_ BitVec 8) Bool) ((_ map and) s7 s8))
+[RECV] ((s0 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[SEND] (get-value (s1))
+[RECV] ((s1 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map and) s0 s1))
+[SEND] (get-value (s5))
+[RECV] ((s5 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((_ map not) s1))
+[GOOD] (define-fun s7 () (Array (_ BitVec 8) Bool) ((_ map and) s0 s6))
+[SEND] (get-value (s7))
+[RECV] ((s7 ((as const (Array (_ BitVec 8) Bool)) false)))
+[GOOD] (define-fun s8 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
+[GOOD] (define-fun s9 () (Array (_ BitVec 8) Bool) ((_ map and) s8 s1))
 [SEND] (get-value (s9))
-[RECV] ((s9 (store ((as const (Array (_ BitVec 8) Bool)) false) #x62 true)))
-[GOOD] (define-fun s10 () (Array (_ BitVec 8) Bool) ((_ map not) s8))
-[GOOD] (define-fun s11 () (Array (_ BitVec 8) Bool) ((_ map and) s7 s10))
-[SEND] (get-value (s11))
-[RECV] ((s11 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s12 () (Array (_ BitVec 8) Bool) ((_ map not) s7))
-[GOOD] (define-fun s13 () (Array (_ BitVec 8) Bool) ((_ map and) s12 s8))
-[SEND] (get-value (s13))
-[RECV] ((s13 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s14 () (Array (_ BitVec 8) Bool) ((_ map and) s12 s10))
-[SEND] (get-value (s14))
-[RECV] ((s14 (store ((as const (Array (_ BitVec 8) Bool)) true) #x62 false)))
+[RECV] ((s9 ((as const (Array (_ BitVec 8) Bool)) false)))
+[GOOD] (define-fun s10 () (Array (_ BitVec 8) Bool) ((_ map and) s8 s6))
+[SEND] (get-value (s10))
+[RECV] ((s10 (store ((as const (Array (_ BitVec 8) Bool)) true) #x61 false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL:
-('b','b',{'b'},{},{},U - {'b'})
+({'a'},{'a'},{'a'},{},{},U - {'a'})
 DONE!

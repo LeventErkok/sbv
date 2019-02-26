@@ -12,36 +12,43 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
+[GOOD] (define-fun s2 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Array (_ BitVec 8) Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s1 () (Array (_ BitVec 8) Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
-[GOOD] (assert s2)
+[GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () Bool (= s1 s2))
+[GOOD] (assert s3)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
-[SEND] (get-value (s3))
-[RECV] ((s3 (store ((as const (Array (_ BitVec 8) Bool)) true) #x61 false)))
-[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) ((_ map not) s3))
-[SEND] (get-value (s4))
-[RECV] ((s4 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map and) s3 s0))
+[SEND] (get-value (s1))
+[RECV] ((s1 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[GOOD] (define-fun s5 () Bool (subset s0 s1))
 [SEND] (get-value (s5))
-[RECV] ((s5 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((_ map or) s3 s0))
-[SEND] (get-value (s6))
-[RECV] ((s6 ((as const (Array (_ BitVec 8) Bool)) true)))
+[RECV] ((s5 true))
+[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((_ map not) s1))
+[GOOD] (define-fun s7 () Bool (subset s0 s6))
+[SEND] (get-value (s7))
+[RECV] ((s7 false))
+[GOOD] (define-fun s8 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
+[GOOD] (define-fun s9 () Bool (subset s8 s1))
+[SEND] (get-value (s9))
+[RECV] ((s9 false))
+[GOOD] (define-fun s10 () Bool (subset s8 s6))
+[SEND] (get-value (s10))
+[RECV] ((s10 true))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL:
-({'a'},U - {'a'},{'a'},{},U)
+({'a'},{'a'},True,False,False,True)
 DONE!
