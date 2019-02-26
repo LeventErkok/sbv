@@ -27,8 +27,13 @@ type SI = SSet Integer
 -- * Commutativity
 -- $commutativity
 {- $commutativity
+\(A\cup B=B\cup A\)
+
 >>> prove $ \(a :: SI) b -> a `union` b .== b `union` a
 Q.E.D.
+
+\(A\cap B=B\cap A\)
+
 >>> prove $ \(a :: SI) b -> a `intersection` b .== b `intersection` a
 Q.E.D.
 -}
@@ -36,8 +41,14 @@ Q.E.D.
 -- * Associativity
 -- $associativity
 {- $associativity
+
+\((A\cup B)\cup C=A\cup (B\cup C)\)
+
 >>> prove $ \(a :: SI) b c -> a `union` (b `union` c) .== (a `union` b) `union` c
 Q.E.D.
+
+\((A\cap B)\cap C=A\cap (B\cap C)\)
+
 >>> prove $ \(a :: SI) b c -> a `intersection` (b `intersection` c) .== (a `intersection` b) `intersection` c
 Q.E.D.
 -}
@@ -45,8 +56,13 @@ Q.E.D.
 -- * Distributivity
 -- $distributivity
 {- $distributivity
+\(A\cup (B\cap C)=(A\cup B)\cap (A\cup C)\)
+
 >>> prove $ \(a :: SI) b c -> a `union` (b `intersection` c) .== (a `union` b) `intersection` (a `union` c)
 Q.E.D.
+
+\(A\cap (B\cup C)=(A\cap B)\cup (A\cap C)\)
+
 >>> prove $ \(a :: SI) b c -> a `intersection` (b `union` c) .== (a `intersection` b) `union` (a `intersection` c)
 Q.E.D.
 -}
@@ -54,8 +70,14 @@ Q.E.D.
 -- * Identity properties
 -- $identity
 {- $identity
+
+\(A\cup \varnothing = A\)
+
 >>> prove $ \(a :: SI) -> a `union` empty .== a
 Q.E.D.
+
+\(A\cap U = A \)
+
 >>> prove $ \(a :: SI) -> a `intersection` full .== a
 Q.E.D.
 -}
@@ -63,14 +85,29 @@ Q.E.D.
 -- * Complement properties
 -- $complement
 {- $complement
+
+\( A\cup A^{C}=U \)
+
 >>> prove $ \(a :: SI) -> a `union` complement a .== full
 Q.E.D.
+
+\( A\cap A^{C}=\varnothing \)
+
 >>> prove $ \(a :: SI) -> a `intersection` complement a .== empty
 Q.E.D.
+
+\({(A^{C})}^{C}=A\)
+
 >>> prove $ \(a :: SI) -> complement (complement a) .== a
 Q.E.D.
+
+\(\varnothing ^{C}=U\)
+
 >>> prove $ complement (empty :: SI) .== full
 Q.E.D.
+
+\( U^{C}=\varnothing \)
+
 >>> prove $ complement (full :: SI) .== empty
 Q.E.D.
 -}
