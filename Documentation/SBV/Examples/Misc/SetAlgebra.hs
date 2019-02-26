@@ -119,6 +119,8 @@ Q.E.D.
 The complement of a set is the only set that satisfies the first two complement properties above. That
 is complementation is characterized by those two laws, as we can formally establish:
 
+\( A\cup B=U \;\land \;A\cap B=\varnothing\;\;iff\;\;B=A^{C} \)
+
 >>> prove $ \(a :: SI) b -> a `union` b .== full .&& a `intersection` b .== empty .<=> b .== complement a
 Q.E.D.
 -}
@@ -126,8 +128,14 @@ Q.E.D.
 -- * Idempotency
 -- $idempotent
 {- $idempotent
+
+\( A\cup A=A \)
+
 >>> prove $ \(a :: SI) -> a `union` a .== a
 Q.E.D.
+
+\( A\cap A=A \)
+
 >>> prove $ \(a :: SI) -> a `intersection` a .== a
 Q.E.D.
 -}
@@ -135,8 +143,14 @@ Q.E.D.
 -- * Domination properties
 -- $domination
 {- $domination
+
+\( A\cup U=U \)
+
 >>> prove $ \(a :: SI) -> a `union` full .== full
 Q.E.D.
+
+\( A\cap \varnothing =\varnothing \)
+
 >>> prove $ \(a :: SI) -> a `intersection` empty .== empty
 Q.E.D.
 -}
@@ -144,8 +158,14 @@ Q.E.D.
 -- * Absorption properties
 -- $absorption
 {- $absorption
+
+\( A\cup (A\cap B)=A \)
+
 >>> prove $ \(a :: SI) b -> a `union` (a `intersection` b) .== a
 Q.E.D.
+
+\( A\cap (A\cup B)=A \)
+
 >>> prove $ \(a :: SI) b -> a `intersection` (a `union` b) .== a
 Q.E.D.
 -}
@@ -153,6 +173,9 @@ Q.E.D.
 -- * Intersection and set difference
 -- $intdiff
 {- $intdiff
+
+\( A\cap B=A\setminus (A\setminus B) \)
+
 >>> prove $ \(a :: SI) b -> a `intersection` b .== a `difference` (a `difference` b)
 Q.E.D.
 -}
@@ -160,8 +183,14 @@ Q.E.D.
 -- * De Morgan's laws
 -- $deMorgan
 {- $deMorgan
+
+\( (A\cup B)^{C}=A^{C}\cap B^{C} \)
+
 >>> prove $ \(a :: SI) b -> complement (a `union` b) .== complement a `intersection` complement b
 Q.E.D.
+
+\( (A\cap B)^{C}=A^{C}\cup B^{C} \)
+
 >>> prove $ \(a :: SI) b -> complement (a `intersection` b) .== complement a `union` complement b
 Q.E.D.
 -}
@@ -171,10 +200,18 @@ Q.E.D.
 {- $incPO
 Subset inclusion is a partial order, i.e., it is reflexive, antisymmetric, and transitive:
 
+\( A \subseteq A \)
+
 >>> prove $ \(a :: SI) -> a `isSubsetOf` a
 Q.E.D.
+
+\( A\subseteq B \;\land\; B\subseteq A \;\;iff\;\; A = B \)
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .&& b `isSubsetOf` a .<=> a .== b
 Q.E.D.
+
+\( A\subseteq B \;\land\; B\subseteq C \;\implies\; A \subseteq C \)
+
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` b .&& b `isSubsetOf` c .=> a `isSubsetOf` c
 Q.E.D.
 -}
@@ -182,14 +219,30 @@ Q.E.D.
 -- * Joins and meets
 -- $joinMeet
 {- $joinMeet
+
+\( A\subseteq A\cup B \)
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` (a `union` b)
 Q.E.D.
+
+
+\( A\subseteq C \;\land\; B\subseteq C \;\implies\; (A \cup B) \subseteq C \)
+
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` c .&& b `isSubsetOf` c .=> (a `union` b) `isSubsetOf` c
 Q.E.D.
+
+\( A\cap B\subseteq A \)
+
 >>> prove $ \(a :: SI) b -> (a `intersection` b) `isSubsetOf` a
 Q.E.D.
+
+\( A\cap B\subseteq B \)
+
 >>> prove $ \(a :: SI) b -> (a `intersection` b) `isSubsetOf` b
 Q.E.D.
+
+\( C\subseteq A \;\land\; C\subseteq B \;\implies\; C \subseteq (A \cap B) \)
+
 >>> prove $ \(a :: SI) b c -> c `isSubsetOf` a .&& c `isSubsetOf` b .=> c `isSubsetOf` (a `intersection` b)
 Q.E.D.
 -}
