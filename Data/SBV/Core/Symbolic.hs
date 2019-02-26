@@ -55,6 +55,7 @@ module Data.SBV.Core.Symbolic
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , outputSVal
+  , VariableName(..)
   ) where
 
 import Control.Arrow               (first, second, (***))
@@ -70,7 +71,7 @@ import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy)
-import Data.Maybe                  (isJust, fromJust, fromMaybe)
+import Data.Maybe                  (isJust, fromJust)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -1041,7 +1042,7 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 -- Such variables are existentially quantified in a SAT context, and universally quantified
 -- in a proof context.
 internalVariable :: State -> Kind -> IO SV
-internalVariable st k = do (sv, nm) <- newSV st k
+internalVariable st k = do (sv, _, nm) <- newSV st k
                            rm <- readIORef (runMode st)
                            let q = case rm of
                                      SMTMode    _ True  _ -> EX
@@ -1062,11 +1063,11 @@ internalVariable st k = do (sv, nm) <- newSV st k
 {-# INLINE internalVariable #-}
 
 -- | Create a new SV
-newSV :: State -> Kind -> IO (SV, String)
+newSV :: State -> Kind -> IO (SV, Int, String)
 newSV st k = do ctr <- incrementInternalCounter st
                 let sv = SV k (NodeId ctr)
                 registerKind st k
-                return (sv, 's' : show ctr)
+                return (sv, ctr, 's' : show ctr)
 {-# INLINE newSV #-}
 
 -- | Register a new kind with the system, used for uninterpreted sorts.
@@ -1148,7 +1149,7 @@ newConst st c = do
     -- has the kind we asked for, because the constMap stores the full CV
     -- which already has a kind field in it.
     Just sv -> return sv
-    Nothing -> do (sv, _) <- newSV st (kindOf c)
+    Nothing -> do (sv, _, _) <- newSV st (kindOf c)
                   let ins = Map.insert c sv
                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
                   return sv
@@ -1178,7 +1179,7 @@ newExpr st k app = do
      -- get the same expression but at a different type. See
      -- https://github.com/GaloisInc/cryptol/issues/566 as an example.
      Just sv | kindOf sv == k -> return sv
-     _                        -> do (sv, _) <- newSV st k
+     _                        -> do (sv, _, _) <- newSV st k
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))
                                     modifyState st spgm append $ modifyIncState st rNewAsgns append
                                     modifyState st rexprMap (Map.insert e sv) (return ())
@@ -1244,46 +1245,78 @@ instance MonadReader r m => MonadReader r (SymbolicT m) where
 -- transformers explicitly, this is the type you should prefer.
 type Symbolic = SymbolicT IO
 
+-- | Naming variables
+data VariableName
+  = Unnamed
+  -- ^ You don't need to supply a name to create a variable. This succeeds and
+  -- generates internal names like @"s1"@ and @"s2"@ for the variables:
+  --
+  -- @
+  -- 'mkSymVal' (Just 'ALL') 'Unnamed'
+  -- 'mkSymVal' (Just 'ALL') 'Unnamed'
+  -- @
+  | UniqueName !String
+  -- ^ A @UniqueName@ must be unique across a run of sbv (within a 'Symbolic'
+  -- or 'Query' context). This is useful when creating all variables by hand or
+  -- when you want a variable to be named uniquely. This fails because the
+  -- names must be unique:
+  --
+  -- @
+  -- 'mkSymVal' (Just 'ALL') ('UniqueName' "tags")
+  -- 'mkSymVal' (Just 'ALL') ('UniqueName' "tags")
+  -- @
+  | NameClass  !String
+  -- ^ A @NameClass@ is useful when you need to create several variables from
+  -- the same class. This is useful when generating variables programmatically.
+  -- This succeeds and generates internal names like @"tags1"@ and @"tags2"@
+  -- for the variables.
+  --
+  -- @
+  -- 'mkSymVal' (Just 'ALL') ('NameClass' "tags")
+  -- 'mkSymVal' (Just 'ALL') ('NameClass' "tags")
+  -- @
+
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCV@ is used for generating random values for this variable
 -- when used for @quickCheck@ or 'Data.SBV.Tools.GenTest.genTest' purposes.
-svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
+svMkSymVar :: Maybe Quantifier -> Kind -> VariableName -> State -> IO SVal
 svMkSymVar = svMkSymVarGen False
 
 -- | Create an existentially quantified tracker variable
 svMkTrackerVar :: Kind -> String -> State -> IO SVal
-svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
+svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (UniqueName nm)
 
 -- | Generalization of 'Data.SBV.sWordN'
 sWordN :: MonadSymbolic m => Int -> String -> m SVal
-sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
+sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (UniqueName nm)
 
 -- | Generalization of 'Data.SBV.sWordN_'
 sWordN_ :: MonadSymbolic m => Int -> m SVal
-sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
+sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Unnamed
 
 -- | Generalization of 'Data.SBV.sIntN'
 sIntN :: MonadSymbolic m => Int -> String -> m SVal
-sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
+sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (UniqueName nm)
 
 -- | Generalization of 'Data.SBV.sIntN_'
 sIntN_ :: MonadSymbolic m => Int -> m SVal
-sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
+sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Unnamed
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCV@ is used for generating random values for this variable
 -- when used for @quickCheck@ or 'Data.SBV.Tools.GenTest.genTest' purposes.
-svMkSymVarGen :: Bool -> Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
+svMkSymVarGen :: Bool -> Maybe Quantifier -> Kind -> VariableName -> State -> IO SVal
 svMkSymVarGen isTracker mbQ k mbNm st = do
         rm <- readIORef (runMode st)
 
         let varInfo = case mbNm of
-                        Nothing -> ", of type " ++ show k
-                        Just nm -> ", while defining " ++ nm ++ " :: " ++ show k
+                        Unnamed       -> ", of type " ++ show k
+                        UniqueName nm -> ", while defining " ++ nm ++ " :: " ++ show k
+                        NameClass _   -> "TODO"
 
             disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show rm
 
@@ -1291,13 +1324,20 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
               | isUninterpreted k  = disallow "Uninterpreted sorts"
               | True               = cont
 
-            mkS q = do (sv, internalName) <- newSV st k
-                       let nm = fromMaybe internalName mbNm
+            mkS q = do (sv, cntr, internalName) <- newSV st k
+                       let nm = case mbNm of
+                             Unnamed        -> internalName
+                             UniqueName nm' -> nm'
+                             NameClass nm'  -> nm' ++ show cntr
                        introduceUserName st isTracker nm k q sv
 
             mkC   = do cv <- randomCV k
                        do registerKind st k
-                          modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
+                          let nm = case mbNm of
+                                Unnamed        -> "_"
+                                UniqueName nm' -> nm'
+                                NameClass nm'  -> nm'
+                          modifyState st rCInfo ((nm, cv):) (return ())
                        return $ SVal k (Left cv)
 
         case (mbQ, rm) of

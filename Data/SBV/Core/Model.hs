@@ -82,13 +82,17 @@ import Data.SBV.Utils.Lib      (isKString)
 
 -- Symbolic-Word class instances
 
--- | Generate a finite symbolic bitvector, named
+-- | Generate a finite symbolic bitvector, uniquely named
 genVar :: MonadSymbolic m => Maybe Quantifier -> Kind -> String -> m (SBV a)
-genVar q k = mkSymSBV q k . Just
+genVar q k = mkSymSBV q k . UniqueName
+
+-- | Generate a finite symbolic bitvector, named as one of a class of variables
+genClassVar :: MonadSymbolic m => Maybe Quantifier -> Kind -> String -> m (SBV a)
+genClassVar q k = mkSymSBV q k . NameClass
 
 -- | Generate a finite symbolic bitvector, unnamed
 genVar_ :: MonadSymbolic m => Maybe Quantifier -> Kind -> m (SBV a)
-genVar_ q k = mkSymSBV q k Nothing
+genVar_ q k = mkSymSBV q k Unnamed
 
 -- | Generate a finite constant bitvector
 genLiteral :: Integral a => Kind -> a -> SBV b
@@ -100,9 +104,10 @@ genFromCV (CV _ (CInteger x)) = fromInteger x
 genFromCV c                   = error $ "genFromCV: Unsupported non-integral value: " ++ show c
 
 -- | Generalization of 'Data.SBV.genMkSymVar'
-genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m (SBV a)
-genMkSymVar k mbq Nothing  = genVar_ mbq k
-genMkSymVar k mbq (Just s) = genVar  mbq k s
+genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> VariableName -> m (SBV a)
+genMkSymVar k mbq Unnamed        = genVar_     mbq k
+genMkSymVar k mbq (UniqueName s) = genVar      mbq k s
+genMkSymVar k mbq (NameClass s)  = genClassVar mbq k s
 
 instance SymVal Bool where
   mkSymVal = genMkSymVar KBool

@@ -82,6 +82,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , registerLabel, svMkSymVar
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
+                              , VariableName(..)
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals)
@@ -223,12 +224,12 @@ instance (MonadIO m, SymVal a, SMTValue a, Foldable t, Traversable t, Fresh m (t
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)
-freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Nothing
+freshVar_ = inNewContext $ fmap SBV . svMkSymVar (Just EX) k Unnamed
   where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.freshVar'
 freshVar :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => String -> m (SBV a)
-freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (Just nm)
+freshVar nm = inNewContext $ fmap SBV . svMkSymVar (Just EX) k (UniqueName nm)
   where k = kindOf (Proxy @a)
 
 -- | Generalization of 'Data.SBV.Control.freshArray_'

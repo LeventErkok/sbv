@@ -22,7 +22,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SWord64, SEither, SMaybe, SSet)
 import Data.SBV.Core.Model     (Metric)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
-                                Symbolic, SBVRunMode, SMTConfig, SVal)
+                                Symbolic, SBVRunMode, SMTConfig, SVal, VariableName)
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
@@ -207,7 +207,7 @@ safeWith = Trans.safeWith
 -- | Create a symbolic variable.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkSymSBV'
-mkSymSBV :: Maybe Quantifier -> Kind -> Maybe String -> Symbolic (SBV a)
+mkSymSBV :: Maybe Quantifier -> Kind -> VariableName -> Symbolic (SBV a)
 mkSymSBV = Trans.mkSymSBV
 
 -- | Convert a symbolic value to an SV, inside the Symbolic monad
@@ -292,7 +292,7 @@ symbolics = Trans.symbolics
 -- | One stop allocator
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkSymVal'
-mkSymVal :: SymVal a => Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+mkSymVal :: SymVal a => Maybe Quantifier -> VariableName -> Symbolic (SBV a)
 mkSymVal = Trans.mkSymVal
 
 -- | Create a new anonymous array, possibly with a default initial value.
@@ -312,7 +312,7 @@ newArray = Trans.newArray
 -- | Generically make a symbolic var
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.genMkSymVar'
-genMkSymVar :: Kind -> Maybe Quantifier -> Maybe String -> Symbolic (SBV a)
+genMkSymVar :: Kind -> Maybe Quantifier -> VariableName -> Symbolic (SBV a)
 genMkSymVar = Trans.genMkSymVar
 
 -- | Declare a named 'SBool'
