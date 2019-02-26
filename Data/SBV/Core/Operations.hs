@@ -422,6 +422,9 @@ svNot = liftSym1 (mkSymOp1SC opt Not)
 
 -- | Shift left by a constant amount. Translates to the "bvshl"
 -- operation in SMT-Lib.
+--
+-- NB. Haskell spec says the behavior is undefined if the shift amount
+-- is negative. We arbitrarily return the value unchanged if this is the case.
 svShl :: SVal -> Int -> SVal
 svShl x i
   | i <= 0
@@ -435,6 +438,9 @@ svShl x i
 -- | Shift right by a constant amount. Translates to either "bvlshr"
 -- (logical shift right) or "bvashr" (arithmetic shift right) in
 -- SMT-Lib, depending on whether @x@ is a signed bitvector.
+--
+-- NB. Haskell spec says the behavior is undefined if the shift amount
+-- is negative. We arbitrarily return the value unchanged if this is the case.
 svShr :: SVal -> Int -> SVal
 svShr x i
   | i <= 0
@@ -449,7 +455,10 @@ svShr x i
         z    = svInteger k 0
         neg1 = svInteger k (-1)
 
--- | Rotate-left, by a constant
+-- | Rotate-left, by a constant.
+--
+-- NB. Haskell spec says the behavior is undefined if the shift amount
+-- is negative. We arbitrarily return the value unchanged if this is the case.
 svRol :: SVal -> Int -> SVal
 svRol x i
   | i <= 0
@@ -461,7 +470,10 @@ svRol x i
                                      (noFloatUnary "rotateL") (noDoubleUnary "rotateL") x
            _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
 
--- | Rotate-right, by a constant
+-- | Rotate-right, by a constant.
+--
+-- NB. Haskell spec says the behavior is undefined if the shift amount
+-- is negative. We arbitrarily return the value unchanged if this is the case.
 svRor :: SVal -> Int -> SVal
 svRor x i
   | i <= 0
