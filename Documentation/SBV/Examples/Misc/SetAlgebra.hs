@@ -119,7 +119,7 @@ Q.E.D.
 The complement of a set is the only set that satisfies the first two complement properties above. That
 is complementation is characterized by those two laws, as we can formally establish:
 
-\( A\cup B=U \;\land \;A\cap B=\varnothing\;\;iff\;\;B=A^{C} \)
+\( A\cup B=U \land A\cap B=\varnothing \iff B=A^{C} \)
 
 >>> prove $ \(a :: SI) b -> a `union` b .== full .&& a `intersection` b .== empty .<=> b .== complement a
 Q.E.D.
@@ -205,12 +205,12 @@ Subset inclusion is a partial order, i.e., it is reflexive, antisymmetric, and t
 >>> prove $ \(a :: SI) -> a `isSubsetOf` a
 Q.E.D.
 
-\( A\subseteq B \;\land\; B\subseteq A \;\;iff\;\; A = B \)
+\( A\subseteq B \land B\subseteq A \iff A = B \)
 
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .&& b `isSubsetOf` a .<=> a .== b
 Q.E.D.
 
-\( A\subseteq B \;\land\; B\subseteq C \;\implies\; A \subseteq C \)
+\( A\subseteq B \land B\subseteq C \Rightarrow A \subseteq C \)
 
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` b .&& b `isSubsetOf` c .=> a `isSubsetOf` c
 Q.E.D.
@@ -226,7 +226,7 @@ Q.E.D.
 Q.E.D.
 
 
-\( A\subseteq C \;\land\; B\subseteq C \;\implies\; (A \cup B) \subseteq C \)
+\( A\subseteq C \land B\subseteq C \Rightarrow (A \cup B) \subseteq C \)
 
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` c .&& b `isSubsetOf` c .=> (a `union` b) `isSubsetOf` c
 Q.E.D.
@@ -241,7 +241,7 @@ Q.E.D.
 >>> prove $ \(a :: SI) b -> (a `intersection` b) `isSubsetOf` b
 Q.E.D.
 
-\( C\subseteq A \;\land\; C\subseteq B \;\implies\; C \subseteq (A \cap B) \)
+\( C\subseteq A \land C\subseteq B \Rightarrow C \subseteq (A \cap B) \)
 
 >>> prove $ \(a :: SI) b c -> c `isSubsetOf` a .&& c `isSubsetOf` b .=> c `isSubsetOf` (a `intersection` b)
 Q.E.D.
@@ -252,12 +252,24 @@ Q.E.D.
 {- $subsetChar
 There are multiple equivalent ways of characterizing the subset relationship:
 
+\( A\subseteq B  \iff A \cap B = A \) 
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `intersection` b .== a
 Q.E.D.
+
+
+\( A\subseteq B \iff A \cup B = B \) 
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `union` b .== b
 Q.E.D.
+
+\( A\subseteq B \iff A \setminus B = \varnothing \)
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `difference` b .== empty
 Q.E.D.
+
+\( A\subseteq B \iff B^{C} \subseteq A^{C} \)
+
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> complement b `isSubsetOf` complement a
 Q.E.D.
 -}
@@ -266,30 +278,71 @@ Q.E.D.
 -- $relComp
 {- $relComp
 
+\( C\setminus (A\cap B)=(C\setminus A)\cup (C\setminus B) \)
+
 >>> prove $ \(a :: SI) b c -> c \\ (a `intersection` b) .== (c \\ a) `union` (c \\ b)
 Q.E.D.
+
+\( C\setminus (A\cup B)=(C\setminus A)\cap (C\setminus B) \)
+
 >>> prove $ \(a :: SI) b c -> c \\ (a `union` b) .== (c \\ a) `intersection` (c \\ b)
 Q.E.D.
+
+
+\( \displaystyle C\setminus (B\setminus A)=(A\cap C)\cup (C\setminus B) \)
+
 >>> prove $ \(a :: SI) b c -> c \\ (b \\ a) .== (a `intersection` c) `union` (c \\ b)
 Q.E.D.
+
+\( (B\setminus A)\cap C = (B\cap C)\setminus A \)
+
 >>> prove $ \(a :: SI) b c -> (b \\ a) `intersection` c .== (b `intersection` c) \\ a
 Q.E.D.
+
+\( (B\setminus A)\cap C= B\cap (C\setminus A) \)
+
 >>> prove $ \(a :: SI) b c -> (b \\ a) `intersection` c .== b `intersection` (c \\ a)
 Q.E.D.
+
+\( (B\setminus A)\cup C=(B\cup C)\setminus (A\setminus C) \)
+
 >>> prove $ \(a :: SI) b c -> (b \\ a) `union` c .== (b `union` c) \\ (a \\ c)
 Q.E.D.
+
+
+\( A \setminus A = \varnothing \)
+
 >>> prove $ \(a :: SI) -> a \\ a .== empty
 Q.E.D.
+
+\( \varnothing \setminus A = \varnothing \)
+
 >>> prove $ \(a :: SI) -> empty \\ a .== empty
 Q.E.D.
+
+\( A \setminus \varnothing = A \)
+
 >>> prove $ \(a :: SI) -> a \\ empty .== a
 Q.E.D.
+
+\( B \setminus A = A^{C} \cap B \)
+
 >>> prove $ \(a :: SI) b -> b \\ a .== complement a `intersection` b
 Q.E.D.
+
+\( {(B \setminus A)}^{C} = A \cup B^{C} \)
+
 >>> prove $ \(a :: SI) b -> complement (b \\ a) .== a `union` complement b
 Q.E.D.
+
+\( U \setminus A = A^{C} \)
+
 >>> prove $ \(a :: SI) -> full \\ a .== complement a
 Q.E.D.
+
+
+\( A \setminus U = \varnothing \)
+
 >>> prove $ \(a :: SI) -> a \\ full .== empty
 Q.E.D.
 -}
@@ -303,6 +356,8 @@ and unions, which is only true as described above. Here, we use SBV to show two 
 
 Subset relation does /not/ distribute over union on the left:
 
+\(A \subseteq (B \cup C) \nRightarrow A \subseteq B \land A \subseteq C \)
+
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
 Falsifiable. Counter-example:
   s0 =     {0} :: {Integer}
@@ -310,6 +365,8 @@ Falsifiable. Counter-example:
   s2 = U - {0} :: {Integer}
 
 Similarly, subset relation does /not/ distribute over intersection on the right:
+
+\( (B \cap C) \subseteq A \nRightarrow B \subseteq A \land C \subseteq A \)
 
 >>> prove $ \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
 Falsifiable. Counter-example:
