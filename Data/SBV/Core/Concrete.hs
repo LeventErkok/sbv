@@ -47,8 +47,8 @@ instance Show a => Show (RCSet a) where
                RegularSet    s              ->           sh (Set.toAscList s)
    where sh xs = '{' : intercalate "," (map show xs) ++ "}"
 
--- We need Eq/Ord instances for RCSet because we want to put them in maps/tables. But we don't want to derive
--- these, nor make it an instance! Why? Because the same set can have multiple representations if the underlying
+-- | Structural equality for 'RCSet'. We need Eq/Ord instances for 'RCSet' because we want to put them in maps/tables. But
+-- we don't want to derive these, nor make it an instance! Why? Because the same set can have multiple representations if the underlying
 -- type is finite. For instance, @{True} = U - {False}@ for boolean sets! Instead, we use the following two functions,
 -- which are equivalent to Eq/Ord instances and work for our purposes, but we do not export these to the user.
 eqRCSet :: Eq a => RCSet a -> RCSet a -> Bool
@@ -56,6 +56,7 @@ eqRCSet (RegularSet    a) (RegularSet    b) = a == b
 eqRCSet (ComplementSet a) (ComplementSet b) = a == b
 eqRCSet _                 _                 = False
 
+-- | Comparing 'RCSet' values. See comments for 'eqRCSet' on why we don't define the 'Ord' instance.
 compareRCSet :: Ord a => RCSet a -> RCSet a -> Ordering
 compareRCSet (RegularSet    a) (RegularSet    b) = a `compare` b
 compareRCSet (RegularSet    _) (ComplementSet _) = LT
