@@ -236,6 +236,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.Assert
+                  , TestSuite.Basics.BarrelRotate
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.BoundedList
                   , TestSuite.Basics.DynSign

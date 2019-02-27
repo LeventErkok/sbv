@@ -27,6 +27,7 @@ import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Assert
 import qualified TestSuite.Basics.BasicTests
+import qualified TestSuite.Basics.BarrelRotate
 import qualified TestSuite.Basics.BoundedList
 import qualified TestSuite.Basics.DynSign
 import qualified TestSuite.Basics.Exceptions
@@ -148,6 +149,7 @@ heavyTests = testGroup "SBVHeavyTests" [TestSuite.Basics.ArithSolver.tests]
 localOnlyTests :: TestTree
 localOnlyTests = testGroup "SBVLocalOnlyTests" [
                      TestSuite.Basics.Exceptions.testsLocal
+                   , TestSuite.Basics.BarrelRotate.tests      -- Requires CVC4
                    , TestSuite.Queries.BasicQuery.tests
                    , TestSuite.Queries.BadOption.tests
                    , TestSuite.Queries.Int_ABC.tests
@@ -155,10 +157,8 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
                    , TestSuite.Queries.Int_CVC4.tests
                    , TestSuite.Queries.Int_Mathsat.tests
                    , TestSuite.Queries.Int_Yices.tests
-                   -- quick-check tests take a long time, so just run them locally:
-                   , TestSuite.QuickCheck.QC.tests
-                   -- interpolant tests require MathSAT, run locally:
-                   , TestSuite.Queries.Interpolants.tests
+                   , TestSuite.Queries.Interpolants.tests     -- requires MathSat
+                   , TestSuite.QuickCheck.QC.tests            -- runs too slow, so only local
                    ]
 
 -- | Remaining tests
