@@ -137,6 +137,13 @@
     arguably the right thing to do anyway.) Thanks to Joel Burget for suggesting
     the idea.
 
+  * [BACKWARDS COMPATIBILITY, Internal] SBV is now more strict in how user-queries
+    are used, performing certain extra-checks that were not done before. (For instance,
+    previously it was possible to mix prove-sat with a query call, which should
+    not have been allowed.) If you have any code that breaks for this reason, you
+    probably should've written it in some other way to start with. Please get
+    in touch if that is the case.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking

@@ -60,7 +60,7 @@ import Data.Maybe (fromMaybe, catMaybes)
 
 import System.FilePath ((</>), (<.>))
 
-import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..))
+import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..))
 
 ---------------------------------------------------------------------------------------
 -- Test environment; continuous integration
@@ -175,7 +175,7 @@ numberOfModels p = do AllSatResult (maxHit, _, unk, rs) <- allSat p
 
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
-runSAT cmp = snd <$> runSymbolic (SMTMode ISetup True defaultSMTCfg) cmp
+runSAT cmp = snd <$> runSymbolic (SMTMode QueryInternal ISetup True defaultSMTCfg) cmp
 
 -- | Turn provable to an assertion, theorem case
 assertIsThm :: Provable a => a -> Assertion

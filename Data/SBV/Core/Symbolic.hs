@@ -799,20 +799,20 @@ isRunIStage s = case s of
                   IRun   -> True
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = SMTMode  IStage Bool SMTConfig -- ^ In regular mode, with a stage. Bool is True if this is SAT.
-                | CodeGen                        -- ^ Code generation mode.
-                | Concrete                       -- ^ Concrete simulation mode.
+data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig -- ^ In regular mode, with a stage. Bool is True if this is SAT.
+                | CodeGen                                    -- ^ Code generation mode.
+                | Concrete                                   -- ^ Concrete simulation mode.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
-   show (SMTMode ISetup True  _) = "Satisfiability setup"
-   show (SMTMode ISafe  True  _) = "Safety setup"
-   show (SMTMode IRun   True  _) = "Satisfiability"
-   show (SMTMode ISetup False _) = "Proof setup"
-   show (SMTMode ISafe  False _) = error "ISafe-False is not an expected/supported combination for SBVRunMode!"
-   show (SMTMode IRun   False _) = "Proof"
-   show CodeGen                  = "Code generation"
-   show Concrete                 = "Concrete evaluation"
+   show (SMTMode qc ISetup True  _) = "Satisfiability setup (" ++ show qc ++ ")"
+   show (SMTMode qc ISafe  True  _) = "Safety setup (" ++ show qc ++ ")"
+   show (SMTMode qc IRun   True  _) = "Satisfiability (" ++ show qc ++ ")"
+   show (SMTMode qc ISetup False _) = "Proof setup (" ++ show qc ++ ")"
+   show (SMTMode qc ISafe  False _) = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
+   show (SMTMode qc IRun   False _) = "Proof (" ++ show qc ++ ")"
+   show CodeGen                     = "Code generation"
+   show Concrete                    = "Concrete evaluation"
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> IO Bool
@@ -970,8 +970,8 @@ modifyState st@State{runMode} field update interactiveUpdate = do
         R.modifyIORef' (field st) update
         rm <- readIORef runMode
         case rm of
-          SMTMode IRun _ _ -> interactiveUpdate
-          _                -> return ()
+          SMTMode _ IRun _ _ -> interactiveUpdate
+          _                  -> return ()
 
 -- | Modify the incremental state
 modifyIncState  :: State -> (IncState -> IORef a) -> (a -> a) -> IO ()
@@ -1044,8 +1044,8 @@ internalVariable :: State -> Kind -> IO SV
 internalVariable st k = do (sv, nm) <- newSV st k
                            rm <- readIORef (runMode st)
                            let q = case rm of
-                                     SMTMode    _ True  _ -> EX
-                                     SMTMode    _ False _ -> ALL
+                                     SMTMode  _ _ True  _ -> EX
+                                     SMTMode  _ _ False _ -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
                                n = "__internal_sbv_" ++ nm
@@ -1301,14 +1301,14 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                        return $ SVal k (Left cv)
 
         case (mbQ, rm) of
-          (Just q,  SMTMode{}        ) -> mkS q
-          (Nothing, SMTMode _ isSAT _) -> mkS (if isSAT then EX else ALL)
+          (Just q,  SMTMode{}          ) -> mkS q
+          (Nothing, SMTMode _ _ isSAT _) -> mkS (if isSAT then EX else ALL)
 
-          (Just EX, CodeGen{})         -> disallow "Existentially quantified variables"
-          (_      , CodeGen)           -> noUI $ mkS ALL  -- code generation, pick universal
+          (Just EX, CodeGen{})           -> disallow "Existentially quantified variables"
+          (_      , CodeGen)             -> noUI $ mkS ALL  -- code generation, pick universal
 
-          (Just EX,  Concrete{})       -> disallow "Existentially quantified variables"
-          (_      ,  Concrete{})       -> noUI mkC
+          (Just EX,  Concrete{})         -> disallow "Existentially quantified variables"
+          (_      ,  Concrete{})         -> noUI mkC
 
 -- | Introduce a new user name. We die if repeated.
 introduceUserName :: State -> Bool -> String -> Kind -> Quantifier -> SV -> IO SVal
@@ -1765,6 +1765,11 @@ data SMTSolver = SMTSolver {
 -- | Query execution context
 data QueryContext = QueryInternal       -- ^ Triggered from inside SBV
                   | QueryExternal       -- ^ Triggered from user code
+
+-- | Show instance for 'QueryContext', for debugging purposes
+instance Show QueryContext where
+   show QueryInternal = "Internal Query"
+   show QueryExternal = "User Query"
 
 {-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}

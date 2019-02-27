@@ -1519,8 +1519,8 @@ unexpected ctx sent expected mbHint received mbReason = do
 runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
 runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
-                                              SMTMode stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
-                                              _                 -> error $ "runProofOn: Unexpected run mode: " ++ show rm
+                                              SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
+                                              _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
 
          flipQ (ALL, x) = (EX,  x)
          flipQ (EX,  x) = (ALL, x)
@@ -1554,6 +1554,12 @@ executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> Symboli
 executeQuery queryContext (QueryT userQuery) = do
      st <- symbolicEnv
      rm <- liftIO $ readIORef (runMode st)
+
+     -- Make sure the phases match:
+     () <- liftIO $ case (queryContext, rm) of
+                      (QueryInternal, _)                                -> return ()  -- no worries, internal
+                      (QueryExternal, SMTMode QueryExternal ISetup _ _) -> return () -- legitimate runSMT call
+                      _                                                 -> invalidQuery rm
 
      -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?
      -- Consider:
@@ -1604,7 +1610,7 @@ executeQuery queryContext (QueryT userQuery) = do
 
      case rm of
         -- Transitioning from setup
-        SMTMode stage isSAT cfg | not (isRunIStage stage) -> do
+        SMTMode qc stage isSAT cfg | not (isRunIStage stage) -> do
 
                                                 let backend = engine (solver cfg)
 
@@ -1615,7 +1621,7 @@ executeQuery queryContext (QueryT userQuery) = do
                                                     cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
                                                     pgm  = smtLibPgm cfg'
 
-                                                liftIO $ writeIORef (runMode st) $ SMTMode IRun isSAT cfg
+                                                liftIO $ writeIORef (runMode st) $ SMTMode qc IRun isSAT cfg
 
                                                 lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
 
@@ -1653,27 +1659,29 @@ executeQuery queryContext (QueryT userQuery) = do
         --
         -- So, we just reject it.
 
-        SMTMode IRun _ _ -> error $ unlines [ ""
-                                            , "*** Data.SBV: Unsupported nested query is detected."
-                                            , "***"
-                                            , "*** Please group your queries into one block. Note that this"
-                                            , "*** can also arise if you have a call to 'query' not within 'runSMT'"
-                                            , "*** For instance, within 'sat'/'prove' calls with custom user queries."
-                                            , "*** The solution is to do the sat/prove part in the query directly."
-                                            , "***"
-                                            , "*** While multiple/nested queries should not be necessary in general,"
-                                            , "*** please do get in touch if your use case does require such a feature,"
-                                            , "*** to see how we can accommodate such scenarios."
-                                            ]
+        SMTMode _ IRun _ _ -> error $ unlines [ ""
+                                              , "*** Data.SBV: Unsupported nested query is detected."
+                                              , "***"
+                                              , "*** Please group your queries into one block. Note that this"
+                                              , "*** can also arise if you have a call to 'query' not within 'runSMT'"
+                                              , "*** For instance, within 'sat'/'prove' calls with custom user queries."
+                                              , "*** The solution is to do the sat/prove part in the query directly."
+                                              , "***"
+                                              , "*** While multiple/nested queries should not be necessary in general,"
+                                              , "*** please do get in touch if your use case does require such a feature,"
+                                              , "*** to see how we can accommodate such scenarios."
+                                              ]
 
         -- Otherwise choke!
-        m -> error $ unlines [ ""
-                             , "*** Data.SBV: Invalid query call."
-                             , "***"
-                             , "***   Current mode: " ++ show m
-                             , "***"
-                             , "*** Query calls are only valid within runSMT/runSMTWith calls"
-                             ]
+        _ -> invalidQuery rm
+
+  where invalidQuery rm = error $ unlines [ ""
+                                          , "*** Data.SBV: Invalid query call."
+                                          , "***"
+                                          , "***   Current mode: " ++ show rm
+                                          , "***"
+                                          , "*** Query calls are only valid within runSMT/runSMTWith calls"
+                                          ]
 
 {-# ANN module          ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN getAllSatResult ("HLint: ignore Use forM_"          :: String) #-}

@@ -297,51 +297,52 @@ getModelAtIndex mbi = do
     State{runMode} <- queryState
     rm     <- io $ readIORef runMode
     case rm of
-      m@CodeGen         -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      m@Concrete        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      SMTMode _ isSAT _ -> do cfg   <- getConfig
-                              inps  <- getQuantifiedInputs
-                              obsvs <- getObservables
-                              uis   <- getUIs
+      m@CodeGen           -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Concrete          -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      SMTMode _ _ isSAT _ -> do
+          cfg   <- getConfig
+          inps  <- getQuantifiedInputs
+          obsvs <- getObservables
+          uis   <- getUIs
 
-                               -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-                              let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                                            else takeWhile ((== ALL) . fst) inps
+           -- for "sat", display the prefix existentials. for "proof", display the prefix universals
+          let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
+                                        else takeWhile ((== ALL) . fst) inps
 
-                                  -- are we inside a quantifier
-                                  insideQuantifier = length allModelInputs < length inps
+              -- are we inside a quantifier
+              insideQuantifier = length allModelInputs < length inps
 
-                                  -- observables are only meaningful if we're not in a quantified context
-                                  prefixObservables | insideQuantifier = []
-                                                    | True             = obsvs
+              -- observables are only meaningful if we're not in a quantified context
+              prefixObservables | insideQuantifier = []
+                                | True             = obsvs
 
-                                  sortByNodeId :: [(NamedSymVar, a)] -> [a]
-                                  sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
+              sortByNodeId :: [(NamedSymVar, a)] -> [a]
+              sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
 
-                                  grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
+              grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
 
-                              inputAssocs <- mapM (grab . snd) allModelInputs
+          inputAssocs <- mapM (grab . snd) allModelInputs
 
-                              let assocs =  sortOn fst prefixObservables
-                                         ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
+          let assocs =  sortOn fst prefixObservables
+                     ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
 
-                              -- collect UIs if requested
-                              let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
+          -- collect UIs if requested
+          let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
 
-                              -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
-                              -- as cex's tend to get larger
-                              unless (null uiFuns) $
-                                 let solverCaps = capabilities (solver cfg)
-                                 in case supportsFlattenedModels solverCaps of
-                                      Nothing   -> return ()
-                                      Just cmds -> mapM_ (send True) cmds
+          -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
+          -- as cex's tend to get larger
+          unless (null uiFuns) $
+             let solverCaps = capabilities (solver cfg)
+             in case supportsFlattenedModels solverCaps of
+                  Nothing   -> return ()
+                  Just cmds -> mapM_ (send True) cmds
 
-                              uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
+          uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
-                              return SMTModel { modelObjectives = []
-                                              , modelAssocs     = assocs
-                                              , modelUIFuns     = uivs
-                                              }
+          return SMTModel { modelObjectives = []
+                          , modelAssocs     = assocs
+                          , modelUIFuns     = uivs
+                          }
 
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.

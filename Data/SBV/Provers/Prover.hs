@@ -292,7 +292,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic (SMTMode ISetup True cfg) (forSome_ a >> Control.query check)
+       fst <$> runSymbolic (SMTMode QueryInternal ISetup True cfg) (forSome_ a >> Control.executeQuery QueryInternal check)
      where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
@@ -365,9 +365,9 @@ generateSMTBenchmark isSat a = do
       let comments = ["Automatically created by SBV on " ++ show t]
           cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-      (_, res) <- runSymbolic (SMTMode ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
 
-      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode IRun isSat cfg) QueryInternal comments res
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
 
       return $ out ++ "\n(check-sat)\n"
@@ -500,11 +500,11 @@ runSMT = runSMTWith defaultSMTCfg
 
 -- | Generalization of 'Data.SBV.runSMTWith'
 runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
-runSMTWith cfg a = fst <$> runSymbolic (SMTMode ISetup True cfg) a
+runSMTWith cfg a = fst <$> runSymbolic (SMTMode QueryExternal ISetup True cfg) a
 
 -- | Runs with a query.
 runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
-runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode ISetup isSAT cfg) comp
+runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode QueryInternal ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
                    Control.executeQuery QueryInternal q
 
@@ -567,9 +567,9 @@ class ExtractIO m => SExecutable m a where
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
-                       fst <$> runSymbolic (SMTMode ISafe True cfg) (sName_ a >> check mkRelative)
+                       fst <$> runSymbolic (SMTMode QueryInternal ISafe True cfg) (sName_ a >> check mkRelative)
      where check :: (FilePath -> FilePath) -> SymbolicT m [SafeResult]
-           check mkRelative = Control.query $ Control.getSBVAssertions >>= mapM (verify mkRelative)
+           check mkRelative = Control.executeQuery QueryInternal $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
            -- check that the cond is unsatisfiable. If satisfiable, that would
            -- indicate the assignment under which the 'Data.SBV.sAssert' would fail
