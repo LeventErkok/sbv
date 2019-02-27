@@ -1320,6 +1320,9 @@ sRotateLeft = liftViaSVal svRotateLeft
 -- We provide this implementation as an alternative to `sRotateLeft` since SMTLib logic
 -- does not support variable argument rotates (as opposed to shifts), and thus this
 -- implementation can produce better code for verification compared to `sRotateLeft`.
+--
+-- >>> prove $ \x y -> (x `sBarrelRotateLeft`  y) `sBarrelRotateRight` (y :: SWord32) .== (x :: SWord64)
+-- Q.E.D.
 sBarrelRotateLeft :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
 sBarrelRotateLeft = liftViaSVal svBarrelRotateLeft
 
@@ -1331,6 +1334,9 @@ sRotateRight = liftViaSVal svRotateRight
 
 -- | An implementation of rotate-right, using a barrel shifter like design. See comments
 -- for `sBarrelRotateLeft` for details.
+--
+-- >>> prove $ \x y -> (x `sBarrelRotateRight` y) `sBarrelRotateLeft`  (y :: SWord32) .== (x :: SWord64)
+-- Q.E.D.
 sBarrelRotateRight :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
 sBarrelRotateRight = liftViaSVal svBarrelRotateRight
 
