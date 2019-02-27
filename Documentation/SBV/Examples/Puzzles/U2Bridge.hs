@@ -15,7 +15,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Documentation.SBV.Examples.Puzzles.U2Bridge where
 

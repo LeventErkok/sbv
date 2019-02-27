@@ -116,7 +116,7 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Ju
                                       cs <- checkSat
                                       case cs of
                                        Unk   -> error "Unknown!"
-                                       Unsat -> io $ putStrLn $ "There are no more solutions."
+                                       Unsat -> io $ putStrLn "There are no more solutions."
                                        Sat   -> do newVals <- mapM getValue vs
                                                    io $ putStrLn $ "Found: " ++ show newVals
                                                    go newVals

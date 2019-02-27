@@ -30,7 +30,7 @@ module Documentation.SBV.Examples.Transformers.SymbolicEval where
 import Control.Monad.Except   (Except, ExceptT, MonadError, mapExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity(runIdentity))
 import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.Reader   (MonadReader(ask, reader), ReaderT, runReaderT)
+import Control.Monad.Reader   (MonadReader(reader), asks, ReaderT, runReaderT)
 import Control.Monad.Trans    (lift)
 
 import Data.SBV.Dynamic   (SVal)
@@ -92,8 +92,8 @@ unsafeCastSBV = SBV . unSBV
 
 -- | Symbolic evaluation function for 'Term'.
 eval :: Term r -> Eval (SBV r)
-eval (Var "x")           = unsafeCastSBV . envX <$> ask
-eval (Var "y")           = unsafeCastSBV . envY <$> ask
+eval (Var "x")           = asks $ unsafeCastSBV . envX
+eval (Var "y")           = asks $ unsafeCastSBV . envY
 eval (Var "result")      = do mRes <- reader result
                               case mRes of
                                 Nothing -> throwError "unknown variable"

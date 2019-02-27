@@ -1353,7 +1353,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                  []  -> Nothing
                                                                  xs  -> Just xs
 
-                                                    (rejects, defs) = unzip $ map mkNotEq [ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
+                                                    (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
                                                     -- Otherwise, we have things to refute, go for it:
                                                     mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
