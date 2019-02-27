@@ -127,6 +127,16 @@
     code; though you might have to add some extra constraints if you were
     writing sufficiently polymorphic SBV code. Yell if you find otherwise!
 
+  * [BACKWARDS COMPATIBILITY] SBV now allows user-given names to be duplicated.
+    It will implicitly add a suffix to them to distinguish without complaining. (In
+    previous versions, we would error out.) The reason for this change is that
+    sometimes it's nice to be able to simply give a prefix for a class of names
+    and not worry about the actual name itself. (Note that this will cause issues
+    if you use model-extraction-via-maps method if we ever make a name unique
+    and store it under a different name, but that's hardly ever used feature and
+    arguably the right thing to do anyway.) Thanks to Joel Burget for suggesting
+    the idea.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking

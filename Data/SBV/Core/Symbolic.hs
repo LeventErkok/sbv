@@ -1312,27 +1312,34 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
 
 -- | Introduce a new user name. We die if repeated.
 introduceUserName :: State -> Bool -> String -> Kind -> Quantifier -> SV -> IO SVal
-introduceUserName st isTracker nm k q sv = do
+introduceUserName st isTracker nmOrig k q sv = do
         (is, ints) <- readIORef (rinps st)
-        if nm `elem` [n | (_, (_, n)) <- is] ++ [n | (_, n) <- ints]
-           then error $ "SBV: Repeated user given name: " ++ show nm ++ ". Please use unique names."
-           else if isTracker && q == ALL
-                then error $ "SBV: Impossible happened! A universally quantified tracker variable is being introduced: " ++ show nm
-                else do let newInp olds = case q of
-                                           EX  -> (sv, nm) : olds
-                                           ALL -> noInteractive [ "Adding a new universally quantified variable: "
-                                                                , "  Name      : " ++ show nm
-                                                                , "  Kind      : " ++ show k
-                                                                , "  Quantifier: Universal"
-                                                                , "  Node      : " ++ show sv
-                                                                , "Only existential variables are supported in query mode."
-                                                                ]
-                        if isTracker
-                           then modifyState st rinps (second ((:) (sv, nm)))
-                                          $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                           else modifyState st rinps (first ((:) (q, (sv, nm))))
-                                          $ modifyIncState st rNewInps newInp
-                        return $ SVal k $ Right $ cache (const (return sv))
+
+        let old = [n | (_, (_, n)) <- is] ++ [n | (_, n) <- ints]
+            nm  = mkUnique nmOrig old
+
+        if isTracker && q == ALL
+           then error $ "SBV: Impossible happened! A universally quantified tracker variable is being introduced: " ++ show nm
+           else do let newInp olds = case q of
+                                      EX  -> (sv, nm) : olds
+                                      ALL -> noInteractive [ "Adding a new universally quantified variable: "
+                                                           , "  Name      : " ++ show nm
+                                                           , "  Kind      : " ++ show k
+                                                           , "  Quantifier: Universal"
+                                                           , "  Node      : " ++ show sv
+                                                           , "Only existential variables are supported in query mode."
+                                                           ]
+                   if isTracker
+                      then modifyState st rinps (second ((:) (sv, nm)))
+                                     $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
+                      else modifyState st rinps (first ((:) (q, (sv, nm))))
+                                     $ modifyIncState st rNewInps newInp
+                   return $ SVal k $ Right $ cache (const (return sv))
+
+   where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
+         -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
+         -- die way ahead of that happening if that's the case!
+         mkUnique prefix names = head $ dropWhile (`elem` names) (prefix : [prefix ++ "_" ++ show i | i <- [(0::Int)..]])
 
 -- | Generalization of 'Data.SBV.addAxiom'
 addAxiom :: MonadSymbolic m => String -> [String] -> m ()
