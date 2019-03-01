@@ -199,6 +199,7 @@ Library
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.ABC
                   , Data.SBV.Utils.ExtractIO
+                  , Data.SBV.Utils.FloatConversionBounds
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff
                   , Data.SBV.Utils.Lib
