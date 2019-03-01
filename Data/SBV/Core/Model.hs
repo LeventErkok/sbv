@@ -2141,8 +2141,7 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
--- and algebraic reals can be optimized. (But not, say, SFloat, SDouble, or SBool.)
--- Minimal complete definition: minimize/maximize.
+-- and algebraic reals can be optimized. (But not, say, 'SFloat', 'SDouble', or 'SBool'.)
 --
 -- A good reference on these features is given in the following paper:
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
