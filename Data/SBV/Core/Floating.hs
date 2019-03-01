@@ -29,7 +29,11 @@ import Data.Proxy
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.AlgReals (isExactRational)
+
 import Data.SBV.Utils.Numeric
+
+-- import Data.SBV.Utils.FloatConversionBounds
+-- import Numeric
 
 -- For doctest use only
 --
@@ -225,12 +229,54 @@ class IEEEFloatConvertible a where
 -- | A generic converter that will work for most of our instances. (But not all!)
 genericFPConverter :: forall a r. (SymVal a, HasKind r, SymVal r, Num r) => Maybe (a -> Bool) -> Maybe (SBV a -> SBool) -> (a -> r) -> SRoundingMode -> SBV a -> SBV r
 genericFPConverter mbConcreteOK mbSymbolicOK converter rm f
+
+  -- If we receive constant value, then only convert if it is within acceptable
+  -- bounds, and bail out otherwise.
   | Just w <- unliteral f, Just RoundNearestTiesToEven <- unliteral rm, check w
   = literal $ converter w
+  {-
+  = let conversionOK = case allowedRange of
+                         Nothing       -> True
+                         Just (lb, ub) -> isNaN w || isInfinite w || (w >= lb && w <= ub)
+
+        allowedRange :: Maybe (a, a)
+        allowedRange = case (kTo, RoundNearestTiesToEven) `lookup` conversionBounds of
+                         Nothing       -> Nothing
+                         Just (fr, dr) -> case kFrom of
+                                            KFloat  -> Just fr
+                                            KDouble -> Just dr
+                                            _       -> Nothing
+
+        okToConvert = case allowedRange of
+                         Nothing     -> "[no bounds]"
+                         Just (l, u) -> "[" ++ show l ++ " .. " ++ show u ++ "] " ++ "([" ++ showHFloat l (" .. " ++ showHFloat u "])")
+
+        nm = case kFrom of
+               KDouble -> "fromSDouble"
+               KFloat  -> "fromSFloat"
+               _       -> show kFrom
+
+    in if conversionOK
+       then literal $ converter w
+       else error $ unlines [ ""
+                            , "*** Data.SBV." ++ nm ++ ": Out-of-bounds conversion detected:"
+                            , "***"
+                            , "***"
+                            , "*** Rounding mode: " ++ show rm
+                            , "*** Input        : " ++ show w ++ " (" ++ showHFloat w ")"
+                            , "*** Allowed range: " ++ okToConvert
+                            , "***"
+                            , "*** Conversion of float/doubles to integral values out of the target range"
+                            , "*** is undefined. Please avoid such values!"
+                            ]
+  -}
+
   | Just symCheck <- mbSymbolicOK
   = ite (symCheck f) result (literal 0)
+
   | True
   = result
+
   where result  = SBV (SVal kTo (Right (cache y)))
         check w = maybe True ($ w) mbConcreteOK
         kFrom   = kindOf f
