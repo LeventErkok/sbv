@@ -21,12 +21,12 @@ notifications:
 
 matrix:
   include:
-    - env: CABALVER=2.0 GHCVER=8.2.2 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
-      compiler: ": #GHC 8.2.2"
+    - env: CABALVER=2.0 GHCVER=8.4.4 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
+      compiler: ": #GHC 8.4.4"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.2.2,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=2.0 GHCVER=8.4.3 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
-      compiler: ": #GHC 8.4.3"
+    - env: CABALVER=2.0 GHCVER=8.6.3 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
+      compiler: ": #GHC 8.6.3"
       addons: {apt: {packages: [cabal-install-2.0,ghc-8.4.3,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
     - os: osx
