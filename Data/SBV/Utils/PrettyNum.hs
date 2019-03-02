@@ -28,6 +28,7 @@ import Data.Word  (Word8, Word16, Word32, Word64)
 import qualified Data.Set as Set
 
 import Numeric (showIntAtBase, showHex, readInt)
+import qualified Numeric (showHFloat)
 
 import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 
@@ -334,15 +335,15 @@ showCFloat f
    | isNaN f             = "((float) NAN)"
    | isInfinite f, f < 0 = "((float) (-INFINITY))"
    | isInfinite f        = "((float) INFINITY)"
-   | True                = show f ++ "F"
+   | True                = Numeric.showHFloat f $ "F /* " ++ show f ++ "F */"
 
 -- | A version of show for doubles that generates correct C literals for nan/infinite. NB. Requires "math.h" to be included.
 showCDouble :: Double -> String
-showCDouble f
-   | isNaN f             = "((double) NAN)"
-   | isInfinite f, f < 0 = "((double) (-INFINITY))"
-   | isInfinite f        = "((double) INFINITY)"
-   | True                = show f
+showCDouble d
+   | isNaN d             = "((double) NAN)"
+   | isInfinite d, d < 0 = "((double) (-INFINITY))"
+   | isInfinite d        = "((double) INFINITY)"
+   | True                = Numeric.showHFloat d " /* " ++ show d ++ " */"
 
 -- | A version of show for floats that generates correct Haskell literals for nan/infinite
 showHFloat :: Float -> String
