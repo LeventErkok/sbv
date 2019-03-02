@@ -1176,7 +1176,7 @@ newExpr st k app = do
      -- is the same kind as we're requesting. This might look unnecessary,
      -- at first, but `svSign` and `svUnsign` rely on this as we can
      -- get the same expression but at a different type. See
-     -- https://github.com/GaloisInc/cryptol/issues/566 as an example.
+     -- <http://github.com/GaloisInc/cryptol/issues/566> as an example.
      Just sv | kindOf sv == k -> return sv
      _                        -> do (sv, _) <- newSV st k
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))

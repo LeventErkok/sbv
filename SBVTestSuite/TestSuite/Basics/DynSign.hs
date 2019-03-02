@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Test case for https://github.com/GaloisInc/cryptol/issues/566
+-- Test case for <http://github.com/GaloisInc/cryptol/issues/566>
 -----------------------------------------------------------------------------
 
 module TestSuite.Basics.DynSign(tests) where

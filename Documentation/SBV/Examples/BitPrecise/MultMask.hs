@@ -44,7 +44,7 @@ import Data.SBV.Control
 -- to positions @[56,57,58,59,60,61,62,63]@ respectively.
 --
 -- Note that we have to send z3 custom configuration for this problem as
--- otherwise it takes too long. See https://github.com/Z3Prover/z3/issues/2075
+-- otherwise it takes too long. See <http://github.com/Z3Prover/z3/issues/2075>
 -- for details.
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
