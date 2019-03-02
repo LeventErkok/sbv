@@ -1686,22 +1686,23 @@ instance HasKind RoundingMode
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose             :: Bool           -- ^ Debug mode
-       , timing              :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , printBase           :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec       :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , satCmd              :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
-       , allSatPrintAlong    :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
-       , satTrackUFs         :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
-       , isNonModelVar       :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , transcript          :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
-       , smtLibVersion       :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
-       , solver              :: SMTSolver      -- ^ The actual SMT solver.
-       , roundingMode        :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
-       , solverSetOptions    :: [SMTOption]    -- ^ Options to set as we start the solver
-       , ignoreExitCode      :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
-       , redirectVerbose     :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
+         verbose                :: Bool           -- ^ Debug mode
+       , timing                 :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase              :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec          :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , satCmd                 :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , allSatMaxModelCount    :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
+       , allSatPrintAlong       :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
+       , satTrackUFs            :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
+       , isNonModelVar          :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , transcript             :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
+       , smtLibVersion          :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
+       , solver                 :: SMTSolver      -- ^ The actual SMT solver.
+       , allowQuantifiedQueries :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
+       , roundingMode           :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
+       , solverSetOptions       :: [SMTOption]    -- ^ Options to set as we start the solver
+       , ignoreExitCode         :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
+       , redirectVerbose        :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)

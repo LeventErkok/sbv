@@ -71,22 +71,23 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [Control.SMTOption] -> SMTConfig
-mkConfig s smtVersion startOpts = SMTConfig { verbose             = False
-                                            , timing              = NoTiming
-                                            , printBase           = 10
-                                            , printRealPrec       = 16
-                                            , transcript          = Nothing
-                                            , solver              = s
-                                            , smtLibVersion       = smtVersion
-                                            , satCmd              = "(check-sat)"
-                                            , satTrackUFs         = True                   -- i.e., yes, do extract UI function values
-                                            , allSatMaxModelCount = Nothing                -- i.e., return all satisfying models
-                                            , allSatPrintAlong    = False                  -- i.e., do not print models as they are found
-                                            , isNonModelVar       = const False            -- i.e., everything is a model-variable by default
-                                            , roundingMode        = RoundNearestTiesToEven
-                                            , solverSetOptions    = startOpts
-                                            , ignoreExitCode      = False
-                                            , redirectVerbose     = Nothing
+mkConfig s smtVersion startOpts = SMTConfig { verbose                = False
+                                            , timing                 = NoTiming
+                                            , printBase              = 10
+                                            , printRealPrec          = 16
+                                            , transcript             = Nothing
+                                            , solver                 = s
+                                            , smtLibVersion          = smtVersion
+                                            , satCmd                 = "(check-sat)"
+                                            , satTrackUFs            = True                   -- i.e., yes, do extract UI function values
+                                            , allSatMaxModelCount    = Nothing                -- i.e., return all satisfying models
+                                            , allSatPrintAlong       = False                  -- i.e., do not print models as they are found
+                                            , isNonModelVar          = const False            -- i.e., everything is a model-variable by default
+                                            , allowQuantifiedQueries = False
+                                            , roundingMode           = RoundNearestTiesToEven
+                                            , solverSetOptions       = startOpts
+                                            , ignoreExitCode         = False
+                                            , redirectVerbose        = Nothing
                                             }
 
 -- | If supported, this makes all output go to stdout, which works better with SBV

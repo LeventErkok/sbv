@@ -113,6 +113,15 @@
     It accepts bit-vectors as arguments and an unsigned rotation quantity to keep
     things simple.
 
+  * Added new configuration option 'allowQueryQuantifers', default is set to False.
+    SBV normally doesn't allow quantifiers in a query context, because there are
+    issues surrounding 'getValue'. However, Joel Burget pointed out this check
+    is too strict for certain scenarios. So, as an escape hatch, you can define
+    'allowQueryQuantifers' to be 'True' and SBV will bypass this check. Of course,
+    if you do this, then you are on your own regarding calls to `getValue` with
+    quantified parameters! See http://github.com/LeventErkok/sbv/issues/459
+    for details.
+
   * [BACKWARDS COMPATIBILITY] Renamed the class `IEEEFloatConvertable` to
     `IEEEFloatConvertible`. (Typo in name!)
 

@@ -1585,8 +1585,17 @@ executeQuery queryContext (QueryT userQuery) = do
      --
      -- So, we check if this is an external-query, and if there are quantified variables. If so, we
      -- cowardly refuse to continue. For details, see: <http://github.com/LeventErkok/sbv/issues/407>
+     --
+     -- However, as discussed in <https://github.com/LeventErkok/sbv/issues/459>, we'll allow for this
+     -- if the user explicitly asks as to do so. In that case, all bets are off!
 
-     () <- liftIO $ case queryContext of
+     let allowQQs = case rm of
+                      SMTMode _ _ _ cfg -> allowQuantifiedQueries cfg
+                      CodeGen           -> False -- doesn't matter in these two
+                      Concrete          -> False -- cases, but we're being careful
+
+     () <- unless allowQQs $ liftIO $
+                    case queryContext of
                       QueryInternal -> return ()         -- we're good, internal usages don't mess with scopes
                       QueryExternal -> do
                         (userInps, _) <- readIORef (rinps st)
