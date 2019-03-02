@@ -153,6 +153,11 @@
     probably should've written it in some other way to start with. Please get
     in touch if that is the case.
 
+  * [BACKWARDS COMPATIBILITY] You need at least GHC 8.4.1 to compile SBV.
+    If you're stuck with an older version, let me know and we'll see if
+    we can create a custom version for you; though I'd much rather avoid this
+    if at all possible.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking
