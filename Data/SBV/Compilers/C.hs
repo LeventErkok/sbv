@@ -207,9 +207,10 @@ specifier cfg sv = case kindOf sv of
         spec (False, 64) = text "0x%016\"PRIx64\"ULL"
         spec (True,  64) = text "%\"PRId64\"LL"
         spec (s, sz)     = die $ "Format specifier at type " ++ (if s then "SInt" else "SWord") ++ show sz
+
         specF :: CgSRealType -> Doc
-        specF CgFloat      = text "%.6g"    -- float.h: __FLT_DIG__
-        specF CgDouble     = text "%.15g"   -- float.h: __DBL_DIG__
+        specF CgFloat      = text "%a"
+        specF CgDouble     = text "%a"
         specF CgLongDouble = text "%Lf"
 
 -- | Make a constant value of the given type. We don't check for out of bounds here, as it should not be needed.
@@ -599,10 +600,18 @@ handleIEEE w consts as var = cvt w
   where same f                   = (f, f)
         named fnm dnm f          = (f fnm, f dnm)
 
-        cvt (FP_Cast _ to m)     = case checkRM (m `lookup` consts) of
-                                     Nothing          -> cast $ \[a] -> parens (text (show to)) <+> a
-                                     Just (Left  msg) -> die msg
-                                     Just (Right msg) -> tbd msg
+        cvt (FP_Cast from to m)     = case checkRM (m `lookup` consts) of
+                                        Nothing          -> cast $ \[a] -> parens (text (show to)) <+> rnd a
+                                        Just (Left  msg) -> die msg
+                                        Just (Right msg) -> tbd msg
+                                      where -- if we're converting from float to some integral like; first use rint/rintf to do the internal conversion and then cast.
+                                            rnd a
+                                             | (isFloat from || isDouble from) && (isBounded to || isUnbounded to)
+                                             = let f = if isFloat from then "rintf" else "rint"
+                                               in text f P.<> parens a
+                                             | True
+                                             = a
+
         cvt (FP_Reinterpret f t) = case (f, t) of
                                      (KBounded False 32, KFloat)  -> cast $ cpy "sizeof(SFloat)"
                                      (KBounded False 64, KDouble) -> cast $ cpy "sizeof(SDouble)"
