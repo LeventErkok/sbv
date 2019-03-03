@@ -159,7 +159,7 @@ instance IEEEFloating Double
 -- integral target domain. For instance, converting an 'SFloat' to
 -- an 'SInt8'. The rules are as follows:
 --
--- If the input is @NaN@, @+oo@ or @-oo@], conversion produces 0.
+-- If the input is @NaN@, @+oo@ or @-oo@, conversion produces 0.
 --
 -- If the input value is out-of-range for the target type (happens when
 -- the target is a signed or unsigned bitvector), then the semantics
