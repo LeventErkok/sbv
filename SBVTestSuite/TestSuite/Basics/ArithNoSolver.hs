@@ -452,8 +452,8 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
           | isNaN x || isNaN y = f a b
           | True               = a == b
 
-        cvtTest  (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) (same (extract a) (extract b) `showsAs` "True")
-        cvtTestI (nm, x, a, b)  = testCase ("arithCF-" ++ nm ++ "." ++ x) ((a .== literal b) `showsAs` "True")
+        cvtTest  (nm, x, a, b)  = testCase ("fpConverts.arithmetic-CF-" ++ nm ++ "." ++ x) (same (extract a) (extract b) `showsAs` "True")
+        cvtTestI (nm, x, a, b)  = testCase ("fpConverts.arithmetic-CF-" ++ nm ++ "." ++ x) ((a .== literal b) `showsAs` "True")
 
         mkTest1 (nm, (x, s))    = testCase ("arithCF-" ++ nm ++ "." ++ x) (s `showsAs` "True")
         mkTest2 (nm, (x, y, s)) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
