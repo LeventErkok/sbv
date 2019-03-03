@@ -161,15 +161,37 @@ instance IEEEFloating Double
 --
 -- If the input is @NaN@, @+oo@ or @-oo@, conversion produces 0.
 --
--- If the input value is out-of-range for the target type (happens when
--- the target is a signed or unsigned bitvector), then the semantics
--- is as if we first convert the input to an 'Int64' or 'Word64'
--- depending on the signedness of the target, and then convert that value
--- to the target type. Note that this is seemingly the behavior of Haskell
--- (though documentation is hard to come by in this regard!), but not
--- necessarily C, where out-of-bounds conversions are explicitly stated
--- to be undefined. We follow what we observed Haskell to be doing here
--- in our experiments.
+-- For finite values, the conversion proceeds as follows:
+--
+-- Regular case: If the input value rounded in the given rounding mode to an
+-- integral value lies within the target bounds, then that result
+-- is returned. This is the regular interpretation of rounding in IEEE754.
+--
+-- If the input value rounded using the given mode is out-of-range for the
+-- target type (happens when the target is a signed or unsigned bitvector), then
+-- there are two cases:
+--
+-- Out-of-range, but convertible case: Regardless of the sign of the target type, if
+-- the input is within range of 'Int64', we convert the value to 'Int64'. Then we
+-- reduce the result to the target type using regular modular arithmetic. (The
+-- conversion is always done via Int64, regardless of the signedness of the target
+-- type. Note that this is what Haskell does, but not necessarily C; as out-of-bounds
+-- conversions are undefined behavior in C.)
+--
+-- Out-of-range, unconvertible case: If the input value rounded using the given
+-- rounding mode is not only out of the target type range, but is also out of range
+-- for 'Int64', then the result of the conversion is unspecified. This means that
+-- SBV does not guarantee matching behavior with Haskell, nor the C-compilation
+-- guarantees anything about the resulting value. This is because there is no SMTLib
+-- function to do this conversion, nor the C standard saying anything about what the
+-- result should be. Haskell seems to be doing a conversion via 'Integer', z3
+-- seems to produce '0', and the output of C programs seem to depend heavily on compiler
+-- and optimization flags. We make no guarantees in this latter case.
+--
+-- Notice that if the target type is 'Word64', then conversion will be exact so long
+-- as the input fits into 'Word64'; as this is a regular case. The conversion via
+-- 'Int64' is only triggered if the input value rounded appropriately doesn't fit into
+-- the range of the target type.
 --
 -- If you want precise control, you can use the following predicates:
 -- To detect @NaN@, use 'fpIsNaN'. To detect infinity, use 'fpIsInfinite'
@@ -177,7 +199,8 @@ instance IEEEFloating Double
 -- of the infinity if necessary. When you have a regular value (i.e.,
 -- something that satisfies 'fpIsPoint'), then you can use 'sFloatInRange'
 -- and 'sDoubleInRange' to determine if it is within the allowed conversion
--- range.
+-- range. When you determine out-of-bounds, you can substitute whatever
+-- value you want out of the conversion.
 class HasKind a => IEEEFloatConvertible a where
   -- | Convert from an IEEE74 single precision float.
   fromSFloat :: SRoundingMode -> SFloat -> SBV a
@@ -289,9 +312,10 @@ genericFPConverter mbConcreteOK mbSymbolicOK mbInRangeOK converter rm f
                           xsv <- sbvToSV st f
                           newExpr st kTo (SBVApp (IEEEFP (FP_Cast kFrom kTo msv)) [xsv])
 
-        -- If we're out-of-bounds, convert to Int64/Word64 depending on the signedness, and then cast away:
+        -- If we're out-of-bounds, convert to Int64 depending on the signedness, and then cast away.
+        -- Note that this is unspecified behavior if the input value does not fit into Int64.
         resultViaIntermediate = SBV (SVal kTo (Right (cache y)))
-          where kIntermediate = KBounded (hasSign kTo) 64
+          where kIntermediate = KBounded True 64
                 y st = do msv  <- sbvToSV st rm
                           xsv  <- sbvToSV st f
                           ires <- newExpr st kIntermediate (SBVApp (IEEEFP (FP_Cast kFrom         kIntermediate msv)) [xsv])
@@ -306,52 +330,52 @@ ptCheck :: IEEEFloating a => Maybe (SBV a -> SBool)
 ptCheck = Just fpIsPoint
 
 instance IEEEFloatConvertible Int8 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int8))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
-  toSFloat       = genericFPConverter Nothing Nothing Nothing                                  (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int8))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
-  toSDouble      = genericFPConverter Nothing Nothing Nothing                                  (fromRational . fromIntegral)
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int8)))  (fpRound0 :: Float  -> Int8 ) rm
+  toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int8)))  (fpRound0 :: Double -> Int8 ) rm
+  toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
 
 instance IEEEFloatConvertible Int16 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int16))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int16))) (fpRound0 :: Float  -> Int16) rm
   toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int16))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int16))) (fpRound0 :: Double -> Int16) rm
   toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
 
 instance IEEEFloatConvertible Int32 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int32))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int32))) (fpRound0 :: Float  -> Int32) rm
   toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int32))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int32))) (fpRound0 :: Double -> Int32) rm
   toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
 
 instance IEEEFloatConvertible Int64 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int64))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Int64))) (fpRound0 :: Float  -> Int64) rm
   toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int64))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Int64))) (fpRound0 :: Double -> Int64) rm
   toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
 
 instance IEEEFloatConvertible Word8 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word8))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
-  toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word8))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
-  toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral)
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word8))) (fpRound0 :: Float  -> Word8 ) rm
+  toSFloat       = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral )
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word8))) (fpRound0 :: Double -> Word8 ) rm
+  toSDouble      = genericFPConverter Nothing Nothing Nothing                                   (fromRational . fromIntegral )
 
 instance IEEEFloatConvertible Word16 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word16))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
-  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word16))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
-  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word16))) (fpRound0 :: Float  -> Word16) rm
+  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word16))) (fpRound0 :: Double -> Word16) rm
+  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
 
 instance IEEEFloatConvertible Word32 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word32))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
-  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word32))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
-  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word32))) (fpRound0 :: Float  -> Word32) rm
+  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word32))) (fpRound0 :: Double -> Word32) rm
+  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
 
 instance IEEEFloatConvertible Word64 where
-  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word64))) (fromIntegral . (fpRound0 :: Float  -> Integer)) rm
-  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
-  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word64))) (fromIntegral . (fpRound0 :: Double -> Integer)) rm
-  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral)
+  fromSFloat  rm = genericFPConverter Nothing ptCheck (Just (sFloatInRange  rm (Proxy @Word64))) (fpRound0 :: Float  -> Word64) rm
+  toSFloat       = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
+  fromSDouble rm = genericFPConverter Nothing ptCheck (Just (sDoubleInRange rm (Proxy @Word64))) (fpRound0 :: Double -> Word64) rm
+  toSDouble      = genericFPConverter Nothing Nothing Nothing                                    (fromRational . fromIntegral )
 
 instance IEEEFloatConvertible Float where
   fromSFloat _ f = f
@@ -366,9 +390,9 @@ instance IEEEFloatConvertible Double where
   toSDouble   _ d = d
 
 instance IEEEFloatConvertible Integer where
-  fromSFloat  = genericFPConverter Nothing ptCheck Nothing (fromIntegral . (fpRound0 :: Float -> Integer))
+  fromSFloat  = genericFPConverter Nothing ptCheck Nothing (fpRound0 :: Float -> Integer)
   toSFloat    = genericFPConverter Nothing Nothing Nothing (fromRational . fromIntegral)
-  fromSDouble = genericFPConverter Nothing ptCheck Nothing (fromIntegral . (fpRound0 :: Double -> Integer))
+  fromSDouble = genericFPConverter Nothing ptCheck Nothing (fpRound0 :: Double -> Integer)
   toSDouble   = genericFPConverter Nothing Nothing Nothing (fromRational . fromIntegral)
 
 -- For AlgReal; be careful to only process exact rationals concretely
