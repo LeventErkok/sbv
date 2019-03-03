@@ -70,6 +70,8 @@ import qualified Test.QuickCheck.Test    as QC (isSuccess)
 import qualified Test.QuickCheck         as QC (quickCheckResult, counterexample)
 import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, monitor)
 
+import qualified Data.Foldable as F (toList)
+
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -2178,7 +2180,7 @@ instance Testable (Symbolic SBool) where
      where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                         cond = and [cvToBool (cval v) | (False, _, v) <- cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
+                         cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
 
                          getObservable (nm, f, v) = case v `lookup` cs of
                                                       Just cv -> if f cv then Just (nm, cv) else Nothing

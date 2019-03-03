@@ -162,6 +162,10 @@
     we can create a custom version for you; though I'd much rather avoid this
     if at all possible.
 
+  * Improved the internal representation of constraints to address performance
+    issues See http://github.com/LeventErkok/sbv/issues/460. Thanks to
+    Thanks Jeffrey Young for reporting.
+
 ### Version 8.0, 2019-01-14
 
   * This is a major release of SBV, with several BACKWARDS COMPATIBILITY breaking

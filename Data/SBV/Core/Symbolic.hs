@@ -642,7 +642,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
                      , resAxioms      :: [(String, [String])]                         -- ^ axioms
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
-                     , resConstraints :: [(Bool, [(String, String)], SV)]                   -- ^ additional constraints (boolean)
+                     , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
                      , resOutputs     :: [SV]                                         -- ^ outputs
                      }
@@ -675,7 +675,7 @@ instance Show Result where
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
-                ++ map (("  " ++) . shCstr) cstrs
+                ++ map (("  " ++) . shCstr) (F.toList cstrs)
                 ++ ["ASSERTIONS"]
                 ++ map (("  "++) . shAssert) asserts
                 ++ ["OUTPUTS"]
@@ -830,7 +830,7 @@ data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always ex
                          , rNewTbls        :: IORef TableMap
                          , rNewUIs         :: IORef UIMap
                          , rNewAsgns       :: IORef SBVPgm
-                         , rNewConstraints :: IORef [(Bool, [(String, String)], SV)]
+                         , rNewConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                          }
 
 -- | Get a new IncState
@@ -843,7 +843,7 @@ newIncState = do
         tm    <- newIORef Map.empty
         ui    <- newIORef Map.empty
         pgm   <- newIORef (SBVPgm S.empty)
-        cstrs <- newIORef []
+        cstrs <- newIORef S.empty
         return IncState { rNewInps        = is
                         , rNewKinds       = ks
                         , rNewConsts      = nc
@@ -874,7 +874,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- User defined, and internal existential
-                    , rConstraints :: IORef [(Bool, [(String, String)], SV)]
+                    , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                     , routs        :: IORef [SV]
                     , rtblMap      :: IORef TableMap
                     , spgm         :: IORef SBVPgm
@@ -1376,7 +1376,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
      faiCache  <- newIORef IMap.empty
      usedKinds <- newIORef Set.empty
      usedLbls  <- newIORef Set.empty
-     cstrs     <- newIORef []
+     cstrs     <- newIORef S.empty
      smtOpts   <- newIORef []
      optGoals  <- newIORef []
      asserts   <- newIORef []
@@ -1448,7 +1448,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    traceVals   <- reverse <$> readIORef cInfo
    observables <- reverse <$> readIORef observes
-   extraCstrs  <- reverse <$> readIORef cstrs
+   extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
    return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
@@ -1472,8 +1472,8 @@ internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
 internalConstraint st isSoft attrs b = do v <- svToSV st b
                                           let c = (isSoft, attrs, v)
                                           unless (null attrs && v == trueSV) $
-                                                 modifyState st rConstraints (c:)
-                                                              $ modifyIncState st rNewConstraints (c:)
+                                                 modifyState st rConstraints (S.|> c)
+                                                              $ modifyIncState st rNewConstraints (S.|> c)
 
 -- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()

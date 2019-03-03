@@ -274,7 +274,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
            where finals  = cstrs' ++ maybe [] (\r -> [(False, [], r)]) mbO
 
-                 cstrs' =  [(isSoft, attrs, c') | (isSoft, attrs, c) <- cstrs, Just c' <- [pos c]]
+                 cstrs' =  [(isSoft, attrs, c') | (isSoft, attrs, c) <- F.toList cstrs, Just c' <- [pos c]]
 
                  mbO | isSat = pos out
                      | True  = neg out
@@ -408,10 +408,8 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ concat arrayDelayeds
             -- array setups
             ++ concat arraySetups
-            -- extra hard constraints
-            ++ map (\(attr, v) -> "(assert "      ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") hardAsserts
-            -- extra soft constraints
-            ++ map (\(attr, v) -> "(assert-soft " ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") softAsserts
+            -- extra constraints
+            ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") (F.toList cstrs)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
@@ -427,10 +425,6 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         tableMap  = IM.fromList $ map mkTable allTables
           where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
-
-        hardAsserts, softAsserts :: [([(String, String)], SV)]
-        hardAsserts = [(attr, v) | (False, attr, v) <- cstrs]
-        softAsserts = [(attr, v) | (True,  attr, v) <- cstrs]
 
         -- If we need flattening in models, do emit the required lines if preset
         settings

@@ -31,7 +31,8 @@ import Data.SBV.Core.Symbolic (QueryContext)
 import Data.SBV.Utils.Lib (joinArgs)
 
 import Data.List (intercalate)
-import qualified Data.Set as Set (Set)
+import qualified Data.Set      as Set (Set)
+import qualified Data.Sequence as S   (Seq)
 
 import System.Exit (ExitCode(..))
 
@@ -48,21 +49,21 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
                        -> [(String, [String])]                          -- ^ user given axioms
                        -> SBVPgm                                        -- ^ assignments
-                       -> [(Bool, [(String, String)], SV)]              -- ^ extra constraints
+                       -> S.Seq (Bool, [(String, String)], SV)          -- ^ extra constraints
                        -> SV                                            -- ^ output variable
                        -> SMTConfig                                     -- ^ configuration
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  [NamedSymVar]                     -- ^ inputs
-                          -> Set.Set Kind                      -- ^ new kinds
-                          -> [(SV, CV)]                        -- ^ constants
-                          -> [(Int, ArrayInfo)]                -- ^ newly created arrays
-                          -> [((Int, Kind, Kind), [SV])]       -- ^ newly created tables
-                          -> [(String, SBVType)]               -- ^ newly created uninterpreted functions/constants
-                          -> SBVPgm                            -- ^ assignments
-                          -> [(Bool, [(String, String)], SV)]  -- ^ extra constraints
-                          -> SMTConfig                         -- ^ configuration
+type SMTLibIncConverter a =  [NamedSymVar]                         -- ^ inputs
+                          -> Set.Set Kind                          -- ^ new kinds
+                          -> [(SV, CV)]                            -- ^ constants
+                          -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
+                          -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
+                          -> [(String, SBVType)]                   -- ^ newly created uninterpreted functions/constants
+                          -> SBVPgm                                -- ^ assignments
+                          -> S.Seq (Bool, [(String, String)], SV)  -- ^ extra constraints
+                          -> SMTConfig                             -- ^ configuration
                           -> a
 
 -- | Create an annotated term
