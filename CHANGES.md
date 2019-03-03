@@ -163,7 +163,7 @@
     if at all possible.
 
   * Improved the internal representation of constraints to address performance
-    issues See http://github.com/LeventErkok/sbv/issues/460. Thanks to
+    issues See http://github.com/LeventErkok/sbv/issues/460 for details. Thanks to
     Thanks Jeffrey Young for reporting.
 
 ### Version 8.0, 2019-01-14
