@@ -2143,7 +2143,11 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 
 -- | Class of metrics we can optimize for. Currently,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
--- and algebraic reals can be optimized. (But not, say, 'SFloat', 'SDouble', or 'SBool'.)
+-- and algebraic reals can be optimized directly by z3. We
+-- allow optimization for floats as well, by using the
+-- lexicographic ordering on them. If you do use optimization
+-- with floats, beware that your goals will be maximized as
+-- an 'SWord32' for 'SFloat', and 'SWord64' for 'SDouble'.
 --
 -- A good reference on these features is given in the following paper:
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.

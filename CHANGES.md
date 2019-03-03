@@ -162,6 +162,13 @@
     we can create a custom version for you; though I'd much rather avoid this
     if at all possible.
 
+  * SBV now supports optimization of goals of SDouble and SFloat types. This is
+    done using the lexicographic ordering on floats, and adds on the additional
+    constraint that the resulting float is not a NaN. If you use this feature,
+    then your float value will be minimized as the corresponding 32 (or 64 for
+    doubles) bit word. Note that this methods supports infinities properly, and
+    does not distinguish between -0 and +0.
+
   * Improved the internal representation of constraints to address performance
     issues See http://github.com/LeventErkok/sbv/issues/460 for details. Thanks to
     Thanks Jeffrey Young for reporting.

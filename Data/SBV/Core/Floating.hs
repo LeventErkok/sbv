@@ -9,14 +9,18 @@
 -- Implementation of floating-point operations mapping to SMT-Lib2 floats
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE Rank2Types           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Core.Floating (
          IEEEFloating(..), IEEEFloatConvertible(..)
        , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
+       , sFloatAsComparableSWord32, sDoubleAsComparableSWord64
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
@@ -26,9 +30,11 @@ import Data.Word           (Word8, Word16, Word32, Word64)
 
 import Data.Proxy
 
+import Data.SBV.Core.AlgReals (isExactRational)
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Core.AlgReals (isExactRational)
+import Data.SBV.Core.Symbolic (addSValOptGoal)
 
 import Data.SBV.Utils.Numeric
 
@@ -599,5 +605,39 @@ sWord64AsSDouble dVal
   | True                     = SBV (SVal KDouble (Right (cache y)))
   where y st = do xsv <- sbvToSV st dVal
                   newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsv])
+
+-- | Convert a float to a comparable 'SWord32'. The trick is to ignore the
+-- sign of -0, and if it's a negative value flip all the bits, and otherwise
+-- only flip the sign bit. This is known as the lexicographic ordering on floats
+-- and it works as long as you do not have a @NaN@.
+sFloatAsComparableSWord32 :: SFloat -> SWord32
+sFloatAsComparableSWord32 f = ite (fpIsNegativeZero f) (sFloatAsComparableSWord32 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
+  where (sb : rest) = blastBE $ sFloatAsSWord32 f
+
+-- | Convert a double to a comparable 'SWord64'. The trick is to ignore the
+-- sign of -0, and if it's a negative value flip all the bits, and otherwise
+-- only flip the sign bit. This is known as the lexicographic ordering on doubles
+-- and it works as long as you do not have a @NaN@.
+sDoubleAsComparableSWord64 :: SDouble -> SWord64
+sDoubleAsComparableSWord64 d = ite (fpIsNegativeZero d) (sDoubleAsComparableSWord64 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
+  where (sb : rest) = blastBE $ sDoubleAsSWord64 d
+
+-- | 'SFloat' instance for 'Metric' goes through the lexicographic ordering on 'SWord32'.
+-- It implicitly makes sure that the value is not @NaN@.
+instance Metric SFloat where
+   minimize nm o = do constrain $ sNot $ fpIsNaN o
+                      addSValOptGoal $ unSBV `fmap` Minimize nm (sFloatAsComparableSWord32 o)
+
+   maximize nm o = do constrain $ sNot $ fpIsNaN o
+                      addSValOptGoal $ unSBV `fmap` Maximize nm (sFloatAsComparableSWord32 o)
+
+-- | 'SDouble' instance for 'Metric' goes through the lexicographic ordering on 'SWord64'.
+-- It implicitly makes sure that the value is not @NaN@.
+instance Metric SDouble where
+   minimize nm o = do constrain $ sNot $ fpIsNaN o
+                      addSValOptGoal $ unSBV `fmap` Minimize nm (sDoubleAsComparableSWord64 o)
+
+   maximize nm o = do constrain $ sNot $ fpIsNaN o
+                      addSValOptGoal $ unSBV `fmap` Maximize nm (sDoubleAsComparableSWord64 o)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
