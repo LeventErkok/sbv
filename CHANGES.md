@@ -123,7 +123,11 @@
     for details.
 
   * [BACKWARDS COMPATIBILITY] Renamed the class `IEEEFloatConvertable` to
-    `IEEEFloatConvertible`. (Typo in name!)
+    `IEEEFloatConvertible`. (Typo in name!) Also reworked this class completely
+    to be more clear about conversions for out-of-bounds values, and added
+    tester functions for checking bounds for convertibility. Thanks to Matt Peddie
+    for pointing out the out-of-bounds issue, his help in crafting the new
+    design, and producing the bounds used by SBV.
 
   * [BACKWARDS COMPATIBILITY] The 'AllSat' result now tracks if search has stopped
     because the solver returned 'Unknown'. Previously this information was not
