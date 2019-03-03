@@ -12,43 +12,21 @@ import Numeric
 import Data.List
 import Control.Concurrent.Async ( async, wait )
 
-class Blastable a where
-  type BlastEquiv a :: *
-  blastFloating :: SBV a -> SBV (BlastEquiv a)
-
-instance Blastable Double where
-  type BlastEquiv Double = Word64
-  blastFloating = sDoubleAsSWord64
-
-instance Blastable Float where
-  type BlastEquiv Float = Word32
-  blastFloating = sFloatAsSWord32
-
-findBounds :: forall a b. ( IEEEFloating a, Blastable a, SymVal a
-                          , SFiniteBits (BlastEquiv a), Metric (SBV (BlastEquiv a))
-                          , Integral b, SymVal b, Metric (SBV b)
-                          )
-           => SRoundingMode -> Proxy a -> Proxy b -> IO (a, a)
+findBounds :: forall a b. (IEEEFloating a, Integral b, Metric (SBV a), Metric (SBV b), SymVal b, SymVal a) => SRoundingMode -> Proxy a -> Proxy b -> IO (a, a)
 findBounds rm _pa _pb = (,) <$> opt False <*> opt True
   where
     f up = do
       x :: SBV a <- free "x"
-      z :: SBV (BlastEquiv a) <- free "z"
       y :: SBV b <- free "y"
 
-      obj up "z" z
+      constrain $ sFromIntegral y .== fpRoundToIntegral rm x
+
+      obj up "x" x
       obj up "y" y
 
-      constrain $ fpIsPoint x
-      constrain $ sFromIntegral y .== fpRoundToIntegral rm x
-      let
-        z0 = blastFloating x
-        (z0s : z0v) = blastBE z0
-        z1 = fromBitsBE $ sNot z0s : ite z0s (fmap sNot z0v) z0v :: SBV (BlastEquiv a)
-      constrain $ z .== z1
-
-    obj True = maximize
+    obj True  = maximize
     obj False = minimize
+
 
     opt up =
       do o <- optimizeWith z3 Lexicographic $ f up
