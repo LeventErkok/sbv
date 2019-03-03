@@ -340,7 +340,7 @@
 ### Version 7.10, 2018-07-20
   * [BACKWARDS COMPATIBILITY] '==' and '/=' now always throw an error instead of
     only throwing an error for non-concrete values.
-    https://github.com/LeventErkok/sbv/issues/301
+    http://github.com/LeventErkok/sbv/issues/301
 
   * [BACKWARDS COMPATIBILITY] Array declarations are reworked to take
     an initial value. The call 'newArray' now accepts an optional default
@@ -487,7 +487,7 @@
     handles this corner case properly, by using tracker assertions
     to keep track of what array values must be restored at each pop.
     Thanks to Martin Brain on the SMTLib mailing list for the
-    suggestion. (See https://github.com/LeventErkok/sbv/issues/374
+    suggestion. (See http://github.com/LeventErkok/sbv/issues/374
     for details.)
 
   * Fix corner case in ite branch equality with float/double arguments,
@@ -591,7 +591,7 @@
     backend solver is no longer alive: You should either just throw it,
     or perform proper clean-up on your user code as required to set up
     a new context. The provided show instance formats the exception nicely
-    for display purposes. See https://github.com/LeventErkok/sbv/issues/335
+    for display purposes. See http://github.com/LeventErkok/sbv/issues/335
     for details and thanks to Brian Huffman for reporting.
 
   * SIntegral class now has Integral as a super-class, which ensures the
@@ -652,7 +652,7 @@
   * Fix optimization routines when applied to signed-bitvector goals. Thanks
     to Anders Kaseorg for reporting. Since SMT-Lib does not distinguish between
     signed and unsigned bit-vectors, we have to be careful when expressing goals
-    that are over signed values. See https://github.com/LeventErkok/sbv/issues/333
+    that are over signed values. See http://github.com/LeventErkok/sbv/issues/333
     for details.
 
 ### Version 7.3, 2017-09-06
@@ -907,7 +907,7 @@
     capability optimize objectives, and solve MaxSAT problems; by appropriately
     employing the corresponding capabilities in z3. A good review of these features
     as implemented by Z3, and thus what is available in SBV is given in this
-    paper: https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf
+    paper: http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf
 
   * SBV now allows for  real or integral valued metrics. Goals can be lexicographically
     (default), independently, or pareto-front optimized. Currently, only the z3 backend
@@ -1078,7 +1078,7 @@
     perspective. This comes handy in doing an `allSat` calls where
     there might be witness variables that we do not care the uniqueness
     for. See `Data/SBV/Examples/Misc/Auxiliary.hs` for an example, and
-    the discussion in https://github.com/LeventErkok/sbv/issues/208 for
+    the discussion in http://github.com/LeventErkok/sbv/issues/208 for
     motivation.
 
   * Yices interface: If Reals are used, then pick the logic QF_UFLRA, instead
@@ -1553,7 +1553,7 @@ uninterpreted.
 
 ### Version 3.1, 2014-07-12
 
- NB: GHC 7.8.1 and 7.8.2 has a serious bug <https://ghc.haskell.org/trac/ghc/ticket/9078>
+ NB: GHC 7.8.1 and 7.8.2 has a serious bug <http://ghc.haskell.org/trac/ghc/ticket/9078>
      that causes SBV to crash under heavy/repeated calls. The bug is addressed
      in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
 
