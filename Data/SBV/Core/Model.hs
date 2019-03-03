@@ -2149,10 +2149,10 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 class Metric a where
   -- | Generalization of 'Data.SBV.minimize'
-  minimize :: MonadSymbolic m => String -> a -> m ()
+  minimize :: (MonadSymbolic m, SolverContext m) => String -> a -> m ()
 
   -- | Generalization of 'Data.SBV.maximize'
-  maximize :: MonadSymbolic m => String -> a -> m ()
+  maximize :: (MonadSymbolic m, SolverContext m) => String -> a -> m ()
 
   {-# MINIMAL minimize, maximize #-}
 
