@@ -1016,10 +1016,6 @@ handleFPCast kFrom kTo rm input
   = "(" ++ cast kFrom kTo input ++ ")"
   where addRM a s = s ++ " " ++ rm ++ " " ++ a
 
-        absRM a s = "ite (fp.isNegative " ++ a ++ ") (" ++ cvt1 ++ ") (" ++ cvt2 ++ ")"
-          where cvt1 = "bvneg (" ++ s ++ " " ++ rm ++ " (fp.abs " ++ a ++ "))"
-                cvt2 =              s ++ " " ++ rm ++ " "         ++ a
-
         -- To go and back from Ints, we detour through reals
         cast KUnbounded         KFloat             a = "(_ to_fp 8 24) "  ++ rm ++ " (to_real " ++ a ++ ")"
         cast KUnbounded         KDouble            a = "(_ to_fp 11 53) " ++ rm ++ " (to_real " ++ a ++ ")"
@@ -1040,11 +1036,17 @@ handleFPCast kFrom kTo rm input
         cast KDouble            KFloat             a = addRM a "(_ to_fp 8 24)"
         cast KDouble            KDouble            a = addRM a "(_ to_fp 11 53)"
 
-        -- From float/double
-        cast KFloat             (KBounded False m) a = absRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
-        cast KDouble            (KBounded False m) a = absRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
+        -- From float/double to unsigned/signed bit-vectors
+        -- NB. SMTLib says the result is undefined when the input value
+        -- is out-of-bounds for the target type. But Haskell doesn't do
+        -- that. We take care of this in 'fromSFloat'/'fromSDouble', so
+        -- when the code reaches here, we're "guaranteed" to be in bounds.
+        cast KFloat             (KBounded False m) a = addRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
+        cast KDouble            (KBounded False m) a = addRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
         cast KFloat             (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " ++ show m ++ ")"
         cast KDouble            (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " ++ show m ++ ")"
+
+
         cast KFloat             KReal              a = "fp.to_real" ++ " " ++ a
         cast KDouble            KReal              a = "fp.to_real" ++ " " ++ a
 
