@@ -286,6 +286,7 @@ Test-Suite SBVTest
                   , TestSuite.Optimization.Basics
                   , TestSuite.Optimization.Combined
                   , TestSuite.Optimization.ExtensionField
+                  , TestSuite.Optimization.Floats
                   , TestSuite.Optimization.Quantified
                   , TestSuite.Optimization.Reals
                   , TestSuite.Optimization.NoOpt

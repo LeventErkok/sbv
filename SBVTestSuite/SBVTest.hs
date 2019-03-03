@@ -74,6 +74,7 @@ import qualified TestSuite.Optimization.AssertWithPenalty
 import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.Combined
 import qualified TestSuite.Optimization.ExtensionField
+import qualified TestSuite.Optimization.Floats
 import qualified TestSuite.Optimization.Quantified
 import qualified TestSuite.Optimization.Reals
 import qualified TestSuite.Optimization.NoOpt
@@ -217,6 +218,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Optimization.Basics.tests
                , TestSuite.Optimization.Combined.tests
                , TestSuite.Optimization.ExtensionField.tests
+               , TestSuite.Optimization.Floats.tests
                , TestSuite.Optimization.Quantified.tests
                , TestSuite.Optimization.Reals.tests
                , TestSuite.Optimization.NoOpt.tests

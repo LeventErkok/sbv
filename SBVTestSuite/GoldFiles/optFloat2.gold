@@ -1,0 +1,108 @@
+Objective "min-x": Optimal model:
+  x     =              -Infinity :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 1 11111111 00000000000000000000000
+             Hex: FF80 0000
+       Precision: SP
+            Sign: Negative
+        Exponent: 128 (Stored: 255, Bias: 127)
+       Hex-float: -Infinity
+           Value: -Infinity
+  y     = 5.854952310409896e-270 :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------F52-------------------------
+          Binary: 0 00010000000 1000101111101011111111001111010011101011010010001101
+             Hex: 0808 BEBF CF4E B48D
+       Precision: DP
+            Sign: Positive
+        Exponent: -895 (Stored: 128, Bias: 1023)
+       Hex-float: +0x1.8bebfcf4eb48dp-895
+           Value: +5.854952310409896e-270 (NORMAL)
+  min-x =             0x007fffff :: Word32
+  max-x =             0x007fffff :: Word32
+  min-y =     0x8808bebfcf4eb48d :: Word64
+  max-y =     0x8808bebfcf4eb48d :: Word64
+Objective "max-x": Optimal model:
+  x     =               Infinity :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 11111111 00000000000000000000000
+             Hex: 7F80 0000
+       Precision: SP
+            Sign: Positive
+        Exponent: 128 (Stored: 255, Bias: 127)
+       Hex-float: +Infinity
+           Value: +Infinity
+  y     = 5.854923399093713e-270 :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------F52-------------------------
+          Binary: 0 00010000000 1000101111101011011111001101010011101011010010000101
+             Hex: 0808 BEB7 CD4E B485
+       Precision: DP
+            Sign: Positive
+        Exponent: -895 (Stored: 128, Bias: 1023)
+       Hex-float: +0x1.8beb7cd4eb485p-895
+           Value: +5.854923399093713e-270 (NORMAL)
+  min-x =             0xff800000 :: Word32
+  max-x =             0xff800000 :: Word32
+  min-y =     0x8808beb7cd4eb485 :: Word64
+  max-y =     0x8808beb7cd4eb485 :: Word64
+Objective "min-y": Optimal model:
+  x     =         1.7237e-41 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 00000000 00000000011000000001101
+             Hex: 0000 300D
+       Precision: SP
+            Sign: Positive
+        Exponent: -126 (Stored: 0, Bias: 126)
+       Hex-float: +0x1.8068p-136
+           Value: +1.7237e-41 (DENORMAL)
+  y     =          -Infinity :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------F52-------------------------
+          Binary: 1 11111111111 0000000000000000000000000000000000000000000000000000
+             Hex: FFF0 0000 0000 0000
+       Precision: DP
+            Sign: Negative
+        Exponent: 1024 (Stored: 2047, Bias: 1023)
+       Hex-float: -Infinity
+           Value: -Infinity
+  min-x =         0x8000300d :: Word32
+  max-x =         0x8000300d :: Word32
+  min-y = 0x000fffffffffffff :: Word64
+  max-y = 0x000fffffffffffff :: Word64
+Objective "max-y": Optimal model:
+  x     =         1.7237e-41 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 00000000 00000000011000000001101
+             Hex: 0000 300D
+       Precision: SP
+            Sign: Positive
+        Exponent: -126 (Stored: 0, Bias: 126)
+       Hex-float: +0x1.8068p-136
+           Value: +1.7237e-41 (DENORMAL)
+  y     =           Infinity :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------F52-------------------------
+          Binary: 0 11111111111 0000000000000000000000000000000000000000000000000000
+             Hex: 7FF0 0000 0000 0000
+       Precision: DP
+            Sign: Positive
+        Exponent: 1024 (Stored: 2047, Bias: 1023)
+       Hex-float: +Infinity
+           Value: +Infinity
+  min-x =         0x8000300d :: Word32
+  max-x =         0x8000300d :: Word32
+  min-y = 0xfff0000000000000 :: Word64
+  max-y = 0xfff0000000000000 :: Word64
