@@ -376,7 +376,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
               $$  text "}"
               $$  text ""
        nm = text fn
-       pairedInputs = matchRands (map abs randVals) inps
+       pairedInputs = matchRands randVals inps
        matchRands _      []                                 = []
        matchRands []     _                                  = die "Run out of driver values!"
        matchRands (r:rs) ((n, CgAtomic sv)            : cs) = ([mkRVal sv r], n, CgAtomic sv) : matchRands rs cs
