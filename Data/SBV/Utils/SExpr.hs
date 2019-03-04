@@ -25,6 +25,8 @@ import Numeric    (readInt, readDec, readHex, fromRat)
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
 
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
+
 import Data.Numbers.CrackNum (wordToFloat, wordToDouble)
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
@@ -278,8 +280,8 @@ parseLambdaExpression funExpr = case funExpr of
                  = go (Left (s, true) : sofar) false
 
                 -- Otherwise, just treat it as an "unknown" arbitrary expression
-                -- as the default. We can only handly so many things here, but
-                -- hopefully it's good enogh.
+                -- as the default. It could be something arbitrary of course, but it's
+                -- too complicated to parse; and hopefully this is good enogh.
                 go sofar e = Just $ Right e : sofar
 
                 cond :: [SExpr] -> [Either ([SExpr], SExpr) SExpr] -> Maybe ([SExpr], SExpr)
@@ -337,5 +339,47 @@ parseStoreAssociations e                                           = Right <$> (
 -- | Turn a sequence of left-right chain assignments (condition + free) into a single chain
 chainAssigns :: [Either ([SExpr], SExpr) SExpr] -> Maybe ([([SExpr], SExpr)], SExpr)
 chainAssigns chain = regroup $ partitionEithers chain
-  where regroup (vs, [d]) = Just (vs, d)
+  where regroup (vs, [d]) = Just (checkDup vs, d)
         regroup _         = Nothing
+
+        -- If we get into a case like this:
+        --
+        --     (store (store a 1 2) 1 3)
+        --
+        -- then we need to drop the 1->2 assignment!
+        --
+        -- The way we parse these, the first assignment wins.
+        checkDup :: [([SExpr], SExpr)] -> [([SExpr], SExpr)]
+        checkDup []              = []
+        checkDup (a@(key, _):as) = a : checkDup [r | r@(key', _) <- as, not (key `sameKey` key')]
+
+        sameKey :: [SExpr] -> [SExpr] -> Bool
+        sameKey as bs
+          | length as == length bs = and $ zipWith same as bs
+          | True                   = error $ "Data.SBV: Differing length of key received in chainAssigns: " ++ show (as, bs)
+
+        -- We don't want to derive Eq; as this is more careful on floats and such
+        same :: SExpr -> SExpr -> Bool
+        same x y = case (x, y) of
+                     (ECon a,      ECon b)       -> a == b
+                     (ENum (i, _), ENum (j, _))  -> i == j
+                     (EReal a,     EReal b)      -> algRealStructuralEqual a b
+                     (EFloat  f1,  EFloat  f2)   -> fpIsEqualObjectH f1 f2
+                     (EDouble d1,  EDouble d2)   -> fpIsEqualObjectH d1 d2
+                     (EApp as,     EApp bs)      -> length as == length bs && and (zipWith same as bs)
+                     (e1,          e2)           -> if eRank e1 == eRank e2
+                                                    then error $ "Data.SBV: You've found a bug in SBV! Please report: SExpr(same): " ++ show (e1, e2)
+                                                    else False
+        -- Defensive programming: It's too long to list all pair up, so we use this function and
+        -- GHC's pattern-match completion warning to catch cases we might've forgotten. If
+        -- you ever get the error line above fire, because you must've disabled the pattern-match
+        -- completion check warning! Shame on you.
+        eRank :: SExpr -> Int
+        eRank ECon{}    = 0
+        eRank ENum{}    = 1
+        eRank EReal{}   = 2
+        eRank EFloat{}  = 3
+        eRank EDouble{} = 4
+        eRank EApp{}    = 5
+
+{-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}
