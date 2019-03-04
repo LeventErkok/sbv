@@ -12,8 +12,8 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (_ BitVec 8) #x61)
-[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
+[GOOD] (define-fun s2 () (_ BitVec 8) #x65)
+[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) false) #x6f true) #x6c true) #x68 true) #x65 true))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () (Array (_ BitVec 8) Bool)) ; tracks user variable "b"
@@ -30,9 +30,17 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #x61))
+[RECV] ((s0 #x65))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[RECV] ((s1 (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) false)
+                                   #x65
+                                   true)
+                            #x68
+                            true)
+                     #x6c
+                     true)
+              #x6f
+              true)))
 [GOOD] (define-fun s6 () Bool (select s1 s0))
 [GOOD] (define-fun s7 () Bool (not s6))
 [SEND] (get-value (s7))
@@ -46,5 +54,5 @@
 *** Exit code: ExitSuccess
 
 FINAL:
-('a',{'a'},False,True)
+('e',{'e','h','l','o'},False,True)
 DONE!
