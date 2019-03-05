@@ -20,7 +20,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
-import Data.SBV.Core.Model     (Metric)
+import Data.SBV.Core.Model     (Metric(..))
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
 import Data.SBV.Control.Types  (SMTOption)
@@ -696,13 +696,13 @@ assertWithPenalty = Trans.assertWithPenalty
 -- | Minimize a named metric
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.minimize'
-minimize :: Metric a => String -> a -> Symbolic ()
+minimize :: Metric a => String -> SBV a -> Symbolic ()
 minimize = Trans.minimize
 
 -- | Maximize a named metric
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.maximize'
-maximize :: Metric a => String -> a -> Symbolic ()
+maximize :: Metric a => String -> SBV a -> Symbolic ()
 maximize = Trans.maximize
 
 -- Data.SBV.Core.Symbolic:
