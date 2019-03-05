@@ -21,7 +21,7 @@ Optimal model:
         Exponent: 126 (Stored: 253, Bias: 127)
        Hex-float: +0x1.fffffep126
            Value: +1.7014117e38 (NORMAL)
-  x_0            = 1.7014117e38 :: Float
+  y              = 1.7014117e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------F23----------

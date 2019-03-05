@@ -38,7 +38,7 @@ p reqPoint = do x <- sFloat  "x"
 
 q :: Goal
 q = do x <- sFloat "x"
-       y <- sFloat "x"
+       y <- sFloat "y"
 
        constrain $ fpIsPoint x
        constrain $ fpIsPoint y
