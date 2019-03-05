@@ -631,11 +631,11 @@ instance Metric Float where
    toMetricSpace          = sFloatAsComparableSWord32
    fromMetricSpace        = sWord32AsSFloat
 
-   minimize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+   msMinimize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
-   maximize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+   msMaximize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 -- | 'Double' instance for 'Metric' goes through the lexicographic ordering on 'Word64'.
 -- It implicitly makes sure that the value is not @NaN@.
@@ -645,10 +645,10 @@ instance Metric Double where
    toMetricSpace           = sDoubleAsComparableSWord64
    fromMetricSpace         = sWord64AsSDouble
 
-   minimize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+   msMinimize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
-   maximize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+   msMaximize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
