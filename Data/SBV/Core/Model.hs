@@ -1789,44 +1789,99 @@ instance Mergeable b => Mergeable (a -> b) where
 
 -- 2-Tuple
 instance (Mergeable a, Mergeable b) => Mergeable (a, b) where
-  symbolicMerge f t (i0, i1) (j0, j1) = (i i0 j0, i i1 j1)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2) ind = (select as err1 ind, select bs err2 ind)
+  symbolicMerge f t (i0, i1) (j0, j1) = ( symbolicMerge f t i0 j0
+                                        , symbolicMerge f t i1 j1
+                                        )
+
+  select xs (err1, err2) ind = ( select as err1 ind
+                               , select bs err2 ind
+                               )
     where (as, bs) = unzip xs
 
 -- 3-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c) => Mergeable (a, b, c) where
-  symbolicMerge f t (i0, i1, i2) (j0, j1, j2) = (i i0 j0, i i1 j1, i i2 j2)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2, err3) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind)
+  symbolicMerge f t (i0, i1, i2) (j0, j1, j2) = ( symbolicMerge f t i0 j0
+                                                , symbolicMerge f t i1 j1
+                                                , symbolicMerge f t i2 j2
+                                                )
+
+  select xs (err1, err2, err3) ind = ( select as err1 ind
+                                     , select bs err2 ind
+                                     , select cs err3 ind
+                                     )
+
     where (as, bs, cs) = unzip3 xs
 
 -- 4-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d) => Mergeable (a, b, c, d) where
-  symbolicMerge f t (i0, i1, i2, i3) (j0, j1, j2, j3) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2, err3, err4) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind)
+  symbolicMerge f t (i0, i1, i2, i3) (j0, j1, j2, j3) = ( symbolicMerge f t i0 j0
+                                                        , symbolicMerge f t i1 j1
+                                                        , symbolicMerge f t i2 j2
+                                                        , symbolicMerge f t i3 j3
+                                                        )
+
+  select xs (err1, err2, err3, err4) ind = ( select as err1 ind
+                                           , select bs err2 ind
+                                           , select cs err3 ind
+                                           , select ds err4 ind
+                                           )
     where (as, bs, cs, ds) = unzip4 xs
 
 -- 5-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e) => Mergeable (a, b, c, d, e) where
-  symbolicMerge f t (i0, i1, i2, i3, i4) (j0, j1, j2, j3, j4) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2, err3, err4, err5) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind)
+  symbolicMerge f t (i0, i1, i2, i3, i4) (j0, j1, j2, j3, j4) = ( symbolicMerge f t i0 j0
+                                                                , symbolicMerge f t i1 j1
+                                                                , symbolicMerge f t i2 j2
+                                                                , symbolicMerge f t i3 j3
+                                                                , symbolicMerge f t i4 j4
+                                                                )
+
+  select xs (err1, err2, err3, err4, err5) ind = ( select as err1 ind
+                                                 , select bs err2 ind
+                                                 , select cs err3 ind
+                                                 , select ds err4 ind
+                                                 , select es err5 ind
+                                                 )
     where (as, bs, cs, ds, es) = unzip5 xs
 
 -- 6-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Mergeable f) => Mergeable (a, b, c, d, e, f) where
-  symbolicMerge f t (i0, i1, i2, i3, i4, i5) (j0, j1, j2, j3, j4, j5) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4, i i5 j5)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2, err3, err4, err5, err6) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind, select fs err6 ind)
+  symbolicMerge f t (i0, i1, i2, i3, i4, i5) (j0, j1, j2, j3, j4, j5) = ( symbolicMerge f t i0 j0
+                                                                        , symbolicMerge f t i1 j1
+                                                                        , symbolicMerge f t i2 j2
+                                                                        , symbolicMerge f t i3 j3
+                                                                        , symbolicMerge f t i4 j4
+                                                                        , symbolicMerge f t i5 j5
+                                                                        )
+
+  select xs (err1, err2, err3, err4, err5, err6) ind = ( select as err1 ind
+                                                       , select bs err2 ind
+                                                       , select cs err3 ind
+                                                       , select ds err4 ind
+                                                       , select es err5 ind
+                                                       , select fs err6 ind
+                                                       )
     where (as, bs, cs, ds, es, fs) = unzip6 xs
 
 -- 7-Tuple
 instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Mergeable f, Mergeable g) => Mergeable (a, b, c, d, e, f, g) where
-  symbolicMerge f t (i0, i1, i2, i3, i4, i5, i6) (j0, j1, j2, j3, j4, j5, j6) = (i i0 j0, i i1 j1, i i2 j2, i i3 j3, i i4 j4, i i5 j5, i i6 j6)
-    where i a b = symbolicMerge f t a b
-  select xs (err1, err2, err3, err4, err5, err6, err7) ind = (select as err1 ind, select bs err2 ind, select cs err3 ind, select ds err4 ind, select es err5 ind, select fs err6 ind, select gs err7 ind)
+  symbolicMerge f t (i0, i1, i2, i3, i4, i5, i6) (j0, j1, j2, j3, j4, j5, j6) = ( symbolicMerge f t i0 j0
+                                                                                , symbolicMerge f t i1 j1
+                                                                                , symbolicMerge f t i2 j2
+                                                                                , symbolicMerge f t i3 j3
+                                                                                , symbolicMerge f t i4 j4
+                                                                                , symbolicMerge f t i5 j5
+                                                                                , symbolicMerge f t i6 j6
+                                                                                )
+
+  select xs (err1, err2, err3, err4, err5, err6, err7) ind = ( select as err1 ind
+                                                             , select bs err2 ind
+                                                             , select cs err3 ind
+                                                             , select ds err4 ind
+                                                             , select es err5 ind
+                                                             , select fs err6 ind
+                                                             , select gs err7 ind
+                                                             )
     where (as, bs, cs, ds, es, fs, gs) = unzip7 xs
 
 -- Arbitrary product types, using GHC.Generics
