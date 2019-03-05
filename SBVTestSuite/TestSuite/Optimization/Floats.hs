@@ -19,8 +19,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Optimization.Floats"
-    [ goldenVsStringShow "optFloat1" (optimizeWith z3{printBase=16} Independent (p True))
-    , goldenVsStringShow "optFloat2" (optimizeWith z3{printBase=16} Independent (p False))
+    [ goldenVsStringShow "optFloat1" $ optimizeWith z3{printBase=16} Independent (p True)
+    , goldenVsStringShow "optFloat2" $ optimizeWith z3{printBase=16} Independent (p False)
+    , goldenVsStringShow "optFloat3" $ optimizeWith z3{printBase=16} Lexicographic q
     ]
 
 p :: Bool -> Goal
@@ -34,3 +35,13 @@ p reqPoint = do x <- sFloat  "x"
                 maximize "max-x" x
                 minimize "min-y" y
                 maximize "max-y" y
+
+q :: Goal
+q = do x <- sFloat "x"
+       y <- sFloat "x"
+
+       constrain $ fpIsPoint x
+       constrain $ fpIsPoint y
+       constrain $ fpIsPoint $ x+y
+
+       maximize "metric-max-x+y" $ observe "max-x+y" (x+y)

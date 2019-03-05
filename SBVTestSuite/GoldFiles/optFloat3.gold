@@ -1,0 +1,35 @@
+Optimal model:
+  max-x+y        = 3.4028235e38 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 11111110 11111111111111111111111
+             Hex: 7F7F FFFF
+       Precision: SP
+            Sign: Positive
+        Exponent: 127 (Stored: 254, Bias: 127)
+       Hex-float: +0x1.fffffep127
+           Value: +3.4028235e38 (NORMAL)
+  x              = 1.7014117e38 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 11111101 11111111111111111111111
+             Hex: 7EFF FFFF
+       Precision: SP
+            Sign: Positive
+        Exponent: 126 (Stored: 253, Bias: 127)
+       Hex-float: +0x1.fffffep126
+           Value: +1.7014117e38 (NORMAL)
+  x_0            = 1.7014117e38 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 0 11111101 11111111111111111111111
+             Hex: 7EFF FFFF
+       Precision: SP
+            Sign: Positive
+        Exponent: 126 (Stored: 253, Bias: 127)
+       Hex-float: +0x1.fffffep126
+           Value: +1.7014117e38 (NORMAL)
+  metric-max-x+y =   0xff7fffff :: Word32
