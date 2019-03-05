@@ -85,11 +85,11 @@ instance Show a => Show (Range a) where
 -- [(0.0,oo)]
 -- >>> ranges $ \x -> x .< (0::SReal)
 -- [(-oo,0.0)]
-ranges :: forall a. (Ord a, Num a, SymVal a,  SMTValue a, SatModel a, Metric (SBV a)) => (SBV a -> SBool) -> IO [Range a]
+ranges :: forall a. (Ord a, Num a, SymVal a,  SMTValue a, SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => (SBV a -> SBool) -> IO [Range a]
 ranges = rangesWith defaultSMTCfg
 
 -- | Compute ranges, using the given solver configuration.
-rangesWith :: forall a. (Ord a, Num a, SymVal a,  SMTValue a, SatModel a, Metric (SBV a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
+rangesWith :: forall a. (Ord a, Num a, SymVal a,  SMTValue a, SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => SMTConfig -> (SBV a -> SBool) -> IO [Range a]
 rangesWith cfg prop = do mbBounds <- getInitialBounds
                          case mbBounds of
                            Nothing -> return []
@@ -128,8 +128,10 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
                 getRegVal :: CV -> a
                 getRegVal cv = case parseCVs [cv] of
-                                 Just (v, []) -> v
-                                 _            -> error $ "Data.SBV.interval.getRegVal: Cannot parse " ++ show cv
+                                 Just (v :: MetricSpace a, []) -> case unliteral (fromMetricSpace (literal v)) of
+                                                                    Nothing -> error $ "Data.SBV.ranges.getRegVal: Cannot extract value from metric space equivalent: " ++ show cv
+                                                                    Just r  -> r
+                                 _                             -> error $ "Data.SBV.ranges.getRegVal: Cannot parse " ++ show cv
 
             IndependentResult m <- optimizeWith cfg Independent $ do x <- free_
                                                                      constrain $ prop x
@@ -171,3 +173,5 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                  case mbCS of
                                    Nothing  -> search cs          (c:sofar)
                                    Just xss -> search (xss ++ cs) sofar
+
+{-# ANN rangesWith ("HLint: ignore Use fromMaybe" :: String) #-}
