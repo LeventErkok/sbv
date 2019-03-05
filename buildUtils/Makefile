@@ -7,9 +7,11 @@ testInterfaces: testInterfaces.hs
 	@rm -f *.o *.hi
 
 generateBounds: generateBounds.hs
+	@rm -f *.o *.hi
 	ghc -O2 -Wall -Werror --make -threaded $@
 	@rm -f *.o *.hi
-	./generateBounds +RTS -N4 > ../Data/SBV/Utils/FloatConversionBounds.hs
+	@echo "*** The following takes about 6 minutes to run, be patient!"
+	time ./generateBounds +RTS -N4 > ../Data/SBV/Utils/FloatConversionBounds.hs
 
 clean:
 	@rm -f *.o *.hi
