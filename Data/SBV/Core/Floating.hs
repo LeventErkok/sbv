@@ -13,6 +13,7 @@
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -622,22 +623,32 @@ sDoubleAsComparableSWord64 :: SDouble -> SWord64
 sDoubleAsComparableSWord64 d = ite (fpIsNegativeZero d) (sDoubleAsComparableSWord64 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where (sb : rest) = blastBE $ sDoubleAsSWord64 d
 
--- | 'SFloat' instance for 'Metric' goes through the lexicographic ordering on 'SWord32'.
+-- | 'Float' instance for 'Metric' goes through the lexicographic ordering on 'Word32'.
 -- It implicitly makes sure that the value is not @NaN@.
-instance Metric SFloat where
+instance Metric Float where
+
+   type MetricSpace Float = Word32
+   toMetricSpace          = sFloatAsComparableSWord32
+   fromMetricSpace        = sWord32AsSFloat
+
    minimize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Minimize nm (sFloatAsComparableSWord32 o)
+                      addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
    maximize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Maximize nm (sFloatAsComparableSWord32 o)
+                      addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
--- | 'SDouble' instance for 'Metric' goes through the lexicographic ordering on 'SWord64'.
+-- | 'Double' instance for 'Metric' goes through the lexicographic ordering on 'Word64'.
 -- It implicitly makes sure that the value is not @NaN@.
-instance Metric SDouble where
+instance Metric Double where
+
+   type MetricSpace Double = Word64
+   toMetricSpace           = sDoubleAsComparableSWord64
+   fromMetricSpace         = sWord64AsSDouble
+
    minimize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Minimize nm (sDoubleAsComparableSWord64 o)
+                      addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
    maximize nm o = do constrain $ sNot $ fpIsNaN o
-                      addSValOptGoal $ unSBV `fmap` Maximize nm (sDoubleAsComparableSWord64 o)
+                      addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
