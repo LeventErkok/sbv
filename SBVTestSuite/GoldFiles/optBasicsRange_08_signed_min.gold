@@ -1,3 +1,3 @@
 Optimal model:
   x = -128 :: Int8
-  m = -128 :: Int8
+  m =    0 :: Word8
