@@ -171,7 +171,8 @@
     
   * Optimization routines have been generalized to work over arbitrary metric-spaces,
     with user-definable mappings. The simplest instance we have added is optimization
-    over booleans, by the obvious numeric mapping. In addition, SBV can now optimize over
+    over booleans, by the obvious numeric mapping. Tuples are also supported with
+    the usual lexicographic ordering. In addition, SBV can now optimize over
     user-defined enumerations. See "Documentation.SBV.Examples.Optimization.Enumerate" for
     an example.
 
