@@ -12,7 +12,7 @@ import Numeric
 import Data.List
 import Control.Concurrent.Async ( async, wait )
 
-findBounds :: forall a b. (IEEEFloating a, Integral b, Metric (SBV a), Metric (SBV b), SymVal b, SymVal a) => SRoundingMode -> Proxy a -> Proxy b -> IO (a, a)
+findBounds :: forall a b. (IEEEFloating a, Integral b, Metric a, Metric b, SymVal b, SymVal a) => SRoundingMode -> Proxy a -> Proxy b -> IO (a, a)
 findBounds rm _pa _pb = (,) <$> opt False <*> opt True
   where
     f up = do
@@ -36,7 +36,7 @@ findBounds rm _pa _pb = (,) <$> opt False <*> opt True
                                       Nothing -> error "Can't find x"
            _ -> error "Didn't expect this!"
 
-getBounds :: forall b. (Integral b, SymVal b, Metric (SBV b)) => Proxy b -> RoundingMode -> IO String
+getBounds :: forall b. (Integral b, SymVal b, Metric b) => Proxy b -> RoundingMode -> IO String
 getBounds b m = do f <- async $ findBounds (literal m) (Proxy @Float)  b
                    d <- async $ findBounds (literal m) (Proxy @Double) b
                    (lf, uf) <- wait f
@@ -59,7 +59,7 @@ getBounds b m = do f <- async $ findBounds (literal m) (Proxy @Float)  b
         l3 = 22
         l4 = 21
 
-getAllModes :: forall b. (Integral b, SymVal b, Metric (SBV b)) => Proxy b -> IO [String]
+getAllModes :: forall b. (Integral b, SymVal b, Metric b) => Proxy b -> IO [String]
 getAllModes b = traverse (getBounds b) [minBound .. maxBound]
 
 main :: IO ()
