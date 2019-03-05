@@ -22,6 +22,7 @@ tests =
     [ goldenVsStringShow "optFloat1" $ optimizeWith z3{printBase=16} Independent (p True)
     , goldenVsStringShow "optFloat2" $ optimizeWith z3{printBase=16} Independent (p False)
     , goldenVsStringShow "optFloat3" $ optimizeWith z3{printBase=16} Lexicographic q
+    , goldenVsStringShow "optFloat4" $ optimizeWith z3{printBase=16} Lexicographic r
     ]
 
 p :: Bool -> Goal
@@ -45,3 +46,14 @@ q = do x <- sFloat "x"
        constrain $ fpIsPoint $ x+y
 
        maximize "metric-max-x+y" $ observe "max-x+y" (x+y)
+
+r :: Goal
+r = do x <- sFloat "x"
+       y <- sFloat "y"
+
+       constrain $ fpIsPoint x
+       constrain $ fpIsPoint y
+       constrain $ fpIsPoint $ x-y
+       constrain $ x - y .> 0
+
+       minimize "metric-min-x-y" $ observe "min-x-y" (x-y)
