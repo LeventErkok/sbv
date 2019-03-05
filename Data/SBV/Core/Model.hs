@@ -16,6 +16,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 {-# LANGUAGE TypeOperators       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -2196,35 +2197,80 @@ instance MonadIO m => SolverContext (SymbolicT m) where
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()
 assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o p
 
--- | Class of metrics we can optimize for. Currently,
+-- | Class of metrics we can optimize for. Currently, booleans,
 -- bounded signed/unsigned bit-vectors, unbounded integers,
--- and algebraic reals can be optimized directly by z3. We
--- allow optimization for floats as well, by using the
--- lexicographic ordering on them. If you do use optimization
--- with floats, beware that your goals will be maximized as
--- an 'SWord32' for 'SFloat', and 'SWord64' for 'SDouble'.
+-- algebraic reals and floats can be optimized. You can add
+-- your instances, but bewared that the 'MetricSpace' should
+-- map your type to something the backend solver understands, which
+-- are limited to unsigned bit-vectors, reals, and unbounded integers
+-- for z3.
 --
 -- A good reference on these features is given in the following paper:
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
+--
+-- Minimal completion: None. However, if @MetricSpace@ is not identical to the type, you want
+-- to define 'toMetricSpace' and possbly 'minimize'/'maximize' to add extra constraints as necessary.
 class Metric a where
+  -- | The metric space we optimize the goal over. Usually the same as the type itself, but not always!
+  -- For instance, signed bit-vectors are optimized over their unsigned counterparts, floats are
+  -- optimized over their 'Word32' comparable counterparts, etc.
+  type MetricSpace a :: *
+  type MetricSpace a = a
+
+  -- | Compute the metric value to optimize.
+  toMetricSpace   :: SBV a -> SBV (MetricSpace a)
+  -- | Compute the value itself from the metric corresponding to it.
+  fromMetricSpace :: SBV (MetricSpace a) -> SBV a
+
   -- | Generalization of 'Data.SBV.minimize'
-  minimize :: (MonadSymbolic m, SolverContext m) => String -> a -> m ()
+  minimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+  minimize nm o = addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
   -- | Generalization of 'Data.SBV.maximize'
-  maximize :: (MonadSymbolic m, SolverContext m) => String -> a -> m ()
+  maximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+  maximize nm o = addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
-  {-# MINIMAL minimize, maximize #-}
+  -- if MetricSpace is the same, we can give a default definition
+  default toMetricSpace :: (a ~ MetricSpace a) => SBV a -> SBV (MetricSpace a)
+  toMetricSpace = id
 
-instance Metric SWord8   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SWord16  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SWord32  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SWord64  where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SInt8    where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SInt16   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SInt32   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SInt64   where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SInteger where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
-instance Metric SReal    where minimize nm o = addSValOptGoal (unSBV `fmap` Minimize nm o); maximize nm o = addSValOptGoal (unSBV `fmap` Maximize nm o)
+  default fromMetricSpace :: (a ~ MetricSpace a) => SBV (MetricSpace a) -> SBV a
+  fromMetricSpace = id
+
+-- Booleans assume True is greater than False
+instance Metric Bool where
+  type MetricSpace Bool = Word8
+  toMetricSpace t       = ite t 1 0
+  fromMetricSpace w     = w ./= 0
+
+-- Unsigned types, integers, and reals directly optimize
+instance Metric Word8
+instance Metric Word16
+instance Metric Word32
+instance Metric Word64
+instance Metric Integer
+instance Metric AlgReal
+
+-- To optimize signed bounded values, we have to adjust to the range
+instance Metric Int8 where
+  type MetricSpace Int8 = Word8
+  toMetricSpace    x    = sFromIntegral x + 128  -- 2^7
+  fromMetricSpace  x    = sFromIntegral x - 128
+
+instance Metric Int16 where
+  type MetricSpace Int16 = Word16
+  toMetricSpace    x     = sFromIntegral x + 32768  -- 2^15
+  fromMetricSpace  x     = sFromIntegral x - 32768
+
+instance Metric Int32 where
+  type MetricSpace Int32 = Word32
+  toMetricSpace    x     = sFromIntegral x + 2147483648 -- 2^31
+  fromMetricSpace  x     = sFromIntegral x - 2147483648
+
+instance Metric Int64 where
+  type MetricSpace Int64 = Word64
+  toMetricSpace    x     = sFromIntegral x + 9223372036854775808  -- 2^63
+  fromMetricSpace  x     = sFromIntegral x - 9223372036854775808
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
