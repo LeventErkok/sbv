@@ -278,9 +278,9 @@ module Data.SBV (
   -- ** Multiple optimization goals
   -- $multiOpt
   , OptimizeStyle(..)
-  -- ** Objectives
+  -- ** Objectives and Metrics
   , Objective(..)
-  , Metric, minimize, maximize
+  , Metric(..), minimize, maximize
   -- ** Soft assertions
   -- $softAssertions
   , assertWithPenalty , Penalty(..)

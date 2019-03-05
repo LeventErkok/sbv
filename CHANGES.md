@@ -168,6 +168,12 @@
     then your float value will be minimized as the corresponding 32 (or 64 for
     doubles) bit word. Note that this methods supports infinities properly, and
     does not distinguish between -0 and +0.
+    
+  * Optimization routines have been generalized to work over arbitrary metric-spaces,
+    with user-definable mappings. The simplest instance we have added is optimization
+    over booleans, by the obvious numeric mapping. In addition, SBV can now optimize over
+    user-defined enumerations. See "Documentation.SBV.Examples.Optimization.Enumerate" for
+    an example.
 
   * Improved the internal representation of constraints to address performance
     issues See http://github.com/LeventErkok/sbv/issues/460 for details. Thanks to
