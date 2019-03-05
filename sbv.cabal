@@ -124,10 +124,10 @@ Library
                   , Documentation.SBV.Examples.Misc.SoftConstrain
                   , Documentation.SBV.Examples.Misc.Tuple
                   , Documentation.SBV.Examples.Misc.Word4
+                  , Documentation.SBV.Examples.Optimization.ExtField
                   , Documentation.SBV.Examples.Optimization.LinearOpt
                   , Documentation.SBV.Examples.Optimization.Production
                   , Documentation.SBV.Examples.Optimization.VM
-                  , Documentation.SBV.Examples.Optimization.ExtField
                   , Documentation.SBV.Examples.ProofTools.BMC
                   , Documentation.SBV.Examples.ProofTools.Fibonacci
                   , Documentation.SBV.Examples.ProofTools.Strengthen
