@@ -288,9 +288,10 @@ Test-Suite SBVTest
                   , TestSuite.Optimization.Combined
                   , TestSuite.Optimization.ExtensionField
                   , TestSuite.Optimization.Floats
+                  , TestSuite.Optimization.NoOpt
                   , TestSuite.Optimization.Quantified
                   , TestSuite.Optimization.Reals
-                  , TestSuite.Optimization.NoOpt
+                  , TestSuite.Optimization.Tuples
                   , TestSuite.Overflows.Arithmetic
                   , TestSuite.Overflows.Casts
                   , TestSuite.Polynomials.Polynomials

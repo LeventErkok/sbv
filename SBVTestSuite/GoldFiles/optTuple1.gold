@@ -1,0 +1,4 @@
+Optimal model:
+  p         = (44,36) :: (Integer, Integer)
+  max-p^._1 =      44 :: Integer
+  max-p^._2 =      36 :: Integer
