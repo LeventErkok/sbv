@@ -226,9 +226,10 @@ getSMTResult = do cfg <- getConfig
 
 -- | Classify a model based on whether it has unbound objectives or not.
 classifyModel :: SMTConfig -> SMTModel -> SMTResult
-classifyModel cfg m = case filter (not . isRegularCV . snd) (modelObjectives m) of
-                        [] -> Satisfiable cfg m
-                        _  -> SatExtField cfg m
+classifyModel cfg m
+  | any isExt (modelObjectives m) = SatExtField cfg m
+  | True                          = Satisfiable cfg m
+  where isExt (_, v) = not $ isRegularCV v
 
 -- | Generalization of 'Data.SBV.Control.getLexicographicOptResults'
 getLexicographicOptResults :: (MonadIO m, MonadQuery m) => m SMTResult
