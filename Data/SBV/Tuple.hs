@@ -19,6 +19,8 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TypeApplications       #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Data.SBV.Tuple (
   -- * Symbolic field access
     (^.), _1, _2, _3, _4, _5, _6, _7, _8
@@ -30,7 +32,7 @@ import GHC.TypeLits
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model
 
 -- For doctest use only
 --
@@ -193,7 +195,8 @@ instance (SymVal a, SymVal b) => Tuple (a, b) (SBV a, SBV b) where
                       bsv <- sbvToSV st sb
                       newExpr st k (SBVApp (TupleConstructor 2) [asv, bsv])
 
-instance (SymVal a, SymVal b, SymVal c) => Tuple (a, b, c) (SBV a, SBV b, SBV c) where
+instance (SymVal a, SymVal b, SymVal c)
+      => Tuple (a, b, c) (SBV a, SBV b, SBV c) where
   untuple p = (p^._1, p^._2, p^._3)
 
   tuple p@(sa, sb, sc)
@@ -207,7 +210,8 @@ instance (SymVal a, SymVal b, SymVal c) => Tuple (a, b, c) (SBV a, SBV b, SBV c)
                       csv <- sbvToSV st sc
                       newExpr st k (SBVApp (TupleConstructor 3) [asv, bsv, csv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d) => Tuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d)
+      => Tuple (a, b, c, d) (SBV a, SBV b, SBV c, SBV d) where
   untuple p = (p^._1, p^._2, p^._3, p^._4)
 
   tuple p@(sa, sb, sc, sd)
@@ -222,7 +226,8 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d) => Tuple (a, b, c, d) (SBV a, 
                       dsv <- sbvToSV st sd
                       newExpr st k (SBVApp (TupleConstructor 4) [asv, bsv, csv, dsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Tuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e)
+      => Tuple (a, b, c, d, e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5)
 
   tuple p@(sa, sb, sc, sd, se)
@@ -238,7 +243,8 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Tuple (a, b, c, d
                       esv <- sbvToSV st se
                       newExpr st k (SBVApp (TupleConstructor 5) [asv, bsv, csv, dsv, esv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Tuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f)
+      => Tuple (a, b, c, d, e, f) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6)
 
   tuple p@(sa, sb, sc, sd, se, sf)
@@ -255,7 +261,8 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Tuple (
                       fsv <- sbvToSV st sf
                       newExpr st k (SBVApp (TupleConstructor 6) [asv, bsv, csv, dsv, esv, fsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => Tuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g)
+      => Tuple (a, b, c, d, e, f, g) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7)
 
   tuple p@(sa, sb, sc, sd, se, sf, sg)
@@ -273,7 +280,8 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) 
                       gsv <- sbvToSV st sg
                       newExpr st k (SBVApp (TupleConstructor 7) [asv, bsv, csv, dsv, esv, fsv, gsv])
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h) => Tuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h)
+      => Tuple (a, b, c, d, e, f, g, h) (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) where
   untuple p = (p^._1, p^._2, p^._3, p^._4, p^._5, p^._6, p^._7, p^._8)
 
   tuple p@(sa, sb, sc, sd, se, sf, sg, sh)
@@ -291,5 +299,133 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
                       gsv <- sbvToSV st sg
                       hsv <- sbvToSV st sh
                       newExpr st k (SBVApp (TupleConstructor 8) [asv, bsv, csv, dsv, esv, fsv, gsv, hsv])
+
+-- Optimization for tuples
+
+-- 2-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b)
+         => Metric (a, b) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+
+-- 3-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c)
+         => Metric (a, b, c) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+
+-- 4-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c
+         , SymVal d, Metric d)
+         => Metric (a, b, c, d) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+                        msMinimize (nm ++ "^._4") (p^._4)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+                        msMaximize (nm ++ "^._4") (p^._4)
+
+-- 5-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c
+         , SymVal d, Metric d
+         , SymVal e, Metric e)
+         => Metric (a, b, c, d, e) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+                        msMinimize (nm ++ "^._4") (p^._4)
+                        msMinimize (nm ++ "^._5") (p^._5)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+                        msMaximize (nm ++ "^._4") (p^._4)
+                        msMaximize (nm ++ "^._5") (p^._5)
+
+-- 6-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c
+         , SymVal d, Metric d
+         , SymVal e, Metric e
+         , SymVal f, Metric f)
+         => Metric (a, b, c, d, e, f) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+                        msMinimize (nm ++ "^._4") (p^._4)
+                        msMinimize (nm ++ "^._5") (p^._5)
+                        msMinimize (nm ++ "^._6") (p^._6)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+                        msMaximize (nm ++ "^._4") (p^._4)
+                        msMaximize (nm ++ "^._5") (p^._5)
+                        msMaximize (nm ++ "^._6") (p^._6)
+
+-- 7-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c
+         , SymVal d, Metric d
+         , SymVal e, Metric e
+         , SymVal f, Metric f
+         , SymVal g, Metric g)
+         => Metric (a, b, c, d, e, f, g) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+                        msMinimize (nm ++ "^._4") (p^._4)
+                        msMinimize (nm ++ "^._5") (p^._5)
+                        msMinimize (nm ++ "^._6") (p^._6)
+                        msMinimize (nm ++ "^._7") (p^._7)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+                        msMaximize (nm ++ "^._4") (p^._4)
+                        msMaximize (nm ++ "^._5") (p^._5)
+                        msMaximize (nm ++ "^._6") (p^._6)
+                        msMaximize (nm ++ "^._7") (p^._7)
+
+-- 8-tuple
+instance ( SymVal a, Metric a
+         , SymVal b, Metric b
+         , SymVal c, Metric c
+         , SymVal d, Metric d
+         , SymVal e, Metric e
+         , SymVal f, Metric f
+         , SymVal g, Metric g
+         , SymVal h, Metric h)
+         => Metric (a, b, c, d, e, f, g, h) where
+   msMinimize nm p = do msMinimize (nm ++ "^._1") (p^._1)
+                        msMinimize (nm ++ "^._2") (p^._2)
+                        msMinimize (nm ++ "^._3") (p^._3)
+                        msMinimize (nm ++ "^._4") (p^._4)
+                        msMinimize (nm ++ "^._5") (p^._5)
+                        msMinimize (nm ++ "^._6") (p^._6)
+                        msMinimize (nm ++ "^._7") (p^._7)
+                        msMinimize (nm ++ "^._8") (p^._8)
+   msMaximize nm p = do msMaximize (nm ++ "^._1") (p^._1)
+                        msMaximize (nm ++ "^._2") (p^._2)
+                        msMaximize (nm ++ "^._3") (p^._3)
+                        msMaximize (nm ++ "^._4") (p^._4)
+                        msMaximize (nm ++ "^._5") (p^._5)
+                        msMaximize (nm ++ "^._6") (p^._6)
+                        msMaximize (nm ++ "^._7") (p^._7)
+                        msMaximize (nm ++ "^._8") (p^._8)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
