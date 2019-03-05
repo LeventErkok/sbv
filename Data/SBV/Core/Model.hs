@@ -22,7 +22,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), assertWithPenalty, SIntegral, SFiniteBits(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, forall, forall_, exists, exists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -2222,13 +2222,13 @@ class Metric a where
   -- | Compute the value itself from the metric corresponding to it.
   fromMetricSpace :: SBV (MetricSpace a) -> SBV a
 
-  -- | Generalization of 'Data.SBV.minimize'
-  minimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  minimize nm o = addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+  -- | Minimizing a metric space
+  msMinimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+  msMinimize nm o = addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
 
-  -- | Generalization of 'Data.SBV.maximize'
-  maximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  maximize nm o = addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+  -- | Maximizing a metric space
+  msMaximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+  msMaximize nm o = addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
   -- if MetricSpace is the same, we can give a default definition
   default toMetricSpace :: (a ~ MetricSpace a) => SBV a -> SBV (MetricSpace a)
@@ -2242,6 +2242,14 @@ instance Metric Bool where
   type MetricSpace Bool = Word8
   toMetricSpace t       = ite t 1 0
   fromMetricSpace w     = w ./= 0
+
+-- | Generalization of 'Data.SBV.minimize'
+minimize :: (Metric a, MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+minimize = msMinimize
+
+-- | Generalization of 'Data.SBV.maximize'
+maximize :: (Metric a, MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
+maximize = msMaximize
 
 -- Unsigned types, integers, and reals directly optimize
 instance Metric Word8
