@@ -43,6 +43,8 @@ q = do x <- sFloat "x"
 
        constrain $ fpIsPoint x
        constrain $ fpIsPoint y
+       constrain $ x .== y
+       constrain $ x .> 0
        constrain $ fpIsPoint $ x+y
 
        maximize "metric-max-x+y" $ observe "max-x+y" (x+y)
@@ -53,9 +55,10 @@ r = do x <- sFloat "x"
 
        constrain $ fpIsPoint x
        constrain $ fpIsPoint y
-       constrain $ fpIsPoint $ x-y
-       constrain $ x - y .> 0
+       constrain $ x .== y
+       constrain $ x .> 0
+       constrain $ fpIsPoint $ x+y
 
-       minimize "metric-min-x-y" $ observe "min-x-y" (x-y)
+       minimize "metric-min-x+y" $ observe "min-x+y" (x+y)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
