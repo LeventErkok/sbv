@@ -57,3 +57,5 @@ r = do x <- sFloat "x"
        constrain $ x - y .> 0
 
        minimize "metric-min-x-y" $ observe "min-x-y" (x-y)
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
