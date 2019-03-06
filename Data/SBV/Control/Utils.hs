@@ -306,7 +306,9 @@ send requireSuccess s = do
 
                                            unexpected cmd s "success" Nothing r Nothing
 
-               else io $ querySend queryTimeOutValue s  -- fire and forget. if you use this, you're on your own!
+               else do -- fire and forget. if you use this, you're on your own!
+                       queryDebug ["[FIRE] " `alignPlain` s]
+                       io $ querySend queryTimeOutValue s
 
 -- | Generalization of 'Data.SBV.Control.retrieveResponse'
 retrieveResponse :: (MonadIO m, MonadQuery m) => String -> Maybe Int -> m [String]
