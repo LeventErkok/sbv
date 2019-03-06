@@ -40,6 +40,6 @@
 [SEND] (get-value (s1))
 [RECV] ((s1 (just_SBVMaybe 1)))
 
-MODEL: SMTModel {modelObjectives = [], modelAssocs = [("s0",Left 0 :: Either Integer Integer),("s1",Just 1 :: Maybe Integer)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("s0",Left 0 :: Either Integer Integer),("s1",Just 1 :: Maybe Integer)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

@@ -40,6 +40,6 @@
 [SEND] (get-value ((q2 true true)))
 [RECV] (((q2 true true) true))
 
-MODEL: SMTModel {modelObjectives = [], modelAssocs = [], modelUIFuns = [("q2",(SBool -> SBool -> SBool,([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q2",(SBool -> SBool -> SBool,([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))]}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess
