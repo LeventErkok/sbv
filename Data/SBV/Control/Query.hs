@@ -272,7 +272,7 @@ getParetoOptResults mbN      = do cfg <- getConfig
                                     Unsat -> return (False, [])
                                     Sat   -> continue (classifyModel cfg)
                                     Unk   -> do ur <- getUnknownReason
-                                                return (False, [ProofError cfg [show ur]])
+                                                return (False, [ProofError cfg [show ur] Nothing])
 
   where continue classify = do m <- getModel
                                (limReached, fronts) <- getParetoFronts (subtract 1 <$> mbN) [m]

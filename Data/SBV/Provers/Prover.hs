@@ -161,8 +161,9 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.proveWith'
   proveWith :: SMTConfig -> a -> m ThmResult
   proveWith cfg a = do r <- runWithQuery False (checkNoOptimizations >> Control.getSMTResult) cfg a
-                       when (validateModel cfg) $ validate False r a
-                       return $ ThmResult r
+                       ThmResult <$> if validateModel cfg
+                                     then validate False cfg a r
+                                     else return r
 
   -- | Generalization of 'Data.SBV.sat'
   sat :: a -> m SatResult
@@ -171,8 +172,9 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.satWith'
   satWith :: SMTConfig -> a -> m SatResult
   satWith cfg a = do r <- runWithQuery True (checkNoOptimizations >> Control.getSMTResult) cfg a
-                     when (validateModel cfg) $ validate True r a
-                     return $ SatResult r
+                     SatResult <$> if validateModel cfg
+                                   then validate True cfg a r
+                                   else return r
 
   -- | Generalization of 'Data.SBV.allSat'
   allSat :: a -> m AllSatResult
@@ -317,64 +319,56 @@ class ExtractIO m => MProvable m a where
                                  SatResult Unsatisfiable{} -> return False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
-  -- | Generalization of 'Data.SBV.validate'
-  validate :: Bool -> SMTResult -> a -> m ()
-  validate isSat res p = case res of
-                           Unsatisfiable{} -> return ()
-                           Satisfiable _ m -> case modelBindings m of
-                                                Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings during model validation."
-                                                Just env -> check env
-                           SatExtField{}   -> error $ unlines [ ""
-                                                              , "*** Data.SBV: Cannot validate models produced during optimization."
-                                                              , "***"
-                                                              , "***   To turn validation off, use `cfg{validateModel = False}`"
-                                                              , "***"
-                                                              , "*** Failed to validate."
-                                                              ]
-                           Unknown{}       -> return ()
-                           ProofError{}    -> return ()
+  -- | Validate a model obtained from the solver
+  validate :: Bool -> SMTConfig -> a -> SMTResult -> m SMTResult
+  validate isSat cfg p res = case res of
+                               Unsatisfiable{} -> return res
+                               Satisfiable _ m -> case modelBindings m of
+                                                    Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings during model validation."
+                                                    Just env -> check env
+                               SatExtField{}   -> return $ ProofError cfg [ "Cannot validate models produced during optimization."
+                                                                          , ""
+                                                                          , "To turn validation off, use `cfg{validateModel = False}`"
+                                                                          , ""
+                                                                          , "Unable to validate the produced model."
+                                                                          ]
+                                                                          (Just res)
+                               Unknown{}       -> return res
+                               ProofError{}    -> return res
 
     where check env = do result <- snd <$> runSymbolic (Concrete (Just env)) (if isSat then forSome_ p else forAll_ p >>= output)
 
                          let classify sv
-                               | sv == trueSV       = Just True
-                               | sv == falseSV      = Just False
-                               | kindOf sv == KBool = Nothing
-                               | True               = giveUp $ "Obtained a non-boolean result: " ++ show sv
+                               | sv == trueSV       = Right True
+                               | sv == falseSV      = Right False
+                               | kindOf sv == KBool = Left $ "Evaluation resulted in a symbolic value: " ++ show sv
+                               | True               = Left $ "Evaluation resulted in a non-boolean value: " ++ show sv
 
-                             giveUp s = error $ unlines [ ""
-                                                      , "*** Data.SBV: Cannot validate the current model."
-                                                      , "***"
-                                                      , "*** Reason     : " ++ s
-                                                      , "*** Environment: " ++ show env
-                                                      , "***"
-                                                      , "*** To turn validation off, use `cfg{validateModel = False}`"
-                                                      , "***"
-                                                      , "*** SBV's model validator is incomplete, and cannot handle this particular case."
-                                                      , "*** Please report this as a feature request or possibly a bug!"
-                                                      ]
+                             giveUp s = ProofError cfg [ "Cannot validate the current model."
+                                                       , ""
+                                                       , "Reason     : " ++ s
+                                                       , "Environment: " ++ show env
+                                                       , ""
+                                                       , "SBV's model validator is incomplete, and cannot handle this particular case."
+                                                       , "Please report this as a feature request or possibly a bug!"
+                                                       ]
+                                                       (Just res)
 
-                             badModel = error $ unlines $   [ ""
-                                                            , "*** Data.SBV: Model validation failure!"
-                                                            , "***"
-                                                            , "*** Solver returned a model that does not satisfy the constraints!"
-                                                            , "***"
-                                                            , "***   To turn validation off, use `cfg{validateModel = False}`"
-                                                            , "***"
-                                                            , "*** This could indicate a bug in the backend solver, or SBV itself. Please report this!"
-                                                            , "***"
-                                                            , "*** SBV received the following raw model:"
-                                                            , "***"
-                                                            ]
-                                                         ++ [ "***   " ++ l | l <- lines (if isSat then show (SatResult res) else show (ThmResult res))]
+                             badModel = ProofError cfg [ "Data.SBV: Model validation failure!"
+                                                       , ""
+                                                       , "Backend solver returned a model that does not satisfy the constraints!"
+                                                       , ""
+                                                       , "This could indicate a bug in the backend solver, or SBV itself. Please report this!"
+                                                       ]
+                                                       (Just res)
 
                          case resOutputs result of
                             [sv] -> case (classify sv, isSat) of
-                                      (Nothing,    _)     -> giveUp $ "Evaluation resulted in a symbolic value: " ++ show sv
-                                      (Just True,  True)  -> return ()
-                                      (Just False, False) -> return ()
-                                      _                   -> badModel
-                            o -> giveUp $ "Evaluation resulted in the following unexpected output: " ++ show o
+                                      (Left m, _)          -> return $ giveUp m
+                                      (Right True,  True)  -> return res
+                                      (Right False, False) -> return res
+                                      _                    -> return badModel
+                            o -> return $ giveUp $ "Evaluation resulted in the following unexpected output: " ++ show o
 
 -- | `Provable` is specialization of `MProvable` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.

@@ -75,11 +75,11 @@ import qualified System.Timeout as Timeout (timeout)
 
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
-resultConfig (Unsatisfiable c _) = c
-resultConfig (Satisfiable   c _) = c
-resultConfig (SatExtField   c _) = c
-resultConfig (Unknown       c _) = c
-resultConfig (ProofError    c _) = c
+resultConfig (Unsatisfiable c _  ) = c
+resultConfig (Satisfiable   c _  ) = c
+resultConfig (SatExtField   c _  ) = c
+resultConfig (Unknown       c _  ) = c
+resultConfig (ProofError    c _ _) = c
 
 -- | A 'Data.SBV.prove' call results in a 'ThmResult'
 newtype ThmResult = ThmResult SMTResult
@@ -399,11 +399,11 @@ instance Modelable SatResult where
 
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
-  getModelAssignment (Unsatisfiable _ _) = Left "SBV.getModelAssignment: Unsatisfiable result"
-  getModelAssignment (Satisfiable   _ m) = Right (False, parseModelOut m)
-  getModelAssignment (SatExtField   _ _) = Left "SBV.getModelAssignment: The model is in an extension field"
-  getModelAssignment (Unknown       _ m) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
-  getModelAssignment (ProofError    _ s) = error $ unlines $ "Backend solver complains: " : s
+  getModelAssignment (Unsatisfiable _ _  ) = Left "SBV.getModelAssignment: Unsatisfiable result"
+  getModelAssignment (Satisfiable   _ m  ) = Right (False, parseModelOut m)
+  getModelAssignment (SatExtField   _ _  ) = Left "SBV.getModelAssignment: The model is in an extension field"
+  getModelAssignment (Unknown       _ m  ) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
+  getModelAssignment (ProofError    _ s _) = error $ unlines $ "SBV.getModelAssignment: Failed to produce a model: " : s
 
   modelExists Satisfiable{}   = True
   modelExists Unknown{}       = False -- don't risk it
@@ -452,8 +452,15 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
   Satisfiable _ m                    -> satMsgModel ++ showModel cfg m
   SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
   Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
-  ProofError  _ []                   -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError  _ ls                   -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."
+  ProofError  _ ls Nothing           -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  ProofError  _ ls (Just r)          -> intercalate "\n" $  [ "*** " ++ l | l <- ls]
+                                                         ++ [ "***"
+                                                            , "*** Alleged model:"
+                                                            , "***"
+                                                            ]
+                                                         ++ ["*** "  ++ l | l <- lines (showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg r)]
+
  where cfg = resultConfig result
        showUnsatCore Nothing   = ""
        showUnsatCore (Just xs) = ". Unsat core:\n" ++ intercalate "\n" ["    " ++ x | x <- xs]

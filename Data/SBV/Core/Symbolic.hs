@@ -1653,11 +1653,11 @@ instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
 instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
 
 instance NFData SMTResult where
-  rnf Unsatisfiable{}      = ()
-  rnf (Satisfiable _   xs) = rnf xs `seq` ()
-  rnf (SatExtField _   xs) = rnf xs `seq` ()
-  rnf (Unknown _       xs) = rnf xs `seq` ()
-  rnf (ProofError _    xs) = rnf xs `seq` ()
+  rnf (Unsatisfiable _ xs   ) = rnf xs
+  rnf (Satisfiable _   xs   ) = rnf xs `seq` ()
+  rnf (SatExtField _   xs   ) = rnf xs `seq` ()
+  rnf (Unknown _       xs   ) = rnf xs `seq` ()
+  rnf (ProofError _    xs mr) = rnf xs `seq` rnf mr `seq` ()
 
 instance NFData SMTModel where
   rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns `seq` ()
@@ -1760,11 +1760,11 @@ data SMTModel = SMTModel {
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
-data SMTResult = Unsatisfiable SMTConfig (Maybe [String]) -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
-               | Satisfiable   SMTConfig SMTModel         -- ^ Satisfiable with model
-               | SatExtField   SMTConfig SMTModel         -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
-               | Unknown       SMTConfig SMTReasonUnknown -- ^ Prover returned unknown, with the given reason
-               | ProofError    SMTConfig [String]         -- ^ Prover errored out
+data SMTResult = Unsatisfiable SMTConfig (Maybe [String])            -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
+               | Satisfiable   SMTConfig SMTModel                    -- ^ Satisfiable with model
+               | SatExtField   SMTConfig SMTModel                    -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
+               | Unknown       SMTConfig SMTReasonUnknown            -- ^ Prover returned unknown, with the given reason
+               | ProofError    SMTConfig [String] (Maybe SMTResult)  -- ^ Prover errored out, with possibly a bogus result
 
 -- | A script, to be passed to the solver.
 data SMTScript = SMTScript {
