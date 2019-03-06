@@ -299,7 +299,7 @@ getModelAtIndex mbi = do
     rm     <- io $ readIORef runMode
     case rm of
       m@CodeGen           -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      m@Concrete          -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Concrete{}        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
       SMTMode _ _ isSAT _ -> do
           cfg   <- getConfig
           inps  <- getQuantifiedInputs
@@ -317,15 +317,16 @@ getModelAtIndex mbi = do
               prefixObservables | insideQuantifier = []
                                 | True             = obsvs
 
-              sortByNodeId :: [(NamedSymVar, a)] -> [a]
-              sortByNodeId = map snd . sortBy (compare `on` (\((SV _ nid, _), _) -> nid))
+              sortByNodeId :: [(SV, (String, CV))] -> [(String, CV)]
+              sortByNodeId = map snd . sortBy (compare `on` (\(SV _ nid, _) -> nid))
 
-              grab (sv, nm) = ((sv, nm),) <$> getValueCV mbi sv
+              grab (sv, nm) = wrap <$> getValueCV mbi sv
+                 where wrap c = (sv, (nm, c))
 
           inputAssocs <- mapM (grab . snd) allModelInputs
 
           let assocs =  sortOn fst prefixObservables
-                     ++ sortByNodeId [(sv, (nm, val)) | (sv@(_, nm), val) <- inputAssocs, not (isNonModelVar cfg nm)]
+                     ++ sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
 
           -- collect UIs if requested
           let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
@@ -338,9 +339,19 @@ getModelAtIndex mbi = do
                   Nothing   -> return ()
                   Just cmds -> mapM_ (send True) cmds
 
+          bindings <- let get i@(ALL, _)      = return (i, Nothing)
+                          get i@(EX, (sv, _)) = case sv `lookup` inputAssocs of
+                                                  Just (_, cv) -> return (i, Just cv)
+                                                  Nothing      -> do cv <- getValueCV mbi sv
+                                                                     return (i, Just cv)
+                      in if validateModel cfg
+                         then Just <$> mapM get inps
+                         else return Nothing
+
           uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
           return SMTModel { modelObjectives = []
+                          , modelBindings   = bindings
                           , modelAssocs     = assocs
                           , modelUIFuns     = uivs
                           }
@@ -720,7 +731,8 @@ SBV a |-> v = case literal v of
 
 -- | Generalization of 'Data.SBV.Control.mkSMTResult'
 -- NB. This function does not allow users to create interpretations for UI-Funs. But that's
--- probably not a good idea anyhow.
+-- probably not a good idea anyhow. Also, if you use the 'validateModel' feature, SBV will
+-- fail on models returned via this function.
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
@@ -782,6 +794,7 @@ mkSMTResult asgns = do
              assocs <- inNewContext grabValues
 
              let m = SMTModel { modelObjectives = []
+                              , modelBindings   = Nothing
                               , modelAssocs     = assocs
                               , modelUIFuns     = []
                               }

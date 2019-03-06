@@ -475,6 +475,11 @@ instance Show Op where
 -- arbitrary nestings.
 data Quantifier = ALL | EX deriving Eq
 
+-- | Show instance for 'Quantifier'
+instance Show Quantifier where
+  show ALL = "Forall"
+  show EX  = "Exists"
+
 -- | Are there any existential quantifiers?
 needsExistentials :: [Quantifier] -> Bool
 needsExistentials = (EX `elem`)
@@ -799,9 +804,9 @@ isRunIStage s = case s of
                   IRun   -> True
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig -- ^ In regular mode, with a stage. Bool is True if this is SAT.
-                | CodeGen                                    -- ^ Code generation mode.
-                | Concrete                                   -- ^ Concrete simulation mode.
+data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                 -- ^ In regular mode, with a stage. Bool is True if this is SAT.
+                | CodeGen                                                    -- ^ Code generation mode.
+                | Concrete (Maybe [((Quantifier, NamedSymVar), Maybe CV)])   -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
@@ -812,7 +817,8 @@ instance Show SBVRunMode where
    show (SMTMode qc ISafe  False _) = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
    show (SMTMode qc IRun   False _) = "Proof (" ++ show qc ++ ")"
    show CodeGen                     = "Code generation"
-   show Concrete                    = "Concrete evaluation"
+   show (Concrete Nothing)          = "Concrete evaluation with random values"
+   show (Concrete (Just _))         = "Concrete evaluation during model validation"
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> IO Bool
@@ -1295,10 +1301,9 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                        let nm = fromMaybe internalName mbNm
                        introduceUserName st isTracker nm k q sv
 
-            mkC   = do cv <- randomCV k
-                       do registerKind st k
-                          modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
-                       return $ SVal k (Left cv)
+            mkC cv = do registerKind st k
+                        modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
+                        return $ SVal k (Left cv)
 
         case (mbQ, rm) of
           (Just q,  SMTMode{}          ) -> mkS q
@@ -1307,10 +1312,39 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
           (Just EX, CodeGen{})           -> disallow "Existentially quantified variables"
           (_      , CodeGen)             -> noUI $ mkS ALL  -- code generation, pick universal
 
-          (Just EX,  Concrete{})         -> disallow "Existentially quantified variables"
-          (_      ,  Concrete{})         -> noUI mkC
+          (Just EX, Concrete Nothing)    -> disallow "Existentially quantified variables"
+          (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
 
--- | Introduce a new user name. We die if repeated.
+          (_      , Concrete (Just env)) ->
+                        let bad why conc = error $ unlines [ ""
+                                                           , "*** Data.SBV: " ++ why
+                                                           , "***"
+                                                           , "***   To turn validation off, use `cfg{validateModel = False}`"
+                                                           , "***"
+                                                           , "*** " ++ conc ++ "."
+                                                           ]
+
+                            cant   = "Validation engine is not capable of handling this case. Failed to validate"
+                            report = "Please report this as a bug in SBV!"
+
+                        in if isUninterpreted k
+                           then bad ("Cannot validate models in the presence of uninterpeted kinds, saw: " ++ show k) cant
+                           else do (sv, internalName) <- newSV st k
+
+                                   let nm = fromMaybe internalName mbNm
+                                       nsv = (sv, nm)
+
+                                       cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
+                                              []              -> bad ("Cannot locate variable: " ++ show nsv) report
+                                              [(ALL, _)]      -> bad ("Cannot validate models with universally quantified variables: " ++ show nsv) cant
+                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show nsv) report
+                                              [(EX, Just c)]  -> c
+                                              r               -> bad (   "Found multiple matching values for variable: " ++ show nsv
+                                                                      ++ "\n*** " ++ show r) report
+
+                                   mkC cv
+
+-- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
 introduceUserName :: State -> Bool -> String -> Kind -> Quantifier -> SV -> IO SVal
 introduceUserName st isTracker nmOrig k q sv = do
         (is, ints) <- readIORef (rinps st)
@@ -1626,7 +1660,7 @@ instance NFData SMTResult where
   rnf (ProofError _    xs) = rnf xs `seq` ()
 
 instance NFData SMTModel where
-  rnf (SMTModel objs assocs uifuns) = rnf objs `seq` rnf assocs `seq` rnf uifuns `seq` ()
+  rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns `seq` ()
 
 instance NFData SMTScript where
   rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
@@ -1695,6 +1729,7 @@ data SMTConfig = SMTConfig {
        , allSatPrintAlong       :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
        , satTrackUFs            :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
        , isNonModelVar          :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , validateModel          :: Bool           -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
        , transcript             :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion          :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
        , solver                 :: SMTSolver      -- ^ The actual SMT solver.
@@ -1711,11 +1746,12 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]                 -- ^ Mapping of symbolic values to objective values.
-     , modelAssocs     :: [(String, CV)]                            -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                                    -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                                    -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                       -- ^ Mapping of symbolic values to objective values.
+     , modelBindings   :: Maybe [((Quantifier, NamedSymVar), Maybe CV)]   -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
+     , modelAssocs     :: [(String, CV)]                                  -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))]       -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                          -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                          -- in the 'modelAssocs' field.
      }
      deriving Show
 

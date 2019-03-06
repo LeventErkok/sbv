@@ -1659,7 +1659,7 @@ sAssert cs msg cond x
    | Just mustHold <- unliteral cond
    = if mustHold
      then x
-     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] [] []))
+     else error $ show $ SafeResult ((locInfo . getCallStack) `fmap` cs, msg, Satisfiable defaultSMTCfg (SMTModel [] Nothing [] []))
    | True
    = SBV $ SVal k $ Right $ cache r
   where k     = kindOf x
@@ -2290,7 +2290,7 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null modelVals) $ QC.monitor (QC.counterexample (complain modelVals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic Concrete prop
+     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic (Concrete Nothing) prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                          cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
@@ -2305,7 +2305,7 @@ instance Testable (Symbolic SBool) where
                                Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
                        us -> noQC us
 
-           complain qcInfo = showModel defaultSMTCfg (SMTModel [] qcInfo [])
+           complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
 
            noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 

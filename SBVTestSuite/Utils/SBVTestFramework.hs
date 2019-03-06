@@ -235,8 +235,8 @@ qc1 nm opC opS = [cf, sm]
                                    ]
 
                             model = case result of
-                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCV "Result" (literal v)]) [])
-                                      Left  e -> showModel defaultSMTCfg (SMTModel [] vals []) ++ "\n" ++ e
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] Nothing (vals ++ [getCV "Result" (literal v)]) [])
+                                      Left  e -> showModel defaultSMTCfg (SMTModel [] Nothing vals []) ++ "\n" ++ e
 
                         QC.monitor (QC.counterexample model)
 
@@ -293,8 +293,8 @@ qc2 nm opC opS = [cf, sm]
                                    ]
 
                             model = case result of
-                                      Right v -> showModel defaultSMTCfg (SMTModel [] (vals ++ [getCV "Result" (literal v)]) [])
-                                      Left  e -> showModel defaultSMTCfg (SMTModel [] vals []) ++ "\n" ++ e
+                                      Right v -> showModel defaultSMTCfg (SMTModel [] Nothing (vals ++ [getCV "Result" (literal v)]) [])
+                                      Left  e -> showModel defaultSMTCfg (SMTModel [] Nothing vals []) ++ "\n" ++ e
 
                         QC.monitor (QC.counterexample model)
 

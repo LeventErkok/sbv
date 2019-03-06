@@ -447,13 +447,13 @@ displayModels disp (AllSatResult (_, _, _, ms)) = do
 -- | Show an SMTResult; generic version
 showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result of
-  Unsatisfiable _ uc               -> unsatMsg ++ showUnsatCore uc
-  Satisfiable _ (SMTModel _ [] []) -> satMsg
-  Satisfiable _ m                  -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
-  Unknown     _ r                  -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
-  ProofError  _ []                 -> "*** An error occurred. No additional information available. Try running in verbose mode"
-  ProofError  _ ls                 -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
+  Unsatisfiable _ uc                 -> unsatMsg ++ showUnsatCore uc
+  Satisfiable _ (SMTModel _ _ [] []) -> satMsg
+  Satisfiable _ m                    -> satMsgModel ++ showModel cfg m
+  SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
+  Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
+  ProofError  _ []                   -> "*** An error occurred. No additional information available. Try running in verbose mode"
+  ProofError  _ ls                   -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
  where cfg = resultConfig result
        showUnsatCore Nothing   = ""
        showUnsatCore (Just xs) = ". Unsat core:\n" ++ intercalate "\n" ["    " ++ x | x <- xs]

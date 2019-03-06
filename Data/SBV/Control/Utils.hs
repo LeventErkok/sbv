@@ -1264,13 +1264,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, unk, ms) <- loop grabObservables topState (allUiFuns, uiFuns) vars cfg
+                     (sc, unk, ms) <- loop grabObservables topState (allUiFuns, uiFuns) qinps vars cfg
                      return (sc, w, unk, reverse ms)
 
    where isFree (KUninterpreted _ (Left _)) = True
          isFree _                           = False
 
-         loop grabObservables topState (allUiFuns, uiFunsToReject) vars cfg = go (1::Int) []
+         loop grabObservables topState (allUiFuns, uiFunsToReject) qinps vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, Bool, [SMTResult])
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -1299,7 +1299,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                       return (False, True, sofar)
 
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
-                                                                             return (n, (sval, cv))) vars
+                                                                             return (sv, (n, (sval, cv)))) vars
 
                                       let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
                                                                    return (nm, (t, cvs))
@@ -1310,13 +1310,23 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                   then getObservables
                                                   else return []
 
+                                      bindings <- let grab i@(ALL, _)      = return (i, Nothing)
+                                                      grab i@(EX, (sv, _)) = case sv `lookup` assocs of
+                                                                               Just (_, (_, cv)) -> return (i, Just cv)
+                                                                               Nothing           -> do cv <- getValueCV Nothing sv
+                                                                                                       return (i, Just cv)
+                                                  in if validateModel cfg
+                                                        then Just <$> mapM grab qinps
+                                                        else return Nothing
+
                                       let model = SMTModel { modelObjectives = []
-                                                           , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (n, (_, cv)) <- assocs]
+                                                           , modelBindings   = bindings
+                                                           , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (_, (n, (_, cv))) <- assocs]
                                                            , modelUIFuns     = uiFunVals
                                                            }
                                           m = Satisfiable cfg model
 
-                                          (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map snd assocs)
+                                          (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map (snd . snd) assocs)
 
                                           -- For each interpreted variable, figure out the model equivalence
                                           -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
@@ -1592,7 +1602,7 @@ executeQuery queryContext (QueryT userQuery) = do
      let allowQQs = case rm of
                       SMTMode _ _ _ cfg -> allowQuantifiedQueries cfg
                       CodeGen           -> False -- doesn't matter in these two
-                      Concrete          -> False -- cases, but we're being careful
+                      Concrete{}        -> False -- cases, but we're being careful
 
      () <- unless allowQQs $ liftIO $
                     case queryContext of
