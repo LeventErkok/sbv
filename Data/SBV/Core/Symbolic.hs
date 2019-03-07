@@ -804,21 +804,22 @@ isRunIStage s = case s of
                   IRun   -> True
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                 -- ^ In regular mode, with a stage. Bool is True if this is SAT.
-                | CodeGen                                                    -- ^ Code generation mode.
-                | Concrete (Maybe [((Quantifier, NamedSymVar), Maybe CV)])   -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
+data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                        -- ^ In regular mode, with a stage. Bool is True if this is SAT.
+                | CodeGen                                                           -- ^ Code generation mode.
+                | Concrete (Maybe (Bool, [((Quantifier, NamedSymVar), Maybe CV)]))  -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
-   show (SMTMode qc ISetup True  _) = "Satisfiability setup (" ++ show qc ++ ")"
-   show (SMTMode qc ISafe  True  _) = "Safety setup (" ++ show qc ++ ")"
-   show (SMTMode qc IRun   True  _) = "Satisfiability (" ++ show qc ++ ")"
-   show (SMTMode qc ISetup False _) = "Proof setup (" ++ show qc ++ ")"
-   show (SMTMode qc ISafe  False _) = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
-   show (SMTMode qc IRun   False _) = "Proof (" ++ show qc ++ ")"
-   show CodeGen                     = "Code generation"
-   show (Concrete Nothing)          = "Concrete evaluation with random values"
-   show (Concrete (Just _))         = "Concrete evaluation during model validation"
+   show (SMTMode qc ISetup True  _)  = "Satisfiability setup (" ++ show qc ++ ")"
+   show (SMTMode qc ISafe  True  _)  = "Safety setup (" ++ show qc ++ ")"
+   show (SMTMode qc IRun   True  _)  = "Satisfiability (" ++ show qc ++ ")"
+   show (SMTMode qc ISetup False _)  = "Proof setup (" ++ show qc ++ ")"
+   show (SMTMode qc ISafe  False _)  = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
+   show (SMTMode qc IRun   False _)  = "Proof (" ++ show qc ++ ")"
+   show CodeGen                      = "Code generation"
+   show (Concrete Nothing)           = "Concrete evaluation with random values"
+   show (Concrete (Just (True, _)))  = "Concrete evaluation during model validation for sat"
+   show (Concrete (Just (False, _))) = "Concrete evaluation during model validation for prove"
 
 -- | Is this a CodeGen run? (i.e., generating code)
 isCodeGenMode :: State -> IO Bool
@@ -1315,7 +1316,8 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
           (Just EX, Concrete Nothing)    -> disallow "Existentially quantified variables"
           (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
 
-          (_      , Concrete (Just env)) ->
+          -- Model validation:
+          (_      , Concrete (Just (_isSat, env))) ->
                         let bad why conc = error $ unlines [ ""
                                                            , "*** Data.SBV: " ++ why
                                                            , "***"
@@ -1336,8 +1338,8 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
 
                                        cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
                                               []              -> bad ("Cannot locate variable: " ++ show nsv) report
-                                              [(ALL, _)]      -> bad ("Cannot validate models with universally quantified variables: " ++ show nsv) cant
-                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show nsv) report
+                                              [(ALL, _)]      -> bad ("Cannot validate models with universally quantified variable: " ++ show (snd nsv)) cant
+                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (snd nsv)) report
                                               [(EX, Just c)]  -> c
                                               r               -> bad (   "Found multiple matching values for variable: " ++ show nsv
                                                                       ++ "\n*** " ++ show r) report
