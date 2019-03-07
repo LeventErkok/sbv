@@ -182,7 +182,11 @@ class ExtractIO m => MProvable m a where
 
   -- | Generalization of 'Data.SBV.allSatWith'
   allSatWith :: SMTConfig -> a -> m AllSatResult
-  allSatWith = runWithQuery True $ checkNoOptimizations >> AllSatResult <$> Control.getAllSatResult
+  allSatWith cfg a = do f@(mm, pe, un, rs) <- runWithQuery True (checkNoOptimizations >> Control.getAllSatResult) cfg a
+                        AllSatResult <$> if validateModel cfg
+                                         then do rs' <- mapM (validate True cfg a) rs
+                                                 return (mm, pe, un, rs')
+                                         else return f
 
   -- | Generalization of 'Data.SBV.optimize'
   optimize :: OptimizeStyle -> a -> m OptimizeResult
@@ -336,7 +340,16 @@ class ExtractIO m => MProvable m a where
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
-    where check env = do result <- snd <$> runSymbolic (Concrete (Just env)) (if isSat then forSome_ p else forAll_ p >>= output)
+    where check env = do let shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
+                             shB ((q, (_, n)), v) = show q ++ " " ++ n ++ " |-> " ++ shv
+                                where shv = case v of
+                                              Nothing -> "<unbound>"
+                                              Just c  -> shCV cfg c
+
+                         when (verbose cfg) $ liftIO $ do putStrLn $ "[VALIDATE] Validating the model in the " ++ if null env then "empty environment." else "environment:"
+                                                          mapM_ putStrLn [ "             " ++ shB v | v <- env]
+
+                         result <- snd <$> runSymbolic (Concrete (Just env)) ((if isSat then forSome_ p else forAll_ p) >>= output)
 
                          let classify sv
                                | sv == trueSV       = Right True
@@ -344,11 +357,6 @@ class ExtractIO m => MProvable m a where
                                | kindOf sv == KBool = Left $ "Evaluation resulted in a symbolic value: " ++ show sv
                                | True               = Left $ "Evaluation resulted in a non-boolean value: " ++ show sv
 
-                             shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
-                             shB ((q, (_, n)), v) = show q ++ " " ++ n ++ " |-> " ++ shv
-                                where shv = case v of
-                                              Nothing -> "<unbound>"
-                                              Just c  -> shCV cfg c
 
                              giveUp s = ProofError cfg (   [ "Cannot validate the model."
                                                            , ""
@@ -366,9 +374,8 @@ class ExtractIO m => MProvable m a where
 
                              badModel = ProofError cfg [ "Data.SBV: Model validation failure!"
                                                        , ""
-                                                       , "Backend solver returned a model that does not satisfy the constraints!"
-                                                       , ""
-                                                       , "This could indicate a bug in the backend solver, or SBV itself. Please report this!"
+                                                       , "Backend solver returned a model that does not satisfy the constraints."
+                                                       , "This could indicate a bug in the backend solver, or SBV itself. Please report."
                                                        ]
                                                        (Just res)
 
