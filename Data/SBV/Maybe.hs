@@ -10,7 +10,6 @@
 -- Symbolic option type, symbolic version of Haskell's 'Maybe' type.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}

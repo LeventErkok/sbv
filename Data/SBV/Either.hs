@@ -10,7 +10,6 @@
 -- Symbolic coproduct, symbolic version of Haskell's 'Either' type.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE KindSignatures      #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
