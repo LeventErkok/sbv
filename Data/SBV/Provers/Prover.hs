@@ -374,10 +374,25 @@ class ExtractIO m => MProvable m a where
                                                    , "This could indicate a bug in the backend solver, or SBV itself. Please report."
                                                    ]
 
-                             notSymbolic sv = wrap ("Data.SBV: Cannot validate the model, since " ++ show sv ++ " is not concretely computable.")
-                                                   ["SBV's model validator is incomplete, and cannot handle this particular case."
-                                                   , "Please report this as a feature request or possibly a bug!"
-                                                   ]
+                             notConcrete sv = wrap ("Data.SBV: Cannot validate the model, since " ++ show sv ++ " is not concretely computable.")
+                                                   (  perhaps (why sv)
+                                                   ++ [ "SBV's model validator is incomplete, and cannot handle this particular case."
+                                                      , "Please report this as a feature request or possibly a bug!"
+                                                      ]
+                                                   )
+                                  where perhaps Nothing  = []
+                                        perhaps (Just x) = [x, ""]
+
+                                        -- This is incomplete, but should capture the most common cases
+                                        why s = case s `lookup` S.toList (pgmAssignments (resAsgns result)) of
+                                                  Nothing            -> Nothing
+                                                  Just (SBVApp o as) -> case o of
+                                                                          Uninterpreted v   -> Just $ "The value depends on the uninterpreted constant " ++ show v
+                                                                          IEEEFP FP_FMA     -> Just "Floating point FMA operation is not supported concretely."
+                                                                          IEEEFP _          -> Just "Floating point operations are only supported with constant RNE rounding mode."
+                                                                          OverflowOp _      -> Just "Overflow-checking is not done concretely"
+                                                                          StrOp (StrInRe _) -> Just "Regular expression matches are not concretely supported."
+                                                                          _                 -> listToMaybe $ mapMaybe why as
 
                              cstrs = S.toList $ resConstraints result
 
@@ -397,7 +412,7 @@ class ExtractIO m => MProvable m a where
                                     Just nm -> badModel $ "Named constraint " ++ show nm ++ " evaluated to False."
                                     Nothing -> badModel "A constraint was violated."
                                 | True
-                                = notSymbolic sv
+                                = notConcrete sv
                                 where mbName = listToMaybe [n | (":named", n) <- attrs]
 
                              -- SAT: All outputs must be true
@@ -412,7 +427,7 @@ class ExtractIO m => MProvable m a where
                                | sv == falseSV
                                = badModel $ "Final output evaluated to False."
                                | True
-                               = notSymbolic sv
+                               = notConcrete sv
 
                              -- Proof: At least one output must be false
                              proveLoop [] somethingFailed
@@ -428,7 +443,7 @@ class ExtractIO m => MProvable m a where
                                | sv == falseSV
                                = proveLoop svs True
                                | True
-                               = notSymbolic sv
+                               = notConcrete sv
 
                              -- Output checking is tricky, since we behave differently for different modes
                              checkOutputs []
@@ -436,7 +451,7 @@ class ExtractIO m => MProvable m a where
                                = giveUp "Impossible happened: There are no outputs nor any constraints to check."
                              checkOutputs os
                                = do notify "Validating outputs."
-                                    if isSAT then satLoop    os
+                                    if isSAT then satLoop   os
                                              else proveLoop os False
 
                          notify $ if null cstrs
