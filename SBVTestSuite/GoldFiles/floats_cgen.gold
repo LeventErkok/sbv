@@ -318,16 +318,17 @@ SInt8 fromFP_Float_ToInt8(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SBool  s6 = s0 >= -0x1.01p7F /* -128.5F */;
-  const SBool  s8 = s0 <= 0x1.fdfffep6F /* 127.49999F */;
-  const SBool  s9 = s6 && s8;
-  const SInt8  s11 = (SInt8) rintf(s0);
-  const SInt64 s12 = (SInt64) rintf(s0);
-  const SInt8  s13 = (SInt8) s12;
-  const SInt8  s14 = s9 ? s11 : s13;
-  const SInt8  s16 = s4 ? s14 : 0;
+  const SBool  s6 = s0 > 0x1.fdfffep6F /* 127.49999F */;
+  const SBool  s8 = s0 < -0x1.01p7F /* -128.5F */;
+  const SBool  s9 = s6 || s8;
+  const SBool  s10 = !s9;
+  const SInt8  s12 = (SInt8) rintf(s0);
+  const SInt64 s13 = (SInt64) rintf(s0);
+  const SInt8  s14 = (SInt8) s13;
+  const SInt8  s15 = s10 ? s12 : s14;
+  const SInt8  s17 = s4 ? s15 : 0;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToInt8.c" ==================
 == BEGIN: "fromFP_Float_ToInt16.c" ================
@@ -342,16 +343,17 @@ SInt16 fromFP_Float_ToInt16(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SBool  s6 = s0 >= -0x1.0001p15F /* -32768.5F */;
-  const SBool  s8 = s0 <= 0x1.fffdfep14F /* 32767.498F */;
-  const SBool  s9 = s6 && s8;
-  const SInt16 s11 = (SInt16) rintf(s0);
-  const SInt64 s12 = (SInt64) rintf(s0);
-  const SInt16 s13 = (SInt16) s12;
-  const SInt16 s14 = s9 ? s11 : s13;
-  const SInt16 s16 = s4 ? s14 : 0x0000;
+  const SBool  s6 = s0 > 0x1.fffdfep14F /* 32767.498F */;
+  const SBool  s8 = s0 < -0x1.0001p15F /* -32768.5F */;
+  const SBool  s9 = s6 || s8;
+  const SBool  s10 = !s9;
+  const SInt16 s12 = (SInt16) rintf(s0);
+  const SInt64 s13 = (SInt64) rintf(s0);
+  const SInt16 s14 = (SInt16) s13;
+  const SInt16 s15 = s10 ? s12 : s14;
+  const SInt16 s17 = s4 ? s15 : 0x0000;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToInt16.c" ==================
 == BEGIN: "fromFP_Float_ToInt32.c" ================
@@ -366,16 +368,17 @@ SInt32 fromFP_Float_ToInt32(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SBool  s6 = s0 >= -0x1p31F /* -2.1474836e9F */;
-  const SBool  s8 = s0 <= 0x1p31F /* 2.1474836e9F */;
-  const SBool  s9 = s6 && s8;
-  const SInt32 s11 = (SInt32) rintf(s0);
-  const SInt64 s12 = (SInt64) rintf(s0);
-  const SInt32 s13 = (SInt32) s12;
-  const SInt32 s14 = s9 ? s11 : s13;
-  const SInt32 s16 = s4 ? s14 : 0x00000000L;
+  const SBool  s6 = s0 > 0x1p31F /* 2.1474836e9F */;
+  const SBool  s8 = s0 < -0x1p31F /* -2.1474836e9F */;
+  const SBool  s9 = s6 || s8;
+  const SBool  s10 = !s9;
+  const SInt32 s12 = (SInt32) rintf(s0);
+  const SInt64 s13 = (SInt64) rintf(s0);
+  const SInt32 s14 = (SInt32) s13;
+  const SInt32 s15 = s10 ? s12 : s14;
+  const SInt32 s17 = s4 ? s15 : 0x00000000L;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToInt32.c" ==================
 == BEGIN: "fromFP_Float_ToInt64.c" ================
@@ -390,15 +393,16 @@ SInt64 fromFP_Float_ToInt64(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SBool  s6 = s0 >= -0x1p63F /* -9.223372e18F */;
-  const SBool  s8 = s0 <= 0x1p63F /* 9.223372e18F */;
-  const SBool  s9 = s6 && s8;
-  const SInt64 s11 = (SInt64) rintf(s0);
-  const SInt64 s12 = (SInt64) s11;
-  const SInt64 s13 = s9 ? s11 : s12;
-  const SInt64 s15 = s4 ? s13 : 0x0000000000000000LL;
+  const SBool  s6 = s0 > 0x1p63F /* 9.223372e18F */;
+  const SBool  s8 = s0 < -0x1p63F /* -9.223372e18F */;
+  const SBool  s9 = s6 || s8;
+  const SBool  s10 = !s9;
+  const SInt64 s12 = (SInt64) rintf(s0);
+  const SInt64 s13 = (SInt64) s12;
+  const SInt64 s14 = s10 ? s12 : s13;
+  const SInt64 s16 = s4 ? s14 : 0x0000000000000000LL;
 
-  return s15;
+  return s16;
 }
 == END: "fromFP_Float_ToInt64.c" ==================
 == BEGIN: "fromFP_Float_ToWord8.c" ================
@@ -413,16 +417,17 @@ SWord8 fromFP_Float_ToWord8(const SFloat a)
   const SBool  s2 = isinf(s0);
   const SBool  s3 = s1 || s2;
   const SBool  s4 = !s3;
-  const SBool  s6 = s0 >= -0x1p-1F /* -0.5F */;
-  const SBool  s8 = s0 <= 0x1.fefffep7F /* 255.49998F */;
-  const SBool  s9 = s6 && s8;
-  const SWord8 s11 = (SWord8) rintf(s0);
-  const SInt64 s12 = (SInt64) rintf(s0);
-  const SWord8 s13 = (SWord8) s12;
-  const SWord8 s14 = s9 ? s11 : s13;
-  const SWord8 s16 = s4 ? s14 : 0;
+  const SBool  s6 = s0 > 0x1.fefffep7F /* 255.49998F */;
+  const SBool  s8 = s0 < -0x1p-1F /* -0.5F */;
+  const SBool  s9 = s6 || s8;
+  const SBool  s10 = !s9;
+  const SWord8 s12 = (SWord8) rintf(s0);
+  const SInt64 s13 = (SInt64) rintf(s0);
+  const SWord8 s14 = (SWord8) s13;
+  const SWord8 s15 = s10 ? s12 : s14;
+  const SWord8 s17 = s4 ? s15 : 0;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToWord8.c" ==================
 == BEGIN: "fromFP_Float_ToWord16.c" ================
@@ -437,16 +442,17 @@ SWord16 fromFP_Float_ToWord16(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1F /* -0.5F */;
-  const SBool   s8 = s0 <= 0x1.fffefep15F /* 65535.496F */;
-  const SBool   s9 = s6 && s8;
-  const SWord16 s11 = (SWord16) rintf(s0);
-  const SInt64  s12 = (SInt64) rintf(s0);
-  const SWord16 s13 = (SWord16) s12;
-  const SWord16 s14 = s9 ? s11 : s13;
-  const SWord16 s16 = s4 ? s14 : 0x0000U;
+  const SBool   s6 = s0 > 0x1.fffefep15F /* 65535.496F */;
+  const SBool   s8 = s0 < -0x1p-1F /* -0.5F */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord16 s12 = (SWord16) rintf(s0);
+  const SInt64  s13 = (SInt64) rintf(s0);
+  const SWord16 s14 = (SWord16) s13;
+  const SWord16 s15 = s10 ? s12 : s14;
+  const SWord16 s17 = s4 ? s15 : 0x0000U;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToWord16.c" ==================
 == BEGIN: "fromFP_Float_ToWord32.c" ================
@@ -461,16 +467,17 @@ SWord32 fromFP_Float_ToWord32(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1F /* -0.5F */;
-  const SBool   s8 = s0 <= 0x1p32F /* 4.2949673e9F */;
-  const SBool   s9 = s6 && s8;
-  const SWord32 s11 = (SWord32) rintf(s0);
-  const SInt64  s12 = (SInt64) rintf(s0);
-  const SWord32 s13 = (SWord32) s12;
-  const SWord32 s14 = s9 ? s11 : s13;
-  const SWord32 s16 = s4 ? s14 : 0x00000000UL;
+  const SBool   s6 = s0 > 0x1p32F /* 4.2949673e9F */;
+  const SBool   s8 = s0 < -0x1p-1F /* -0.5F */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord32 s12 = (SWord32) rintf(s0);
+  const SInt64  s13 = (SInt64) rintf(s0);
+  const SWord32 s14 = (SWord32) s13;
+  const SWord32 s15 = s10 ? s12 : s14;
+  const SWord32 s17 = s4 ? s15 : 0x00000000UL;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToWord32.c" ==================
 == BEGIN: "fromFP_Float_ToWord64.c" ================
@@ -485,16 +492,17 @@ SWord64 fromFP_Float_ToWord64(const SFloat a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1F /* -0.5F */;
-  const SBool   s8 = s0 <= 0x1p64F /* 1.8446744e19F */;
-  const SBool   s9 = s6 && s8;
-  const SWord64 s11 = (SWord64) rintf(s0);
-  const SInt64  s12 = (SInt64) rintf(s0);
-  const SWord64 s13 = (SWord64) s12;
-  const SWord64 s14 = s9 ? s11 : s13;
-  const SWord64 s16 = s4 ? s14 : 0x0000000000000000ULL;
+  const SBool   s6 = s0 > 0x1p64F /* 1.8446744e19F */;
+  const SBool   s8 = s0 < -0x1p-1F /* -0.5F */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord64 s12 = (SWord64) rintf(s0);
+  const SInt64  s13 = (SInt64) rintf(s0);
+  const SWord64 s14 = (SWord64) s13;
+  const SWord64 s15 = s10 ? s12 : s14;
+  const SWord64 s17 = s4 ? s15 : 0x0000000000000000ULL;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_Float_ToWord64.c" ==================
 == BEGIN: "fromFP_Float_ToFloat.c" ================
@@ -569,16 +577,17 @@ SInt8 fromFP_DoubleTo_Int8(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1.01p7 /* -128.5 */;
-  const SBool   s8 = s0 <= 0x1.fdfffffffffffp6 /* 127.49999999999999 */;
-  const SBool   s9 = s6 && s8;
-  const SInt8   s11 = (SInt8) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SInt8   s13 = (SInt8) s12;
-  const SInt8   s14 = s9 ? s11 : s13;
-  const SInt8   s16 = s4 ? s14 : 0;
+  const SBool   s6 = s0 > 0x1.fdfffffffffffp6 /* 127.49999999999999 */;
+  const SBool   s8 = s0 < -0x1.01p7 /* -128.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SInt8   s12 = (SInt8) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SInt8   s14 = (SInt8) s13;
+  const SInt8   s15 = s10 ? s12 : s14;
+  const SInt8   s17 = s4 ? s15 : 0;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Int8.c" ==================
 == BEGIN: "fromFP_DoubleTo_Int16.c" ================
@@ -593,16 +602,17 @@ SInt16 fromFP_DoubleTo_Int16(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1.0001p15 /* -32768.5 */;
-  const SBool   s8 = s0 <= 0x1.fffdfffffffffp14 /* 32767.499999999996 */;
-  const SBool   s9 = s6 && s8;
-  const SInt16  s11 = (SInt16) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SInt16  s13 = (SInt16) s12;
-  const SInt16  s14 = s9 ? s11 : s13;
-  const SInt16  s16 = s4 ? s14 : 0x0000;
+  const SBool   s6 = s0 > 0x1.fffdfffffffffp14 /* 32767.499999999996 */;
+  const SBool   s8 = s0 < -0x1.0001p15 /* -32768.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SInt16  s12 = (SInt16) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SInt16  s14 = (SInt16) s13;
+  const SInt16  s15 = s10 ? s12 : s14;
+  const SInt16  s17 = s4 ? s15 : 0x0000;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Int16.c" ==================
 == BEGIN: "fromFP_DoubleTo_Int32.c" ================
@@ -617,16 +627,17 @@ SInt32 fromFP_DoubleTo_Int32(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1.00000001p31 /* -2.1474836485e9 */;
-  const SBool   s8 = s0 <= 0x0.fffffffefffff8p31 /* 2.1474836474999998e9 */;
-  const SBool   s9 = s6 && s8;
-  const SInt32  s11 = (SInt32) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SInt32  s13 = (SInt32) s12;
-  const SInt32  s14 = s9 ? s11 : s13;
-  const SInt32  s16 = s4 ? s14 : 0x00000000L;
+  const SBool   s6 = s0 > 0x0.fffffffefffff8p31 /* 2.1474836474999998e9 */;
+  const SBool   s8 = s0 < -0x1.00000001p31 /* -2.1474836485e9 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SInt32  s12 = (SInt32) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SInt32  s14 = (SInt32) s13;
+  const SInt32  s15 = s10 ? s12 : s14;
+  const SInt32  s17 = s4 ? s15 : 0x00000000L;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Int32.c" ==================
 == BEGIN: "fromFP_DoubleTo_Int64.c" ================
@@ -641,15 +652,16 @@ SInt64 fromFP_DoubleTo_Int64(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p63 /* -9.223372036854776e18 */;
-  const SBool   s8 = s0 <= 0x1p63 /* 9.223372036854776e18 */;
-  const SBool   s9 = s6 && s8;
-  const SInt64  s11 = (SInt64) rint(s0);
-  const SInt64  s12 = (SInt64) s11;
-  const SInt64  s13 = s9 ? s11 : s12;
-  const SInt64  s15 = s4 ? s13 : 0x0000000000000000LL;
+  const SBool   s6 = s0 > 0x1p63 /* 9.223372036854776e18 */;
+  const SBool   s8 = s0 < -0x1p63 /* -9.223372036854776e18 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SInt64  s12 = (SInt64) rint(s0);
+  const SInt64  s13 = (SInt64) s12;
+  const SInt64  s14 = s10 ? s12 : s13;
+  const SInt64  s16 = s4 ? s14 : 0x0000000000000000LL;
 
-  return s15;
+  return s16;
 }
 == END: "fromFP_DoubleTo_Int64.c" ==================
 == BEGIN: "fromFP_DoubleTo_Word8.c" ================
@@ -664,16 +676,17 @@ SWord8 fromFP_DoubleTo_Word8(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1 /* -0.5 */;
-  const SBool   s8 = s0 <= 0x1.fefffffffffffp7 /* 255.49999999999997 */;
-  const SBool   s9 = s6 && s8;
-  const SWord8  s11 = (SWord8) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SWord8  s13 = (SWord8) s12;
-  const SWord8  s14 = s9 ? s11 : s13;
-  const SWord8  s16 = s4 ? s14 : 0;
+  const SBool   s6 = s0 > 0x1.fefffffffffffp7 /* 255.49999999999997 */;
+  const SBool   s8 = s0 < -0x1p-1 /* -0.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord8  s12 = (SWord8) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SWord8  s14 = (SWord8) s13;
+  const SWord8  s15 = s10 ? s12 : s14;
+  const SWord8  s17 = s4 ? s15 : 0;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Word8.c" ==================
 == BEGIN: "fromFP_DoubleTo_Word16.c" ================
@@ -688,16 +701,17 @@ SWord16 fromFP_DoubleTo_Word16(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1 /* -0.5 */;
-  const SBool   s8 = s0 <= 0x1.fffefffffffffp15 /* 65535.49999999999 */;
-  const SBool   s9 = s6 && s8;
-  const SWord16 s11 = (SWord16) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SWord16 s13 = (SWord16) s12;
-  const SWord16 s14 = s9 ? s11 : s13;
-  const SWord16 s16 = s4 ? s14 : 0x0000U;
+  const SBool   s6 = s0 > 0x1.fffefffffffffp15 /* 65535.49999999999 */;
+  const SBool   s8 = s0 < -0x1p-1 /* -0.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord16 s12 = (SWord16) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SWord16 s14 = (SWord16) s13;
+  const SWord16 s15 = s10 ? s12 : s14;
+  const SWord16 s17 = s4 ? s15 : 0x0000U;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Word16.c" ==================
 == BEGIN: "fromFP_DoubleTo_Word32.c" ================
@@ -712,16 +726,17 @@ SWord32 fromFP_DoubleTo_Word32(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1 /* -0.5 */;
-  const SBool   s8 = s0 <= 0x1.fffffffefffffp31 /* 4.2949672954999995e9 */;
-  const SBool   s9 = s6 && s8;
-  const SWord32 s11 = (SWord32) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SWord32 s13 = (SWord32) s12;
-  const SWord32 s14 = s9 ? s11 : s13;
-  const SWord32 s16 = s4 ? s14 : 0x00000000UL;
+  const SBool   s6 = s0 > 0x1.fffffffefffffp31 /* 4.2949672954999995e9 */;
+  const SBool   s8 = s0 < -0x1p-1 /* -0.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord32 s12 = (SWord32) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SWord32 s14 = (SWord32) s13;
+  const SWord32 s15 = s10 ? s12 : s14;
+  const SWord32 s17 = s4 ? s15 : 0x00000000UL;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Word32.c" ==================
 == BEGIN: "fromFP_DoubleTo_Word64.c" ================
@@ -736,16 +751,17 @@ SWord64 fromFP_DoubleTo_Word64(const SDouble a)
   const SBool   s2 = isinf(s0);
   const SBool   s3 = s1 || s2;
   const SBool   s4 = !s3;
-  const SBool   s6 = s0 >= -0x1p-1 /* -0.5 */;
-  const SBool   s8 = s0 <= 0x1p64 /* 1.8446744073709552e19 */;
-  const SBool   s9 = s6 && s8;
-  const SWord64 s11 = (SWord64) rint(s0);
-  const SInt64  s12 = (SInt64) rint(s0);
-  const SWord64 s13 = (SWord64) s12;
-  const SWord64 s14 = s9 ? s11 : s13;
-  const SWord64 s16 = s4 ? s14 : 0x0000000000000000ULL;
+  const SBool   s6 = s0 > 0x1p64 /* 1.8446744073709552e19 */;
+  const SBool   s8 = s0 < -0x1p-1 /* -0.5 */;
+  const SBool   s9 = s6 || s8;
+  const SBool   s10 = !s9;
+  const SWord64 s12 = (SWord64) rint(s0);
+  const SInt64  s13 = (SInt64) rint(s0);
+  const SWord64 s14 = (SWord64) s13;
+  const SWord64 s15 = s10 ? s12 : s14;
+  const SWord64 s17 = s4 ? s15 : 0x0000000000000000ULL;
 
-  return s16;
+  return s17;
 }
 == END: "fromFP_DoubleTo_Word64.c" ==================
 == BEGIN: "fromFP_DoubleTo_Float.c" ================
