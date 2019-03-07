@@ -21,7 +21,7 @@ module Data.SBV.SMT.SMT (
        , SatModel(..), genParse
        , extractModels, getModelValues
        , getModelDictionaries, getModelUninterpretedValues
-       , displayModels, showModel
+       , displayModels, showModel, shCV
 
        -- * Standard prover engine
        , standardEngine

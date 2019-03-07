@@ -344,14 +344,24 @@ class ExtractIO m => MProvable m a where
                                | kindOf sv == KBool = Left $ "Evaluation resulted in a symbolic value: " ++ show sv
                                | True               = Left $ "Evaluation resulted in a non-boolean value: " ++ show sv
 
-                             giveUp s = ProofError cfg [ "Cannot validate the current model."
-                                                       , ""
-                                                       , "Reason     : " ++ s
-                                                       , "Environment: " ++ show env
-                                                       , ""
-                                                       , "SBV's model validator is incomplete, and cannot handle this particular case."
-                                                       , "Please report this as a feature request or possibly a bug!"
-                                                       ]
+                             shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
+                             shB ((q, (_, n)), v) = show q ++ " " ++ n ++ " |-> " ++ shv
+                                where shv = case v of
+                                              Nothing -> "<unbound>"
+                                              Just c  -> shCV cfg c
+
+                             giveUp s = ProofError cfg (   [ "Cannot validate the model."
+                                                           , ""
+                                                           , "Reason     : " ++ s
+                                                           , "Environment:"  ++ if null env then " <empty>" else ""
+                                                           ]
+                                                        ++ [ ""              | not (null env)]
+                                                        ++ [ "    " ++ shB v | v <- env]
+                                                        ++ [ ""
+                                                           , "SBV's model validator is incomplete, and cannot handle this particular case."
+                                                           , "Please report this as a feature request or possibly a bug!"
+                                                           ]
+                                                       )
                                                        (Just res)
 
                              badModel = ProofError cfg [ "Data.SBV: Model validation failure!"
