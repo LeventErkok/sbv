@@ -69,6 +69,10 @@
 --
 --   * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 --
+--   * Model validation: SBV can validate models returned by solvers, which allows
+--     for protection against bugs in SMT solvers and SBV itself. (See the 'validateModel'
+--     parameter.)
+--
 -- The user can construct ordinary Haskell programs using these types, which behave
 -- very similar to their concrete counterparts. In particular these types belong to the
 -- standard classes 'Num', 'Bits', custom versions of 'Eq' ('EqSymbolic')
