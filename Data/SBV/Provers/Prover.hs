@@ -341,8 +341,10 @@ class ExtractIO m => MProvable m a where
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
-    where check env = do let shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
-                             shB ((_, (_, n)), v) = " " ++ n ++ " |-> " ++ shv
+    where check env = do let nlen = maximum $ 0 : [length n | ((_, (_, n)), _) <- env]
+
+                             shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
+                             shB ((_, (_, n)), v) = " " ++ n ++ replicate (nlen - length n) ' ' ++ " |-> " ++ shv
                                 where shv = case v of
                                               Nothing -> "<unbound>"
                                               Just c  -> shCV cfg c
@@ -356,7 +358,8 @@ class ExtractIO m => MProvable m a where
 
                          result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 
-                         let explain  = [ ""
+                         let 
+                             explain  = [ ""
                                         , "Environment:"  ++ if null env then " <empty>" else ""
                                         ]
                                      ++ [ ""              | not (null env)]
