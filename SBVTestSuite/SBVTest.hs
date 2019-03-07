@@ -36,6 +36,7 @@ import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
 import qualified TestSuite.Basics.List
+import qualified TestSuite.Basics.ModelValidate
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
@@ -152,6 +153,7 @@ localOnlyTests :: TestTree
 localOnlyTests = testGroup "SBVLocalOnlyTests" [
                      TestSuite.Basics.Exceptions.testsLocal
                    , TestSuite.Basics.BarrelRotate.tests      -- Requires CVC4
+                   , TestSuite.Basics.ModelValidate.testsABC  -- Requires ABC
                    , TestSuite.Queries.BasicQuery.tests
                    , TestSuite.Queries.BadOption.tests
                    , TestSuite.Queries.Int_ABC.tests
@@ -181,6 +183,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Basics.Index.tests
                , TestSuite.Basics.IteTest.tests
                , TestSuite.Basics.List.tests
+               , TestSuite.Basics.ModelValidate.tests
                , TestSuite.Basics.ProofTests.tests
                , TestSuite.Basics.PseudoBoolean.tests
                , TestSuite.Basics.QRem.tests

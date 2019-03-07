@@ -249,6 +249,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.IteTest
                   , TestSuite.Basics.List
+                  , TestSuite.Basics.ModelValidate
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.PseudoBoolean
                   , TestSuite.Basics.QRem
