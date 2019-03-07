@@ -279,17 +279,33 @@ class HasKind a => IEEEFloatConvertible a where
 
   -- | Is the given float in range for the conversion?
   sFloatInRange :: SRoundingMode -> Proxy a -> SFloat -> SBool
+  sFloatInRange rm p f = sNot (sFloatOverflow rm p f .|| sFloatUnderflow rm p f)
 
-  -- | Range of doubles that can be safely mapped to this type, per rounding mode
+  -- | Will the given float overflow after conversion?
+  sFloatOverflow  :: SRoundingMode -> Proxy a -> SFloat -> SBool
+  sFloatOverflow rm pa f = sAnd [check m fr | ((k, m), (fr, _)) <- conversionBounds, k == kindOf pa]
+    where check m (_, ub) = literal m .== rm .=> (f .> literal ub)
+
+  -- | Will the given float underflow after conversion?
+  sFloatUnderflow  :: SRoundingMode -> Proxy a -> SFloat -> SBool
+  sFloatUnderflow rm pa f = sAnd [check m fr | ((k, m), (fr, _)) <- conversionBounds, k == kindOf pa]
+    where check m (lb, _) = literal m .== rm .=> (f .< literal lb)
+
+  -- | Is the given float in range for the conversion?
   sDoubleInRange :: SRoundingMode -> Proxy a -> SDouble -> SBool
+  sDoubleInRange rm p d = sNot (sDoubleOverflow rm p d .|| sDoubleUnderflow rm p d)
+
+  -- | Will the given double overflow after conversion?
+  sDoubleOverflow  :: SRoundingMode -> Proxy a -> SDouble -> SBool
+  sDoubleOverflow rm pa d = sAnd [check m dr | ((k, m), (_, dr)) <- conversionBounds, k == kindOf pa]
+    where check m (_, ub) = literal m .== rm .=> (d .> literal ub)
+
+  -- | Will the given double underflow after conversion?
+  sDoubleUnderflow  :: SRoundingMode -> Proxy a -> SDouble -> SBool
+  sDoubleUnderflow rm pa d = sAnd [check m dr | ((k, m), (_, dr)) <- conversionBounds, k == kindOf pa]
+    where check m (lb, _) = literal m .== rm .=> (d .< literal lb)
 
   {-# MINIMAL fromSDouble, toSDouble, fromSFloat, toSFloat #-}
-
-  sFloatInRange rm pa f = sAnd [check m fr | ((k, m), (fr, _)) <- conversionBounds, k == kindOf pa]
-    where check m (lb, ub) = literal m .== rm .=> (f .>= literal lb .&& f .<= literal ub)
-
-  sDoubleInRange rm pa d = sAnd [check m dr | ((k, m), (_, dr)) <- conversionBounds, k == kindOf pa]
-    where check m (lb, ub) = literal m .== rm .=> (d .>= literal lb .&& d .<= literal ub)
 
 -- | A generic converter that will work for most of our instances. (But not all!)
 genericFPConverter :: forall a r. (SymVal a, HasKind r, SymVal r, Num r)
