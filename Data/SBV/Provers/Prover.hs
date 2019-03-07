@@ -341,29 +341,25 @@ class ExtractIO m => MProvable m a where
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
-    where check env = do let nlen = maximum $ 0 : [length n | ((_, (_, n)), _) <- env]
-
-                             shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
-                             shB ((_, (_, n)), v) = " " ++ n ++ replicate (nlen - length n) ' ' ++ " |-> " ++ shv
-                                where shv = case v of
-                                              Nothing -> "<unbound>"
-                                              Just c  -> shCV cfg c
+    where check env = do let envShown = showModelDictionary True True cfg modelBinds
+                                where modelBinds = [(n, fake s v) | ((_, (s, n)), v) <- env]
+                                      fake s Nothing  = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<unbound>")
+                                      fake _ (Just v) = RegularCV v
 
                              notify s
                                | not (verbose cfg) = return ()
                                | True              = debug cfg ["[VALIDATE] " `alignPlain` s]
 
                          notify $ "Validating the model in the " ++ if null env then "empty environment." else "environment:"
-                         mapM_ notify ["    " ++ shB v | v <- env]
+                         mapM_ notify ["    " ++ l | l <- lines envShown]
 
                          result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 
-                         let 
-                             explain  = [ ""
+                         let explain  = [ ""
                                         , "Environment:"  ++ if null env then " <empty>" else ""
                                         ]
-                                     ++ [ ""              | not (null env)]
-                                     ++ [ "    " ++ shB v | v <- env]
+                                     ++ [ ""          | not (null env)]
+                                     ++ [ "    " ++ l | l <- lines envShown]
                                      ++ [ "" ]
 
                              wrap tag extras = return $ ProofError cfg (tag : explain ++ extras) (Just res)

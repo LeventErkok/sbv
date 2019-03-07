@@ -21,7 +21,7 @@ module Data.SBV.SMT.SMT (
        , SatModel(..), genParse
        , extractModels, getModelValues
        , getModelDictionaries, getModelUninterpretedValues
-       , displayModels, showModel, shCV
+       , displayModels, showModel, shCV, showModelDictionary
 
        -- * Standard prover engine
        , standardEngine
@@ -450,7 +450,7 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
   Unsatisfiable _ uc                 -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ _ [] []) -> satMsg
   Satisfiable _ m                    -> satMsgModel ++ showModel cfg m
-  SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True cfg b
+  SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
   Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
   ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."
   ProofError  _ ls Nothing           -> "*** An error occurred.\n" ++ intercalate "\n" (map ("***  " ++) ls)
@@ -473,14 +473,14 @@ showModel cfg model
    = nonUIFuncs
    | True
    = sep nonUIFuncs ++ intercalate "\n\n" (map (showModelUI cfg) uiFuncs)
-   where nonUIFuncs = showModelDictionary (null uiFuncs) cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
+   where nonUIFuncs = showModelDictionary (null uiFuncs) False cfg [(n, RegularCV c) | (n, c) <- modelAssocs model]
          uiFuncs    = modelUIFuns model
          sep ""     = ""
          sep x      = x ++ "\n\n"
 
 -- | Show bindings in a generalized model dictionary, tabulated
-showModelDictionary :: Bool -> SMTConfig -> [(String, GeneralizedCV)] -> String
-showModelDictionary warnEmpty cfg allVars
+showModelDictionary :: Bool -> Bool -> SMTConfig -> [(String, GeneralizedCV)] -> String
+showModelDictionary warnEmpty includeEverything cfg allVars
    | null allVars
    = warn "[There are no variables bound by the model.]"
    | null relevantVars
@@ -490,7 +490,9 @@ showModelDictionary warnEmpty cfg allVars
   where warn s = if warnEmpty then s else ""
 
         relevantVars  = filter (not . ignore) allVars
-        ignore (s, _) = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
+        ignore (s, _)
+          | includeEverything = False
+          | True              = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))
