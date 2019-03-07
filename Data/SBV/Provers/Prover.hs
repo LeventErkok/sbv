@@ -45,7 +45,7 @@ import System.Directory  (getCurrentDirectory)
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
 import Data.List (intercalate, isPrefixOf, nub)
 
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, listToMaybe)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Foldable   as S (toList)
@@ -325,7 +325,7 @@ class ExtractIO m => MProvable m a where
 
   -- | Validate a model obtained from the solver
   validate :: Bool -> SMTConfig -> a -> SMTResult -> m SMTResult
-  validate isSat cfg p res = case res of
+  validate isSAT cfg p res = case res of
                                Unsatisfiable{} -> return res
                                Satisfiable _ m -> case modelBindings m of
                                                     Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings during model validation."
@@ -341,51 +341,109 @@ class ExtractIO m => MProvable m a where
                                ProofError{}    -> return res
 
     where check env = do let shB :: ((Quantifier, NamedSymVar), Maybe CV) -> String
-                             shB ((q, (_, n)), v) = show q ++ " " ++ n ++ " |-> " ++ shv
+                             shB ((_, (_, n)), v) = " " ++ n ++ " |-> " ++ shv
                                 where shv = case v of
                                               Nothing -> "<unbound>"
                                               Just c  -> shCV cfg c
 
-                         when (verbose cfg) $ liftIO $ do putStrLn $ "[VALIDATE] Validating the model in the " ++ if null env then "empty environment." else "environment:"
-                                                          mapM_ putStrLn [ "             " ++ shB v | v <- env]
+                             notify s
+                               | not (verbose cfg) = return ()
+                               | True              = liftIO $ do putStrLn $ "[VALIDATE] " ++ s
 
-                         result <- snd <$> runSymbolic (Concrete (Just env)) ((if isSat then forSome_ p else forAll_ p) >>= output)
+                         notify $ "Validating the model in the " ++ if null env then "empty environment." else "environment:"
+                         mapM_ notify ["    " ++ shB v | v <- env]
 
-                         let classify sv
-                               | sv == trueSV       = Right True
-                               | sv == falseSV      = Right False
-                               | kindOf sv == KBool = Left $ "Evaluation resulted in a symbolic value: " ++ show sv
-                               | True               = Left $ "Evaluation resulted in a non-boolean value: " ++ show sv
+                         result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 
+                         let explain  = [ ""
+                                        , "Environment:"  ++ if null env then " <empty>" else ""
+                                        ]
+                                     ++ [ ""              | not (null env)]
+                                     ++ [ "    " ++ shB v | v <- env]
+                                     ++ [ "" ]
 
-                             giveUp s = ProofError cfg (   [ "Cannot validate the model."
-                                                           , ""
-                                                           , "Reason     : " ++ s
-                                                           , "Environment:"  ++ if null env then " <empty>" else ""
-                                                           ]
-                                                        ++ [ ""              | not (null env)]
-                                                        ++ [ "    " ++ shB v | v <- env]
-                                                        ++ [ ""
-                                                           , "SBV's model validator is incomplete, and cannot handle this particular case."
-                                                           , "Please report this as a feature request or possibly a bug!"
-                                                           ]
-                                                       )
-                                                       (Just res)
+                             wrap tag extras = return $ ProofError cfg (tag : explain ++ extras) (Just res)
 
-                             badModel = ProofError cfg [ "Data.SBV: Model validation failure!"
-                                                       , ""
-                                                       , "Backend solver returned a model that does not satisfy the constraints."
-                                                       , "This could indicate a bug in the backend solver, or SBV itself. Please report."
-                                                       ]
-                                                       (Just res)
+                             giveUp   s     = wrap ("Data.SBV: Cannot validate the model: " ++ s)
+                                                   [ "SBV's model validator is incomplete, and cannot handle this particular case."
+                                                   , "Please report this as a feature request or possibly a bug!"
+                                                   ]
 
-                         case resOutputs result of
-                            [sv] -> case (classify sv, isSat) of
-                                      (Left m, _)          -> return $ giveUp m
-                                      (Right True,  True)  -> return res
-                                      (Right False, False) -> return res
-                                      _                    -> return badModel
-                            o -> return $ giveUp $ "Evaluation resulted in the following unexpected output: " ++ show o
+                             badModel s     = wrap ("Data.SBV: Model validation failure: " ++ s)
+                                                   [ "Backend solver returned a model that does not satisfy the constraints."
+                                                   , "This could indicate a bug in the backend solver, or SBV itself. Please report."
+                                                   ]
+
+                             notSymbolic sv = wrap ("Data.SBV: Cannot validate the model, since " ++ show sv ++ " is not concretely computable.")
+                                                   ["SBV's model validator is incomplete, and cannot handle this particular case."
+                                                   , "Please report this as a feature request or possibly a bug!"
+                                                   ]
+
+                             cstrs = S.toList $ resConstraints result
+
+                             -- If isSAT, then all constraints must hold. If prove, then we actually don't care
+                             -- whether the current-counterexample satisfies that constraint. Imagine 'constrain $ x > x'
+                             -- This will obviously fail, but will not invalidate a proof.
+                             walkConstraints [] cont = do
+                                unless (null cstrs) $ notify "Validated all constraints."
+                                cont
+                             walkConstraints ((isSoft, attrs, sv) : rest) cont
+                                | kindOf sv /= KBool
+                                = giveUp $ "Constraint tied to " ++ show sv ++ " is non-boolean."
+                                | not isSAT || isSoft || sv == trueSV
+                                = walkConstraints rest cont
+                                | sv == falseSV
+                                = case mbName of
+                                    Just nm -> badModel $ "Named constraint " ++ show nm ++ " evaluated to False."
+                                    Nothing -> badModel "A constraint was violated."
+                                | True
+                                = notSymbolic sv
+                                where mbName = listToMaybe [n | (":named", n) <- attrs]
+
+                             -- SAT: All outputs must be true
+                             satLoop []
+                               = do notify "All outputs are satisfied. Validation complete."
+                                    return res
+                             satLoop (sv:svs)
+                               | kindOf sv /= KBool
+                               = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."
+                               | sv == trueSV
+                               = satLoop svs
+                               | sv == falseSV
+                               = badModel $ "Final output evaluated to False."
+                               | True
+                               = notSymbolic sv
+
+                             -- Proof: At least one output must be false
+                             proveLoop [] somethingFailed
+                               | somethingFailed = do notify "Counterexample is validated."
+                                                      return res
+                               | True            = do notify "Counterexample violates none of the outputs."
+                                                      badModel "Counter-example violates no constraints."
+                             proveLoop (sv:svs) somethingFailed
+                               | kindOf sv /= KBool
+                               = giveUp $ "Output tied to " ++ show sv ++ " is non-boolean."
+                               | sv == trueSV
+                               = proveLoop svs somethingFailed
+                               | sv == falseSV
+                               = proveLoop svs True
+                               | True
+                               = notSymbolic sv
+
+                             -- Output checking is tricky, since we behave differently for different modes
+                             checkOutputs []
+                               | null cstrs
+                               = giveUp "Impossible happened: There are no outputs nor any constraints to check."
+                             checkOutputs os
+                               = do notify "Validating outputs."
+                                    if isSAT then satLoop    os
+                                             else proveLoop os False
+
+                         notify $ if null cstrs
+                                  then "There are no constraints to check."
+                                  else "Validating constraints."
+
+                         walkConstraints cstrs (checkOutputs (resOutputs result))
 
 -- | `Provable` is specialization of `MProvable` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
