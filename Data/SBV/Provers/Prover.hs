@@ -425,7 +425,7 @@ class ExtractIO m => MProvable m a where
                                | sv == trueSV
                                = satLoop svs
                                | sv == falseSV
-                               = badModel $ "Final output evaluated to False."
+                               = badModel "Final output evaluated to False."
                                | True
                                = notConcrete sv
 
