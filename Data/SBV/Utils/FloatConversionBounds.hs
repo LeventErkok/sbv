@@ -22,7 +22,7 @@ import Data.SBV.Core.Symbolic (RoundingMode(..))
 
 -- | For each target type and rounding mode, returns the valid conversion bounds from floats and doubles.
 -- Each pair on the right hand side shows the inclusive lower and upper bounds that are safely convertible in the
--- given rounding mode to the corresponding type, using 'fromSFloat' and 'fromSDouble', respectively.
+-- given rounding mode to the corresponding type, using 'Data.SBV.fromSFloat' and 'Data.SBV.fromSDouble', respectively.
 conversionBounds :: [((Kind, RoundingMode), ((Float, Float), (Double, Double)))]
 conversionBounds = [
     ((KBounded False 8 , RoundNearestTiesToEven), ((-0x1p-1       , 0x1.fefffep7 ), (-0x1p-1               , 0x1.fefffffffffffp7  ))) -- SWord8
