@@ -28,7 +28,7 @@
 *** Solver   : ABC
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model in the environment:
-[VALIDATE]      x |-> 255 :: Word8
+[VALIDATE]      x = 255 :: Word8
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 
@@ -37,7 +37,7 @@ FINAL OUTPUT:
 *** 
 *** Environment:
 *** 
-***      x |-> 255 :: Word8
+***      x = 255 :: Word8
 *** 
 *** Backend solver returned a model that does not satisfy the constraints.
 *** This could indicate a bug in the backend solver, or SBV itself. Please report.

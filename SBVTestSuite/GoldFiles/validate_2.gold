@@ -29,7 +29,7 @@
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model in the environment:
-[VALIDATE]      x |-> 1.0884394e-19 :: Float
+[VALIDATE]       x = 1.0884394e-19 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 
@@ -38,7 +38,7 @@ FINAL OUTPUT:
 *** 
 *** Environment:
 *** 
-***      x |-> 1.0884394e-19 :: Float
+***       x = 1.0884394e-19 :: Float
 *** 
 *** Floating point FMA operation is not supported concretely.
 *** 

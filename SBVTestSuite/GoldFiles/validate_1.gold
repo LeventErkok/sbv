@@ -29,7 +29,7 @@
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model in the environment:
-[VALIDATE]      x |-> 0.0 :: Float
+[VALIDATE]       x = 0.0 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 
@@ -38,7 +38,7 @@ FINAL OUTPUT:
 *** 
 *** Environment:
 *** 
-***      x |-> 0.0 :: Float
+***       x = 0.0 :: Float
 *** 
 *** Floating point operations are only supported with constant RNE rounding mode.
 *** 

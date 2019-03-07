@@ -34,8 +34,8 @@
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model in the environment:
-[VALIDATE]      x |-> 3 :: Integer
-[VALIDATE]      y |-> 0 :: Integer
+[VALIDATE]       x = 3 :: Integer
+[VALIDATE]       y = 0 :: Integer
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 [VALIDATE] All outputs are satisfied. Validation complete.
