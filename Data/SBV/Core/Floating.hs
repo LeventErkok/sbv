@@ -227,18 +227,19 @@ class HasKind a => IEEEFloatConvertible a where
   -- Q.E.D.
   -- >>> prove $ roundTrip @Word16
   -- Q.E.D.
-  -- >>> prove $ roundTrip @Int32
+  -- >>> prove $ roundTrip @Int32 sRNE
   -- Falsifiable. Counter-example:
-  --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =             -268435454 :: Int32
+  --   s0 = 302022785 :: Int32
   --
-  -- Note how we get a failure on `Int32`. The value @-268435454@ is not representable exactly
-  -- as a single precision float:
+  -- Note how we get a failure on `Int32`. (We forced this example to use 'sRNE' since we
+  -- cannot demonstrate the failure with Haskell other rounding modes!) The value @302022785@ is
+  -- not representable exactly as a single precision float:
   --
-  -- >>> toRational (-268435454 :: Float)
-  -- (-268435456) % 1
+  -- >>> toRational (302022785 :: Float)
+  -- 302022784 % 1
   --
-  -- Note how the numerator is different!
+  -- Note how the numerator is off-by-one! The failure on 'Int32' is not unique to 'sRNE', however,
+  -- as in that range floats become sparser to cover all the integer values representable.
   toSFloat    :: SRoundingMode -> SBV a -> SFloat
 
   -- | Convert from an IEEE74 double precision float.
@@ -263,18 +264,17 @@ class HasKind a => IEEEFloatConvertible a where
   -- Q.E.D.
   -- >>> prove $ roundTrip @Word32
   -- Q.E.D.
-  -- >>> prove $ roundTrip @Int64
+  -- >>> prove $ roundTrip @Int64 sRNE
   -- Falsifiable. Counter-example:
-  --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =   -1152919305583591360 :: Int64
+  --   s0 = -2306124381113810684 :: Int64
   --
   -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
   -- integer value for all possible values:
   --
-  -- >>> toRational (-1152919305583591360 :: Double)
-  -- (-1152919305583591424) % 1
+  -- >>> toRational (-2306124381113810684 ::Double)
+  -- (-2306124381113810432) % 1
   --
-  -- Again the numerator is different!
+  -- Again the numerator is different, this time by quite a bit!
   toSDouble :: SRoundingMode -> SBV a -> SDouble
 
   -- | Is the given float in range for the conversion?
