@@ -343,8 +343,14 @@ getModelAtIndex mbi = do
                                                   Just (_, cv) -> return (i, Just cv)
                                                   Nothing      -> do cv <- getValueCV mbi sv
                                                                      return (i, Just cv)
+
+                          flipQ i@(q, sv) = case (isSAT, q) of
+                                             (True,  _ )  -> i
+                                             (False, EX)  -> (ALL, sv)
+                                             (False, ALL) -> (EX,  sv)
+
                       in if validateModel cfg
-                         then Just <$> mapM get inps
+                         then Just <$> mapM (get . flipQ) inps
                          else return Nothing
 
           uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
