@@ -53,6 +53,7 @@ import qualified Data.Foldable   as S (toList)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
+import Data.SBV.SMT.Utils (debug, alignPlain)
 import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.TDiff
 
@@ -348,7 +349,7 @@ class ExtractIO m => MProvable m a where
 
                              notify s
                                | not (verbose cfg) = return ()
-                               | True              = liftIO $ do putStrLn $ "[VALIDATE] " ++ s
+                               | True              = debug cfg ["[VALIDATE] " `alignPlain` s]
 
                          notify $ "Validating the model in the " ++ if null env then "empty environment." else "environment:"
                          mapM_ notify ["    " ++ shB v | v <- env]
