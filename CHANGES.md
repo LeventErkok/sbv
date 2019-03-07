@@ -37,6 +37,13 @@
     For an example use case demonstrating how to use UF-models to synthesize a
     simple multiplier, see "Documentation/SBV/Examples/Uninterpreted/Multiply.hs".
 
+  * SBV now comes with a model validator. In a 'sat', 'prove', or 'allSat' call,
+    you can pass the configuration parameter 'z3{validateModel = True}' (or whichever
+    solver you're using), and z3 will attempt to validate the returned model
+    from the solver. Note that validation only works if there are no uninterpreted
+    kinds of functions, and also in quantifier-free problems only. Please report
+    your experiences, as there's room for improvement in validation, always!
+
   * [BACKWARDS COMPATIBILITY] The `allSat` function is similarly modified to
     return uninterpreted-function models. There are a few technical restrictions,
     however: Only the values of uninterpreted functions without any uninterpreted
