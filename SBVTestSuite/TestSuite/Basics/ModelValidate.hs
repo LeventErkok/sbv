@@ -21,7 +21,7 @@ import Utils.SBVTestFramework
 -- Test suite, this needs ABC
 testsABC :: TestTree
 testsABC = testGroup "Basics.ModelValidate.ABC" [
-             goldenCapturedIO "abc_badValidate" badABC
+             goldenCapturedIO "validate_0" badABC
            ]
     where badABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ forSome ["x"] $ \x -> x .< (10::SWord8)
                                appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
@@ -53,6 +53,7 @@ tests = testGroup "Basics.ModelValidate" [
           t4 = do x <- sInteger "x"
                   y <- sInteger "y"
                   constrain $ x .> y
+                  constrain $ x .> 12
                   return $ x .== y+3
 
           t5 = do x <- exists "x"

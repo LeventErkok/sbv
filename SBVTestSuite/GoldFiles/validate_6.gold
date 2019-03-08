@@ -10,7 +10,8 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s3 () Int 3)
+[GOOD] (define-fun s3 () Int 12)
+[GOOD] (define-fun s5 () Int 3)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "x"
 [GOOD] (declare-fun s1 () Int) ; tracks user variable "y"
@@ -21,26 +22,29 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s2 () Bool (> s0 s1))
-[GOOD] (define-fun s4 () Int (+ s1 s3))
-[GOOD] (define-fun s5 () Bool (= s0 s4))
+[GOOD] (define-fun s4 () Bool (> s0 s3))
+[GOOD] (define-fun s6 () Int (+ s1 s5))
+[GOOD] (define-fun s7 () Bool (= s0 s6))
 [GOOD] (assert s2)
-[GOOD] (assert (not s5))
+[GOOD] (assert s4)
+[GOOD] (assert (not s7))
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 0))
+[RECV] ((s0 13))
 [SEND] (get-value (s1))
-[RECV] ((s1 (- 1)))
+[RECV] ((s1 11))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model in the environment:
-[VALIDATE]       x =  0 :: Integer
-[VALIDATE]       y = -1 :: Integer
-[VALIDATE] There are no constraints to check.
+[VALIDATE]       x = 13 :: Integer
+[VALIDATE]       y = 11 :: Integer
+[VALIDATE] Validating 2 constraint(s).
+[VALIDATE] Validated all constraints.
 [VALIDATE] Validating outputs.
 [VALIDATE] Counterexample is validated.
 
 FINAL OUTPUT:
 Falsifiable. Counter-example:
-  x =  0 :: Integer
-  y = -1 :: Integer
+  x = 13 :: Integer
+  y = 11 :: Integer
