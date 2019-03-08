@@ -59,7 +59,7 @@ module Data.SBV.Core.Symbolic
 
 import Control.Arrow               (first, second, (***))
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when, unless)
+import Control.Monad               (when)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -1507,10 +1507,25 @@ imposeConstraint isSoft attrs c = do st <- symbolicEnv
 -- | Require a boolean condition to be true in the state. Only used for internal purposes.
 internalConstraint :: State -> Bool -> [(String, String)] -> SVal -> IO ()
 internalConstraint st isSoft attrs b = do v <- svToSV st b
-                                          let c = (isSoft, attrs, v)
-                                          unless (null attrs && v == trueSV) $
-                                                 modifyState st rConstraints (S.|> c)
-                                                              $ modifyIncState st rNewConstraints (S.|> c)
+
+                                          rm <- liftIO $ readIORef (runMode st)
+
+                                          -- Are we running validation? If so, we always want to
+                                          -- add the constraint for debug purposes. Otherwie
+                                          -- we only add it if it's interesting; i.e., not directly
+                                          -- true or has some attributes.
+                                          let isValidating = case rm of
+                                                               SMTMode _ _ _ cfg -> validateModel cfg
+                                                               CodeGen           -> False
+                                                               Concrete Nothing  -> False
+                                                               Concrete (Just _) -> True   -- The case when we *are* running the validation
+
+                                          let c           = (isSoft, attrs, v)
+                                              interesting = v /= trueSV || not (null attrs)
+
+                                          when (isValidating || interesting) $
+                                               modifyState st rConstraints (S.|> c)
+                                                            $ modifyIncState st rNewConstraints (S.|> c)
 
 -- | Generalization of 'Data.SBV.addSValOptGoal'
 addSValOptGoal :: MonadSymbolic m => Objective SVal -> m ()
