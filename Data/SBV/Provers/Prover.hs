@@ -200,6 +200,12 @@ class ExtractIO m => MProvable m a where
                    qinps      <- Control.getQuantifiedInputs
                    spgm       <- Control.getSBVPgm
 
+                   when (validateModel config) $
+                          error $ unlines [ ""
+                                          , "*** Data.SBV: Model validation is not supported in optimization calls."
+                                          , "*** To turn validation off, use `cfg{validateModel = False}`"
+                                          ]
+
                    when (null objectives) $
                           error $ unlines [ ""
                                           , "*** Data.SBV: Unsupported call to optimize when no objectives are present."
