@@ -406,16 +406,13 @@ class ExtractIO m => MProvable m a where
 
                              cstrs = S.toList $ resConstraints result
 
-                             -- If isSAT, then all constraints must hold. If prove, then we actually don't care
-                             -- whether the current-counterexample satisfies that constraint. Imagine 'constrain $ x > x'
-                             -- This will obviously fail, but will not invalidate a proof.
                              walkConstraints [] cont = do
                                 unless (null cstrs) $ notify "Validated all constraints."
                                 cont
                              walkConstraints ((isSoft, attrs, sv) : rest) cont
                                 | kindOf sv /= KBool
                                 = giveUp $ "Constraint tied to " ++ show sv ++ " is non-boolean."
-                                | not isSAT || isSoft || sv == trueSV
+                                | isSoft || sv == trueSV
                                 = walkConstraints rest cont
                                 | sv == falseSV
                                 = case mbName of
