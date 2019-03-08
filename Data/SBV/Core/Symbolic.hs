@@ -1491,13 +1491,14 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
-addNewSMTOption o =  do st <- symbolicEnv
-                        liftIO $ modifyState st rSMTOptions (o:) (return ())
+addNewSMTOption o = do st <- symbolicEnv
+                       liftIO $ modifyState st rSMTOptions (o:) (return ())
 
 -- | Generalization of 'Data.SBV.imposeConstraint'
 imposeConstraint :: MonadSymbolic m => Bool -> [(String, String)] -> SVal -> m ()
 imposeConstraint isSoft attrs c = do st <- symbolicEnv
                                      rm <- liftIO $ readIORef (runMode st)
+
                                      case rm of
                                        CodeGen -> error "SBV: constraints are not allowed in code-generation"
                                        _       -> liftIO $ do mapM_ (registerLabel "Constraint" st) [nm | (":named",  nm) <- attrs]
