@@ -342,9 +342,13 @@ class ExtractIO m => MProvable m a where
                                ProofError{}    -> return res
 
     where check env = do let envShown = showModelDictionary True True cfg modelBinds
-                                where modelBinds = [(n, fake s v) | ((_, (s, n)), v) <- env]
-                                      fake s Nothing  = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<unbound>")
-                                      fake _ (Just v) = RegularCV v
+                                where modelBinds = [(n, fake q s v) | ((q, (s, n)), v) <- env]
+                                      fake q s Nothing
+                                        | q == ALL
+                                        = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<universally quantified>")
+                                        | True
+                                        = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<no binding found>")
+                                      fake _ _ (Just v) = RegularCV v
 
                              notify s
                                | not (verbose cfg) = return ()
