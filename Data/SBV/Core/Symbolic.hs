@@ -1338,7 +1338,7 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
 
                                        cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
                                               []              -> bad ("Cannot locate variable: " ++ show nsv) report
-                                              [(ALL, _)]      -> bad ("Cannot validate models in the presence of universally quantified variable: " ++ show (snd nsv)) cant
+                                              [(ALL, _)]      -> bad ("Cannot validate models in the presence of universally quantified variable " ++ show (snd nsv)) cant
                                               [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (snd nsv)) report
                                               [(EX, Just c)]  -> c
                                               r               -> bad (   "Found multiple matching values for variable: " ++ show nsv
