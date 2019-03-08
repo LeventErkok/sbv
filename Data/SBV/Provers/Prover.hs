@@ -387,11 +387,11 @@ class ExtractIO m => MProvable m a where
                                         why s = case s `lookup` S.toList (pgmAssignments (resAsgns result)) of
                                                   Nothing            -> Nothing
                                                   Just (SBVApp o as) -> case o of
-                                                                          Uninterpreted v   -> Just $ "The value depends on the uninterpreted constant " ++ show v
+                                                                          Uninterpreted v   -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
                                                                           IEEEFP FP_FMA     -> Just "Floating point FMA operation is not supported concretely."
                                                                           IEEEFP _          -> Just "Floating point operations are only supported with constant RNE rounding mode."
-                                                                          OverflowOp _      -> Just "Overflow-checking is not done concretely"
-                                                                          StrOp (StrInRe _) -> Just "Regular expression matches are not concretely supported."
+                                                                          OverflowOp _      -> Just "Overflow-checking is not done concretely."
+                                                                          StrOp (StrInRe _) -> Just "Regular expression matches are not supported in validation mode."
                                                                           _                 -> listToMaybe $ mapMaybe why as
 
                              cstrs = S.toList $ resConstraints result
