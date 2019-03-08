@@ -466,7 +466,7 @@ class ExtractIO m => MProvable m a where
 
                          notify $ if null cstrs
                                   then "There are no constraints to check."
-                                  else "Validating constraints."
+                                  else "Validating " ++ show (length cstrs) ++ " constraint(s)."
 
                          walkConstraints cstrs (checkOutputs (resOutputs result))
 
