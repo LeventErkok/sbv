@@ -668,8 +668,8 @@ runSolver cfg ctx execPath opts pgm continuation
                       where safeGetLine isFirst h =
                                          let timeOutToUse | isFirst = mbTimeOut
                                                           | True    = Just 5000000
-                                             timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded."
-                                                          | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded."
+                                             timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded"
+                                                          | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded"
 
                                              -- Like hGetLine, except it keeps getting lines if inside a string.
                                              getFullLine :: IO String
