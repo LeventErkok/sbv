@@ -393,32 +393,8 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                  ++  [cvtTest ("toFP_Integer_ToDouble", show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- iUBs]
                  ++  [cvtTest ("toFP_Real_ToDouble",    show x, toSDouble sRNE (literal x), fromRational (toRational x)) | x <- rs  ]
 
-                 ++  [cvtTestI ("fromFP_Float_ToInt8",     show x, (fromSFloat sRNE :: SFloat -> SInt8)     (literal x),  (fpRound0 :: Float  -> Int8  )  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToInt16",    show x, (fromSFloat sRNE :: SFloat -> SInt16)    (literal x),  (fpRound0 :: Float  -> Int16 )  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToInt32",    show x, (fromSFloat sRNE :: SFloat -> SInt32)    (literal x),  (fpRound0 :: Float  -> Int32 )  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToInt64",    show x, (fromSFloat sRNE :: SFloat -> SInt64)    (literal x),  (fpRound0 :: Float  -> Int64 )  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToWord8",    show x, (fromSFloat sRNE :: SFloat -> SWord8)    (literal x),  (fpRound0 :: Float  -> Word8 )  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToWord16",   show x, (fromSFloat sRNE :: SFloat -> SWord16)   (literal x),  (fpRound0 :: Float  -> Word16)  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToWord32",   show x, (fromSFloat sRNE :: SFloat -> SWord32)   (literal x),  (fpRound0 :: Float  -> Word32)  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToWord64",   show x, (fromSFloat sRNE :: SFloat -> SWord64)   (literal x),  (fpRound0 :: Float  -> Word64)  x) | x <- fs]
-                 ++  [cvtTest  ("fromFP_Float_ToFloat",    show x, (fromSFloat sRNE :: SFloat -> SFloat)    (literal x),                         literal  x) | x <- fs]
-                 ++  [cvtTest  ("fromFP_Float_ToDouble",   show x, (fromSFloat sRNE :: SFloat -> SDouble)   (literal x),              (literal .  fp2fp)  x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToInteger",  show x, (fromSFloat sRNE :: SFloat -> SInteger)  (literal x), (fpRound0 :: Float   -> Integer) x) | x <- fs]
-                 ++  [cvtTestI ("fromFP_Float_ToReal",     show x, (fromSFloat sRNE :: SFloat -> SReal)     (literal x),       (fromRational . fpRatio0)  x) | x <- fs]
-
-                 ++  [cvtTestI ("fromFP_Double_ToInt8",    show x, (fromSDouble sRNE :: SDouble -> SInt8)    (literal x),  (fpRound0 :: Double -> Int8  ) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToInt16",   show x, (fromSDouble sRNE :: SDouble -> SInt16)   (literal x),  (fpRound0 :: Double -> Int16 ) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToInt32",   show x, (fromSDouble sRNE :: SDouble -> SInt32)   (literal x),  (fpRound0 :: Double -> Int32 ) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToInt64",   show x, (fromSDouble sRNE :: SDouble -> SInt64)   (literal x),  (fpRound0 :: Double -> Int64 ) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToWord8",   show x, (fromSDouble sRNE :: SDouble -> SWord8)   (literal x),  (fpRound0 :: Double -> Word8 ) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToWord16",  show x, (fromSDouble sRNE :: SDouble -> SWord16)  (literal x),  (fpRound0 :: Double -> Word16) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToWord32",  show x, (fromSDouble sRNE :: SDouble -> SWord32)  (literal x),  (fpRound0 :: Double -> Word32) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToWord64",  show x, (fromSDouble sRNE :: SDouble -> SWord64)  (literal x),  (fpRound0 :: Double -> Word64) x) | x <- ds]
-                 ++  [cvtTest  ("fromFP_Double_ToFloat",   show x, (fromSDouble sRNE :: SDouble -> SFloat)   (literal x),               (literal . fp2fp) x) | x <- ds]
-                 ++  [cvtTest  ("fromFP_Double_ToDouble",  show x, (fromSDouble sRNE :: SDouble -> SDouble)  (literal x),                         literal x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToInteger", show x, (fromSDouble sRNE :: SDouble -> SInteger) (literal x), (fpRound0 :: Double -> Integer) x) | x <- ds]
-                 ++  [cvtTestI ("fromFP_Double_ToReal",    show x, (fromSDouble sRNE :: SDouble -> SReal)    (literal x),       (fromRational . fpRatio0) x) | x <- ds]
-
+                 -- NB. We don't constant fold float/double conversions, so we skip these
+                 --
                  ++  [cvtTest  ("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (CN.wordToFloat  x)) | x <- w32s]
                  ++  [cvtTest  ("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (CN.wordToDouble x)) | x <- w64s]
 
