@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.0, 2019-01-14
+* Latest Hackage released version: 8.1, 2019-03-09
 
-### Version 8.1, Not yet released
+### Version 8.1, 2019-03-09
 
   * Added support for `SEither` and `SMaybe` types: symbolic sums and symbolic
     optional values. These can be accessed by importing `Data.SBV.Either` and
