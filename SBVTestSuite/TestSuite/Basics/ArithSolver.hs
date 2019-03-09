@@ -426,28 +426,30 @@ genFPConverts = [tst1 ("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                  ++  [("toFP_Real_ToDouble",    show x, mkThmC (m toSDouble) x (fromRational (toRational x))) | x <- rs  ]
 
                  -- Conversions from floats are only well-defined if the input is in-bounds. So we just check round-trip for these.
-                 ++  [("fromFP_Float_ToInt8",    show x, mkThmC' (m fromSFloat :: SFloat -> SInt8)     x ((round :: Float  -> Int8  )  x)) | i <- i8s,  i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToInt16",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt16)    x ((round :: Float  -> Int16 )  x)) | i <- i16s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToInt32",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt32)    x ((round :: Float  -> Int32 )  x)) | i <- i32s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToInt64",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt64)    x ((round :: Float  -> Int64 )  x)) | i <- i64s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToWord8",   show x, mkThmC' (m fromSFloat :: SFloat -> SWord8)    x ((round :: Float  -> Word8 )  x)) | i <- w8s,                 let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToWord16",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord16)   x ((round :: Float  -> Word16)  x)) | i <- w16s,                let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToWord32",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord32)   x ((round :: Float  -> Word32)  x)) | i <- w32s,                let x = fromIntegral i]
-                 ++  [("fromFP_Float_ToWord64",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord64)   x ((round :: Float  -> Word64)  x)) | i <- w64s,                let x = fromIntegral i]
+                 -- Also note that we clamp Int32/Word32/Int64/Word64 conversions further as floats become too sparse to handle those.
+                 ++  [("fromFP_Float_ToInt8",    show x, mkThmC' (m fromSFloat :: SFloat -> SInt8)     x ((round :: Float  -> Int8  )  x)) | i <- i8s,  let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToInt16",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt16)    x ((round :: Float  -> Int16 )  x)) | i <- i16s, let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToInt32",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt32)    x ((round :: Float  -> Int32 )  x)) | i <- i16s, let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToInt64",   show x, mkThmC' (m fromSFloat :: SFloat -> SInt64)    x ((round :: Float  -> Int64 )  x)) | i <- i16s, let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToWord8",   show x, mkThmC' (m fromSFloat :: SFloat -> SWord8)    x ((round :: Float  -> Word8 )  x)) | i <- w8s,  let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToWord16",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord16)   x ((round :: Float  -> Word16)  x)) | i <- w16s, let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToWord32",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord32)   x ((round :: Float  -> Word32)  x)) | i <- w16s, let x = fromIntegral i]
+                 ++  [("fromFP_Float_ToWord64",  show x, mkThmC' (m fromSFloat :: SFloat -> SWord64)   x ((round :: Float  -> Word64)  x)) | i <- w16s, let x = fromIntegral i]
 
                  ++  [("fromFP_Float_ToFloat",   show x, mkThm1  (m fromSFloat :: SFloat -> SFloat)    x                               x)  | x <- fs]
                  ++  [("fromFP_Float_ToDouble",  show x, mkThm1  (m fromSFloat :: SFloat -> SDouble)   x (                    fp2fp    x)) | x <- fs]
                  -- Neither Z3 nor MathSAT support Float->Integer/Float->Real conversion for the time being; so we skip those. See GitHub issue: #191
 
                  -- Conversions from doubles are only well-defined if the input is in-bounds. So we just check round-trip for these.
-                 ++  [("fromFP_Double_ToInt8",    show x, mkThmC' (m fromSDouble :: SDouble -> SInt8)   x ((round :: Double -> Int8  ) x)) | i <- i8s,  i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToInt16",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt16)  x ((round :: Double -> Int16 ) x)) | i <- i16s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToInt32",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt32)  x ((round :: Double -> Int32 ) x)) | i <- i32s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToInt64",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt64)  x ((round :: Double -> Int64 ) x)) | i <- i64s, i /= minBound, let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToWord8",   show x, mkThmC' (m fromSDouble :: SDouble -> SWord8)  x ((round :: Double -> Word8 ) x)) | i <- w8s,                 let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToWord16",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord16) x ((round :: Double -> Word16) x)) | i <- w16s,                let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToWord32",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord32) x ((round :: Double -> Word32) x)) | i <- w32s,                let x = fromIntegral i]
-                 ++  [("fromFP_Double_ToWord64",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord64) x ((round :: Double -> Word64) x)) | i <- w64s,                let x = fromIntegral i]
+                 -- Also note that we clamp Int64/Word64 conversions further as floats become too sparse to handle those.
+                 ++  [("fromFP_Double_ToInt8",    show x, mkThmC' (m fromSDouble :: SDouble -> SInt8)   x ((round :: Double -> Int8  ) x)) | i <- i8s,  let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToInt16",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt16)  x ((round :: Double -> Int16 ) x)) | i <- i16s, let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToInt32",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt32)  x ((round :: Double -> Int32 ) x)) | i <- i32s, let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToInt64",   show x, mkThmC' (m fromSDouble :: SDouble -> SInt64)  x ((round :: Double -> Int64 ) x)) | i <- i32s, let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToWord8",   show x, mkThmC' (m fromSDouble :: SDouble -> SWord8)  x ((round :: Double -> Word8 ) x)) | i <- w8s,  let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToWord16",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord16) x ((round :: Double -> Word16) x)) | i <- w16s, let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToWord32",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord32) x ((round :: Double -> Word32) x)) | i <- w32s, let x = fromIntegral i]
+                 ++  [("fromFP_Double_ToWord64",  show x, mkThmC' (m fromSDouble :: SDouble -> SWord64) x ((round :: Double -> Word64) x)) | i <- w32s, let x = fromIntegral i]
 
                  ++  [("fromFP_Double_ToFloat",   show x, mkThm1  (m fromSDouble :: SDouble -> SFloat)  x (                    fp2fp   x)) | x <- ds]
                  ++  [("fromFP_Double_ToDouble",  show x, mkThm1  (m fromSDouble :: SDouble -> SDouble) x                              x ) | x <- ds]
