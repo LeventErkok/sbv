@@ -40,7 +40,7 @@ FINAL OUTPUT:
 *** 
 ***       x = 0.0 :: Float
 *** 
-*** Floating point operations are only supported with constant RNE rounding mode.
+*** Not all floating point operations are supported concretely.
 *** 
 *** SBV's model validator is incomplete, and cannot handle this particular case.
 *** Please report this as a feature request or possibly a bug!
