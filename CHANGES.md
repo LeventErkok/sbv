@@ -130,11 +130,13 @@
     for details.
 
   * [BACKWARDS COMPATIBILITY] Renamed the class `IEEEFloatConvertable` to
-    `IEEEFloatConvertible`. (Typo in name!) Also reworked this class completely
-    to be more clear about conversions for out-of-bounds values, and added
-    tester functions for checking bounds for convertibility. Thanks to Matt Peddie
-    for pointing out the out-of-bounds issue, his help in crafting the new
-    design, and producing the bounds used by SBV.
+    `IEEEFloatConvertible`. (Typo in name!) Matt Peddie pointed out issues
+    regarding conversion of out-of-bounds float and double values to integral
+    types. Unfortunately SMTLib does not support these conversions, and we
+    had issues in getting Haskell, SMTLib, and C to agree. Summary: These conversions
+    are only guaranteed to work if they are done on numbers that lie within the
+    representable range of the target type. Thanks to Matt Peddie for pointing out
+    the out-of-bounds problem, his help in figuring out the issues.
 
   * [BACKWARDS COMPATIBILITY] The 'AllSat' result now tracks if search has stopped
     because the solver returned 'Unknown'. Previously this information was not
