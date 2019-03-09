@@ -51,10 +51,6 @@ module Data.SBV.Internals (
 
   -- * Defining new metrics
   , addSValOptGoal, sFloatAsComparableSWord32, sDoubleAsComparableSWord64
-
-  -- * Conversion bounds table from IEEE-floats to integral types
-  , conversionBounds
-
   ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -64,8 +60,6 @@ import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, l
 import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind)
 
 import Data.SBV.Core.Floating   (sFloatAsComparableSWord32, sDoubleAsComparableSWord64)
-
-import Data.SBV.Utils.FloatConversionBounds (conversionBounds)
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
