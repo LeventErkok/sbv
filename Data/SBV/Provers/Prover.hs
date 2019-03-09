@@ -399,7 +399,7 @@ class ExtractIO m => MProvable m a where
                                                   Just (SBVApp o as) -> case o of
                                                                           Uninterpreted v   -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
                                                                           IEEEFP FP_FMA     -> Just "Floating point FMA operation is not supported concretely."
-                                                                          IEEEFP _          -> Just "Floating point operations are only supported with constant RNE rounding mode."
+                                                                          IEEEFP _          -> Just "Not all floating point operations are supported concretely."
                                                                           OverflowOp _      -> Just "Overflow-checking is not done concretely."
                                                                           StrOp (StrInRe _) -> Just "Regular expression matches are not supported in validation mode."
                                                                           _                 -> listToMaybe $ mapMaybe why as
