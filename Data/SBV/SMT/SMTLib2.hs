@@ -1030,16 +1030,11 @@ handleFPCast kFrom kTo rm input
         cast KDouble            KFloat             a = addRM a "(_ to_fp 8 24)"
         cast KDouble            KDouble            a = addRM a "(_ to_fp 11 53)"
 
-        -- From float/double to unsigned/signed bit-vectors
-        -- NB. SMTLib says the result is undefined when the input value
-        -- is out-of-bounds for the target type. But Haskell doesn't do
-        -- that. We take care of this in 'fromSFloat'/'fromSDouble', so
-        -- when the code reaches here, we're "guaranteed" to be in bounds.
+        -- From float/double
         cast KFloat             (KBounded False m) a = addRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
         cast KDouble            (KBounded False m) a = addRM a $ "(_ fp.to_ubv " ++ show m ++ ")"
         cast KFloat             (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " ++ show m ++ ")"
         cast KDouble            (KBounded True  m) a = addRM a $ "(_ fp.to_sbv " ++ show m ++ ")"
-
 
         cast KFloat             KReal              a = "fp.to_real" ++ " " ++ a
         cast KDouble            KReal              a = "fp.to_real" ++ " " ++ a
