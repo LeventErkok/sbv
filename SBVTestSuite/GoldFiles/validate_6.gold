@@ -36,7 +36,7 @@
 [RECV] ((s1 11))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[VALIDATE] Validating the model in the environment:
+[VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x = 13 :: Integer
 [VALIDATE]       y = 11 :: Integer
 [VALIDATE] Validating 2 constraint(s).

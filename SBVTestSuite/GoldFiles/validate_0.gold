@@ -27,7 +27,7 @@
 [RECV] ((s0 #xff))
 *** Solver   : ABC
 *** Exit code: ExitSuccess
-[VALIDATE] Validating the model in the environment:
+[VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x = 255 :: Word8
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
@@ -35,7 +35,7 @@
 FINAL OUTPUT:
 *** Data.SBV: Model validation failure: Final output evaluated to False.
 *** 
-*** Environment:
+*** Assignment:
 *** 
 ***       x = 255 :: Word8
 *** 

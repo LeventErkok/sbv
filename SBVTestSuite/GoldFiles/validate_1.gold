@@ -28,7 +28,7 @@
 [RECV] ((s0 (_ +zero 8 24)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[VALIDATE] Validating the model in the environment:
+[VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x = 0.0 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
@@ -36,7 +36,7 @@
 FINAL OUTPUT:
 *** Data.SBV: Cannot validate the model, since s4 is not concretely computable.
 *** 
-*** Environment:
+*** Assignment:
 *** 
 ***       x = 0.0 :: Float
 *** 

@@ -360,13 +360,13 @@ class ExtractIO m => MProvable m a where
                                | not (verbose cfg) = return ()
                                | True              = debug cfg ["[VALIDATE] " `alignPlain` s]
 
-                         notify $ "Validating the model in the " ++ if null env then "empty environment." else "environment:"
+                         notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
                          mapM_ notify ["    " ++ l | l <- lines envShown]
 
                          result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 
                          let explain  = [ ""
-                                        , "Environment:"  ++ if null env then " <empty>" else ""
+                                        , "Assignment:"  ++ if null env then " <none>" else ""
                                         ]
                                      ++ [ ""          | not (null env)]
                                      ++ [ "    " ++ l | l <- lines envShown]

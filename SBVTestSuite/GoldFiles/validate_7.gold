@@ -33,7 +33,7 @@
 [RECV] ((s0 (_ -oo 8 24)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
-[VALIDATE] Validating the model in the environment:
+[VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x =                -Infinity :: Float
 [VALIDATE]       y = <universally quantified> :: Float
 
