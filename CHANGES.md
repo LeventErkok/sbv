@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.1, 2019-03-09
 
+### Version 8.1.5, Not yet released
+
+  * Curent develppment version
+
 ### Version 8.1, 2019-03-09
 
   * Added support for `SEither` and `SMaybe` types: symbolic sums and symbolic
