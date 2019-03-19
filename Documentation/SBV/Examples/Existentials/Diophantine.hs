@@ -45,7 +45,7 @@ ldn mbLim problem = do solution <- basis mbLim (map (map literal) m)
 
 -- | Find the basis solution. By definition, the basis has all non-trivial (i.e., non-0) solutions
 -- that cannot be written as the sum of two other solutions. We use the mathematically equivalent
--- statement that a solution is in the basis if it's least according to the lexicographic
+-- statement that a solution is in the basis if it's least according to the natural partial
 -- order using the ordinary less-than relation. (NB. We explicitly tell z3 to use the logic
 -- AUFLIA for this problem, as the BV solver that is chosen automatically has a performance
 -- issue. See: <http://z3.codeplex.com/workitem/88>.)
