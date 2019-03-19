@@ -274,7 +274,7 @@ parseLambdaExpression funExpr = case funExpr of
                           _       -> Nothing
 
                 -- Catch cases like: x = a)
-                go sofar (inner@(EApp [ECon "=", _, _]))
+                go sofar inner@(EApp [ECon "=", _, _])
                   = go sofar (EApp [ECon "ite", inner, true, false])
 
                 -- Catch cases like: not x
