@@ -152,7 +152,7 @@
                    21
                    7)))))
 [SEND] (get-value (q6))
-[RECV] ((q6 (lambda ((x!1 Int)) false)))
+[RECV] ((q6 ((as const Array) false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
