@@ -301,22 +301,22 @@ getModelAtIndex mbi = do
       m@Concrete{}        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
       SMTMode _ _ isSAT _ -> do
           cfg   <- getConfig
-          inps  <- getQuantifiedInputs
-          obsvs <- getObservables
+          qinps <- getQuantifiedInputs
           uis   <- getUIs
 
            -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-          let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) inps
-                                        else takeWhile ((== ALL) . fst) inps
+          let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) qinps
+                                        else takeWhile ((== ALL) . fst) qinps
 
-              -- are we inside a quantifier
-              insideQuantifier = length allModelInputs < length inps
+              -- Add on observables only if we're not in a quantified context
+              grabObservables = length allModelInputs == length qinps -- i.e., we didn't drop anything
 
-              -- observables are only meaningful if we're not in a quantified context
-              prefixObservables | insideQuantifier = []
-                                | True             = obsvs
+          obsvs <- if grabObservables
+                      then getObservables
+                      else do queryDebug ["*** In a quantified context, obvservables will not be printed."]
+                              return []
 
-              sortByNodeId :: [(SV, (String, CV))] -> [(String, CV)]
+          let sortByNodeId :: [(SV, (String, CV))] -> [(String, CV)]
               sortByNodeId = map snd . sortBy (compare `on` (\(SV _ nid, _) -> nid))
 
               grab (sv, nm) = wrap <$> getValueCV mbi sv
@@ -324,7 +324,7 @@ getModelAtIndex mbi = do
 
           inputAssocs <- mapM (grab . snd) allModelInputs
 
-          let assocs =  sortOn fst prefixObservables
+          let assocs =  sortOn fst obsvs
                      ++ sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
 
           -- collect UIs if requested
@@ -350,7 +350,7 @@ getModelAtIndex mbi = do
                                              (False, ALL) -> (EX,  sv)
 
                       in if validateModel cfg
-                         then Just <$> mapM (get . flipQ) inps
+                         then Just <$> mapM (get . flipQ) qinps
                          else return Nothing
 
           uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns

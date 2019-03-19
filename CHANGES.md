@@ -5,7 +5,7 @@
 
 ### Version 8.1.5, Not yet released
 
-  * Curent develppment version
+  * Fixed minor issue with getting observables in quantified contexts.
 
 ### Version 8.1, 2019-03-09
 
