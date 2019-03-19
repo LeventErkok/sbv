@@ -25,5 +25,6 @@
                    (not s4))))))
 [SEND] (check-sat)
 [RECV] sat
+*** In a quantified context, obvservables will not be printed.
 *** Solver   : Z3
 *** Exit code: ExitSuccess

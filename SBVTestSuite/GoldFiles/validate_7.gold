@@ -29,6 +29,7 @@
                    s8)))))))))
 [SEND] (check-sat)
 [RECV] sat
+*** In a quantified context, obvservables will not be printed.
 [SEND] (get-value (s0))
 [RECV] ((s0 (_ -oo 8 24)))
 *** Solver   : Z3
