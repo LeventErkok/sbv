@@ -56,8 +56,8 @@ Looking for solution 3
 [SEND] (get-value (q1))
 [RECV] ((q1 (lambda ((x!1 Bool)) (not x!1))))
 [GOOD] (define-fun q1_model3 ((x!0 Bool)) Bool
-          (ite (and (= x!0 false)) true
-          false)
+          (ite (and (= x!0 true)) false
+          true)
        )
 [GOOD] (define-fun q1_model3_reject () Bool
           (exists ((x!0 Bool))
@@ -94,8 +94,8 @@ Solution #2:
   q1 _ = True
 Solution #3:
   q1 :: Bool -> Bool
-  q1 False = True 
-  q1 _     = False
+  q1 True = False
+  q1 _    = True 
 Solution #4:
   q1 :: Bool -> Bool
   q1 True = True 
