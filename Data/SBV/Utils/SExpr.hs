@@ -273,6 +273,14 @@ parseLambdaExpression funExpr = case funExpr of
                           Just sv -> go (Left sv : sofar) elseBranch
                           _       -> Nothing
 
+                -- Catch cases like: (x = a)
+                go sofar (inner@(EApp [ECon "=", _, _]))
+                  = go sofar (EApp [ECon "ite", inner, true, false])
+
+                -- Catch cases like: not (x = a)
+                go sofar (EApp [ECon "not", inner@(EApp [ECon "=", _, _])])
+                  = go sofar (EApp [ECon "ite", inner, false, true])
+
                 -- z3 sometimes puts together a bunch of booleans as final expression,
                 -- see if we can catch that.
                 go sofar e
@@ -281,7 +289,7 @@ parseLambdaExpression funExpr = case funExpr of
 
                 -- Otherwise, just treat it as an "unknown" arbitrary expression
                 -- as the default. It could be something arbitrary of course, but it's
-                -- too complicated to parse; and hopefully this is good enogh.
+                -- too complicated to parse; and hopefully this is good enough.
                 go sofar e = Just $ Right e : sofar
 
                 cond :: [SExpr] -> [Either ([SExpr], SExpr) SExpr] -> Maybe ([SExpr], SExpr)
