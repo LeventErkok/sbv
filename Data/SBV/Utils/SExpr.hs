@@ -273,13 +273,27 @@ parseLambdaExpression funExpr = case funExpr of
                           Just sv -> go (Left sv : sofar) elseBranch
                           _       -> Nothing
 
-                -- Catch cases like: (x = a)
+                -- Catch cases like: x = a)
                 go sofar (inner@(EApp [ECon "=", _, _]))
                   = go sofar (EApp [ECon "ite", inner, true, false])
 
-                -- Catch cases like: not (x = a)
-                go sofar (EApp [ECon "not", inner@(EApp [ECon "=", _, _])])
+                -- Catch cases like: not x
+                go sofar (EApp [ECon "not", inner])
                   = go sofar (EApp [ECon "ite", inner, false, true])
+
+                -- Catch (or x y z..)
+                go sofar (EApp (ECon "or" : elts))
+                  = let xform []     = false
+                        xform [x]    = x
+                        xform (x:xs) = EApp [ECon "ite", x, true, xform xs]
+                    in go sofar $ xform elts
+
+                -- Catch (and x y z..)
+                go sofar (EApp (ECon "and" : elts))
+                  = let xform []     = true
+                        xform [x]    = x
+                        xform (x:xs) = EApp [ECon "ite", x, xform xs, false]
+                    in go sofar $ xform elts
 
                 -- z3 sometimes puts together a bunch of booleans as final expression,
                 -- see if we can catch that.
