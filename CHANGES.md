@@ -5,7 +5,10 @@
 
 ### Version 8.1.5, Not yet released
 
-  * Fixed minor issue with getting observables in quantified contexts.
+  * Fixed minor issue with getting observables in quantified contexts
+
+  * Simplify data-type constructor fields, based on the discussion in
+    http://github.com/Z3Prover/z3/issues/2135
 
 ### Version 8.1, 2019-03-09
 
