@@ -24,10 +24,10 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () (SBVEither Int (_ BitVec 8)) (left_SBVEither s0))
+[GOOD] (define-fun s2 () (SBVEither Int (_ BitVec 8)) ((as left_SBVEither (SBVEither Int (_ BitVec 8))) s0))
 [GOOD] (define-fun s3 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int (_ BitVec 8)))) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 true false))
-[GOOD] (define-fun s5 () (SBVEither Int (_ BitVec 8)) (right_SBVEither s1))
+[GOOD] (define-fun s5 () (SBVEither Int (_ BitVec 8)) ((as right_SBVEither (SBVEither Int (_ BitVec 8))) s1))
 [GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int (_ BitVec 8)))) s5))
 [GOOD] (define-fun s7 () Bool (ite s6 false true))
 [GOOD] (assert s4)

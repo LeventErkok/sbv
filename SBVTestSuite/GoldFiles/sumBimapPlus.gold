@@ -26,10 +26,10 @@
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
 [GOOD] (define-fun s3 () Int (+ s1 s2))
-[GOOD] (define-fun s4 () (SBVEither Int Int) (left_SBVEither s3))
+[GOOD] (define-fun s4 () (SBVEither Int Int) ((as left_SBVEither (SBVEither Int Int)) s3))
 [GOOD] (define-fun s5 () Int (get_right_SBVEither s0))
 [GOOD] (define-fun s6 () Int (+ s2 s5))
-[GOOD] (define-fun s7 () (SBVEither Int Int) (right_SBVEither s6))
+[GOOD] (define-fun s7 () (SBVEither Int Int) ((as right_SBVEither (SBVEither Int Int)) s6))
 [GOOD] (define-fun s8 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s0))
 [GOOD] (define-fun s9 () (SBVEither Int Int) (ite s8 s4 s7))
 [GOOD] (define-fun s10 () Int (get_left_SBVEither s9))

@@ -24,7 +24,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () (SBVMaybe Int) (just_SBVMaybe s0))
+[GOOD] (define-fun s1 () (SBVMaybe Int) ((as just_SBVMaybe (SBVMaybe Int)) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
 [GOOD] (assert s3)
 [SEND] (check-sat)

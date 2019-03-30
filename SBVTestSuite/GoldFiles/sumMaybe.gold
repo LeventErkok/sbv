@@ -30,7 +30,7 @@
 [GOOD] (define-fun s2 () Bool (ite s1 true false))
 [GOOD] (define-fun s4 () Int (get_just_SBVMaybe s0))
 [GOOD] (define-fun s6 () Int (+ s4 s5))
-[GOOD] (define-fun s7 () (SBVMaybe Int) (just_SBVMaybe s6))
+[GOOD] (define-fun s7 () (SBVMaybe Int) ((as just_SBVMaybe (SBVMaybe Int)) s6))
 [GOOD] (define-fun s8 () (SBVMaybe Int) (ite s1 s3 s7))
 [GOOD] (define-fun s9 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s8))
 [GOOD] (define-fun s10 () Bool (ite s9 true false))
