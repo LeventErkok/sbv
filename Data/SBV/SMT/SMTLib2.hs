@@ -720,16 +720,10 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         -- and in particular <http://github.com/Z3Prover/z3/issues/2135#issuecomment-477636435>
         dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map ssv args) ++ ")"
 
-        -- We fully qualify the accessors with their types to work around type checking issues
-        -- if the solver requires it, as specified by the 'supportsDTAccessorSigs' capability.
+        -- Similarly, we fully qualify the accessors with their types to work around type checking issues
         dtAccessor fld params res = result
-          where accessor = "(_ is " ++ fld ++ ")"
-
-                ps       = " (" ++ unwords (map smtType params) ++ ") "
-                withSig  = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
-
-                result | supportsDTAccessorSigs caps = withSig
-                       | True                        = accessor
+          where ps       = " (" ++ unwords (map smtType params) ++ ") "
+                result   = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
 
