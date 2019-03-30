@@ -710,17 +710,15 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift1  o _ sbvs   = error $ "SBV.SMT.SMTLib2.sh.lift1: Unexpected arguments: "   ++ show (o, sbvs)
 
         -- We fully qualify the constructor with their types to work around type checking issues
-        -- if the solver requires it, as specified by the 'supportsDTConstructorSigs' capability.
-        dtConstructor fld args res = result
-          where body = parIfArgs (unwords (fld : map ssv args))
-                parIfArgs r | null args = r
-                            | True      = "(" ++ r ++ ")"
-
-                constructor = body
-                withSig     = "(as " ++ constructor ++ " " ++ smtType res ++ ")"
-
-                result | supportsDTConstructorSigs caps = withSig
-                       | True                           = constructor
+        -- Note that this is rather bizarre, as we're tagging the constructor with its *result* type,
+        -- not its full function type as one would expect. But this is per the spec: Pg. 27 of SMTLib 2.6 spec
+        -- says:
+        --
+        --    To simplify sort checking, a function symbol in a term can be annotated with one of its result sorts sigma.
+        --
+        -- I wish it was the full type here not just the result, but we go with the spec. Also see: <http://github.com/Z3Prover/z3/issues/2135>
+        -- and in particular <http://github.com/Z3Prover/z3/issues/2135#issuecomment-477636435>
+        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map ssv args) ++ ")"
 
         -- We fully qualify the accessors with their types to work around type checking issues
         -- if the solver requires it, as specified by the 'supportsDTAccessorSigs' capability.

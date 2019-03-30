@@ -41,7 +41,6 @@ mathSAT = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = False
                               , supportsDataTypes          = True
-                              , supportsDTConstructorSigs  = False
                               , supportsDTAccessorSigs     = False
                               , supportsFlattenedModels    = Nothing
                               }
