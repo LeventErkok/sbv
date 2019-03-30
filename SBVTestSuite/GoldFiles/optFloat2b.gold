@@ -1,0 +1,13 @@
+Optimal model:
+  x     =          -Infinity :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------F52-------------------------
+          Binary: 1 11111111111 0000000000000000000000000000000000000000000000000000
+             Hex: FFF0 0000 0000 0000
+       Precision: DP
+            Sign: Negative
+        Exponent: 1024 (Stored: 2047, Bias: 1023)
+       Hex-float: -Infinity
+           Value: -Infinity
+  min-x = 0x000fffffffffffff :: Word64

@@ -1,0 +1,13 @@
+Optimal model:
+  x     =  -Infinity :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------F23----------
+          Binary: 1 11111111 00000000000000000000000
+             Hex: FF80 0000
+       Precision: SP
+            Sign: Negative
+        Exponent: 128 (Stored: 255, Bias: 127)
+       Hex-float: -Infinity
+           Value: -Infinity
+  min-x = 0x007fffff :: Word32
