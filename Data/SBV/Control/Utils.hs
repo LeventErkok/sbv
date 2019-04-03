@@ -79,7 +79,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
                               , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..)
-                              , registerLabel, svMkSymVar
+                              , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               )
@@ -1318,7 +1318,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                                Just (_, (_, cv)) -> return (i, Just cv)
                                                                                Nothing           -> do cv <- getValueCV Nothing sv
                                                                                                        return (i, Just cv)
-                                                  in if validateModel cfg
+                                                  in if validationRequested cfg
                                                         then Just <$> mapM grab qinps
                                                         else return Nothing
 

@@ -16,6 +16,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
@@ -71,24 +72,25 @@ import qualified Data.SBV.Provers.MathSAT    as MathSAT
 import qualified Data.SBV.Provers.ABC        as ABC
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [Control.SMTOption] -> SMTConfig
-mkConfig s smtVersion startOpts = SMTConfig { verbose                = False
-                                            , timing                 = NoTiming
-                                            , printBase              = 10
-                                            , printRealPrec          = 16
-                                            , transcript             = Nothing
-                                            , solver                 = s
-                                            , smtLibVersion          = smtVersion
-                                            , satCmd                 = "(check-sat)"
-                                            , satTrackUFs            = True                   -- i.e., yes, do extract UI function values
-                                            , allSatMaxModelCount    = Nothing                -- i.e., return all satisfying models
-                                            , allSatPrintAlong       = False                  -- i.e., do not print models as they are found
-                                            , isNonModelVar          = const False            -- i.e., everything is a model-variable by default
-                                            , validateModel          = False
-                                            , allowQuantifiedQueries = False
-                                            , roundingMode           = RoundNearestTiesToEven
-                                            , solverSetOptions       = startOpts
-                                            , ignoreExitCode         = False
-                                            , redirectVerbose        = Nothing
+mkConfig s smtVersion startOpts = SMTConfig { verbose                     = False
+                                            , timing                      = NoTiming
+                                            , printBase                   = 10
+                                            , printRealPrec               = 16
+                                            , transcript                  = Nothing
+                                            , solver                      = s
+                                            , smtLibVersion               = smtVersion
+                                            , satCmd                      = "(check-sat)"
+                                            , satTrackUFs                 = True                   -- i.e., yes, do extract UI function values
+                                            , allSatMaxModelCount         = Nothing                -- i.e., return all satisfying models
+                                            , allSatPrintAlong            = False                  -- i.e., do not print models as they are found
+                                            , isNonModelVar               = const False            -- i.e., everything is a model-variable by default
+                                            , validateModel               = False
+                                            , optimizeValidateConstraints = False
+                                            , allowQuantifiedQueries      = False
+                                            , roundingMode                = RoundNearestTiesToEven
+                                            , solverSetOptions            = startOpts
+                                            , ignoreExitCode              = False
+                                            , redirectVerbose             = Nothing
                                             }
 
 -- | If supported, this makes all output go to stdout, which works better with SBV
@@ -162,7 +164,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.proveWith'
   proveWith :: SMTConfig -> a -> m ThmResult
   proveWith cfg a = do r <- runWithQuery False (checkNoOptimizations >> Control.getSMTResult) cfg a
-                       ThmResult <$> if validateModel cfg
+                       ThmResult <$> if validationRequested cfg
                                      then validate False cfg a r
                                      else return r
 
@@ -173,7 +175,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.satWith'
   satWith :: SMTConfig -> a -> m SatResult
   satWith cfg a = do r <- runWithQuery True (checkNoOptimizations >> Control.getSMTResult) cfg a
-                     SatResult <$> if validateModel cfg
+                     SatResult <$> if validationRequested cfg
                                    then validate True cfg a r
                                    else return r
 
@@ -184,7 +186,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.allSatWith'
   allSatWith :: SMTConfig -> a -> m AllSatResult
   allSatWith cfg a = do f@(mm, pe, un, rs) <- runWithQuery True (checkNoOptimizations >> Control.getAllSatResult) cfg a
-                        AllSatResult <$> if validateModel cfg
+                        AllSatResult <$> if validationRequested cfg
                                          then do rs' <- mapM (validate True cfg a) rs
                                                  return (mm, pe, un, rs')
                                          else return f
@@ -195,16 +197,22 @@ class ExtractIO m => MProvable m a where
 
   -- | Generalization of 'Data.SBV.optimizeWith'
   optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
-  optimizeWith config style = runWithQuery True opt config
+  optimizeWith config style optGoal = do
+                   res <- runWithQuery True opt config optGoal
+                   if not (optimizeValidateConstraints config)
+                      then return res
+                      else let v :: SMTResult -> m SMTResult
+                               v = validate True config optGoal
+                           in case res of
+                                LexicographicResult m -> LexicographicResult <$> v m
+                                IndependentResult xs  -> let w []            sofar = return (reverse sofar)
+                                                             w ((n, m):rest) sofar = v m >>= \m' -> w rest ((n, m') : sofar)
+                                                         in IndependentResult <$> w xs []
+                                ParetoResult (b, rs)  -> ParetoResult . (b, ) <$> mapM v rs
+
     where opt = do objectives <- Control.getObjectives
                    qinps      <- Control.getQuantifiedInputs
                    spgm       <- Control.getSBVPgm
-
-                   when (validateModel config) $
-                          error $ unlines [ ""
-                                          , "*** Data.SBV: Model validation is not supported in optimization calls."
-                                          , "*** To turn validation off, use `cfg{validateModel = False}`"
-                                          ]
 
                    when (null objectives) $
                           error $ unlines [ ""
@@ -217,6 +225,17 @@ class ExtractIO m => MProvable m a where
                                           , "*** Data.SBV: The backend solver " ++ show (name (solver config)) ++ "does not support optimization goals."
                                           , "*** Please use a solver that has support, such as z3"
                                           ]
+
+                   when (validateModel config && not (optimizeValidateConstraints config)) $
+                          error $ unlines [ ""
+                                          , "*** Data.SBV: Model validation is not supported in optimization calls."
+                                          , "***"
+                                          , "*** Instead, use `cfg{optimizeValidateConstraints = True}`"
+                                          , "***"
+                                          , "*** which checks that the results satisfy the constraints but does"
+                                          , "*** NOT ensure that they are optimal."
+                                          ]
+
 
                    let universals = [s | (ALL, s) <- qinps]
 
@@ -285,9 +304,9 @@ class ExtractIO m => MProvable m a where
                    mapM_ (Control.send True) optimizerDirectives
 
                    case style of
-                      Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
-                      Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
-                      Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
+                     Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
+                     Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
+                     Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
   -- | Generalization of 'Data.SBV.isVacuous'
   isVacuous :: a -> m Bool
@@ -335,11 +354,12 @@ class ExtractIO m => MProvable m a where
   validate isSAT cfg p res = case res of
                                Unsatisfiable{} -> return res
                                Satisfiable _ m -> case modelBindings m of
-                                                    Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings during model validation."
+                                                    Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings generated during model validation."
                                                     Just env -> check env
-                               SatExtField{}   -> return $ ProofError cfg [ "Cannot validate models produced during optimization."
+                               SatExtField{}   -> return $ ProofError cfg [ "The model requires an extension field value."
+                                                                          , "Cannot validate models with infinities/epsilons produced during optimization."
                                                                           , ""
-                                                                          , "To turn validation off, use `cfg{validateModel = False}`"
+                                                                          , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
                                                                           , ""
                                                                           , "Unable to validate the produced model."
                                                                           ]

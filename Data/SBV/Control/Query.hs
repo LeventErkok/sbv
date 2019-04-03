@@ -46,7 +46,9 @@ import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   (MonadQuery(..), QueryState(..), SMTModel(..), SMTResult(..), State(..), incrementInternalCounter)
+import Data.SBV.Core.Symbolic   ( MonadQuery(..), QueryState(..), SMTModel(..), SMTResult(..), State(..)
+                                , incrementInternalCounter, validationRequested
+                                )
 
 import Data.SBV.Utils.SExpr
 
@@ -349,7 +351,7 @@ getModelAtIndex mbi = do
                                              (False, EX)  -> (ALL, sv)
                                              (False, ALL) -> (EX,  sv)
 
-                      in if validateModel cfg
+                      in if validationRequested cfg
                          then Just <$> mapM (get . flipQ) qinps
                          else return Nothing
 
@@ -736,7 +738,7 @@ SBV a |-> v = case literal v of
 
 -- | Generalization of 'Data.SBV.Control.mkSMTResult'
 -- NB. This function does not allow users to create interpretations for UI-Funs. But that's
--- probably not a good idea anyhow. Also, if you use the 'validateModel' feature, SBV will
+-- probably not a good idea anyhow. Also, if you use the 'validateModel' or 'optimizeValidateConstraints' features, SBV will
 -- fail on models returned via this function.
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do

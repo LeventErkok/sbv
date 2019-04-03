@@ -54,7 +54,7 @@ module Data.SBV.Core.Symbolic
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
-  , outputSVal
+  , validationRequested, outputSVal
   ) where
 
 import Control.Arrow               (first, second, (***))
@@ -1323,10 +1323,10 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                                                            , "***"
                                                            , "***   To turn validation off, use `cfg{validateModel = False}`"
                                                            , "***"
-                                                           , "*** " ++ conc ++ "."
+                                                           , "*** " ++ conc
                                                            ]
 
-                            cant   = "Validation engine is not capable of handling this case. Failed to validate"
+                            cant   = "Validation engine is not capable of handling this case. Failed to validate."
                             report = "Please report this as a bug in SBV!"
 
                         in if isUninterpreted k
@@ -1337,7 +1337,14 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                                        nsv = (sv, nm)
 
                                        cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
-                                              []              -> bad ("Cannot locate variable: " ++ show nsv) report
+                                              []              -> if isTracker
+                                                                 then  -- The sole purpose of a tracker variable is to send the optimization
+                                                                       -- directive to the solver, so we can name "expressions" that are minimized
+                                                                       -- or maximized. There will be no constraints on these when we are doing
+                                                                       -- the validation; in fact they will not even be used anywhere during a
+                                                                       -- validation run. So, simply push a zero value that inhabits all metrics.
+                                                                       mkConstCV k (0::Integer)
+                                                                 else bad ("Cannot locate variable: " ++ show (nsv, k)) report
                                               [(ALL, _)]      -> bad ("Cannot validate models in the presence of universally quantified variable " ++ show (snd nsv)) cant
                                               [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (snd nsv)) report
                                               [(EX, Just c)]  -> c
@@ -1515,7 +1522,7 @@ internalConstraint st isSoft attrs b = do v <- svToSV st b
                                           -- we only add it if it's interesting; i.e., not directly
                                           -- true or has some attributes.
                                           let isValidating = case rm of
-                                                               SMTMode _ _ _ cfg -> validateModel cfg
+                                                               SMTMode _ _ _ cfg -> validationRequested cfg
                                                                CodeGen           -> False
                                                                Concrete Nothing  -> False
                                                                Concrete (Just _) -> True   -- The case when we *are* running the validation
@@ -1736,25 +1743,30 @@ instance HasKind RoundingMode
 -- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
 -- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
 data SMTConfig = SMTConfig {
-         verbose                :: Bool           -- ^ Debug mode
-       , timing                 :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , printBase              :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec          :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , satCmd                 :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount    :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
-       , allSatPrintAlong       :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
-       , satTrackUFs            :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
-       , isNonModelVar          :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , validateModel          :: Bool           -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
-       , transcript             :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
-       , smtLibVersion          :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
-       , solver                 :: SMTSolver      -- ^ The actual SMT solver.
-       , allowQuantifiedQueries :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
-       , roundingMode           :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
-       , solverSetOptions       :: [SMTOption]    -- ^ Options to set as we start the solver
-       , ignoreExitCode         :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
-       , redirectVerbose        :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
+         verbose                     :: Bool           -- ^ Debug mode
+       , timing                      :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase                   :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec               :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , satCmd                      :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , allSatMaxModelCount         :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
+       , allSatPrintAlong            :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
+       , satTrackUFs                 :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
+       , isNonModelVar               :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , validateModel               :: Bool           -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
+       , optimizeValidateConstraints :: Bool           -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
+       , transcript                  :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
+       , smtLibVersion               :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
+       , solver                      :: SMTSolver      -- ^ The actual SMT solver.
+       , allowQuantifiedQueries      :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
+       , roundingMode                :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
+       , solverSetOptions            :: [SMTOption]    -- ^ Options to set as we start the solver
+       , ignoreExitCode              :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
+       , redirectVerbose             :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
+
+-- | Returns true if we have to perform validation
+validationRequested :: SMTConfig -> Bool
+validationRequested SMTConfig{validateModel, optimizeValidateConstraints} = validateModel || optimizeValidateConstraints
 
 -- We're just seq'ing top-level here, it shouldn't really matter. (i.e., no need to go deeper.)
 instance NFData SMTConfig where
@@ -1762,12 +1774,12 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]                       -- ^ Mapping of symbolic values to objective values.
-     , modelBindings   :: Maybe [((Quantifier, NamedSymVar), Maybe CV)]   -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
-     , modelAssocs     :: [(String, CV)]                                  -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))]       -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                                          -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                                          -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                     -- ^ Mapping of symbolic values to objective values.
+     , modelBindings   :: Maybe [((Quantifier, NamedSymVar), Maybe CV)] -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
+     , modelAssocs     :: [(String, CV)]                                -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))]     -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                        -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                        -- in the 'modelAssocs' field.
      }
      deriving Show
 

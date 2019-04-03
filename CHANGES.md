@@ -10,6 +10,15 @@
   * Simplify data-type constructor usage and accessor formats. See
     http://github.com/Z3Prover/z3/issues/2135 for a discussion.
 
+  * Add support for model validation in optimization problems. Use the
+    config parameter: `optimizeValidateConstraints`. Default: False. This
+    feature nicely complements the `validateModel` option, which works
+    for `sat` and `prove` calls. Note that when we validate the model
+    for an optimization problem, we only make sure that the given result
+    satisfies the constraints not that it is minimum (or maximum) such
+    model. (And hence the new configuration variable.) Validating optimality
+    is beyond the scope of SBV.
+
 ### Version 8.1, 2019-03-09
 
   * Added support for `SEither` and `SMaybe` types: symbolic sums and symbolic
