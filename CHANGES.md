@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.1, 2019-03-09
+* Latest Hackage released version: 8.2, 2019-04-07
 
-### Version 8.1.5, Not yet released
+### Version 8.2, 2019-04-07
 
   * Fixed minor issue with getting observables in quantified contexts.
 
