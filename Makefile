@@ -107,6 +107,9 @@ hlint:
 	@echo "Running HLint.."
 	@hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error" -i "Use fewer imports" -i "Use module export list" -i "Use import/export shortcut"
 
+ghcid:
+	ghcid --lint
+
 clean:
 	@rm -rf dist
 
