@@ -3,6 +3,9 @@
 
 * Latest Hackage released version: 8.2, 2019-04-07
 
+### Version 8.2.5, Current development version
+
+  * Add support for `Data.Set.hasSize` and `Data.Set.isFinite`.
 
   * Increment base dependency to 4.11.
 
