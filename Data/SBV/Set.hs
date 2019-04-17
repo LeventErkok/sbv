@@ -21,10 +21,8 @@
 -- it into a list or necessarily enumerate its elements.
 --
 -- __A note on cardinality__: While there is no function to retrieve the size of a set (what would
--- it return for infinite sets?), you can indirectly talk about cardinality: The predicates
--- 'Data.SBV.Set.isFinite' and 'Data.SBV.Set.isInfinite' allow checking for finiteness,
--- and 'Data.SBV.Set.hasSize' can be used to state that the set is finite and has
--- size @k@ for a user-specified symbolic integer @k@.
+-- it return for infinite sets?), you can indirectly talk about cardinality: 'Data.SBV.Set.hasSize' can
+-- be used to state that the set is finite and has size @k@ for a user-specified symbolic integer @k@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
@@ -42,14 +40,14 @@ module Data.SBV.Set (
         , insert, delete
 
         -- * Query
-        , member, notMember, null, isEmpty, isFull, isUniversal, isFinite, isInfinite, hasSize, isSubsetOf, isProperSubsetOf, disjoint
+        , member, notMember, null, isEmpty, isFull, isUniversal, hasSize, isSubsetOf, isProperSubsetOf, disjoint
 
         -- * Combinations
         , union, unions, intersection, intersections, difference, (\\)
 
         ) where
 
-import Prelude hiding (null, isInfinite)
+import Prelude hiding (null)
 
 import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
@@ -299,62 +297,6 @@ isFull = (.== full)
 isUniversal :: HasKind a => SSet a -> SBool
 isUniversal = isFull
 
--- | Is the given set finite?
---
--- >>> isFinite (empty :: SSet Integer)
--- True
---
--- >>> isFinite (full :: SSet Integer)
--- False
---
--- >>> prove $ \a e -> isFinite (a :: SSet Integer) .=> isFinite (e `insert` a)
--- Q.E.D.
---
--- >>> prove $ \a e -> isFinite (a :: SSet Integer) .=> isFinite (e `delete` a)
--- Q.E.D.
---
--- >>> prove $ \a b -> isFinite (a :: SSet Integer) .&& isFinite b .=> isFinite (a `union` b)
--- Q.E.D.
---
--- >>> prove $ \a b -> isFinite (a :: SSet Integer) .&& isFinite b .=> isFinite (a `intersection` b)
--- Q.E.D.
---
--- >>> prove $ \a -> isFinite (a :: SSet Integer) .<=> isInfinite (complement a)
--- Q.E.D.
-isFinite :: (Ord a, SymVal a) => SSet a -> SBool
-isFinite sa
-  -- Case 1: Constant regular set: always finite
-  | Just (RegularSet _) <- unliteral sa
-  = sTrue
-
-  -- Case 2: Constant complement set: never finite
-  | Just (ComplementSet _) <- unliteral sa
-  = sFalse
-
-  -- Otherwise, go symbolic with the existential variable
-  | True
-  = SBV $ SVal KBool $ Right $ cache r
-  where r st = do sva <- sbvToSV st sa
-                  k   <- internalVariable st KUnbounded
-
-                  -- Assert that has-size with `k` returns true
-                  fin <- newExpr st KBool $ SBVApp (SetOp SetHasSize) [sva, k]
-
-                  internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return fin
-
-                  -- we're good to go
-                  return fin
-
--- | Is the given set infinite?
---
--- >>> prove $ \a e -> isInfinite (a :: SSet Integer) .=> isInfinite (e `delete` a)
--- Q.E.D.
---
--- >>> prove $ \a e -> isInfinite (a :: SSet Integer) .=> isInfinite (e `insert` a)
--- Q.E.D.
-isInfinite :: (Ord a, SymVal a) => SSet a -> SBool
-isInfinite = sNot . isFinite
-
 -- | Does the set have the given size? Note that this will
 -- ensure the set under consideration is finite.
 --
@@ -368,9 +310,6 @@ isInfinite = sNot . isFinite
 -- Q.E.D.
 --
 -- >>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `intersection` b) k .=> k .<= i `smin` j
--- Q.E.D.
---
--- >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> isFinite a
 -- Q.E.D.
 --
 -- >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
