@@ -3,6 +3,9 @@
 
 * Latest Hackage released version: 8.2, 2019-04-07
 
+
+  * Increment base dependency to 4.11.
+
 ### Version 8.2, 2019-04-07
 
   * Fixed minor issue with getting observables in quantified contexts.
