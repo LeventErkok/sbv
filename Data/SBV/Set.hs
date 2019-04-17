@@ -19,6 +19,12 @@
 -- which is something you cannot do in Haskell! Conversely, you cannot compute
 -- the size of a symbolic set (as it can be infinite!), nor you can turn
 -- it into a list or necessarily enumerate its elements.
+--
+-- __A note on cardinality__: While there is no function to retrieve the size of a set (what would
+-- it return for infinite sets?), you can indirectly talk about cardinality: The predicates
+-- 'Data.SBV.Set.isFinite' and 'Data.SBV.Set.isInfinite' allow checking for finiteness,
+-- and 'Data.SBV.Set.hasSize' can be used to state that the set is finite and has
+-- size @k@ for a user-specified symbolic integer @k@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
