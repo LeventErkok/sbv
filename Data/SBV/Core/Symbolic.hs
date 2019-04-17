@@ -628,12 +628,12 @@ instance NFData OptimizeStyle where
 
 instance NFData Penalty where
    rnf DefaultPenalty  = ()
-   rnf (Penalty p mbs) = rnf p `seq` rnf mbs `seq` ()
+   rnf (Penalty p mbs) = rnf p `seq` rnf mbs
 
 instance NFData a => NFData (Objective a) where
-   rnf (Minimize          s a)   = rnf s `seq` rnf a `seq` ()
-   rnf (Maximize          s a)   = rnf s `seq` rnf a `seq` ()
-   rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p `seq` ()
+   rnf (Minimize          s a)   = rnf s `seq` rnf a
+   rnf (Maximize          s a)   = rnf s `seq` rnf a
+   rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p
 
 -- | Result of running a symbolic computation
 data Result = Result { reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
@@ -1620,7 +1620,7 @@ uncacheGen getCache (Cached f) st = do
         stored <- readIORef rCache
         sn <- f `seq` makeStableName f
         let h = hashStableName sn
-        case maybe Nothing (sn `lookup`) (h `IMap.lookup` stored) of
+        case (h `IMap.lookup` stored) >>= (sn `lookup`) of
           Just r  -> return r
           Nothing -> do r <- f st
                         r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
@@ -1640,7 +1640,7 @@ smtLibVersionExtension SMTLib2 = "smt2"
 data SMTLibPgm = SMTLibPgm SMTLibVersion [String]
 
 instance NFData SMTLibVersion where rnf a               = a `seq` ()
-instance NFData SMTLibPgm     where rnf (SMTLibPgm v p) = rnf v `seq` rnf p `seq` ()
+instance NFData SMTLibPgm     where rnf (SMTLibPgm v p) = rnf v `seq` rnf p
 
 instance Show SMTLibPgm where
   show (SMTLibPgm _ pre) = intercalate "\n" pre
@@ -1675,20 +1675,20 @@ instance NFData Quantifier   where rnf a          = seq a ()
 instance NFData SBVType      where rnf a          = seq a ()
 instance NFData SBVPgm       where rnf a          = seq a ()
 instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
-instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y `seq` ()
+instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y
 
 instance NFData SMTResult where
   rnf (Unsatisfiable _ xs   ) = rnf xs
-  rnf (Satisfiable _   xs   ) = rnf xs `seq` ()
-  rnf (SatExtField _   xs   ) = rnf xs `seq` ()
-  rnf (Unknown _       xs   ) = rnf xs `seq` ()
-  rnf (ProofError _    xs mr) = rnf xs `seq` rnf mr `seq` ()
+  rnf (Satisfiable _   xs   ) = rnf xs
+  rnf (SatExtField _   xs   ) = rnf xs
+  rnf (Unknown _       xs   ) = rnf xs
+  rnf (ProofError _    xs mr) = rnf xs `seq` rnf mr
 
 instance NFData SMTModel where
-  rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns `seq` ()
+  rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns
 
 instance NFData SMTScript where
-  rnf (SMTScript b m) = rnf b `seq` rnf m `seq` ()
+  rnf (SMTScript b m) = rnf b `seq` rnf m
 
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
