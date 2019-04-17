@@ -366,6 +366,9 @@ isInfinite = sNot . isFinite
 --
 -- >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> isFinite a
 -- Q.E.D.
+--
+-- >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
+-- Q.E.D.
 hasSize :: (Ord a, SymVal a) => SSet a -> SInteger -> SBool
 hasSize sa si
   -- Case 1: Constant regular set, see if the size matches
