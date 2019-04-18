@@ -5,7 +5,7 @@
 
 ### Version 8.2.5, Current development version
 
-  * Add support for `Data.Set.hasSize` and `Data.Set.isFinite`.
+  * Add support for `Data.Set.hasSize`.
 
   * Increment base dependency to 4.11.
 
