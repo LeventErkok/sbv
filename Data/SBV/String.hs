@@ -355,7 +355,7 @@ offsetIndexOf s sub offset
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
 -- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 --
--- >>> prove $ \s -> let n = strToNat s in n .>= 0 .&& n .< 10 .=> length s .== 1
+-- >>> prove $ \s -> let n = strToNat s in length s .== 1 .=> (-1) .<= n .&& n .<= 9
 -- Q.E.D.
 strToNat :: SString -> SInteger
 strToNat s
