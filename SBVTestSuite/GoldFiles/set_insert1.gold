@@ -54,7 +54,7 @@
                      true)
               #x65
               true)))
-[GOOD] (define-fun s7 () (Array (_ BitVec 8) Bool) ((_ map not) s1))
+[GOOD] (define-fun s7 () (Array (_ BitVec 8) Bool) (complement s1))
 [GOOD] (define-fun s8 () (Array (_ BitVec 8) Bool) (store s7 s0 true))
 [SEND] (get-value (s8))
 [RECV] ((s8 (store (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) true)

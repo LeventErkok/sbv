@@ -39,7 +39,7 @@
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [SEND] (get-value (s4))
 [RECV] ((s4 false))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
+[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) (complement s0))
 [GOOD] (define-fun s6 () Bool (= s5 s3))
 [SEND] (get-value (s6))
 [RECV] ((s6 false))

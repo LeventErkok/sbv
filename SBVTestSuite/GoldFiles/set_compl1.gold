@@ -35,7 +35,7 @@
                      true)
               #x6f
               true)))
-[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) ((_ map not) s0))
+[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) (complement s0))
 [SEND] (get-value (s3))
 [RECV] ((s3 (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) true)
                                    #x65
@@ -46,7 +46,7 @@
                      false)
               #x6f
               false)))
-[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) ((_ map not) s3))
+[GOOD] (define-fun s4 () (Array (_ BitVec 8) Bool) (complement s3))
 [SEND] (get-value (s4))
 [RECV] ((s4 (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) false)
                                    #x65
@@ -57,10 +57,10 @@
                      true)
               #x6f
               true)))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) ((_ map and) s3 s0))
+[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) (intersection s3 s0))
 [SEND] (get-value (s5))
 [RECV] ((s5 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) ((_ map or) s3 s0))
+[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) (union s3 s0))
 [SEND] (get-value (s6))
 [RECV] ((s6 ((as const (Array (_ BitVec 8) Bool)) true)))
 *** Solver   : Z3
