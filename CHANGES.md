@@ -7,6 +7,8 @@
 
   * Add support for `Data.Set.hasSize` and `Data.Set.card`.
 
+  * Add `supportsFP` to CVC4 capabilities list. (#469)
+
   * Increment base dependency to 4.11.
 
 ### Version 8.2, 2019-04-07
