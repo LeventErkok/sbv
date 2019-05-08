@@ -97,19 +97,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
            -- we never set QF_S (ALL seems to work better in all cases)
 
-           | hasArrayInits
-           = ["(set-logic ALL)"]
-
-           | hasString || hasList
-           = ["(set-logic ALL)"]
-
-           | hasDouble || hasFloat
-           = if hasInteger || not (null foralls)
-             then ["(set-logic ALL)"]
-             else if hasBVs
-                  then ["(set-logic QF_FPBV)"]
-                  else ["(set-logic QF_FP)"]
-           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets
+           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets || hasList || hasString || hasArrayInits
            = let why | hasInteger        = "has unbounded values"
                      | hasReal           = "has algebraic reals"
                      | not (null usorts) = "has user-defined sorts"
@@ -118,8 +106,18 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                      | hasEither         = "has either type"
                      | hasMaybe          = "has maybe type"
                      | hasSets           = "has sets"
+                     | hasList           = "has lists"
+                     | hasString         = "has strings"
+                     | hasArrayInits     = "has array initializers"
                      | True              = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
+
+           | hasDouble || hasFloat
+           = if not (null foralls)
+             then ["(set-logic ALL)"]
+             else if hasBVs
+                  then ["(set-logic QF_FPBV)"]
+                  else ["(set-logic QF_FP)"]
 
            -- If we're in a user query context, we'll pick ALL, otherwise
            -- we'll stick to some bit-vector logic based on what we see in the problem.
