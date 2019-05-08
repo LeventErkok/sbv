@@ -45,6 +45,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasDouble      = KDouble    `Set.member` kindInfo
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
+        trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
@@ -97,19 +98,19 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
            -- we never set QF_S (ALL seems to work better in all cases)
 
-           | hasInteger || hasReal || not (null usorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets || hasList || hasString || hasArrayInits
-           = let why | hasInteger        = "has unbounded values"
-                     | hasReal           = "has algebraic reals"
-                     | not (null usorts) = "has user-defined sorts"
-                     | hasNonBVArrays    = "has non-bitvector arrays"
-                     | hasTuples         = "has tuples"
-                     | hasEither         = "has either type"
-                     | hasMaybe          = "has maybe type"
-                     | hasSets           = "has sets"
-                     | hasList           = "has lists"
-                     | hasString         = "has strings"
-                     | hasArrayInits     = "has array initializers"
-                     | True              = "cannot determine the SMTLib-logic to use"
+           | hasInteger || hasReal || not (null trueUSorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets || hasList || hasString || hasArrayInits
+           = let why | hasInteger            = "has unbounded values"
+                     | hasReal               = "has algebraic reals"
+                     | not (null trueUSorts) = "has user-defined sorts"
+                     | hasNonBVArrays        = "has non-bitvector arrays"
+                     | hasTuples             = "has tuples"
+                     | hasEither             = "has either type"
+                     | hasMaybe              = "has maybe type"
+                     | hasSets               = "has sets"
+                     | hasList               = "has lists"
+                     | hasString             = "has strings"
+                     | hasArrayInits         = "has array initializers"
+                     | True                  = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
 
            | hasDouble || hasFloat
