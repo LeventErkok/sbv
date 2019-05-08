@@ -7,7 +7,7 @@
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
-[GOOD] (set-logic ALL)
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
