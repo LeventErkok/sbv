@@ -66,6 +66,8 @@ install:
  # display versions
  - cabal --version
  - happy --version
+ - ls -ld /opt/alex*
+ - ls -l /opt/alex*
  - alex --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
