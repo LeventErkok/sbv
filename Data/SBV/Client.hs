@@ -9,6 +9,7 @@
 -- Cross-cutting toplevel client functions
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
@@ -25,7 +26,8 @@ import Control.Monad (filterM)
 import Data.Generics
 
 import qualified Control.Exception   as C
-import qualified Language.Haskell.TH as TH
+
+import qualified "template-haskell" Language.Haskell.TH as TH
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
