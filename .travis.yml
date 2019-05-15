@@ -21,16 +21,16 @@ notifications:
 
 matrix:
   include:
-    - env: CABALVER=2.4 GHCVER=8.4.4 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
+    - env: CABALVER=2.4 GHCVER=8.4.4 HAPPYVER=1.19.5 ALEXVER=3.1.7 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=15
       compiler: ": #GHC 8.4.4"
       addons: {apt: {packages: [cabal-install-2.4,ghc-8.4.4,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
-    - env: CABALVER=2.4 GHCVER=8.6.3 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
+    - env: CABALVER=2.4 GHCVER=8.6.3 HAPPYVER=1.19.5 ALEXVER=3.1.7 SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=60
       compiler: ": #GHC 8.6.3"
       addons: {apt: {packages: [cabal-install-2.4,ghc-8.6.3,alex-3.1.7,happy-1.19.5], sources: [hvr-ghc]}}
 
     - os: osx
-      env: CABALVER=2.4 GHCVER=8.6.3 HAPPYVER=1.19.5 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=15
+      env: CABALVER=2.4 GHCVER=8.6.3 HAPPYVER=1.19.5 ALEXVER=3.1.7 SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=15
       compiler: ": #GHC 8.6.3"
 
 # Note: the distinction between `before_install` and `install` is not important.
@@ -38,6 +38,7 @@ before_install:
  - unset CC
  - export PATH=/opt/ghc/$GHCVER/bin:/opt/cabal/$CABALVER/bin:~/.cabal/bin:$PATH
  - export PATH=/opt/happy/$HAPPYVER/bin:$PATH
+ - export PATH=/opt/alex/$ALEXVER/bin:$PATH
  - export TASTY_HIDE_SUCCESSES=True 
  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
      export Z3=`wget -q -O- http://github.com/Z3Prover/bin/raw/master/nightly | grep 'z3.*x64.*ubuntu.*.zip<' | awk '{print $7}' | awk -F= '{print $2}' | head -1 | awk -F\" '{print $2}'`;
@@ -66,8 +67,6 @@ install:
  # display versions
  - cabal --version
  - happy --version
- - ls -ld /opt/alex*
- - ls -l /opt/alex*
  - alex --version
  - echo "$(ghc --version) [$(ghc --print-project-git-commit-id 2> /dev/null || echo '?')]"
 
