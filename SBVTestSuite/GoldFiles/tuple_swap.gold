@@ -36,11 +36,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple3 1 2 0)))
+[RECV] ((s0 (mkSBVTuple3 0 7719 1)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (mkSBVTuple3 2 1 3)))
+[RECV] ((s1 (mkSBVTuple3 7719 0 2)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL: ((1,2,0),(2,1,3))
+ FINAL: ((0,7719,1),(7719,0,2))
 DONE!

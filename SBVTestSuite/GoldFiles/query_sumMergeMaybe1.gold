@@ -34,11 +34,11 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 nothing_SBVMaybe))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 0)))
+[RECV] ((s1 nothing_SBVMaybe))
 [SEND] (get-value (s2))
-[RECV] ((s2 true))
+[RECV] ((s2 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(Nothing,Just 0,True)
+(Nothing,Nothing,False)

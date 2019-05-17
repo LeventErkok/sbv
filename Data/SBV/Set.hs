@@ -393,16 +393,16 @@ isSubsetOf sa sb
 --
 -- >>> prove $ \x (s :: SSet Integer) -> s `isProperSubsetOf` (x `insert` s)
 -- Falsifiable. Counter-example:
---   s0 =       0 :: Integer
---   s1 = U - {1} :: {Integer}
+--   s0 = 0 :: Integer
+--   s1 = U :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> s `isProperSubsetOf` (x `insert` s)
 -- Q.E.D.
 --
 -- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isProperSubsetOf` s
 -- Falsifiable. Counter-example:
---   s0 =   0 :: Integer
---   s1 = {1} :: {Integer}
+--   s0 =  0 :: Integer
+--   s1 = {} :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `member` s .=> (x `delete` s) `isProperSubsetOf` s
 -- Q.E.D.

@@ -36,9 +36,9 @@
 [SEND] (get-value (s1))
 [RECV] ((s1 (right_SBVEither false)))
 [SEND] (get-value (s2))
-[RECV] ((s2 true))
+[RECV] ((s2 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(Right False,Right False,True)
+(Right False,Right False,False)
