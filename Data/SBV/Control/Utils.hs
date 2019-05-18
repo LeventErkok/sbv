@@ -42,7 +42,7 @@ module Data.SBV.Control.Utils (
      ) where
 
 import Data.Maybe (isJust)
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
 import Data.Function (on)
@@ -1261,7 +1261,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                     mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
                                     mkSVal nm@(sv, _) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
 
-                                in map mkSVal $ sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (isNonModelVar cfg n)]
+                                    ignored n = isNonModelVar cfg n || "__internal_sbv" `isPrefixOf` n
+
+                                in map mkSVal $ sortByNodeId [nv | (_, nv@(_, n)) <- allModelInputs, not (ignored n)]
 
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
