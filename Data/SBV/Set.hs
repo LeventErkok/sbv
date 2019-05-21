@@ -20,11 +20,9 @@
 -- the size of a symbolic set (as it can be infinite!), nor you can turn
 -- it into a list or necessarily enumerate its elements.
 --
--- __A note on cardinality__: The function `Data.SBV.Set.card` can be used to obtain the cardinality
--- of a set. If you use this function on a set, it implicitly ensures that the set it
--- operates on is finite. Alternatively, you can also indirectly talk about
--- cardinality: 'Data.SBV.Set.hasSize' can be used to state that the set is finite and
--- has size @k@ for a user-specified symbolic integer @k@.
+-- __A note on cardinality__: You can indirectly talk about cardinality: 'Data.SBV.Set.hasSize'
+-- can be used to state that the set is finite and has size @k@ for a user-specified symbolic
+-- integer @k@.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE Rank2Types          #-}
@@ -42,7 +40,7 @@ module Data.SBV.Set (
         , insert, delete
 
         -- * Query
-        , member, notMember, null, isEmpty, isFull, isUniversal, card, hasSize, isSubsetOf, isProperSubsetOf, disjoint
+        , member, notMember, null, isEmpty, isFull, isUniversal, hasSize, isSubsetOf, isProperSubsetOf, disjoint
 
         -- * Combinations
         , union, unions, intersection, intersections, difference, (\\)
@@ -298,28 +296,6 @@ isFull = (.== full)
 -- | Synonym for 'Data.SBV.Set.isFull'.
 isUniversal :: HasKind a => SSet a -> SBool
 isUniversal = isFull
-
--- | Cardinality of a set. It implicitly asserts that the set
--- it is operating on is finite. Also see 'Data.SBV.Set.hasSize'.
---
--- >>> card (empty :: SSet Integer)
--- 0 :: SInteger
---
--- >>> sat $ \ x -> x .== card (full::SSet Integer)
--- Unsatisfiable
-card :: (Ord a, SymVal a) => SSet a -> SInteger
-card sa
-  -- Case: Constant regular set
-  | Just (RegularSet a) <- unliteral sa
-  = literal (fromIntegral (Set.size a))
-
-  -- Otherwise, go symbolic. Note that this also includes the
-  -- case of a constant complement set, which doesn't have a
-  -- finite size.
-  | True
-  = SBV $ SVal KUnbounded $ Right $ cache r
-  where r st = do sva <- sbvToSV st sa
-                  newExpr st KUnbounded $ SBVApp (SetOp SetCard) [sva]
 
 -- | Does the set have the given size? It implicitly asserts that the set
 -- it is operating on is finite. Also see 'Data.SBV.Set.card'.
