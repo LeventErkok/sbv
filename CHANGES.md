@@ -5,11 +5,14 @@
 
 ### Version 8.2.5, Current development version
 
-  * Add support for `Data.Set.hasSize` and `Data.Set.card`.
+  * Increment base dependency to 4.11.
+
+  * Add support for `Data.Set.hasSize`.
 
   * Add `supportsFP` to CVC4 capabilities list. (#469)
 
-  * Increment base dependency to 4.11.
+  * Fix a glitch in allSat computations that incorrectly
+    used values of internal variables in model construction.
 
 ### Version 8.2, 2019-04-07
 
