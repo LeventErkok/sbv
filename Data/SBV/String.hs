@@ -309,10 +309,6 @@ replace s src dst
 --
 -- >>> prove $ \s i -> i .> 0 .&& i .< length s .=> indexOf s (subStr s i 1) .<= i
 -- Q.E.D.
--- >>> prove $ \s i -> i .> 0 .&& i .< length s .=> indexOf s (subStr s i 1) .== i
--- Falsifiable. Counter-example:
---   s0 = "\128\NUL\NUL" :: String
---   s1 =              2 :: Integer
 -- >>> prove $ \s1 s2 -> length s2 .> length s1 .=> indexOf s1 s2 .== -1
 -- Q.E.D.
 indexOf :: SString -> SString -> SInteger
