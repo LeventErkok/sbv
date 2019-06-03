@@ -144,31 +144,7 @@ elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
   | True
-  = SBV (SVal kElem (Right (cache (y (l `listToListAt` i)))))
-  where kElem = kindOf (Proxy @a)
-        kSeq  = KList kElem
-
-        -- This is trickier than it needs to be, but necessary since there's
-        -- no SMTLib function to extract the element from a list. Instead,
-        -- we form a singleton list, and assert that it is equivalent to
-        -- the extracted value. See <http://github.com/Z3Prover/z3/issues/1302>
-        y si st = do -- grab an internal variable and make a unit list out of it
-                     e <- internalVariable st kElem
-                     es <- newExpr st kSeq (SBVApp (SeqOp SeqUnit) [e])
-
-                     -- Create the condition that it is equal to si
-                     li <- sbvToSV st si
-                     eq <- newExpr st KBool (SBVApp Equal [es, li])
-
-                     -- Gotta make sure we do this only when length is at least > i
-                     caseTooShort <- sbvToSV st (length l .<= i)
-                     require      <- newExpr st KBool (SBVApp Or [caseTooShort, eq])
-
-                     -- register the constraint:
-                     internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
-
-                     -- We're good to go:
-                     return e
+  = lift2 SeqNth Nothing l i
 
 -- | Short cut for 'elemAt'
 (.!!) :: SymVal a => SList a -> SInteger -> SBV a

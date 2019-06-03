@@ -14,6 +14,10 @@
   * Fix a glitch in allSat computations that incorrectly
     used values of internal variables in model construction.
 
+  * SBV now directly uses the new `seq.nth` function from z3
+    for sequence element access, instead of implementing it
+    internally.
+
 ### Version 8.2, 2019-04-07
 
   * Fixed minor issue with getting observables in quantified contexts.

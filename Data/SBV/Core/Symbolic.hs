@@ -263,6 +263,7 @@ instance Show OvOp where
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrLen          -- ^ String length
            | StrUnit         -- ^ Unit string
+           | StrNth          -- ^ Nth element
            | StrSubstr       -- ^ Retrieves substring of @s@ at @offset@
            | StrIndexOf      -- ^ Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences
            | StrContains     -- ^ Does @s@ contain the substring @sub@?
@@ -348,6 +349,7 @@ instance Show StrOp where
   show StrConcat   = "str.++"
   show StrLen      = "str.len"
   show StrUnit     = "seq.unit"      -- NB. The "seq" prefix is intentional; works uniformly.
+  show StrNth      = "seq.nth"       -- NB. The "seq" prefix is intentional; works uniformly.
   show StrSubstr   = "str.substr"
   show StrIndexOf  = "str.indexof"
   show StrContains = "str.contains"
@@ -363,6 +365,7 @@ instance Show StrOp where
 data SeqOp = SeqConcat    -- ^ See StrConcat
            | SeqLen       -- ^ See StrLen
            | SeqUnit      -- ^ See StrUnit
+           | SeqNth       -- ^ See StrNth
            | SeqSubseq    -- ^ See StrSubseq
            | SeqIndexOf   -- ^ See StrIndexOf
            | SeqContains  -- ^ See StrContains
@@ -376,6 +379,7 @@ instance Show SeqOp where
   show SeqConcat   = "seq.++"
   show SeqLen      = "seq.len"
   show SeqUnit     = "seq.unit"
+  show SeqNth      = "seq.nth"
   show SeqSubseq   = "seq.extract"
   show SeqIndexOf  = "seq.indexof"
   show SeqContains = "seq.contains"

@@ -147,17 +147,6 @@ strToCharAt s i
   | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci)
   = literal (C.chr c)
   | True
-  = SBV (SVal w8 (Right (cache (y (s `strToStrAt` i)))))
-  where w8      = KBounded False 8
-        -- This is trickier than it needs to be, but necessary since there's
-        -- no SMTLib function to extract the character from a string. Instead,
-        -- we form a singleton string, and assert that it is equivalent to
-        -- the extracted value. See <http://github.com/Z3Prover/z3/issues/1302>
-        y si st = do c <- internalVariable st w8
-                     cs <- newExpr st KString (SBVApp (StrOp StrUnit) [c])
-                     let csSBV = SBV (SVal KString (Right (cache (\_ -> return cs))))
-                     internalConstraint st False [] $ unSBV $ length s .> i .=> csSBV .== si
-                     return c
 
 -- | Short cut for 'strToCharAt'
 (.!!) :: SString -> SInteger -> SChar
