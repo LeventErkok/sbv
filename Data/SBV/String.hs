@@ -140,13 +140,14 @@ strToStrAt s offset = subStr s offset 1
 --
 -- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> "AAAAA" `strToCharAt` i .== literal 'A'
 -- Q.E.D.
--- >>> prove $ \s i c -> s `strToCharAt` i .== c .=> indexOf s (singleton c) .<= i
+-- >>> prove $ \s i c -> i `inRange` (0, length s - 1) .&& s `strToCharAt` i .== c .=> indexOf s (singleton c) .<= i
 -- Q.E.D.
 strToCharAt :: SString -> SInteger -> SChar
 strToCharAt s i
   | Just cs <- unliteral s, Just ci <- unliteral i, ci >= 0, ci < genericLength cs, let c = C.ord (cs `genericIndex` ci)
   = literal (C.chr c)
   | True
+  = lift2 StrNth Nothing s i
 
 -- | Short cut for 'strToCharAt'
 (.!!) :: SString -> SInteger -> SChar

@@ -135,9 +135,9 @@ listToListAt s offset = subList s offset 1
 -- | @`elemAt` l i@ is the value stored at location @i@. Unspecified if
 -- index is out of bounds.
 --
--- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
+-- >>> prove $ \i -> i `inRange` (0, 4) .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) i e -> l `elemAt` i .== e .=> indexOf l (singleton e) .<= i
+-- >>> prove $ \(l :: SList Integer) i e -> i `inRange` (0, length l - 1) .&& l `elemAt` i .== e .=> indexOf l (singleton e) .<= i
 -- Q.E.D.
 elemAt :: forall a. SymVal a => SList a -> SInteger -> SBV a
 elemAt l i
