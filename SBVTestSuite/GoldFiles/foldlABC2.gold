@@ -13,13 +13,11 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s3 () Int 0)
-[GOOD] (define-fun s16 () Int 1)
+[GOOD] (define-fun s15 () Int 1)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () Int) ; tracks user variable "b"
 [GOOD] (declare-fun s2 () Int) ; tracks user variable "c"
-[GOOD] (declare-fun s14 () Int) ; tracks user variable "__internal_sbv_s14"
-[GOOD] (declare-fun s25 () Int) ; tracks user variable "__internal_sbv_s25"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -36,32 +34,22 @@
 [GOOD] (define-fun s11 () (Seq Int) (seq.++ s7 s10))
 [GOOD] (define-fun s12 () Int (seq.len s11))
 [GOOD] (define-fun s13 () Bool (= s3 s12))
-[GOOD] (define-fun s15 () (Seq Int) (seq.unit s14))
-[GOOD] (define-fun s17 () (Seq Int) (seq.extract s11 s3 s16))
-[GOOD] (define-fun s18 () Bool (= s15 s17))
-[GOOD] (define-fun s19 () Bool (<= s12 s3))
-[GOOD] (define-fun s20 () Bool (or s18 s19))
-[GOOD] (define-fun s21 () Int (- s12 s16))
-[GOOD] (define-fun s22 () (Seq Int) (seq.extract s11 s16 s21))
-[GOOD] (define-fun s23 () Int (seq.len s22))
-[GOOD] (define-fun s24 () Bool (= s3 s23))
-[GOOD] (define-fun s26 () (Seq Int) (seq.unit s25))
-[GOOD] (define-fun s27 () (Seq Int) (seq.extract s22 s3 s16))
-[GOOD] (define-fun s28 () Bool (= s26 s27))
-[GOOD] (define-fun s29 () Bool (<= s23 s3))
-[GOOD] (define-fun s30 () Bool (or s28 s29))
-[GOOD] (define-fun s31 () Int (ite s24 s3 s25))
-[GOOD] (define-fun s32 () Int (+ s14 s31))
-[GOOD] (define-fun s33 () Int (ite s13 s3 s32))
-[GOOD] (define-fun s34 () Int (+ s0 s1))
-[GOOD] (define-fun s35 () Int (+ s2 s34))
-[GOOD] (define-fun s36 () Bool (= s33 s35))
+[GOOD] (define-fun s14 () Int (seq.nth s11 s3))
+[GOOD] (define-fun s16 () Int (- s12 s15))
+[GOOD] (define-fun s17 () (Seq Int) (seq.extract s11 s15 s16))
+[GOOD] (define-fun s18 () Int (seq.len s17))
+[GOOD] (define-fun s19 () Bool (= s3 s18))
+[GOOD] (define-fun s20 () Int (seq.nth s17 s3))
+[GOOD] (define-fun s21 () Int (ite s19 s3 s20))
+[GOOD] (define-fun s22 () Int (+ s14 s21))
+[GOOD] (define-fun s23 () Int (ite s13 s3 s22))
+[GOOD] (define-fun s24 () Int (+ s0 s1))
+[GOOD] (define-fun s25 () Int (+ s2 s24))
+[GOOD] (define-fun s26 () Bool (= s23 s25))
 [GOOD] (assert s4)
 [GOOD] (assert s5)
 [GOOD] (assert s6)
-[GOOD] (assert s20)
-[GOOD] (assert s30)
-[GOOD] (assert s36)
+[GOOD] (assert s26)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
