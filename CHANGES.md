@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.2, 2019-04-07
+* Latest Hackage released version: 8.3, 2019-06-08
 
-### Version 8.2.5, Current development version
+### Version 8.3, 2019-06-08
 
   * Increment base dependency to 4.11.
 
