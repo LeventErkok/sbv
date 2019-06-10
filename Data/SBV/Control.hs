@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE NamedFieldPuns  #-}
 
 module Data.SBV.Control (
      -- $queryIntro

@@ -11,7 +11,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
 
 module Data.SBV.Tools.BMC (
          bmc, bmcWith

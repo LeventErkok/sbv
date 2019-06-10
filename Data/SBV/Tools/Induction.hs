@@ -20,7 +20,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns   #-}
 
 module Data.SBV.Tools.Induction (
          InductionResult(..), InductionStep(..), induct, inductWith
