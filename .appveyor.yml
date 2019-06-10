@@ -1,5 +1,3 @@
-# As of Jun 5 2019, nightly z3 builds no longer available.
-# So, we're commenting out the test lines.
 build: off
 
 environment:
@@ -8,14 +6,14 @@ environment:
       TASTY_HIDE_SUCCESSES: True
 
 before_build:
-    # - git clone -q https://github.com/Z3Prover/bin.git Z3Prover
-    # - 7z e C:\projects\sbv\Z3Prover\nightly\z3*x64*win*zip -oc:\projects\sbv\z3_downloaded -r -y
+- wget https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-x64-win.zip
+- 7z e z3-4.8.6-x64-win.zip -oc:\projects\sbv\z3_downloaded -r -y
 - choco install -y cabal
-- choco install -y ghc --version 8.6.2
+- choco install -y ghc --version 8.6.5
 - refreshenv
-  # - set PATH=C:\projects\sbv\z3_downloaded;%PATH%
+- set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - ghc --version
-  # - z3 --version
+- z3 --version
 
 skip_tags: true
 
@@ -25,8 +23,8 @@ build_script:
 - cabal install happy
 - cabal install --only-dependencies --enable-tests --enable-benchmarks
 - cabal build
-  # - cabal test SBVTest
-  # - cabal test SBVDocTest
+- cabal test SBVTest
+- cabal test SBVDocTest
 - cabal test SBVHLint
 - cabal check
 - cabal sdist
