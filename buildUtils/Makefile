@@ -1,4 +1,4 @@
-TARGETS=testInterfaces
+TARGETS=testInterfaces ../.travis.yml ../.appveyor.yml
 
 all: $(TARGETS)
 
@@ -16,6 +16,18 @@ generateBounds: generateBounds.hs
 	@rm -f *.o *.hi
 # 	@echo "*** The following takes about 6 minutes to run, be patient!"
 # 	time ./generateBounds +RTS -N4 > ../Data/SBV/Utils/FloatConversionBounds.hs
+
+ci: ci.hs
+	ghc -O2 -Wall -Werror --make $@
+	@rm -f *.o *.hi
+
+genCI: ../.travis.yml ../.appveyor.yml
+
+../.travis.yml: ci
+	@./ci travis
+
+../.appveyor.yml: ci
+	@./ci appveyor
 
 clean:
 	@rm -f *.o *.hi

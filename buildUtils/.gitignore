@@ -1,6 +1,6 @@
 *.hi
 *.o
-simplify
 testInterfaces
 remLine
 generateBounds
+ci

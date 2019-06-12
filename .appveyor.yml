@@ -1,9 +1,13 @@
+#####################################################
+# Automatically generated CI build file. Do not edit!
+#####################################################
+
 build: off
 
 environment:
-      SBV_TEST_ENVIRONMENT: win
-      SBV_HEAVYTEST_PERCENTAGE:  0
-      TASTY_HIDE_SUCCESSES: True
+    SBV_TEST_ENVIRONMENT: win
+    SBV_HEAVYTEST_PERCENTAGE: 0
+    TASTY_HIDE_SUCCESSES: True
 
 before_build:
 - curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-x64-win.zip -o z3-4.8.6-x64-win.zip
@@ -28,3 +32,6 @@ build_script:
 - cabal test SBVHLint
 - cabal check
 - cabal sdist
+#####################################################
+# End of automatically generated CI build file.
+#####################################################
