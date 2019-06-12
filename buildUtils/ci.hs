@@ -6,6 +6,16 @@ travisFile, appveyorFile :: FilePath
 travisFile   = "../.travis.yml"
 appveyorFile = "../.appveyor.yml"
 
+-- The version of z3 we test with
+z3Version :: String
+z3Version = "4.8.6"
+
+ghcLatest :: String
+ghcLatest = "8.6.5"
+
+windowsGHCVersion :: String
+windowsGHCVersion = ghcLatest
+
 main :: IO ()
 main = do as <- getArgs
           case as of
@@ -40,12 +50,6 @@ appveyor = header ++ body ++ footer
        heavyTestPercentage :: Int
        heavyTestPercentage = 0
 
-       ghcVersion :: String
-       ghcVersion = "8.6.5"
-
-       z3Version :: String
-       z3Version = "4.8.6"
-
        z3Name :: String
        z3Name = "z3-" ++ z3Version ++ "-x64-win.zip"
 
@@ -65,7 +69,7 @@ appveyor = header ++ body ++ footer
               , "- curl -fsSL " ++ z3Path ++ " -o " ++ z3Name
               , "- 7z e " ++ z3Name ++ " -oc:\\projects\\sbv\\z3_downloaded -r -y"
               , "- choco install -y cabal"
-              , "- choco install -y ghc --version " ++ ghcVersion
+              , "- choco install -y ghc --version " ++ windowsGHCVersion
               , "- refreshenv"
               , "- set PATH=C:\\projects\\sbv\\z3_downloaded;%PATH%"
               , "- ghc --version"
