@@ -66,7 +66,7 @@ stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
                          }
   where downloadName = "z3-" ++ z3Version ++ "-ubuntu-16.04.zip"
         testPerc     = 15
-        envs         = ["env: SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
+        envs         = ["env: SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 headLinTweaks :: Tweaks
 headLinTweaks = Tweaks { heavyTestPercentage = testPerc
@@ -79,7 +79,7 @@ headLinTweaks = Tweaks { heavyTestPercentage = testPerc
   where downloadName = "z3-" ++ z3Version ++ "-ubuntu-16.04.zip"
         testPerc     = 30
         -- Two different spellings of true below (true and True) is intentional; since Travis script treats it differently than SBV. Sigh.
-        envs         = ["env: GHCHEAD=true SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
+        envs         = ["env: GHCHEAD=true SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 osxTweaks :: Tweaks
 osxTweaks = Tweaks { heavyTestPercentage = testPerc
@@ -91,7 +91,7 @@ osxTweaks = Tweaks { heavyTestPercentage = testPerc
                    }
   where downloadName = "z3-" ++ z3Version ++ "-osx-10.14.5.zip"
         testPerc     = 15
-        envs         = ["env: SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
+        envs         = ["env: SBV_EXTRA_CHECKS=False SBV_TEST_ENVIRONMENT=osx SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 
 appveyor :: [String]
@@ -151,9 +151,9 @@ travis                              = header ++ body ++ footer
              , extras               = lin2Extras
              } = headLinTweaks
        Tweaks{ ghcVersion           = osxGHCVer
-             , cabalInstallVersion = osxCabalVer
-             , z3Name              = _osXZ3Name
-             , z3Path              = _osXZ3Path
+             , cabalInstallVersion  = osxCabalVer
+             , z3Name               = _osXZ3Name
+             , z3Path               = _osXZ3Path
              , extras               = osxExtras
              } = osxTweaks
 
