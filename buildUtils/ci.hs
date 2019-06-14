@@ -15,6 +15,9 @@ z3Version = "4.8.6"
 ghcLatest :: String
 ghcLatest = "8.6.5"
 
+cabalLatest :: String
+cabalLatest = "2.4"
+
 main :: IO ()
 main = do as <- getArgs
           case as of
@@ -38,30 +41,57 @@ footer = [ "#####################################################"
 
 data Tweaks = Tweaks { heavyTestPercentage :: Int
                      , ghcVersion          :: String
+                     , cabalInstallVersion :: String
                      , z3Name              :: String
                      , z3Path              :: String
+                     , extras              :: [String]
                      }
 
 winTweaks :: Tweaks
 winTweaks = Tweaks { heavyTestPercentage = 0
                    , ghcVersion          = ghcLatest
+                   , cabalInstallVersion = cabalLatest
                    , z3Name              = "z3-" ++ z3Version ++ "-x64-win.zip"
                    , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/z3-" ++ z3Version ++ "-x64-win.zip"
+                   , extras              = []
                    }
 
-_stableLinTweaks :: Tweaks
-_stableLinTweaks = Tweaks { heavyTestPercentage = 0
+stableLinTweaks :: Tweaks
+stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
                          , ghcVersion          = ghcLatest
-                         , z3Name              = "z3-" ++ z3Version ++ "-x64-win.zip"
-                         , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/z3-" ++ z3Version ++ "-x64-win.zip"
+                         , cabalInstallVersion = cabalLatest
+                         , z3Name              = downloadName
+                         , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                         , extras              = envs
                          }
+  where downloadName = "z3-" ++ z3Version ++ "-ubuntu-16.04.zip"
+        testPerc     = 15
+        envs         = ["env: SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
-_headLinTweaks :: Tweaks
-_headLinTweaks = Tweaks { heavyTestPercentage = 0
-                       , ghcVersion          = ghcLatest
-                       , z3Name              = "z3-" ++ z3Version ++ "-x64-win.zip"
-                       , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/z3-" ++ z3Version ++ "-x64-win.zip"
+headLinTweaks :: Tweaks
+headLinTweaks = Tweaks { heavyTestPercentage = testPerc
+                       , ghcVersion          = "head"
+                       , cabalInstallVersion = "head"
+                       , z3Name              = downloadName
+                       , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                       , extras              = envs
                        }
+  where downloadName = "z3-" ++ z3Version ++ "-ubuntu-16.04.zip"
+        testPerc     = 30
+        -- Two different spellings of true below (true and True) is intentional; since Travis script treats it differently than SBV. Sigh.
+        envs         = ["env: GHCHEAD=true SBV_EXTRA_CHECKS=True SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
+
+osxTweaks :: Tweaks
+osxTweaks = Tweaks { heavyTestPercentage = testPerc
+                   , ghcVersion          = ghcLatest
+                   , cabalInstallVersion = cabalLatest
+                   , z3Name              = downloadName
+                   , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                   , extras              = "os: osx" : envs
+                   }
+  where downloadName = "z3-" ++ z3Version ++ "-osx-10.14.5.zip"
+        testPerc     = 15
+        envs         = ["env: SBV_EXTRA_CHECKS=False SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 
 appveyor :: [String]
@@ -107,13 +137,31 @@ appveyor = header ++ body ++ footer
 --
 -- and then modified to install z3 and do other tweaks.
 travis :: [String]
-travis = header ++ body ++ footer
- where -- put tweaks here
+travis                              = header ++ body ++ footer
+ where Tweaks{ ghcVersion           = lin1GHCVer
+             , cabalInstallVersion  = lin1CabalVer
+             , z3Name               = _lin1Z3Name
+             , z3Path               = _lin1Z3Path
+             , extras               = lin1Extras
+             } = stableLinTweaks
+       Tweaks{ ghcVersion           = lin2GHCVer
+             , cabalInstallVersion  = lin2CabalVer
+             , z3Name               = _lin2Z3Name
+             , z3Path               = _lin2Z3Path
+             , extras               = lin2Extras
+             } = headLinTweaks
+       Tweaks{ ghcVersion           = osxGHCVer
+             , cabalInstallVersion = osxCabalVer
+             , z3Name              = _osXZ3Name
+             , z3Path              = _osXZ3Path
+             , extras               = osxExtras
+             } = osxTweaks
+
        body = [ "language: c"
               , "dist: xenial"
               , ""
               , "git:"
-              , "  submodules: false  # whether to recursively clone submodules"
+              , "  submodules: false"
               , ""
               , "cache:"
               , "  directories:"
@@ -123,26 +171,28 @@ travis = header ++ body ++ footer
               , ""
               , "before_cache:"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/build-reports.log"
-              , "  # remove files that are regenerated by 'cabal update'"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/00-index.*"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/*.json"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/01-index.cache"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/01-index.tar"
               , "  - rm -fv $CABALHOME/packages/hackage.haskell.org/01-index.tar.idx"
-              , ""
               , "  - rm -rfv $CABALHOME/packages/head.hackage"
               , ""
               , "matrix:"
               , "  include:"
-              , "    - compiler: \"ghc-8.6.5\""
-              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: [hvr-ghc]}}"
-              , "    - compiler: \"ghc-head\""
-              , "      env: GHCHEAD=true"
-              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}"
-              , "    - compiler: \"ghc-8.6.5\""
-              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: [hvr-ghc]}}"
-              , "      os: osx"
-              , ""
+              , "    - compiler: \"ghc-" ++ lin1GHCVer ++ "\""
+              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-" ++ lin1CabalVer ++ ",ghc-" ++ lin1GHCVer ++ "], sources: [hvr-ghc]}}"
+              ]
+           ++ [ "      " ++ e | e <- lin1Extras]
+           ++ [ "    - compiler: \"ghc-" ++ lin2GHCVer ++ "\""
+              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-" ++ lin2CabalVer ++ ",ghc-" ++ lin2GHCVer ++ "], sources: [hvr-ghc]}}"
+              ]
+           ++ [ "      " ++ e | e <- lin2Extras]
+           ++ [ "    - compiler: \"ghc-" ++ osxGHCVer ++ "\""
+              , "      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-" ++ osxCabalVer ++ ",ghc-"  ++ osxGHCVer  ++ "], sources: [hvr-ghc]}}"
+              ]
+           ++ [ "      " ++ e | e <- osxExtras]
+           ++ [ ""
               , "before_install:"
               , "  - HC=/opt/ghc/bin/${CC}"
               , "  - HCPKG=${HC/ghc/ghc-pkg}"
