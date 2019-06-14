@@ -7,10 +7,10 @@ Please see: http://leventerkok.github.io/sbv/
 ### Build Status
 
  - Linux:
-     - GHC 8.4.4 [![Build1][3]][1]
-     - GHC 8.6.3 [![Build1][4]][1]
+     - GHC 8.6.5 [![Build1][3]][1]
+     - GHC HEAD  [![Build1][4]][1]
  - Mac OSX:
-     - GHC 8.6.3 [![Build1][5]][1]
+     - GHC 8.6.5 [![Build1][5]][1]
  - Windows:
      - GHC 8.6.5 [![Build5][6]][2]
 
