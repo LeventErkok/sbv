@@ -140,14 +140,12 @@ travis :: [String]
 travis                              = header ++ body ++ footer
  where Tweaks{ ghcVersion           = lin1GHCVer
              , cabalInstallVersion  = lin1CabalVer
-             , z3Name               = _lin1Z3Name
-             , z3Path               = _lin1Z3Path
+             , z3Name               = z3Name
+             , z3Path               = z3Path
              , extras               = lin1Extras
              } = stableLinTweaks
        Tweaks{ ghcVersion           = lin2GHCVer
              , cabalInstallVersion  = lin2CabalVer
-             , z3Name               = _lin2Z3Name
-             , z3Path               = _lin2Z3Path
              , extras               = lin2Extras
              } = headLinTweaks
        Tweaks{ ghcVersion           = osxGHCVer
@@ -201,6 +199,7 @@ travis                              = header ++ body ++ footer
               , "  - CABALHOME=$HOME/.cabal"
               , "  - export PATH=\"$CABALHOME/bin:$PATH\""
               , "  - ROOTDIR=$(pwd)"
+              , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ z3Path ++ " -o " ++ z3Name ++ "; unzip " ++ z3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/" ++ z3Name ++ "/bin; z3 --version; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then HC=$HOME/.ghc-install/ghc/bin/$TRAVIS_COMPILER; HCPKG=${HC/ghc/ghc-pkg}; CABAL=$HOME/.ghc-install/ghc/bin/cabal; fi"
               , "  - HCNUMVER=$(( $(${HC} --numeric-version|sed -E 's/([0-9]+)\\.([0-9]+)\\.([0-9]+).*/\\1 * 10000 + \\2 * 100 + \\3/') ))"
@@ -248,36 +247,14 @@ travis                              = header ++ body ++ footer
               , "  - \"cat \\\"cabal.project.freeze\\\" | sed -E 's/^(constraints: *| *)//' | sed 's/any.//'\""
               , "  - rm  \"cabal.project.freeze\""
               , "  - ${CABAL} new-build -w ${HC} ${TEST} ${BENCH} --project-file=\"cabal.project\" --dep -j2 all"
-              , "  - ${CABAL} new-build -w ${HC} --disable-tests --disable-benchmarks --project-file=\"cabal.project\" --dep -j2 all"
               , "  - rm -rf .ghc.environment.* \".\"/dist"
               , "  - DISTDIR=$(mktemp -d /tmp/dist-test.XXXX)"
               , ""
               , "# Here starts the actual work to be performed for the package under test;"
               , "# any command which exits with a non-zero exit code causes the build to fail."
               , "script:"
-              , "  # test that source-distributions can be generated"
-              , "  - ${CABAL} new-sdist all"
-              , "  - mv dist-newstyle/sdist/*.tar.gz ${DISTDIR}/"
-              , "  - cd ${DISTDIR} || false"
-              , "  - find . -maxdepth 1 -name '*.tar.gz' -exec tar -xvf '{}' \\;"
-              , "  - rm -f cabal.project"
-              , "  - touch cabal.project"
-              , "  - \"printf 'packages: \\\"sbv-*/*.cabal\\\"\\\\n' >> cabal.project\""
-              , "  - \"printf 'write-ghc-environment-files: always\\\\n' >> cabal.project\""
-              , "  - touch cabal.project.local"
-              , "  - \"for pkg in $($HCPKG list --simple-output); do echo $pkg | sed 's/-[^-]*$//' | grep -vE -- '^(sbv)$' | sed 's/^/constraints: /' | sed 's/$/ installed/' >> cabal.project.local; done\""
-              , "  - cat cabal.project || true"
-              , "  - cat cabal.project.local || true"
-              , "  # this builds all libraries and executables (without tests/benchmarks)"
-              , "  - ${CABAL} new-build -w ${HC} --disable-tests --disable-benchmarks all"
-              , ""
-              , "  # build & run tests, build benchmarks"
-              , "  - ${CABAL} new-build -w ${HC} ${TEST} ${BENCH} all"
               , "  - if [ \"x$TEST\" = \"x--enable-tests\" ]; then ${CABAL} new-test -w ${HC} ${TEST} ${BENCH} all; fi"
               , ""
               , "  # cabal check"
               , "  - (cd sbv-* && ${CABAL} check)"
-              , ""
-              , "  # Build without installed constraints for packages in global-db"
-              , "  - rm -f cabal.project.local; ${CABAL} new-build -w ${HC} --disable-tests --disable-benchmarks all;"
               ]
