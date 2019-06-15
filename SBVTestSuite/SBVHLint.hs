@@ -21,6 +21,7 @@ arguments =
     [ "Data"
     , "SBVTestSuite"
     , "-i", "Use otherwise"
+    , "-i", "Parse error"
     ]
 
 main :: IO ()
