@@ -43,8 +43,8 @@ before_install:
   - CABALHOME=$HOME/.cabal
   - export PATH="$CABALHOME/bin:$PATH"
   - ROOTDIR=$(pwd)
-  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-x64-ubuntu-16.04.zip -o z3-4.8.6-x64-ubuntu-16.04.zip; unzip -j z3-4.8.6-x64-ubuntu-16.04.zip -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; rehash; z3 --version; fi
-  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-osx-10.14.5.zip -o z3-4.8.6-osx-10.14.5.zip; unzip -j z3-4.8.6-osx-10.14.5.zip -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; z3 --version; rehash; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" ]; then curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-x64-ubuntu-16.04.zip -o z3-4.8.6-x64-ubuntu-16.04.zip; unzip -j z3-4.8.6-x64-ubuntu-16.04.zip -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; echo $PATH; ./z3_downloaded/bin/z3 --version; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx" ]; then curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.6-osx-10.14.5.zip -o z3-4.8.6-osx-10.14.5.zip; unzip -j z3-4.8.6-osx-10.14.5.zip -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; z3 --version; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi
   - if [ "$TRAVIS_OS_NAME" = "osx" ]; then HC=$HOME/.ghc-install/ghc/bin/$TRAVIS_COMPILER; HCPKG=${HC/ghc/ghc-pkg}; CABAL=$HOME/.ghc-install/ghc/bin/cabal; fi

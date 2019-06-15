@@ -199,7 +199,7 @@ travis                              = header ++ body ++ footer
               , "  - CABALHOME=$HOME/.cabal"
               , "  - export PATH=\"$CABALHOME/bin:$PATH\""
               , "  - ROOTDIR=$(pwd)"
-              , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ lin1Z3Path ++ " -o " ++ lin1Z3Name ++ "; unzip -j " ++ lin1Z3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; z3 --version; fi"
+              , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ lin1Z3Path ++ " -o " ++ lin1Z3Name ++ "; unzip -j " ++ lin1Z3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; echo $PATH; ./z3_downloaded/bin/z3 --version; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then curl -fsSL " ++ osxZ3Path ++ " -o " ++ osxZ3Name ++ "; unzip -j " ++ osxZ3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; z3 --version; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
