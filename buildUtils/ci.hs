@@ -89,7 +89,7 @@ osxTweaks = Tweaks { heavyTestPercentage = testPerc
                    , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
                    , extras              = "os: osx" : envs
                    }
-  where downloadName = "z3-" ++ z3Version ++ "-osx-10.14.5.zip"
+  where downloadName = "z3-" ++ z3Version ++ "-x64-osx-10.14.5.zip"
         testPerc     = 15
         envs         = ["env: SBV_EXTRA_CHECKS=False SBV_TEST_ENVIRONMENT=osx SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
@@ -199,8 +199,8 @@ travis                              = header ++ body ++ footer
               , "  - CABALHOME=$HOME/.cabal"
               , "  - export PATH=\"$CABALHOME/bin:$PATH\""
               , "  - ROOTDIR=$(pwd)"
-              , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ lin1Z3Path ++ " -o " ++ lin1Z3Name ++ "; unzip -j " ++ lin1Z3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; echo $PATH; ./z3_downloaded/bin/z3 --version; fi"
-              , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then curl -fsSL " ++ osxZ3Path ++ " -o " ++ osxZ3Name ++ "; unzip -j " ++ osxZ3Name ++ " -d z3_downloaded; export PATH=$PATH:$PWD/z3_downloaded/bin; z3 --version; fi"
+              , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ lin1Z3Path ++ " -o " ++ lin1Z3Name ++ "; unzip -j " ++ lin1Z3Name ++ " -d z3_downloaded; export PATH=$PATH:$(pwd)/z3_downloaded; z3 --version; fi"
+              , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then curl -fsSL " ++ osxZ3Path ++ " -o " ++ osxZ3Name ++ "; unzip -j " ++ osxZ3Name ++ " -d z3_downloaded; export PATH=$PATH:$(pwd)/z3_downloaded; z3 --version; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then HC=$HOME/.ghc-install/ghc/bin/$TRAVIS_COMPILER; HCPKG=${HC/ghc/ghc-pkg}; CABAL=$HOME/.ghc-install/ghc/bin/cabal; fi"
