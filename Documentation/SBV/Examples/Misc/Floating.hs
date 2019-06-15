@@ -56,19 +56,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =  4.4272186e20 :: Float
---   y =  1.6717353e20 :: Float
---   z = -1.2626838e19 :: Float
+--   x = -6.2126765e-33 :: Float
+--   y =  7.5025677e-37 :: Float
+--   z =   2.542798e-39 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x =  4.4272186e20 :: Float
--- >>> let y =  1.6717353e20 :: Float
--- >>> let z = -1.2626838e19 :: Float
+-- >>> let x = -6.2126765e-33 :: Float
+-- >>> let y =  7.5025677e-37 :: Float
+-- >>> let z =   2.542798e-39 :: Float
 -- >>> x + (y + z)
--- 5.972685e20
+-- -6.2119234e-33
 -- >>> (x + y) + z
--- 5.972686e20
+-- -6.211924e-33
 --
 -- Note the difference between two additions!
 assocPlusRegular :: IO ThmResult
@@ -90,17 +90,16 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a =  1.8446744e19 :: Float
---   b = -3.786532e-28 :: Float
+--   a = 3.0327754e-36 :: Float
+--   b =       4.5e-44 :: Float
 --
 -- Indeed, we have:
 --
--- >>> (1.8446744e19 - 3.786532e-28) == (1.8446744e19 :: Float)
+-- >>> let a = 3.0327754e-36 :: Float
+-- >>> let b =       4.5e-44 :: Float
+-- >>> a + b == a
 -- True
---
--- But:
---
--- >>> -3.786532e-28 == (0 :: Float)
+-- >>> b == 0
 -- False
 --
 nonZeroAddition :: IO ThmResult
@@ -121,11 +120,11 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.271703601976025e-308 :: Double
+--   a = 2.800139349078291e-281 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = 1.271703601976025e-308 :: Double
+-- >>> let a = 2.800139349078291e-281 :: Double
 -- >>> a * (1/a)
 -- 0.9999999999999999
 multInverse :: IO ThmResult
