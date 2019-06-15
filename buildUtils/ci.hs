@@ -1,14 +1,19 @@
+-- We test with:
+--     Z3 : Nightly release only
+--     GHC:
+--       - OSX:   Latest stable release
+--       - Win:   Latest stable release
+--       - Linux: Latest stable release
+--                GHC Head
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Main(main) where
 
 import System.Environment
 
-travisFile, appveyorFile :: FilePath
-travisFile   = "../.travis.yml"
-appveyorFile = "../.appveyor.yml"
-
--- The version of z3 we test with
+---------------------------------------------------------------------------------
+-- Modify the following section as new releases are made for these.
+---------------------------------------------------------------------------------
 z3Version :: String
 z3Version = "4.8.6"
 
@@ -17,6 +22,13 @@ ghcLatest = "8.6.5"
 
 cabalLatest :: String
 cabalLatest = "2.4"
+
+---------------------------------------------------------------------------------
+-- Hopefully none of the below needs to change. At least that's the goal!
+---------------------------------------------------------------------------------
+travisFile, appveyorFile :: FilePath
+travisFile   = "../.travis.yml"
+appveyorFile = "../.appveyor.yml"
 
 main :: IO ()
 main = do as <- getArgs
