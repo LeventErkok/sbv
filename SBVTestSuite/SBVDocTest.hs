@@ -31,7 +31,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
           case testEnv of
             TestEnvLocal   -> runDocTest False False 100
             TestEnvCI env  -> if testPercentage < 50
-                              then do putStrLn $ "Test percentage below tresheold, skipping doctest: " ++ show testPercentage
+                              then do putStrLn $ "Test percentage below threshold, skipping doctest: " ++ show testPercentage
                                       exitSuccess
                               else runDocTest (env == CIWindows) True testPercentage
             TestEnvUnknown  -> do putStrLn "Unknown test environment, skipping doctests"

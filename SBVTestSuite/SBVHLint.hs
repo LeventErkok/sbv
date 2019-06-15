@@ -33,7 +33,7 @@ main = do
     case testEnv of
       TestEnvLocal   -> runHLint
       TestEnvCI{}    -> if testPercentage < 50
-                           then do putStrLn $ "Test percentage below tresheold, skipping hlint: " ++ show testPercentage
+                           then do putStrLn $ "Test percentage below threshold, skipping hlint: " ++ show testPercentage
                                    exitSuccess
                            else runHLint
       TestEnvUnknown -> do putStrLn "Unknown test environment, skipping hlint run"
