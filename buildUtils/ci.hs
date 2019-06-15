@@ -47,6 +47,17 @@ data Tweaks = Tweaks { heavyTestPercentage :: Int
                      , extras              :: [String]
                      }
 
+mkEnvs :: Int -> Bool -> String -> String -> String
+mkEnvs perc extraChecks os suff =    "env: TASTY_HIDE_SUCCESSES=True"
+                                  ++ " SBV_EXTRA_CHECKS=" ++ show extraChecks
+                                  ++ " SBV_TEST_ENVIRONMENT=" ++ os
+                                  ++ " SBV_HEAVYTEST_PERCENTAGE=" ++ show perc
+                                  ++ " TASTY_HIDE_SUCCESSES=True"
+                                  ++ s
+  where s = case suff of
+              "" -> ""
+              _  -> ' ' : suff
+
 winTweaks :: Tweaks
 winTweaks = Tweaks { heavyTestPercentage = 0
                    , ghcVersion          = ghcLatest
@@ -62,11 +73,10 @@ stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
                          , cabalInstallVersion = cabalLatest
                          , z3Name              = downloadName
                          , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
-                         , extras              = envs
+                         , extras              = [mkEnvs testPerc True "linux" ""]
                          }
   where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
         testPerc     = 15
-        envs         = ["env: SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 headLinTweaks :: Tweaks
 headLinTweaks = Tweaks { heavyTestPercentage = testPerc
@@ -74,12 +84,10 @@ headLinTweaks = Tweaks { heavyTestPercentage = testPerc
                        , cabalInstallVersion = "head"
                        , z3Name              = downloadName
                        , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
-                       , extras              = envs
+                       , extras              = [mkEnvs testPerc True "linux" "GHCHEAD=true"]
                        }
   where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
         testPerc     = 30
-        -- Two different spellings of true below (true and True) is intentional; since Travis script treats it differently than SBV. Sigh.
-        envs         = ["env: GHCHEAD=true SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 osxTweaks :: Tweaks
 osxTweaks = Tweaks { heavyTestPercentage = testPerc
@@ -87,11 +95,10 @@ osxTweaks = Tweaks { heavyTestPercentage = testPerc
                    , cabalInstallVersion = cabalLatest
                    , z3Name              = downloadName
                    , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
-                   , extras              = "os: osx" : envs
+                   , extras              = ["os: osx", mkEnvs testPerc False "osx" ""]
                    }
   where downloadName = "z3-" ++ z3Version ++ "-x64-osx-10.14.5.zip"
         testPerc     = 15
-        envs         = ["env: SBV_EXTRA_CHECKS=False SBV_TEST_ENVIRONMENT=osx SBV_HEAVYTEST_PERCENTAGE=" ++ show testPerc]
 
 
 appveyor :: [String]
