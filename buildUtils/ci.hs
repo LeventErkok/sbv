@@ -277,5 +277,5 @@ travis                              = header ++ body ++ footer
               , "  - if [ \"x$TEST\" = \"x--enable-tests\" ]; then ${CABAL} new-test -w ${HC} ${TEST} ${BENCH} all; fi"
               , ""
               , "  # cabal check"
-              , "  - (cd sbv-* && ${CABAL} check)"
+              , "  - ${CABAL} check"
               ]

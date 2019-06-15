@@ -102,7 +102,7 @@ script:
   - if [ "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test -w ${HC} ${TEST} ${BENCH} all; fi
 
   # cabal check
-  - (cd sbv-* && ${CABAL} check)
+  - ${CABAL} check
 #####################################################
 # End of automatically generated CI build file.
 #####################################################
