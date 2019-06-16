@@ -27,9 +27,9 @@ matrix:
     - compiler: "ghc-8.6.5"
       addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: [hvr-ghc]}}
       env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=15 TASTY_HIDE_SUCCESSES=True
-    - compiler: "ghc-head"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-head,ghc-head], sources: [hvr-ghc]}}
-      env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=30 TASTY_HIDE_SUCCESSES=True GHCHEAD=true
+    - compiler: "ghc-8.8.1"
+      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.0,ghc-8.8.1], sources: [hvr-ghc]}}
+      env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=30 TASTY_HIDE_SUCCESSES=True
     - compiler: "ghc-8.6.5"
       addons: {apt: {packages: [ghc-ppa-tools,cabal-install-2.4,ghc-8.6.5], sources: [hvr-ghc]}}
       os: osx
@@ -59,24 +59,6 @@ install:
   - travis_retry ${CABAL} update -v
   - sed -i.bak 's/^jobs:/-- jobs:/' $CABALHOME/config
   - rm -fv cabal.project cabal.project.local
-  # Overlay Hackage Package Index for GHC HEAD: https://github.com/hvr/head.hackage
-  - |
-    if $GHCHEAD; then
-      sed -i 's/-- allow-newer: .*/allow-newer: *:base/' $CABALHOME/config
-      for pkg in $($HCPKG list --simple-output); do pkg=$(echo $pkg | sed 's/-[^-]*$//'); sed -i "s/allow-newer: /allow-newer: *:$pkg, /" $CABALHOME/config; done
-
-      echo 'repository head.hackage'                                                        >> $CABALHOME/config
-      echo '   url: http://head.hackage.haskell.org/'                                       >> $CABALHOME/config
-      echo '   secure: True'                                                                >> $CABALHOME/config
-      echo '   root-keys: 07c59cb65787dedfaef5bd5f987ceb5f7e5ebf88b904bbd4c5cbdeb2ff71b740' >> $CABALHOME/config
-      echo '              2e8555dde16ebd8df076f1a8ef13b8f14c66bad8eafefd7d9e37d0ed711821fb' >> $CABALHOME/config
-      echo '              8f79fd2389ab2967354407ec852cbe73f2e8635793ac446d09461ffb99527f6e' >> $CABALHOME/config
-      echo '   key-threshold: 3'                                                            >> $CABALHOME.config
-
-      grep -Ev -- '^\s*--' $CABALHOME/config | grep -Ev '^\s*$'
-
-      ${CABAL} new-update head.hackage -v
-    fi
   - grep -Ev -- '^\s*--' $CABALHOME/config | grep -Ev '^\s*$'
   - rm -f cabal.project
   - touch cabal.project
@@ -97,8 +79,6 @@ install:
   - rm -rf .ghc.environment.* "."/dist
   - DISTDIR=$(mktemp -d /tmp/dist-test.XXXX)
 
-# Here starts the actual work to be performed for the package under test;
-# any command which exits with a non-zero exit code causes the build to fail.
 script:
   - if [ "$TRAVIS_OS_NAME" = "osx"   -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all; fi
   - if [ "$TRAVIS_OS_NAME" = "linux" -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test                    -w ${HC} ${TEST} ${BENCH} all; fi

@@ -4,7 +4,8 @@
 --       - OSX:   Latest stable release
 --       - Win:   Latest stable release
 --       - Linux: Latest stable release
---                GHC Head
+--                Latest build from PPV that's not yet released
+--                See: https://launchpad.net/~hvr/+archive/ubuntu/ghc
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Main(main) where
@@ -14,15 +15,19 @@ import System.Environment
 ---------------------------------------------------------------------------------
 -- Modify the following section as new releases are made for these.
 ---------------------------------------------------------------------------------
+-- Get this from latest z3 setting on github
 z3Version :: String
 z3Version = "4.8.6"
 
-ghcLatest :: String
-ghcLatest = "8.6.5"
-
-cabalLatest :: String
+-- Get these from whatever the "official" latest GHC release is
+ghcLatest, cabalLatest :: String
+ghcLatest   = "8.6.5"
 cabalLatest = "2.4"
 
+-- Get these from: https://launchpad.net/~hvr/+archive/ubuntu/ghc
+ghcHead, cabalHead :: String
+ghcHead   = "8.8.1"
+cabalHead = "3.0"
 ---------------------------------------------------------------------------------
 -- Hopefully none of the below needs to change. At least that's the goal!
 ---------------------------------------------------------------------------------
@@ -92,11 +97,11 @@ stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
 
 headLinTweaks :: Tweaks
 headLinTweaks = Tweaks { heavyTestPercentage = testPerc
-                       , ghcVersion          = "head"
-                       , cabalInstallVersion = "head"
+                       , ghcVersion          = ghcHead
+                       , cabalInstallVersion = cabalHead
                        , z3Name              = downloadName
                        , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
-                       , extras              = [mkEnvs testPerc True "linux" "GHCHEAD=true"]
+                       , extras              = [mkEnvs testPerc True "linux" ""]
                        }
   where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
         testPerc     = 30
@@ -234,24 +239,6 @@ travis                              = header ++ body ++ footer
               , "  - travis_retry ${CABAL} update -v"
               , "  - sed -i.bak 's/^jobs:/-- jobs:/' $CABALHOME/config"
               , "  - rm -fv cabal.project cabal.project.local"
-              , "  # Overlay Hackage Package Index for GHC HEAD: https://github.com/hvr/head.hackage"
-              , "  - |"
-              , "    if $GHCHEAD; then"
-              , "      sed -i 's/-- allow-newer: .*/allow-newer: *:base/' $CABALHOME/config"
-              , "      for pkg in $($HCPKG list --simple-output); do pkg=$(echo $pkg | sed 's/-[^-]*$//'); sed -i \"s/allow-newer: /allow-newer: *:$pkg, /\" $CABALHOME/config; done"
-              , ""
-              , "      echo 'repository head.hackage'                                                        >> $CABALHOME/config"
-              , "      echo '   url: http://head.hackage.haskell.org/'                                       >> $CABALHOME/config"
-              , "      echo '   secure: True'                                                                >> $CABALHOME/config"
-              , "      echo '   root-keys: 07c59cb65787dedfaef5bd5f987ceb5f7e5ebf88b904bbd4c5cbdeb2ff71b740' >> $CABALHOME/config"
-              , "      echo '              2e8555dde16ebd8df076f1a8ef13b8f14c66bad8eafefd7d9e37d0ed711821fb' >> $CABALHOME/config"
-              , "      echo '              8f79fd2389ab2967354407ec852cbe73f2e8635793ac446d09461ffb99527f6e' >> $CABALHOME/config"
-              , "      echo '   key-threshold: 3'                                                            >> $CABALHOME.config"
-              , ""
-              , "      grep -Ev -- '^\\s*--' $CABALHOME/config | grep -Ev '^\\s*$'"
-              , ""
-              , "      ${CABAL} new-update head.hackage -v"
-              , "    fi"
               , "  - grep -Ev -- '^\\s*--' $CABALHOME/config | grep -Ev '^\\s*$'"
               , "  - rm -f cabal.project"
               , "  - touch cabal.project"
@@ -272,8 +259,6 @@ travis                              = header ++ body ++ footer
               , "  - rm -rf .ghc.environment.* \".\"/dist"
               , "  - DISTDIR=$(mktemp -d /tmp/dist-test.XXXX)"
               , ""
-              , "# Here starts the actual work to be performed for the package under test;"
-              , "# any command which exits with a non-zero exit code causes the build to fail."
               , "script:"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\"   -a \"x$TEST\" = \"x--enable-tests\" ]; then ${CABAL} new-test -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" -a \"x$TEST\" = \"x--enable-tests\" ]; then ${CABAL} new-test                    -w ${HC} ${TEST} ${BENCH} all; fi"
