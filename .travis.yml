@@ -22,6 +22,12 @@ before_cache:
   - rm -fv $CABALHOME/packages/hackage.haskell.org/01-index.tar.idx
   - rm -rfv $CABALHOME/packages/head.hackage
 
+notifications:
+  email:
+    - erkokl@gmail.com
+  on_success: always
+  on_failure: always
+
 matrix:
   include:
     - compiler: "ghc-8.6.5"
