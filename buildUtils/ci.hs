@@ -1,11 +1,10 @@
 -- We test with:
 --     Z3 : Nightly release only
 --     GHC:
---       - OSX:   Latest stable release
---       - Win:   Latest stable release
---       - Linux: Latest stable release
---                Latest build from PPV that's not yet released
---                See: https://launchpad.net/~hvr/+archive/ubuntu/ghc
+--       - OSX:   Latest release
+--       - Win:   Latest release
+--       - Linux: Latest release
+--                Previous release
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Main(main) where
@@ -20,14 +19,12 @@ z3Version :: String
 z3Version = "4.8.6"
 
 -- Get these from whatever the "official" latest GHC release is
-ghcLatest, cabalLatest :: String
+ghcLatest, cabalLatest, ghcPrev, cabalPrev :: String
 ghcLatest   = "8.6.5"
 cabalLatest = "2.4"
+ghcPrev     = "8.6.4"
+cabalPrev   = "2.4"
 
--- Get these from: https://launchpad.net/~hvr/+archive/ubuntu/ghc
-ghcHead, cabalHead :: String
-ghcHead   = "8.8.1"
-cabalHead = "3.0"
 ---------------------------------------------------------------------------------
 -- Hopefully none of the below needs to change. At least that's the goal!
 ---------------------------------------------------------------------------------
@@ -95,10 +92,10 @@ stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
   where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
         testPerc     = 15
 
-headLinTweaks :: Tweaks
-headLinTweaks = Tweaks { heavyTestPercentage = testPerc
-                       , ghcVersion          = ghcHead
-                       , cabalInstallVersion = cabalHead
+prevLinTweaks :: Tweaks
+prevLinTweaks = Tweaks { heavyTestPercentage = testPerc
+                       , ghcVersion          = ghcPrev
+                       , cabalInstallVersion = cabalPrev
                        , z3Name              = downloadName
                        , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
                        , extras              = [mkEnvs testPerc True "linux" ""]
@@ -171,7 +168,7 @@ travis                              = header ++ body ++ footer
        Tweaks{ ghcVersion           = lin2GHCVer
              , cabalInstallVersion  = lin2CabalVer
              , extras               = lin2Extras
-             } = headLinTweaks
+             } = prevLinTweaks
        Tweaks{ ghcVersion           = osxGHCVer
              , cabalInstallVersion  = osxCabalVer
              , z3Name               = osxZ3Name
