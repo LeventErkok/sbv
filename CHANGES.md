@@ -5,7 +5,7 @@
 
 ### Version 8.3.5, Not yet released
 
-  * New development version
+  * Ramped up travis-appveyor build infrastructure.
 
 ### Version 8.3, 2019-06-08
 
