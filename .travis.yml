@@ -101,8 +101,8 @@ install:
 # Here starts the actual work to be performed for the package under test;
 # any command which exits with a non-zero exit code causes the build to fail.
 script:
-  - if [ "TRAVIS_OS_NAME" = "osx"   -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all; fi
-  - if [ "TRAVIS_OS_NAME" = "linux" -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test                    -w ${HC} ${TEST} ${BENCH} all; fi
+  - if [ "$TRAVIS_OS_NAME" = "osx"   -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all; fi
+  - if [ "$TRAVIS_OS_NAME" = "linux" -a "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test                    -w ${HC} ${TEST} ${BENCH} all; fi
 
   # cabal check
   - ${CABAL} check
