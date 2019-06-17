@@ -12,12 +12,10 @@
 
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE KindSignatures       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Data.SBV.Core.Sized (
         -- * Type-sized unsigned bit-vectors
@@ -118,12 +116,12 @@ lift2IB nm op x i = uc $ c x `op` i
 -- | 'Bounded' instance for 'WordN'
 instance (KnownNat n, 1 <= n) => Bounded (WordN n) where
    minBound = WordN 0
-   maxBound = WordN $ 2 ^ (intOfProxy (Proxy @n)) - 1
+   maxBound = let sz = intOfProxy (Proxy @n) in WordN $ 2 ^ sz - 1
 
 -- | 'Bounded' instance for 'IntN'
 instance (KnownNat n, 1 <= n) => Bounded (IntN n) where
-   minBound = IntN $ - (2 ^ (intOfProxy (Proxy @n) - 1))
-   maxBound = IntN $ 2 ^ (intOfProxy (Proxy @n) - 1) - 1
+   minBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ - (2 ^ sz1)
+   maxBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ 2 ^ sz1 - 1
 
 -- | 'Num' instance for 'WordN'
 instance (KnownNat n, 1 <= n) => Num (WordN n) where
@@ -132,8 +130,8 @@ instance (KnownNat n, 1 <= n) => Num (WordN n) where
    (*)         = lift2 "(*)"    svTimes
    negate      = lift1 "signum" svUNeg
    abs         = lift1 "abs"    svAbs
-   signum      = WordN . signum   . toInteger
-   fromInteger = WordN . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
+   signum      = fromIntegral . signum   . toInteger
+   fromInteger = fromIntegral . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
 
 -- | 'Num' instance for 'IntN'
 instance (KnownNat n, 1 <= n) => Num (IntN n) where
@@ -142,8 +140,8 @@ instance (KnownNat n, 1 <= n) => Num (IntN n) where
    (*)         = lift2 "(*)"    svTimes
    negate      = lift1 "signum" svUNeg
    abs         = lift1 "abs"    svAbs
-   signum      = IntN . signum   . toInteger
-   fromInteger = IntN . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
+   signum      = fromIntegral . signum   . toInteger
+   fromInteger = fromIntegral . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
 
 -- | 'Enum' instance for 'WordN'
 instance (KnownNat n, 1 <= n) => Enum (WordN n) where
@@ -183,7 +181,7 @@ instance (KnownNat n, 1 <= n) => Bits (WordN n) where
    shiftR       = lift2I  "shiftR"     svShr
    rotateL      = lift2I  "rotateL"    svRol
    rotateR      = lift2I  "rotateR"    svRor
-   testBit v i  = lift2IB "svTestBit" svTestBit v i
+   testBit      = lift2IB "svTestBit"  svTestBit
    bitSizeMaybe = Just . const (intOfProxy (Proxy @n))
    bitSize _    = intOfProxy (Proxy @n)
    isSigned     = hasSign . kindOf
@@ -200,7 +198,7 @@ instance (KnownNat n, 1 <= n) => Bits (IntN n) where
    shiftR       = lift2I  "shiftR"     svShr
    rotateL      = lift2I  "rotateL"    svRol
    rotateR      = lift2I  "rotateR"    svRor
-   testBit v i  = lift2IB "svTestBit" svTestBit v i
+   testBit      = lift2IB "svTestBit"  svTestBit
    bitSizeMaybe = Just . const (intOfProxy (Proxy @n))
    bitSize _    = intOfProxy (Proxy @n)
    isSigned     = hasSign . kindOf
