@@ -186,6 +186,7 @@ Library
                   , Data.SBV.Core.Model
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
+                  , Data.SBV.Core.Sized
                   , Data.SBV.Core.Splittable
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.BaseIO
