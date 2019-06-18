@@ -225,12 +225,12 @@ instance (KnownNat n, 1 <= n) => SDivisible (IntN n) where
   sDivMod  x 0 = (0, x)
   sDivMod  x y = x `divMod` y
 
--- | 'SDvisible' instance for 'SWordN'
+-- | 'SDivisible' instance for 'SWord'
 instance (KnownNat n, 1 <= n) => SDivisible (SWord n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
--- | 'SDvisible' instance for 'SIntN'
+-- | 'SDivisible' instance for 'SInt'
 instance (KnownNat n, 1 <= n) => SDivisible (SInt n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
