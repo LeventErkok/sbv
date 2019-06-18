@@ -130,8 +130,8 @@ instance (KnownNat n, 1 <= n) => Num (WordN n) where
    (*)         = lift2 "(*)"    svTimes
    negate      = lift1 "signum" svUNeg
    abs         = lift1 "abs"    svAbs
-   signum      = fromIntegral . signum   . toInteger
-   fromInteger = fromIntegral . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
+   signum      = WordN . signum   . toInteger
+   fromInteger = WordN . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
 
 -- | 'Num' instance for 'IntN'
 instance (KnownNat n, 1 <= n) => Num (IntN n) where
@@ -140,8 +140,8 @@ instance (KnownNat n, 1 <= n) => Num (IntN n) where
    (*)         = lift2 "(*)"    svTimes
    negate      = lift1 "signum" svUNeg
    abs         = lift1 "abs"    svAbs
-   signum      = fromIntegral . signum   . toInteger
-   fromInteger = fromIntegral . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
+   signum      = IntN . signum   . toInteger
+   fromInteger = IntN . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
 
 -- | 'Enum' instance for 'WordN'
 instance (KnownNat n, 1 <= n) => Enum (WordN n) where
