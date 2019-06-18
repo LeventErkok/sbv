@@ -1351,7 +1351,10 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                                                                        -- validation run. So, simply push a zero value that inhabits all metrics.
                                                                        mkConstCV k (0::Integer)
                                                                  else bad ("Cannot locate variable: " ++ show (nsv, k)) report
-                                              [(ALL, _)]      -> bad ("Cannot validate models in the presence of universally quantified variable " ++ show (snd nsv)) cant
+                                              [(ALL, _)]      -> -- We can stop here, as we can't really validate in the presence of a universal quantifier:
+                                                                 -- we'd have to validate for each possible value. But that's more or less useless. Instead,
+                                                                 -- just issue a warning and use 0 for this value.
+                                                                 mkConstCV k (0::Integer)
                                               [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (snd nsv)) report
                                               [(EX, Just c)]  -> c
                                               r               -> bad (   "Found multiple matching values for variable: " ++ show nsv

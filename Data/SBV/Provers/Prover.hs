@@ -367,7 +367,8 @@ class ExtractIO m => MProvable m a where
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
-    where check env = do let envShown = showModelDictionary True True cfg modelBinds
+    where check env = do let univs    = [n | ((ALL, (_, n)), _) <- env]
+                             envShown = showModelDictionary True True cfg modelBinds
                                 where modelBinds = [(n, fake q s v) | ((q, (s, n)), v) <- env]
                                       fake q s Nothing
                                         | q == ALL
@@ -382,6 +383,11 @@ class ExtractIO m => MProvable m a where
 
                          notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
                          mapM_ notify ["    " ++ l | l <- lines envShown]
+
+                         unless (null univs) $ do
+                                notify $ "NB. The following variable(s) are universally quantified: " ++ intercalate ", " univs
+                                notify $ "    We will assume that they are essentially zero for the purposes of validation."
+                                notify $ "    Note that this is a gross simplification of the model validation with universals!"
 
                          result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 

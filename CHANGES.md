@@ -11,6 +11,16 @@
     GHC. Thanks to Ben Blaxill for the idea and the initial
     implementation.
 
+  * Model validator: In the presence of universally quantified
+    variables, SBV used to refuse to validate given models. This
+    is the right thing to do since we would have to validate
+    the model for all possible values of all the universally
+    quantified variables. Obviously this is not useful. Instead,
+    SBV now simply assumes any universally quantified variable
+    is zero during model validation. This severely limits the
+    validation result, but it is better than nothing. (In the
+    verbose mode, a message to this effect will be printed.)
+
   * Ramped up travis-appveyor build infrastructure.
 
 ### Version 8.3, 2019-06-08
