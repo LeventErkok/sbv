@@ -169,8 +169,8 @@ module Data.SBV (
   -- ** Single value
   -- $createSym
   , sBool, sBool_
-  , sWord8, sWord8_, sWord16, sWord16_, sWord32, sWord32_, sWord64, sWord64_, sWordN, sWordN_
-  , sInt8,  sInt8_,  sInt16,  sInt16_,  sInt32,  sInt32_,  sInt64,  sInt64_, sIntN, sIntN_
+  , sWord8, sWord8_, sWord16, sWord16_, sWord32, sWord32_, sWord64, sWord64_, sWord, sWord_
+  , sInt8,  sInt8_,  sInt16,  sInt16_,  sInt32,  sInt32_,  sInt64,  sInt64_, sInt, sInt_
   , sInteger, sInteger_
   , sReal, sReal_
   , sFloat, sFloat_
@@ -186,8 +186,8 @@ module Data.SBV (
   -- ** List of values
   -- $createSyms
   , sBools
-  , sWord8s, sWord16s, sWord32s, sWord64s
-  , sInt8s,  sInt16s,  sInt32s,  sInt64s
+  , sWord8s, sWord16s, sWord32s, sWord64s, sWords
+  , sInt8s,  sInt16s,  sInt32s,  sInt64s, sInts
   , sIntegers
   , sReals
   , sFloats
@@ -354,7 +354,8 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
-import Data.SBV.Core.Sized
+import Data.SBV.Core.Sized      hiding (sWord, sWord_, sWords, sInt, sInt_, sInts)
+
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)

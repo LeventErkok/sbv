@@ -39,10 +39,10 @@ module Data.SBV.Trans (
 
   -- * Creating symbolic values
   -- ** Single value
-  , sBool, sWord8, sWord16, sWord32, sWord64, sInt8, sInt16, sInt32, sInt64, sInteger, sReal, sFloat, sDouble, sChar, sString, sList
+  , sBool, sWord8, sWord16, sWord32, sWord64, sWord, sInt8, sInt16, sInt32, sInt64, sInt, sInteger, sReal, sFloat, sDouble, sChar, sString, sList
 
   -- ** List of values
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sInt8s, sInt16s, sInt32s, sInt64s, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sWords, sInt8s, sInt16s, sInt32s, sInt64s, sInts, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
@@ -155,6 +155,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
+import Data.SBV.Core.Sized
 import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic
 

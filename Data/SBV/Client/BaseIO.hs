@@ -11,7 +11,10 @@
 -- @Data.SBV@, where we restrict the underlying monad to be IO.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies     #-}
+{-# LANGUAGE TypeOperators    #-}
 
 module Data.SBV.Client.BaseIO where
 
@@ -20,6 +23,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
+import Data.SBV.Core.Sized     (SInt, SWord)
 import Data.SBV.Core.Model     (Metric(..))
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
@@ -28,7 +32,10 @@ import Data.SBV.Provers.Prover (Provable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
                                 OptimizeResult)
 
+import GHC.TypeLits
+
 import qualified Data.SBV.Core.Data      as Trans
+import qualified Data.SBV.Core.Sized     as Trans
 import qualified Data.SBV.Core.Model     as Trans
 import qualified Data.SBV.Core.Symbolic  as Trans
 import qualified Data.SBV.Provers.Prover as Trans
@@ -405,6 +412,24 @@ sWord64_ = Trans.sWord64_
 sWord64s :: [String] -> Symbolic [SWord64]
 sWord64s = Trans.sWord64s
 
+-- | Declare a named 'SWord'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord'
+sWord :: (KnownNat n, 1 <= n) => String -> Symbolic (SWord n)
+sWord = Trans.sWord
+
+-- | Declare an unnamed 'SWord'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord_'
+sWord_ :: (KnownNat n, 1 <= n) => Symbolic (SWord n)
+sWord_ = Trans.sWord_
+
+-- | Declare a list of 'SWord8's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWords'
+sWords :: (KnownNat n, 1 <= n) => [String] -> Symbolic [SWord n]
+sWords = Trans.sWords
+
 -- | Declare a named 'SInt8'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt8'
@@ -476,6 +501,24 @@ sInt64_ = Trans.sInt64_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt64s'
 sInt64s :: [String] -> Symbolic [SInt64]
 sInt64s = Trans.sInt64s
+
+-- | Declare a named 'SInt'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt'
+sInt :: (KnownNat n, 1 <= n) => String -> Symbolic (SInt n)
+sInt = Trans.sInt
+
+-- | Declare an unnamed 'SInt'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt_'
+sInt_ :: (KnownNat n, 1 <= n) => Symbolic (SInt n)
+sInt_ = Trans.sInt_
+
+-- | Declare a list of 'SInt's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInts'
+sInts :: (KnownNat n, 1 <= n) => [String] -> Symbolic [SInt n]
+sInts = Trans.sInts
 
 -- | Declare a named 'SInteger'
 --
@@ -712,30 +755,6 @@ maximize = Trans.maximize
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.svToSymSV'
 svToSymSV :: SVal -> Symbolic SV
 svToSymSV = Trans.svToSymSV
-
--- | Create an N-bit symbolic unsigned named variable
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWordN'
-sWordN :: Int -> String -> Symbolic SVal
-sWordN = Trans.sWordN
-
--- | Create an N-bit symbolic unsigned unnamed variable
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWordN_'
-sWordN_ :: Int -> Symbolic SVal
-sWordN_ = Trans.sWordN_
-
--- | Create an N-bit symbolic signed named variable
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sIntN'
-sIntN :: Int -> String -> Symbolic SVal
-sIntN = Trans.sIntN
-
--- | Create an N-bit symbolic signed unnamed variable
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sIntN_'
-sIntN_ :: Int -> Symbolic SVal
-sIntN_ = Trans.sIntN_
 
 -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
 -- string, use for commenting purposes. The second argument is intended to hold the multiple-lines

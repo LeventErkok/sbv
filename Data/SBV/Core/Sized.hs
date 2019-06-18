@@ -19,9 +19,9 @@
 
 module Data.SBV.Core.Sized (
         -- * Type-sized unsigned bit-vectors
-          SWord
+          SWord, WordN, sWord, sWord_, sWords
         -- * Type-sized signed bit-vectors
-        , SInt
+        , SInt, IntN, sInt, sInt_, sInts
        ) where
 
 import Data.Bits
@@ -33,6 +33,7 @@ import GHC.TypeLits
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
+import Data.SBV.Core.Symbolic
 
 import Data.SBV.Control.Utils
 import Data.SBV.SMT.SMT
@@ -258,3 +259,27 @@ instance (KnownNat n, 1 <= n) => SatModel (WordN n) where
 -- | Constructing models for 'IntN'
 instance (KnownNat n, 1 <= n) => SatModel (IntN n) where
   parseCVs = genParse (kindOf (undefined :: IntN n))
+
+-- | Generalization of 'Data.SBV.sWord'
+sWord :: (KnownNat n, 1 <= n) => MonadSymbolic m => String -> m (SWord n)
+sWord = symbolic
+
+-- | Generalization of 'Data.SBV.sWord_'
+sWord_ :: (KnownNat n, 1 <= n) => MonadSymbolic m => m (SWord n)
+sWord_ = free_
+
+-- | Generalization of 'Data.SBV.sWord64s'
+sWords :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SWord n]
+sWords = symbolics
+
+-- | Generalization of 'Data.SBV.sInt'
+sInt :: (KnownNat n, 1 <= n) => MonadSymbolic m => String -> m (SInt n)
+sInt = symbolic
+
+-- | Generalization of 'Data.SBV.sInt_'
+sInt_ :: (KnownNat n, 1 <= n) => MonadSymbolic m => m (SInt n)
+sInt_ = free_
+
+-- | Generalization of 'Data.SBV.sInts'
+sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
+sInts = symbolics
