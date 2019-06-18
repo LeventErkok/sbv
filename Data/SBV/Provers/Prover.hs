@@ -386,8 +386,8 @@ class ExtractIO m => MProvable m a where
 
                          unless (null univs) $ do
                                 notify $ "NB. The following variable(s) are universally quantified: " ++ intercalate ", " univs
-                                notify $ "    We will assume that they are essentially zero for the purposes of validation."
-                                notify $ "    Note that this is a gross simplification of the model validation with universals!"
+                                notify   "    We will assume that they are essentially zero for the purposes of validation."
+                                notify   "    Note that this is a gross simplification of the model validation with universals!"
 
                          result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
 
