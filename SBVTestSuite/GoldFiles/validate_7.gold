@@ -37,11 +37,13 @@
 [VALIDATE] Validating the model. Assignment:
 [VALIDATE]       x =                -Infinity :: Float
 [VALIDATE]       y = <universally quantified> :: Float
+[VALIDATE] NB. The following variable(s) are universally quantified: y
+[VALIDATE]     We will assume that they are essentially zero for the purposes of validation.
+[VALIDATE]     Note that this is a gross simplification of the model validation with universals!
+[VALIDATE] There are no constraints to check.
+[VALIDATE] Validating outputs.
+[VALIDATE] All outputs are satisfied. Validation complete.
 
-EXCEPTION RAISED:
-*** Data.SBV: Cannot validate models in the presence of universally quantified variable "y"
-***
-***   To turn validation off, use `cfg{validateModel = False}`
-***
-*** Validation engine is not capable of handling this case. Failed to validate.
-
+FINAL OUTPUT:
+Satisfiable. Model:
+  x = -Infinity :: Float
