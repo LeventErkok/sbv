@@ -18,14 +18,12 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "Existentials.CRCPolynomial" [
-  goldenVsStringShow "crcPolyExist" pgm
+    goldenVsStringShow "crcPolyExist" (runSAT pgm)
+  , testCase "crcPolyGood" (assertIsSat pgm)
  ]
- where pgm = runSAT $ do
-                p <- exists "poly"
-                s <- do sh <- forall "sh"
-                        sl <- forall "sl"
-                        return (sh, sl)
-                r <- do rh <- forall "rh"
-                        rl <- forall "rl"
-                        return (rh, rl)
-                output $ sTestBit p 0 .&& crcGood 4 p s r
+
+pgm :: Predicate
+pgm = do p <- exists "poly"
+         s <- forall "sent"
+         r <- forall "received"
+         return $ sTestBit p 0 .&& crcGood 4 p s r
