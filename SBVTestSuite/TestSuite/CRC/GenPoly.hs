@@ -9,6 +9,8 @@
 -- Test suite for Examples.CRC.GenPoly
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds #-}
+
 module TestSuite.CRC.GenPoly(tests) where
 
 import Data.SBV.Tools.Polynomial
@@ -24,23 +26,17 @@ tests =
 
 crcGoodE :: Symbolic SBool
 crcGoodE = do
-  x1 <- exists_
-  x2 <- exists_
-  y1 <- exists_
-  y2 <- exists_
-  return (crcGood 3 0 (x1,x2) (y1,y2))
+  x <- exists_
+  y <- exists_
+  return (crcGood 3 0 x y)
 
--- We don't have native support for 48 bits in Data.SBV
--- So, represent as 32 high-bits and 16 low
-type SWord48 = (SWord32, SWord16)
+extendData :: SWord 48 -> SWord64
+extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse
 
-extendData :: SWord48 -> SWord64
-extendData (h, l) = h # l # 0
+mkFrame :: SWord64 -> SWord 48 -> SWord64
+mkFrame poly msg = fromBitsBE $ blastBE msg ++ blastBE (crc_48_16 msg poly)
 
-mkFrame :: SWord64 -> SWord48 -> SWord64
-mkFrame poly msg@(h, l) = h # l # crc_48_16 msg poly
-
-crc_48_16 :: SWord48 -> SWord64 -> SWord16
+crc_48_16 :: SWord 48 -> SWord64 -> SWord16
 crc_48_16 msg poly = res
   where msg64 = extendData msg
         crc64 = pMod msg64 poly
@@ -51,7 +47,7 @@ diffCount x y = count $ zipWith (.==) (blastLE x) (blastLE y)
   where count []     = 0
         count (b:bs) = let r = count bs in ite b r (1+r)
 
-crcGood :: SWord8 -> SWord16 -> SWord48 -> SWord48 -> SBool
+crcGood :: SWord8 -> SWord16 -> SWord 48 -> SWord 48 -> SBool
 crcGood hd divisor sent received =
      sent ./= received .=> diffCount frameSent frameReceived .> hd
    where frameSent     = mkFrame poly sent
