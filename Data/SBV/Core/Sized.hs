@@ -23,7 +23,7 @@ module Data.SBV.Core.Sized (
         -- * Type-sized signed bit-vectors
         , SInt, IntN, sInt, sInt_, sInts
         -- Bit-vector operations
-        , sExtract, (#), zeroExtend, signExtend
+        , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
        ) where
 
 import Data.Bits
@@ -287,13 +287,13 @@ sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
 sInts = symbolics
 
 -- | Extract a portion of bits to form a smaller bit-vector.
-sExtract :: forall i n m bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
-                                   , KnownNat m, 1 <= m, SymVal (bv m)
-                                   , KnownNat i
-                                   , i + 1 <= n
-                                   , m <= i + 1
-                                   ) => proxy i -> SBV (bv n) -> SBV (bv m)
-sExtract start = SBV . svExtract i j . unSBV
+bvExtract :: forall i n m bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
+                                    , KnownNat m, 1 <= m, SymVal (bv m)
+                                    , KnownNat i
+                                    , i + 1 <= n
+                                    , m <= i + 1
+                                    ) => proxy i -> SBV (bv n) -> SBV (bv m)
+bvExtract start = SBV . svExtract i j . unSBV
    where mv = intOfProxy (Proxy @m)
          i  = fromIntegral (natVal start)
          j  = i - mv + 1
@@ -327,3 +327,23 @@ signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
         zero = literal 0
         ones = complement zero
         ext  = ite (msb n) ones zero
+
+-- | Drop bits from the top of a bit-vector.
+bvDrop :: forall i n m bv proxy. ( KnownNat n, 1 <= n
+                                 , KnownNat i
+                                 , i + 1 <= n
+                                 , i + m - n <= 0
+                                 ) => proxy i -> SBV (bv n) -> SBV (bv m)
+bvDrop i = SBV . svExtract start 0 . unSBV
+  where nv    = intOfProxy (Proxy @n)
+        start = nv - fromIntegral (natVal i) - 1
+
+-- | Take bits from the top of a bit-vector.
+bvTake :: forall i n bv proxy. ( KnownNat n, 1 <= n
+                               , KnownNat i, 1 <= i
+                               , i <= n
+                               ) => proxy i -> SBV (bv n) -> SBV (bv i)
+bvTake i = SBV . svExtract start end . unSBV
+  where nv    = intOfProxy (Proxy @n)
+        start = nv - 1
+        end   = start - fromIntegral (natVal i) + 1
