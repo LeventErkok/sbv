@@ -22,6 +22,8 @@ module Data.SBV.Core.Sized (
           SWord, WordN, sWord, sWord_, sWords
         -- * Type-sized signed bit-vectors
         , SInt, IntN, sInt, sInt_, sInts
+        -- Bit-vector operations
+        , sExtract, (#), zeroExtend, signExtend
        ) where
 
 import Data.Bits
@@ -49,7 +51,7 @@ instance Show (WordN n) where
   show (WordN v) = show v
 
 -- | Grab the bit-size from the proxy
-intOfProxy :: (KnownNat n, 1 <= n) => Proxy n -> Int
+intOfProxy :: KnownNat n => Proxy n -> Int
 intOfProxy = fromEnum . natVal
 
 -- | 'WordN' has a kind
@@ -283,3 +285,45 @@ sInt_ = free_
 -- | Generalization of 'Data.SBV.sInts'
 sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
 sInts = symbolics
+
+-- | Extract a portion of bits to form a smaller bit-vector.
+sExtract :: forall i n m bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
+                                   , KnownNat m, 1 <= m, SymVal (bv m)
+                                   , KnownNat i
+                                   , i + 1 <= n
+                                   , m <= i + 1
+                                   ) => proxy i -> SBV (bv n) -> SBV (bv m)
+sExtract start = SBV . svExtract i j . unSBV
+   where mv = intOfProxy (Proxy @m)
+         i  = fromIntegral (natVal start)
+         j  = i - mv + 1
+
+-- | Join two bitvectors.
+(#) :: ( KnownNat n, 1 <= n, SymVal (bv n)
+       , KnownNat m, 1 <= m, SymVal (bv m)
+       ) => SBV (bv n) -> SBV (bv m) -> SBV (bv (n + m))
+n # m = SBV $ svJoin (unSBV n) (unSBV m)
+infixr 5 #
+
+-- | Zero extend a bit-vector.
+zeroExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
+                             , KnownNat m, 1 <= m, SymVal (bv m)
+                             , n <= m
+                             , SIntegral (bv (m - n))
+                             ) => SBV (bv n) -> SBV (bv m)
+zeroExtend n = SBV $ svJoin (unSBV zero) (unSBV n)
+  where zero :: SBV (bv (m - n))
+        zero = literal 0
+
+-- | Sign extend a bit-vector.
+signExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
+                             , KnownNat m, 1 <= m, SymVal (bv m)
+                             , n <= m
+                             , SFiniteBits (bv n)
+                             , SIntegral   (bv (m - n))
+                             ) => SBV (bv n) -> SBV (bv m)
+signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
+  where zero, ones, ext :: SBV (bv (m - n))
+        zero = literal 0
+        ones = complement zero
+        ext  = ite (msb n) ones zero
