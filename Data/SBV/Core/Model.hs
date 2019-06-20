@@ -2209,7 +2209,7 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 --
 -- Minimal completion: None. However, if @MetricSpace@ is not identical to the type, you want
--- to define 'toMetricSpace' and possbly 'minimize'/'maximize' to add extra constraints as necessary.
+-- to define 'toMetricSpace' and possibly 'minimize'/'maximize' to add extra constraints as necessary.
 class Metric a where
   -- | The metric space we optimize the goal over. Usually the same as the type itself, but not always!
   -- For instance, signed bit-vectors are optimized over their unsigned counterparts, floats are
