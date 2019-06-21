@@ -847,22 +847,30 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
           = if hi == 0
             then text "(SBool)" <+> parens (a <+> text "& 1")
             else text "(SBool)" <+> parens (parens (a <+> text ">>" <+> int hi) <+> text "& 1")
-        extract hi lo i a = case (hi, lo, kindOf i) of
-                              (63, 32, KBounded False 64) -> text "(SWord32)" <+> parens (a <+> text ">> 32")
-                              (31,  0, KBounded False 64) -> text "(SWord32)" <+> a
-                              (31, 16, KBounded False 32) -> text "(SWord16)" <+> parens (a <+> text ">> 16")
-                              (15,  0, KBounded False 32) -> text "(SWord16)" <+> a
-                              (15,  8, KBounded False 16) -> text "(SWord8)"  <+> parens (a <+> text ">> 8")
-                              ( 7,  0, KBounded False 16) -> text "(SWord8)"  <+> a
-                              (63,  0, KBounded False 64) -> text "(SInt64)"  <+> a
-                              (63,  0, KBounded True  64) -> text "(SWord64)" <+> a
-                              (31,  0, KBounded False 32) -> text "(SInt32)"  <+> a
-                              (31,  0, KBounded True  32) -> text "(SWord32)" <+> a
-                              (15,  0, KBounded False 16) -> text "(SInt16)"  <+> a
-                              (15,  0, KBounded True  16) -> text "(SWord16)" <+> a
-                              ( 7,  0, KBounded False  8) -> text "(SInt8)"   <+> a
-                              ( 7,  0, KBounded True   8) -> text "(SWord8)"  <+> a
-                              ( _,  _, k                ) -> tbd $ "extract with " ++ show (hi, lo, k, i)
+        extract hi lo i a
+          | srcSize `notElem` [64, 32, 16]
+          = bad "Unsupported source size"
+          | (hi + 1) `mod` 8 /= 0 || lo `mod` 8 /= 0
+          = bad "Unsupported non-byte-aligned extraction"
+          | tgtSize < 8 || tgtSize `mod` 8 /= 0
+          = bad "Unsupported target size"
+          | True
+          = text cast <+> shifted
+          where bad why    = tbd $ "extract with " ++ show (hi, lo, k, i) ++ " (Reason: " ++ why ++ ".)"
+
+                k          = kindOf i
+                srcSize    = intSizeOf k
+                tgtSize    = hi - lo + 1
+                signChange = srcSize == tgtSize
+
+                cast
+                  | signChange && hasSign k = "(SWord" ++ show srcSize ++ ")"
+                  | signChange              = "(SInt"  ++ show srcSize ++ ")"
+                  | True                    = "(SWord" ++ show tgtSize ++ ")"
+
+                shifted
+                  | lo == 0 = a
+                  | True    = parens (a <+> text ">>" <+> int lo)
 
         -- TBD: ditto here for join, just like extract above
         join (i, j, a, b) = case (kindOf i, kindOf j) of
