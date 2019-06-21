@@ -287,16 +287,15 @@ sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
 sInts = symbolics
 
 -- | Extract a portion of bits to form a smaller bit-vector.
-bvExtract :: forall i n m bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
-                                    , KnownNat m, 1 <= m, SymVal (bv m)
+bvExtract :: forall i j n bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
                                     , KnownNat i
+                                    , KnownNat j
                                     , i + 1 <= n
-                                    , m <= i + 1
-                                    ) => proxy i -> SBV (bv n) -> SBV (bv m)
-bvExtract start = SBV . svExtract i j . unSBV
-   where mv = intOfProxy (Proxy @m)
-         i  = fromIntegral (natVal start)
-         j  = i - mv + 1
+                                    , j <= i
+                                    ) => proxy i -> proxy j -> SBV (bv n) -> SBV (bv (i - j + 1))
+bvExtract start end = SBV . svExtract i j . unSBV
+   where i  = fromIntegral (natVal start)
+         j  = fromIntegral (natVal end)
 
 -- | Join two bitvectors.
 (#) :: ( KnownNat n, 1 <= n, SymVal (bv n)
