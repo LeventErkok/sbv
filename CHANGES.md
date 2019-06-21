@@ -11,6 +11,13 @@
     GHC. Thanks to Ben Blaxill for the idea and the initial
     implementation.
 
+  * Add arbitrary-sized bit vector operations: extraction,
+    extension, and joining; these use proxy arguments to
+    determine precise size info, and are much better suited
+    for type safety. Consequently, remove the Splittable
+    class which provided similar operations but only on
+    predefined types.
+
   * Model validator: In the presence of universally quantified
     variables, SBV used to refuse to validate given models. This
     is the right thing to do since we would have to validate

@@ -60,8 +60,8 @@ module Data.SBV.Trans (
   , sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight
   -- ** Finite bit-vector operations
   , SFiniteBits(..)
-  -- ** Splitting, joining, and extending
-  , Splittable(..)
+  -- ** Splitting, joining, and extending bit-vectors
+  , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
   -- ** Exponentiation
   , (.^)
   -- * IEEE-floating point numbers
@@ -156,7 +156,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Sized
-import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic
 
 import Data.SBV.Provers.Prover

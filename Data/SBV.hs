@@ -217,8 +217,8 @@ module Data.SBV (
   , sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight
   -- ** Finite bit-vector operations
   , SFiniteBits(..)
-  -- ** Splitting, joining, and extending
-  , Splittable(..)
+  -- ** Splitting, joining, and extending bit-vectors
+  , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
   -- ** Exponentiation
   , (.^)
   -- * IEEE-floating point numbers
@@ -357,7 +357,6 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
 import Data.SBV.Core.Sized      hiding (sWord, sWord_, sWords, sInt, sInt_, sInts)
 
 import Data.SBV.Core.Floating
-import Data.SBV.Core.Splittable
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
 import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
@@ -649,7 +648,7 @@ bit-vectors. The operations that are restricted to bounded word/int sizes are:
 
    * Bitwise logical ops: '.&.', '.|.', 'xor', 'complement'
 
-   * Extraction and concatenation: 'split', '#', and 'extend' (see the 'Splittable' class)
+   * Extraction and concatenation: 'bvExtract', '#', 'zeroExtend', 'signExtend', 'bvDrop', and 'bvTake'
 
 Usual arithmetic ('+', '-', '*', 'sQuotRem', 'sQuot', 'sRem', 'sDivMod', 'sDiv', 'sMod') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
 supported for 'SInteger' fully, both in programming and verification modes.
