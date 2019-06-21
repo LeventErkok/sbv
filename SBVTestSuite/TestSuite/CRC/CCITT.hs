@@ -31,7 +31,7 @@ extendData :: SWord 48 -> SWord 64
 extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse
 
 mkFrame :: SWord 48 -> SWord 64
-mkFrame msg = fromBitsBE $ blastBE msg ++ blastBE (crc_48_16 msg)
+mkFrame msg = msg # crc_48_16 msg
 
 crc_48_16 :: SWord 48 -> SWord 16
 crc_48_16 msg = res
