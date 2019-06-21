@@ -9,9 +9,12 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PatternGuards     #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Data.SBV.Tools.Polynomial (
         -- * Polynomial arithmetic and CRCs
@@ -24,7 +27,10 @@ import Data.Maybe (fromJust, fromMaybe)
 import Data.Word  (Word8, Word16, Word32, Word64)
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Sized
 import Data.SBV.Core.Model
+
+import GHC.TypeLits
 
 -- | Implements polynomial addition, multiplication, division, and modulus operations
 -- over GF(2^n).  NB. Similar to 'sQuotRem', division by @0@ is interpreted as follows:
@@ -74,7 +80,6 @@ class (Num a, Bits a) => Polynomial a where
  pMod x y   = snd (pDivMod x y)
  showPoly   = showPolynomial False
 
-
 instance Polynomial Word8   where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
 instance Polynomial Word16  where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
 instance Polynomial Word32  where {showPolynomial   = sp;           pMult = lift polyMult; pDivMod = liftC polyDivMod}
@@ -83,6 +88,8 @@ instance Polynomial SWord8  where {showPolynomial b = liftS (sp b); pMult = poly
 instance Polynomial SWord16 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 instance Polynomial SWord32 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 instance Polynomial SWord64 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
+
+instance (KnownNat n, 1 <= n) => Polynomial (SWord n) where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 
 lift :: SymVal a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
 lift f (x, y, z) = fromJust $ unliteral $ f (literal x, literal y, z)
