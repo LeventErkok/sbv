@@ -9,12 +9,15 @@
 -- Test suite for Examples.CRC.CCITT_Unidir
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE TypeApplications #-}
 
 module TestSuite.CRC.CCITT_Unidir(tests) where
 
 import Data.SBV.Tools.Polynomial
 import Utils.SBVTestFramework
+
+import Data.Proxy
 
 -- Test suite
 tests :: TestTree
@@ -24,19 +27,19 @@ tests =
       , testCase "ccitHDis4" (assertIsntThm (crcUniGood 4))
     ]
 
-extendData :: SWord 48 -> SWord64
-extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse
+extendData :: SWord 48 -> SWord 64
+extendData msg = msg # 0
 
-mkFrame :: SWord 48 -> SWord64
-mkFrame msg = fromBitsBE $ blastBE msg ++ blastBE (crc_48_16 msg)
+mkFrame :: SWord 48 -> SWord 64
+mkFrame msg = msg # crc_48_16 msg
 
-crc_48_16 :: SWord 48 -> SWord16
+crc_48_16 :: SWord 48 -> SWord 16
 crc_48_16 msg = res
-  where msg64, divisor :: SWord64
+  where msg64, divisor :: SWord 64
         msg64   = extendData msg
         divisor = polynomial [16, 12, 5, 0]
         crc64 = pMod msg64 divisor
-        (_, res) = split (snd (split crc64))
+        res   = bvExtract (Proxy @15) (Proxy @0) crc64
 
 diffCount :: [SBool] -> [SBool] -> SWord8
 diffCount xs ys = count $ zipWith (.==) xs ys

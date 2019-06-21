@@ -24,7 +24,9 @@
 -- are supported.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Documentation.SBV.Examples.Crypto.AES where
 
@@ -34,6 +36,7 @@ import Data.SBV.Tools.Polynomial
 
 import Data.List (transpose)
 import Data.Maybe (fromJust)
+import Data.Proxy
 
 import Numeric (showHex)
 
@@ -43,7 +46,7 @@ import Numeric (showHex)
 
 -- | An element of the Galois Field 2^8, which are essentially polynomials with
 -- maximum degree 7. They are conveniently represented as values between 0 and 255.
-type GF28 = SWord8
+type GF28 = SWord 8
 
 -- | Multiplication in GF(2^8). This is simple polynomial multipliation, followed
 -- by the irreducible polynomial @x^8+x^4+x^3+x^1+1@. We simply use the 'pMult'
@@ -84,10 +87,10 @@ gf28Inverse x = x `gf28Pow` 254
 -- | AES state. The state consists of four 32-bit words, each of which is in turn treated
 -- as four GF28's, i.e., 4 bytes. The T-Box implementation keeps the four-bytes together
 -- for efficient representation.
-type State = [SWord32]
+type State = [SWord 32]
 
 -- | The key, which can be 128, 192, or 256 bits. Represented as a sequence of 32-bit words.
-type Key = [SWord32]
+type Key = [SWord 32]
 
 -- | The key schedule. AES executes in rounds, and it treats first and last round keys slightly
 -- differently than the middle ones. We reflect that choice by being explicit about it in our type.
@@ -96,11 +99,13 @@ type Key = [SWord32]
 type KS = (Key, [Key], Key)
 
 -- | Conversion from 32-bit words to 4 constituent bytes.
-toBytes :: SWord32 -> [GF28]
+toBytes :: SWord 32 -> [GF28]
 toBytes x = [x1, x2, x3, x4]
-        where (h,  l)  = split x
-              (x1, x2) = split h
-              (x3, x4) = split l
+        where x1, x2, x3, x4 :: SWord 8
+              x1 = bvExtract (Proxy @31) (Proxy @24) x
+              x2 = bvExtract (Proxy @23) (Proxy @16) x
+              x3 = bvExtract (Proxy @15) (Proxy @ 8) x
+              x4 = bvExtract (Proxy @ 7) (Proxy @ 0) x
 
 -- | Conversion from 4 bytes, back to a 32-bit row, inverse of 'toBytes' above. We
 -- have the following simple theorems stating this relationship formally:
@@ -110,7 +115,7 @@ toBytes x = [x1, x2, x3, x4]
 --
 -- >>> prove $ \r -> fromBytes (toBytes r) .== r
 -- Q.E.D.
-fromBytes :: [GF28] -> SWord32
+fromBytes :: [GF28] -> SWord 32
 fromBytes [x1, x2, x3, x4] = (x1 # x2) # (x3 # x4)
 fromBytes xs               = error $ "fromBytes: Unexpected input: " ++ show xs
 
@@ -154,16 +159,16 @@ invMixColumns state = map fromBytes $ transpose $ mmult (map toBytes state)
 -- words, as described by the AES standard, Section 5.2, Figure 11.
 keyExpansion :: Int -> Key -> [Key]
 keyExpansion nk key = chop4 keys
-   where keys :: [SWord32]
+   where keys :: [SWord 32]
          keys = key ++ [nextWord i prev old | i <- [nk ..] | prev <- drop (nk-1) keys | old <- keys]
          chop4 :: [a] -> [[a]]
          chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
-         nextWord :: Int -> SWord32 -> SWord32 -> SWord32
+         nextWord :: Int -> SWord 32 -> SWord 32 -> SWord 32
          nextWord i prev old
            | i `mod` nk == 0           = old `xor` subWordRcon (prev `rotateL` 8) (roundConstants !! (i `div` nk))
            | i `mod` nk == 4 && nk > 6 = old `xor` subWordRcon prev 0
            | True                      = old `xor` prev
-         subWordRcon :: SWord32 -> GF28 -> SWord32
+         subWordRcon :: SWord 32 -> GF28 -> SWord 32
          subWordRcon w rc = fromBytes [a `xor` rc, b, c, d]
             where [a, b, c, d] = map sbox $ toBytes w
 
@@ -227,19 +232,19 @@ t0Func :: GF28 -> [GF28]
 t0Func a = [s `gf28Mult` 2, s, s, s `gf28Mult` 3] where s = sbox a
 
 -- | First look-up table used in encryption
-t0 :: GF28 -> SWord32
+t0 :: GF28 -> SWord 32
 t0 = select t0Table 0 where t0Table = [fromBytes (t0Func a)          | a <- [0..255]]
 
 -- | Second look-up table used in encryption
-t1 :: GF28 -> SWord32
+t1 :: GF28 -> SWord 32
 t1 = select t1Table 0 where t1Table = [fromBytes (t0Func a `rotR` 1) | a <- [0..255]]
 
 -- | Third look-up table used in encryption
-t2 :: GF28 -> SWord32
+t2 :: GF28 -> SWord 32
 t2 = select t2Table 0 where t2Table = [fromBytes (t0Func a `rotR` 2) | a <- [0..255]]
 
 -- | Fourth look-up table used in encryption
-t3 :: GF28 -> SWord32
+t3 :: GF28 -> SWord 32
 t3 = select t3Table 0 where t3Table = [fromBytes (t0Func a `rotR` 3) | a <- [0..255]]
 
 -----------------------------------------------------------------------------
@@ -251,19 +256,19 @@ u0Func :: GF28 -> [GF28]
 u0Func a = [s `gf28Mult` 0xE, s `gf28Mult` 0x9, s `gf28Mult` 0xD, s `gf28Mult` 0xB] where s = unSBox a
 
 -- | First look-up table used in decryption
-u0 :: GF28 -> SWord32
+u0 :: GF28 -> SWord 32
 u0 = select t0Table 0 where t0Table = [fromBytes (u0Func a)          | a <- [0..255]]
 
 -- | Second look-up table used in decryption
-u1 :: GF28 -> SWord32
+u1 :: GF28 -> SWord 32
 u1 = select t1Table 0 where t1Table = [fromBytes (u0Func a `rotR` 1) | a <- [0..255]]
 
 -- | Third look-up table used in decryption
-u2 :: GF28 -> SWord32
+u2 :: GF28 -> SWord 32
 u2 = select t2Table 0 where t2Table = [fromBytes (u0Func a `rotR` 2) | a <- [0..255]]
 
 -- | Fourth look-up table used in decryption
-u3 :: GF28 -> SWord32
+u3 :: GF28 -> SWord 32
 u3 = select t3Table 0 where t3Table = [fromBytes (u0Func a `rotR` 3) | a <- [0..255]]
 
 -----------------------------------------------------------------------------
@@ -334,7 +339,7 @@ aesKeySchedule key
 -- precisely 4 elements, for a total of 128-bits of input. The second
 -- argument is the key-schedule to be used, obtained by a call to 'aesKeySchedule'.
 -- The output will always have 4 32-bit words, which is the cipher-text.
-aesEncrypt :: [SWord32] -> KS -> [SWord32]
+aesEncrypt :: [SWord 32] -> KS -> [SWord 32]
 aesEncrypt pt encKS
   | length pt == 4
   = doRounds aesRound encKS pt
@@ -344,7 +349,7 @@ aesEncrypt pt encKS
 -- | Block decryption. The arguments are the same as in 'aesEncrypt', except
 -- the first argument is the cipher-text and the output is the corresponding
 -- plain-text.
-aesDecrypt :: [SWord32] -> KS -> [SWord32]
+aesDecrypt :: [SWord 32] -> KS -> [SWord 32]
 aesDecrypt ct decKS
   | length ct == 4
   = doRounds aesInvRound decKS ct
@@ -364,7 +369,7 @@ aesDecrypt ct decKS
 -- >>> map hex8 t128Enc
 -- ["69c4e0d8","6a7b0430","d8cdb780","70b4c55a"]
 --
-t128Enc :: [SWord32]
+t128Enc :: [SWord 32]
 t128Enc = aesEncrypt pt ks
   where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
@@ -375,7 +380,7 @@ t128Enc = aesEncrypt pt ks
 -- >>> map hex8 t128Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
-t128Dec :: [SWord32]
+t128Dec :: [SWord 32]
 t128Dec = aesDecrypt ct ks
   where ct  = [0x69c4e0d8, 0x6a7b0430, 0xd8cdb780, 0x70b4c55a]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
@@ -390,7 +395,7 @@ t128Dec = aesDecrypt ct ks
 -- >>> map hex8 t192Enc
 -- ["dda97ca4","864cdfe0","6eaf70a0","ec0d7191"]
 --
-t192Enc :: [SWord32]
+t192Enc :: [SWord 32]
 t192Enc = aesEncrypt pt ks
   where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617]
@@ -401,7 +406,7 @@ t192Enc = aesEncrypt pt ks
 -- >>> map hex8 t192Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
-t192Dec :: [SWord32]
+t192Dec :: [SWord 32]
 t192Dec = aesDecrypt ct ks
   where ct  = [0xdda97ca4, 0x864cdfe0, 0x6eaf70a0, 0xec0d7191]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617]
@@ -416,7 +421,7 @@ t192Dec = aesDecrypt ct ks
 -- >>> map hex8 t256Enc
 -- ["8ea2b7ca","516745bf","eafc4990","4b496089"]
 --
-t256Enc :: [SWord32]
+t256Enc :: [SWord 32]
 t256Enc = aesEncrypt pt ks
   where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f]
@@ -427,7 +432,7 @@ t256Enc = aesEncrypt pt ks
 -- >>> map hex8 t256Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
-t256Dec :: [SWord32]
+t256Dec :: [SWord 32]
 t256Dec = aesDecrypt ct ks
   where ct  = [0x8ea2b7ca, 0x516745bf, 0xeafc4990, 0x4b496089]
         key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f]
@@ -462,8 +467,8 @@ t256Dec = aesDecrypt ct ks
 -- 
 -- and get some degree of confidence in our code. Similar predicates can be easily constructed for 192, and
 -- 256 bit cases as well.
-aes128IsCorrect :: (SWord32, SWord32, SWord32, SWord32)  -- ^ plain-text words
-                -> (SWord32, SWord32, SWord32, SWord32)  -- ^ key-words
+aes128IsCorrect :: (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ plain-text words
+                -> (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ key-words
                 -> SBool                                 -- ^ True if round-trip gives us plain-text back
 aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
    where pt  = [i0, i1, i2, i3]
@@ -561,13 +566,13 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
                     cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
         -- Transforming back and forth from our KS type to a flat array used by the generated C code
         -- Turn a series of expanded keys to our internal KS type
-        xkeyToKS :: [SWord32] -> KS
+        xkeyToKS :: [SWord 32] -> KS
         xkeyToKS xs = (f, m, l)
            where f = take 4 xs                       -- first round key
                  m = chop4 (take 36 (drop 4 xs))     -- middle rounds
                  l = drop 40 xs                      -- last round key
         -- Turn a KS to a series of expanded key words
-        ksToXKey :: KS -> [SWord32]
+        ksToXKey :: KS -> [SWord 32]
         ksToXKey (f, m, l) = f ++ concat m ++ l
         -- chunk in fours. (This function must be in some standard library, where?)
         chop4 :: [a] -> [[a]]

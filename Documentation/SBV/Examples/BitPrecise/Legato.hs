@@ -31,6 +31,7 @@
 -- is indeed correct.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds      #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric  #-}
 
@@ -55,7 +56,7 @@ data Register = RegX  | RegA  deriving (Eq, Ord, Ix, Bounded)
 data Flag = FlagC | FlagZ deriving (Eq, Ord, Ix, Bounded)
 
 -- | Mostek was an 8-bit machine.
-type Value = SWord8
+type Value = SWord 8
 
 -- | Convenient synonym for symbolic machine bits.
 type Bit = SBool
@@ -124,7 +125,7 @@ poke a v m = m {memory = memory m // [(a, v)]}
 -- needs to see if the expression x + y + c overflowed, as checked
 -- by this function. Note that we verify the correctness of this check
 -- separately below in `checkOverflowCorrect`.
-checkOverflow :: SWord8 -> SWord8 -> SBool -> SBool
+checkOverflow :: SWord 8 -> SWord 8 -> SBool -> SBool
 checkOverflow x y c = s .< x .|| s .< y .|| s' .< s
   where s  = x + y
         s' = s + ite c 1 0
@@ -139,8 +140,8 @@ checkOverflowCorrect :: IO ThmResult
 checkOverflowCorrect = checkOverflow === overflow
   where -- Reference spec for overflow. We do the addition
         -- using 16 bits and check that it's larger than 255
-        overflow :: SWord8 -> SWord8 -> SBool -> SBool
-        overflow x y c = (0 # x) + (0 # y) + ite c 1 0 .> 255
+        overflow :: SWord 8 -> SWord 8 -> SBool -> SBool
+        overflow x y c = (0 # x) + (0 # y) + ite c 1 0 .> (255 :: SWord 16)
 ------------------------------------------------------------------
 -- * Instruction set
 ------------------------------------------------------------------
@@ -270,7 +271,7 @@ legatoIsCorrect initVals@(x, y, _, _, _, _, _) = result .== expected
     where (hi, lo) = runLegato (initMachine initVals)
           -- NB. perform the comparison over 16 bit values to avoid overflow!
           -- If Value changes to be something else, modify this accordingly.
-          result, expected :: SWord16
+          result, expected :: SWord 16
           result   = 256 * (0 # hi) + (0 # lo)
           expected = (0 # x) * (0 # y)
 
@@ -281,13 +282,13 @@ legatoIsCorrect initVals@(x, y, _, _, _, _, _) = result .== expected
 -- | The correctness theorem.
 correctnessTheorem :: IO ThmResult
 correctnessTheorem = proveWith defaultSMTCfg{timing = PrintTiming} $ do
-        lo <- sWord8 "lo"
+        lo <- sWord "lo"
 
-        x <- sWord8  "x"
-        y <- sWord8  "y"
+        x <- sWord  "x"
+        y <- sWord  "y"
 
-        regX  <- sWord8 "regX"
-        regA  <- sWord8 "regA"
+        regX  <- sWord "regX"
+        regA  <- sWord "regA"
 
         flagC <- sBool "flagC"
         flagZ <- sBool "flagZ"

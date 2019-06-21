@@ -9,12 +9,15 @@
 -- Test suite for Examples.CRC.GenPoly
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE TypeApplications #-}
 
 module TestSuite.CRC.GenPoly(tests) where
 
 import Data.SBV.Tools.Polynomial
 import Utils.SBVTestFramework
+
+import Data.Proxy
 
 -- Test suite
 tests :: TestTree
@@ -30,32 +33,32 @@ crcGoodE = do
   y <- exists_
   return (crcGood 3 0 x y)
 
-extendData :: SWord 48 -> SWord64
-extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse
+extendData :: SWord 48 -> SWord 64
+extendData msg = msg # 0
 
-mkFrame :: SWord64 -> SWord 48 -> SWord64
-mkFrame poly msg = fromBitsBE $ blastBE msg ++ blastBE (crc_48_16 msg poly)
+mkFrame :: SWord 64 -> SWord 48 -> SWord 64
+mkFrame poly msg = msg # crc_48_16 msg poly
 
-crc_48_16 :: SWord 48 -> SWord64 -> SWord16
+crc_48_16 :: SWord 48 -> SWord 64 -> SWord 16
 crc_48_16 msg poly = res
   where msg64 = extendData msg
         crc64 = pMod msg64 poly
-        (_, res) = split (snd (split crc64))
+        res   = bvExtract (Proxy @15) (Proxy @0) crc64
 
-diffCount :: SWord64 -> SWord64 -> SWord8
+diffCount :: SWord 64 -> SWord 64 -> SWord 8
 diffCount x y = count $ zipWith (.==) (blastLE x) (blastLE y)
   where count []     = 0
         count (b:bs) = let r = count bs in ite b r (1+r)
 
-crcGood :: SWord8 -> SWord16 -> SWord 48 -> SWord 48 -> SBool
+crcGood :: SWord 8 -> SWord 16 -> SWord 48 -> SWord 48 -> SBool
 crcGood hd divisor sent received =
      sent ./= received .=> diffCount frameSent frameReceived .> hd
    where frameSent     = mkFrame poly sent
          frameReceived = mkFrame poly received
          poly          = mkPoly divisor
 
-mkPoly :: SWord16 -> SWord64
-mkPoly d = 0 # 1 # d
+mkPoly :: SWord 16 -> SWord 64
+mkPoly d = 0 # (1 :: SWord 1) # d
 
 {-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN crcGoodE  ("HLint: ignore Use <$>"       :: String) #-}
