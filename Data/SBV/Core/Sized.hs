@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.SBV.Core.Sized (
         -- * Type-sized unsigned bit-vectors
@@ -39,6 +40,12 @@ import Data.SBV.Core.Symbolic
 
 import Data.SBV.Control.Utils
 import Data.SBV.SMT.SMT
+
+-- Doctest only
+-- $setup
+-- >>> :set -XTypeApplications
+-- >>> :set -XDataKinds
+-- >>> import Data.SBV.Provers.Prover (prove)
 
 -- | An unsigned bit-vector carrying its size info
 newtype WordN (n :: Nat) = WordN Integer deriving (Eq, Ord)
@@ -286,41 +293,75 @@ sInt_ = free_
 sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
 sInts = symbolics
 
+-- | Type family to allow for better type errors, occasionally. In my experiements, GHC
+-- is able to hit this in obvious cases, but not in all. In particular, there doesn't seem
+-- to be any way to trigger this when we have a negative intermediate bit-vector in a computation,
+-- in those cases you get a horrendous type-error message from GHC. Still, it's better than nothing.
+type family BVNonZero n where
+  BVNonZero (WordN 0) = TypeError ('Text "Unsupported 0-sized unsigned bit-vector " ':<>: 'ShowType (WordN 0))
+  BVNonZero (IntN  0) = TypeError ('Text "Unsupported 0-sized signed bit-vector "   ':<>: 'ShowType (IntN  0))
+  BVNonZero (WordN _) = 'True
+  BVNonZero (IntN  _) = 'True
+
 -- | Extract a portion of bits to form a smaller bit-vector.
+--
+-- >>> prove $ \x -> bvExtract (Proxy @7) (Proxy @3) (x :: SWord 12) .== bvDrop (Proxy @4) (bvTake (Proxy @9) x)
+-- Q.E.D.
 bvExtract :: forall i j n bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
                                     , KnownNat i
                                     , KnownNat j
                                     , i + 1 <= n
                                     , j <= i
-                                    ) => proxy i -> proxy j -> SBV (bv n) -> SBV (bv (i - j + 1))
+                                    , BVNonZero (bv (i - j + 1)) ~ 'True
+                                    ) => proxy i                -- ^ @i@: Start position, numbered from @n-1@ to @0@
+                                      -> proxy j                -- ^ @j@: End position, numbered from @n-1@ to @0@, @j <= i@ must hold
+                                      -> SBV (bv n)             -- ^ Input bit vector of size @n@
+                                      -> SBV (bv (i - j + 1))   -- ^ Output is of size @i - j + 1@
 bvExtract start end = SBV . svExtract i j . unSBV
    where i  = fromIntegral (natVal start)
          j  = fromIntegral (natVal end)
 
 -- | Join two bitvectors.
+--
+-- >>> prove $ \x y -> x .== bvExtract (Proxy @79) (Proxy @71) ((x :: SWord 9) # (y :: SWord 71))
+-- Q.E.D.
 (#) :: ( KnownNat n, 1 <= n, SymVal (bv n)
        , KnownNat m, 1 <= m, SymVal (bv m)
-       ) => SBV (bv n) -> SBV (bv m) -> SBV (bv (n + m))
+       ) => SBV (bv n)                     -- ^ First input, of size @n@, becomes the left side
+         -> SBV (bv m)                     -- ^ Second input, of size @m@, becomes the right side
+         -> SBV (bv (n + m))               -- ^ Concatenation, of size @n+m@
 n # m = SBV $ svJoin (unSBV n) (unSBV m)
 infixr 5 #
 
 -- | Zero extend a bit-vector.
+--
+-- >>> prove $ \x -> bvExtract (Proxy @20) (Proxy @12) (zeroExtend (x :: SInt 12) :: SInt 21) .== 0
+-- Q.E.D.
 zeroExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
                              , KnownNat m, 1 <= m, SymVal (bv m)
-                             , n <= m
+                             , n + 1 <= m
                              , SIntegral (bv (m - n))
-                             ) => SBV (bv n) -> SBV (bv m)
+                             , BVNonZero (bv (m - n)) ~ 'True
+                             ) => SBV (bv n)    -- ^ Input, of size @n@
+                               -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
 zeroExtend n = SBV $ svJoin (unSBV zero) (unSBV n)
   where zero :: SBV (bv (m - n))
         zero = literal 0
 
 -- | Sign extend a bit-vector.
+--
+-- >>> prove $ \x -> sNot (msb x) .=> bvExtract (Proxy @20) (Proxy @12) (signExtend (x :: SInt 12) :: SInt 21) .== 0
+-- Q.E.D.
+-- >>> prove $ \x ->       msb x  .=> bvExtract (Proxy @20) (Proxy @12) (signExtend (x :: SInt 12) :: SInt 21) .== complement 0
+-- Q.E.D.
 signExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
                              , KnownNat m, 1 <= m, SymVal (bv m)
-                             , n <= m
+                             , n + 1 <= m
                              , SFiniteBits (bv n)
                              , SIntegral   (bv (m - n))
-                             ) => SBV (bv n) -> SBV (bv m)
+                             , BVNonZero   (bv (m - n)) ~ 'True
+                             ) => SBV (bv n)  -- ^ Input, of size @n@
+                               -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
 signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
   where zero, ones, ext :: SBV (bv (m - n))
         zero = literal 0
@@ -328,20 +369,38 @@ signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
         ext  = ite (msb n) ones zero
 
 -- | Drop bits from the top of a bit-vector.
+--
+-- >>> prove $ \x -> bvDrop (Proxy @0) (x :: SWord 43) .== x
+-- Q.E.D.
+-- >>> prove $ \x -> bvDrop (Proxy @20) (x :: SWord 21) .== ite (lsb x) 1 0
+-- Q.E.D.
 bvDrop :: forall i n m bv proxy. ( KnownNat n, 1 <= n
                                  , KnownNat i
                                  , i + 1 <= n
                                  , i + m - n <= 0
-                                 ) => proxy i -> SBV (bv n) -> SBV (bv m)
+                                 , BVNonZero (bv (n - i)) ~ 'True
+                                 ) => proxy i                    -- ^ @i@: Number of bits to drop. @i < n@ must hold.
+                                   -> SBV (bv n)                 -- ^ Input, of size @n@
+                                   -> SBV (bv m)                 -- ^ Output, of size @m@. @m = n - i@ holds.
 bvDrop i = SBV . svExtract start 0 . unSBV
   where nv    = intOfProxy (Proxy @n)
         start = nv - fromIntegral (natVal i) - 1
 
 -- | Take bits from the top of a bit-vector.
+--
+-- >>> prove $ \x -> bvTake (Proxy @13) (x :: SWord 13) .== x
+-- Q.E.D.
+-- >>> prove $ \x -> bvTake (Proxy @1) (x :: SWord 13) .== ite (msb x) 1 0
+-- Q.E.D.
+-- >>> prove $ \x -> bvTake (Proxy @4) x # bvDrop (Proxy @4) x .== (x :: SWord 23)
+-- Q.E.D.
 bvTake :: forall i n bv proxy. ( KnownNat n, 1 <= n
                                , KnownNat i, 1 <= i
                                , i <= n
-                               ) => proxy i -> SBV (bv n) -> SBV (bv i)
+                               , BVNonZero (bv i) ~ 'True
+                               ) => proxy i                  -- ^ @i@: Number of bits to take. @0 < i <= n@ must hold.
+                                 -> SBV (bv n)               -- ^ Input, of size @n@
+                                 -> SBV (bv i)               -- ^ Output, of size @i@
 bvTake i = SBV . svExtract start end . unSBV
   where nv    = intOfProxy (Proxy @n)
         start = nv - 1
