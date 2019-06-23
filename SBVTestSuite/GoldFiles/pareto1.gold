@@ -5,29 +5,29 @@ Pareto front #1: Optimal model:
   max_x_plus_y = 0 :: Integer
   min_y        = 0 :: Integer
 Pareto front #2: Optimal model:
+  x            = 0 :: Integer
+  y            = 1 :: Integer
+  min_x        = 0 :: Integer
+  max_x_plus_y = 1 :: Integer
+  min_y        = 1 :: Integer
+Pareto front #3: Optimal model:
+  x            = 1 :: Integer
+  y            = 1 :: Integer
+  min_x        = 1 :: Integer
+  max_x_plus_y = 2 :: Integer
+  min_y        = 1 :: Integer
+Pareto front #4: Optimal model:
   x            = 1 :: Integer
   y            = 0 :: Integer
   min_x        = 1 :: Integer
   max_x_plus_y = 1 :: Integer
   min_y        = 0 :: Integer
-Pareto front #3: Optimal model:
+Pareto front #5: Optimal model:
   x            = 0 :: Integer
   y            = 2 :: Integer
   min_x        = 0 :: Integer
   max_x_plus_y = 2 :: Integer
   min_y        = 2 :: Integer
-Pareto front #4: Optimal model:
-  x            = 1 :: Integer
-  y            = 1 :: Integer
-  min_x        = 1 :: Integer
-  max_x_plus_y = 2 :: Integer
-  min_y        = 1 :: Integer
-Pareto front #5: Optimal model:
-  x            = 0 :: Integer
-  y            = 1 :: Integer
-  min_x        = 0 :: Integer
-  max_x_plus_y = 1 :: Integer
-  min_y        = 1 :: Integer
 Pareto front #6: Optimal model:
   x            = 1 :: Integer
   y            = 2 :: Integer
@@ -65,17 +65,17 @@ Pareto front #11: Optimal model:
   max_x_plus_y = 4 :: Integer
   min_y        = 0 :: Integer
 Pareto front #12: Optimal model:
-  x            = 4 :: Integer
-  y            = 1 :: Integer
-  min_x        = 4 :: Integer
-  max_x_plus_y = 5 :: Integer
-  min_y        = 1 :: Integer
-Pareto front #13: Optimal model:
   x            = 5 :: Integer
   y            = 0 :: Integer
   min_x        = 5 :: Integer
   max_x_plus_y = 5 :: Integer
   min_y        = 0 :: Integer
+Pareto front #13: Optimal model:
+  x            = 4 :: Integer
+  y            = 1 :: Integer
+  min_x        = 4 :: Integer
+  max_x_plus_y = 5 :: Integer
+  min_y        = 1 :: Integer
 Pareto front #14: Optimal model:
   x            = 5 :: Integer
   y            = 1 :: Integer

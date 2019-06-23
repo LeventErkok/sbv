@@ -47,7 +47,7 @@ Looking for solution 3
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (lambda ((x!1 E)) (or (= x!1 B) (= x!1 A)))))
+[RECV] ((s0 (lambda ((x!1 E)) (or (= x!1 A) (= x!1 B)))))
 [GOOD] (define-fun s7 () (Array E Bool) (store (store ((as const (Array E Bool)) false) B true) A true))
 [GOOD] (define-fun s8 () Bool (= s0 s7))
 [GOOD] (define-fun s9 () Bool (not s8))
@@ -56,7 +56,7 @@ Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (lambda ((x!1 E)) (or (= x!1 B) (= x!1 C) (= x!1 A)))))
+[RECV] ((s0 (lambda ((x!1 E)) (or (= x!1 A) (= x!1 B) (= x!1 C)))))
 [GOOD] (define-fun s10 () (Array E Bool) (store (store (store ((as const (Array E Bool)) false) C true) B true) A true))
 [GOOD] (define-fun s11 () Bool (= s0 s10))
 [GOOD] (define-fun s12 () Bool (not s11))
