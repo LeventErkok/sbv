@@ -234,10 +234,10 @@ The other way we can have a bad measure is if it fails to decrease through the l
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = 2, i = 1, s = 1}
-    Measure: 3
-    After  : SumS {n = 2, i = 2, s = 3}
-    Measure: 4
+    Before : SumS {n = 1, i = 0, s = 0}
+    Measure: 1
+    After  : SumS {n = 1, i = 1, s = 1}
+    Measure: 2
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@.
 -}

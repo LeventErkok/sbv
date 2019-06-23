@@ -56,21 +56,23 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -6.2126765e-33 :: Float
---   y =  7.5025677e-37 :: Float
---   z =   2.542798e-39 :: Float
+--   x = -1.6754219e-38 :: Float
+--   y =    -2.38804e16 :: Float
+--   z =     2.38804e16 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x = -6.2126765e-33 :: Float
--- >>> let y =  7.5025677e-37 :: Float
--- >>> let z =   2.542798e-39 :: Float
+-- >>> let x = -1.6754219e-38 :: Float
+-- >>> let y =    -2.38804e16 :: Float
+-- >>> let z =     2.38804e16 :: Float
 -- >>> x + (y + z)
--- -6.2119234e-33
+-- -1.6754219e-38
 -- >>> (x + y) + z
--- -6.211924e-33
+-- 0.0
 --
--- Note the difference between two additions!
+-- Note the difference between two additions! This is a classic example of massive cancelation as @y@ and @z@
+-- are simply large enough values that sum up to @0@, so a tiny number added before or after the cancelation
+-- happens has a significant impact on the final result.
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -90,13 +92,13 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 3.0327754e-36 :: Float
---   b =       4.5e-44 :: Float
+--   a = -2.2362675e-19 :: Float
+--   b =  6.4623485e-27 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 3.0327754e-36 :: Float
--- >>> let b =       4.5e-44 :: Float
+-- >>> let a = -2.2362675e-19 :: Float
+-- >>> let b =  6.4623485e-27 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
@@ -120,13 +122,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 2.800139349078291e-281 :: Double
+--   a = 8.988465674311582e307 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = 2.800139349078291e-281 :: Double
+-- >>> let a = 8.988465674311582e307 :: Double
 -- >>> a * (1/a)
--- 0.9999999999999999
+-- 1.0000000000000002
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
@@ -147,33 +149,33 @@ multInverse = prove $ do a <- sDouble "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardPositive :: RoundingMode
---   x  =           255.96877 :: Float
---   y  =             255.875 :: Float
+--   x  =          -1.9999393 :: Float
+--   y  =       -4.8827764e-2 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> 255.96877 + 255.875 :: Float
--- 511.84375
+-- >>> -1.9999393 + (-4.8827764e-2) :: Float
+-- -2.048767
 --
 -- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive 255.96877 (255.875 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-1.9999393) (-4.8827764e-2 :: SFloat)
 -- Satisfiable. Model:
---   s0 = 511.84378 :: Float
+--   s0 = -2.0487669 :: Float
 --
 -- We can see why these two resuls are indeed different: The 'RoundTowardPositive'
 -- (which rounds towards positive-infinity) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >>> 255.96877 + 255.875 :: Double
--- 511.84377
+-- >> -1.9999393 + (-4.8827764e-2) :: Double
+-- -2.048767064
 --
--- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
+-- we see that the "more precise" result is smaller than what the 'Float' value is, justifying the
 -- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
---  merely -- note that floating point representation and semantics is indeed a thorny
+-- merely -- note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.
 roundingAdd :: IO SatResult
