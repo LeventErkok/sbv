@@ -47,6 +47,9 @@ module Data.SBV.RegExp (
 
 import Prelude hiding (length, take, elem, notElem, head)
 
+import qualified Prelude   as P
+import qualified Data.List as L
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
@@ -93,11 +96,28 @@ instance RegExpMatchable SChar where
 
 -- | Matching symbolic strings.
 instance RegExpMatchable SString where
-   match s r = lift1 (StrInRe r) opt s
-     where -- TODO: Replace this with a function that concretely evaluates the string against the
-           -- reg-exp, possible future work. But probably there isn't enough ROI.
-           opt :: Maybe (String -> Bool)
-           opt = Nothing
+   match input regExp = lift1 (StrInRe regExp) (Just (go regExp P.null)) input
+     where -- This isn't super efficient, but it gets the job done.
+           go :: RegExp -> (String -> Bool) -> String -> Bool
+           go (Literal l)    k s      = l `L.isPrefixOf` s && k (P.drop (P.length l) s)
+           go All            _ _      = True
+           go None           _ _      = False
+           go (Range _ _)    _ []     = False
+           go (Range a b)    k (c:cs) = a <= c && c <= b && k cs
+           go (Conc [])      k s      = k s
+           go (Conc (r:rs))  k s      = go r (go (Conc rs) k) s
+           go (KStar r)      k s      = k s || go r (smaller (P.length s) (go (KStar r) k)) s
+           go (KPlus r)      k s      = go (Conc [r, KStar r]) k s
+           go (Opt r)        k s      = k s || go r k s
+           go (Loop i j r)   k s      = go (Conc (replicate i r ++ replicate (j - i) (Opt r))) k s
+           go (Union [])     _ _      = False
+           go (Union [x])    k s      = go x k s
+           go (Union (x:xs)) k s      = go x k s || go (Union xs) k s
+           go (Inter a b)    k s      = go a k s && go b k s
+
+           -- In the KStar case, make sure the continuation is called with something
+           -- smaller to avoid infinite recursion!
+           smaller orig k inp = P.length inp < orig && k inp
 
 -- | A literal regular-expression, matching the given string exactly. Note that
 -- with @OverloadedStrings@ extension, you can simply use a Haskell

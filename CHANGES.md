@@ -27,6 +27,12 @@
     is zero during model validation. This severely limits the
     validation result, but it is better than nothing. (In the
     verbose mode, a message to this effect will be printed.)
+  
+  * Model validator: SBV can now validate models returned from
+    the backend solver for regular-expression match problems.
+    We also constant fold matches against constant strings without
+    calling the solver at all, less useful perhaps but more inline
+    with the general SBV methodology.
 
   * Ramped up travis-appveyor build infrastructure.
 

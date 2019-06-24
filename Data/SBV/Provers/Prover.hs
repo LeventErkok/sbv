@@ -427,7 +427,6 @@ class ExtractIO m => MProvable m a where
                                                                           IEEEFP FP_FMA     -> Just "Floating point FMA operation is not supported concretely."
                                                                           IEEEFP _          -> Just "Not all floating point operations are supported concretely."
                                                                           OverflowOp _      -> Just "Overflow-checking is not done concretely."
-                                                                          StrOp (StrInRe _) -> Just "Regular expression matches are not supported in validation mode."
                                                                           _                 -> listToMaybe $ mapMaybe why as
 
                              cstrs = S.toList $ resConstraints result
