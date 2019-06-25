@@ -56,23 +56,21 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -1.6754219e-38 :: Float
---   y =    -2.38804e16 :: Float
---   z =     2.38804e16 :: Float
+--   x =  131071.26 :: Float
+--   y =  1.4853516 :: Float
+--   z = -126976.29 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x = -1.6754219e-38 :: Float
--- >>> let y =    -2.38804e16 :: Float
--- >>> let z =     2.38804e16 :: Float
+-- >>> let x =  131071.26 :: Float
+-- >>> let y =  1.4853516 :: Float
+-- >>> let z = -126976.29 :: Float
 -- >>> x + (y + z)
--- -1.6754219e-38
+-- 4096.453
 -- >>> (x + y) + z
--- 0.0
+-- 4096.461
 --
--- Note the difference between two additions! This is a classic example of massive cancelation as @y@ and @z@
--- are simply large enough values that sum up to @0@, so a tiny number added before or after the cancelation
--- happens has a significant impact on the final result.
+-- Note the significant difference between two additions!
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -92,13 +90,13 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = -2.2362675e-19 :: Float
---   b =  6.4623485e-27 :: Float
+--   a = 2.2922064e-37 :: Float
+--   b =       1.1e-44 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = -2.2362675e-19 :: Float
--- >>> let b =  6.4623485e-27 :: Float
+-- >>> let a = 2.2922064e-37 :: Float
+-- >>> let b =       1.1e-44 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
@@ -122,13 +120,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 8.988465674311582e307 :: Double
+--   a = 1.2896893825010637e308 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = 8.988465674311582e307 :: Double
+-- >>> let a = 1.2896893825010637e308 :: Double
 -- >>> a * (1/a)
--- 1.0000000000000002
+-- 0.9999999999999998
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
@@ -148,34 +146,34 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardPositive :: RoundingMode
---   x  =          -1.9999393 :: Float
---   y  =       -4.8827764e-2 :: Float
+--   rm = RoundTowardNegative :: RoundingMode
+--   x  =          0.21655247 :: Float
+--   y  =          -1.0332974 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> -1.9999393 + (-4.8827764e-2) :: Float
--- -2.048767
+-- >>> 0.21655247 + (-1.0332974) :: Float
+-- -0.8167449
 --
--- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
+-- While we cannot directly see the result when the mode is 'RoundTowardNegative' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-1.9999393) (-4.8827764e-2 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardNegative 0.21655247 (-1.0332974 :: SFloat)
 -- Satisfiable. Model:
---   s0 = -2.0487669 :: Float
+--   s0 = -0.816745 :: Float
 --
--- We can see why these two resuls are indeed different: The 'RoundTowardPositive'
--- (which rounds towards positive-infinity) produces a larger result. Indeed, if we treat these numbers
+-- We can see why these two resuls are indeed different: The 'RoundTowardNegative'
+-- (which rounds towards negative-infinity) produces a smaller result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >> -1.9999393 + (-4.8827764e-2) :: Double
--- -2.048767064
+-- >> 0.21655247 + (-1.0332974) :: Double
+-- -0.8167449299999999
 --
 -- we see that the "more precise" result is smaller than what the 'Float' value is, justifying the
--- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
--- merely -- note that floating point representation and semantics is indeed a thorny
+-- smaller value with 'RoundTowardNegative'. A more detailed study is beyond our current scope, so we'll
+-- merely note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.
 roundingAdd :: IO SatResult
