@@ -269,6 +269,15 @@ instance (KnownNat n, 1 <= n) => SatModel (WordN n) where
 instance (KnownNat n, 1 <= n) => SatModel (IntN n) where
   parseCVs = genParse (kindOf (undefined :: IntN n))
 
+-- | Optimizing 'WordN'
+instance (KnownNat n, 1 <= n) => Metric (WordN n)
+
+-- | Optimizing 'IntN'
+instance (KnownNat n, 1 <= n) => Metric (IntN n) where
+  type MetricSpace (IntN n) = WordN n
+  toMetricSpace    x        = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
+  fromMetricSpace  x        = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
+
 -- | Generalization of 'Data.SBV.sWord'
 sWord :: (KnownNat n, 1 <= n) => MonadSymbolic m => String -> m (SWord n)
 sWord = symbolic
