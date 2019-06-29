@@ -107,7 +107,7 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                    ++ [(show x, show y, mkThm2L x y (x `op` y)) | nm `elem` allowedListComps  , x <- sl,        y <- sl       ]
   where -- Currently Z3 doesn't allow for string/list comparisons, so only test equals and distinct
         -- See: http://github.com/LeventErkok/sbv/issues/368 for tracking issue.
-        allowedStringComps = ["==", "/="]
+        allowedStringComps = ["==", "/=", "<"]
         allowedListComps   = ["==", "/="]
         mkTest (x, y, t) = testCase ("genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
