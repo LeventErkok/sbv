@@ -995,7 +995,7 @@ class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
                   | True   = ite (sTestBit x i) i8 (go (i+1))
                 where i8 = literal (fromIntegral i :: Word8)
 
--- 'SIntegral' Instances, skips Real/Float/Bool/Integer
+-- 'SFiniteBits' Instances, skips Real/Float/Bool/Integer
 instance SFiniteBits Word8  where sFiniteBitSize _ =  8
 instance SFiniteBits Word16 where sFiniteBitSize _ = 16
 instance SFiniteBits Word32 where sFiniteBitSize _ = 32
