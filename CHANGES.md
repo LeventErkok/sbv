@@ -9,7 +9,17 @@
     `SWord 17`, `SInt 9`, `SWord 128` etc. These work like any
     other bit-vector, using the `DataKinds` feature of
     GHC. Thanks to Ben Blaxill for the idea and the initial
-    implementation.
+    implementation. Note that SBV still supports the traditional
+    fixed-size bit-vectors, SInt8, SWord16 etc. Support for
+    these will not be removed; so existing programs will
+    continue to work.
+
+  * To convert between arbitrary sized bit-vectors and
+    the old style equivalents, use `fromSized` and `toSized`
+    functions. The behavior is controlled with a closed
+    type-family so you will get a (hopefully not too
+    horrendous) type error message if you try to convert,
+    say, a SInt16 to SInt 22; or vice versa.
 
   * Add arbitrary-sized bit vector operations: extraction,
     extension, and joining; these use proxy arguments to

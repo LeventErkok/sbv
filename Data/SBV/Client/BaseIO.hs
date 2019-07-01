@@ -11,10 +11,12 @@
 -- @Data.SBV@, where we restrict the underlying monad to be IO.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeFamilies     #-}
-{-# LANGUAGE TypeOperators    #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 
 module Data.SBV.Client.BaseIO where
 
@@ -23,7 +25,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
-import Data.SBV.Core.Sized     (SInt, SWord)
+import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
 import Data.SBV.Core.Model     (Metric(..))
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
@@ -33,6 +35,10 @@ import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
                                 OptimizeResult)
 
 import GHC.TypeLits
+import Data.Kind
+
+import Data.Int
+import Data.Word
 
 import qualified Data.SBV.Core.Data      as Trans
 import qualified Data.SBV.Core.Sized     as Trans
@@ -796,3 +802,93 @@ addSValOptGoal = Trans.addSValOptGoal
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.outputSVal'
 outputSVal :: SVal -> Symbolic ()
 outputSVal = Trans.outputSVal
+
+-- | Capture the correspondence between sized and fixed-sized BVs
+type family FromSized (t :: Type) :: Type where
+   FromSized (WordN  8) = Word8
+   FromSized (WordN 16) = Word16
+   FromSized (WordN 32) = Word32
+   FromSized (WordN 64) = Word64
+   FromSized (IntN   8) = Int8
+   FromSized (IntN  16) = Int16
+   FromSized (IntN  32) = Int32
+   FromSized (IntN  64) = Int64
+   FromSized (SWord  8) = SWord8
+   FromSized (SWord 16) = SWord16
+   FromSized (SWord 32) = SWord32
+   FromSized (SWord 64) = SWord64
+   FromSized (SInt   8) = SInt8
+   FromSized (SInt  16) = SInt16
+   FromSized (SInt  32) = SInt32
+   FromSized (SInt  64) = SInt64
+
+-- | Conversion from a sized BV to a fixed-sized bit-vector.
+class FromSizedBV a where
+   -- | Convert a sized bit-vector to the corresponding fixed-sized bit-vector,
+   -- for instance 'SWord 16' to 'SWord16'. See also 'toSized'.
+   fromSized :: a -> FromSized a
+
+   default fromSized :: (Num (FromSized a), Integral a) => a -> FromSized a
+   fromSized = fromIntegral
+
+instance FromSizedBV (WordN   8)
+instance FromSizedBV (WordN  16)
+instance FromSizedBV (WordN  32)
+instance FromSizedBV (WordN  64)
+instance FromSizedBV (IntN    8)
+instance FromSizedBV (IntN   16)
+instance FromSizedBV (IntN   32)
+instance FromSizedBV (IntN   64)
+instance FromSizedBV (SWord   8) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SWord  16) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SWord  32) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SWord  64) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SInt    8) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SInt   16) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SInt   32) where fromSized = Trans.sFromIntegral
+instance FromSizedBV (SInt   64) where fromSized = Trans.sFromIntegral
+
+-- | Capture the correspondence between fixed-sized and sized BVs
+type family ToSized (t :: Type) :: Type where
+   ToSized Word8   = WordN  8
+   ToSized Word16  = WordN 16
+   ToSized Word32  = WordN 32
+   ToSized Word64  = WordN 64
+   ToSized Int8    = IntN   8
+   ToSized Int16   = IntN  16
+   ToSized Int32   = IntN  32
+   ToSized Int64   = IntN  64
+   ToSized SWord8  = SWord  8
+   ToSized SWord16 = SWord 16
+   ToSized SWord32 = SWord 32
+   ToSized SWord64 = SWord 64
+   ToSized SInt8   = SInt   8
+   ToSized SInt16  = SInt  16
+   ToSized SInt32  = SInt  32
+   ToSized SInt64  = SInt  64
+
+-- | Conversion from a fixed-sized BV to a sized bit-vector.
+class ToSizedBV a where
+   -- | Convert a fixed-sized bit-vector to the corresponding sized bit-vector,
+   -- for instance 'SWord16' to 'SWord 16'. See also 'fromSized'.
+   toSized :: a -> ToSized a
+
+   default toSized :: (Num (ToSized a), Integral a) => (a -> ToSized a)
+   toSized = fromIntegral
+
+instance ToSizedBV Word8
+instance ToSizedBV Word16
+instance ToSizedBV Word32
+instance ToSizedBV Word64
+instance ToSizedBV Int8
+instance ToSizedBV Int16
+instance ToSizedBV Int32
+instance ToSizedBV Int64
+instance ToSizedBV SWord8  where toSized = Trans.sFromIntegral
+instance ToSizedBV SWord16 where toSized = Trans.sFromIntegral
+instance ToSizedBV SWord32 where toSized = Trans.sFromIntegral
+instance ToSizedBV SWord64 where toSized = Trans.sFromIntegral
+instance ToSizedBV SInt8   where toSized = Trans.sFromIntegral
+instance ToSizedBV SInt16  where toSized = Trans.sFromIntegral
+instance ToSizedBV SInt32  where toSized = Trans.sFromIntegral
+instance ToSizedBV SInt64  where toSized = Trans.sFromIntegral

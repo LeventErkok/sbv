@@ -140,6 +140,8 @@ module Data.SBV (
   , SWord8, SWord16, SWord32, SWord64, SWord
   -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64, SInt
+  -- *** Converting between fixed-size and arbitrary bitvectors
+  , FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
   -- $unboundedLimitations
   , SInteger
