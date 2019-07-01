@@ -1262,6 +1262,8 @@ instance (Ord a, Num a, Bits a, SymVal a) => Bits (SBV a) where
 -- | Conversion between integral-symbolic values, akin to Haskell's `fromIntegral`
 sFromIntegral :: forall a b. (Integral a, HasKind a, Num a, SymVal a, HasKind b, Num b, SymVal b) => SBV a -> SBV b
 sFromIntegral x
+  | kFrom == kTo
+  = SBV (unSBV x)
   | isReal x
   = error "SBV.sFromIntegral: Called on a real value" -- can't really happen due to types, but being overcautious
   | Just v <- unliteral x
