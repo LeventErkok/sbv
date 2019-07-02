@@ -9,12 +9,13 @@
 -- Implementation of polynomial arithmetic
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PatternGuards     #-}
-{-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE PatternGuards        #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Data.SBV.Tools.Polynomial (
         -- * Polynomial arithmetic and CRCs
@@ -89,7 +90,7 @@ instance Polynomial SWord16 where {showPolynomial b = liftS (sp b); pMult = poly
 instance Polynomial SWord32 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 instance Polynomial SWord64 where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 
-instance (KnownNat n, 1 <= n) => Polynomial (SWord n) where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
+instance (KnownNat n, IsNonZero n) => Polynomial (SWord n) where {showPolynomial b = liftS (sp b); pMult = polyMult;      pDivMod = polyDivMod}
 
 lift :: SymVal a => ((SBV a, SBV a, [Int]) -> SBV a) -> (a, a, [Int]) -> a
 lift f (x, y, z) = fromJust $ unliteral $ f (literal x, literal y, z)

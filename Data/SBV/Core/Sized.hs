@@ -25,6 +25,8 @@ module Data.SBV.Core.Sized (
         , SInt, IntN, sInt, sInt_, sInts
         -- Bit-vector operations
         , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
+        -- Non-zero constraint
+        , IsNonZero
        ) where
 
 import Data.Bits
@@ -32,6 +34,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy(..))
 
 import GHC.TypeLits
+import Data.Kind
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -61,12 +64,20 @@ instance Show (WordN n) where
 intOfProxy :: KnownNat n => Proxy n -> Int
 intOfProxy = fromEnum . natVal
 
+-- | Catch 0-width cases
+type ZeroWidth = 'Text "Zero-width BV's are not allowed."
+
+-- | Type family to create the appropriate non-zero constraint
+type family IsNonZero (arg :: Nat) :: Constraint where
+   IsNonZero 0 = TypeError ZeroWidth
+   IsNonZero n = ()
+
 -- | 'WordN' has a kind
-instance (KnownNat n, 1 <= n) => HasKind (WordN n) where
+instance (KnownNat n, IsNonZero n) => HasKind (WordN n) where
   kindOf _ = KBounded False (intOfProxy (Proxy @n))
 
 -- | 'SymVal' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => SymVal (WordN n) where
+instance (KnownNat n, IsNonZero n) => SymVal (WordN n) where
    literal  x = genLiteral  (kindOf x) x
    mkSymVal   = genMkSymVar (kindOf (undefined :: WordN n))
    fromCV     = genFromCV
@@ -82,17 +93,17 @@ instance Show (IntN n) where
   show (IntN v) = show v
 
 -- | 'IntN' has a kind
-instance (KnownNat n, 1 <= n) => HasKind (IntN n) where
+instance (KnownNat n, IsNonZero n) => HasKind (IntN n) where
   kindOf _ = KBounded True (intOfProxy (Proxy @n))
 
 -- | 'SymVal' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => SymVal (IntN n) where
+instance (KnownNat n, IsNonZero n) => SymVal (IntN n) where
    literal  x = genLiteral  (kindOf x) x
    mkSymVal   = genMkSymVar (kindOf (undefined :: IntN n))
    fromCV     = genFromCV
 
 -- Lift a unary operation via SVal
-lift1 :: (KnownNat n, 1 <= n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal) -> bv n -> bv n
+lift1 :: (KnownNat n, IsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal) -> bv n -> bv n
 lift1 nm op x = uc $ op (c x)
   where k = kindOf x
         c = SVal k . Left . CV k . CInteger . toInteger
@@ -100,7 +111,7 @@ lift1 nm op x = uc $ op (c x)
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, r)
 
 -- Lift a binary operation via SVal
-lift2 :: (KnownNat n, 1 <= n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal -> SVal) -> bv n -> bv n -> bv n
+lift2 :: (KnownNat n, IsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal -> SVal) -> bv n -> bv n -> bv n
 lift2 nm op x y = uc $ c x `op` c y
   where k = kindOf x
         c = SVal k . Left . CV k . CInteger . toInteger
@@ -108,7 +119,7 @@ lift2 nm op x y = uc $ c x `op` c y
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, y, r)
 
 -- Lift a binary operation via SVal where second argument is an Int
-lift2I :: (KnownNat n, 1 <= n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> bv n
+lift2I :: (KnownNat n, IsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> bv n
 lift2I nm op x i = uc $ c x `op` i
   where k = kindOf x
         c = SVal k . Left . CV k . CInteger . toInteger
@@ -116,7 +127,7 @@ lift2I nm op x i = uc $ c x `op` i
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, i, r)
 
 -- Lift a binary operation via SVal where second argument is an Int and returning a Bool
-lift2IB :: (KnownNat n, 1 <= n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> Bool
+lift2IB :: (KnownNat n, IsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> Bool
 lift2IB nm op x i = uc $ c x `op` i
   where k = kindOf x
         c = SVal k . Left . CV k . CInteger . toInteger
@@ -124,17 +135,17 @@ lift2IB nm op x i = uc $ c x `op` i
         uc r                 = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, i, r)
 
 -- | 'Bounded' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Bounded (WordN n) where
+instance (KnownNat n, IsNonZero n) => Bounded (WordN n) where
    minBound = WordN 0
    maxBound = let sz = intOfProxy (Proxy @n) in WordN $ 2 ^ sz - 1
 
 -- | 'Bounded' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Bounded (IntN n) where
+instance (KnownNat n, IsNonZero n) => Bounded (IntN n) where
    minBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ - (2 ^ sz1)
    maxBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ 2 ^ sz1 - 1
 
 -- | 'Num' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Num (WordN n) where
+instance (KnownNat n, IsNonZero n) => Num (WordN n) where
    (+)         = lift2 "(+)"    svPlus
    (-)         = lift2 "(*)"    svMinus
    (*)         = lift2 "(*)"    svTimes
@@ -144,7 +155,7 @@ instance (KnownNat n, 1 <= n) => Num (WordN n) where
    fromInteger = WordN . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
 
 -- | 'Num' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Num (IntN n) where
+instance (KnownNat n, IsNonZero n) => Num (IntN n) where
    (+)         = lift2 "(+)"    svPlus
    (-)         = lift2 "(*)"    svMinus
    (*)         = lift2 "(*)"    svTimes
@@ -154,35 +165,35 @@ instance (KnownNat n, 1 <= n) => Num (IntN n) where
    fromInteger = IntN . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
 
 -- | 'Enum' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Enum (WordN n) where
+instance (KnownNat n, IsNonZero n) => Enum (WordN n) where
    toEnum   = fromInteger  . toInteger
    fromEnum = fromIntegral . toInteger
 
 -- | 'Enum' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Enum (IntN n) where
+instance (KnownNat n, IsNonZero n) => Enum (IntN n) where
    toEnum   = fromInteger  . toInteger
    fromEnum = fromIntegral . toInteger
 
 -- | 'Real' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Real (WordN n) where
+instance (KnownNat n, IsNonZero n) => Real (WordN n) where
    toRational (WordN x) = toRational x
 
 -- | 'Real' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Real (IntN n) where
+instance (KnownNat n, IsNonZero n) => Real (IntN n) where
    toRational (IntN x) = toRational x
 
 -- | 'Integral' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Integral (WordN n) where
+instance (KnownNat n, IsNonZero n) => Integral (WordN n) where
    toInteger (WordN x)           = x
    quotRem   (WordN x) (WordN y) = let (q, r) = quotRem x y in (WordN q, WordN r)
 
 -- | 'Integral' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Integral (IntN n) where
+instance (KnownNat n, IsNonZero n) => Integral (IntN n) where
    toInteger (IntN x)          = x
    quotRem   (IntN x) (IntN y) = let (q, r) = quotRem x y in (IntN q, IntN r)
 
 --  'Bits' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => Bits (WordN n) where
+instance (KnownNat n, IsNonZero n) => Bits (WordN n) where
    (.&.)        = lift2   "(.&.)"      svAnd
    (.|.)        = lift2   "(.|.)"      svOr
    xor          = lift2   "xor"        svXOr
@@ -199,7 +210,7 @@ instance (KnownNat n, 1 <= n) => Bits (WordN n) where
    popCount     = fromIntegral . popCount . toInteger
 
 --  'Bits' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => Bits (IntN n) where
+instance (KnownNat n, IsNonZero n) => Bits (IntN n) where
    (.&.)        = lift2   "(.&.)"      svAnd
    (.|.)        = lift2   "(.|.)"      svOr
    xor          = lift2   "xor"        svXOr
@@ -216,112 +227,102 @@ instance (KnownNat n, 1 <= n) => Bits (IntN n) where
    popCount     = fromIntegral . popCount . toInteger
 
 -- | 'SIntegral' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => SIntegral (WordN n)
+instance (KnownNat n, IsNonZero n) => SIntegral (WordN n)
 
 -- | 'SIntegral' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => SIntegral (IntN n)
+instance (KnownNat n, IsNonZero n) => SIntegral (IntN n)
 
 -- | 'SDivisible' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => SDivisible (WordN n) where
+instance (KnownNat n, IsNonZero n) => SDivisible (WordN n) where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
   sDivMod  x y = x `divMod` y
 
 -- | 'SDivisible' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => SDivisible (IntN n) where
+instance (KnownNat n, IsNonZero n) => SDivisible (IntN n) where
   sQuotRem x 0 = (0, x)
   sQuotRem x y = x `quotRem` y
   sDivMod  x 0 = (0, x)
   sDivMod  x y = x `divMod` y
 
 -- | 'SDivisible' instance for 'SWord'
-instance (KnownNat n, 1 <= n) => SDivisible (SWord n) where
+instance (KnownNat n, IsNonZero n) => SDivisible (SWord n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
 -- | 'SDivisible' instance for 'SInt'
-instance (KnownNat n, 1 <= n) => SDivisible (SInt n) where
+instance (KnownNat n, IsNonZero n) => SDivisible (SInt n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
 -- | 'SFiniteBits' instance for 'WordN'
-instance (KnownNat n, 1 <= n) => SFiniteBits (WordN n) where
+instance (KnownNat n, IsNonZero n) => SFiniteBits (WordN n) where
    sFiniteBitSize _ = intOfProxy (Proxy @n)
 
 -- | 'SFiniteBits' instance for 'IntN'
-instance (KnownNat n, 1 <= n) => SFiniteBits (IntN n) where
+instance (KnownNat n, IsNonZero n) => SFiniteBits (IntN n) where
    sFiniteBitSize _ = intOfProxy (Proxy @n)
 
 -- | Reading 'WordN' values in queries.
-instance (KnownNat n, 1 <= n) => SMTValue (WordN n) where
+instance (KnownNat n, IsNonZero n) => SMTValue (WordN n) where
    sexprToVal e = WordN <$> sexprToVal e
 
 -- | Reading 'IntN' values in queries.
-instance (KnownNat n, 1 <= n) => SMTValue (IntN n) where
+instance (KnownNat n, IsNonZero n) => SMTValue (IntN n) where
    sexprToVal e = IntN <$> sexprToVal e
 
 -- | Constructing models for 'WordN'
-instance (KnownNat n, 1 <= n) => SatModel (WordN n) where
+instance (KnownNat n, IsNonZero n) => SatModel (WordN n) where
   parseCVs = genParse (kindOf (undefined :: WordN n))
 
 -- | Constructing models for 'IntN'
-instance (KnownNat n, 1 <= n) => SatModel (IntN n) where
+instance (KnownNat n, IsNonZero n) => SatModel (IntN n) where
   parseCVs = genParse (kindOf (undefined :: IntN n))
 
 -- | Optimizing 'WordN'
-instance (KnownNat n, 1 <= n) => Metric (WordN n)
+instance (KnownNat n, IsNonZero n) => Metric (WordN n)
 
 -- | Optimizing 'IntN'
-instance (KnownNat n, 1 <= n) => Metric (IntN n) where
+instance (KnownNat n, IsNonZero n) => Metric (IntN n) where
   type MetricSpace (IntN n) = WordN n
   toMetricSpace    x        = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
   fromMetricSpace  x        = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
 
 -- | Generalization of 'Data.SBV.sWord'
-sWord :: (KnownNat n, 1 <= n) => MonadSymbolic m => String -> m (SWord n)
+sWord :: (KnownNat n, IsNonZero n) => MonadSymbolic m => String -> m (SWord n)
 sWord = symbolic
 
 -- | Generalization of 'Data.SBV.sWord_'
-sWord_ :: (KnownNat n, 1 <= n) => MonadSymbolic m => m (SWord n)
+sWord_ :: (KnownNat n, IsNonZero n) => MonadSymbolic m => m (SWord n)
 sWord_ = free_
 
 -- | Generalization of 'Data.SBV.sWord64s'
-sWords :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SWord n]
+sWords :: (KnownNat n, IsNonZero n) => MonadSymbolic m => [String] -> m [SWord n]
 sWords = symbolics
 
 -- | Generalization of 'Data.SBV.sInt'
-sInt :: (KnownNat n, 1 <= n) => MonadSymbolic m => String -> m (SInt n)
+sInt :: (KnownNat n, IsNonZero n) => MonadSymbolic m => String -> m (SInt n)
 sInt = symbolic
 
 -- | Generalization of 'Data.SBV.sInt_'
-sInt_ :: (KnownNat n, 1 <= n) => MonadSymbolic m => m (SInt n)
+sInt_ :: (KnownNat n, IsNonZero n) => MonadSymbolic m => m (SInt n)
 sInt_ = free_
 
 -- | Generalization of 'Data.SBV.sInts'
-sInts :: (KnownNat n, 1 <= n) => MonadSymbolic m => [String] -> m [SInt n]
+sInts :: (KnownNat n, IsNonZero n) => MonadSymbolic m => [String] -> m [SInt n]
 sInts = symbolics
-
--- | Type family to allow for better type errors, occasionally. In my experiements, GHC
--- is able to hit this in obvious cases, but not in all. In particular, there doesn't seem
--- to be any way to trigger this when we have a negative intermediate bit-vector in a computation,
--- in those cases you get a horrendous type-error message from GHC. Still, it's better than nothing.
-type family BVNonZero n where
-  BVNonZero (WordN 0) = TypeError ('Text "Unsupported 0-sized unsigned bit-vector " ':<>: 'ShowType (WordN 0))
-  BVNonZero (IntN  0) = TypeError ('Text "Unsupported 0-sized signed bit-vector "   ':<>: 'ShowType (IntN  0))
-  BVNonZero (WordN _) = 'True
-  BVNonZero (IntN  _) = 'True
 
 -- | Extract a portion of bits to form a smaller bit-vector.
 --
 -- >>> prove $ \x -> bvExtract (Proxy @7) (Proxy @3) (x :: SWord 12) .== bvDrop (Proxy @4) (bvTake (Proxy @9) x)
 -- Q.E.D.
-bvExtract :: forall i j n bv proxy. ( KnownNat n, 1 <= n, SymVal (bv n)
+bvExtract :: forall i j n bv proxy. ( KnownNat n, IsNonZero n, SymVal (bv n)
                                     , KnownNat i
                                     , KnownNat j
                                     , i + 1 <= n
                                     , j <= i
-                                    , BVNonZero (bv (i - j + 1)) ~ 'True
+                                    , IsNonZero (i - j + 1)
                                     ) => proxy i                -- ^ @i@: Start position, numbered from @n-1@ to @0@
                                       -> proxy j                -- ^ @j@: End position, numbered from @n-1@ to @0@, @j <= i@ must hold
                                       -> SBV (bv n)             -- ^ Input bit vector of size @n@
@@ -334,8 +335,8 @@ bvExtract start end = SBV . svExtract i j . unSBV
 --
 -- >>> prove $ \x y -> x .== bvExtract (Proxy @79) (Proxy @71) ((x :: SWord 9) # (y :: SWord 71))
 -- Q.E.D.
-(#) :: ( KnownNat n, 1 <= n, SymVal (bv n)
-       , KnownNat m, 1 <= m, SymVal (bv m)
+(#) :: ( KnownNat n, IsNonZero n, SymVal (bv n)
+       , KnownNat m, IsNonZero m, SymVal (bv m)
        ) => SBV (bv n)                     -- ^ First input, of size @n@, becomes the left side
          -> SBV (bv m)                     -- ^ Second input, of size @m@, becomes the right side
          -> SBV (bv (n + m))               -- ^ Concatenation, of size @n+m@
@@ -346,11 +347,11 @@ infixr 5 #
 --
 -- >>> prove $ \x -> bvExtract (Proxy @20) (Proxy @12) (zeroExtend (x :: SInt 12) :: SInt 21) .== 0
 -- Q.E.D.
-zeroExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
-                             , KnownNat m, 1 <= m, SymVal (bv m)
+zeroExtend :: forall n m bv. ( KnownNat n, IsNonZero n, SymVal (bv n)
+                             , KnownNat m, IsNonZero m, SymVal (bv m)
                              , n + 1 <= m
                              , SIntegral (bv (m - n))
-                             , BVNonZero (bv (m - n)) ~ 'True
+                             , IsNonZero (m - n)
                              ) => SBV (bv n)    -- ^ Input, of size @n@
                                -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
 zeroExtend n = SBV $ svJoin (unSBV zero) (unSBV n)
@@ -363,12 +364,12 @@ zeroExtend n = SBV $ svJoin (unSBV zero) (unSBV n)
 -- Q.E.D.
 -- >>> prove $ \x ->       msb x  .=> bvExtract (Proxy @20) (Proxy @12) (signExtend (x :: SInt 12) :: SInt 21) .== complement 0
 -- Q.E.D.
-signExtend :: forall n m bv. ( KnownNat n, 1 <= n, SymVal (bv n)
-                             , KnownNat m, 1 <= m, SymVal (bv m)
+signExtend :: forall n m bv. ( KnownNat n, IsNonZero n, SymVal (bv n)
+                             , KnownNat m, IsNonZero m, SymVal (bv m)
                              , n + 1 <= m
                              , SFiniteBits (bv n)
                              , SIntegral   (bv (m - n))
-                             , BVNonZero   (bv (m - n)) ~ 'True
+                             , IsNonZero   (m - n)
                              ) => SBV (bv n)  -- ^ Input, of size @n@
                                -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
 signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
@@ -383,11 +384,11 @@ signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
 -- Q.E.D.
 -- >>> prove $ \x -> bvDrop (Proxy @20) (x :: SWord 21) .== ite (lsb x) 1 0
 -- Q.E.D.
-bvDrop :: forall i n m bv proxy. ( KnownNat n, 1 <= n
+bvDrop :: forall i n m bv proxy. ( KnownNat n, IsNonZero n
                                  , KnownNat i
                                  , i + 1 <= n
                                  , i + m - n <= 0
-                                 , BVNonZero (bv (n - i)) ~ 'True
+                                 , IsNonZero (n - i)
                                  ) => proxy i                    -- ^ @i@: Number of bits to drop. @i < n@ must hold.
                                    -> SBV (bv n)                 -- ^ Input, of size @n@
                                    -> SBV (bv m)                 -- ^ Output, of size @m@. @m = n - i@ holds.
@@ -403,10 +404,9 @@ bvDrop i = SBV . svExtract start 0 . unSBV
 -- Q.E.D.
 -- >>> prove $ \x -> bvTake (Proxy @4) x # bvDrop (Proxy @4) x .== (x :: SWord 23)
 -- Q.E.D.
-bvTake :: forall i n bv proxy. ( KnownNat n, 1 <= n
-                               , KnownNat i, 1 <= i
+bvTake :: forall i n bv proxy. ( KnownNat n, IsNonZero n
+                               , KnownNat i, IsNonZero i
                                , i <= n
-                               , BVNonZero (bv i) ~ 'True
                                ) => proxy i                  -- ^ @i@: Number of bits to take. @0 < i <= n@ must hold.
                                  -> SBV (bv n)               -- ^ Input, of size @n@
                                  -> SBV (bv i)               -- ^ Output, of size @i@
