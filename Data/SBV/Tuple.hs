@@ -170,13 +170,13 @@ _8 = field (Get @"_8")
 -- | Constructing a tuple from its parts and deconstructing back.
 class Tuple tup a | a -> tup, tup -> a where
   -- | Deconstruct a tuple, getting its constituent parts apart. Forms an
-  -- isomorphism pair with 'untuple':
+  -- isomorphism pair with 'tuple':
   --
   -- >>> prove $ \p -> tuple @(Integer, Bool, (String, Char)) (untuple p) .== p
   -- Q.E.D.
   untuple :: SBV tup -> a
 
-  -- | Constructing a tuple from its parts. Forms an isomorphism pair with 'tuple':
+  -- | Constructing a tuple from its parts. Forms an isomorphism pair with 'untuple':
   --
   -- >>> prove $ \p -> untuple @(Integer, Bool, (String, Char)) (tuple p) .== p
   -- Q.E.D.
