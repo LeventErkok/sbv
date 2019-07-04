@@ -370,7 +370,7 @@ Similarly, subset relation does /not/ distribute over intersection on the right:
 
 >>> prove $ \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
 Falsifiable. Counter-example:
-  s0 =      {} :: {Integer}
-  s1 = U - {0} :: {Integer}
+  s0 = U - {0} :: {Integer}
+  s1 =      {} :: {Integer}
   s2 =     {0} :: {Integer}
 -}
