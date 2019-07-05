@@ -545,32 +545,40 @@ cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
    The generated library is a typical @.a@ archive, that can be linked using the C-compiler as usual.
 -}
 
--- | Components of the AES-128 implementation that the library is generated from
-aes128LibComponents :: [(String, SBVCodeGen ())]
-aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
-                      , ("aes128BlockEncrypt", enc128)
-                      , ("aes128BlockDecrypt", dec128)
+-- | Components of the AES implementation that the library is generated from
+aesLibComponents :: Int -> [(String, SBVCodeGen ())]
+aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
+                      , ("aes" ++ show sz ++ "BlockEncrypt", enc)
+                      , ("aes" ++ show sz ++ "BlockDecrypt", dec)
                       ]
   where -- key-schedule
-        keySchedule = do key <- cgInputArr 4 "key"     -- key
+        nk
+         | sz == 128 = 4
+         | sz == 192 = 6
+         | sz == 256 = 8
+         | True      = error $ "aesLibComponents: Size must be one of 128, 192, or 256; received: " ++ show sz
+        -- We get 4*(nr+1) keys, where nr = nk + 6
+        nr = nk + 6
+        xk = 4 * (nr + 1)
+        keySchedule = do key <- cgInputArr nk "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
                          cgOutputArr "encKS" (ksToXKey encKS)
                          cgOutputArr "decKS" (ksToXKey decKS)
         -- encryption
-        enc128 = do pt   <- cgInputArr 4  "pt"    -- plain-text
-                    xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
-                    cgOutputArr "ct" $ aesEncrypt pt (xkeyToKS xkey)
+        enc = do pt   <- cgInputArr 4  "pt"    -- plain-text
+                 xkey <- cgInputArr xk "xkey"  -- expanded key
+                 cgOutputArr "ct" $ aesEncrypt pt (xkeyToKS xkey)
         -- decryption
-        dec128 = do pt   <- cgInputArr 4  "ct"    -- cipher-text
-                    xkey <- cgInputArr 44 "xkey"  -- expanded key, for 128-bit AES, the key-expansion has 44 Word32's
-                    cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
+        dec = do pt   <- cgInputArr 4  "ct"    -- cipher-text
+                 xkey <- cgInputArr xk "xkey"  -- expanded key
+                 cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
         -- Transforming back and forth from our KS type to a flat array used by the generated C code
         -- Turn a series of expanded keys to our internal KS type
         xkeyToKS :: [SWord 32] -> KS
         xkeyToKS xs = (f, m, l)
-           where f = take 4 xs                       -- first round key
-                 m = chop4 (take 36 (drop 4 xs))     -- middle rounds
-                 l = drop 40 xs                      -- last round key
+           where f  = take 4 xs                             -- first round key
+                 m  = chop4 (take (xk - 8) (drop 4 xs))     -- middle rounds
+                 l  = drop (xk - 4) xs                      -- last round key
         -- Turn a KS to a series of expanded key words
         ksToXKey :: KS -> [SWord 32]
         ksToXKey (f, m, l) = f ++ concat m ++ l
@@ -579,6 +587,13 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
         chop4 [] = []
         chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
 
+-- | Generate code for AES functionality; given the key size.
+cgAESLibrary :: Int -> Maybe FilePath -> IO ()
+cgAESLibrary sz mbd
+  | sz `elem` [128, 192, 256] = compileToCLib mbd nm (aesLibComponents sz)
+  | True                      = error $ "cgAESLibrary: Size must be one of 128, 192, or 256"
+  where nm = "aes" ++ show sz ++ "Lib"
+
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
 -- A note on performance: In a very rough speed test, the generated code was able to do
 -- 6.3 million block encryptions per second on a decent MacBook Pro. On the same machine, OpenSSL
@@ -586,7 +601,7 @@ aes128LibComponents = [ ("aes128KeySchedule",  keySchedule)
 -- as compared to the highly optimized OpenSSL implementation. (Note that the speed test was done
 -- somewhat simplistically, so these numbers should be considered very rough estimates.)
 cgAES128Library :: IO ()
-cgAES128Library = compileToCLib Nothing "aes128Lib" aes128LibComponents
+cgAES128Library = cgAESLibrary 128 Nothing
 
 --------------------------------------------------------------------------------------------
 -- | For doctest purposes only
