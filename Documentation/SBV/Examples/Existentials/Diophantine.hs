@@ -105,10 +105,8 @@ test = ldn Nothing [([2,1,-1], 2)]
 --     4 x_5 = 5 x_6 + 1
 -- @
 --
--- We need to solve for x_0, over the naturals. We have:
---
--- >>> sailors
--- [15621,3124,2499,1999,1599,1279,1023]
+-- We need to solve for x_0, over the naturals. If you run this program, z3 takes its time (quite long!)
+-- but, it eventually computes: [15621,3124,2499,1999,1599,1279,1023] as the answer.
 --
 -- That is:
 --
