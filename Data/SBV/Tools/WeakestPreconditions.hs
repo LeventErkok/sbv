@@ -482,4 +482,4 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                            where mCur = currentMeasure is
                                  zero = map (const 0) mCur
 
-{-# ANN traceExecution ("HLint: ignore Use fromMaybe" :: String) #-}
+{-# ANN traceExecution ("HLint: ignore Replace case with fromMaybe" :: String) #-}

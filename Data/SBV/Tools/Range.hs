@@ -174,4 +174,4 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                    Nothing  -> search cs          (c:sofar)
                                    Just xss -> search (xss ++ cs) sofar
 
-{-# ANN rangesWith ("HLint: ignore Use fromMaybe" :: String) #-}
+{-# ANN rangesWith ("HLint: ignore Replace case with fromMaybe" :: String) #-}
