@@ -6,7 +6,7 @@
 ### Version 8.3.5, Not yet released
 
   * SBV now supports arbitrary-size bit-vectors, i.e.,
-    `SWord 17`, `SInt 9`, `SWord 128` etc. These work like any
+    SWord 17, SInt 9, SWord 128 etc. These work like any
     other bit-vector, using the `DataKinds` feature of
     GHC. Thanks to Ben Blaxill for the idea and the initial
     implementation. Note that SBV still supports the traditional
@@ -21,10 +21,10 @@
     horrendous) type error message if you try to convert,
     say, a SInt16 to SInt 22; or vice versa.
 
-  * Add arbitrary-sized bit vector operations: extraction,
+  * Added arbitrary-sized bit vector operations: extraction,
     extension, and joining; these use proxy arguments to
     determine precise size info, and are much better suited
-    for type safety. Consequently, remove the Splittable
+    for type safety. Consequently, removed the Splittable
     class which provided similar operations but only on
     predefined types.
 
