@@ -591,7 +591,7 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
 cgAESLibrary :: Int -> Maybe FilePath -> IO ()
 cgAESLibrary sz mbd
   | sz `elem` [128, 192, 256] = compileToCLib mbd nm (aesLibComponents sz)
-  | True                      = error $ "cgAESLibrary: Size must be one of 128, 192, or 256"
+  | True                      = error $ "cgAESLibrary: Size must be one of 128, 192, or 256, received: " ++ show sz
   where nm = "aes" ++ show sz ++ "Lib"
 
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
