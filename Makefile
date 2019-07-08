@@ -34,12 +34,12 @@ all: quick
 
 quick: tags
 	@$(TIME) cabal $(CBUILD)
-	@$(TIME) cabal $(CINSTALL) --force-reinstalls
+	@$(TIME) cabal $(CINSTALL) --lib --force-reinstalls
 	
 install: tags
 	@$(TIME) cabal $(CCONFIGURE) --enable-tests --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal $(CBUILD)
-	@$(TIME) cabal $(CINSTALL) --force-reinstalls
+	@$(TIME) cabal $(CINSTALL) --lib --force-reinstalls
 
 docs:
 	cabal $(CHADDOCK) --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
