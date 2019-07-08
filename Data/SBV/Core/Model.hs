@@ -1413,6 +1413,14 @@ enumCvt w x = case unliteral x of
 -- Note that our instances implement this law even when @x@ is @0@ itself.
 --
 -- NB. 'quot' truncates toward zero, while 'div' truncates toward negative infinity.
+--
+-- === C code generation of division operations
+--
+-- In the case of division or modulo of a minimal signed value (e.g. @-128@ for
+-- 'SInt8') by @-1@, SMTLIB and Haskell agree on what the result should be.
+-- Unfortunately the result in C code depends on CPU architecture and compiler
+-- settings, as this is undefined behaviour in C.  **SBV does not guarantee**
+-- what will happen in generated C code in this corner case.
 class SDivisible a where
   sQuotRem :: a -> a -> (a, a)
   sDivMod  :: a -> a -> (a, a)
