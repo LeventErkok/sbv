@@ -5,7 +5,10 @@
 --       - Win:   Latest release
 --       - Linux: Latest release
 --                Previous release
+
 {-# LANGUAGE NamedFieldPuns #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Main(main) where
 

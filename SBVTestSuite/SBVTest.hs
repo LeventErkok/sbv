@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Main(main) where
 
 import Test.Tasty

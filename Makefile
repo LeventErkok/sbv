@@ -6,30 +6,12 @@
 OS := $(shell uname)
 
 GHCVERSION := $(shell ghc --version | awk '{print $$NF}')
-CBUILD=build
-CINSTALL=install
-CCONFIGURE=configure
-CHADDOCK=haddock
-CSDIST=sdist
-
-ifeq ($(GHCVERSION), $(filter $(GHCVERSION), 8.0.1 8.4.3))
-# GHC 8.0.1 (and possibly others) don't understand hide-source-paths and are picky about redundant constraints. Also,
-# for this version use old style cabal comands.
-CONFIGOPTS = "-Werror -Wall -Wno-redundant-constraints"
-else
-CONFIGOPTS = "-Werror -Wall -fhide-source-paths"
-# Haven't had much luck with the new-* stuff yet..
-# CBUILD=new-build
-# CINSTALL=new-install
-# CCONFIGURE=new-configure
-# CHADDOCK=new-haddock
-# CSDIST=new-sdist
-CBUILD=v1-build
-CINSTALL=v1-install
-CCONFIGURE=v1-configure
-CHADDOCK=v1-haddock
-CSDIST=v1-sdist
-endif
+CONFIGOPTS = "-Wall -fhide-source-paths"
+CBUILD=new-build
+CINSTALL=new-install
+CCONFIGURE=new-configure
+CHADDOCK=new-haddock
+CSDIST=new-sdist
 
 SHELL := /usr/bin/env bash
 
@@ -65,16 +47,16 @@ docs:
 test: lintTest docTest regularTests
 
 lintTest:
-	@$(TIME) ./dist/build/SBVHLint/SBVHLint
+	@$(TIME) cabal new-test SBVHLint
 
 docTest:
-	@$(TIME) doctest --fast --no-magic $(DOCTESTSOURCES)
+	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 vdocTest:
-	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
+	@$(TIME) cabal new-run SBVDocTest -- --verbose --fast --no-magic
 
 regularTests:
-	@$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -j $(NO_OF_CORES)
+	@$(TIME) cabal new-run SBVTest -- --hide-successes -j $(NO_OF_CORES)
 
 checkLinks:
 	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
@@ -93,7 +75,7 @@ release: veryclean install docs test testInterfaces mkDistro checkLinks
 # use this as follows:
 #         make testPattern TGT=U2Bridge
 testPattern:
-	$(TIME) ./dist/build/SBVTest/SBVTest --hide-successes -p ${TGT}
+	$(TIME) cabal new-run SBVTest -- --hide-successes -p ${TGT}
 
 # use this as follows:
 #         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
@@ -111,7 +93,7 @@ ghcid:
 	ghcid --lint
 
 clean:
-	@rm -rf dist
+	@rm -rf dist dist-newstyle cabal.project.local*
 
 veryclean: clean
 	@make -C buildUtils clean

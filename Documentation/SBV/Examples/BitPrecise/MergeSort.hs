@@ -9,6 +9,8 @@
 -- Symbolic implementation of merge-sort and its correctness.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.BitPrecise.MergeSort where
 
 import Data.SBV

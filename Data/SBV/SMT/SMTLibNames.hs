@@ -9,6 +9,8 @@
 -- SMTLib Reserved names
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.SMT.SMTLibNames where
 
 import Data.Char (toLower)

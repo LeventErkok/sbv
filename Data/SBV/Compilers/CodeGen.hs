@@ -13,6 +13,8 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Compilers.CodeGen (
         -- * The codegen monad
           SBVCodeGen(..), cgSym

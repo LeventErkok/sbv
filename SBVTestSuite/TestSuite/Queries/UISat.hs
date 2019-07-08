@@ -9,6 +9,8 @@
 -- Testing UI function sat examples via queries
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Queries.UISat(tests)  where
 
 import Control.Monad (unless, when)

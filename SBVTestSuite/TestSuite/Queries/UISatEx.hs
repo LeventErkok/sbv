@@ -12,6 +12,8 @@
 {-# LANGUAGE OverloadedLists   #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Queries.UISatEx where
 
 import Data.SBV.Control

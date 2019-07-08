@@ -13,6 +13,8 @@
 -- purposes, such as efficiency, or reliability.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.CodeGeneration.Uninterpreted where
 
 import Data.Maybe (fromMaybe)

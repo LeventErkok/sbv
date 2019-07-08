@@ -28,6 +28,8 @@
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Crypto.AES where
 
 import Data.SBV

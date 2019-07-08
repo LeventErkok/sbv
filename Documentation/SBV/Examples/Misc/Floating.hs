@@ -16,6 +16,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Misc.Floating where
 
 import Data.SBV

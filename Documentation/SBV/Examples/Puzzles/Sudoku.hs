@@ -9,6 +9,8 @@
 -- The Sudoku solver, quintessential SMT solver example!
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Puzzles.Sudoku where
 
 import Data.List  (transpose)

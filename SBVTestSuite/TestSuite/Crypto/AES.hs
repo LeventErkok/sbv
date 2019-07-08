@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Crypto.AES
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Crypto.AES(tests) where
 
 import Data.SBV.Internals

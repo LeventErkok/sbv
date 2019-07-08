@@ -14,6 +14,8 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Misc.SoftConstrain where
 
 import Data.SBV

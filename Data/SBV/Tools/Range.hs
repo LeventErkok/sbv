@@ -12,6 +12,8 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.Range (
 
          -- * Boundaries and ranges

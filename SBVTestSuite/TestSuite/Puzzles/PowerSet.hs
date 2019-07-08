@@ -9,6 +9,8 @@
 -- Test suite for Examples.Puzzles.PowerSet
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Puzzles.PowerSet(tests) where
 
 import Utils.SBVTestFramework

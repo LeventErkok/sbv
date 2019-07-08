@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.CodeGeneration.CgTests(tests) where
 
 import Data.SBV.Internals

@@ -9,7 +9,8 @@
 -- Setup module for the sbv library
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Main(main) where
 
 import Distribution.Simple

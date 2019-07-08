@@ -13,6 +13,8 @@
 --   How many of each should you buy?
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Puzzles.DogCatMouse where
 
 import Data.SBV

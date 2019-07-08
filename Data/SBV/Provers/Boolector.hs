@@ -9,6 +9,8 @@
 -- The connection to the Boolector SMT solver
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Provers.Boolector(boolector) where
 
 import Data.SBV.Core.Data

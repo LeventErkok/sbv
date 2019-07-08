@@ -9,6 +9,8 @@
 -- Doctest interface for SBV testsuite
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Main (main) where
 
 import System.FilePath.Glob (glob)

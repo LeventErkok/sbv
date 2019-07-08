@@ -10,6 +10,8 @@
 -- facts.  See: <http://en.wikipedia.org/wiki/Shannon's_expansion>
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Uninterpreted.Shannon where
 
 import Data.SBV

@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.PrefixSum.PrefixSum
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.BitPrecise.PrefixSum(tests) where
 
 import Documentation.SBV.Examples.BitPrecise.PrefixSum

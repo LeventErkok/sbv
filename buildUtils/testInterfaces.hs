@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Main (main) where
 
 import Data.SBV

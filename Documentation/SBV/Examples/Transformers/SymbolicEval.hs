@@ -25,6 +25,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Transformers.SymbolicEval where
 
 import Control.Monad.Except   (Except, ExceptT, MonadError, mapExceptT, runExceptT, throwError)

@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Queries.BasicQuery (tests)  where
 
 import Data.SBV.Control

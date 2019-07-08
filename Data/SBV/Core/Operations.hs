@@ -11,6 +11,8 @@
 
 {-# LANGUAGE BangPatterns #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Core.Operations
   (
   -- ** Basic constructors

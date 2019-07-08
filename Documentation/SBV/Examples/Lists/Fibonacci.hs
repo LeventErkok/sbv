@@ -9,6 +9,8 @@
 -- Define the fibonacci sequence as an SBV symbolic list.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Lists.Fibonacci where
 
 import Data.SBV

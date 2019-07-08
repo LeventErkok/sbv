@@ -15,6 +15,8 @@
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Client
   ( sbvCheckSolverInstallation
   , defaultSolverConfig

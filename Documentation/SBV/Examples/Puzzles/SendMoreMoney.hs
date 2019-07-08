@@ -9,6 +9,8 @@
 -- Solves the classic @send + more = money@ puzzle.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Puzzles.SendMoreMoney where
 
 import Data.SBV

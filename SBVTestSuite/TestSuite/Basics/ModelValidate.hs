@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.ModelValidate (testsABC, tests)  where
 
 import qualified Control.Exception as C

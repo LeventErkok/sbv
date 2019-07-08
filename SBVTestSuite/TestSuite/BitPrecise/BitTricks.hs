@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.BitPrecise.BitTricks
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.BitPrecise.BitTricks(tests) where
 
 import Documentation.SBV.Examples.BitPrecise.BitTricks

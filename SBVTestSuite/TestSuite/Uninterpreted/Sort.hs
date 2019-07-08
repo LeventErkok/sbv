@@ -12,6 +12,8 @@
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Uninterpreted.Sort(tests) where
 
 import Utils.SBVTestFramework

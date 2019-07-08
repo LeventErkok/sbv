@@ -9,6 +9,8 @@
 -- Solves a VM allocation problem using optimization features
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Optimization.VM where
 
 import Data.SBV

@@ -9,6 +9,8 @@
 -- Test suite for Examples.Basics.QRem
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.QRem(tests) where
 
 import Utils.SBVTestFramework

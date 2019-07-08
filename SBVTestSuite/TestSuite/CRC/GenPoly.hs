@@ -12,6 +12,8 @@
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.CRC.GenPoly(tests) where
 
 import Data.SBV.Tools.Polynomial

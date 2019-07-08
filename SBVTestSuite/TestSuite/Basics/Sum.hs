@@ -13,6 +13,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.Sum(tests)  where
 
 import Prelude hiding (either)

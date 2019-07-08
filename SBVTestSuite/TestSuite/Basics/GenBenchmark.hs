@@ -9,6 +9,8 @@
 -- Test the generateSMTBenchmark function.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.GenBenchmark(tests)  where
 
 import Utils.SBVTestFramework

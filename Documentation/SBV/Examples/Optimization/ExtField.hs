@@ -9,6 +9,8 @@
 -- Demonstrates the extension field (@oo@/@epsilon@) optimization results.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Optimization.ExtField where
 
 import Data.SBV

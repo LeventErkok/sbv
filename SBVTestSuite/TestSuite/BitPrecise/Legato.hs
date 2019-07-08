@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.BitPrecise.Legato
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.BitPrecise.Legato(tests) where
 
 import Data.SBV.Internals hiding (free, output)

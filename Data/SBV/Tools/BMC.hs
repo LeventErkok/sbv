@@ -12,6 +12,8 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.BMC (
          bmc, bmcWith
        ) where

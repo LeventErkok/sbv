@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Provers.Z3(z3) where
 
 import Data.SBV.Core.Data

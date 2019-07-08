@@ -12,6 +12,8 @@
 -- to use the MathSAT backend for this example to work.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Queries.Interpolants where
 
 import Data.SBV

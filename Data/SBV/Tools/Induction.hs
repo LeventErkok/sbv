@@ -21,6 +21,8 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.Induction (
          InductionResult(..), InductionStep(..), induct, inductWith
        ) where

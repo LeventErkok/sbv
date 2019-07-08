@@ -15,6 +15,8 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeOperators       #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Maybe (
   -- * Constructing optional values
     sJust, sNothing, liftMaybe

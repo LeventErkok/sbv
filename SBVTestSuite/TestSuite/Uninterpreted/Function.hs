@@ -9,6 +9,8 @@
 -- Testsuite for Documentation.SBV.Examples.Uninterpreted.Function
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Uninterpreted.Function(tests) where
 
 import Documentation.SBV.Examples.Uninterpreted.Function

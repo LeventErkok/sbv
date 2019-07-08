@@ -8,6 +8,8 @@
 --
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Uninterpreted.Uninterpreted(tests) where
 
 import Utils.SBVTestFramework

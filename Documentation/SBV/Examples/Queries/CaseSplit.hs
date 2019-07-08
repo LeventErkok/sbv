@@ -9,6 +9,8 @@
 -- A couple of demonstrations for the 'caseSplit' function.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Queries.CaseSplit where
 
 import Data.SBV

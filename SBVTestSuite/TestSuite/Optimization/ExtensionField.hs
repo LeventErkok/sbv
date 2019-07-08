@@ -9,6 +9,8 @@
 -- Test suite for optimization routines, extension field
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.ExtensionField(tests) where
 
 import Utils.SBVTestFramework

@@ -9,6 +9,8 @@
 -- Test the pseudo-boolean functions
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.PseudoBoolean(tests)  where
 
 import Data.SBV.Control

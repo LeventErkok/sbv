@@ -10,6 +10,8 @@
 -- negative position.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Utils.ExtractIO where
 
 import Control.Monad.Except      (ExceptT(ExceptT), runExceptT)

@@ -14,6 +14,8 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE TupleSections       #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.ArithNoSolver(tests) where
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)

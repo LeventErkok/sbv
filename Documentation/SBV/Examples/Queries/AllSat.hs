@@ -13,6 +13,8 @@
 -- extra conditions with easy as we walk through solutions.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Queries.AllSat where
 
 import Data.SBV

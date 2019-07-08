@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Crypto.RC4
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Crypto.RC4(tests) where
 
 import Data.SBV.Tools.STree

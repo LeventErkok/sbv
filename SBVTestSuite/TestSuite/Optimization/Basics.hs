@@ -9,6 +9,8 @@
 -- Test suite for optimization routines
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.Basics(tests) where
 
 import Utils.SBVTestFramework

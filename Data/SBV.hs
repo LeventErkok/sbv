@@ -124,6 +124,8 @@
 -- get in touch if there is a solver you'd like to see included.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV (
   -- $progIntro
 

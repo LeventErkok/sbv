@@ -8,11 +8,13 @@
 --
 -- Test barrel rotates.
 -----------------------------------------------------------------------------
---
+
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Basics.BarrelRotate (tests)  where
 

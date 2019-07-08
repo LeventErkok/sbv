@@ -9,6 +9,8 @@
 -- Demonstrates function counter-examples
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Uninterpreted.Function where
 
 import Data.SBV

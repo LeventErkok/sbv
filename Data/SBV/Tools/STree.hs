@@ -15,6 +15,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.STree (STree, readSTree, writeSTree, mkSTree) where
 
 import Data.SBV.Core.Data

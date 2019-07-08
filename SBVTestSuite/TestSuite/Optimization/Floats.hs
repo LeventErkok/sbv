@@ -9,6 +9,8 @@
 -- Test suite for optimization routines, floats
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.Floats (tests) where
 
 import Control.Monad (when)

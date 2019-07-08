@@ -11,6 +11,8 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Strings.RegexCrossword where
 
 import Data.List (genericLength, transpose)

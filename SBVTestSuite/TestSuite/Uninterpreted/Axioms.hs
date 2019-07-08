@@ -12,6 +12,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Uninterpreted.Axioms(tests) where
 
 import Utils.SBVTestFramework

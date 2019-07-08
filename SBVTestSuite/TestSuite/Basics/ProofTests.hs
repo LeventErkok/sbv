@@ -9,6 +9,8 @@
 -- Test suite for Examples.Basics.ProofTests
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.ProofTests(tests)  where
 
 import Utils.SBVTestFramework

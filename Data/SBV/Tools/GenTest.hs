@@ -9,6 +9,8 @@
 -- Test generation from symbolic programs
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.GenTest (
         -- * Test case generation
         genTest, TestVectors, getTestValues, renderTest, TestStyle(..)

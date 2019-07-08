@@ -9,6 +9,8 @@
 -- Test suite for Examples.Basics.Index
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.Index(tests) where
 
 import Utils.SBVTestFramework

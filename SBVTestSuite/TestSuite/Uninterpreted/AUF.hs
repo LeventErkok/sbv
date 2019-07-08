@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Uninterpreted.AUF
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Uninterpreted.AUF where
 
 import Documentation.SBV.Examples.Uninterpreted.AUF

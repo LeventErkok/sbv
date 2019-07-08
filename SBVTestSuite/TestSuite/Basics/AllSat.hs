@@ -12,6 +12,8 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.AllSat(tests) where
 
 import Data.Generics

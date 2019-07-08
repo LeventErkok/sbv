@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Puzzles.U2Bridge
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Puzzles.U2Bridge(tests) where
 
 import Documentation.SBV.Examples.Puzzles.U2Bridge

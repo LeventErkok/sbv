@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Solves the following logic puzzle:
+-- Solves the following logic puzzle, attributed to Albert Einstein:
 --
 --   - The Briton lives in the red house.
 --   - The Swede keeps dogs as pets.
@@ -26,6 +26,8 @@
 --
 -- Who owns the fish?
 ------------------------------------------------------------------------------
+
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}

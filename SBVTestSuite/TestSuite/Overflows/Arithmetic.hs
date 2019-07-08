@@ -12,6 +12,8 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Overflows.Arithmetic(tests) where
 
 import Data.SBV

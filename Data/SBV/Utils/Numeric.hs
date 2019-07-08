@@ -9,6 +9,8 @@
 -- Various number related utilities
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Utils.Numeric where
 
 -- | The SMT-Lib (in particular Z3) implementation for min/max for floats does not agree with

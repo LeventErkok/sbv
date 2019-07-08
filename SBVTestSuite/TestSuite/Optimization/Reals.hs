@@ -9,6 +9,8 @@
 -- Test suite for optimization routines, reals
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.Reals(tests) where
 
 import Utils.SBVTestFramework

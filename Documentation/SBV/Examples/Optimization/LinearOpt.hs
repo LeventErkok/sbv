@@ -9,6 +9,8 @@
 -- Simple linear optimization example, as found in operations research texts.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Optimization.LinearOpt where
 
 import Data.SBV

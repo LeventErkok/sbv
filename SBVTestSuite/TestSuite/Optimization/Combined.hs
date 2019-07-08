@@ -9,6 +9,8 @@
 -- Test suite for optimization routines, combined objectives
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.Combined(tests) where
 
 import Utils.SBVTestFramework

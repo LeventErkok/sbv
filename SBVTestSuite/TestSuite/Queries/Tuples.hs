@@ -12,6 +12,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Queries.Tuples (tests)  where
 
 import Data.SBV

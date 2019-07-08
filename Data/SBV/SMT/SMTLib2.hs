@@ -11,6 +11,8 @@
 
 {-# LANGUAGE PatternGuards #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)

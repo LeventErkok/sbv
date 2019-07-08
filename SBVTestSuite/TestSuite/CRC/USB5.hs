@@ -11,6 +11,8 @@
 
 module TestSuite.CRC.USB5(tests) where
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 import Data.SBV.Tools.Polynomial
 import Utils.SBVTestFramework
 

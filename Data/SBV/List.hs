@@ -19,6 +19,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.List (
         -- * Length, emptiness
           length, null

@@ -18,6 +18,8 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.BoundedList (
      -- * General folds
      bfoldr, bfoldrM, bfoldl, bfoldlM

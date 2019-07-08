@@ -17,6 +17,8 @@
 -- is a very good but also a very difficult question to answer!)
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
     Result(..), SBVRunMode(..), IStage(..), QueryContext(..)

@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.Exceptions(testsLocal, testsRemote)  where
 
 import Data.SBV.Control

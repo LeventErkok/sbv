@@ -13,6 +13,8 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Utils.SBVTestFramework (
           showsAs
         , runSAT, numberOfModels

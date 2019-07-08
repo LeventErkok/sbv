@@ -10,6 +10,8 @@
 -- generating C code.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
 
 import Data.SBV

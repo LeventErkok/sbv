@@ -12,6 +12,8 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Uninterpreted.Multiply where
 
 import Data.SBV

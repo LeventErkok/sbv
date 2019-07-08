@@ -9,6 +9,8 @@
 -- Test the "squash" reals feature
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.SquashReals(tests) where
 
 import Utils.SBVTestFramework

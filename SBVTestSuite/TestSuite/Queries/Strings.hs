@@ -11,6 +11,8 @@
 
 {-# LANGUAGE OverloadedStrings #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Queries.Strings (tests)  where
 
 import Data.SBV

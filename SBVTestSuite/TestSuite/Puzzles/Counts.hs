@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Puzzles.Counts
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Puzzles.Counts(tests) where
 
 import Documentation.SBV.Examples.Puzzles.Counts

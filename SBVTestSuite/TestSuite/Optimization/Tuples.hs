@@ -11,6 +11,8 @@
 
 {-# LANGUAGE ScopedTypeVariables  #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Optimization.Tuples (tests) where
 
 import Data.SBV.Tuple

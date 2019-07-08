@@ -30,6 +30,8 @@
 --
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Puzzles.Coins where
 
 import Data.SBV

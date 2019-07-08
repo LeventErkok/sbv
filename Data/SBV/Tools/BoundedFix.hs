@@ -11,6 +11,8 @@
 
 {-# LANGUAGE FlexibleContexts #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.BoundedFix (
          bfix
        ) where

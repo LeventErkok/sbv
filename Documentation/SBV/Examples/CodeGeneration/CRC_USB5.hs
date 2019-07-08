@@ -14,6 +14,8 @@
 -- CRC implementation generates much better code, compare 'cg1' vs 'cg2' below.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.CodeGeneration.CRC_USB5 where
 
 import Data.SBV

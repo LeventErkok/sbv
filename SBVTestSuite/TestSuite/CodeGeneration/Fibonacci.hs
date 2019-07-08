@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.CodeGeneration.Fibonacci
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.CodeGeneration.Fibonacci(tests) where
 
 import Data.SBV.Internals

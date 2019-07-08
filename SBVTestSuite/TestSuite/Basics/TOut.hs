@@ -9,6 +9,8 @@
 -- Test the basic timeout mechanism
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.TOut(tests)  where
 
 import Documentation.SBV.Examples.Puzzles.Euler185

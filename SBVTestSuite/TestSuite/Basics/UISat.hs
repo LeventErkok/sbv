@@ -9,6 +9,8 @@
 -- Testing UI function sat examples
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.UISat(tests)  where
 
 import Data.SBV.Control

@@ -12,6 +12,8 @@
 
 {-# LANGUAGE DeriveDataTypeable #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Uninterpreted.UISortAllSat where
 
 import Data.Generics

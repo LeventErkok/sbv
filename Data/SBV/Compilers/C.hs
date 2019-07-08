@@ -12,6 +12,8 @@
 {-# LANGUAGE CPP           #-}
 {-# LANGUAGE PatternGuards #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLib') where
 
 import Control.DeepSeq                (rnf)

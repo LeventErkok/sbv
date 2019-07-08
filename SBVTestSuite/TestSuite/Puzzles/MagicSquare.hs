@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Puzzles.MagicSquare
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Puzzles.MagicSquare(tests) where
 
 import Documentation.SBV.Examples.Puzzles.MagicSquare

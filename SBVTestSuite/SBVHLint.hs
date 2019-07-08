@@ -9,6 +9,8 @@
 -- HLint interface for SBV testsuite
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Main (main) where
 
 import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..))

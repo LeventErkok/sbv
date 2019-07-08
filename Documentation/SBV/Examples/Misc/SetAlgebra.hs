@@ -10,6 +10,8 @@
 -- prove all come from <http://en.wikipedia.org/wiki/Algebra_of_sets>.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Misc.SetAlgebra where
 
 import Data.SBV hiding (complement)

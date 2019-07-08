@@ -9,6 +9,8 @@
 -- Some recursive definitions.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.Recursive(tests) where
 
 import Utils.SBVTestFramework

@@ -17,6 +17,8 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Tools.Polynomial (
         -- * Polynomial arithmetic and CRCs
         Polynomial(..), crc, crcBV, ites, mdp, addPoly

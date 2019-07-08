@@ -13,6 +13,8 @@
 -- enforce termination by using a recursion depth counter.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.CodeGeneration.GCD where
 
 import Data.SBV

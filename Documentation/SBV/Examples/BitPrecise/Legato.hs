@@ -35,6 +35,8 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric  #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.BitPrecise.Legato where
 
 import Data.Array (Array, Ix(..), (!), (//), array)

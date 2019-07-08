@@ -15,6 +15,8 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Basics.ArithSolver(tests) where
 
 import qualified Data.Numbers.CrackNum as RC (wordToFloat, wordToDouble, floatToWord, doubleToWord)

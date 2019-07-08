@@ -11,6 +11,8 @@
 -- for the interactive-query programming.
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Queries.GuessNumber where
 
 import Data.SBV

@@ -9,6 +9,9 @@
 -- Finding minimal natural number solutions to linear Diophantine equations,
 -- using explicit quantification.
 -----------------------------------------------------------------------------
+
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Documentation.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV

@@ -12,6 +12,8 @@
 -- at your own risk!
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module Data.SBV.Dynamic
   (
   -- * Programming with symbolic values

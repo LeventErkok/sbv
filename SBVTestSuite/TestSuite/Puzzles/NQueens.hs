@@ -9,6 +9,8 @@
 -- Test suite for Documentation.SBV.Examples.Puzzles.NQueens
 -----------------------------------------------------------------------------
 
+{-# OPTIONS_GHC -Wall -Werror #-}
+
 module TestSuite.Puzzles.NQueens(tests) where
 
 import Documentation.SBV.Examples.Puzzles.NQueens
