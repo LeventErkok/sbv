@@ -4,16 +4,9 @@
 # in the distribution for details.
 
 OS := $(shell uname)
-
-GHCVERSION := $(shell ghc --version | awk '{print $$NF}')
-CONFIGOPTS = "-Wall -fhide-source-paths"
-CBUILD=new-build
-CINSTALL=new-install
-CCONFIGURE=new-configure
-CHADDOCK=new-haddock
-CSDIST=new-sdist
-
 SHELL := /usr/bin/env bash
+
+CONFIGOPTS = "-Wall -fhide-source-paths"
 
 export SBV_TEST_ENVIRONMENT := local
 
@@ -33,16 +26,16 @@ endif
 all: quick
 
 quick: tags
-	@$(TIME) cabal $(CBUILD)
-	@$(TIME) cabal $(CINSTALL) --lib --force-reinstalls
+	@$(TIME) cabal new-build
+	@$(TIME) cabal new-install --lib --force-reinstalls
 	
 install: tags
-	@$(TIME) cabal $(CCONFIGURE) --enable-tests --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal $(CBUILD)
-	@$(TIME) cabal $(CINSTALL) --lib --force-reinstalls
+	@$(TIME) cabal new-configure --enable-tests --ghc-options=$(CONFIGOPTS)
+	@$(TIME) cabal new-build
+	@$(TIME) cabal new-install --lib --force-reinstalls
 
 docs:
-	cabal $(CHADDOCK) --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
+	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
 test: lintTest docTest regularTests
 
@@ -67,7 +60,7 @@ testInterfaces:
 	buildUtils/testInterfaces
 
 mkDistro:
-	$(TIME) cabal $(CSDIST)
+	$(TIME) cabal new-dist
 
 release: veryclean install docs test testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
@@ -88,9 +81,6 @@ tags:
 hlint: 
 	@echo "Running HLint.."
 	@hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error"
-
-ghcid:
-	ghcid --lint
 
 clean:
 	@rm -rf dist dist-newstyle cabal.project.local*
