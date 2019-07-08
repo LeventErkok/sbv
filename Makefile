@@ -60,7 +60,7 @@ testInterfaces:
 	buildUtils/testInterfaces
 
 mkDistro:
-	$(TIME) cabal new-dist
+	$(TIME) cabal new-sdist
 
 release: veryclean install docs test testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
