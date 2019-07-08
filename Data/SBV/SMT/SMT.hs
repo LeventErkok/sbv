@@ -624,24 +624,10 @@ runSolver cfg ctx execPath opts pgm continuation
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
-                let -- send a command down, but check that we're balanced in parens. If we aren't
-                    -- this is most likely an SBV bug.
-                    send :: Maybe Int -> String -> IO ()
-                    send mbTimeOut command
-                      | parenDeficit command /= 0
-                      = error $ unlines $  [ ""
-                                           , "*** Data.SBV: Unbalanced input detected."
-                                           , "***"
-                                           , "***   Sending: "
-                                           ]
-                                        ++ [ "***     " ++ l | l <- lines command ]
-                                        ++ [ "***"
-                                           , "*** This is most likely an SBV bug. Please report!"
-                                           ]
-                      | True
-                      = do hPutStrLn inh (clean command)
-                           hFlush inh
-                           recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
+                let send :: Maybe Int -> String -> IO ()
+                    send mbTimeOut command = do hPutStrLn inh (clean command)
+                                                hFlush inh
+                                                recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
