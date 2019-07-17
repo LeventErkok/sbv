@@ -47,7 +47,7 @@ docTest:
 	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 vdocTest:
-	@$(TIME) cabal new-run SBVDocTest -- --verbose --fast --no-magic
+	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
 
 regularTests:
 	@$(TIME) cabal new-run SBVTest -- --hide-successes -j $(NO_OF_CORES)
