@@ -1079,6 +1079,21 @@ handleKindCast kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
+        b2i False _ = "(bv2nat " ++ a ++ ")"
+        b2i True  1 = "(ite (= " ++ a ++ " #b0) 0 (- 1))"
+        b2i True  m = "(ite (= " ++ msb ++ " #b0" ++ ") " ++ ifPos ++ " " ++ ifNeg ++ ")"
+          where offset :: Integer
+                offset = 2^(m-1)
+                rest   = extract (m - 2)
+
+                msb    = let top = show (m-1) in "((_ extract " ++ top ++ " " ++ top ++ ") " ++ a ++ ")"
+                ifPos  = "(bv2nat " ++ rest ++")"
+                ifNeg  = "(- " ++ ifPos ++ " " ++ show offset ++ ")"
+
+        signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
+        zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
+        extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
+
         -- NB. The following works regardless n < 0 or not, because the first thing we
         -- do is to compute "reduced" to bring it down to the correct range. It also works
         -- regardless were mapping to signed or unsigned bit-vector; because the representation
@@ -1094,19 +1109,6 @@ handleKindCast kFrom kTo a
                 mkBit i  = "(__a" ++ show i ++ " (ite (= (mod (div __a " ++ b i ++ ") 2) 0) #b0 #b1))"
                 defs     = unwords (map mkBit [0 .. n - 1])
                 body     = foldr1 (\c r -> "(concat " ++ c ++ " " ++ r ++ ")") ["__a" ++ show i | i <- [n-1, n-2 .. 0]]
-
-        b2i s m
-          | s    = "(- " ++ val ++ " " ++ valIf (2^m) sign ++ ")"
-          | True = val
-          where valIf v b = "(ite (= " ++ b ++ " #b1) " ++ show (v::Integer) ++ " 0)"
-                getBit i  = "((_ extract " ++ show i ++ " " ++ show i ++ ") " ++ a ++ ")"
-                bitVal i  = valIf (2^i) (getBit i)
-                val       = "(+ " ++ unwords (map bitVal [0 .. m-1]) ++ ")"
-                sign      = getBit (m-1)
-
-        signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
-        zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
-        extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
 
 -- Translation of pseudo-booleans, in case the solver supports them
 handlePB :: PBOp -> [String] -> String
