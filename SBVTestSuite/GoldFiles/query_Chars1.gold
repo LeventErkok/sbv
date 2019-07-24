@@ -20,7 +20,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Int (+ (ite (= ((_ extract 0 0) s0) #b1) 1 0) (ite (= ((_ extract 1 1) s0) #b1) 2 0) (ite (= ((_ extract 2 2) s0) #b1) 4 0) (ite (= ((_ extract 3 3) s0) #b1) 8 0) (ite (= ((_ extract 4 4) s0) #b1) 16 0) (ite (= ((_ extract 5 5) s0) #b1) 32 0) (ite (= ((_ extract 6 6) s0) #b1) 64 0) (ite (= ((_ extract 7 7) s0) #b1) 128 0)))
+[GOOD] (define-fun s1 () Int (bv2nat s0))
 [GOOD] (define-fun s3 () Bool (>= s1 s2))
 [GOOD] (define-fun s5 () Bool (< s1 s4))
 [GOOD] (assert s3)
