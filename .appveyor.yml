@@ -25,12 +25,12 @@ build_script:
 - cabal update
 - cabal install alex
 - cabal install happy
-- cabal update
-- cabal install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
-- cabal build
-- cabal test
-- cabal check
-- cabal sdist
+- cabal new-update
+- cabal new-install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
+- cabal new-build
+- cabal new-test
+- cabal new-check
+- cabal new-sdist
 #####################################################
 # End of automatically generated CI build file.
 #####################################################
