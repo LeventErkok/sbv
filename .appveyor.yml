@@ -22,9 +22,10 @@ before_build:
 skip_tags: true
 
 build_script:
+- cabal update
+- cabal install alex
+- cabal install happy
 - cabal new-update
-- cabal new-install alex
-- cabal new-install happy
 - cabal new-install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
 - cabal new-build
 - cabal new-test --enable-tests --enable-benchmarks
