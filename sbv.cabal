@@ -24,7 +24,7 @@ source-repository head
     type:       git
     location:   git://github.com/LeventErkok/sbv.git
 
--- On Travis with OSX, building HLint takes inordinately long and times out. So
+-- On build-bots, building HLint takes inordinately long and times out. So
 -- we use this flag to skip that build.
 flag skipHLintTester
     description: Do not build the HLint tester
