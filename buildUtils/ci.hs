@@ -149,7 +149,7 @@ appveyor = header ++ body ++ footer
               , "- cabal update"
               , "- cabal install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester"
               , "- cabal build"
-              , "- cabal test --enable-tests --enable-benchmarks"
+              , "- cabal test"
               , "- cabal check"
               , "- cabal sdist"
               ]
