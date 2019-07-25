@@ -22,16 +22,16 @@ before_build:
 skip_tags: true
 
 build_script:
-- cabal update
-- cabal install alex
-- cabal install happy
-- cabal install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
-- cabal build
-- cabal test SBVTest
-- cabal test SBVDocTest
-- cabal test SBVHLint
+- cabal new-update
+- cabal new-install alex
+- cabal new-install happy
+- cabal new-install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
+- cabal new-build
+- cabal new-test --enable-tests --enable-benchmarks
+- cabal new-test SBVDocTest
+# - cabal new-test SBVHLint
 - cabal check
-- cabal sdist
+- cabal new-sdist
 #####################################################
 # End of automatically generated CI build file.
 #####################################################
