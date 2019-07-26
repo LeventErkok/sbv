@@ -26,8 +26,8 @@ build_script:
 - cabal install alex
 - cabal install happy
 - cabal new-update
-- cabal new-install --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
-- cabal new-build
+- cabal new-build --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
+- cabal new-install
 - cabal new-test
 - cabal new-check
 - cabal new-sdist
