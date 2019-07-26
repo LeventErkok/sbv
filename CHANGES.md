@@ -44,7 +44,10 @@
     calling the solver at all, less useful perhaps but more inline
     with the general SBV methodology.
 
-  * Ramped up travis-appveyor build infrastructure.
+  * Ramped up travis-appveyor build infrastructure. However, we no
+    longer test on the CI, since build-times are prohibitively long
+    and myriad issues cause instability. If you can help out regarding
+    testing on CI, please reach out!
 
 ### Version 8.3, 2019-06-08
 
