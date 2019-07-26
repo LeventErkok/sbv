@@ -151,7 +151,6 @@ appveyor = header ++ body ++ footer
               , "- cabal new-install"
               , "# Skipping tests till we find a CI solution that can handle it."
               , "# - cabal new-test"
-              , "- cabal new-check"
               , "- cabal new-sdist"
               ]
 
