@@ -84,6 +84,7 @@ install:
   - DISTDIR=$(mktemp -d /tmp/dist-test.XXXX)
 
 script:
+  - ${CABAL} new-install -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all --lib
   # Skipping tests till we find a CI solution that can handle it.
   # - if [ "x$TEST" = "x--enable-tests" ]; then ${CABAL} new-test -f skipHLintTester -w ${HC} ${TEST} ${BENCH} all; fi
 
