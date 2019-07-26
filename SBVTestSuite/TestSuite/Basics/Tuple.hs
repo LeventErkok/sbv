@@ -90,7 +90,7 @@ list = do
 
 enum :: Symbolic ([(E, [Bool])], (Word8, (E, Char, Float)))
 enum = do
-   vTup1 :: SList (E, [Bool]) <- sTuple "v1"
+   vTup1 :: SList (E, [Bool]) <- sList "v1"
    q <- sBool "q"
    constrain $ sNot q
    constrain $ (vTup1 .!! 1)^._2 .== sTrue .: q .: L.nil

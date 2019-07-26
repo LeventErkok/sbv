@@ -161,7 +161,7 @@ module Data.SBV (
   , SList
   -- ** Tuples
   -- $tuples
-  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
+  , SymTuple, STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
   -- ** Sum types
   , SMaybe, SEither
   -- ** Sets

@@ -28,6 +28,12 @@
     class which provided similar operations but only on
     predefined types.
 
+  * Tuple construction functions are given new types to strengthen
+    type checking. Previously the tuple argument was ignored,
+    causing things to be marked as tuples when they actually
+    cannot be. (NB. The system was always type-safe, it just
+    didn't produce helpful type-error messages before.)
+
   * Model validator: In the presence of universally quantified
     variables, SBV used to refuse to validate given models. This
     is the right thing to do since we would have to validate

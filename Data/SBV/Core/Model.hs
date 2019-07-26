@@ -30,7 +30,7 @@ module Data.SBV.Core.Model (
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
-  , sTuple, sTuple_, sTuples
+  , SymTuple, sTuple, sTuple_, sTuples
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
   , sSet, sSet_, sSets
   , solve
@@ -537,16 +537,27 @@ sList_ = free_
 sLists :: (SymVal a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
+-- | Identify tuple like things. Note that there are no methods, just instances to control type inference
+class SymTuple a
+instance SymTuple ()
+instance SymTuple (a, b)
+instance SymTuple (a, b, c)
+instance SymTuple (a, b, c, d)
+instance SymTuple (a, b, c, d, e)
+instance SymTuple (a, b, c, d, e, f)
+instance SymTuple (a, b, c, d, e, f, g)
+instance SymTuple (a, b, c, d, e, f, g, h)
+
 -- | Generalization of 'Data.SBV.sTuple'
-sTuple :: (SymVal tup, MonadSymbolic m) => String -> m (SBV tup)
+sTuple :: (SymTuple tup, SymVal tup, MonadSymbolic m) => String -> m (SBV tup)
 sTuple = symbolic
 
 -- | Generalization of 'Data.SBV.sTuple_'
-sTuple_ :: (SymVal tup, MonadSymbolic m) => m (SBV tup)
+sTuple_ :: (SymTuple tup, SymVal tup, MonadSymbolic m) => m (SBV tup)
 sTuple_ = free_
 
 -- | Generalization of 'Data.SBV.sTuples'
-sTuples :: (SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
+sTuples :: (SymTuple tup, SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
 
 -- | Generalization of 'Data.SBV.sEither'

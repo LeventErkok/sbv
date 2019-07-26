@@ -29,7 +29,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
 import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN, IsNonZero)
-import Data.SBV.Core.Model     (Metric(..))
+import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Quantifier, Result,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
 import Data.SBV.Control.Types  (SMTOption)
@@ -658,19 +658,19 @@ sLists = Trans.sLists
 -- | Declare a named tuple.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple'
-sTuple :: SymVal tup => String -> Symbolic (SBV tup)
+sTuple :: (SymTuple tup, SymVal tup) => String -> Symbolic (SBV tup)
 sTuple = Trans.sTuple
 
 -- | Declare an unnamed tuple.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuple_'
-sTuple_ :: SymVal tup => Symbolic (SBV tup)
+sTuple_ :: (SymTuple tup, SymVal tup) => Symbolic (SBV tup)
 sTuple_ = Trans.sTuple_
 
 -- | Declare a list of tuples.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sTuples'
-sTuples :: SymVal tup => [String] -> Symbolic [SBV tup]
+sTuples :: (SymTuple tup, SymVal tup) => [String] -> Symbolic [SBV tup]
 sTuples = Trans.sTuples
 
 -- | Declare a named 'Data.SBV.SEither'.
