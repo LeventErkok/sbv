@@ -28,7 +28,8 @@ build_script:
 - cabal new-update
 - cabal new-build --only-dependencies --enable-tests --enable-benchmarks -f skipHLintTester
 - cabal new-install
-- cabal new-test
+# Skipping tests till we find a CI solution that can handle it.
+# - cabal new-test
 - cabal new-check
 - cabal new-sdist
 #####################################################
