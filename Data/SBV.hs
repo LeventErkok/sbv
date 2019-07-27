@@ -222,7 +222,7 @@ module Data.SBV (
   -- ** Finite bit-vector operations
   , SFiniteBits(..)
   -- ** Splitting, joining, and extending bit-vectors
-  , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
+  , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake, ByteConverter(..)
   -- ** Exponentiation
   , (.^)
   -- * IEEE-floating point numbers

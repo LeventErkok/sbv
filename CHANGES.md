@@ -26,7 +26,9 @@
     determine precise size info, and are much better suited
     for type safety. Consequently, removed the Splittable
     class which provided similar operations but only on
-    predefined types.
+    predefined types. There is a new class called ByteConverter
+    to convert to-and-from bytes for suitable bit-vector
+    sizes upto 512.
 
   * Tuple construction functions are given new types to strengthen
     type checking. Previously the tuple argument was ignored,

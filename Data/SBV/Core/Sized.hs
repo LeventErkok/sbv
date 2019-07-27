@@ -27,6 +27,8 @@ module Data.SBV.Core.Sized (
         , SInt, IntN, sInt, sInt_, sInts
         -- Bit-vector operations
         , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
+        -- Splitting and reconstructing from bytes
+        , ByteConverter(..)
         -- Non-zero constraint
         , IsNonZero
        ) where
@@ -416,3 +418,71 @@ bvTake i = SBV . svExtract start end . unSBV
   where nv    = intOfProxy (Proxy @n)
         start = nv - 1
         end   = start - fromIntegral (natVal i) + 1
+
+-- | A helper class to convert sized bit-vectors to/from bytes.
+class ByteConverter a where
+   -- | Convert to a sequence of bytes
+   --
+   -- >>> prove $ \a b c d -> toBytes ((fromBytes [a, b, c, d]) :: SWord 32) .== [a, b, c, d]
+   -- Q.E.D.
+   toBytes   :: a -> [SWord 8]
+
+   -- | Convert from a sequence of bytes
+   --
+   -- >>> prove $ \r -> fromBytes (toBytes r) .== (r :: SWord 64)
+   -- Q.E.D.
+   fromBytes :: [SWord 8] -> a
+
+-- | 'SWord' 8 instance for 'ByteConverter'
+instance ByteConverter (SWord 8) where
+   toBytes   a   = [a]
+   fromBytes [a] = a
+   fromBytes as  = error $ "fromBytes:SWord 8: Incorrect number of bytes: " ++ show (length as)
+
+-- | 'SWord' 16 instance for 'ByteConverter'
+instance ByteConverter (SWord 16) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @15) (Proxy @8) a, bvExtract (Proxy @7) (Proxy @0) a]
+   fromBytes as
+     | l == 2   = (fromBytes :: ([SWord 8] -> SWord 8)) (take 1 as) # fromBytes (drop 1 as)
+     | True     = error $ "fromBytes:SWord 16: Incorrect number of bytes: " ++ show l
+     where l = length as
+
+-- | 'SWord' 32 instance for 'ByteConverter'
+instance ByteConverter (SWord 32) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @31) (Proxy @16) a, bvExtract (Proxy @15) (Proxy @0) a]
+   fromBytes as
+     | l == 4   = (fromBytes :: [SWord 8] -> SWord 16) (take 2 as) # fromBytes (drop 2 as)
+     | True     = error $ "fromBytes:SWord 32: Incorrect number of bytes: " ++ show l
+     where l = length as
+
+-- | 'SWord' 64 instance for 'ByteConverter'
+instance ByteConverter (SWord 64) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @63) (Proxy @32) a, bvExtract (Proxy @31) (Proxy @0) a]
+   fromBytes as
+     | l == 8   = (fromBytes :: [SWord 8] -> SWord 32) (take 4 as) # fromBytes (drop 4 as)
+     | True     = error $ "fromBytes:SWord 64: Incorrect number of bytes: " ++ show l
+     where l = length as
+
+-- | 'SWord' 128 instance for 'ByteConverter'
+instance ByteConverter (SWord 128) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @127) (Proxy @64) a, bvExtract (Proxy @63) (Proxy @0) a]
+   fromBytes as
+     | l == 16  = (fromBytes :: [SWord 8] -> SWord 64) (take 8 as) # fromBytes (drop 8 as)
+     | True     = error $ "fromBytes:SWord 128: Incorrect number of bytes: " ++ show l
+     where l = length as
+
+-- | 'SWord' 256 instance for 'ByteConverter'
+instance ByteConverter (SWord 256) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @255) (Proxy @128) a, bvExtract (Proxy @127) (Proxy @0) a]
+   fromBytes as
+     | l == 32  = (fromBytes :: [SWord 8] -> SWord 128) (take 16 as) # fromBytes (drop 16 as)
+     | True     = error $ "fromBytes:SWord 256: Incorrect number of bytes: " ++ show l
+     where l = length as
+
+-- | 'SWord' 512 instance for 'ByteConverter'
+instance ByteConverter (SWord 512) where
+   toBytes   a  = concatMap toBytes [bvExtract (Proxy @511) (Proxy @256) a, bvExtract (Proxy @255) (Proxy @0) a]
+   fromBytes as
+     | l == 64  = (fromBytes :: [SWord 8] -> SWord 256) (take 32 as) # fromBytes (drop 32 as)
+     | True     = error $ "fromBytes:SWord 512: Incorrect number of bytes: " ++ show l
+     where l = length as
