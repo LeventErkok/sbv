@@ -1,12 +1,7 @@
 import Data.List
 
 gen :: Int -> String
-gen n = unlines $ [ "-- | 'SWord' " ++ show n ++ " instance for 'ByteConverter'"
-                  , "instance ByteConverter (SWord " ++ show n ++ ") where"
-                  , "   toBytes a = [ " ++ intercalate "\n               , " (exts (n-1)) ++ "\n               ]"
-                  , ""
-                  ]
-                  ++ from
+gen n = unlines $ to ++ from
 
   where exts i
           | i < 0 = []
@@ -17,6 +12,23 @@ gen n = unlines $ [ "-- | 'SWord' " ++ show n ++ " instance for 'ByteConverter'"
         n2 = show $ n `div` 2
         req = n `div` 8
         half = show $ req `div` 2
+
+        by4 xs | length xs < 4 = xs
+               | True          = intercalate ", " (take 4 xs) : by4 (drop 4 xs)
+
+        to
+         | n == 8
+         = [ "-- | 'SWord' " ++ show n ++ " instance for 'ByteConverter'"
+           , "instance ByteConverter (SWord " ++ show n ++ ") where"
+           , "   toBytes a = [a]"
+           , ""
+           ]
+         | True
+         = [ "-- | 'SWord' " ++ show n ++ " instance for 'ByteConverter'"
+           , "instance ByteConverter (SWord " ++ show n ++ ") where"
+           , "   toBytes a = [ " ++ intercalate "\n               , " (by4 (exts (n-1))) ++ "\n               ]"
+           , ""
+           ]
 
         from
          | n == 8
@@ -32,6 +44,6 @@ gen n = unlines $ [ "-- | 'SWord' " ++ show n ++ " instance for 'ByteConverter'"
            , "     where l = length as"
            ]
 
-genAll = intercalate "\n" $ map gen [8, 16, 32, 64, 128, 256, 512, 1024]
-
-doit = writeFile "generated.hs" genAll
+generate :: IO ()
+generate = writeFile "generated.hs" $ intercalate "\n" $ map gen insts
+  where insts = [8, 16, 32, 64, 128, 256, 512, 1024]
