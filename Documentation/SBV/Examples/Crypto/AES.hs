@@ -38,7 +38,6 @@ import Data.SBV.Tools.Polynomial
 
 import Data.List (transpose)
 import Data.Maybe (fromJust)
-import Data.Proxy
 
 import Numeric (showHex)
 
@@ -99,27 +98,6 @@ type Key = [SWord 32]
 -- The length of the middle list of keys depends on the key-size, which in turn determines
 -- the number of rounds.
 type KS = (Key, [Key], Key)
-
--- | Conversion from 32-bit words to 4 constituent bytes.
-toBytes :: SWord 32 -> [GF28]
-toBytes x = [x1, x2, x3, x4]
-        where x1, x2, x3, x4 :: SWord 8
-              x1 = bvExtract (Proxy @31) (Proxy @24) x
-              x2 = bvExtract (Proxy @23) (Proxy @16) x
-              x3 = bvExtract (Proxy @15) (Proxy @ 8) x
-              x4 = bvExtract (Proxy @ 7) (Proxy @ 0) x
-
--- | Conversion from 4 bytes, back to a 32-bit row, inverse of 'toBytes' above. We
--- have the following simple theorems stating this relationship formally:
---
--- >>> prove $ \a b c d -> toBytes (fromBytes [a, b, c, d]) .== [a, b, c, d]
--- Q.E.D.
---
--- >>> prove $ \r -> fromBytes (toBytes r) .== r
--- Q.E.D.
-fromBytes :: [GF28] -> SWord 32
-fromBytes [x1, x2, x3, x4] = (x1 # x2) # (x3 # x4)
-fromBytes xs               = error $ "fromBytes: Unexpected input: " ++ show xs
 
 -- | Rotating a state row by a fixed amount to the right.
 rotR :: [GF28] -> Int -> [GF28]
