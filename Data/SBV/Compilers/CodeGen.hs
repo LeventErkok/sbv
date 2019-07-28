@@ -31,7 +31,7 @@ module Data.SBV.Compilers.CodeGen (
 
         -- * Settings
         , cgPerformRTCs, cgSetDriverValues
-        , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles
+        , cgAddPrototype, cgAddDecl, cgAddLDFlags, cgIgnoreSAssert, cgOverwriteFiles, cgShowU8UsingHex
         , cgIntegerSize, cgSRealType, CgSRealType(..)
 
         -- * Infrastructure
@@ -76,6 +76,7 @@ data CgConfig = CgConfig {
         , cgGenMakefile        :: Bool               -- ^ If 'True', will generate a makefile
         , cgIgnoreAsserts      :: Bool               -- ^ If 'True', will ignore 'Data.SBV.sAssert' calls
         , cgOverwriteGenerated :: Bool               -- ^ If 'True', will overwrite the generated files without prompting.
+        , cgShowU8InHex        :: Bool               -- ^ If 'True', then 8-bit unsigned values will be shown in hex as well, otherwise decimal. (Other types always shown in hex.)
         }
 
 -- | Default options for code generation. The run-time checks are turned-off, and the driver values are completely random.
@@ -88,6 +89,7 @@ defaultCgConfig = CgConfig { cgRTC                = False
                            , cgGenMakefile        = True
                            , cgIgnoreAsserts      = False
                            , cgOverwriteGenerated = False
+                           , cgShowU8InHex        = False
                            }
 
 -- | Abstraction of target language values
@@ -197,6 +199,12 @@ cgAddPrototype ss = modify' (\s -> let old = cgPrototypes s
 -- the C code. Otherwise, we'll prompt.
 cgOverwriteFiles :: Bool -> SBVCodeGen ()
 cgOverwriteFiles b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgOverwriteGenerated = b } })
+
+-- | If passed 'True', then we will show 'SWord 8' type in hex. Otherwise we'll show it in decimal. All signed
+-- types are shown decimal, and all unsigned larger types are shown hexadecimal otherwise.
+cgShowU8UsingHex :: Bool -> SBVCodeGen ()
+cgShowU8UsingHex b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgShowU8InHex = b } })
+
 
 -- | Adds the given lines to the program file generated, useful for generating programs with uninterpreted functions.
 cgAddDecl :: [String] -> SBVCodeGen ()

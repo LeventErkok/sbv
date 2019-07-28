@@ -198,9 +198,13 @@ specifier cfg sv = case kindOf sv of
                      KTuple k           -> die $ "tuple sort: " ++ show k
                      KMaybe  k          -> die $ "maybe sort: "  ++ show k
                      KEither k1 k2      -> die $ "either sort: " ++ show (k1, k2)
-  where spec :: (Bool, Int) -> Doc
+  where u8InHex = cgShowU8InHex cfg
+
+        spec :: (Bool, Int) -> Doc
         spec (False,  1) = text "%d"
-        spec (False,  8) = text "%\"PRIu8\""
+        spec (False,  8)
+          | u8InHex      = text "0x%02\"PRIx8\""
+          | True         = text "%\"PRIu8\""
         spec (True,   8) = text "%\"PRId8\""
         spec (False, 16) = text "0x%04\"PRIx16\"U"
         spec (True,  16) = text "%\"PRId16\""
@@ -223,27 +227,29 @@ mkConst cfg  (CV KReal (CAlgReal (AlgRational _ r))) = double (fromRational r ::
   where sRealSuffix CgFloat      = text "F"
         sRealSuffix CgDouble     = empty
         sRealSuffix CgLongDouble = text "L"
-mkConst cfg (CV KUnbounded       (CInteger i)) = showSizedConst i (True, fromJust (cgInteger cfg))
-mkConst _   (CV (KBounded sg sz) (CInteger i)) = showSizedConst i (sg,   sz)
-mkConst _   (CV KBool            (CInteger i)) = showSizedConst i (False, 1)
+mkConst cfg (CV KUnbounded       (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (True, fromJust (cgInteger cfg))
+mkConst cfg (CV (KBounded sg sz) (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (sg,   sz)
+mkConst cfg (CV KBool            (CInteger i)) = showSizedConst (cgShowU8InHex cfg) i (False, 1)
 mkConst _   (CV KFloat           (CFloat f))   = text $ showCFloat f
 mkConst _   (CV KDouble          (CDouble d))  = text $ showCDouble d
 mkConst _   (CV KString          (CString s))  = text $ show s
 mkConst _   (CV KChar            (CChar c))    = text $ show c
 mkConst _   cv                                 = die $ "mkConst: " ++ show cv
 
-showSizedConst :: Integer -> (Bool, Int) -> Doc
-showSizedConst i   (False,  1) = text (if i == 0 then "false" else "true")
-showSizedConst i   (False,  8) = integer i
-showSizedConst i   (True,   8) = integer i
-showSizedConst i t@(False, 16) = text $ chex False True t i
-showSizedConst i t@(True,  16) = text $ chex False True t i
-showSizedConst i t@(False, 32) = text $ chex False True t i
-showSizedConst i t@(True,  32) = text $ chex False True t i
-showSizedConst i t@(False, 64) = text $ chex False True t i
-showSizedConst i t@(True,  64) = text $ chex False True t i
-showSizedConst i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
-showSizedConst i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
+showSizedConst :: Bool -> Integer -> (Bool, Int) -> Doc
+showSizedConst _   i   (False,  1) = text (if i == 0 then "false" else "true")
+showSizedConst u8h i t@(False,  8)
+  | u8h                            = text (chex False True t i)
+  | True                           = integer i
+showSizedConst _   i   (True,   8) = integer i
+showSizedConst _   i t@(False, 16) = text $ chex False True t i
+showSizedConst _   i t@(True,  16) = text $ chex False True t i
+showSizedConst _   i t@(False, 32) = text $ chex False True t i
+showSizedConst _   i t@(True,  32) = text $ chex False True t i
+showSizedConst _   i t@(False, 64) = text $ chex False True t i
+showSizedConst _   i t@(True,  64) = text $ chex False True t i
+showSizedConst _   i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
+showSizedConst _   i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Generate a makefile. The first argument is True if we have a driver.
 genMake :: Bool -> String -> String -> [String] -> Doc
@@ -415,13 +421,15 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
                                                                                 P.<> text "\\n") P.<> comma <+> text n) P.<> semi
        display (n, CgArray [])         =  die $ "Unsupported empty array value for " ++ show n
        display (n, CgArray sws@(sv:_)) =   text "int" <+> nctr P.<> semi
-                                        $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int (length sws) <+> text "; ++" P.<> nctr P.<> text ")"
+                                        $$ text "for(" P.<> nctr <+> text "= 0;" <+> nctr <+> text "<" <+> int len <+> text "; ++" P.<> nctr P.<> text ")"
                                         $$ nest 2 (text "printf" P.<> parens (printQuotes (text " " <+> entrySpec <+> text "=" <+> spec P.<> text "\\n")
                                                                  P.<> comma <+> nctr <+> comma P.<> entry) P.<> semi)
                   where nctr      = text n P.<> text "_ctr"
                         entry     = text n P.<> text "[" P.<> nctr P.<> text "]"
-                        entrySpec = text n P.<> text "[%d]"
+                        entrySpec = text n P.<> text "[%" P.<> int tab P.<> text "d]"
                         spec      = specifier cfg sv
+                        len       = length sws
+                        tab       = length $ show (len - 1)
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
