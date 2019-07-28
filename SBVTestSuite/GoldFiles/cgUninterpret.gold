@@ -80,7 +80,7 @@ int main(void)
   printf("Contents of input array vs:\n");
   int vs_ctr;
   for(vs_ctr = 0; vs_ctr < 3 ; ++vs_ctr)
-    printf("  vs[%d] = 0x%08"PRIx32"UL\n", vs_ctr ,vs[vs_ctr]);
+    printf("  vs[%1d] = 0x%08"PRIx32"UL\n", vs_ctr ,vs[vs_ctr]);
 
 
   const SWord32 __result = tstShiftLeft(vs);

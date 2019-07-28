@@ -80,7 +80,7 @@ int main(void)
   printf("Contents of input array xs:\n");
   int xs_ctr;
   for(xs_ctr = 0; xs_ctr < 5 ; ++xs_ctr)
-    printf("  xs[%d] = %"PRIu8"\n", xs_ctr ,xs[xs_ctr]);
+    printf("  xs[%1d] = %"PRIu8"\n", xs_ctr ,xs[xs_ctr]);
 
   SWord8 ys[5];
 
@@ -89,7 +89,7 @@ int main(void)
   printf("merge(xs, ys) ->\n");
   int ys_ctr;
   for(ys_ctr = 0; ys_ctr < 5 ; ++ys_ctr)
-    printf("  ys[%d] = %"PRIu8"\n", ys_ctr ,ys[ys_ctr]);
+    printf("  ys[%1d] = %"PRIu8"\n", ys_ctr ,ys[ys_ctr]);
 
   return 0;
 }
