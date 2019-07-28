@@ -45,12 +45,25 @@
     is zero during model validation. This severely limits the
     validation result, but it is better than nothing. (In the
     verbose mode, a message to this effect will be printed.)
-  
+
   * Model validator: SBV can now validate models returned from
     the backend solver for regular-expression match problems.
     We also constant fold matches against constant strings without
     calling the solver at all, less useful perhaps but more inline
     with the general SBV methodology.
+
+  * Add implementation of SHA-2 family of functions as an example
+    algorithm.  These are good for code-generation purposes as
+    opposed to actual verification tasks as it is hard to state
+    any properties of these algorithms. But the SBV generated
+    code can be quite useful in other development and verification
+    environments. See 'Documentation.SBV.Examples.Crypto.SHA' for
+    details.
+
+  * Add 'cgShowU8UsingHex function, which controls if we print unsigned-8 bit
+    values in code generation driver code in hex or not. Previously we were
+    using decimal, but in crypto code hex is always better. Default is 'False'
+    to keep backwards compatibility.
 
   * Ramped up travis-appveyor build infrastructure. However, we no
     longer test on the CI, since build-times are prohibitively long

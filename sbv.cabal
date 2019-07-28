@@ -115,6 +115,7 @@ Library
                   , Documentation.SBV.Examples.CodeGeneration.Uninterpreted
                   , Documentation.SBV.Examples.Crypto.AES
                   , Documentation.SBV.Examples.Crypto.RC4
+                  , Documentation.SBV.Examples.Crypto.SHA
                   , Documentation.SBV.Examples.Existentials.CRCPolynomial
                   , Documentation.SBV.Examples.Existentials.Diophantine
                   , Documentation.SBV.Examples.Lists.Fibonacci
@@ -286,6 +287,7 @@ Test-Suite SBVTest
                   , TestSuite.CRC.USB5
                   , TestSuite.Crypto.AES
                   , TestSuite.Crypto.RC4
+                  , TestSuite.Crypto.SHA
                   , TestSuite.Existentials.CRCPolynomial
                   , TestSuite.GenTest.GenTests
                   , TestSuite.Optimization.AssertWithPenalty

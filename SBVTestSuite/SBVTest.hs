@@ -71,6 +71,7 @@ import qualified TestSuite.CRC.Parity
 import qualified TestSuite.CRC.USB5
 import qualified TestSuite.Crypto.AES
 import qualified TestSuite.Crypto.RC4
+import qualified TestSuite.Crypto.SHA
 import qualified TestSuite.Existentials.CRCPolynomial
 import qualified TestSuite.GenTest.GenTests
 import qualified TestSuite.Optimization.AssertWithPenalty
@@ -218,6 +219,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.CRC.USB5.tests
                , TestSuite.Crypto.AES.tests
                , TestSuite.Crypto.RC4.tests
+               , TestSuite.Crypto.SHA.tests
                , TestSuite.Existentials.CRCPolynomial.tests
                , TestSuite.GenTest.GenTests.tests
                , TestSuite.Optimization.AssertWithPenalty.tests
