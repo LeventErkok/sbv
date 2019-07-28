@@ -23,7 +23,7 @@ tests :: TestTree
 tests = testGroup "Crypto.AES" [
    goldenVsStringShow "sha256HashBlock" $ snd <$> compileToC' "sha256HashBlock" c
  ]
- where c = do let algorithm = sha256
+ where c = do let algorithm = sha256P
 
               hInBytes   <- cgInputArr 32 "hIn"
               blockBytes <- cgInputArr 64 "block"
