@@ -305,7 +305,7 @@ module Data.SBV (
 
   -- ** Observing expressions
   -- $observeInternal
-  , observe, observeIf
+  , observe, observeIf, sObserve
 
   -- ** Programmable model extraction
   -- $programmableExtraction
@@ -955,7 +955,8 @@ SBV provides various levels of verbosity to aid in debugging, by using the 'SMTC
 {- $observeInternal
 
 The 'observe' command can be used to trace values of arbitrary expressions during a 'sat', 'prove', or perhaps more
-importantly, in a @quickCheck@ call. This is useful for, for instance, recording expected/obtained expressions as a symbolic program is executing.
+importantly, in a @quickCheck@ call with the 'sObserve' variant.. This is useful for, for instance, recording expected vs. obtained expressions
+as a symbolic program is executing.
 
 >>> :{
 prove $ do a1 <- free "i1"
@@ -974,7 +975,8 @@ Falsifiable. Counter-example:
   i2       = 22 :: Word8
 
 The 'observeIf' variant allows the user to specify a boolean condition when the value is interesting to observe. Useful when
-you have lots of "debugging" points, but not all are of interest.
+you have lots of "debugging" points, but not all are of interest. Use the 'sObserve' variant when you are at the 'Symbolic'
+monad, which also supports quick-check applications.
 -}
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

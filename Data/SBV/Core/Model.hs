@@ -35,7 +35,7 @@ module Data.SBV.Core.Model (
   , sSet, sSet_, sSets
   , solve
   , slet
-  , sRealToSInteger, label, observe, observeIf
+  , sRealToSInteger, label, observe, observeIf, sObserve
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
@@ -45,6 +45,7 @@ module Data.SBV.Core.Model (
 
 import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus)
+import Control.Monad.Trans    (liftIO)
 import Control.Monad.IO.Class (MonadIO)
 
 import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
@@ -625,18 +626,27 @@ label m x
         r st = do xsv <- sbvToSV st x
                   newExpr st k (SBVApp (Label m) [xsv])
 
+
+-- | Check if an observable name is good.
+checkObservableName :: String -> Maybe String
+checkObservableName lbl
+  | null lbl
+  = Just "SBV.observe: Bad empty name!"
+  | map toLower lbl `elem` smtLibReservedNames
+  = Just $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show lbl
+  | "s" `isPrefixOf` lbl && all isDigit (drop 1 lbl)
+  = Just $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show lbl
+  | True
+  = Nothing
+
 -- | Observe the value of an expression, if the given condition holds.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
 -- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
 -- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
 -- which is used for putting a label in the generated SMTLib-C code.
 observeIf :: SymVal a => (a -> Bool) -> String -> SBV a -> SBV a
 observeIf cond m x
-  | null m
-  = error "SBV.observe: Bad empty name!"
-  | map toLower m `elem` smtLibReservedNames
-  = error $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show m
-  | "s" `isPrefixOf` m && all isDigit (drop 1 m)
-  = error $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show m
+  | Just bad <- checkObservableName m
+  = error bad
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf x
@@ -647,6 +657,16 @@ observeIf cond m x
 -- | Observe the value of an expression, uncoditionally. See 'observeIf' for a generalized version.
 observe :: SymVal a => String -> SBV a -> SBV a
 observe = observeIf (const True)
+
+-- | A variant of observe that you can use at the top-level. This is useful with quick-check, for instance.
+sObserve :: SymVal a => String -> SBV a -> Symbolic ()
+sObserve m x
+  | Just bad <- checkObservableName m
+  = error bad
+  | True
+  = do st <- symbolicEnv
+       liftIO $ do xsv <- sbvToSV st x
+                   recordObservable st m (const True) xsv
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.

@@ -65,6 +65,9 @@
     using decimal, but in crypto code hex is always better. Default is 'False'
     to keep backwards compatibility.
 
+  * Add `sObserve` from: `SymWord a => String -> SBV a -> Symbolic ()` which
+    comes in handy in symbolic contexts, especially with quick-check uses.
+
   * Ramped up travis-appveyor build infrastructure. However, we no
     longer test on the CI, since build-times are prohibitively long
     and myriad issues cause instability. If you can help out regarding
