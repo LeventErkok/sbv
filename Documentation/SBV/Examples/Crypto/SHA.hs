@@ -288,19 +288,21 @@ sha512_256 s = h0 # h1 # h2 # h3
 -- * Testing
 -----------------------------------------------------------------------------
 
--- | Collection of known answer tests for SHA. We have:
+-- | Collection of known answer tests for SHA. Since these tests take too long during regular
+-- regression runs, we pass as an argument how many to run. Increase the below number to 24 to run all tests.
+-- We have:
 --
--- >>> knownAnswerTests
+-- >>> knownAnswerTests 1
 -- True
-knownAnswerTests :: Bool
-knownAnswerTests = and $  [showHash (sha224     t) == map toLower r | (t, r) <- take nTest sha224Kats    ]
-                       ++ [showHash (sha256     t) == map toLower r | (t, r) <- take nTest sha256Kats    ]
-                       ++ [showHash (sha384     t) == map toLower r | (t, r) <- take nTest sha384Kats    ]
-                       ++ [showHash (sha512     t) == map toLower r | (t, r) <- take nTest sha512Kats    ]
-                       ++ [showHash (sha512_224 t) == map toLower r | (t, r) <- take nTest sha512_224Kats]
-                       ++ [showHash (sha512_256 t) == map toLower r | (t, r) <- take nTest sha512_256Kats]
+knownAnswerTests :: Int -> Bool
+knownAnswerTests nTest = and $  take nTest $  [showHash (sha224     t) == map toLower r | (t, r) <- sha224Kats    ]
+                                           ++ [showHash (sha256     t) == map toLower r | (t, r) <- sha256Kats    ]
+                                           ++ [showHash (sha384     t) == map toLower r | (t, r) <- sha384Kats    ]
+                                           ++ [showHash (sha512     t) == map toLower r | (t, r) <- sha512Kats    ]
+                                           ++ [showHash (sha512_224 t) == map toLower r | (t, r) <- sha512_224Kats]
+                                           ++ [showHash (sha512_256 t) == map toLower r | (t, r) <- sha512_256Kats]
 
-  where -- These tests take too long during regular runs, so we limit them. Increase the below number to 4 to run all tests
+  where 
         nTest = 1
 
         -- | From <http://github.com/bcgit/bc-java/blob/master/core/src/test/java/org/bouncycastle/crypto/test/SHA224DigestTest.java>
