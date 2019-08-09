@@ -302,10 +302,7 @@ knownAnswerTests nTest = and $  take nTest $  [showHash (sha224     t) == map to
                                            ++ [showHash (sha512_224 t) == map toLower r | (t, r) <- sha512_224Kats]
                                            ++ [showHash (sha512_256 t) == map toLower r | (t, r) <- sha512_256Kats]
 
-  where 
-        nTest = 1
-
-        -- | From <http://github.com/bcgit/bc-java/blob/master/core/src/test/java/org/bouncycastle/crypto/test/SHA224DigestTest.java>
+  where -- | From <http://github.com/bcgit/bc-java/blob/master/core/src/test/java/org/bouncycastle/crypto/test/SHA224DigestTest.java>
         sha224Kats :: [(String, String)]
         sha224Kats = [ (""                                                        , "d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f")
                      , ("a"                                                       , "abd37534c7d9a2efb9465de931cd7055ffdb8879563ae98078d6d6d5")
