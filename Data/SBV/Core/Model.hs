@@ -2342,13 +2342,13 @@ instance Testable (Symbolic SBool) where
 
                      case map fst unints of
                        [] -> case unliteral r of
-                               Nothing -> noQC [show r]
+                               Nothing -> error $ intercalate "\n" [ "Quick-check: Calls to 'observe' not supported in quick-check mode. Please use 'sObserve' for full support."
+                                                                   , "             (If you haven't used 'observe', please report this as a bug!)"
+                                                                   ]
                                Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
-                       us -> noQC us
+                       us -> error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
-
-           noQC us         = error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
 
 -- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
 -- well. Use this variant if you want to receive the boolean result.
