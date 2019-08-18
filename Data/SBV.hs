@@ -40,6 +40,10 @@
 --
 --   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed).
 --
+--   * 'SWord n': Generalized symbolic words of arbitrary bit-size.
+--
+--   * 'SInt n': Generalized symbolic ints of arbitrary bit-size.
+--
 --   * 'SInteger': Unbounded signed integers.
 --
 --   * 'SReal': Algebraic-real numbers
@@ -139,9 +143,9 @@ module Data.SBV (
   , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
-  , SWord8, SWord16, SWord32, SWord64, SWord
+  , SWord8, SWord16, SWord32, SWord64, SWord, WordN
   -- *** Signed bit-vectors
-  , SInt8, SInt16, SInt32, SInt64, SInt
+  , SInt8, SInt16, SInt32, SInt64, SInt, IntN
   -- *** Converting between fixed-size and arbitrary bitvectors
   , FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
