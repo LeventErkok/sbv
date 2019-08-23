@@ -827,7 +827,7 @@ instance EqSymbolic a => EqSymbolic (Maybe a) where
   Just a  .== Just b  = a .== b
   _       .== _       = sFalse
 
-instance (OrdSymbolic a) => OrdSymbolic (Maybe a) where
+instance OrdSymbolic a => OrdSymbolic (Maybe a) where
   Nothing .<  Nothing = sFalse
   Nothing .<  _       = sTrue
   Just _  .<  Nothing = sFalse
