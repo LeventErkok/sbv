@@ -800,10 +800,10 @@ instance EqSymbolic (SBV a) where
           isBool _                    = False
 
 instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
-  SBV x .<  SBV y = SBV (svLessThan x y)
-  SBV x .<= SBV y = SBV (svLessEq x y)
+  SBV x .<  SBV y = SBV (svLessThan    x y)
+  SBV x .<= SBV y = SBV (svLessEq      x y)
   SBV x .>  SBV y = SBV (svGreaterThan x y)
-  SBV x .>= SBV y = SBV (svGreaterEq x y)
+  SBV x .>= SBV y = SBV (svGreaterEq   x y)
 
 -- Bool
 instance EqSymbolic Bool where
