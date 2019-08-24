@@ -23,7 +23,7 @@ import Control.Monad (replicateM)
 import Data.Bits
 import System.Random (randomIO, randomRIO)
 
-import Data.Char (chr)
+import Data.Char (chr, isSpace)
 import Data.List (isPrefixOf, intercalate)
 
 import Data.SBV.Core.Kind
@@ -404,15 +404,23 @@ showCV shk w               = liftCV show show show show show show snd shL shS sh
             shMaybe :: Maybe CVal -> String
             shMaybe c = case (c, kw) of
                           (Nothing, KMaybe{}) -> "Nothing"
-                          (Just x,  KMaybe k) -> "Just " ++ showCV False (CV k x)
+                          (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
                           _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show kw
 
             shEither :: Either CVal CVal -> String
             shEither val
               | KEither k1 k2 <- kw = case val of
-                                        Left  x -> "Left "  ++ showCV False (CV k1 x)
-                                        Right y -> "Right " ++ showCV False (CV k2 y)
+                                        Left  x -> "Left "  ++ paren (showCV False (CV k1 x))
+                                        Right y -> "Right " ++ paren (showCV False (CV k2 y))
               | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
+
+            -- kind of crude, but works ok
+            paren v
+              | needsParen = '(' : v ++ ")"
+              | True       = v
+              where needsParen = case dropWhile isSpace v of
+                                   []         -> False
+                                   rest@(x:_) -> any isSpace rest && x `notElem` "{[("
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
