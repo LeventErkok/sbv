@@ -42,6 +42,7 @@ tests = testGroup "Basics.Tuple" [
         , goldenCapturedIO "tuple_enum"       $ t enum
         , goldenCapturedIO "tuple_unit"       $ t unit
         , goldenCapturedIO "tuple_makePair"   $ t makePair
+        , goldenCapturedIO "tuple_unequal"    $ t unequal
         ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL: " ++ show r ++ "\nDONE!\n")
@@ -121,5 +122,20 @@ makePair = do
   [x, y] <- sIntegers ["x", "y"]
   let xy = tuple (x, y)
   constrain $ xy^._1 + xy^._2 .== 0
+
+type TI = STuple Integer Integer
+
+unequal :: Symbolic ()
+unequal = do
+   x :: TI <- free_
+   y :: TI <- free_
+   -- force unsat; we're simply testing we can generate the tuple inequality here
+   constrain $ x .< y
+   constrain $ x .> y
+
+   query $ do cs <- checkSat
+              case cs of
+                Unsat -> return ()
+                _     -> error "did not expect this!"
 
 {-# ANN module ("HLint: ignore Use ." :: String) #-}
