@@ -30,7 +30,15 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) false) true true true) true false true)))
+[RECV] ((q2 (lambda ((x!1 Bool) (x!2 Bool)) (or (and x!2 x!1) (and x!2 (not x!1))))))
+[SEND] (get-value ((q2 false false)))
+[RECV] (((q2 false false) false))
+[SEND] (get-value ((q2 false true)))
+[RECV] (((q2 false true) false))
+[SEND] (get-value ((q2 true false)))
+[RECV] (((q2 true false) true))
+[SEND] (get-value ((q2 true true)))
+[RECV] (((q2 true true) true))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q2",(SBool -> SBool -> SBool,([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))]}
 DONE.*** Solver   : Z3

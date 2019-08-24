@@ -69,10 +69,10 @@ Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q1))
-[RECV] ((q1 (store ((as const Array) true) false false)))
+[RECV] ((q1 (lambda ((x!1 Bool)) x!1)))
 [GOOD] (define-fun q1_model4 ((x!0 Bool)) Bool
-          (ite (and (= x!0 false)) false
-          true)
+          (ite (and (= x!0 true)) true
+          false)
        )
 [GOOD] (define-fun q1_model4_reject () Bool
           (exists ((x!0 Bool))
@@ -98,6 +98,6 @@ Solution #3:
   q1 _    = True 
 Solution #4:
   q1 :: Bool -> Bool
-  q1 False = False
-  q1 _     = True 
+  q1 True = True 
+  q1 _    = False
 Found 4 different solutions.

@@ -28,7 +28,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [SEND] (get-value (q1))
-[RECV] ((q1 (store ((as const Array) false) true true)))
+[RECV] ((q1 (lambda ((x!1 Bool)) x!1)))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q1",(SBool -> SBool,([([True :: Bool],True :: Bool)],False :: Bool)))]}
 DONE.*** Solver   : Z3
