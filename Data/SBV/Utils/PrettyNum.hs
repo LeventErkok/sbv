@@ -467,15 +467,18 @@ cvToSMTLib rm x
         smtLibTup (KTuple ks) xs = "(mkSBVTuple" ++ show (length ks) ++ " " ++ unwords (zipWith (\ek e -> cvToSMTLib rm (CV ek e)) ks xs) ++ ")"
         smtLibTup k           _  = error $ "SBV.cvToSMTLib: Impossible case (smtLibTup), received kind: " ++ show k
 
+        dtConstructor fld []   res =  "(as " ++ fld ++ " " ++ smtType res ++ ")"
+        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords args ++ ")"
+
         smtLibMaybe :: Kind -> Maybe CVal -> String
-        smtLibMaybe (KMaybe k) Nothing   = "(as nothing_SBVMaybe " ++ smtType (KMaybe k) ++ ")"
-        smtLibMaybe (KMaybe k) (Just  c) = "(just_SBVMaybe " ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibMaybe k          _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
+        smtLibMaybe km@(KMaybe{}) Nothing   = dtConstructor "nothing_SBVMaybe" []                       km
+        smtLibMaybe km@(KMaybe k) (Just  c) = dtConstructor "just_SBVMaybe"    [cvToSMTLib rm (CV k c)] km
+        smtLibMaybe k             _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
 
         smtLibEither :: Kind -> Either CVal CVal -> String
-        smtLibEither (KEither  k _) (Left c)  = "(left_SBVEither "  ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibEither (KEither  _ k) (Right c) = "(right_SBVEither " ++ cvToSMTLib rm (CV k c) ++ ")"
-        smtLibEither k              _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibEither), received kind: " ++ show k
+        smtLibEither ke@(KEither  k _) (Left c)  = dtConstructor "left_SBVEither"  [cvToSMTLib rm (CV k c)] ke
+        smtLibEither ke@(KEither  _ k) (Right c) = dtConstructor "right_SBVEither" [cvToSMTLib rm (CV k c)] ke
+        smtLibEither k                 _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibEither), received kind: " ++ show k
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
