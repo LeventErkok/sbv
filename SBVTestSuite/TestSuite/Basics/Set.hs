@@ -24,6 +24,8 @@ import Data.SBV.Set
 
 import Data.SBV.Control
 
+import Data.SBV.Tuple
+
 import Utils.SBVTestFramework hiding (complement)
 
 data E = A | B | C
@@ -68,6 +70,7 @@ tests = testGroup "Basics.Set" [
         , goldenCapturedIO "set_delete1"    $ tq $ templateBE  cCharA cSetAL delete
         , goldenCapturedIO "set_member1"    $ tq $ templateBEB cCharA cSetAL member
         , goldenCapturedIO "set_notMember1" $ tq $ templateBEB cCharA cSetAL notMember
+        , goldenCapturedIO "set_tupleSet"   $ ta setOfTuples
         ]
     where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
           tq tc goldFile    = record goldFile =<< runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
@@ -164,5 +167,11 @@ templateBEB ic is f = do a <- sChar "a"
 
                          query $ do ensureSat
                                     (,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2
+
+setOfTuples :: SMTConfig -> IO SatResult
+setOfTuples cfg = satWith cfg $ do
+    let x = tuple (empty :: SSet Bool, empty :: SSet Bool)
+    y <- exists_
+    return $ x ./= y
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
