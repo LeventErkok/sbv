@@ -24,7 +24,7 @@ module Data.SBV.Core.Operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svQuotRem
   , svEqual, svNotEqual, svStrongEqual, svSetEqual
-  , svLessThan, svGreaterThan, svLessEq, svGreaterEq
+  , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
   , svExtract, svJoin
@@ -1376,6 +1376,11 @@ uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, S
 uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
 uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
+-- | Predicate to check if a value is concrete
+isConcrete :: SVal -> Bool
+isConcrete (SVal _ Left{}) = True
+isConcrete _               = False
+
 -- | Predicate for optimizing word operations like (+) and (*).
 -- NB. We specifically do *not* match for Double/Float; because
 -- FP-arithmetic doesn't obey traditional rules. For instance,
@@ -1451,6 +1456,92 @@ noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ sho
 
 noDoubleUnary :: String -> Double -> Double
 noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
+
+-- | Given a composite structure, figure out how to compare for less than
+svStructuralLessThan :: SVal -> SVal -> SVal
+svStructuralLessThan x y
+   | isConcrete x && isConcrete y
+   = x `svLessThan` y
+   | KTuple{} <- kx
+   = tupleLT x y
+   | KMaybe{}  <- kx
+   = maybeLT x y
+   | KEither{} <- kx
+   = eitherLT x y
+   | True
+   = x `svLessThan` y
+   where kx = kindOf x
+
+-- | Structural less-than for tuples
+tupleLT :: SVal -> SVal -> SVal
+tupleLT x y = SVal KBool $ Right $ cache res
+  where ks = case kindOf x of
+               KTuple xs -> xs
+               k         -> error $ "Data.SBV: Impossible happened, tupleLT called with: " ++ show (k, x, y)
+
+        n = length ks
+
+        res st = do sx <- svToSV st x
+                    sy <- svToSV st y
+
+                    let chkElt i ek = let xi = SVal ek $ Right $ cache $ \_ -> newExpr st ek $ SBVApp (TupleAccess i n) [sx]
+                                          yi = SVal ek $ Right $ cache $ \_ -> newExpr st ek $ SBVApp (TupleAccess i n) [sy]
+                                          lt = xi `svStructuralLessThan` yi
+                                          eq = xi `svEqual`              yi
+                                       in (lt, eq)
+
+                        walk []                  = svFalse
+                        walk [(lti, _)]          = lti
+                        walk ((lti, eqi) : rest) = lti `svOr` (eqi `svAnd` walk rest)
+
+                    svToSV st $ walk $ zipWith chkElt [1..] ks
+
+-- | Structural less-than for maybes
+maybeLT :: SVal -> SVal -> SVal
+maybeLT x y = sMaybeCase (       sMaybeCase svFalse (const svTrue)    y)
+                         (\jx -> sMaybeCase svFalse (jx `svStructuralLessThan`) y)
+                         x
+  where ka = case kindOf x of
+               KMaybe k' -> k'
+               k         -> error $ "Data.SBV: Impossible happened, maybeLT called with: " ++ show (k, x, y)
+
+        sMaybeCase brNothing brJust s = SVal KBool $ Right $ cache res
+           where res st = do sv <- svToSV st s
+
+                             let justVal = SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp MaybeAccess [sv]
+                                 justRes = brJust justVal
+
+                             br1 <- svToSV st brNothing
+                             br2 <- svToSV st justRes
+
+                             -- Do we have a value?
+                             noVal <- newExpr st KBool $ SBVApp (MaybeIs ka False) [sv]
+                             newExpr st KBool $ SBVApp Ite [noVal, br1, br2]
+
+-- | Structural less-than for either
+eitherLT :: SVal -> SVal -> SVal
+eitherLT x y = sEitherCase (\lx -> sEitherCase (lx `svStructuralLessThan`) (const svTrue)              y)
+                           (\rx -> sEitherCase (const svFalse)             (rx `svStructuralLessThan`) y)
+                           x
+  where (ka, kb) = case kindOf x of
+                     KEither k1 k2 -> (k1, k2)
+                     k             -> error $ "Data.SBV: Impossible happened, eitherLT called with: " ++ show (k, x, y)
+
+        sEitherCase brA brB sab = SVal KBool $ Right $ cache res
+          where res st = do abv <- svToSV st sab
+
+                            let leftVal  = SVal ka $ Right $ cache $ \_ -> newExpr st ka $ SBVApp (EitherAccess False) [abv]
+                                rightVal = SVal kb $ Right $ cache $ \_ -> newExpr st kb $ SBVApp (EitherAccess True)  [abv]
+
+                                leftRes  = brA leftVal
+                                rightRes = brB rightVal
+
+                            br1 <- svToSV st leftRes
+                            br2 <- svToSV st rightRes
+
+                            --  Which branch are we in? Return the appropriate value:
+                            onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
+                            newExpr st KBool $ SBVApp Ite [onLeft, br1, br2]
 
 {-# ANN svIte     ("HLint: ignore Eta reduce" :: String)         #-}
 {-# ANN svLazyIte ("HLint: ignore Eta reduce" :: String)         #-}

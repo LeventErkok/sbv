@@ -45,7 +45,7 @@ module Data.SBV.Dynamic
   -- *** Constructing concrete lists
   , svEnumFromThenTo
   -- *** Symbolic ordering
-  , svLessThan, svGreaterThan, svLessEq, svGreaterEq
+  , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   -- *** Arithmetic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svQuotRem, svExp

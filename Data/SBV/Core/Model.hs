@@ -799,11 +799,39 @@ instance EqSymbolic (SBV a) where
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
 
+-- | If comparison is over something SMTLib can handle, just translate it. Otherwise desugar.
 instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
-  SBV x .<  SBV y = SBV (svLessThan    x y)
-  SBV x .<= SBV y = SBV (svLessEq      x y)
-  SBV x .>  SBV y = SBV (svGreaterThan x y)
-  SBV x .>= SBV y = SBV (svGreaterEq   x y)
+  a@(SBV x) .<     SBV y  | smtComparable "<"   a = SBV (svLessThan x y)
+                          | True                  = SBV (svStructuralLessThan x y)
+
+  a@(SBV x) .<= b@(SBV y) | smtComparable ".<=" a = SBV (svLessEq x y)
+                          | True                  = a .< b .|| a .== b
+
+  a@(SBV x) .>  b@(SBV y) | smtComparable ">"   a = SBV (svGreaterThan x y)
+                          | True                  = b .< a
+
+  a@(SBV x) .>= b@(SBV y) | smtComparable ">="  a = SBV (svGreaterEq x y)
+                          | True                  = b .<= a
+
+-- Is this a type that's comparable by underlying translation to SMTLib?
+smtComparable :: HasKind a => String -> SBV a -> Bool
+smtComparable op x = case k of
+                       KBool             -> True
+                       KBounded       {} -> True
+                       KUnbounded     {} -> True
+                       KReal          {} -> True
+                       KUninterpreted {} -> True
+                       KFloat            -> True
+                       KDouble           -> True
+                       KChar             -> True
+                       KString           -> True
+                       KList          {} -> nope     -- Unfortunately, no way for us to desugar this
+                       KSet           {} -> nope     -- Ditto here..
+                       KTuple         {} -> False
+                       KMaybe         {} -> False
+                       KEither        {} -> False
+ where k    = kindOf x
+       nope = error $ "Data.SBV.OrdSymbolic: SMTLib does not support " ++ op ++ " for " ++ show k
 
 -- Bool
 instance EqSymbolic Bool where
