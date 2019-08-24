@@ -471,7 +471,7 @@ cvToSMTLib rm x
         dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords args ++ ")"
 
         smtLibMaybe :: Kind -> Maybe CVal -> String
-        smtLibMaybe km@(KMaybe{}) Nothing   = dtConstructor "nothing_SBVMaybe" []                       km
+        smtLibMaybe km@ KMaybe{}  Nothing   = dtConstructor "nothing_SBVMaybe" []                       km
         smtLibMaybe km@(KMaybe k) (Just  c) = dtConstructor "just_SBVMaybe"    [cvToSMTLib rm (CV k c)] km
         smtLibMaybe k             _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibMaybe), received kind: " ++ show k
 
