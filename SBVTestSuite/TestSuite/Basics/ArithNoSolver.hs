@@ -103,6 +103,9 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs ]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
+     ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssm,  y <- ssm ] [x `opS` y | x <- ssm,   y <- ssm  ]
+     ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- sse,  y <- sse ] [x `opS` y | x <- sse,   y <- sse  ]
+     ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- sst,  y <- sst ] [x `opS` y | x <- sst,   y <- sst  ]
   where pair (x, y, a) b = (x, y, Just a == unliteral b)
         mkTest (x, y, s) = testCase ("arithCF-" ++ nm ++ "." ++ x ++ "_" ++ y) (s `showsAs` "True")
         toL x = fromMaybe (error "genBoolTest: Cannot extract a literal!") (unliteral x)
@@ -759,4 +762,22 @@ sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
 ssl :: [SList Integer]
 ssl = map literal sl
 
+-- Very rudimentary maybe, either, and, tuples
+sm :: [Maybe Integer]
+sm = [Nothing, Just (-5), Just 0, Just 5]
+
+ssm :: [SMaybe Integer]
+ssm = map literal sm
+
+se :: [Either Integer Integer]
+se = [Left 3, Right 5]
+
+sse :: [SEither Integer Integer]
+sse = map literal se
+
+st :: [(Integer, Integer)]
+st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
+
+sst :: [STuple Integer Integer]
+sst = map literal st
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

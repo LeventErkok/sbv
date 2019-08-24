@@ -107,7 +107,11 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- reducedCS, y <- reducedCS]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- ss,        y <- ss       ]
                                    ++ [(show x, show y, mkThm2L x y (x `op` y)) | nm `elem` allowedListComps, x <- sl,        y <- sl       ]
+                                   ++ [(show x, show y, mkThm2M x y (x `op` y)) |                             x <- sm,        y <- sm       ]
+                                   ++ [(show x, show y, mkThm2E x y (x `op` y)) |                             x <- se,        y <- se       ]
+                                   ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- st,        y <- st       ]
   where -- Currently Z3 doesn't allow for list comparisons, so only test equals and distinct
+        -- And there's no way for us to desugar this like we do for tuple/maybe etc; since the datatype itself is recursive.
         allowedListComps = ["==", "/="]
         mkTest (x, y, t) = testCase ("genBoolTest.arithmetic-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
         mkThm2 x y r = isTheorem $ do [a, b] <- mapM free ["x", "y"]
@@ -115,6 +119,18 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                       constrain $ b .== literal y
                                       return $ literal r .== a `opS` b
         mkThm2L x y r = isTheorem $ do [a, b :: SList Integer] <- mapM free ["x", "y"]
+                                       constrain $ a .== literal x
+                                       constrain $ b .== literal y
+                                       return $ literal r .== a `opS` b
+        mkThm2M x y r = isTheorem $ do [a, b :: SMaybe Integer] <- mapM free ["x", "y"]
+                                       constrain $ a .== literal x
+                                       constrain $ b .== literal y
+                                       return $ literal r .== a `opS` b
+        mkThm2E x y r = isTheorem $ do [a, b :: SEither Integer Integer] <- mapM free ["x", "y"]
+                                       constrain $ a .== literal x
+                                       constrain $ b .== literal y
+                                       return $ literal r .== a `opS` b
+        mkThm2T x y r = isTheorem $ do [a, b :: STuple Integer Integer] <- mapM free ["x", "y"]
                                        constrain $ a .== literal x
                                        constrain $ b .== literal y
                                        return $ literal r .== a `opS` b
@@ -800,5 +816,15 @@ ss = ["", "palTRY", "teSTing", "SBV", "sTRIngs", "123", "surely", "thIS", "hI", 
 -- Lists are the worst in coverage!
 sl :: [[Integer]]
 sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
+
+-- Ditto for maybe, either and tuple
+sm :: [Maybe Integer]
+sm = [Nothing, Just (-5), Just 0, Just 5]
+
+se :: [Either Integer Integer]
+se = [Left 3, Right 5]
+
+st :: [(Integer, Integer)]
+st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
