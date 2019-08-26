@@ -21,6 +21,18 @@ import System.Environment
 z3Version :: String
 z3Version = "4.8.6"
 
+z3WindowsName, z3WindowsPath :: String
+z3WindowsName = "z3-" ++ z3Version ++ "-x64-win.zip"
+z3WindowsPath = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ z3WindowsName
+
+z3LinuxName, z3LinuxPath :: String
+z3LinuxName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
+z3LinuxPath = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ z3LinuxName
+
+z3OSXName, z3OSXPath :: String
+z3OSXName = "z3-" ++ z3Version ++ "-x64-osx-10.14.6.zip"
+z3OSXPath = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ z3OSXName
+
 -- Get these from whatever the "official" latest GHC release is
 ghcLatest, cabalLatest, ghcPrev, cabalPrev :: String
 ghcLatest   = "8.6.5"
@@ -79,8 +91,8 @@ winTweaks :: Tweaks
 winTweaks = Tweaks { heavyTestPercentage = 0
                    , ghcVersion          = ghcLatest
                    , cabalInstallVersion = cabalLatest
-                   , z3Name              = "z3-" ++ z3Version ++ "-x64-win.zip"
-                   , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/z3-" ++ z3Version ++ "-x64-win.zip"
+                   , z3Name              = z3WindowsName
+                   , z3Path              = z3WindowsPath
                    , extras              = []
                    }
 
@@ -88,35 +100,31 @@ stableLinTweaks :: Tweaks
 stableLinTweaks = Tweaks { heavyTestPercentage = testPerc
                          , ghcVersion          = ghcLatest
                          , cabalInstallVersion = cabalLatest
-                         , z3Name              = downloadName
-                         , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                         , z3Name              = z3LinuxName
+                         , z3Path              = z3LinuxPath
                          , extras              = [mkEnvs testPerc True "linux" ""]
                          }
-  where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
-        testPerc     = 15
+  where testPerc     = 15
 
 prevLinTweaks :: Tweaks
 prevLinTweaks = Tweaks { heavyTestPercentage = testPerc
                        , ghcVersion          = ghcPrev
                        , cabalInstallVersion = cabalPrev
-                       , z3Name              = downloadName
-                       , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                       , z3Name              = z3LinuxName
+                       , z3Path              = z3LinuxPath
                        , extras              = [mkEnvs testPerc True "linux" ""]
                        }
-  where downloadName = "z3-" ++ z3Version ++ "-x64-ubuntu-16.04.zip"
-        testPerc     = 30
+  where testPerc     = 30
 
 osxTweaks :: Tweaks
 osxTweaks = Tweaks { heavyTestPercentage = testPerc
                    , ghcVersion          = ghcLatest
                    , cabalInstallVersion = cabalLatest
-                   , z3Name              = downloadName
-                   , z3Path              = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ downloadName
+                   , z3Name              = z3OSXName
+                   , z3Path              = z3OSXPath
                    , extras              = ["os: osx", mkEnvs testPerc False "osx" ""]
                    }
-  where downloadName = "z3-" ++ z3Version ++ "-x64-osx-10.14.5.zip"
-        testPerc     = 15
-
+  where testPerc     = 15
 
 appveyor :: [String]
 appveyor = header ++ body ++ footer
