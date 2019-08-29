@@ -22,6 +22,7 @@
 *** Checking Satisfiability, all solutions..
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 Looking for solution 1
 [SEND] (check-sat)
 [RECV] sat

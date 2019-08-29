@@ -29,6 +29,7 @@
 [RECV] sat
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (q2))
 [RECV] ((q2 (lambda ((x!1 Bool) (x!2 Bool)) (or (and x!2 x!1) (and x!2 (not x!1))))))
 [SEND] (get-value ((q2 false false)))

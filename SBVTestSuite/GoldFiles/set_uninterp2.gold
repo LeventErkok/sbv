@@ -7,6 +7,7 @@
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] (declare-datatypes ((E 0)) (((A) (B) (C))))

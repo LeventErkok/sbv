@@ -19,6 +19,7 @@
 [GOOD] ; --- formula ---
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (declare-datatypes ((SBVMaybe 1)) ((par (T)
                                            ((nothing_SBVMaybe)
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))

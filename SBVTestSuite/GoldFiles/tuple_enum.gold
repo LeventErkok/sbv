@@ -7,6 +7,7 @@
 [GOOD] (set-option :produce-models true)
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] (declare-datatypes ((E 0)) (((A) (B) (C))))
@@ -58,6 +59,7 @@
 [GOOD] (assert s23)
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (declare-datatypes ((SBVTuple3 3)) ((par (T1 T2 T3)
                                            ((mkSBVTuple3 (proj_1_SBVTuple3 T1)
                                                          (proj_2_SBVTuple3 T2)
