@@ -130,7 +130,7 @@ singleton = lift1 SeqUnit (Just (: []))
 -- Q.E.D.
 -- >>> sat $ \(l :: SList Word16) -> length l .>= 2 .&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
---   s0 = [0,0,8192] :: [Word16]
+--   s0 = [0,0,2] :: [Word16]
 listToListAt :: SymVal a => SList a -> SInteger -> SList a
 listToListAt s offset = subList s offset 1
 
