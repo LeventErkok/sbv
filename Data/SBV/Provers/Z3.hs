@@ -43,6 +43,7 @@ z3 = SMTSolver {
                               , supportsDataTypes          = True
                               , supportsFlattenedModels    = Just [ "(set-option :pp.max_depth      4294967295)"
                                                                   , "(set-option :pp.min_alias_size 4294967295)"
+                                                                  , "(set-option :model.inline_def  true      )"
                                                                   ]
                               }
          }
