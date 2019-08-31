@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.3, 2019-06-08
+* Latest Hackage released version: 8.4, 2019-08-31
 
-### Version 8.3.5, Not yet released
+### Version 8.4, 2019-08-31
 
   * SBV now supports arbitrary-size bit-vectors, i.e.,
     SWord 17, SInt 9, SWord 128 etc. These work like any
