@@ -58,8 +58,8 @@ data Kind = KBool
 -- the reserved names; see 'constructUKind' for details.
 instance Show Kind where
   show KBool                = "SBool"
-  show (KBounded False n)   = "SWord" ++ show n
-  show (KBounded True n)    = "SInt"  ++ show n
+  show (KBounded False n)   = pickType n "SWord" "SWord " ++ show n
+  show (KBounded True n)    = pickType n "SInt"  "SInt "  ++ show n
   show KUnbounded           = "SInteger"
   show KReal                = "SReal"
   show (KUninterpreted s _) = s
@@ -77,7 +77,8 @@ instance Show Kind where
 showBaseKind :: Kind -> String
 showBaseKind = sh
   where sh k@KBool             = noS (show k)
-        sh k@KBounded{}        = noS (show k)
+        sh (KBounded False n)  = pickType n "Word" "WordN " ++ show n
+        sh (KBounded True n)   = pickType n "Int"  "IntN "  ++ show n
         sh k@KUnbounded        = noS (show k)
         sh k@KReal             = noS (show k)
         sh k@KUninterpreted{}  = show k     -- Leave user-sorts untouched!
@@ -94,6 +95,12 @@ showBaseKind = sh
         -- Drop the initial S if it's there
         noS ('S':s) = s
         noS s       = s
+
+-- For historical reasons, we show 8-16-32-64 bit values with no space; others with a space. 
+pickType :: Int -> String -> String -> String
+pickType i standard other
+  | i `elem` [8, 16, 32, 64] = standard
+  | True                     = other
 
 -- | Put parens if necessary. This test is rather crummy, but seems to work ok
 kindParen :: String -> String

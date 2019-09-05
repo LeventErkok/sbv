@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.4, 2019-08-31
 
+### Version 8.4.5, Not yet released
+
+  * Minor fix to how kinds are shown for non-standard sizes.
+
 ### Version 8.4, 2019-08-31
 
   * SBV now supports arbitrary-size bit-vectors, i.e.,
