@@ -1,7 +1,7 @@
 INPUTS
   s0 :: SWord16, existential, aliasing "poly"
-  s1 :: SWord48, aliasing "sent"
-  s2 :: SWord48, aliasing "received"
+  s1 :: SWord 48, aliasing "sent"
+  s2 :: SWord 48, aliasing "received"
 CONSTANTS
 TABLES
 ARRAYS
