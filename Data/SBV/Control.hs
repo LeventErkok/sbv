@@ -154,7 +154,7 @@ they allow direct control of the solver. Here's a simple example:
 
 Note the type of @test@: it returns an optional pair of integers in the 'Symbolic' monad. We turn
 it into an IO value with the 'Data.SBV.Control.runSMT' function: (There's also 'Data.SBV.Control.runSMTWith' that uses a user specified
-solver instead of the default.)
+solver instead of the default. Note that 'Data.SBV.Provers.z3' is best supported (and tested), if you use another solver your results may vary!)
 
 @
     pair :: IO (Maybe (Integer, Integer))
