@@ -57,12 +57,11 @@ import Data.SBV
 import Data.SBV.Control
 
 import Data.Char  (chr, ord, isDigit)
-import Data.List  (zip3)
 import Data.Maybe (fromMaybe, catMaybes)
 
 import System.FilePath ((</>), (<.>))
 
-import Data.SBV.Internals (runSymbolic, Symbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..))
+import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..))
 
 ---------------------------------------------------------------------------------------
 -- Test environment; continuous integration
