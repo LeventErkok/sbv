@@ -74,7 +74,6 @@ module Data.SBV.Trans.Control (
      , SMTOption(..)
      ) where
 
-import Data.SBV.Core.Data     (SMTConfig(..))
 import Data.SBV.Core.Symbolic (MonadQuery(..), QueryT, Query, SymbolicT, QueryContext(..))
 
 import Data.SBV.Control.Query
