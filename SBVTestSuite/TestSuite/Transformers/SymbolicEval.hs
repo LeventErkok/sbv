@@ -16,7 +16,7 @@ module TestSuite.Transformers.SymbolicEval(tests) where
 import Control.Monad.Except (ExceptT, runExceptT, throwError)
 import Data.Either          (isLeft)
 
-import Data.SBV.Trans         (runSMT, sat, unliteral)
+import Data.SBV.Trans         (runSMT, sat)
 import Data.SBV.Trans.Control (query)
 
 import Documentation.SBV.Examples.Transformers.SymbolicEval
