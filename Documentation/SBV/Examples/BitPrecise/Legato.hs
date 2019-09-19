@@ -43,7 +43,6 @@ import Data.Array (Array, Ix(..), (!), (//), array)
 
 import Data.SBV
 import Data.SBV.Tools.CodeGen
-import Data.SBV.Internals (Timing(PrintTiming))
 
 import GHC.Generics (Generic)
 
