@@ -97,7 +97,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                        else die "Extra tokens after valid input"
   where inpToks = tokenize inp
 
-        die w = fail $  "SBV.Provers.SExpr: Failed to parse S-Expr: " ++ w
+        die w = Left $  "SBV.Provers.SExpr: Failed to parse S-Expr: " ++ w
                      ++ "\n*** Input : <" ++ inp ++ ">"
 
         parse []         = die "ran out of tokens"
