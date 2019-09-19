@@ -40,13 +40,13 @@ import qualified Data.IntMap.Strict as IM
 
 
 import Data.Char     (toLower)
-import Data.List     (unzip3, intercalate, nubBy, sortBy, sortOn)
+import Data.List     (intercalate, nubBy, sortBy, sortOn)
 import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   ( MonadQuery(..), QueryState(..), SMTModel(..), SMTResult(..), State(..)
+import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
                                 , incrementInternalCounter, validationRequested
                                 )
 

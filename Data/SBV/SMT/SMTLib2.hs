@@ -16,7 +16,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, unzip3, nub, sort)
+import Data.List  (intercalate, partition, nub, sort)
 import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
