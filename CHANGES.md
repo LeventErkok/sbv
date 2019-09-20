@@ -7,6 +7,9 @@
 
   * Minor fix to how kinds are shown for non-standard sizes.
 
+  * Changes to compile with GHC 8.8. Thanks to Oliver Charles
+    for the patch.
+
 ### Version 8.4, 2019-08-31
 
   * SBV now supports arbitrary-size bit-vectors, i.e.,
