@@ -40,9 +40,9 @@
 --
 --   * 'SInt8',  'SInt16',  'SInt32',  'SInt64': Symbolic Ints (signed).
 --
---   * 'SWord n': Generalized symbolic words of arbitrary bit-size.
+--   * 'SWord' @n@: Generalized symbolic words of arbitrary bit-size.
 --
---   * 'SInt n': Generalized symbolic ints of arbitrary bit-size.
+--   * 'SInt' @n@: Generalized symbolic ints of arbitrary bit-size.
 --
 --   * 'SInteger': Unbounded signed integers.
 --
