@@ -45,6 +45,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasString      = KString    `Set.member` kindInfo
         hasChar        = KChar      `Set.member` kindInfo
         hasDouble      = KDouble    `Set.member` kindInfo
+        hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
         usorts         = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
@@ -115,7 +116,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                      | True                  = "cannot determine the SMTLib-logic to use"
              in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
 
-           | hasDouble || hasFloat
+           | hasDouble || hasFloat || hasRounding
            = if not (null foralls)
              then ["(set-logic ALL)"]
              else if hasBVs
