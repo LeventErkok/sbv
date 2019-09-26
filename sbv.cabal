@@ -389,3 +389,41 @@ Test-Suite SBVHLint
     Other-modules   : Utils.SBVTestFramework
     main-is:          SBVHLint.hs
     type:             exitcode-stdio-1.0
+
+Benchmark SBVBench
+  type            : exitcode-stdio-1.0
+  default-language: Haskell2010
+  ghc-options     : -with-rtsopts=-K64m -O2
+  other-extensions: DataKinds
+                    DeriveAnyClass
+                    DeriveDataTypeable
+                    FlexibleContexts
+                    GeneralizedNewtypeDeriving
+                    OverloadedLists
+                    OverloadedStrings
+                    Rank2Types
+                    RankNTypes
+                    ScopedTypeVariables
+                    StandaloneDeriving
+                    TemplateHaskell
+                    TupleSections
+                    TypeApplications
+  Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
+                , sbv, directory, random, mtl, containers
+                , criterion, process, deepseq
+  Hs-Source-Dirs  : SBVBenchSuite
+  main-is         : SBVBench.hs
+  Other-modules   : Utils.SBVBenchFramework
+                  , BenchSuite.Overhead.SBVOverhead
+                  , BenchSuite.Puzzles.Birthday
+                  , BenchSuite.Puzzles.Coins
+                  , BenchSuite.Puzzles.Counts
+                  , BenchSuite.Puzzles.DogCatMouse
+                  , BenchSuite.Puzzles.Euler185
+                  , BenchSuite.Puzzles.Garden
+                  , BenchSuite.Puzzles.LadyAndTigers
+                  , BenchSuite.Puzzles.MagicSquare
+                  , BenchSuite.Puzzles.NQueens
+                  , BenchSuite.Puzzles.SendMoreMoney
+                  , BenchSuite.Puzzles.Sudoku
+                  , BenchSuite.Puzzles.U2Bridge
