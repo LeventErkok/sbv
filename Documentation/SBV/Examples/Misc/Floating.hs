@@ -58,21 +58,21 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -1.1967979e-6 :: Float
---   y =  1.5629658e-3 :: Float
---   z =      34.66332 :: Float
+--   x = 3.1705284e18 :: Float
+--   y =  5.634997e12 :: Float
+--   z = -1.503316e20 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x = -1.1967979e-6 :: Float
--- >>> let y =  1.5629658e-3 :: Float
--- >>> let z =      34.66332 :: Float
+-- >>> let x = 3.1705284e18 :: Float
+-- >>> let y =  5.634997e12 :: Float
+-- >>> let z = -1.503316e20 :: Float
 -- >>> x + (y + z)
--- 34.664883
+-- -1.4716107e20
 -- >>> (x + y) + z
--- 34.66488
+-- -1.4716106e20
 --
--- Note the significant difference between two additions!
+-- Note the difference in the last digit before the exponent!
 assocPlusRegular :: IO ThmResult
 assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
                               let lhs = x+(y+z)
@@ -92,18 +92,17 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 2.2922064e-37 :: Float
---   b =       1.1e-44 :: Float
+--   a = -2.032879e-20 :: Float
+--   b =  4.887041e-39 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 2.2922064e-37 :: Float
--- >>> let b =       1.1e-44 :: Float
+-- >>> let a = -2.032879e-20 :: Float
+-- >>> let b =  4.887041e-39 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
 -- False
---
 nonZeroAddition :: IO ThmResult
 nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
                              constrain $ fpIsPoint a
@@ -122,13 +121,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.2896893825010637e308 :: Double
+--   a = -6.72794746807321e-309 :: Double
 --
 -- Indeed, we have:
 --
--- >>> let a = 1.2896893825010637e308 :: Double
+-- >>> let a = -6.72794746807321e-309 :: Double
 -- >>> a * (1/a)
--- 0.9999999999999998
+-- 0.9999999999999999
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sDouble "a"
                          constrain $ fpIsPoint a
@@ -148,33 +147,33 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardNegative :: RoundingMode
---   x  =          0.21655247 :: Float
---   y  =          -1.0332974 :: Float
+--   rm = RoundNearestTiesToAway :: RoundingMode
+--   x  =                    1.0 :: Float
+--   y  =            -0.43749997 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> 0.21655247 + (-1.0332974) :: Float
--- -0.8167449
+-- >>> 1.0 + (-0.43749997) :: Float
+-- 0.5625
 --
--- While we cannot directly see the result when the mode is 'RoundTowardNegative' in Haskell, we can use
+-- While we cannot directly see the result when the mode is 'RoundNearestTiesToAway' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardNegative 0.21655247 (-1.0332974 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundNearestTiesToAway 1.0 (-0.43749997 :: SFloat)
 -- Satisfiable. Model:
---   s0 = -0.816745 :: Float
+--   s0 = 0.56250006 :: Float
 --
--- We can see why these two resuls are indeed different: The 'RoundTowardNegative'
--- (which rounds towards negative-infinity) produces a smaller result. Indeed, if we treat these numbers
+-- We can see why these two resuls are indeed different: The 'RoundNearestTiesToAway'
+-- (which rounds away from zero) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >> 0.21655247 + (-1.0332974) :: Double
--- -0.8167449299999999
+-- >> 1.0 + (-0.43749997 :: Double)
+-- 0.56250003
 --
--- we see that the "more precise" result is smaller than what the 'Float' value is, justifying the
--- smaller value with 'RoundTowardNegative'. A more detailed study is beyond our current scope, so we'll
+-- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
+-- larger value with 'RoundNearestTiesToAway'. A more detailed study is beyond our current scope, so we'll
 -- merely note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.
