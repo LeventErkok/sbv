@@ -32,7 +32,6 @@
 module Documentation.SBV.Examples.BitPrecise.MultMask where
 
 import Data.SBV
-import Data.SBV.Control
 
 -- | Find the multiplier and the mask as described. We have:
 --
@@ -48,16 +47,11 @@ import Data.SBV.Control
 -- NB. Depending on your z3 version, you might also get the following
 -- multiplier as the result: 0x8202040810204081. That value works just fine as well!
 --
--- Note that we have to send z3 custom configuration for this problem as
--- otherwise it takes too long. See <http://github.com/Z3Prover/z3/issues/2075>
--- for details.
+-- Note that we have to use a custom SAT command for this problem, as otherwise it takes too
+-- long. See <https://github.com/Z3Prover/z3/issues/2587> for details.
 maskAndMult :: IO ()
-maskAndMult = print =<< satWith z3{printBase=16} find
-  where find = do -- The magic incantations that make z3 go faster on this
-                  setOption $ OptionKeyword ":smt.auto_config" ["false"]
-                  setOption $ OptionKeyword ":smt.relevancy"   ["0"]
-
-                  mask <- exists "mask"
+maskAndMult = print =<< satWith z3{printBase=16, satCmd = "(check-sat-using (and-then simplify smtfd))"} find
+  where find = do mask <- exists "mask"
                   mult <- exists "mult"
                   inp  <- forall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)
