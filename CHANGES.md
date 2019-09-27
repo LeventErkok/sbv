@@ -10,6 +10,11 @@
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
     for the patch.
 
+  * Thanks to Jeffrey Young, SBV now has a performance benchmark
+    test-suite. The framework still new, but should help
+    in the long run to make sure SBV performance doesn't regress
+    on its test-suite, and by extension in general usage.
+
 ### Version 8.4, 2019-08-31
 
   * SBV now supports arbitrary-size bit-vectors, i.e.,

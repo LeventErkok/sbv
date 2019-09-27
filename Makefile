@@ -38,6 +38,9 @@ install: tags
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
+bench:
+	cabal new-bench
+
 test: lintTest docTest regularTests
 
 lintTest:
