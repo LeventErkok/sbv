@@ -534,9 +534,9 @@ True
 False
 >>> sat $ \(x::SSet (Maybe Integer)) y z -> distinct [x, y, z]
 Satisfiable. Model:
-  s0 = U - {Nothing} :: {Maybe Integer}
-  s1 =            {} :: {Maybe Integer}
-  s2 =             U :: {Maybe Integer}
+  s0 = U - {Just 0} :: {Maybe Integer}
+  s1 =           {} :: {Maybe Integer}
+  s2 =            U :: {Maybe Integer}
 
 However, if we compare two sets that are constructed as regular or in the complement
 form, we have to use a proof to establish equality:
