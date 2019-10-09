@@ -48,3 +48,5 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
 
          t2 :: (String -> Symbolic SWord8) -> (String -> Symbolic SWord8) -> (SWord8 -> SWord8 -> SBool) -> Predicate
          t2 q1 q2 act = q1 "x" >>= \x -> q2 "y" >>= \y -> return    $ act x y
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

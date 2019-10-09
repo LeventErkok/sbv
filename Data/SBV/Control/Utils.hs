@@ -1130,9 +1130,7 @@ getUIFunCVAssoc mbi (nm, typ) = do
       tryPointWise bailOut = do mbSExprs <- pointWiseExtract nm typ
                                 case mbSExprs of
                                   Nothing     -> bailOut
-                                  Just sExprs -> case convert sExprs of
-                                                   Just res -> return res
-                                                   Nothing  -> bailOut
+                                  Just sExprs -> maybe bailOut return (convert sExprs)
 
   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> let bailOut = bad r Nothing
                                                            in case parseSExprFunction e of
