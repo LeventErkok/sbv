@@ -1,14 +1,14 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.4, 2019-08-31
+* Latest Hackage released version: 8.5, 2019-10-16
 
-### Version 8.4.5, Not yet released
-
-  * Minor fix to how kinds are shown for non-standard sizes.
+### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
     for the patch.
+
+  * Minor fix to how kinds are shown for non-standard sizes.
 
   * Thanks to Jeffrey Young, SBV now has a performance benchmark
     test-suite. The framework still new, but should help
