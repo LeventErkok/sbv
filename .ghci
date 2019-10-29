@@ -6,7 +6,7 @@
 :set -i./Data -i./SBVTestSuite
 :{
 loadEverything _ = (":load " ++) . unwords . filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) <$> System.FilePath.Glob.glob "**/*.hs"
-  where ignore = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "Paths_sbv.hs"]
+  where ignore = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "Paths_sbv.hs", "SBVBenchSuite"]
 :}
 :def loadEverything loadEverything
 :loadEverything
