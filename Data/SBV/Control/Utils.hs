@@ -402,9 +402,8 @@ instance (SMTValue a, Typeable a) => SMTValue [a] where
           c2w8 = fromIntegral . ord
 
    -- Otherwise we have a good old sequence, just parse it simply:
-   sexprToVal (EApp [ECon "seq.++", l, r])            = do l' <- sexprToVal l
-                                                           r' <- sexprToVal r
-                                                           return $ l' ++ r'
+   sexprToVal (EApp (ECon "seq.++" : rest))           = do elts <- mapM sexprToVal rest
+                                                           return $ concat elts
    sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
                                                            return [a']
    sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return []
@@ -980,7 +979,7 @@ recoverKindedValue k e = case k of
                 walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek v of
                                                                  Just w -> [cvVal w]
                                                                  Nothing -> error $ "Cannot parse a sequence item of kind " ++ show ek ++ " from: " ++ show v ++ extra v
-                walk (EApp [ECon "seq.++", pre, post])       = walk pre ++ walk post
+                walk (EApp (ECon "seq.++" : rest))           = concatMap walk rest
                 walk cur                                     = error $ "Expected a sequence constant, but received: " ++ show cur ++ extra cur
 
                 extra cur | show cur == t = ""

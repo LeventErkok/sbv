@@ -8,6 +8,9 @@
   * Fix typo in error message. Thanks to Oliver Charles
     for the patch.
 
+  * Fix parsing of sequence counter-examples to accommodate
+    recent changes in z3.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
