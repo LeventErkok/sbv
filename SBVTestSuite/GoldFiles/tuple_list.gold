@@ -58,22 +58,16 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (seq.++ (seq.unit (mkSBVTuple2 2 (as seq.empty (Seq (SBVTuple2 Int String)))))
-               (seq.++ (seq.unit (mkSBVTuple2 1
-                                              (seq.++ (seq.unit (mkSBVTuple2 3 "foo"))
-                                                      (seq.++ (seq.unit (mkSBVTuple2 0
-                                                                                     "bar"))
-                                                              (seq.++ (seq.unit (mkSBVTuple2 (- 1)
-                                                                                             "baz"))
-                                                                      (seq.++ (seq.unit (mkSBVTuple2 (- 2)
-                                                                                                     "quux"))
-                                                                              (seq.unit (mkSBVTuple2 (- 3)
-                                                                                                     "enough"))))))))
-                       (seq.++ (seq.unit (mkSBVTuple2 (- 4)
-                                                      (as seq.empty
-                                                          (Seq (SBVTuple2 Int String)))))
-                               (seq.unit (mkSBVTuple2 (- 5)
-                                                      (as seq.empty
-                                                          (Seq (SBVTuple2 Int String))))))))))
+               (seq.unit (mkSBVTuple2 1
+                                      (seq.++ (seq.unit (mkSBVTuple2 3 "foo"))
+                                              (seq.unit (mkSBVTuple2 0 "bar"))
+                                              (seq.unit (mkSBVTuple2 (- 1) "baz"))
+                                              (seq.unit (mkSBVTuple2 (- 2) "quux"))
+                                              (seq.unit (mkSBVTuple2 (- 3) "enough")))))
+               (seq.unit (mkSBVTuple2 (- 4)
+                                      (as seq.empty (Seq (SBVTuple2 Int String)))))
+               (seq.unit (mkSBVTuple2 (- 5)
+                                      (as seq.empty (Seq (SBVTuple2 Int String))))))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

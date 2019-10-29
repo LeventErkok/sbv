@@ -75,15 +75,13 @@
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 (seq.++ (seq.unit (mkSBVTuple2 B (as seq.empty (Seq Bool))))
-               (seq.++ (seq.unit (mkSBVTuple2 A
-                                              (seq.++ (seq.unit true) (seq.unit false))))
-                       (seq.unit (mkSBVTuple2 C
-                                              (seq.++ (seq.unit false)
-                                                      (seq.++ (seq.unit false)
-                                                              (seq.++ (seq.unit false)
-                                                                      (seq.++ (seq.unit false)
-                                                                              (seq.++ (seq.unit true)
-                                                                                      (seq.unit false))))))))))))
+               (seq.unit (mkSBVTuple2 A (seq.++ (seq.unit true) (seq.unit false))))
+               (seq.unit (mkSBVTuple2 C
+                                      (seq.++ (seq.unit false)
+                                              (seq.unit false)
+                                              (seq.unit false)
+                                              (seq.unit false)
+                                              (seq.++ (seq.unit true) (seq.unit false))))))))
 [SEND] (get-value (s24))
 [RECV] ((s24 (mkSBVTuple2 #x05 (mkSBVTuple3 C #x41 (fp #b0 #x82 #b00000011110101110000101)))))
 *** Solver   : Z3

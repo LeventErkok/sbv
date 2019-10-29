@@ -27,9 +27,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.++ (seq.unit 1)
-               (seq.++ (seq.unit 2)
-                       (seq.++ (seq.unit 3) (seq.++ (seq.unit 4) (seq.unit 5)))))))
+[RECV] ((s0 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
