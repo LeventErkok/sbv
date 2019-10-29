@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 8.5, 2019-10-16
 
+### Version 8.5.5, Not yet released
+
+  * Fix typo in error message. Thanks to Oliver Charles
+    for the patch.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
