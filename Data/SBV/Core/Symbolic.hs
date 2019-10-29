@@ -1143,7 +1143,7 @@ registerLabel whence st nm
   | '|' `elem` nm
   = err "contains the character `|', which is not allowed!"
   | '\\' `elem` nm
-  = err "contains the character `\', which is not allowed!"
+  = err "contains the character `\\', which is not allowed!"
   | True
   = do old <- readIORef $ rUsedLbls st
        if nm `Set.member` old
