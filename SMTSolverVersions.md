@@ -19,7 +19,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jul 6, 2019
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Oct 29th, 2019
+      * Version as downloaded from the above site on Nov 16th, 2019
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
 	always use their latest release.
