@@ -19,7 +19,7 @@ import System.Environment
 ---------------------------------------------------------------------------------
 -- Get this from latest z3 setting on github
 z3Version :: String
-z3Version = "4.8.7"
+z3Version = "4.8.8"
 
 z3WindowsName, z3WindowsPath :: String
 z3WindowsName = "z3-" ++ z3Version ++ "-x64-win.zip"
