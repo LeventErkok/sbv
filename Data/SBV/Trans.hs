@@ -27,7 +27,7 @@ module Data.SBV.Trans (
   -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64, SInt, IntN
   -- *** Converting between fixed-size and arbitrary bitvectors
-  , IsNonZero(..) , FromSized, ToSized, fromSized, toSized
+  , IsNonZero, FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
   , SInteger
   -- ** Floating point numbers
