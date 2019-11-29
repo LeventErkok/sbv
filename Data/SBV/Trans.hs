@@ -165,6 +165,8 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.Provers.Prover
 
 import Data.SBV.Client
+import Data.SBV.Client.BaseIO  (FromSized, ToSized, fromSized, toSized)
+
 
 import Data.SBV.Utils.TDiff   (Timing(..))
 
