@@ -23,9 +23,11 @@ module Data.SBV.Trans (
   , sAnd, sOr, sAny, sAll
   -- ** Bit-vectors
   -- *** Unsigned bit-vectors
-  , SWord8, SWord16, SWord32, SWord64
+  , SWord8, SWord16, SWord32, SWord64, SWord, WordN
   -- *** Signed bit-vectors
-  , SInt8, SInt16, SInt32, SInt64
+  , SInt8, SInt16, SInt32, SInt64, SInt, IntN
+  -- *** Converting between fixed-size and arbitrary bitvectors
+  , IsNonZero, FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
   , SInteger
   -- ** Floating point numbers
@@ -163,6 +165,8 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.Provers.Prover
 
 import Data.SBV.Client
+import Data.SBV.Client.BaseIO  (FromSized, ToSized, fromSized, toSized)
+
 
 import Data.SBV.Utils.TDiff   (Timing(..))
 
