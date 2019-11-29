@@ -11,6 +11,9 @@
   * Fix parsing of sequence counter-examples to accommodate
     recent changes in z3.
 
+  * Add missing exports related to N-bit words. Thanks to
+    Markus Barenhoff for the patch.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
