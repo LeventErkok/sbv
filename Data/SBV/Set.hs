@@ -379,8 +379,8 @@ isSubsetOf sa sb
 --
 -- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isProperSubsetOf` s
 -- Falsifiable. Counter-example:
---   s0 =       0 :: Integer
---   s1 = U - {0} :: {Integer}
+--   s0 =         0 :: Integer
+--   s1 = U - {0,1} :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `member` s .=> (x `delete` s) `isProperSubsetOf` s
 -- Q.E.D.
