@@ -529,20 +529,19 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
        -- TODO: The following is brittle. We should really have a function elsewhere
        -- that walks the SBVExprs and collects the SWs together.
        usedVariables = Set.unions (retSWs : map usedCgVal outVars ++ map usedAsgn assignments)
-         where nid (SV _ i) = i
-               retSWs = maybe Set.empty (Set.singleton . nid) mbRet
+         where retSWs = maybe Set.empty Set.singleton mbRet
 
-               usedCgVal (_, CgAtomic s)  = Set.singleton $ nid s
-               usedCgVal (_, CgArray ss)  = Set.fromList $ map nid ss
-               usedAsgn  (_, SBVApp o ss) = Set.union (opSWs o) (Set.fromList $ map nid ss)
+               usedCgVal (_, CgAtomic s)  = Set.singleton s
+               usedCgVal (_, CgArray ss)  = Set.fromList ss
+               usedAsgn  (_, SBVApp o ss) = Set.union (opSWs o) (Set.fromList ss)
 
-               opSWs (LkUp _ a b)             = Set.fromList [nid a, nid b]
-               opSWs (IEEEFP (FP_Cast _ _ s)) = Set.singleton $ nid s
+               opSWs (LkUp _ a b)             = Set.fromList [a, b]
+               opSWs (IEEEFP (FP_Cast _ _ s)) = Set.singleton s
                opSWs _                        = Set.empty
 
        isAlive :: (String, CgVal) -> Bool
-       isAlive (_, CgAtomic (SV _ i)) = i `Set.member` usedVariables
-       isAlive (_, _)                 = True
+       isAlive (_, CgAtomic sv) = sv `Set.member` usedVariables
+       isAlive (_, _)           = True
 
        genIO :: Bool -> (Bool, (String, CgVal)) -> [Doc]
        genIO True  (alive, (cNm, CgAtomic sv)) = [declSV typeWidth sv  <+> text "=" <+> text cNm P.<> semi               | alive]
