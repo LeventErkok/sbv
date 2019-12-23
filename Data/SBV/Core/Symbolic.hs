@@ -107,7 +107,15 @@ import Control.Monad.Fail as Fail
 newtype NodeId = NodeId Int deriving (Eq, Ord)
 
 -- | A symbolic word, tracking it's signedness and size.
-data SV = SV !Kind !NodeId deriving (Eq, Ord)
+data SV = SV !Kind !NodeId
+
+-- | For equality, we merely use the node-id
+instance Eq SV where
+  SV _ n1 == SV _ n2 = n1 == n2
+
+-- | Again, simply use the node-id for ordering
+instance Ord SV where
+  SV _ n1 `compare` SV _ n2 = n1 `compare` n2
 
 instance HasKind SV where
   kindOf (SV k _) = k
