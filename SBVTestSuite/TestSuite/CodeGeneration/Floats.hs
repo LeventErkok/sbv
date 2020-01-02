@@ -22,7 +22,9 @@ tests :: TestTree
 tests = testGroup "CodeGeneration.Floats" [
    goldenVsStringShow "floats_cgen" code
  ]
- where code  = snd <$> compileToCLib' "floatCodeGen" cases
+ where code  = thd <$> compileToCLib' "floatCodeGen" cases
+
+       thd (_, _, r) = r
 
        setup = do cgSRealType CgLongDouble
                   cgIntegerSize 64

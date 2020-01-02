@@ -50,12 +50,17 @@ import GHC.Stack
 --
 --   * The final argument is the function to be compiled.
 --
--- Compilation will also generate a @Makefile@,  a header file, and a driver (test) program, etc.
-compileToC :: Maybe FilePath -> String -> SBVCodeGen () -> IO ()
-compileToC mbDirName nm f = compileToC' nm f >>= renderCgPgmBundle mbDirName
+-- Compilation will also generate a @Makefile@,  a header file, and a driver (test) program, etc. As a
+-- result, we return whatever the code-gen function returns. Most uses should simply have @()@ as
+-- the return type here, but the value can be useful if you want to chain the result of
+-- one compilation act to the next.
+compileToC :: Maybe FilePath -> String -> SBVCodeGen a -> IO a
+compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
+                               renderCgPgmBundle mbDirName (cfg, bundle)
+                               return retVal
 
 -- | Lower level version of 'compileToC', producing a 'CgPgmBundle'
-compileToC' :: String -> SBVCodeGen () -> IO (CgConfig, CgPgmBundle)
+compileToC' :: String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
 compileToC' nm f = do rands <- randoms `fmap` newStdGen
                       codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
 
@@ -69,12 +74,16 @@ compileToC' nm f = do rands <- randoms `fmap` newStdGen
 --
 --   * The third argument is the list of functions to include, in the form of function-name/code pairs, similar
 --     to the second and third arguments of 'compileToC', except in a list.
-compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen ())] -> IO ()
-compileToCLib mbDirName libName comps = compileToCLib' libName comps >>= renderCgPgmBundle mbDirName
+compileToCLib :: Maybe FilePath -> String -> [(String, SBVCodeGen a)] -> IO [a]
+compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' libName comps
+                                           renderCgPgmBundle mbDirName (cfg, pgm)
+                                           return retVal
 
 -- | Lower level version of 'compileToCLib', producing a 'CgPgmBundle'
-compileToCLib' :: String -> [(String, SBVCodeGen ())] -> IO (CgConfig, CgPgmBundle)
-compileToCLib' libName comps = mergeToLib libName `fmap` mapM (uncurry compileToC') comps
+compileToCLib' :: String -> [(String, SBVCodeGen a)] -> IO ([a], CgConfig, CgPgmBundle)
+compileToCLib' libName comps = do resCfgBundles <- mapM (uncurry compileToC') comps
+                                  let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]
+                                  return ([r | (r, _, _) <- resCfgBundles], finalCfg, finalPgm)
 
 ---------------------------------------------------------------------------
 -- * Implementation

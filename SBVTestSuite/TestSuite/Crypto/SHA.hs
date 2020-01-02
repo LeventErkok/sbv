@@ -21,7 +21,7 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "Crypto.AES" [
-   goldenVsStringShow "sha256HashBlock" $ snd <$> compileToC' "sha256HashBlock" c
+   goldenVsStringShow "sha256HashBlock" $ (\(_, _, r) -> r) <$> compileToC' "sha256HashBlock" c
  ]
  where c = do let algorithm = sha256P
 

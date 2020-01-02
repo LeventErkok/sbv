@@ -21,11 +21,12 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "CodeGeneration.PopulationCount" [
-   goldenVsStringShow "popCount1" $ snd <$> genC False
- , goldenVsStringShow "popCount2" $ snd <$> genC True
+   goldenVsStringShow "popCount1" $ thd <$> genC False
+ , goldenVsStringShow "popCount2" $ thd <$> genC True
  ]
  where genC b = compileToC' "popCount" $ do
                   cgSetDriverValues [0x0123456789ABCDEF]
                   cgPerformRTCs b
                   x <- cgInput "x"
                   cgReturn $ popCountFast x
+       thd (_, _, r) = r

@@ -23,7 +23,8 @@ tests :: TestTree
 tests = testGroup "CodeGeneration.GCD" [
    goldenVsStringShow "gcd" gcdC
  ]
- where gcdC = snd <$> compileToC' "sgcd" (do
+ where thd (_, _, r) = r
+       gcdC = thd <$> compileToC' "sgcd" (do
                 cgSetDriverValues [55,154]
                 x <- cgInput "x"
                 y <- cgInput "y"

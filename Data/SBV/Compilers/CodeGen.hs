@@ -335,9 +335,9 @@ instance Show CgPgmBundle where
 
 -- | Generate code for a symbolic program, returning a Code-gen bundle, i.e., collection
 -- of makefiles, source code, headers, etc.
-codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen () -> IO (CgConfig, CgPgmBundle)
+codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
 codeGen l cgConfig nm (SBVCodeGen comp) = do
-   (((), st'), res) <- runSymbolic CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
+   ((retVal, st'), res) <- runSymbolic CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
                 }
@@ -346,7 +346,7 @@ codeGen l cgConfig nm (SBVCodeGen comp) = do
    unless (null dupNames) $
         error $ "SBV.codeGen: " ++ show nm ++ " has following argument names duplicated: " ++ unwords dupNames
 
-   return (cgFinalConfig st, translate l (cgFinalConfig st) nm st res)
+   return (retVal, cgFinalConfig st, translate l (cgFinalConfig st) nm st res)
 
 -- | Render a code-gen bundle to a directory or to stdout
 renderCgPgmBundle :: Maybe FilePath -> (CgConfig, CgPgmBundle) -> IO ()

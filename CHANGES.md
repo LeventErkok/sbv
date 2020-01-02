@@ -14,6 +14,11 @@
   * Add missing exports related to N-bit words. Thanks to
     Markus Barenhoff for the patch.
 
+  * Generalized code-generation functions to accept a function
+    with an arbitrary return type, which was previously just unit.
+    This allows for complicated code-generation scenarios where
+    one code-gen run can produce input to the next.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles

@@ -26,14 +26,16 @@ tests = testGroup "CodeGeneration.CgTests" [
  , goldenVsStringShow "selUnchecked" $ genSelect False "selUnChecked"
  , goldenVsStringShow "codeGen1"       foo
  ]
- where genSelect b n = snd <$> compileToC' n (do
+ where thd (_, _, r) = r
+
+       genSelect b n = thd <$> compileToC' n (do
                          cgSetDriverValues [65]
                          cgPerformRTCs b
                          let sel :: SWord8 -> SWord8
                              sel x = select [1, x+2] 3 x
                          x <- cgInput "x"
                          cgReturn $ sel x)
-       foo = snd <$> compileToC' "foo" (do
+       foo = thd <$> compileToC' "foo" (do
                         cgSetDriverValues $ repeat 0
                         (x::SInt16)    <- cgInput "x"
                         (ys::[SInt64]) <- cgInputArr 45 "xArr"

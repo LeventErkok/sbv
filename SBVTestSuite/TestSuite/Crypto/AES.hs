@@ -21,9 +21,9 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests = testGroup "Crypto.AES" [
-   goldenVsStringShow "aes128Enc" $ snd <$> compileToC'    "aes128Enc" (aes128EncDec True)
- , goldenVsStringShow "aes128Dec" $ snd <$> compileToC'    "aes128Dec" (aes128EncDec False)
- , goldenVsStringShow "aes128Lib" $ snd <$> compileToCLib' "aes128Lib" aes128Comps
+   goldenVsStringShow "aes128Enc" $ thd <$> compileToC'    "aes128Enc" (aes128EncDec True)
+ , goldenVsStringShow "aes128Dec" $ thd <$> compileToC'    "aes128Dec" (aes128EncDec False)
+ , goldenVsStringShow "aes128Lib" $ thd <$> compileToCLib' "aes128Lib" aes128Comps
  ]
  where aes128EncDec d = do pt  <- cgInputArr 4 "pt"
                            key <- cgInputArr 4 "key"
@@ -34,3 +34,4 @@ tests = testGroup "Crypto.AES" [
                            cgOutputArr "ct" res
        aes128Comps = [(f, setVals c) | (f, c) <- aesLibComponents 128]
        setVals c = cgSetDriverValues (repeat 0) >> c
+       thd (_, _, r) = r

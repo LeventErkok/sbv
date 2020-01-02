@@ -32,6 +32,8 @@
 
 module Documentation.SBV.Examples.Crypto.AES where
 
+import Control.Monad (void)
+
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 import Data.SBV.Tools.Polynomial
@@ -570,7 +572,7 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
 -- | Generate code for AES functionality; given the key size.
 cgAESLibrary :: Int -> Maybe FilePath -> IO ()
 cgAESLibrary sz mbd
-  | sz `elem` [128, 192, 256] = compileToCLib mbd nm (aesLibComponents sz)
+  | sz `elem` [128, 192, 256] = void $ compileToCLib mbd nm (aesLibComponents sz)
   | True                      = error $ "cgAESLibrary: Size must be one of 128, 192, or 256, received: " ++ show sz
   where nm = "aes" ++ show sz ++ "Lib"
 

@@ -33,7 +33,10 @@ tests = testGroup "BitPrecise.Legato" [
                        flagC <- free "flagC"
                        flagZ <- free "flagZ"
                        output $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
-       legatoC = snd <$> compileToC' "legatoMult" (do
+
+       thd (_, _, r) = r
+
+       legatoC = thd <$> compileToC' "legatoMult" (do
                     cgSetDriverValues [87, 92]
                     x <- cgInput "x"
                     y <- cgInput "y"

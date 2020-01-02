@@ -23,7 +23,8 @@ tests :: TestTree
 tests = testGroup "BitPrecise.MergeSort" [
    goldenVsStringShow "merge" mergeC
  ]
- where mergeC = snd <$> compileToC' "merge" (do
+ where thd (_, _, r) = r
+       mergeC = thd <$> compileToC' "merge" (do
                    cgSetDriverValues [10, 6, 4, 82, 71]
                    xs <- cgInputArr 5 "xs"
                    cgOutputArr "ys" (mergeSort xs))
