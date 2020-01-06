@@ -304,7 +304,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSV                skolemMap          e ++ ")) ; " ++ m
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
 
-        userName s = case s `lookup` map snd inputs of
+        userNameMap = M.fromList (map snd inputs)
+        userName s = case M.lookup s userNameMap of
                         Just u  | show s /= u -> " ; tracks user variable " ++ show u
                         _ -> ""
 
