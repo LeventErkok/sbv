@@ -894,7 +894,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
-                    , rinps        :: IORef ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- User defined, and internal existential
+                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set String) -- User defined, and internal existential
                     , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                     , routs        :: IORef [SV]
                     , rtblMap      :: IORef TableMap
@@ -1071,7 +1071,7 @@ internalVariable st k = do (sv, nm) <- newSV st k
                                      Concrete{}           -> ALL
                                n = "__internal_sbv_" ++ nm
                                v = (sv, n)
-                           modifyState st rinps (first ((q, v) :))
+                           modifyState st rinps (first ((q, v) :) *** Set.insert n)
                                      $ modifyIncState st rNewInps (\newInps -> case q of
                                                                                  EX -> v : newInps
                                                                                  -- I don't think the following can actually happen
@@ -1373,10 +1373,9 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
 introduceUserName :: State -> Bool -> String -> Kind -> Quantifier -> SV -> IO SVal
 introduceUserName st isTracker nmOrig k q sv = do
-        (is, ints) <- readIORef (rinps st)
+        (_, old) <- readIORef (rinps st)
 
-        let old = [n | (_, (_, n)) <- is] ++ [n | (_, n) <- ints]
-            nm  = mkUnique nmOrig old
+        let nm  = mkUnique nmOrig old
 
         if isTracker && q == ALL
            then error $ "SBV: Impossible happened! A universally quantified tracker variable is being introduced: " ++ show nm
@@ -1390,16 +1389,16 @@ introduceUserName st isTracker nmOrig k q sv = do
                                                            , "Only existential variables are supported in query mode."
                                                            ]
                    if isTracker
-                      then modifyState st rinps (second ((:) (sv, nm)))
+                      then modifyState st rinps (second ((:) (sv, nm)) *** Set.insert nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                      else modifyState st rinps (first ((:) (q, (sv, nm))))
+                      else modifyState st rinps (first ((:) (q, (sv, nm))) *** Set.insert nm)
                                      $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
    where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
-         mkUnique prefix names = head $ dropWhile (`elem` names) (prefix : [prefix ++ "_" ++ show i | i <- [(0::Int)..]])
+         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix ++ "_" ++ show i | i <- [(0::Int)..]])
 
 -- | Generalization of 'Data.SBV.addAxiom'
 addAxiom :: MonadSymbolic m => String -> [String] -> m ()
@@ -1423,7 +1422,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
      pgm       <- newIORef (SBVPgm S.empty)
      emap      <- newIORef Map.empty
      cmap      <- newIORef Map.empty
-     inps      <- newIORef ([], [])
+     inps      <- newIORef (([], []), Set.empty)
      outs      <- newIORef []
      tables    <- newIORef Map.empty
      arrays    <- newIORef IMap.empty
@@ -1491,7 +1490,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
                                        , rObservables=observes
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
-   inpsO <- (reverse *** reverse) <$> readIORef inps
+   inpsO <- (reverse *** reverse) . fst <$> readIORef inps
    outsO <- reverse <$> readIORef outs
 
    let swap  (a, b)              = (b, a)

@@ -1165,7 +1165,7 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
 -- | What are the top level inputs? Trackers are returned as top level existentials
 getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m [(Quantifier, NamedSymVar)]
 getQuantifiedInputs = do State{rinps} <- queryState
-                         (rQinps, rTrackers) <- liftIO $ readIORef rinps
+                         ((rQinps, rTrackers), _) <- liftIO $ readIORef rinps
 
                          let qinps    = reverse rQinps
                              trackers = map (EX,) $ reverse rTrackers
@@ -1610,7 +1610,7 @@ executeQuery queryContext (QueryT userQuery) = do
                     case queryContext of
                       QueryInternal -> return ()         -- we're good, internal usages don't mess with scopes
                       QueryExternal -> do
-                        (userInps, _) <- readIORef (rinps st)
+                        ((userInps, _), _) <- readIORef (rinps st)
                         let badInps = reverse [n | (ALL, (_, n)) <- userInps]
                         case badInps of
                           [] -> return ()
