@@ -19,6 +19,9 @@
     This allows for complicated code-generation scenarios where
     one code-gen run can produce input to the next.
 
+  * Scalability improvements for internal data structures. Thanks
+    to Brian Huffman for the patch.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
