@@ -894,7 +894,9 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
-                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set String) -- User defined, and internal existential
+                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set String) -- First : User defined, with proper quantifiers
+                                                                                                           -- Second: Internally declared, always existential
+                                                                                                           -- Third : Entire set of names, for faster lookup
                     , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                     , routs        :: IORef [SV]
                     , rtblMap      :: IORef TableMap
