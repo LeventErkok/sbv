@@ -238,7 +238,7 @@ travis                              = header ++ body ++ footer
               , "  - ROOTDIR=$(pwd)"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"linux\" ]; then curl -fsSL " ++ lin1Z3Path ++ " -o " ++ lin1Z3Name ++ "; unzip -j " ++ lin1Z3Name ++ " -d z3_downloaded; export PATH=$PATH:$(pwd)/z3_downloaded; z3 --version; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then curl -fsSL " ++ osxZ3Path ++ " -o " ++ osxZ3Name ++ "; unzip -j " ++ osxZ3Name ++ " -d z3_downloaded; export PATH=$PATH:$(pwd)/z3_downloaded; z3 --version; fi"
-              , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then brew update; brew upgrade python@3; curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
+              , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then curl https://haskell.futurice.com/haskell-on-macos.py | python3 - --make-dirs --install-dir=$HOME/.ghc-install --cabal-alias=head install cabal-install-head ${TRAVIS_COMPILER}; fi"
               , "  - if [ \"$TRAVIS_OS_NAME\" = \"osx\" ]; then HC=$HOME/.ghc-install/ghc/bin/$TRAVIS_COMPILER; HCPKG=${HC/ghc/ghc-pkg}; CABAL=$HOME/.ghc-install/ghc/bin/cabal; fi"
               , "  - HCNUMVER=$(( $(${HC} --numeric-version|sed -E 's/([0-9]+)\\.([0-9]+)\\.([0-9]+).*/\\1 * 10000 + \\2 * 100 + \\3/') ))"
               , "  - echo $HCNUMVER"
