@@ -253,7 +253,7 @@ getProof = Trans.getProof
 -- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
 -- to @A@ and @B@.
 --
--- N.B. Interpolant extraction isn't standardized well in SMTLib. Currently both MathSAT and Z3
+-- NB. Interpolant extraction isn't standardized well in SMTLib. Currently both MathSAT and Z3
 -- support them, but with slightly differing APIs. So, we support two APIs with slightly
 -- differing types to accommodate both. See "Documentation.SBV.Examples.Queries.Interpolants" for example
 -- usages in these solvers.
@@ -265,13 +265,9 @@ getInterpolantMathSAT = Trans.getInterpolantMathSAT
 -- | Interpolant extraction for z3. Compare with 'getInterpolantMathSAT', which performs
 -- similar function (but with a different use model) in MathSAT.
 --
--- Retrieve interpolants after an 'Unsat' result is obtained. Note you must have arranged for
--- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
--- for this call to not error out!
---
--- To get an interpolant for a pair of formulas @A@ and @B@, use a 'namedConstraint' to attach
--- names to @A@ and @B@. Then call 'getInterpolant' @[\"A\", \"B\"]@, assuming those are the names
--- you gave to the formulas.
+-- Retrieve interpolants after an 'Data.SBV.Control.Types.Unsat' result is obtained. To get an interpolant for a pair of
+-- formulas @A@ and @B@ in z3, use a 'Data.SBV.Core.namedConstraint' to attach names to @A@ and @B@. Then
+-- call 'getInterpolantZ3' @[\"A\", \"B\"]@, assuming those are the names you gave to the formulas.
 --
 -- An interpolant for @A@ and @B@ is a formula @I@ such that:
 --
@@ -285,7 +281,7 @@ getInterpolantMathSAT = Trans.getInterpolantMathSAT
 -- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
 -- to @A@ and @B@.
 --
--- Interpolants generalize to sequences: If you pass more than two formulas, then you will get
+-- In Z3, interpolants generalize to sequences: If you pass more than two formulas, then you will get
 -- a sequence of interpolants. In general, for @N@ formulas that are not satisfiable together, you will be
 -- returned @N-1@ interpolants. If formulas are @A1 .. An@, then interpolants will be @I1 .. I(N-1)@, such
 -- that @A1 ==> I1@, @A2 /\\ I1 ==> I2@, @A3 /\\ I2 ==> I3@, ..., and finally @AN ===> not I(N-1)@.
@@ -294,6 +290,11 @@ getInterpolantMathSAT = Trans.getInterpolantMathSAT
 -- If you need these, please get in touch. Furthermore, the result will be a list of mere strings representing the
 -- interpolating formulas, as opposed to a more structured type. Please get in touch if you use this function and can
 -- suggest a better API.
+--
+-- NB. Interpolant extraction isn't standardized well in SMTLib. Currently both MathSAT and Z3
+-- support them, but with slightly differing APIs. So, we support two APIs with slightly
+-- differing types to accommodate both. See "Documentation.SBV.Examples.Queries.Interpolants" for example
+-- usages in these solvers.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getInterpolantZ3'
 getInterpolantZ3 :: [String] -> Query String
