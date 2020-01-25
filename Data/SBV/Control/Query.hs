@@ -30,8 +30,8 @@ module Data.SBV.Control.Query (
      , io
      ) where
 
-import Control.Monad            (unless, when, zipWithM)
-import Control.Monad.IO.Class   (MonadIO)
+import Control.Monad          (unless, when, zipWithM)
+import Control.Monad.IO.Class (MonadIO)
 
 import Data.IORef (readIORef)
 
@@ -677,13 +677,17 @@ getInterpolantMathSAT fs
 
 
 -- | Generalization of 'Data.SBV.Control.getInterpolantZ3'. Use this version with Z3.
-getInterpolantZ3 :: (MonadIO m, MonadQuery m) => [String] -> m String
+getInterpolantZ3 :: (MonadIO m, MonadQuery m) => [SBool] -> m String
 getInterpolantZ3 fs
   | length fs < 2
-  = error $ "SBV.getInterpolantZ3 requires at least two named constraints, received: " ++ show fs
+  = error $ "SBV.getInterpolantZ3 requires at least two booleans, received: " ++ show fs
   | True
-  = do let bar s = '|' : s ++ "|"
-           cmd = "(get-interpolant " ++ unwords (map bar fs) ++ ")"
+  = do ss <- let fAll []     sofar = return $ reverse sofar
+                 fAll (b:bs) sofar = do sv <- inNewContext (`sbvToSV` b)
+                                        fAll bs (sv : sofar)
+             in fAll fs []
+
+       let cmd = "(get-interpolant " ++ unwords (map show ss) ++ ")"
            bad = unexpected "getInterpolant" cmd "a get-interpolant response" Nothing
 
        r <- ask cmd

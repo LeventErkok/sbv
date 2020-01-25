@@ -118,19 +118,4 @@ evenOdd = do
        y <- sInteger "y"
        z <- sInteger "z"
 
-       -- NB. Z3 doesn't like the produce-interpolants command
-       -- So, the following line is commented out. See
-       -- <https://github.com/Z3Prover/z3/issues/2885> for details.
-       -- setOption $ ProduceInterpolants True
-
-       -- create named constraints, which will allow
-       -- computation of the interpolants for our formulas
-       namedConstraint "y is even" $ y .== 2*x
-       namedConstraint "y is odd"  $ y .== 2*z + 1
-
-       -- To obtain the interpolant, we run a query
-       query $ do cs <- checkSat
-                  case cs of
-                    Unsat -> getInterpolantZ3 ["y is even", "y is odd"]
-                    Sat   -> error "Unexpected sat result!"
-                    Unk   -> error "Unexpected unknown result!"
+       query $ getInterpolantZ3 [y .== 2*x, y .== 2*z+1]

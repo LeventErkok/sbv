@@ -76,11 +76,9 @@ q3 = do a <- sInteger "a"
         c <- sInteger "c"
         d <- sInteger "d"
 
-        namedConstraint "c1" $ a .== b .&& a .== c
-        namedConstraint "c2" $ b .== d .&& sNot (c .== d)
-
-        query $ do _ <- checkSat
-                   getInterpolantZ3 ["c1", "c2"]
+        query $ getInterpolantZ3 [ a .== b .&& a .== c
+                                 , b .== d .&& sNot (c .== d)
+                                 ]
 
 q4 :: Symbolic String
 q4 = do a <- sInteger "a"
@@ -92,10 +90,8 @@ q4 = do a <- sInteger "a"
             f = uninterpret "f"
             g = uninterpret "g"
 
-        namedConstraint "c1" $ f a .== c .&& f b .== d
-        namedConstraint "c2" $   a .== b .&& g c ./= g d
-
-        query $ do _ <- checkSat
-                   getInterpolantZ3 ["c1", "c2"]
+        query $ getInterpolantZ3 [ f a .== c .&& f b .== d
+                                 ,   a .== b .&& g c ./= g d
+                                 ]
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

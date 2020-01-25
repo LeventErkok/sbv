@@ -28,11 +28,7 @@
 [GOOD] (define-fun s8 () Bool (= s2 s3))
 [GOOD] (define-fun s9 () Bool (not s8))
 [GOOD] (define-fun s10 () Bool (and s7 s9))
-[GOOD] (assert (! s6 :named |c1|))
-[GOOD] (assert (! s10 :named |c2|))
-[SEND] (check-sat)
-[RECV] unsat
-[SEND] (get-interpolant |c1| |c2|)
+[SEND] (get-interpolant s6 s10)
 [RECV] (= s2 s1)
 *** Solver   : Z3
 *** Exit code: ExitSuccess
