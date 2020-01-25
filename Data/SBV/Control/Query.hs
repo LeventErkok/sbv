@@ -684,14 +684,7 @@ getInterpolantZ3 fs
   | True
   = do let bar s = '|' : s ++ "|"
            cmd = "(get-interpolant " ++ unwords (map bar fs) ++ ")"
-           bad = unexpected "getInterpolant" cmd "a get-interpolant response"
-                          $ Just [ "Make sure you use:"
-                                 , ""
-                                 , "       setOption $ ProduceInterpolants True"
-                                 , ""
-                                 , "to make sure the solver is ready for producing interpolants,"
-                                 , "and that you have named the formulas with calls to 'namedConstraint'."
-                                 ]
+           bad = unexpected "getInterpolant" cmd "a get-interpolant response" Nothing
 
        r <- ask cmd
 
