@@ -65,6 +65,7 @@ exampleMathSAT = do
        z <- sInteger "z"
 
        -- tell the solver we want interpolants
+       -- NB. Only MathSAT needs this. Z3 doesn't need or like this setting!
        setOption $ ProduceInterpolants True
 
        -- create interpolation constraints. MathSAT requires the relevant formulas
@@ -117,8 +118,10 @@ evenOdd = do
        y <- sInteger "y"
        z <- sInteger "z"
 
-       -- tell the solver we want interpolants
-       setOption $ ProduceInterpolants True
+       -- NB. Z3 doesn't like the produce-interpolants command
+       -- So, the following line is commented out. See
+       -- <https://github.com/Z3Prover/z3/issues/2885> for details.
+       -- setOption $ ProduceInterpolants True
 
        -- create named constraints, which will allow
        -- computation of the interpolants for our formulas
