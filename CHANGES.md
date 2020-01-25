@@ -22,6 +22,15 @@
   * Scalability improvements for internal data structures. Thanks
     to Brian Huffman for the patch.
 
+  * Add interpolation support for Z3, following changes to that
+    solver. Note that SBV now supports two different APIs for
+    interpolation extraction, one for Z3 and the other for
+    MathSAT. This is unfortunate, but necessary since interpolant
+    extraction isn't quite standardized amongst solvers and
+    MathSAT and Z3 use sufficiently different calling mechanisms
+    to warrant their own calls. See 'Documentation.SBV.Examples.Queries.Interpolants'
+    for examples that illustrate both cases.
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles

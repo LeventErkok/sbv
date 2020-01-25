@@ -37,7 +37,7 @@ module Data.SBV.Trans.Control (
      , getProof
 
      -- ** Extracting interpolants
-     , getInterpolant
+     , getInterpolantMathSAT, getInterpolantZ3
 
      -- ** Extracting assertions
      , getAssertions

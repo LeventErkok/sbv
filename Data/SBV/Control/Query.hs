@@ -19,7 +19,7 @@
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
-     , getUnsatCore, getProof, getInterpolant, getAssignment, getOption, freshVar, freshVar_, freshArray, freshArray_, push, pop, getAssertionStackDepth
+     , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAssignment, getOption, freshVar, freshVar_, freshArray, freshArray_, push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
      , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, getObservables, ensureSat
      , SMTOption(..), SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo
@@ -653,11 +653,11 @@ getProof = do
         -- result of parsing is ignored.
         parse r bad $ \_ -> return r
 
--- | Generalization of 'Data.SBV.Control.getInterpolant'
-getInterpolant :: (MonadIO m, MonadQuery m) => [String] -> m String
-getInterpolant fs
+-- | Generalization of 'Data.SBV.Control.getInterpolantMathSAT'. Use this version with MathSAT.
+getInterpolantMathSAT :: (MonadIO m, MonadQuery m) => [String] -> m String
+getInterpolantMathSAT fs
   | null fs
-  = error "SBV.getInterpolant requires at least one marked constraint, received none!"
+  = error "SBV.getInterpolantMathSAT requires at least one marked constraint, received none!"
   | True
   = do let bar s = '|' : s ++ "|"
            cmd = "(get-interpolant (" ++ unwords (map bar fs) ++ "))"
@@ -669,6 +669,28 @@ getInterpolant fs
                                  , "to make sure the solver is ready for producing interpolants,"
                                  , "and that you have used the proper attributes using the"
                                  , "constrainWithAttribute function."
+                                 ]
+
+       r <- ask cmd
+
+       parse r bad $ \e -> return $ serialize False e
+
+
+-- | Generalization of 'Data.SBV.Control.getInterpolantZ3'. Use this version with Z3.
+getInterpolantZ3 :: (MonadIO m, MonadQuery m) => [String] -> m String
+getInterpolantZ3 fs
+  | length fs < 2
+  = error $ "SBV.getInterpolantZ3 requires at least two named constraints, received: " ++ show fs
+  | True
+  = do let bar s = '|' : s ++ "|"
+           cmd = "(get-interpolant " ++ unwords (map bar fs) ++ ")"
+           bad = unexpected "getInterpolant" cmd "a get-interpolant response"
+                          $ Just [ "Make sure you use:"
+                                 , ""
+                                 , "       setOption $ ProduceInterpolants True"
+                                 , ""
+                                 , "to make sure the solver is ready for producing interpolants,"
+                                 , "and that you have named the formulas with calls to 'namedConstraint'."
                                  ]
 
        r <- ask cmd

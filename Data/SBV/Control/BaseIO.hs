@@ -225,7 +225,10 @@ getUnsatCore = Trans.getUnsatCore
 getProof :: Query String
 getProof = Trans.getProof
 
--- | Retrieve an interpolant after an 'Data.SBV.Control.Unsat' result is obtained. Note you must have arranged for
+-- | Interpolant extraction for MathSAT. Compare with 'getInterpolantZ3', which performs
+-- similar function (but with a different use model) in Z3.
+--
+-- Retrieve an interpolant after an 'Data.SBV.Control.Unsat' result is obtained. Note you must have arranged for
 -- interpolants to be produced first via
 --
 -- @
@@ -235,7 +238,7 @@ getProof = Trans.getProof
 -- for this call to not error out!
 --
 -- To get an interpolant for a pair of formulas @A@ and @B@, use a 'Data.SBV.constrainWithAttribute' call to attach
--- interplation groups to @A@ and @B@. Then call 'getInterpolant' @[\"A\"]@, assuming those are the names
+-- interplation groups to @A@ and @B@. Then call 'getInterpolantMathSAT' @[\"A\"]@, assuming those are the names
 -- you gave to the formulas in the @A@ group.
 --
 -- An interpolant for @A@ and @B@ is a formula @I@ such that:
@@ -250,12 +253,51 @@ getProof = Trans.getProof
 -- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
 -- to @A@ and @B@.
 --
--- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. Use the MathSAT backend for extracting
--- interpolants. See "Documentation.SBV.Examples.Queries.Interpolants" for an example.
+-- N.B. Interpolant extraction isn't standardized well in SMTLib. Currently both MathSAT and Z3
+-- support them, but with slightly differing APIs. So, we support two APIs with slightly
+-- differing types to accommodate both. See "Documentation.SBV.Examples.Queries.Interpolants" for example
+-- usages in these solvers.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getInterpolant'
-getInterpolant :: [String] -> Query String
-getInterpolant = Trans.getInterpolant
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getInterpolantMathSAT'
+getInterpolantMathSAT :: [String] -> Query String
+getInterpolantMathSAT = Trans.getInterpolantMathSAT
+
+-- | Interpolant extraction for z3. Compare with 'getInterpolantMathSAT', which performs
+-- similar function (but with a different use model) in MathSAT.
+--
+-- Retrieve interpolants after an 'Unsat' result is obtained. Note you must have arranged for
+-- interpolants to be produced first (/via/ @'setOption' $ 'ProduceInterpolants' 'True'@)
+-- for this call to not error out!
+--
+-- To get an interpolant for a pair of formulas @A@ and @B@, use a 'namedConstraint' to attach
+-- names to @A@ and @B@. Then call 'getInterpolant' @[\"A\", \"B\"]@, assuming those are the names
+-- you gave to the formulas.
+--
+-- An interpolant for @A@ and @B@ is a formula @I@ such that:
+--
+-- @
+--        A ==> I
+--    and B ==> not I
+-- @
+--
+-- That is, it's evidence that @A@ and @B@ cannot be true together
+-- since @A@ implies @I@ but @B@ implies @not I@; establishing that @A@ and @B@ cannot
+-- be satisfied at the same time. Furthermore, @I@ will have only the symbols that are common
+-- to @A@ and @B@.
+--
+-- Interpolants generalize to sequences: If you pass more than two formulas, then you will get
+-- a sequence of interpolants. In general, for @N@ formulas that are not satisfiable together, you will be
+-- returned @N-1@ interpolants. If formulas are @A1 .. An@, then interpolants will be @I1 .. I(N-1)@, such
+-- that @A1 ==> I1@, @A2 /\\ I1 ==> I2@, @A3 /\\ I2 ==> I3@, ..., and finally @AN ===> not I(N-1)@.
+--
+-- Currently, SBV only returns simple and sequence interpolants, and does not support tree-interpolants.
+-- If you need these, please get in touch. Furthermore, the result will be a list of mere strings representing the
+-- interpolating formulas, as opposed to a more structured type. Please get in touch if you use this function and can
+-- suggest a better API.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getInterpolantZ3'
+getInterpolantZ3 :: [String] -> Query String
+getInterpolantZ3 = Trans.getInterpolantZ3
 
 -- | Retrieve assertions. Note you must have arranged for
 -- assertions to be available first via

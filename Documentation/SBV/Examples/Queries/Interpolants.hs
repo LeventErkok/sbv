@@ -8,8 +8,10 @@
 --
 -- Demonstrates extraction of interpolants via queries.
 --
--- N.B. As of Z3 version 4.8.0; Z3 no longer supports interpolants. You need
--- to use the MathSAT backend for this example to work.
+-- N.B. Interpolants are supported by MathSAT and Z3. Unfortunately
+-- the extraction of interpolants is not standardized, and are slightly
+-- different for these two solvers. So, we have two separate examples
+-- to demonstrate the usage.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -19,7 +21,7 @@ module Documentation.SBV.Examples.Queries.Interpolants where
 import Data.SBV
 import Data.SBV.Control
 
--- | Compute the interpolant for the following sets of formulas:
+-- | MathSAT example. Compute the interpolant for the following sets of formulas:
 --
 --     @{x - 3y >= -1, x + y >= 0}@
 --
@@ -39,7 +41,7 @@ import Data.SBV.Control
 -- An interpolant for these sets would only talk about the variable @x@ that is common
 -- to both. We have:
 --
--- >>> runSMTWith mathSAT example
+-- >>> runSMTWith mathSAT exampleMathSAT
 -- "(<= 0 s0)"
 --
 -- Notice that we get a string back, not a term; so there's some back-translation we need to do. We
@@ -56,8 +58,8 @@ import Data.SBV.Control
 -- Q.E.D.
 --
 -- This establishes that we indeed have an interpolant!
-example :: Symbolic String
-example = do
+exampleMathSAT :: Symbolic String
+exampleMathSAT = do
        x <- sInteger "x"
        y <- sInteger "y"
        z <- sInteger "z"
@@ -75,6 +77,57 @@ example = do
        -- To obtain the interpolant, we run a query
        query $ do cs <- checkSat
                   case cs of
-                    Unsat -> getInterpolant ["A"]
+                    Unsat -> getInterpolantMathSAT ["A"]
+                    Sat   -> error "Unexpected sat result!"
+                    Unk   -> error "Unexpected unknown result!"
+
+-- | Z3 example. Compute the interpolant for formulas @y = 2x@ and @y = 2z+1@.
+--
+-- These formulas are not satisfiable together since it would mean
+-- @y@ is both even and odd at the same time. An interpolant for
+-- this pair of formulas is a formula that's expressed only in terms
+-- of @y@, which is the only common symbol among them. We have:
+--
+-- >>> runSMT evenOdd
+-- "(or (= s1 0) (= s1 (* 2 (div s1 2))))"
+--
+-- This is a bit hard to read unfortunately, due to translation artifacts and use of strings. To analyze,
+-- we need to know that @s1@ is @y@ through SBV's translation. Let's express it in
+-- regular infix notation with @y@ for @s1@:
+--
+-- @(y == 0) || (y == 2 * (y `div` 2))@
+--
+-- Notice that the only symbol is @y@, as required. To establish that this is
+-- indeed an interpolant, we should establish that when @y@ is even, this formula
+-- is @True@; and if @y@ is odd, then then it should be @False@. You can argue
+-- mathematically that this indeed the case, but let's just use SBV to prove these:
+--
+-- >>> prove $ \y -> (y `sMod` 2 .== 0) .=> ((y .== 0) .|| (y .== 2 * (y `sDiv` (2::SInteger))))
+-- Q.E.D.
+--
+-- And:
+--
+-- >>> prove $ \y -> (y `sMod` 2 .== 1) .=> sNot ((y .== 0) .|| (y .== 2 * (y `sDiv` (2::SInteger))))
+-- Q.E.D.
+--
+-- This establishes that we indeed have an interpolant!
+evenOdd :: Symbolic String
+evenOdd = do
+       x <- sInteger "x"
+       y <- sInteger "y"
+       z <- sInteger "z"
+
+       -- tell the solver we want interpolants
+       setOption $ ProduceInterpolants True
+
+       -- create named constraints, which will allow
+       -- computation of the interpolants for our formulas
+       namedConstraint "y is even" $ y .== 2*x
+       namedConstraint "y is odd"  $ y .== 2*z + 1
+
+       -- To obtain the interpolant, we run a query
+       query $ do cs <- checkSat
+                  case cs of
+                    Unsat -> getInterpolantZ3 ["y is even", "y is odd"]
                     Sat   -> error "Unexpected sat result!"
                     Unk   -> error "Unexpected unknown result!"
