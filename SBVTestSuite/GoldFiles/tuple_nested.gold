@@ -16,10 +16,10 @@
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s13 () (_ BitVec 8) #x00)
 [GOOD] (define-fun s3 () Int 1)
-[GOOD] (define-fun s10 () (_ BitVec 8) #x63)
 [GOOD] (define-fun s7 () String "foo")
+[GOOD] (define-fun s10 () (_ BitVec 8) #x63)
+[GOOD] (define-fun s13 () (_ BitVec 8) #x00)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVTuple2 (SBVTuple2 Int (SBVTuple2 String (_ BitVec 8))) (_ BitVec 8))) ; tracks user variable "abcd"
 [GOOD] ; --- constant tables ---

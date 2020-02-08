@@ -14,11 +14,11 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 0)
+[GOOD] (define-fun s4 () (Seq Int) (as seq.empty (Seq Int)))
 [GOOD] (define-fun s6 () Int 1)
 [GOOD] (define-fun s91 () Int 2)
 [GOOD] (define-fun s93 () Int 11)
 [GOOD] (define-fun s97 () Int 10)
-[GOOD] (define-fun s4 () (Seq Int) (as seq.empty (Seq Int)))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Seq Int)) ; tracks user variable "ints"
 [GOOD] ; --- constant tables ---

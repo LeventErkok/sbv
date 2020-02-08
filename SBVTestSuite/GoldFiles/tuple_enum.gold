@@ -21,12 +21,12 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s3 () Int 1)
+[GOOD] (define-fun s6 () (Seq Bool) (seq.unit true))
 [GOOD] (define-fun s11 () Int 3)
 [GOOD] (define-fun s13 () Int 2)
+[GOOD] (define-fun s16 () E C)
 [GOOD] (define-fun s20 () Int 6)
 [GOOD] (define-fun s22 () Int 4)
-[GOOD] (define-fun s16 () E C)
-[GOOD] (define-fun s6 () (Seq Bool) (seq.unit true))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Seq (SBVTuple2 E (Seq Bool)))) ; tracks user variable "v1"
 [GOOD] (declare-fun s1 () Bool) ; tracks user variable "q"

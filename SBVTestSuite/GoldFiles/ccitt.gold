@@ -3,9 +3,6 @@ INPUTS
   s1 :: SWord 48
 CONSTANTS
   s5 = 0 :: WordN 1
-  s2054 = 0 :: Word8
-  s2055 = 1 :: Word8
-  s2183 = 3 :: Word8
   s101 = 65536 :: Word64
   s102 = 0 :: Word64
   s104 = 131072 :: Word64
@@ -71,6 +68,9 @@ CONSTANTS
   s795 = 8192 :: Word64
   s798 = 16384 :: Word64
   s801 = 32768 :: Word64
+  s2054 = 0 :: Word8
+  s2055 = 1 :: Word8
+  s2183 = 3 :: Word8
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS

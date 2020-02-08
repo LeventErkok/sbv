@@ -19,9 +19,9 @@
 [GOOD] (define-fun s1 () Int 0)
 [GOOD] (define-fun s4 () Int 2)
 [GOOD] (define-fun s6 () Int 1)
+[GOOD] (define-fun s11 () String "foo")
 [GOOD] (define-fun s14 () Int 4)
 [GOOD] (define-fun s17 () Int 5)
-[GOOD] (define-fun s11 () String "foo")
 [GOOD] (define-fun s23 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.++ (seq.unit (mkSBVTuple2 2 (as seq.empty (Seq (SBVTuple2 Int String))))) (seq.unit (mkSBVTuple2 1 (seq.++ (seq.unit (mkSBVTuple2 3 "foo")) (seq.unit (mkSBVTuple2 0 "bar")) (seq.unit (mkSBVTuple2 (- 1) "baz")) (seq.unit (mkSBVTuple2 (- 2) "quux")) (seq.unit (mkSBVTuple2 (- 3) "enough"))))) (seq.unit (mkSBVTuple2 (- 4) (as seq.empty (Seq (SBVTuple2 Int String))))) (seq.unit (mkSBVTuple2 (- 5) (as seq.empty (Seq (SBVTuple2 Int String)))))))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String))))) ; tracks user variable "lst"

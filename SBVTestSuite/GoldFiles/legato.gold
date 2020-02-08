@@ -7,11 +7,11 @@ INPUTS
   s5 :: SBool, existential, aliasing "flagC"
   s6 :: SBool, existential, aliasing "flagZ"
 CONSTANTS
-  s10 = 0 :: WordN 1
+  s7 = 256 :: Word16
   s8 = 0 :: Word8
+  s10 = 0 :: WordN 1
   s14 = 128 :: Word8
   s16 = 127 :: Word8
-  s7 = 256 :: Word16
 TABLES
 ARRAYS
 UNINTERPRETED CONSTANTS
