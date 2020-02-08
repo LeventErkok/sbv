@@ -51,7 +51,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
 
                                              doctest $ args ++ tfs
 
-         where noGood nm sl =  any ((`isSuffixOf` map toLower nm) . map toLower) sl
+         where noGood nm = any $ (`isSuffixOf` map toLower nm) . map toLower
 
                skipWindows nm
                  | not onWindows = False
