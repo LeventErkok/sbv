@@ -223,14 +223,14 @@ class SymVal a => IEEEFloatConvertible a where
   -- >>> prove $ roundTrip @Int32
   -- Falsifiable. Counter-example:
   --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =            -2147483616 :: Int32
+  --   s1 =              134280664 :: Int32
   --
   -- Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
   --
-  -- >>> toRational (-2147483616 :: Float)
-  -- (-2147483648) % 1
+  -- >>> toRational (134280664 :: Float)
+  -- 134280672 % 1
   --
-  -- Note how the numerator is different, it is off by 32. This is hardly surprising, since floats become sparser as
+  -- Note how the numerator is different, it is off by 8. This is hardly surprising, since floats become sparser as
   -- the magnitude increases to be able to cover all the integer values representable.
   toSFloat :: SRoundingMode -> SBV a -> SFloat
 
