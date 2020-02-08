@@ -265,11 +265,20 @@ Looking for solution 13
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) true) false true false) true true false)))
+[RECV] ((q2 (lambda ((x!1 Bool) (x!2 Bool))
+         (or (and (not x!2) (not x!1)) (and x!2 (not x!1))))))
+[SEND] (get-value ((q2 false false)))
+[RECV] (((q2 false false) true))
+[SEND] (get-value ((q2 false true)))
+[RECV] (((q2 false true) false))
+[SEND] (get-value ((q2 true false)))
+[RECV] (((q2 true false) true))
+[SEND] (get-value ((q2 true true)))
+[RECV] (((q2 true true) false))
 [GOOD] (define-fun q2_model13 ((x!0 Bool) (x!1 Bool)) Bool
-          (ite (and (= x!0 true) (= x!1 true)) false
-          (ite (and (= x!0 false) (= x!1 true)) false
-          true))
+          (ite (and (= x!0 false) (= x!1 false)) true
+          (ite (and (= x!0 true) (= x!1 false)) true
+          false))
        )
 [GOOD] (define-fun q2_model13_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -281,9 +290,9 @@ Looking for solution 14
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store ((as const Array) true) true true false)))
+[RECV] ((q2 (store ((as const Array) true) true false false)))
 [GOOD] (define-fun q2_model14 ((x!0 Bool) (x!1 Bool)) Bool
-          (ite (and (= x!0 true) (= x!1 true)) false
+          (ite (and (= x!0 true) (= x!1 false)) false
           true)
        )
 [GOOD] (define-fun q2_model14_reject () Bool
@@ -296,10 +305,11 @@ Looking for solution 15
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store ((as const Array) true) true false false)))
+[RECV] ((q2 (store (store ((as const Array) true) true false false) true true false)))
 [GOOD] (define-fun q2_model15 ((x!0 Bool) (x!1 Bool)) Bool
+          (ite (and (= x!0 true) (= x!1 true)) false
           (ite (and (= x!0 true) (= x!1 false)) false
-          true)
+          true))
        )
 [GOOD] (define-fun q2_model15_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -311,11 +321,10 @@ Looking for solution 16
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) true) true false false) true true false)))
+[RECV] ((q2 (store ((as const Array) true) true true false)))
 [GOOD] (define-fun q2_model16 ((x!0 Bool) (x!1 Bool)) Bool
           (ite (and (= x!0 true) (= x!1 true)) false
-          (ite (and (= x!0 true) (= x!1 false)) false
-          true))
+          true)
        )
 [GOOD] (define-fun q2_model16_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -381,20 +390,20 @@ Solution #12:
   q2 _     _     = True 
 Solution #13:
   q2 :: Bool -> Bool -> Bool
-  q2 True  True = False
-  q2 False True = False
-  q2 _     _    = True 
+  q2 False False = True 
+  q2 True  False = True 
+  q2 _     _     = False
 Solution #14:
-  q2 :: Bool -> Bool -> Bool
-  q2 True True = False
-  q2 _    _    = True 
-Solution #15:
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
   q2 _    _     = True 
-Solution #16:
+Solution #15:
   q2 :: Bool -> Bool -> Bool
   q2 True True  = False
   q2 True False = False
   q2 _    _     = True 
+Solution #16:
+  q2 :: Bool -> Bool -> Bool
+  q2 True True = False
+  q2 _    _    = True 
 Found 16 different solutions.
