@@ -60,7 +60,7 @@ genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Jus
                                 -- polynomial, as all CRC polynomials have the "+1"
                                 -- term in them set. This simplifies the query.
                                 return $ sTestBit p 0 .&& crcGood hd p s r
-                       cnt <- displayModels disp res
+                       cnt <- displayModels id disp res
                        putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()
               disp n (_, s) = putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s

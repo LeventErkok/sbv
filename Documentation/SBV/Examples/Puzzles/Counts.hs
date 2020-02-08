@@ -30,6 +30,7 @@
 module Documentation.SBV.Examples.Puzzles.Counts where
 
 import Data.SBV
+import Data.List (sortOn)
 
 -- | We will assume each number can be represented by an 8-bit word, i.e., can be at most 128.
 type Count  = SWord8
@@ -64,7 +65,7 @@ puzzle cnt = cnt .== last css
 -- Found: 2 solution(s).
 counts :: IO ()
 counts = do res <- allSat $ puzzle `fmap` mkExistVars 10
-            cnt <- displayModels disp res
+            cnt <- displayModels (sortOn show) disp res
             putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
   where disp n (_, s) = do putStrLn $ "Solution #" ++ show n
                            dispSolution s

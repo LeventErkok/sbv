@@ -76,7 +76,7 @@ dispSolution (i, f) (_, fs)
 solveAll :: Puzzle -> IO ()
 solveAll p@(i, f) = do putStrLn "Finding all solutions.."
                        res <- allSat $ (valid . f) `fmap` mkExistVars i
-                       cnt <- displayModels disp res
+                       cnt <- displayModels id disp res
                        putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where disp n s = do putStrLn $ "Solution #" ++ show n
                        dispSolution p s

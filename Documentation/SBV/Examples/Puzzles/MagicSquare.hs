@@ -59,7 +59,7 @@ magic n
  | n < 0 = putStrLn $ "n must be non-negative, received: " ++ show n
  | True  = do putStrLn $ "Finding all " ++ show n ++ "-magic squares.."
               res <- allSat $ (isMagic . chunk n) `fmap` mkExistVars n2
-              cnt <- displayModels disp res
+              cnt <- displayModels id disp res
               putStrLn $ "Found: " ++ show cnt ++ " solution(s)."
    where n2 = n * n
          disp i (_, model)

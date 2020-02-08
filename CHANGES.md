@@ -31,6 +31,12 @@
     to warrant their own calls. See 'Documentation.SBV.Examples.Queries.Interpolants'
     for examples that illustrate both cases.
 
+  * Add a new argument to `displayModels` function to allow rearranging
+    of the results in an 'allSat` call. Strictly speaking this is
+    a backwards breaking change, but substituting `id` for the
+    new argument gives you old functionality, so easy to work-around.
+
+
 ### Version 8.5, 2019-10-16
 
   * Changes to compile with GHC 8.8. Thanks to Oliver Charles
