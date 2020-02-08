@@ -9,8 +9,8 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s5 () (_ BitVec 1) #b0)
 [GOOD] (define-fun s2 () (_ BitVec 8) #x10)
+[GOOD] (define-fun s5 () (_ BitVec 1) #b0)
 [GOOD] (define-fun s35 () (_ BitVec 16) #x0000)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (_ BitVec 16))
