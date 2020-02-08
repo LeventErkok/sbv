@@ -1128,24 +1128,24 @@ pbExactly xs k
 -- | 'sTrue' if the sum of coefficients for 'sTrue' elements is at most @k@. Generalizes 'pbAtMost'.
 pbLe :: [(Int, SBool)] -> Int -> SBool
 pbLe xs k
- | k < 0                       = error $ "SBV.pbLe: Non-negative value required, received: " ++ show k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbLe" c b | (c, b) <- xs] <= fromIntegral k
- | True                        = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
+ | k < 0                     = error $ "SBV.pbLe: Non-negative value required, received: " ++ show k
+ | all (isConcrete . snd) xs = literal $ sum [pbToInteger "pbLe" c b | (c, b) <- xs] <= fromIntegral k
+ | True                      = liftPB "pbLe" (PB_Le (map fst xs) k) (map snd xs)
 
 -- | 'sTrue' if the sum of coefficients for 'sTrue' elements is at least @k@. Generalizes 'pbAtLeast'.
 pbGe :: [(Int, SBool)] -> Int -> SBool
 pbGe xs k
- | k < 0                       = error $ "SBV.pbGe: Non-negative value required, received: " ++ show k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbGe" c b | (c, b) <- xs] >= fromIntegral k
- | True                        = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
+ | k < 0                     = error $ "SBV.pbGe: Non-negative value required, received: " ++ show k
+ | all (isConcrete . snd) xs = literal $ sum [pbToInteger "pbGe" c b | (c, b) <- xs] >= fromIntegral k
+ | True                      = liftPB "pbGe" (PB_Ge (map fst xs) k) (map snd xs)
 
 -- | 'sTrue' if the sum of coefficients for 'sTrue' elements is exactly least @k@. Useful for coding
 -- /exactly K-of-N/ constraints, and in particular mutex constraints.
 pbEq :: [(Int, SBool)] -> Int -> SBool
 pbEq xs k
- | k < 0                       = error $ "SBV.pbEq: Non-negative value required, received: " ++ show k
- | all isConcrete (map snd xs) = literal $ sum [pbToInteger "pbEq" c b | (c, b) <- xs] == fromIntegral k
- | True                        = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
+ | k < 0                     = error $ "SBV.pbEq: Non-negative value required, received: " ++ show k
+ | all (isConcrete . snd) xs = literal $ sum [pbToInteger "pbEq" c b | (c, b) <- xs] == fromIntegral k
+ | True                      = liftPB "pbEq" (PB_Eq (map fst xs) k) (map snd xs)
 
 -- | 'sTrue' if there is at most one set bit
 pbMutexed :: [SBool] -> SBool
