@@ -24,7 +24,8 @@ import qualified Data.SBV.List as L
 
 -- | Simple example demonstrating the use of nested lists. We have:
 --
--- >>> nestedExample
+-- Turned off. See: https://github.com/Z3Prover/z3/issues/2820
+-- nestedExample
 -- [[1,2,3],[4,5,6,7],[8,9,10],[11,12,13]]
 nestedExample :: IO ()
 nestedExample = runSMT $ do a :: SList [Integer] <- free "a"
