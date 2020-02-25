@@ -23,6 +23,7 @@
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
        , MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll, satWithAny
+       , satConcurrentWithAny, satConcurrentWithAll, proveConcurrentWithAny, proveConcurrentWithAll
        , generateSMTBenchmark
        , Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
@@ -38,7 +39,7 @@ import Control.Monad          (when, unless)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.DeepSeq        (rnf, NFData(..))
 
-import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async)
+import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async, mapConcurrently)
 import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
 
 import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
@@ -522,7 +523,41 @@ satWithAll = (`sbvWithAll` satWith)
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
 satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
-satWithAny    = (`sbvWithAny` satWith)
+satWithAny = (`sbvWithAny` satWith)
+
+-- | Find a satisfying assignment to a property using a single solver, but
+-- providing several query problems of interest, with each query running in a
+-- separate thread and return the first one that returns. This can be useful to
+-- use symbolic mode to drive to a location in the search space of the solver
+-- and then refine the problem in query mode. If the computation is very hard to
+-- solve for the solver than running in concurrent mode may provide a large
+-- performance benefit.
+satConcurrentWithAny :: Provable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
+                                      return (slvr, time, SatResult result)
+  where go cfg a' q = runWithQuery True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
+
+-- | Prove a property by running many queries each isolated to their own thread
+-- concurrently and return the first that finishes, killing the others
+proveConcurrentWithAny :: Provable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
+                                        return (slvr, time, ThmResult result)
+  where go cfg a' q = runWithQuery False (do _ <- q;  checkNoOptimizations >> Control.getSMTResult) cfg a'
+
+-- | Find a satisfying assignment to a property using a single solver, but run
+-- each query problem in a separate isolated thread and wait for each thread to
+-- finish. See 'satConcurrentWithAny' for more details.
+satConcurrentWithAll :: Provable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
+                                      return $ (\(a',b,c) -> (a',b,SatResult c)) <$> results
+  where go cfg a' q = runWithQuery True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
+
+-- | Prove a property by running many queries each isolated to their own thread
+-- concurrently and wait for each to finish returning all results
+proveConcurrentWithAll :: Provable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
+                                        return $ (\(a',b,c) -> (a',b,ThmResult c)) <$> results
+  where go cfg a' q = runWithQuery False (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | Create an SMT-Lib2 benchmark. The 'Bool' argument controls whether this is a SAT instance, i.e.,
 -- translate the query directly, or a PROVE instance, i.e., translate the negated query.
@@ -702,6 +737,34 @@ sbvWithAny solvers what a = do beginTime <- getCurrentTime
          -- wait part for killed threads.
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
          cancelFast other = throwTo (asyncThreadId other) ThreadKilled
+
+
+sbvConcurrentWithAny :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO (Solver, NominalDiffTime, c)
+sbvConcurrentWithAny solver what queries a = snd `fmap` (mapM runQueryInThread queries >>= waitAnyFastCancel)
+  where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
+         -- wait part for killed threads.
+         waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
+         cancelFast other = throwTo (asyncThreadId other) ThreadKilled
+         runQueryInThread q = do beginTime <- getCurrentTime
+                                 (runInThread beginTime (\cfg -> what cfg a q)) solver
+
+
+sbvConcurrentWithAll :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO [(Solver, NominalDiffTime, c)]
+sbvConcurrentWithAll solver what queries a = mapConcurrently runQueryInThread queries  >>= unsafeInterleaveIO . go
+  where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
+         -- wait part for killed threads.
+         runQueryInThread q = do beginTime <- getCurrentTime
+                                 (runInThread beginTime (\cfg -> what cfg a q)) solver
+
+         go []  = return []
+         go as  = do (d, r) <- waitAny as
+                     -- The following filter works because the Eq instance on Async
+                     -- checks the thread-id; so we know that we're removing the
+                     -- correct solver from the list. This also allows for
+                     -- running the same-solver (with different options), since
+                     -- they will get different thread-ids.
+                     rs <- unsafeInterleaveIO $ go (filter (/= d) as)
+                     return (r : rs)
 
 -- | Perform action for all given configs, return all the results.
 sbvWithAll :: NFData b => [SMTConfig] -> (SMTConfig -> a -> IO b) -> a -> IO [(Solver, NominalDiffTime, b)]

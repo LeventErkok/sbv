@@ -85,6 +85,7 @@ module Data.SBV.Trans (
 
   -- * Properties, proofs, and satisfiability
   , Predicate, Goal, MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll
+  , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
   , satWithAny, generateSMTBenchmark
   , solve
   -- * Constraints

@@ -255,6 +255,7 @@ module Data.SBV (
   , satWith, allSat, allSatWith, optimize, optimizeWith, isVacuous
   , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
   , proveWithAll, proveWithAny, satWithAll
+  , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
   , satWithAny, generateSMTBenchmark
   , solve
   -- * Constraints
