@@ -3,6 +3,13 @@
 
 * Latest Hackage released version: 8.6, 2020-02-08
 
+### Version 8.7, Not yet released
+
+  * Add support for concurrent versions of solvers for query
+    problems. Similar to 'satWithAny', 'proveWithAny' etc.,
+    except when we have queries. Thanks to Jeffrey Young
+    for the idea and the implementation.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
