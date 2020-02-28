@@ -202,15 +202,15 @@ proveWithAny cfgs s = SBV.proveWithAny cfgs (fmap toSBool s)
 
 -- | Prove a property with query mode using multiple threads. Each query
 -- computation will spawn a thread and a unique instance of your solver to run
--- asynchronously. The Symbolic SVal is duplicated for each thread. This
--- function will block until they all child threads return.
+-- asynchronously. The 'Symbolic' 'SVal' is duplicated for each thread. This
+-- function will block until all child threads return.
 proveConcurrentWithAll :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO [(Solver, NominalDiffTime, ThmResult)]
 proveConcurrentWithAll cfg s queries = SBV.proveConcurrentWithAll cfg queries (fmap toSBool s)
 
 -- | Prove a property with query mode using multiple threads. Each query
 -- computation will spawn a thread and a unique instance of your solver to run
--- asynchronously. The Symbolic SVal is duplicated for each thread. This
--- function will return the first query computation that completes.
+-- asynchronously. The 'Symbolic' 'SVal' is duplicated for each thread. This
+-- function will return the first query computation that completes, killing the others.
 proveConcurrentWithAny :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO (Solver, NominalDiffTime, ThmResult)
 proveConcurrentWithAny cfg s queries = SBV.proveConcurrentWithAny cfg queries (fmap toSBool s)
 
@@ -227,16 +227,16 @@ satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatRe
 satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
 
 -- | Find a satisfying assignment to a property with multiple threads in query
--- mode. The Symbolic SVal represents what is known to all child query threads.
+-- mode. The 'Symbolic' 'SVal' represents what is known to all child query threads.
 -- Each query thread will spawn a unique instance of the solver. Only the first
 -- one to finish will be returned and the other threads will be killed.
 satConcurrentWithAny :: SMTConfig -> [Query b] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatResult)
 satConcurrentWithAny cfg qs s = SBV.satConcurrentWithAny cfg qs (fmap toSBool s)
 
 -- | Find a satisfying assignment to a property with multiple threads in query
--- mode. The Symbolic Sval represents what is known to all child query threads.
+-- mode. The 'Symbolic' 'SVal' represents what is known to all child query threads.
 -- Each query thread will spawn a unique instance of the solver. This function
--- will block until all child threads have completed
+-- will block until all child threads have completed.
 satConcurrentWithAll :: SMTConfig -> [Query b] -> Symbolic SVal -> IO [(Solver, NominalDiffTime, SatResult)]
 satConcurrentWithAll cfg qs s = SBV.satConcurrentWithAll cfg qs (fmap toSBool s)
 

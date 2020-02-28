@@ -40,7 +40,7 @@ shared v = do
   constrain $ x + y .== 10
   liftIO $ putMVar v (x,y)
 
--- | in our first query we'll define a constraint that will not be known to the
+-- | In our first query we'll define a constraint that will not be known to the
 -- shared or second query and then solve for an answer that will differ from the
 -- first query. Note that we need to pass an MVar in so that we can operate on
 -- the shared variables. In general, the variables you want to operate on should
@@ -68,7 +68,7 @@ queryOne v = do
                 return $ Just (xv + yv)
 
 -- | In the second query we constrain for an answer where y is smaller than x,
--- and then return the product of the found values
+-- and then return the product of the found values.
 queryTwo :: MVar (SInteger, SInteger) -> Query (Maybe Integer)
 queryTwo v = do
   (x,y) <- liftIO $ takeMVar v
@@ -86,8 +86,7 @@ queryTwo v = do
                 io $ putStrLn $ "[Two]: Current solution is: " ++ show (xv, yv)
                 return $ Just (xv * yv)
 
--- | run the demo several times to see that the children threads will change
--- ordering
+-- | Run the demo several times to see that the children threads will change ordering
 demo :: IO ()
 demo = do
   v <- newEmptyMVar

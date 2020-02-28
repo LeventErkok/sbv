@@ -401,7 +401,7 @@
         * Existential  : bAny    became   sAny
         * Universal    : bAll    became   sAll
 
-  * [BACKWARDS COMPATIBILITY, INTERNAL] Hostorically, SBV focused on bit-vectors and machine
+  * [BACKWARDS COMPATIBILITY, INTERNAL] Historically, SBV focused on bit-vectors and machine
     words, which meant lots of internal types were named suggestive of this heritage.
     With the addition of `SInteger`, `SReal`, `SFloat`, `SDouble` we have expanded
     this, but still remained focused on atomic types. But, thanks largely to

@@ -21,6 +21,7 @@ import qualified Data.SBV.List as L
 import Data.SBV.Control
 
 -- | Compute a prefix of the fibonacci numbers. We have:
+--
 -- >>> mkFibs 10
 -- [1,1,2,3,5,8,13,21,34,55]
 mkFibs :: Int -> IO [Integer]
