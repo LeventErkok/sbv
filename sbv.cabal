@@ -126,6 +126,7 @@ Library
                   , Documentation.SBV.Examples.Misc.ModelExtract
                   , Documentation.SBV.Examples.Misc.Auxiliary
                   , Documentation.SBV.Examples.Misc.NoDiv0
+                  , Documentation.SBV.Examples.Misc.Newtypes
                   , Documentation.SBV.Examples.Misc.Polynomials
                   , Documentation.SBV.Examples.Misc.SetAlgebra
                   , Documentation.SBV.Examples.Misc.SoftConstrain
