@@ -81,6 +81,9 @@ module Data.SBV.Dynamic
   , safeWith
   -- * Proving properties using multiple solvers
   , proveWithAll, proveWithAny, satWithAll, satWithAny
+  -- * Proving properties using multiple threads
+  , proveConcurrentWithAll, proveConcurrentWithAny
+  , satConcurrentWithAny, satConcurrentWithAll
   -- * Quick-check
   , svQuickCheck
 
@@ -146,7 +149,10 @@ import Data.SBV.Provers.Prover (boolector, cvc4, yices, z3, mathSAT, abc, defaul
 import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), OptimizeResult(..), AllSatResult(..), genParse)
 import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig, sbvAvailableSolvers)
 
-import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny)
+import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny
+                                                , proveConcurrentWithAll, proveConcurrentWithAny
+                                                , satConcurrentWithAny, satConcurrentWithAll
+                                                )
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
 import qualified Data.SBV.Core.Model     as SBV (sbvQuickCheck)
 import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmark)
@@ -194,6 +200,20 @@ proveWithAll cfgs s = SBV.proveWithAll cfgs (fmap toSBool s)
 proveWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, NominalDiffTime, ThmResult)
 proveWithAny cfgs s = SBV.proveWithAny cfgs (fmap toSBool s)
 
+-- | Prove a property with query mode using multiple threads. Each query
+-- computation will spawn a thread and a unique instance of your solver to run
+-- asynchronously. The 'Symbolic' 'SVal' is duplicated for each thread. This
+-- function will block until all child threads return.
+proveConcurrentWithAll :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveConcurrentWithAll cfg s queries = SBV.proveConcurrentWithAll cfg queries (fmap toSBool s)
+
+-- | Prove a property with query mode using multiple threads. Each query
+-- computation will spawn a thread and a unique instance of your solver to run
+-- asynchronously. The 'Symbolic' 'SVal' is duplicated for each thread. This
+-- function will return the first query computation that completes, killing the others.
+proveConcurrentWithAny :: SMTConfig -> Symbolic SVal -> [Query SVal] -> IO (Solver, NominalDiffTime, ThmResult)
+proveConcurrentWithAny cfg s queries = SBV.proveConcurrentWithAny cfg queries (fmap toSBool s)
+
 -- | Find a satisfying assignment to a property with multiple solvers,
 -- running them in separate threads. The results will be returned in
 -- the order produced.
@@ -205,6 +225,20 @@ satWithAll cfgs s = SBV.satWithAll cfgs (fmap toSBool s)
 -- to finish will be returned, remaining threads will be killed.
 satWithAny :: [SMTConfig] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatResult)
 satWithAny cfgs s = SBV.satWithAny cfgs (fmap toSBool s)
+
+-- | Find a satisfying assignment to a property with multiple threads in query
+-- mode. The 'Symbolic' 'SVal' represents what is known to all child query threads.
+-- Each query thread will spawn a unique instance of the solver. Only the first
+-- one to finish will be returned and the other threads will be killed.
+satConcurrentWithAny :: SMTConfig -> [Query b] -> Symbolic SVal -> IO (Solver, NominalDiffTime, SatResult)
+satConcurrentWithAny cfg qs s = SBV.satConcurrentWithAny cfg qs (fmap toSBool s)
+
+-- | Find a satisfying assignment to a property with multiple threads in query
+-- mode. The 'Symbolic' 'SVal' represents what is known to all child query threads.
+-- Each query thread will spawn a unique instance of the solver. This function
+-- will block until all child threads have completed.
+satConcurrentWithAll :: SMTConfig -> [Query b] -> Symbolic SVal -> IO [(Solver, NominalDiffTime, SatResult)]
+satConcurrentWithAll cfg qs s = SBV.satConcurrentWithAll cfg qs (fmap toSBool s)
 
 -- | Extract a model, the result is a tuple where the first argument (if True)
 -- indicates whether the model was "probable". (i.e., if the solver returned unknown.)
