@@ -10,6 +10,11 @@
     except when we have queries. Thanks to Jeffrey Young
     for the idea and the implementation.
 
+  * Add "Documentation.SBV.Examples.Misc.Newtypes", demonstrating
+    how to use newtypes over existing symbolic types as
+    symbolic quantities themselves. Thanks to lachrimae on github
+    for the example.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
