@@ -12,7 +12,7 @@
 
   * Add "Documentation.SBV.Examples.Misc.Newtypes", demonstrating
     how to use newtypes over existing symbolic types as
-    symbolic quantities themselves. Thanks to lachrimae on github
+    symbolic quantities themselves. Thanks to Curran McConnell
     for the example.
 
 ### Version 8.6, 2020-02-08

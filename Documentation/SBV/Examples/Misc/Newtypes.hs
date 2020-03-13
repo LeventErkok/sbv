@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module    : Documentation.SBV.Examples.Misc.Newtypes
--- Copyright : (c) Levent Erkok
+-- Copyright : (c) Curran McConnell
+--                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
