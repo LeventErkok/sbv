@@ -16,6 +16,16 @@
     for the example.
 
   * Added new predicate `sNotElem`, negating `sElem`.
+
+  * Added new predicate `distinctExcept`. This is same as `distinct`
+    except you can also provide an ignore list. The elements in
+    the first list will be checked to be distinct from each other,
+    or belong to the second list. This is good for writing constraints
+    that either require a default value or if picked be different
+    from each other for a set of variables. This sort of constraint
+    can be coded in user space, but SBV generates efficient code
+    instead of the obvious quadratic number of constraints.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles

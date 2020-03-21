@@ -692,6 +692,18 @@ class EqSymbolic a where
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
   distinct :: [a] -> SBool
 
+  -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
+  -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
+  -- distinct regardless of repetition.
+  --
+  -- >>> prove $ \a -> distinctExcept [a, a] [0::SInteger] .<=> a .== 0
+  -- Q.E.D.
+  -- >>> prove $ \a b -> distinctExcept [a, b] [0::SWord8] .<=> (a .== b .=> a .== 0)
+  -- Q.E.D.
+  -- >>> prove $ \a b c d -> distinctExcept [a, b, c, d] [] .== distinct [a, b, c, (d::SInteger)]
+  -- Q.E.D.
+  distinctExcept :: [a] -> [a] -> SBool
+
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.
   allEqual :: [a] -> SBool
 
@@ -714,6 +726,15 @@ class EqSymbolic a where
   -- this method for the base types to generate better code.
   distinct []     = sTrue
   distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
+
+  -- Default implementation of distinctExcept. Note that we override
+  -- this method for the base types to generate better code.
+  distinctExcept es ignored = go es
+    where isIgnored = (`sElem` ignored)
+
+          go []     = sTrue
+          go (x:xs) = let xOK  = isIgnored x .|| sAll (\y -> isIgnored y .|| x ./= y) xs
+                      in xOK .&& go xs
 
   x `sElem`    xs = sAny (.== x) xs
   x `sNotElem` xs = sNot (x `sElem` xs)
@@ -803,6 +824,40 @@ instance EqSymbolic (SBV a) where
 
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
+
+  -- Custom version of distinctExcept that generates better code for base types
+  -- We essentially keep track of an array and count cardinalities as we walk along.
+  distinctExcept []  _       = sTrue
+  distinctExcept [_] _       = sTrue
+  distinctExcept es  ignored
+     | all isConc (es ++ ignored)
+    = distinct (filter ignoreConc es)
+    | True
+    = SBV (SVal KBool (Right (cache r)))
+    where ignoreConc x = case x `sElem` ignored of
+                           SBV (SVal KBool (Left cv)) -> cvToBool cv
+                           _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
+
+          ek = case head es of  -- Head is safe here as we're guaranteed to have a non-empty es by pattern matching above. (Actually, there'll be at least two elements)
+                 SBV (SVal k _) -> k
+
+          r st = do let zero = 0 :: SInteger
+
+                    arr <- SArray <$> newSArr st (ek, KUnbounded) (\i -> "array_" ++ show i) (Just (unSBV zero))
+
+                    let incr x table = ite (x `sElem` ignored) zero (1 + readArray table x)
+
+                        insert []     table = table
+                        insert (x:xs) table = insert xs (writeArray table x (incr x table))
+
+                        finalArray = insert es arr
+
+                    sbvToSV st $ sAll (\e -> readArray finalArray e .<= 1) es
+
+          -- Sigh, we can't use isConcrete since that requires SymVal
+          -- constraint that we don't have here. (To support SBools.)
+          isConc (SBV (SVal _ (Left _))) = True
+          isConc _                       = False
 
 -- | If comparison is over something SMTLib can handle, just translate it. Otherwise desugar.
 instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
