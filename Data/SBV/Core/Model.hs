@@ -697,6 +697,10 @@ class EqSymbolic a where
 
   -- | Symbolic membership test.
   sElem    :: a -> [a] -> SBool
+
+  -- | Symbolic negated membership test.
+  sNotElem :: a -> [a] -> SBool
+
   {-# MINIMAL (.==) #-}
 
   x ./=  y = sNot (x .==  y)
@@ -711,7 +715,8 @@ class EqSymbolic a where
   distinct []     = sTrue
   distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
 
-  sElem x xs = sAny (.== x) xs
+  x `sElem`    xs = sAny (.== x) xs
+  x `sNotElem` xs = sNot (x `sElem` xs)
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.

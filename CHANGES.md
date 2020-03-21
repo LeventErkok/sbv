@@ -15,6 +15,7 @@
     symbolic quantities themselves. Thanks to Curran McConnell
     for the example.
 
+  * Added new predicate `sNotElem`, negating `sElem`.
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
