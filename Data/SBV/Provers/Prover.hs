@@ -746,7 +746,7 @@ sbvConcurrentWithAny solver what queries a = snd `fmap` (mapM runQueryInThread q
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
          cancelFast other = throwTo (asyncThreadId other) ThreadKilled
          runQueryInThread q = do beginTime <- getCurrentTime
-                                 (runInThread beginTime (\cfg -> what cfg a q)) solver
+                                 runInThread beginTime (\cfg -> what cfg a q) solver
 
 
 sbvConcurrentWithAll :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO [(Solver, NominalDiffTime, c)]
@@ -754,7 +754,7 @@ sbvConcurrentWithAll solver what queries a = mapConcurrently runQueryInThread qu
   where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
          runQueryInThread q = do beginTime <- getCurrentTime
-                                 (runInThread beginTime (\cfg -> what cfg a q)) solver
+                                 runInThread beginTime (\cfg -> what cfg a q) solver
 
          go []  = return []
          go as  = do (d, r) <- waitAny as
