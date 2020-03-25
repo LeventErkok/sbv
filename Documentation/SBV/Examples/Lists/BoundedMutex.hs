@@ -98,8 +98,7 @@ validTurns b turns process1 process2 = sAnd [ L.length turns .== fromIntegral b
 -- so long as both the agents and the arbiter act according to the rules. The check is bounded up-to-the
 -- given concrete bound; so this is an example of a bounded-model-checking style proof. We have:
 --
--- Test turned off. See: https://github.com/Z3Prover/z3/issues/2956
--- checkMutex 20
+-- >>> checkMutex 20
 -- All is good!
 checkMutex :: Int -> IO ()
 checkMutex b = runSMT $ do
