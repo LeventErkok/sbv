@@ -147,6 +147,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "/", ENum  a, ENum  b])                    = return $ EReal (fromInteger (fst a) / fromInteger (fst b))
         cvt (EApp [ECon "-", EReal a])                             = return $ EReal (-a)
         cvt (EApp [ECon "-", ENum a])                              = return $ ENum  (-(fst a), snd a)
+
         -- bit-vector value as CVC4 prints: (_ bv0 16) for instance
         cvt (EApp [ECon "_", ENum a, ENum _b])                     = return $ ENum a
         cvt (EApp [ECon "root-obj", EApp (ECon "+":trms), ENum k]) = do ts <- mapM getCoeff trms
@@ -155,6 +156,18 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "as", n, EApp [ECon "_", ECon "FloatingPoint", ENum ( 8, _), ENum (24, _)]]) = getFloat  n
         cvt (EApp [ECon "as", n, ECon "Float64"])                                                    = getDouble n
         cvt (EApp [ECon "as", n, ECon "Float32"])                                                    = getFloat  n
+
+        -- Deal with CVC4's approximate reals
+        cvt x@(EApp [ECon "choice", EApp [EApp [ECon v, ECon "Real"]]
+                                  , EApp [ECon "or", EApp [ECon "=", ECon v', val], _]]) | v == v'   = do
+                                                approx <- cvt val
+                                                case approx of
+                                                  ENum (s, _) -> return $ EReal $ mkPolyReal (Left (False, show s))
+                                                  EReal aval  -> case aval of
+                                                                   AlgRational _ r -> return $ EReal $ AlgRational False r
+                                                                   _               -> return $ EReal aval
+                                                  _           -> die $ "Cannot parse a CVC4 approximate value from: " ++ show x
+
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat  $ getTripleFloat  s e m
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble $ getTripleDouble s e m
