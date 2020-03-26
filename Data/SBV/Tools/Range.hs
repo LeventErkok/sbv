@@ -87,6 +87,8 @@ instance Show a => Show (Range a) where
 -- [(0.0,oo)]
 -- >>> ranges $ \x -> x .< (0::SReal)
 -- [(-oo,0.0)]
+-- >>> ranges $ \(x :: SWord8) -> 2*x .== 4
+-- [[2,3),(129,130]]
 ranges :: forall a. (Ord a, Num a, SymVal a,  SMTValue a, SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => (SBV a -> SBool) -> IO [Range a]
 ranges = rangesWith defaultSMTCfg
 
@@ -148,32 +150,51 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                  in return $ Just $ Range (getGenVal mi) (getGenVal ma)
 
 
+        -- Is this range satisfiable? Returns a witness to it.
+        witness :: Range a -> Symbolic (SBV a)
+        witness (Range lo hi) = do x :: SBV a <- free_
+
+                                   let restrict v open closed = case v of
+                                                                  Unbounded -> sTrue
+                                                                  Open   a  -> x `open`   literal a
+                                                                  Closed a  -> x `closed` literal a
+
+                                       lower = restrict lo (.>) (.>=)
+                                       upper = restrict hi (.<) (.<=)
+
+                                   constrain $ lower .&& upper
+
+                                   return x
+
+        isFeasible :: Range a -> IO Bool
+        isFeasible r = runSMTWith cfg $ do _ <- witness r
+
+                                           query $ do cs <- checkSat
+                                                      case cs of
+                                                        Unsat -> return False
+                                                        Unk   -> error "Data.SBV.interval.isFeasible: Solver said unknown!"
+                                                        Sat   -> return True
+
         bisect :: Range a -> IO (Maybe [Range a])
-        bisect (Range lo hi) = runSMTWith cfg $ do
-                                     x <- free_
+        bisect r@(Range lo hi) = runSMTWith cfg $ do x <- witness r
 
-                                     let restrict v open closed = case v of
-                                                                    Unbounded -> sTrue
-                                                                    Open   a  -> x `open`   literal a
-                                                                    Closed a  -> x `closed` literal a
+                                                     constrain $ sNot (prop x)
 
-                                         lower = restrict lo (.>) (.>=)
-                                         upper = restrict hi (.<) (.<=)
-
-                                     constrain $ lower .&& upper .&& sNot (prop x)
-
-                                     query $ do cs <- checkSat
-                                                case cs of
-                                                  Unsat -> return Nothing
-                                                  Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
-                                                  Sat   -> do midV <- Open <$> getValue x
-                                                              return $ Just [Range lo midV, Range midV hi]
+                                                     query $ do cs <- checkSat
+                                                                case cs of
+                                                                  Unsat -> return Nothing
+                                                                  Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
+                                                                  Sat   -> do midV <- Open <$> getValue x
+                                                                              return $ Just [Range lo midV, Range midV hi]
 
         search :: [Range a] -> [Range a] -> IO [Range a]
         search []     sofar = return $ reverse sofar
-        search (c:cs) sofar = do mbCS <- bisect c
-                                 case mbCS of
-                                   Nothing  -> search cs          (c:sofar)
-                                   Just xss -> search (xss ++ cs) sofar
+        search (c:cs) sofar = do feasible <- isFeasible c
+                                 if feasible
+                                    then do mbCS <- bisect c
+                                            case mbCS of
+                                              Nothing  -> search cs          (c:sofar)
+                                              Just xss -> search (xss ++ cs) sofar
+                                    else search cs sofar
 
 {-# ANN rangesWith ("HLint: ignore Replace case with fromMaybe" :: String) #-}
