@@ -137,18 +137,22 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                                                     Just r  -> r
                                  _                             -> error $ "Data.SBV.ranges.getRegVal: Cannot parse " ++ show cv
 
-            IndependentResult m <- optimizeWith cfg Independent $ do x <- free_
-                                                                     constrain $ prop x
-                                                                     minimize "min" x
-                                                                     maximize "max" x
-            case head (map snd m) of
-              Unsatisfiable{} -> return Nothing
-              Unknown{}       -> error "Solver said Unknown!"
-              ProofError{}    -> error (show (IndependentResult m))
-              _               -> let Just (Just mi) = getModelObjectiveValue "min" `fmap` ("min" `lookup` m)
-                                     Just (Just ma) = getModelObjectiveValue "max" `fmap` ("max" `lookup` m)
-                                 in return $ Just $ Range (getGenVal mi) (getGenVal ma)
 
+                getBound cstr = do let objName = "boundValue"
+                                   res@(LexicographicResult m) <- optimizeWith cfg Lexicographic $ do x <- free_
+                                                                                                      constrain $ prop x
+                                                                                                      cstr objName x
+                                   case m of
+                                     Unsatisfiable{} -> return Nothing
+                                     Unknown{}       -> error "Solver said Unknown!"
+                                     ProofError{}    -> error (show res)
+                                     _               -> return $ getModelObjectiveValue objName m
+
+            mi <- getBound minimize
+            ma <- getBound maximize
+            case (mi, ma) of
+              (Just minV, Just maxV) -> return $ Just $ Range (getGenVal minV) (getGenVal maxV)
+              _                      -> return Nothing
 
         -- Is this range satisfiable? Returns a witness to it.
         witness :: Range a -> Symbolic (SBV a)
