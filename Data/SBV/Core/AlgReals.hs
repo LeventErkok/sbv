@@ -187,7 +187,13 @@ algRealToSMTLib2 (AlgPolyRoot (i, AlgRealPoly xs) _) = "(root-obj (+ " ++ unword
 -- standard Haskell type that can represent root-of-polynomial variety.
 algRealToHaskell :: AlgReal -> String
 algRealToHaskell (AlgRational True r) = "((" ++ show r ++ ") :: Rational)"
-algRealToHaskell r                    = error $ "SBV.algRealToHaskell: Unsupported argument: " ++ show r
+algRealToHaskell r                    = error $ unlines [ ""
+                                                        , "SBV.algRealToHaskell: Unsupported argument:"
+                                                        , ""
+                                                        , "   " ++ show r
+                                                        , ""
+                                                        , "represents an irrational number, and cannot be converted to a Haskell value."
+                                                        ]
 
 -- Try to show a rational precisely if we can, with finite number of
 -- digits. Otherwise, show it as a rational value.
