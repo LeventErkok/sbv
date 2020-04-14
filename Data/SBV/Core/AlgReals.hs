@@ -19,6 +19,7 @@ module Data.SBV.Core.AlgReals (
            , mkPolyReal
            , algRealToSMTLib2
            , algRealToHaskell
+           , algRealToRational
            , mergeAlgReals
            , isExactRational
            , algRealStructuralEqual
@@ -31,6 +32,8 @@ import Data.Ratio      ((%), numerator, denominator)
 import Data.Function   (on)
 import System.Random
 import Test.QuickCheck (Arbitrary(..))
+
+import Numeric (readSigned, readFloat)
 
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
@@ -194,6 +197,27 @@ algRealToHaskell r                    = error $ unlines [ ""
                                                         , ""
                                                         , "represents an irrational number, and cannot be converted to a Haskell value."
                                                         ]
+
+-- | Convert an 'AlgReal' to a 'Rational'. If the 'AlgReal' is exact, then you get a 'Left' value. Otherwise,
+-- you get a 'Right' value which is simply an approximation.
+algRealToRational :: AlgReal -> Either Rational Rational
+algRealToRational a = case a of
+                        AlgRational True  r        -> Left r
+                        AlgRational False r        -> Left r
+                        AlgPolyRoot _     Nothing  -> bad
+                        AlgPolyRoot _     (Just s) -> let trimmed = case reverse s of
+                                                                     '.':'.':'.':rest -> reverse rest
+                                                                     _                -> s
+                                                      in case readSigned readFloat trimmed of
+                                                           [(v, "")] -> Right v
+                                                           _         -> bad
+   where bad = error $ unlines [ ""
+                               , "SBV.algRealToRational: Unsupported argument:"
+                               , ""
+                               , "   " ++ show a
+                               , ""
+                               , "represents an irrational number that cannot be approximated."
+                               ]
 
 -- Try to show a rational precisely if we can, with finite number of
 -- digits. Otherwise, show it as a rational value.

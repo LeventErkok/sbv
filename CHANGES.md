@@ -26,6 +26,14 @@
     can be coded in user space, but SBV generates efficient code
     instead of the obvious quadratic number of constraints.
 
+  * Add function 'algRealToRational' that can convert an algebraic-real
+    to a Haskell rational. We get an either value: If the algebraic real
+    is exact, then it returns a 'Left' value that represents the value
+    precisely. Otherwise, it returns a 'Right' value, which is only
+    an approximation. Note: Setting 'printRealPrec' in SMTConfig
+    to a higher value will increase the precision at the cost of more
+    computation by the SMT solver.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
