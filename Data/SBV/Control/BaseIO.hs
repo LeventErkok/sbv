@@ -427,7 +427,7 @@ retrieveResponse = Trans.retrieveResponse
 -- | Get the value of a term.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValue'
-getValue :: SMTValue a => SBV a -> Query a
+getValue :: (SymVal a, SMTValue a) => SBV a -> Query a
 getValue = Trans.getValue
 
 -- | Get the value of an uninterpreted sort, as a String
