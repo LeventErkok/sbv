@@ -1309,7 +1309,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                       -- Add on observables if we're asked to do so:
                                       obsvs <- if grabObservables
                                                   then getObservables
-                                                  else do queryDebug ["*** In a quantified context, obvservables will not be printed."]
+                                                  else do queryDebug ["*** In a quantified context, observables will not be printed."]
                                                           return []
 
                                       bindings <- let grab i@(ALL, _)      = return (i, Nothing)
