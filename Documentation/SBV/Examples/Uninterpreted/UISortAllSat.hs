@@ -59,8 +59,8 @@ classify = uninterpret "classify"
 --   l2 = L!val!2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
 --   classify L!val!1 = 1
+--   classify L!val!2 = 2
 --   classify _       = 0
 -- Solution #2:
 --   l  = L!val!1 :: L
@@ -69,8 +69,8 @@ classify = uninterpret "classify"
 --   l2 = L!val!2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
 --   classify L!val!1 = 1
+--   classify L!val!2 = 2
 --   classify _       = 0
 -- Solution #3:
 --   l  = L!val!2 :: L
@@ -79,8 +79,8 @@ classify = uninterpret "classify"
 --   l2 = L!val!2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
 --   classify L!val!1 = 1
+--   classify L!val!2 = 2
 --   classify _       = 0
 -- Found 3 different solutions.
 genLs :: Predicate
