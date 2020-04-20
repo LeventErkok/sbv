@@ -142,7 +142,8 @@ strToStrAt s offset = subStr s offset 1
 --
 -- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> "AAAAA" `strToCharAt` i .== literal 'A'
 -- Q.E.D.
--- >>> prove $ \s i c -> i `inRange` (0, length s - 1) .&& s `strToCharAt` i .== c .=> indexOf s (singleton c) .<= i
+--
+-- ->>> prove $ \s i c -> i `inRange` (0, length s - 1) .&& s `strToCharAt` i .== c .=> indexOf s (singleton c) .<= i
 -- Q.E.D.
 strToCharAt :: SString -> SInteger -> SChar
 strToCharAt s i
@@ -310,8 +311,9 @@ replace s src dst
 -- | @`indexOf` s sub@. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` s sub 0@.
 --
--- >>> prove $ \s i -> i .> 0 .&& i .< length s .=> indexOf s (subStr s i 1) .<= i
+-- ->>> prove $ \s i -> i .> 0 .&& i .< length s .=> indexOf s (subStr s i 1) .<= i
 -- Q.E.D.
+--
 -- >>> prove $ \s1 s2 -> length s2 .> length s1 .=> indexOf s1 s2 .== -1
 -- Q.E.D.
 indexOf :: SString -> SString -> SInteger
