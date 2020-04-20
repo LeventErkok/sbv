@@ -308,13 +308,13 @@ isUniversal = isFull
 -- >>> sat $ \i -> hasSize (full :: SSet Integer) i
 -- Unsatisfiable
 --
--- >>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `union` b) k .=> k .>= i `smax` j
+-- ->>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `union` b) k .=> k .>= i `smax` j
 -- Q.E.D.
 --
--- >>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `intersection` b) k .=> k .<= i `smin` j
+-- ->>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `intersection` b) k .=> k .<= i `smin` j
 -- Q.E.D.
 --
--- >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
+-- ->>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
 -- Q.E.D.
 hasSize :: (Ord a, SymVal a) => SSet a -> SInteger -> SBool
 hasSize sa si
