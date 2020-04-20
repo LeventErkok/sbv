@@ -52,6 +52,10 @@ tupleSwapSat = do
   [abx, bay] <- sTuples @(Integer, Integer, Integer) ["abx", "bay"]
   constrain $ abx^._1 .== bay^._2
   constrain $ abx^._2 .== bay^._1
+  constrain $ abx^._1 .== 1
+  constrain $ abx^._2 .== 2
+  constrain $ abx^._3 .== 3
+  constrain $ bay^._3 .== 4
   query $ do _ <- checkSat
              (,) <$> getValue abx <*> getValue bay
 
