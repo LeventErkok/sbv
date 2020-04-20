@@ -36,7 +36,6 @@ import qualified Control.Exception as C
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
-import qualified Data.ByteString as BS
 
 import System.Directory   (removeFile)
 import System.Environment (lookupEnv)
@@ -44,8 +43,7 @@ import System.Environment (lookupEnv)
 import Test.Tasty            (testGroup, TestTree, TestName)
 import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable)
 
-import Test.Tasty.Golden           (goldenVsString)
-import Test.Tasty.Golden.Advanced  (goldenTest)
+import Test.Tasty.Golden     (goldenVsString, goldenVsFileDiff)
 
 import qualified Test.Tasty.QuickCheck   as QC
 import qualified Test.QuickCheck.Monadic as QC
@@ -56,7 +54,7 @@ import System.Random (randomRIO)
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Char  (chr, ord, isDigit)
+import Data.Char  (isDigit)
 import Data.Maybe (fromMaybe, catMaybes)
 
 import System.FilePath ((</>), (<.>))
@@ -114,53 +112,12 @@ goldenVsStringShow :: Show a => TestName -> IO a -> TestTree
 goldenVsStringShow n res = goldenVsString n (goldFile n) (fmap (LBC.pack . show) res)
 
 goldenCapturedIO :: TestName -> (FilePath -> IO ()) -> TestTree
-goldenCapturedIO n res = doTheDiff n gf gfTmp (rm gfTmp >> res gfTmp)
+goldenCapturedIO n res = goldenVsFileDiff n diff gf gfTmp (rm gfTmp >> res gfTmp)
   where gf    = goldFile n
         gfTmp = gf ++ "_temp"
+        rm f  = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
 
-        rm f = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
-
--- | When comparing ignore \r's for windows's sake
-doTheDiff :: TestName -> FilePath -> FilePath -> IO () -> TestTree
-doTheDiff nm ref new act = goldenTest nm (BS.readFile ref) (act >> BS.readFile new) cmp upd
-   where upd = BS.writeFile ref
-
-         cmp :: BS.ByteString -> BS.ByteString -> IO (Maybe String)
-         cmp x y
-          | cleanUp x == cleanUp y = return Nothing
-          | True                   = return $ Just $ unlines $ [ "Discrepancy found. Expected: " ++ ref
-                                                               , "============================================"
-                                                               ]
-                                                            ++ lxs
-                                                            ++ [ "Got: " ++ new
-                                                               , "============================================"
-                                                               ]
-                                                            ++ lys
-                                                            ++ [ "Diff: "
-                                                               , "============================================"
-                                                               ]
-                                                            ++ diff
-          where xs = map (chr . fromIntegral) $ BS.unpack x
-                ys = map (chr . fromIntegral) $ BS.unpack y
-
-                lxs = lines xs
-                lys = lines ys
-
-                diffLen = length lxs `max` length lys
-                diff    = concatMap pick $ zip3 [1..diffLen] (lxs ++ repeat "") (lys ++ repeat "")
-
-                pick (i, expected, got)
-                  | filter (/= '\r') expected == filter (/= '\r') got
-                  = []
-                  | True
-                  = [ "== Line " ++ show i ++ " =="
-                    , "  Expected: " ++ show expected
-                    , "  Got     : " ++ show got
-                    ]
-
-         -- deal with insane Windows \r stuff
-         cleanUp = BS.filter (/= slashr)
-         slashr  = fromIntegral (ord '\r')
+        diff ref new = ["diff", "-u", ref, new]
 
 -- | Count the number of models. It's not kosher to
 -- call this function if you provided a max-model count
