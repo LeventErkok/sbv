@@ -41,7 +41,7 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- the bottom two bits, and assert that our "uninterpreted" implementation in 'mul22'
 -- is precisely the same. We have:
 --
--- ->>> sat synthMul22
+-- >>> sat synthMul22
 -- Satisfiable. Model:
 --   mul22_hi :: Bool -> Bool -> Bool -> Bool -> Bool
 --   mul22_hi False True  True  False = True
