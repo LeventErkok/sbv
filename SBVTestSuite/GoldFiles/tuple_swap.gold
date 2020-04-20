@@ -17,6 +17,10 @@
                                                          (proj_3_SBVTuple3 T3))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
+[GOOD] (define-fun s8 () Int 1)
+[GOOD] (define-fun s10 () Int 2)
+[GOOD] (define-fun s13 () Int 3)
+[GOOD] (define-fun s16 () Int 4)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVTuple3 Int Int Int)) ; tracks user variable "abx"
 [GOOD] (declare-fun s1 () (SBVTuple3 Int Int Int)) ; tracks user variable "bay"
@@ -32,16 +36,26 @@
 [GOOD] (define-fun s5 () Int (proj_2_SBVTuple3 s0))
 [GOOD] (define-fun s6 () Int (proj_1_SBVTuple3 s1))
 [GOOD] (define-fun s7 () Bool (= s5 s6))
+[GOOD] (define-fun s9 () Bool (= s2 s8))
+[GOOD] (define-fun s11 () Bool (= s5 s10))
+[GOOD] (define-fun s12 () Int (proj_3_SBVTuple3 s0))
+[GOOD] (define-fun s14 () Bool (= s12 s13))
+[GOOD] (define-fun s15 () Int (proj_3_SBVTuple3 s1))
+[GOOD] (define-fun s17 () Bool (= s15 s16))
 [GOOD] (assert s4)
 [GOOD] (assert s7)
+[GOOD] (assert s9)
+[GOOD] (assert s11)
+[GOOD] (assert s14)
+[GOOD] (assert s17)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple3 0 7719 1)))
+[RECV] ((s0 (mkSBVTuple3 1 2 3)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (mkSBVTuple3 7719 0 2)))
+[RECV] ((s1 (mkSBVTuple3 2 1 4)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL: ((0,7719,1),(7719,0,2))
+ FINAL: ((1,2,3),(2,1,4))
 DONE!
