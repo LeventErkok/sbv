@@ -30,11 +30,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 (lambda ((x!1 Bool)) (not x!1)) (lambda ((x!1 Bool)) x!1))))
+[RECV] ((s0 (mkSBVTuple2 (lambda ((x!1 Bool)) x!1) (lambda ((x!1 Bool)) (not x!1)))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL:
 Satisfiable. Model:
-  s0 = (U - {True},{True}) :: ({Bool}, {Bool})
+  s0 = ({True},U - {True}) :: ({Bool}, {Bool})
 DONE!
