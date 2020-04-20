@@ -22,7 +22,7 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
-.PHONY: install docs test release testPattern tags clean veryclean
+.PHONY: install docs testsuite release tags clean veryclean
 
 all: quick
 
@@ -41,7 +41,7 @@ docs:
 bench:
 	cabal new-bench
 
-test: lintTest docTest regularTests
+testsuite: lintTest docTest test
 
 lintTest:
 	@$(TIME) cabal new-test SBVHLint
@@ -52,8 +52,19 @@ docTest:
 vdocTest:
 	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
 
-regularTests:
+test:
+ifndef TGT
 	@$(TIME) cabal new-run SBVTest -- --hide-successes -j $(NO_OF_CORES)
+else
+	@$(TIME) cabal new-run SBVTest -- 	           -j $(NO_OF_CORES) -p ${TGT}
+endif
+
+testAccept:
+ifndef TGT
+	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) --accept
+else
+	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) -p ${TGT} --accept
+endif
 
 checkLinks:
 	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
@@ -66,13 +77,8 @@ testInterfaces:
 mkDistro:
 	$(TIME) cabal new-sdist
 
-release: veryclean install docs test testInterfaces mkDistro checkLinks
+release: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
-
-# use this as follows:
-#         make testPattern TGT=U2Bridge
-testPattern:
-	$(TIME) cabal new-run SBVTest -- --hide-successes -p ${TGT}
 
 # use this as follows:
 #         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
