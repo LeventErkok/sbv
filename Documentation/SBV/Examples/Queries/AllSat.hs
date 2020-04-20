@@ -20,10 +20,8 @@ module Documentation.SBV.Examples.Queries.AllSat where
 import Data.SBV
 import Data.SBV.Control
 
-import Data.List
-
 -- | Find all solutions to @x + y .== 10@ for positive @x@ and @y@, but at each
--- iteration we would like to ensure that the value of @x@ we get is at least twice as large as
+-- iteration we would like to ensure that the value of @x@ we get is one more than
 -- the previous one. This is rather silly, but demonstrates how we can dynamically
 -- query the result and put in new constraints based on those.
 goodSum :: Symbolic [(Integer, Integer)]
@@ -37,13 +35,16 @@ goodSum = do x <- sInteger "x"
 
              -- Capture the "next" solution function:
              let next i sofar = do
-                    io $ putStrLn $ "Iteration: " ++ show (i :: Int)
+                    io $ putStrLn $ "Iteration: " ++ show (i :: Integer)
 
-                    cs <- checkSat
+                    -- Using a check-sat assuming, we force the solver to walk through
+                    -- the entire range of x's
+                    cs <- checkSatAssuming [x .== literal (i-1)]
+
                     case cs of
                       Unk   -> error "Too bad, solver said unknown.." -- Won't happen
                       Unsat -> do io $ putStrLn "No other solution!"
-                                  return sofar
+                                  return $ reverse sofar
 
                       Sat   -> do xv <- getValue x
                                   yv <- getValue y
@@ -55,9 +56,6 @@ goodSum = do x <- sInteger "x"
                                   -- to allow repetition on one value if the other is different!
                                   constrain $   x ./= literal xv
                                             .|| y ./= literal yv
-
-                                  -- Also request @x@ to be twice as large, for demo purposes:
-                                  constrain $ x .>= 2 * literal xv
 
                                   -- loop around!
                                   next (i+1) ((xv, yv) : sofar)
@@ -77,12 +75,23 @@ goodSum = do x <- sInteger "x"
 -- Iteration: 3
 -- Current solution is: (2,8)
 -- Iteration: 4
--- Current solution is: (4,6)
+-- Current solution is: (3,7)
 -- Iteration: 5
--- Current solution is: (8,2)
+-- Current solution is: (4,6)
 -- Iteration: 6
+-- Current solution is: (5,5)
+-- Iteration: 7
+-- Current solution is: (6,4)
+-- Iteration: 8
+-- Current solution is: (7,3)
+-- Iteration: 9
+-- Current solution is: (8,2)
+-- Iteration: 10
+-- Current solution is: (9,1)
+-- Iteration: 11
+-- Current solution is: (10,0)
+-- Iteration: 12
 -- No other solution!
--- [(0,10),(1,9),(2,8),(4,6),(8,2)]
+-- [(0,10),(1,9),(2,8),(3,7),(4,6),(5,5),(6,4),(7,3),(8,2),(9,1),(10,0)]
 demo :: IO ()
-demo = do ss <- runSMT goodSum
-          print $ sort ss
+demo = print =<< runSMT goodSum
