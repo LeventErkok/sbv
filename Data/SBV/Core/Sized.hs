@@ -45,7 +45,6 @@ import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Symbolic
 
-import Data.SBV.Control.Utils
 import Data.SBV.SMT.SMT
 
 -- Doctest only
@@ -267,14 +266,6 @@ instance (KnownNat n, IsNonZero n) => SFiniteBits (WordN n) where
 -- | 'SFiniteBits' instance for 'IntN'
 instance (KnownNat n, IsNonZero n) => SFiniteBits (IntN n) where
    sFiniteBitSize _ = intOfProxy (Proxy @n)
-
--- | Reading 'WordN' values in queries.
-instance (KnownNat n, IsNonZero n) => SMTValue (WordN n) where
-   sexprToVal e = WordN <$> sexprToVal e
-
--- | Reading 'IntN' values in queries.
-instance (KnownNat n, IsNonZero n) => SMTValue (IntN n) where
-   sexprToVal e = IntN <$> sexprToVal e
 
 -- | Constructing models for 'WordN'
 instance (KnownNat n, IsNonZero n) => SatModel (WordN n) where

@@ -38,7 +38,6 @@ data L = A | B ()
 
 instance SymVal L
 instance HasKind L
-instance SMTValue L
 
 unint1 :: Symbolic String
 unint1 = do (x :: SBV L) <- free_

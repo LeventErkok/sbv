@@ -34,6 +34,13 @@
     to a higher value will increase the precision at the cost of more
     computation by the SMT solver.
 
+  * Removed the 'SMTValue' class. It's functionality was not really
+    needed. If you ever used this class, removing it from your
+    type signatures should fix the issue. (You might have to
+    add SymVal constraint if you did not already have it.) Please
+    get in touch if you used this class in some cunning way and you
+    need its functionality back.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles

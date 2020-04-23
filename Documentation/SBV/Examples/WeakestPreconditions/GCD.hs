@@ -56,7 +56,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (GCDS (SBV a)) where
                     Just l  -> show l
 
 -- | 'Fresh' instance for the program state
-instance (SymVal a, SMTValue a) => Fresh IO (GCDS (SBV a)) where
+instance SymVal a => Fresh IO (GCDS (SBV a)) where
   fresh = GCDS <$> freshVar_  <*> freshVar_  <*> freshVar_ <*> freshVar_
 
 -- | Helper type synonym

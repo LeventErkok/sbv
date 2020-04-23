@@ -17,7 +17,6 @@ module Data.SBV.Control.BaseIO where
 
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
-import Data.SBV.Control.Utils (SMTValue)
 import Data.SBV.Core.Concrete (CV)
 import Data.SBV.Core.Data     (HasKind, Symbolic, SymArray, SymVal, SBool, SBV, SBVType)
 import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV)
@@ -427,7 +426,7 @@ retrieveResponse = Trans.retrieveResponse
 -- | Get the value of a term.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getValue'
-getValue :: (SymVal a, SMTValue a) => SBV a -> Query a
+getValue :: SymVal a => SBV a -> Query a
 getValue = Trans.getValue
 
 -- | Get the value of an uninterpreted sort, as a String
@@ -439,7 +438,7 @@ getUninterpretedValue = Trans.getUninterpretedValue
 -- | Get the value of an uninterpreted function, as a list of domain, value pairs.
 -- The final value is the "else" clause, i.e., what the function maps values outside
 -- of the domain of the first list.
-getFunction :: Trans.SMTFunction fun a r => fun -> Query ([(a, r)], r)
+getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query ([(a, r)], r)
 getFunction = Trans.getFunction
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,

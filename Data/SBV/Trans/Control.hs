@@ -28,7 +28,7 @@ module Data.SBV.Trans.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , SMTValue(..), getValue, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
+     , getValue, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -77,7 +77,7 @@ module Data.SBV.Trans.Control (
 import Data.SBV.Core.Symbolic (MonadQuery(..), QueryT, Query, SymbolicT, QueryContext(..))
 
 import Data.SBV.Control.Query
-import Data.SBV.Control.Utils (SMTValue(..), queryDebug, executeQuery, getFunction)
+import Data.SBV.Control.Utils (queryDebug, executeQuery, getFunction)
 
 import Data.SBV.Utils.ExtractIO
 

@@ -152,7 +152,7 @@ assertIsntSat :: Provable a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
 
 -- | Quick-check a unary function, creating one version for constant folding, and another for solver
-qc1 :: (Eq a, SymVal a, SymVal b, Show a, QC.Arbitrary a, Eq b, SMTValue b) => String -> (a -> b) -> (SBV a -> SBV b) -> [TestTree]
+qc1 :: (Eq a, SymVal a, SymVal b, Show a, QC.Arbitrary a, Eq b) => String -> (a -> b) -> (SBV a -> SBV b) -> [TestTree]
 qc1 nm opC opS = [cf, sm]
    where cf = QC.testProperty (nm ++ ".constantFold") $ do
                         i <- free "i"
@@ -204,7 +204,7 @@ qc1 nm opC opS = [cf, sm]
 
 
 -- | Quick-check a binary function, creating one version for constant folding, and another for solver
-qc2 :: (Eq a, Eq b, SymVal a, SymVal b, SymVal c, Show a, Show b, QC.Arbitrary a, QC.Arbitrary b, Eq c, SMTValue c) => String -> (a -> b -> c) -> (SBV a -> SBV b -> SBV c) -> [TestTree]
+qc2 :: (Eq a, Eq b, SymVal a, SymVal b, SymVal c, Show a, Show b, QC.Arbitrary a, QC.Arbitrary b, Eq c) => String -> (a -> b -> c) -> (SBV a -> SBV b -> SBV c) -> [TestTree]
 qc2 nm opC opS = [cf, sm]
    where cf = QC.testProperty (nm ++ ".constantFold") $ do
                         i1 <- free "i1"

@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns           #-}
-{-# LANGUAGE DefaultSignatures      #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -26,7 +25,7 @@ module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getFunction, getUninterpretedValue
      , getValueCV, getUIFunCVAssoc, getUnsatAssumptions
-     , SMTValue(..), SMTFunction(..), registerUISMTFunction
+     , SMTFunction(..), registerUISMTFunction
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
@@ -48,10 +47,6 @@ import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
 import Data.Function (on)
 
 import Data.Proxy
-import Data.Typeable (Typeable)
-
-import Data.Int
-import Data.Word
 
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
@@ -66,7 +61,7 @@ import Data.IORef (readIORef, writeIORef)
 
 import Data.Time (getZonedTime)
 
-import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, AlgReal, sbvToSV, kindOf, Kind(..)
+import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, sbvToSV, kindOf, Kind(..)
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), SMTModel(..)
                               , QueryState(..), SVal(..), Quantifier(..), cache
@@ -93,19 +88,17 @@ import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
 import Data.SBV.Utils.ExtractIO
-import Data.SBV.Utils.Lib       (qfsToString, isKString)
+import Data.SBV.Utils.Lib       (qfsToString)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.SBV.Control.Types
 
-import qualified Data.Set as Set (empty, fromList, toAscList, map)
+import qualified Data.Set as Set (empty, fromList, toAscList)
 
 import qualified Control.Exception as C
 
 import GHC.Stack
-
-import Unsafe.Coerce (unsafeCoerce) -- Only used safely!
 
 -- | 'Data.SBV.Trans.Control.QueryT' as a 'SolverContext'.
 instance MonadIO m => SolverContext (QueryT m) where
@@ -210,13 +203,13 @@ inNewContext act = do st <- queryState
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
-instance (MonadIO m, SymVal a, SMTValue a) => Queriable m (SBV a) a where
+instance (MonadIO m, SymVal a) => Queriable m (SBV a) a where
   create  = freshVar_
   project = getValue
   embed   = return . literal
 
 -- | Generic 'Queriable' instance for things that are 'Fresh' and look like containers:
-instance (MonadIO m, SymVal a, SMTValue a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) (t a) where
+instance (MonadIO m, SymVal a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) (t a) where
   create  = fresh
   project = mapM getValue
   embed   = return . fmap literal
@@ -338,174 +331,20 @@ retrieveResponse userTag mbTo = do
 
              loop []
 
--- | A class which allows for sexpr-conversion to values
-class SMTValue a where
-  sexprToVal :: SExpr -> Maybe a
-
-  default sexprToVal :: Read a => SExpr -> Maybe a
-  sexprToVal (ECon c) = case reads c of
-                          [(v, "")] -> Just v
-                          _         -> Nothing
-  sexprToVal _        = Nothing
-
--- | Integral values are easy to convert:
-fromIntegralToVal :: Integral a => SExpr -> Maybe a
-fromIntegralToVal (ENum (i, _)) = Just $ fromIntegral i
-fromIntegralToVal _             = Nothing
-
-instance SMTValue Int8    where sexprToVal = fromIntegralToVal
-instance SMTValue Int16   where sexprToVal = fromIntegralToVal
-instance SMTValue Int32   where sexprToVal = fromIntegralToVal
-instance SMTValue Int64   where sexprToVal = fromIntegralToVal
-instance SMTValue Word8   where sexprToVal = fromIntegralToVal
-instance SMTValue Word16  where sexprToVal = fromIntegralToVal
-instance SMTValue Word32  where sexprToVal = fromIntegralToVal
-instance SMTValue Word64  where sexprToVal = fromIntegralToVal
-instance SMTValue Integer where sexprToVal = fromIntegralToVal
-
-instance SMTValue Float where
-   sexprToVal (EFloat f)    = Just f
-   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
-   sexprToVal _             = Nothing
-
-instance SMTValue Double where
-   sexprToVal (EDouble f)   = Just f
-   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
-   sexprToVal _             = Nothing
-
-instance SMTValue Bool where
-   sexprToVal (ENum (1, _)) = Just True
-   sexprToVal (ENum (0, _)) = Just False
-   sexprToVal _             = Nothing
-
-instance SMTValue AlgReal where
-   sexprToVal (EReal a)     = Just a
-   sexprToVal (ENum (v, _)) = Just (fromIntegral v)
-   sexprToVal _             = Nothing
-
-instance SMTValue Char where
-   sexprToVal (ENum (i, _)) = Just (chr (fromIntegral i))
-   sexprToVal _             = Nothing
-
-instance (SMTValue a, Typeable a) => SMTValue [a] where
-   -- NB. The conflation of String/[Char] forces us to have this bastard case here
-   -- with unsafeCoerce to cast back to a regular string. This is unfortunate,
-   -- and the ice is thin here. But it works, and is much better than a plethora
-   -- of overlapping instances. Sigh.
-   sexprToVal (ECon s)
-    | isKString @[a] undefined && length s >= 2 && head s == '"' && last s == '"'
-    = Just $ map unsafeCoerce s'
-    | True
-    = Just $ map (unsafeCoerce . c2w8) s'
-    where s' = qfsToString (tail (init s))
-          c2w8  :: Char -> Word8
-          c2w8 = fromIntegral . ord
-
-   -- Otherwise we have a good old sequence, just parse it simply:
-   sexprToVal (EApp (ECon "seq.++" : rest))           = do elts <- mapM sexprToVal rest
-                                                           return $ concat elts
-   sexprToVal (EApp [ECon "seq.unit", a])             = do a' <- sexprToVal a
-                                                           return [a']
-   sexprToVal (EApp [ECon "as", ECon "seq.empty", _]) = return []
-
-   sexprToVal _                                       = Nothing
-
-instance (SMTValue a, SMTValue b) => SMTValue (Either a b) where
-  sexprToVal (EApp [ECon "left_SBVEither",  a])                      = Left  <$> sexprToVal a
-  sexprToVal (EApp [ECon "right_SBVEither", b])                      = Right <$> sexprToVal b
-  sexprToVal (EApp [EApp [ECon "as", ECon "left_SBVEither",  _], a]) = Left  <$> sexprToVal a   -- CVC4 puts full ascriptions
-  sexprToVal (EApp [EApp [ECon "as", ECon "right_SBVEither", _], b]) = Right <$> sexprToVal b   -- CVC4 puts full ascriptions
-  sexprToVal _                                                       = Nothing
-
-instance SMTValue a => SMTValue (Maybe a) where
-  sexprToVal (ECon "nothing_SBVMaybe")                                = return Nothing
-  sexprToVal (EApp [ECon "just_SBVMaybe", a])                         = Just <$> sexprToVal a
-  sexprToVal (      EApp [ECon "as", ECon "nothing_SBVMaybe", _])     = return Nothing          -- Ditto here for CVC4
-  sexprToVal (EApp [EApp [ECon "as", ECon "just_SBVMaybe",    _], a]) = Just <$> sexprToVal a
-  sexprToVal _                                                        = Nothing
-
-instance SMTValue () where
-   sexprToVal (ECon "mkSBVTuple0") = Just ()
-   sexprToVal _                    = Nothing
-
-instance (Ord a, SymVal a) => SMTValue (RCSet a) where
-   sexprToVal e = recoverKindedValue k e >>= cvt . cvVal
-     where ke = kindOf (Proxy @a)
-           k  = KSet ke
-
-           cvt (CSet (RegularSet s))    = Just $ RegularSet    $ Set.map (fromCV . CV ke) s
-           cvt (CSet (ComplementSet s)) = Just $ ComplementSet $ Set.map (fromCV . CV ke) s
-           cvt _                        = Nothing
-
--- | Convert a sexpr of n-tuple to constituent sexprs. Z3 and CVC4 differ here on how they
--- present tuples, so we accommodate both:
-sexprToTuple :: Int -> SExpr -> [SExpr]
-sexprToTuple n e = try e
-  where -- Z3 way
-        try (EApp (ECon f : args)) = case splitAt (length "mkSBVTuple") f of
-                                       ("mkSBVTuple", c) | all isDigit c && read c == n && length args == n -> args
-                                       _  -> bad
-        -- CVC4 way
-        try  (EApp (EApp [ECon "as", ECon f, _] : args)) = try (EApp (ECon f : args))
-        try  _ = bad
-        bad = error $ "Data.SBV.sexprToTuple: Impossible: Expected a constructor for " ++ show n ++ " tuple, but got: " ++ show e
-
--- 2-tuple
-instance (SMTValue a, SMTValue b) => SMTValue (a, b) where
-   sexprToVal s = case sexprToTuple 2 s of
-                    [a, b] -> (,) <$> sexprToVal a <*> sexprToVal b
-                    _      -> Nothing
-
--- 3-tuple
-instance (SMTValue a, SMTValue b, SMTValue c) => SMTValue (a, b, c) where
-   sexprToVal s = case sexprToTuple 3 s of
-                    [a, b, c] -> (,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c
-                    _         -> Nothing
-
--- 4-tuple
-instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d) => SMTValue (a, b, c, d) where
-   sexprToVal s = case sexprToTuple 4 s of
-                    [a, b, c, d] -> (,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d
-                    _            -> Nothing
-
--- 5-tuple
-instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e) => SMTValue (a, b, c, d, e) where
-   sexprToVal s = case sexprToTuple 5 s of
-                    [a, b, c, d, e] -> (,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e
-                    _               -> Nothing
-
--- 6-tuple
-instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f) => SMTValue (a, b, c, d, e, f) where
-   sexprToVal s = case sexprToTuple 6 s of
-                    [a, b, c, d, e, f] -> (,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f
-                    _                  -> Nothing
-
--- 7-tuple
-instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f, SMTValue g) => SMTValue (a, b, c, d, e, f, g) where
-   sexprToVal s = case sexprToTuple 7 s of
-                    [a, b, c, d, e, f, g] -> (,,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f <*> sexprToVal g
-                    _                     -> Nothing
-
--- 8-tuple
-instance (SMTValue a, SMTValue b, SMTValue c, SMTValue d, SMTValue e, SMTValue f, SMTValue g, SMTValue h) => SMTValue (a, b, c, d, e, f, g, h) where
-   sexprToVal s = case sexprToTuple 8 s of
-                    [a, b, c, d, e, f, g, h] -> (,,,,,,,) <$> sexprToVal a <*> sexprToVal b <*> sexprToVal c <*> sexprToVal d <*> sexprToVal e <*> sexprToVal f <*> sexprToVal g <*> sexprToVal h
-                    _                        -> Nothing
-
 -- | Generalization of 'Data.SBV.Control.getValue'
-getValue :: (MonadIO m, MonadQuery m, SMTValue a, SymVal a) => SBV a -> m a
+getValue :: (MonadIO m, MonadQuery m, SymVal a) => SBV a -> m a
 getValue s = do sv <- inNewContext (`sbvToSV` s)
                 cv <- getValueCV Nothing sv
                 return $ fromCV cv
 
 -- | A class which allows for sexpr-conversion to functions
-class (HasKind r, SatModel r, SMTValue r) => SMTFunction fun a r | fun -> a r where
+class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
   smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m String
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
-  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m) => fun -> SExpr -> m (Maybe ([(a, r)], r))
+  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m, SymVal r) => fun -> SExpr -> m (Maybe ([(a, r)], r))
 
   {-# MINIMAL sexprToArg, smtFunSaturate, smtFunType  #-}
 
@@ -654,8 +493,8 @@ mkArg k = case defaultKindedValue k of
             Just c -> SBV $ SVal k (Left c)
 
 -- | Functions of arity 1
-instance ( SymVal a, HasKind a, SMTValue a
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a, HasKind a
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV r) a r
          where
   sexprToArg _ [a0] = sexprToVal a0
@@ -666,9 +505,9 @@ instance ( SymVal a, HasKind a, SMTValue a
   smtFunSaturate f = f $ mkArg (kindOf (Proxy @a))
 
 -- | Functions of arity 2
-instance ( SymVal a,  HasKind a, SMTValue a
-         , SymVal b,  HasKind b, SMTValue b
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV r) (a, b) r
          where
   sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
@@ -680,10 +519,10 @@ instance ( SymVal a,  HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @b)))
 
 -- | Functions of arity 3
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV r) (a, b, c) r
          where
   sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
@@ -696,11 +535,11 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @c)))
 
 -- | Functions of arity 4
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SymVal d,   HasKind d, SMTValue d
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SymVal d,   HasKind d
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV r) (a, b, c, d) r
          where
   sexprToArg _ [a0, a1, a2, a3] = (,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3
@@ -714,12 +553,12 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @d)))
 
 -- | Functions of arity 5
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SymVal d,   HasKind d, SMTValue d
-         , SymVal e,   HasKind e, SMTValue e
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SymVal d,   HasKind d
+         , SymVal e,   HasKind e
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV r) (a, b, c, d, e) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4] = (,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4
@@ -734,13 +573,13 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @e)))
 
 -- | Functions of arity 6
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SymVal d,   HasKind d, SMTValue d
-         , SymVal e,   HasKind e, SMTValue e
-         , SymVal f,   HasKind f, SMTValue f
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SymVal d,   HasKind d
+         , SymVal e,   HasKind e
+         , SymVal f,   HasKind f
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV r) (a, b, c, d, e, f) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5] = (,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5
@@ -756,14 +595,14 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @f)))
 
 -- | Functions of arity 7
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SymVal d,   HasKind d, SMTValue d
-         , SymVal e,   HasKind e, SMTValue e
-         , SymVal f,   HasKind f, SMTValue f
-         , SymVal g,   HasKind g, SMTValue g
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SymVal d,   HasKind d
+         , SymVal e,   HasKind e
+         , SymVal f,   HasKind f
+         , SymVal g,   HasKind g
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV r) (a, b, c, d, e, f, g) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = (,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6
@@ -780,15 +619,15 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @g)))
 
 -- | Functions of arity 8
-instance ( SymVal a,   HasKind a, SMTValue a
-         , SymVal b,   HasKind b, SMTValue b
-         , SymVal c,   HasKind c, SMTValue c
-         , SymVal d,   HasKind d, SMTValue d
-         , SymVal e,   HasKind e, SMTValue e
-         , SymVal f,   HasKind f, SMTValue f
-         , SymVal g,   HasKind g, SMTValue g
-         , SymVal h,   HasKind h, SMTValue h
-         , SatModel r, HasKind r, SMTValue r
+instance ( SymVal a,   HasKind a
+         , SymVal b,   HasKind b
+         , SymVal c,   HasKind c
+         , SymVal d,   HasKind d
+         , SymVal e,   HasKind e
+         , SymVal f,   HasKind f
+         , SymVal g,   HasKind g
+         , SymVal h,   HasKind h
+         , SatModel r, HasKind r
          ) => SMTFunction (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV h -> SBV r) (a, b, c, d, e, f, g, h) r
          where
   sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = (,,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6 <*> sexprToVal a7
@@ -806,7 +645,7 @@ instance ( SymVal a,   HasKind a, SMTValue a
                        (mkArg (kindOf (Proxy @h)))
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SMTFunction fun a r) => fun -> m ([(a, r)], r)
+getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r) => fun -> m ([(a, r)], r)
 getFunction f = do nm <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
@@ -898,6 +737,10 @@ defaultKindedValue k = CV k <$> cvt k
         uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
         uninterp (Right [])    = Nothing                       -- I don't think this can actually happen, but just in case
         uninterp (Left _)      = Nothing                       -- Out of luck, truly uninterpreted; we don't even know if it's inhabited.
+
+-- | Go from an SExpr directly to a value
+sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
+sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
@@ -1021,7 +864,17 @@ recoverKindedValue k e = case k of
                                                                 , "While trying to parse: " ++ show te
                                                                 ]
 
-                      args = sexprToTuple n te
+                      -- | Convert a sexpr of n-tuple to constituent sexprs. Z3 and CVC4 differ here on how they
+                      -- present tuples, so we accommodate both:
+                      args = try te
+                        where -- Z3 way
+                              try (EApp (ECon f : as)) = case splitAt (length "mkSBVTuple") f of
+                                                             ("mkSBVTuple", c) | all isDigit c && read c == n && length as == n -> as
+                                                             _  -> bad
+                              -- CVC4 way
+                              try  (EApp (EApp [ECon "as", ECon f, _] : as)) = try (EApp (ECon f : as))
+                              try  _ = bad
+                              bad = error $ "Data.SBV.sexprToTuple: Impossible: Expected a constructor for " ++ show n ++ " tuple, but got: " ++ show te
 
                       walk _ []           sofar = reverse sofar
                       walk i (Just el:es) sofar = walk (i+1) es (cvVal el : sofar)

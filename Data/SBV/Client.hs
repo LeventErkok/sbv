@@ -33,7 +33,6 @@ import qualified "template-haskell" Language.Haskell.TH as TH
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
-import Data.SBV.Control.Utils
 import Data.SBV.Provers.Prover
 
 -- | Check whether the given solver is installed and is ready to go. This call does a
@@ -69,6 +68,5 @@ mkSymbolicEnumeration typeName = do
         deriving instance Data     $(typeCon)
         deriving instance SymVal   $(typeCon)
         deriving instance HasKind  $(typeCon)
-        deriving instance SMTValue $(typeCon)
         deriving instance SatModel $(typeCon)
       |]

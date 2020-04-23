@@ -48,7 +48,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
                     Just l  -> show l
 
 -- | 'Fresh' instance for the program state
-instance (SymVal a, SMTValue a) => Fresh IO (SumS (SBV a)) where
+instance SymVal a => Fresh IO (SumS (SBV a)) where
   fresh = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
 
 -- | Helper type synonym
