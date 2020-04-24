@@ -233,13 +233,18 @@ The other way we can have a bad measure is if it fails to decrease through the l
 >>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> let measure   SumS{n, i}    = [n + i]
 >>> void $ correctness invariant (Just measure)
-Following proof obligation failed:
-==================================
+Following proof obligations failed:
+===================================
+  Measure for loop "i < n" is negative:
+    State  : SumS {n = -3, i = -4, s = 6}
+    Measure: -7
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = 5, i = 1, s = 1}
-    Measure: 6
-    After  : SumS {n = 5, i = 2, s = 3}
-    Measure: 7
+    Before : SumS {n = -3, i = -4, s = 6}
+    Measure: -7
+    After  : SumS {n = -3, i = -3, s = 3}
+    Measure: -6
 
-Clearly, as @i@ increases, so does our bogus measure @n+i@.
+Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that this counterexample might be a bit
+confusing at first as @n@ and @i@ are negative, but the point here is that measure goes down if we start with
+these values, not that these values are actually reachable.
 -}
