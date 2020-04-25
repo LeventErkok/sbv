@@ -72,7 +72,7 @@ Library
                     ViewPatterns
   Build-Depends   : base >= 4.11 && < 5
                   , crackNum >= 2.3
-                  , ghc, QuickCheck, template-haskell
+                  , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, transformers
                   , generic-deriving
