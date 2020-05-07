@@ -1391,9 +1391,9 @@ introduceUserName st isTracker nmOrig k q sv = do
                                                            , "Only existential variables are supported in query mode."
                                                            ]
                    if isTracker
-                      then modifyState st rinps (second ((:) (sv, nm)) *** Set.insert nm)
+                      then modifyState st rinps (second ((sv, nm) :) *** Set.insert nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                      else modifyState st rinps (first ((:) (q, (sv, nm))) *** Set.insert nm)
+                      else modifyState st rinps (first ((q, (sv, nm)) :) *** Set.insert nm)
                                      $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
