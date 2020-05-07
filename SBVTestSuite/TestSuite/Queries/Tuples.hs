@@ -64,4 +64,5 @@ queryTuples2 = do
        then return av
        else error $ "Didn't expect this: " ++ show av
 
-{-# ANN module ("HLint: ignore Use ." :: String) #-}
+{-# ANN module ("HLint: ignore Use ."        :: String) #-}
+{-# ANN module ("HLint: ignore Redundant ^." :: String) #-}

@@ -142,4 +142,5 @@ unequal = do
                 Unsat -> return ()
                 _     -> error "did not expect this!"
 
-{-# ANN module ("HLint: ignore Use ." :: String) #-}
+{-# ANN module ("HLint: ignore Use ."        :: String) #-}
+{-# ANN module ("HLint: ignore Redundant ^." :: String) #-}
