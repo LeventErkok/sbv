@@ -58,19 +58,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =   5.615828e-4 :: Float
---   y = -2.2688436e-3 :: Float
---   z =    -2047.9991 :: Float
+--   x =    128.00029 :: Float
+--   y =  -7.27236e-4 :: Float
+--   z = -6.875994e-3 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x =   5.615828e-4 :: Float
--- >>> let y = -2.2688436e-3 :: Float
--- >>> let z =    -2047.9991 :: Float
+-- >>> let x =    128.00029 :: Float
+-- >>> let y =  -7.27236e-4 :: Float
+-- >>> let z = -6.875994e-3 :: Float
 -- >>> x + (y + z)
--- -2048.001
+-- 127.99268
 -- >>> (x + y) + z
--- -2048.0007
+-- 127.99269
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
@@ -92,13 +92,13 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a =   -1.9999999 :: Float
---   b = 9.403954e-38 :: Float
+--   a =  5.060287e28 :: Float
+--   b = 3.6780381e19 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a =   -1.9999999 :: Float
--- >>> let b = 9.403954e-38 :: Float
+-- >>> let a =  5.060287e28 :: Float
+-- >>> let b = 3.6780381e19 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
@@ -121,15 +121,15 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -1.910829855912238e-308 :: Double
+--   a = 2.4907063e38 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = -1.910829855912238e-308 :: Double
+-- >>> let a = 2.4907063e38 :: Float
 -- >>> a * (1/a)
--- 0.9999999999999999
+-- 1.0000001
 multInverse :: IO ThmResult
-multInverse = prove $ do a <- sDouble "a"
+multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
                          constrain $ fpIsPoint (1/a)
                          return $ a * (1/a) .== 1
@@ -147,33 +147,33 @@ multInverse = prove $ do a <- sDouble "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundNearestTiesToAway :: RoundingMode
---   x  =                    1.0 :: Float
---   y  =            -0.43749997 :: Float
+--   rm = RoundTowardPositive :: RoundingMode
+--   x  =      -2.3509886e-38 :: Float
+--   y  =            -6.0e-45 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> 1.0 + (-0.43749997) :: Float
--- 0.5625
+-- >>> -2.3509886e-38 + (-6.0e-45) :: Float
+-- -2.3509893e-38
 --
--- While we cannot directly see the result when the mode is 'RoundNearestTiesToAway' in Haskell, we can use
+-- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundNearestTiesToAway 1.0 (-0.43749997 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-2.3509886e-38) (-6.0e-45 :: SFloat)
 -- Satisfiable. Model:
---   s0 = 0.56250006 :: Float
+--   s0 = -2.350989e-38 :: Float
 --
--- We can see why these two resuls are indeed different: The 'RoundNearestTiesToAway'
--- (which rounds away from zero) produces a larger result. Indeed, if we treat these numbers
+-- We can see why these two resuls are indeed different: The 'RoundTowardPositive'
+-- (which rounds towards positive infinity from zero) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >> 1.0 + (-0.43749997 :: Double)
--- 0.56250003
+-- >> -2.3509886e-38 + (-6.0e-45) :: Double
+-- -2.3509892e-38
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
--- larger value with 'RoundNearestTiesToAway'. A more detailed study is beyond our current scope, so we'll
+-- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
 -- merely note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.

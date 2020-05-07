@@ -221,7 +221,7 @@ The termination measure must always be non-negative:
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 4, i = 1, s = 1}
+    State  : SumS {n = 2, i = 1, s = 1}
     Measure: -1
 
 The failure is pretty obvious in this case: Measure produces a negative value.
@@ -236,15 +236,16 @@ The other way we can have a bad measure is if it fails to decrease through the l
 Following proof obligations failed:
 ===================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 3, i = -20, s = 190}
-    Measure: -17
+    State  : SumS {n = -45, i = -46, s = 1035}
+    Measure: -91
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = 3, i = -20, s = 190}
-    Measure: -17
-    After  : SumS {n = 3, i = -19, s = 171}
-    Measure: -16
+    Before : SumS {n = -45, i = -46, s = 1035}
+    Measure: -91
+    After  : SumS {n = -45, i = -45, s = 990}
+    Measure: -90
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that this counterexample might be a bit
 confusing at first as @n@ and @i@ are negative, but the point here is that measure goes down if we start with
-these values, not that these values are actually reachable.
+these values, not that these values are actually reachable. (In other words, this is a counter-example to
+induction; and still needs to be addressed for a full proof.)
 -}
