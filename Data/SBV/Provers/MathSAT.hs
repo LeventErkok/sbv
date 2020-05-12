@@ -41,7 +41,7 @@ mathSAT = SMTSolver {
                               , supportsOptimization       = False
                               , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = True
-                              , supportsGlobalDecls        = False
+                              , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
                               , supportsFlattenedModels    = Nothing
                               }
