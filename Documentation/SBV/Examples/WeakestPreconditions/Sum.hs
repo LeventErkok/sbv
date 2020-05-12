@@ -236,13 +236,13 @@ The other way we can have a bad measure is if it fails to decrease through the l
 Following proof obligations failed:
 ===================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = -45, i = -46, s = 1035}
-    Measure: -91
+    State  : SumS {n = -56, i = -57, s = 1596}
+    Measure: -113
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = -45, i = -46, s = 1035}
-    Measure: -91
-    After  : SumS {n = -45, i = -45, s = 990}
-    Measure: -90
+    Before : SumS {n = -56, i = -57, s = 1596}
+    Measure: -113
+    After  : SumS {n = -56, i = -56, s = 1540}
+    Measure: -112
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that this counterexample might be a bit
 confusing at first as @n@ and @i@ are negative, but the point here is that measure goes down if we start with
