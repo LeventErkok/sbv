@@ -28,6 +28,7 @@ boolector = SMTSolver {
          , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False

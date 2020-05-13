@@ -116,6 +116,8 @@
 --
 --   * Yices from SRI: <http://yices.csl.sri.com/>
 --
+--   * DReal: <https://dreal.github.io/>
+--
 --   * Z3 from Microsoft: <http://github.com/Z3Prover/z3/wiki>
 --
 -- SBV requires recent versions of these solvers; please see the file
@@ -323,7 +325,7 @@ module Data.SBV (
   -- $verbosity
 
   -- ** Solvers
-  , boolector, cvc4, yices, z3, mathSAT, abc
+  , boolector, cvc4, yices, dReal, z3, mathSAT, abc
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut

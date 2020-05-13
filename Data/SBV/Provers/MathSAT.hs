@@ -32,6 +32,7 @@ mathSAT = SMTSolver {
          , engine       = standardEngine "SBV_MATHSAT" "SBV_MATHSAT_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True

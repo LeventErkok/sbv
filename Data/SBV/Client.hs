@@ -48,6 +48,7 @@ sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> ret
 defaultSolverConfig :: Solver -> SMTConfig
 defaultSolverConfig Z3        = z3
 defaultSolverConfig Yices     = yices
+defaultSolverConfig DReal     = dReal
 defaultSolverConfig Boolector = boolector
 defaultSolverConfig CVC4      = cvc4
 defaultSolverConfig MathSAT   = mathSAT

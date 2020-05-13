@@ -30,6 +30,7 @@ yices = SMTSolver {
          , engine       = standardEngine "SBV_YICES" "SBV_YICES_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True

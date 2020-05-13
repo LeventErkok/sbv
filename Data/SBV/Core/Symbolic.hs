@@ -1711,6 +1711,7 @@ instance NFData SMTScript where
 -- | Translation tricks needed for specific capabilities afforded by each solver
 data SolverCapabilities = SolverCapabilities {
          supportsQuantifiers        :: Bool           -- ^ Supports SMT-Lib2 style quantifiers?
+       , supportsDefineFun          :: Bool           -- ^ Supports define-fun construct?
        , supportsUninterpretedSorts :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
        , supportsReals              :: Bool           -- ^ Supports reals?
@@ -1829,6 +1830,7 @@ type SMTEngine =  forall res.
 -- | Solvers that SBV is aware of
 data Solver = Z3
             | Yices
+            | DReal
             | Boolector
             | CVC4
             | MathSAT

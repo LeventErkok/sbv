@@ -30,6 +30,7 @@ abc = SMTSolver {
          , engine       = standardEngine "SBV_ABC" "SBV_ABC_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False

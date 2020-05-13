@@ -32,6 +32,7 @@ cvc4 = SMTSolver {
          , engine       = standardEngine "SBV_CVC4" "SBV_CVC4_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..

@@ -30,6 +30,7 @@ z3 = SMTSolver {
          , engine       = standardEngine "SBV_Z3" "SBV_Z3_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
+                              , supportsDefineFun          = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True

@@ -440,15 +440,20 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> String
 declDef cfg skolemMap tableMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun (s, cvtSV          skolemMap          e) (Just m)
-          e                     -> defineFun (s, cvtExp caps rm skolemMap tableMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV          skolemMap          e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp caps rm skolemMap tableMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
-defineFun :: (SV, String) -> Maybe String -> String
-defineFun (s, def) mbComment = "(define-fun "   ++ varT ++ " " ++ def ++ ")" ++ cmnt
-  where varT      = show s ++ " " ++ svFunType [] s
-        cmnt      = maybe "" (" ; " ++) mbComment
+defineFun :: SMTConfig -> (SV, String) -> Maybe String -> String
+defineFun cfg (s, def) mbComment
+   | hasDefFun = "(define-fun "  ++ varT ++ " " ++ def ++ ")" ++ cmnt
+   | True      = "(declare-fun " ++ varT ++ "); (assert (= " ++ var ++ " " ++ def ++ ")) " ++ cmnt
+  where var  = show s
+        varT = var ++ " " ++ svFunType [] s
+        cmnt = maybe "" (" ; " ++) mbComment
+
+        hasDefFun = supportsDefineFun $ capabilities (solver cfg)
 
 -- Declare constants. NB. We don't declare true/false; but just inline those as necessary
 declConst :: SMTConfig -> (SV, CV) -> [String]
@@ -456,7 +461,7 @@ declConst cfg (s, c)
   | s == falseSV || s == trueSV
   = []
   | True
-  = [defineFun (s, cvtCV (roundingMode cfg) c) Nothing]
+  = [defineFun cfg (s, cvtCV (roundingMode cfg) c) Nothing]
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
