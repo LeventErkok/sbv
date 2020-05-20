@@ -17,20 +17,20 @@ module BenchSuite.Puzzles.NQueens(benchmarks) where
 import Documentation.SBV.Examples.Puzzles.NQueens
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ runner "NQueens.NQueens 1" (mkQueens 1) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 2" (mkQueens 2) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 3" (mkQueens 3) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 4" (mkQueens 4) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 5" (mkQueens 5) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 6" (mkQueens 6) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 7" (mkQueens 7) `using` setRunner allSatWith
-  , runner "NQueens.NQueens 8" (mkQueens 8) `using` setRunner allSatWith
+  [ S.run "NQueens.NQueens 1" (mkQueens 1) `using` runner allSatWith
+  , S.run "NQueens.NQueens 2" (mkQueens 2) `using` runner allSatWith
+  , S.run "NQueens.NQueens 3" (mkQueens 3) `using` runner allSatWith
+  , S.run "NQueens.NQueens 4" (mkQueens 4) `using` runner allSatWith
+  , S.run "NQueens.NQueens 5" (mkQueens 5) `using` runner allSatWith
+  , S.run "NQueens.NQueens 6" (mkQueens 6) `using` runner allSatWith
+  , S.run "NQueens.NQueens 7" (mkQueens 7) `using` runner allSatWith
+  , S.run "NQueens.NQueens 8" (mkQueens 8) `using` runner allSatWith
   ]
 
 mkQueens :: Int -> Symbolic SBool

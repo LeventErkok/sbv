@@ -168,6 +168,7 @@ Library
                   , Documentation.SBV.Examples.Queries.CaseSplit
                   , Documentation.SBV.Examples.Queries.Enums
                   , Documentation.SBV.Examples.Queries.Interpolants
+                  , Documentation.SBV.Examples.Queries.Concurrency
                   , Documentation.SBV.Examples.Strings.RegexCrossword
                   , Documentation.SBV.Examples.Strings.SQLInjection
                   , Documentation.SBV.Examples.Transformers.SymbolicEval
@@ -411,11 +412,11 @@ Benchmark SBVBench
                     TypeApplications
   Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
                 , sbv, directory, random, mtl, containers
-                , criterion, process, deepseq
+                , gauge, process, deepseq, silently
   Hs-Source-Dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
   Other-modules   : Utils.SBVBenchFramework
-                  , BenchSuite.Overhead.SBVOverhead
+                  , BenchSuite.Bench.Bench
                   , BenchSuite.Puzzles.Birthday
                   , BenchSuite.Puzzles.Coins
                   , BenchSuite.Puzzles.Counts
@@ -428,3 +429,17 @@ Benchmark SBVBench
                   , BenchSuite.Puzzles.SendMoreMoney
                   , BenchSuite.Puzzles.Sudoku
                   , BenchSuite.Puzzles.U2Bridge
+                  , BenchSuite.BitPrecise.BitTricks
+                  , BenchSuite.BitPrecise.BrokenSearch
+                  , BenchSuite.BitPrecise.Legato
+                  , BenchSuite.BitPrecise.MergeSort
+                  , BenchSuite.BitPrecise.MultMask
+                  , BenchSuite.BitPrecise.PrefixSum
+                  , BenchSuite.Queries.AllSat
+                  , BenchSuite.Queries.CaseSplit
+                  , BenchSuite.Queries.Concurrency
+                  , BenchSuite.Queries.Enums
+                  , BenchSuite.Queries.FourFours
+                  , BenchSuite.Queries.GuessNumber
+                  , BenchSuite.Queries.Interpolants
+                  , BenchSuite.Queries.UnsatCore
