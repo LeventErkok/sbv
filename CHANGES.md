@@ -41,6 +41,9 @@
     get in touch if you used this class in some cunning way and you
     need its functionality back.
 
+  * Reworked SBVBenchSuite api, added "BenchSuite.BitPrecise" and
+    "BenchSuite.Queries".
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
@@ -362,7 +365,7 @@
     then your float value will be minimized as the corresponding 32 (or 64 for
     doubles) bit word. Note that this methods supports infinities properly, and
     does not distinguish between -0 and +0.
-    
+
   * Optimization routines have been generalized to work over arbitrary metric-spaces,
     with user-definable mappings. The simplest instance we have added is optimization
     over booleans, by the obvious numeric mapping. Tuples are also supported with
