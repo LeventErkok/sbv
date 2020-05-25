@@ -15,12 +15,12 @@
 module BenchSuite.Puzzles.DogCatMouse(benchmarks) where
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = runner "DogCatMouse" p `using` setRunner allSatWith
+benchmarks = S.run "DogCatMouse" p `using` runner allSatWith
   where p = do [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
                solve [ dog   .>= 1                                   -- at least one dog
                      , cat   .>= 1                                   -- at least one cat

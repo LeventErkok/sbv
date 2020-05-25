@@ -1,25 +1,24 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : BenchSuite.Puzzles.Euler185
+-- Module    : BenchSuite.Queries.CaseSplit
 -- Copyright : (c) Jeffrey Young
 --                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Bench suite for Documentation.SBV.Examples.Puzzles.Euler185
+-- Bench suite for Documentation.SBV.Examples.Queries.CaseSplit
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module BenchSuite.Puzzles.Euler185(benchmarks) where
+module BenchSuite.Queries.CaseSplit(benchmarks) where
 
-import Documentation.SBV.Examples.Puzzles.Euler185
+import Documentation.SBV.Examples.Queries.CaseSplit
 
-import Utils.SBVBenchFramework
-import BenchSuite.Bench.Bench as S
+import BenchSuite.Bench.Bench
 
-
--- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Euler185" euler185 `using` runner allSatWith
+benchmarks = rGroup [ runIO "CaseSplit.1" csDemo1
+                    , runIO "CaseSplit.2" csDemo2
+                    ]

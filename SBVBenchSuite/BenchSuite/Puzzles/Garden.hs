@@ -19,10 +19,10 @@ import Data.List (isSuffixOf)
 import Documentation.SBV.Examples.Puzzles.Garden
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
-benchmarks :: Runner 
-benchmarks = runnerWith s "Garden" puzzle `using` setRunner allSatWith
+benchmarks :: Runner
+benchmarks = S.runWith s "Garden" puzzle `using` runner allSatWith
   where s = z3{satTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)}

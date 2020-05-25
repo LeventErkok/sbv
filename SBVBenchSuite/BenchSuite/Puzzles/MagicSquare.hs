@@ -17,14 +17,14 @@ module BenchSuite.Puzzles.MagicSquare(benchmarks) where
 import Documentation.SBV.Examples.Puzzles.MagicSquare
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ runner "MagicSquare.magic 2" (mkMagic 2) `using` setRunner allSatWith
-  , runner "MagicSquare.magic 3" (mkMagic 3) `using` setRunner allSatWith
+  [ S.run "MagicSquare.magic 2" (mkMagic 2) `using` runner allSatWith
+  , S.run "MagicSquare.magic 3" (mkMagic 3) `using` runner allSatWith
   ]
 
 mkMagic :: Int -> Symbolic SBool

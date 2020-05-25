@@ -1,25 +1,22 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : BenchSuite.Puzzles.Euler185
+-- Module    : BenchSuite.Queries.AllSat
 -- Copyright : (c) Jeffrey Young
 --                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Bench suite for Documentation.SBV.Examples.Puzzles.Euler185
+-- Bench suite for Documentation.SBV.Examples.Queries.AllSat
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module BenchSuite.Puzzles.Euler185(benchmarks) where
+module BenchSuite.Queries.AllSat(benchmarks) where
 
-import Documentation.SBV.Examples.Puzzles.Euler185
+import Documentation.SBV.Examples.Queries.AllSat
 
-import Utils.SBVBenchFramework
-import BenchSuite.Bench.Bench as S
+import BenchSuite.Bench.Bench
 
-
--- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Euler185" euler185 `using` runner allSatWith
+benchmarks = runIO "AllSat" demo

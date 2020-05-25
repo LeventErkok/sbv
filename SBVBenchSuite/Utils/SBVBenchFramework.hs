@@ -13,7 +13,7 @@
 module Utils.SBVBenchFramework
   ( mkExecString
   , mkFileName
-  , module Criterion.Main
+  , module Gauge.Main
   , module Data.SBV
   ) where
 
@@ -21,7 +21,7 @@ import qualified Data.List      as L
 import           System.Process (showCommandForUser)
 import           System.Random
 
-import           Criterion.Main (Benchmark, bgroup)
+import           Gauge.Main (Benchmark, bgroup)
 
 import           Data.SBV
 

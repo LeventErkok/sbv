@@ -16,12 +16,12 @@ module BenchSuite.Puzzles.SendMoreMoney(benchmarks) where
 
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = runner "Puzzles.SendMoreMoney" p `using` setRunner allSatWith
+benchmarks = S.run "Puzzles.SendMoreMoney" p `using` runner allSatWith
   where p = do
           ds@[s,e,n,d,m,o,r,y] <- mapM sInteger ["s", "e", "n", "d", "m", "o", "r", "y"]
           let isDigit x = x .>= 0 .&& x .<= 9

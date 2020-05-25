@@ -11,3 +11,5 @@ dist-newstyle/
 .ghc.environment.*
 .*.swp
 .brokdb
+*.o
+*.hi
