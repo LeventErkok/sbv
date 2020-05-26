@@ -1,22 +1,25 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : BenchSuite.Queries.UnsatCore
+-- Module    : BenchSuite.Lists.Nested
 -- Copyright : (c) Jeffrey Young
 --                 Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Bench suite for Documentation.SBV.Examples.Queries.UnsatCore
+-- Bench suite for Documentation.SBV.Examples.Lists.Nested
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module BenchSuite.Queries.UnsatCore(benchmarks) where
+module BenchSuite.Lists.Nested(benchmarks) where
 
-import Documentation.SBV.Examples.Queries.UnsatCore
+import Documentation.SBV.Examples.Lists.Nested
 
 import BenchSuite.Bench.Bench
 
+-- benchmark suite
 benchmarks :: Runner
-benchmarks =  runIO "UnsatCore.ucCore" ucCore
+benchmarks = rGroup
+             [ runIO "Nested.Example" nestedExample
+             ]

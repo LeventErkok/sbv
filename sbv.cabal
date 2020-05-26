@@ -141,6 +141,7 @@ Library
                   , Documentation.SBV.Examples.ProofTools.Strengthen
                   , Documentation.SBV.Examples.ProofTools.Sum
                   , Documentation.SBV.Examples.WeakestPreconditions.Append
+                  , Documentation.SBV.Examples.WeakestPreconditions.Basics
                   , Documentation.SBV.Examples.WeakestPreconditions.Fib
                   , Documentation.SBV.Examples.WeakestPreconditions.GCD
                   , Documentation.SBV.Examples.WeakestPreconditions.IntDiv
@@ -443,3 +444,56 @@ Benchmark SBVBench
                   , BenchSuite.Queries.GuessNumber
                   , BenchSuite.Queries.Interpolants
                   , BenchSuite.Queries.UnsatCore
+                  , BenchSuite.WeakestPreconditions.Instances
+                  , BenchSuite.WeakestPreconditions.Append
+                  , BenchSuite.WeakestPreconditions.Basics
+                  , BenchSuite.WeakestPreconditions.Fib
+                  , BenchSuite.WeakestPreconditions.GCD
+                  , BenchSuite.WeakestPreconditions.IntDiv
+                  , BenchSuite.WeakestPreconditions.IntSqrt
+                  , BenchSuite.WeakestPreconditions.Length
+                  , BenchSuite.WeakestPreconditions.Sum
+                  , BenchSuite.Optimization.Instances
+                  , BenchSuite.Optimization.Enumerate
+                  , BenchSuite.Optimization.ExtField
+                  , BenchSuite.Optimization.LinearOpt
+                  , BenchSuite.Optimization.Production
+                  , BenchSuite.Optimization.VM
+                  , BenchSuite.Uninterpreted.AUF
+                  , BenchSuite.Uninterpreted.Deduce
+                  , BenchSuite.Uninterpreted.Function
+                  , BenchSuite.Uninterpreted.Multiply
+                  , BenchSuite.Uninterpreted.Shannon
+                  , BenchSuite.Uninterpreted.Sort
+                  , BenchSuite.Uninterpreted.UISortAllSat
+                  , BenchSuite.ProofTools.BMC
+                  , BenchSuite.ProofTools.Fibonacci
+                  , BenchSuite.ProofTools.Strengthen
+                  , BenchSuite.ProofTools.Sum
+                  , BenchSuite.CodeGeneration.AddSub
+                  , BenchSuite.CodeGeneration.CRC_USB5
+                  , BenchSuite.CodeGeneration.Fibonacci
+                  , BenchSuite.CodeGeneration.GCD
+                  , BenchSuite.CodeGeneration.PopulationCount
+                  , BenchSuite.CodeGeneration.Uninterpreted
+                  , BenchSuite.Crypto.AES
+                  , BenchSuite.Crypto.RC4
+                  , BenchSuite.Crypto.SHA
+                  , BenchSuite.Misc.Auxiliary
+                  , BenchSuite.Misc.Enumerate
+                  , BenchSuite.Misc.Floating
+                  , BenchSuite.Misc.ModelExtract
+                  , BenchSuite.Misc.Newtypes
+                  , BenchSuite.Misc.NoDiv0
+                  , BenchSuite.Misc.Polynomials
+                  , BenchSuite.Misc.SetAlgebra
+                  , BenchSuite.Misc.SoftConstrain
+                  , BenchSuite.Misc.Tuple
+                  , BenchSuite.Lists.BoundedMutex
+                  , BenchSuite.Lists.Fibonacci
+                  , BenchSuite.Lists.Nested
+                  , BenchSuite.Strings.RegexCrossword
+                  , BenchSuite.Strings.SQLInjection
+                  , BenchSuite.Existentials.CRCPolynomial
+                  , BenchSuite.Existentials.Diophantine
+                  , BenchSuite.Transformers.SymbolicEval

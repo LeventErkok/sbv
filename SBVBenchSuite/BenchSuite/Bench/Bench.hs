@@ -26,6 +26,7 @@ module BenchSuite.Bench.Bench
   , runWith
   , runIOWith
   , runIO
+  , runPure
   , rGroup
   , runOverheadBenchMark
   , runBenchMark
@@ -186,7 +187,7 @@ runOverheadBenchMark (RBenchmark b)         = b
 -- | make a normal benchmark without the overhead comparision. Notice this is
 -- just unpacking the Runner record
 mkBenchMark :: RunnerI -> Benchmark
-mkBenchMark RunnerI{..} = bgroup description [bench "sbv" . nfIO $! runI config problem]
+mkBenchMark RunnerI{..} = bgroup description [bench "" . nfIO $! runI config problem]
 
 -- | Convert a Runner or a group of Runners to Benchmarks, this is an api level
 -- function to convert the runners defined in each file to benchmarks which can
@@ -226,6 +227,11 @@ runIOWith f d = RBenchmark . bench d . f
 -- Benchmarkable injection function
 runIO :: NFData a => String -> IO a -> Runner
 runIO d = RBenchmark . bench d . nfIO . silence
+
+-- | Benchmark an pure result
+runPure :: NFData a => String -> (a -> b) -> a -> Runner
+runPure d = (RBenchmark . bench d) .: whnf
+  where (.:) = (.).(.)
 
 -- | create a runner group. Useful for benchmarks that need to run several
 -- benchmarks. See 'BenchSuite.Puzzles.NQueens' for an example.
