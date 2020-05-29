@@ -41,8 +41,7 @@
     get in touch if you used this class in some cunning way and you
     need its functionality back.
 
-  * Reworked SBVBenchSuite api, added "BenchSuite.BitPrecise" and
-    "BenchSuite.Queries".
+  * Reworked SBVBenchSuite api, Phase 1 of BenchSuite complete.
 
 ### Version 8.6, 2020-02-08
 
