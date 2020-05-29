@@ -10,7 +10,7 @@
 -- Bench suite for Documentation.SBV.Examples.Queries.Interpolants
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module BenchSuite.Queries.Interpolants(benchmarks) where
 
