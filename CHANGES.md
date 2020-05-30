@@ -41,7 +41,9 @@
     get in touch if you used this class in some cunning way and you
     need its functionality back.
 
-  * Reworked SBVBenchSuite api, Phase 1 of BenchSuite complete.
+  * Reworked SBVBenchSuite api, Phase 1 of BenchSuite completed.
+  
+  * Add support for addAxiom command to work in the interactive mode.
 
 ### Version 8.6, 2020-02-08
 
