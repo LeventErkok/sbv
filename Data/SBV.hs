@@ -242,7 +242,7 @@ module Data.SBV (
   -- $enumerations
   , mkSymbolicEnumeration
 
-  -- * Uninterpreted sorts, constants, and functions
+  -- * Uninterpreted sorts, axioms, constants, and functions
   -- $uninterpreted
   , Uninterpreted(..), addAxiom
 
@@ -347,7 +347,7 @@ module Data.SBV (
   ) where
 
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.Data       hiding (addAxiom, forall, forall_,
+import Data.SBV.Core.Data       hiding (forall, forall_,
                                         mkForallVars, exists, exists_,
                                         mkExistVars, free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,

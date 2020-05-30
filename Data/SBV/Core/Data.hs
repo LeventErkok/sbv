@@ -48,7 +48,7 @@ module Data.SBV.Core.Data
  , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
- , SBVType(..), newUninterpreted, addAxiom
+ , SBVType(..), newUninterpreted
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
  , SolverCapabilities(..)
@@ -396,6 +396,12 @@ class SolverContext m where
    setOption :: SMTOption -> m ()
    -- | Set the logic.
    setLogic :: Logic -> m ()
+   -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
+   -- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
+   -- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
+   -- itself, to see whether it's actually well-formed or is sensical by any means.
+   -- A separate formalization of SMT-Lib would be very useful here.
+   addAxiom :: String -> [String] -> m ()
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
@@ -405,7 +411,7 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]

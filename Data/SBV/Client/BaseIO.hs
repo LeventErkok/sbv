@@ -765,16 +765,6 @@ maximize = Trans.maximize
 svToSymSV :: SVal -> Symbolic SV
 svToSymSV = Trans.svToSymSV
 
--- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
--- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
--- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
--- itself, to see whether it's actually well-formed or is sensical by any means.
--- A separate formalization of SMT-Lib would be very useful here.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.addAxiom'
-addAxiom :: String -> [String] -> Symbolic ()
-addAxiom = Trans.addAxiom
-
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.runSymbolic'

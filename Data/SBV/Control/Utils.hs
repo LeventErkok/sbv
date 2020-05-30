@@ -106,6 +106,7 @@ instance MonadIO m => SolverContext (QueryT m) where
    softConstrain          = addQueryConstraint True  []
    namedConstraint nm     = addQueryConstraint False [(":named", nm)]
    constrainWithAttribute = addQueryConstraint False
+   addAxiom               = addQueryAxiom
    contextState           = queryState
 
    setOption o
@@ -125,6 +126,9 @@ addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do map
                                              send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sv)  ++ ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
+
+addQueryAxiom :: (MonadIO m, MonadQuery m) => String -> [String] -> m ()
+addQueryAxiom nm ls = send True $ intercalate "\n" $ (";; -- user given axiom: " ++ nm) : ls
 
 -- | Get the current configuration
 getConfig :: (MonadIO m, MonadQuery m) => m SMTConfig

@@ -33,7 +33,7 @@ module Data.SBV.Core.Symbolic
   , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
-  , SBVType(..), svUninterpreted, newUninterpreted, addAxiom
+  , SBVType(..), svUninterpreted, newUninterpreted
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
@@ -1401,16 +1401,6 @@ introduceUserName st isTracker nmOrig k q sv = do
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
          mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix ++ "_" ++ show i | i <- [(0::Int)..]])
-
--- | Generalization of 'Data.SBV.addAxiom'
-addAxiom :: MonadSymbolic m => String -> [String] -> m ()
-addAxiom nm ax = do
-        st <- symbolicEnv
-        liftIO $ modifyState st raxioms ((nm, ax) :)
-                           $ noInteractive [ "Adding a new axiom:"
-                                           , "  Named: " ++ show nm
-                                           , "  Axiom: " ++ unlines ax
-                                           ]
 
 -- | Generalization of 'Data.SBV.runSymbolic'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
