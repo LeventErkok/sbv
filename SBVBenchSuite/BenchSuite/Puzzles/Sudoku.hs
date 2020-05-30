@@ -17,13 +17,13 @@ module BenchSuite.Puzzles.Sudoku(benchmarks) where
 import Documentation.SBV.Examples.Puzzles.Sudoku
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-    [ runner ("sudoku " ++ show n) (checkPuzzle s) `using` setRunner allSatWith
+    [ S.run ("sudoku " ++ show n) (checkPuzzle s) `using` runner allSatWith
        | (n, s) <-
            zip
              [(0::Int)..]

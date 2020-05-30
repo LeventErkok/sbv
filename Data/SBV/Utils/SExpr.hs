@@ -158,8 +158,8 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         cvt (EApp [ECon "as", n, ECon "Float32"])                                                    = getFloat  n
 
         -- Deal with CVC4's approximate reals
-        cvt x@(EApp [ECon "choice", EApp [EApp [ECon v, ECon "Real"]]
-                                  , EApp [ECon "or", EApp [ECon "=", ECon v', val], _]]) | v == v'   = do
+        cvt x@(EApp [ECon "witness", EApp [EApp [ECon v, ECon "Real"]]
+                                   , EApp [ECon "or", EApp [ECon "=", ECon v', val], _]]) | v == v'   = do
                                                 approx <- cvt val
                                                 case approx of
                                                   ENum (s, _) -> return $ EReal $ mkPolyReal (Left (False, show s))

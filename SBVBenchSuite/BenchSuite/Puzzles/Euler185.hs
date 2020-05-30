@@ -17,9 +17,9 @@ module BenchSuite.Puzzles.Euler185(benchmarks) where
 import Documentation.SBV.Examples.Puzzles.Euler185
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = runner "Euler185" euler185 `using` setRunner allSatWith
+benchmarks = S.run "Euler185" euler185 `using` runner allSatWith

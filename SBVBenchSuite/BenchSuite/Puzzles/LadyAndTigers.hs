@@ -16,12 +16,12 @@ module BenchSuite.Puzzles.LadyAndTigers(benchmarks) where
 
 
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
+import BenchSuite.Bench.Bench as S
 
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = runner "Puzzles.LadyAndTigers" p `using` setRunner allSatWith
+benchmarks = S.run "Puzzles.LadyAndTigers" p `using` runner allSatWith
   where p = do
 
           -- One boolean for each of the correctness of the signs

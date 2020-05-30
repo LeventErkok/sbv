@@ -10,7 +10,7 @@ report any issues you might see with newer releases.
       * Version 3.2.0
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version as downloaded from the above site on Mar 26, 2020
+      * Version as downloaded from the above site on May 19, 2020
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.6.3
@@ -19,7 +19,7 @@ report any issues you might see with newer releases.
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on May 12th, 2020
+      * Version as downloaded from the above site on May 20th, 2020
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
 	always use their latest release.

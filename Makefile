@@ -77,6 +77,10 @@ testInterfaces:
 mkDistro:
 	$(TIME) cabal new-sdist
 
+# Useful if we update z3 (or some other solver) but don't make any changes to SBV
+releaseNoBuild: testsuite testInterfaces mkDistro checkLinks
+	@echo "*** SBV is ready for release! -- no SBV build was done."
+
 release: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 

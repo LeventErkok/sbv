@@ -16,10 +16,10 @@ module BenchSuite.Puzzles.Birthday(benchmarks) where
 
 import Documentation.SBV.Examples.Puzzles.Birthday
 
+import BenchSuite.Bench.Bench as S
 import Utils.SBVBenchFramework
-import BenchSuite.Overhead.SBVOverhead
 
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = runner "Birthday" puzzle `using` setRunner allSatWith
+benchmarks = S.run "Birthday" puzzle `using` runner allSatWith
