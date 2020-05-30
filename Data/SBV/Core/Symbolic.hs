@@ -850,7 +850,6 @@ data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always ex
                          , rNewArrs        :: IORef ArrayMap
                          , rNewTbls        :: IORef TableMap
                          , rNewUIs         :: IORef UIMap
-                         , rNewAxioms      :: IORef [(String, [String])]
                          , rNewAsgns       :: IORef SBVPgm
                          , rNewConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                          }
@@ -864,7 +863,6 @@ newIncState = do
         am    <- newIORef IMap.empty
         tm    <- newIORef Map.empty
         ui    <- newIORef Map.empty
-        ax    <- newIORef []
         pgm   <- newIORef (SBVPgm S.empty)
         cstrs <- newIORef S.empty
         return IncState { rNewInps        = is
@@ -873,7 +871,6 @@ newIncState = do
                         , rNewArrs        = am
                         , rNewTbls        = tm
                         , rNewUIs         = ui
-                        , rNewAxioms      = ax
                         , rNewAsgns       = pgm
                         , rNewConstraints = cstrs
                         }
@@ -1410,7 +1407,10 @@ addAxiom :: MonadSymbolic m => String -> [String] -> m ()
 addAxiom nm ax = do
         st <- symbolicEnv
         liftIO $ modifyState st raxioms ((nm, ax) :)
-                           $ modifyIncState st rNewAxioms ((nm, ax) :)
+                           $ noInteractive [ "Adding a new axiom:"
+                                           , "  Named: " ++ show nm
+                                           , "  Axiom: " ++ unlines ax
+                                           ]
 
 -- | Generalization of 'Data.SBV.runSymbolic'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)

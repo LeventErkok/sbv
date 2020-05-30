@@ -385,7 +385,7 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps newKs consts arrs tbls uis axs (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -403,8 +403,6 @@ cvtInc afterAPush inps newKs consts arrs tbls uis axs (SBVPgm asgnsSeq) cstrs cf
             ++ concat arrayConstants
             -- uninterpreteds
             ++ concatMap declUI uis
-            -- axioms
-            ++ map declAx axs
             -- tables
             ++ concatMap (constTable afterAPush) allTables
             -- expressions
