@@ -162,10 +162,11 @@ syncUpSolver afterAPush is = do
                        arrs        <- IMap.toAscList <$> readIORef (rNewArrs is)
                        tbls        <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
                        uis         <- Map.toAscList <$> readIORef (rNewUIs is)
+                       axs         <- reverse <$> readIORef (rNewAxioms is)
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as constraints cfg
+                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis axs as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context

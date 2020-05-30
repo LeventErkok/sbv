@@ -65,6 +65,7 @@ type SMTLibIncConverter a =  [NamedSymVar]                         -- ^ inputs
                           -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
                           -> [(String, SBVType)]                   -- ^ newly created uninterpreted functions/constants
+                          -> [(String, [String])]                  -- ^ newly issued axioms
                           -> SBVPgm                                -- ^ assignments
                           -> S.Seq (Bool, [(String, String)], SV)  -- ^ extra constraints
                           -> SMTConfig                             -- ^ configuration
