@@ -45,7 +45,7 @@ import Control.Monad      (zipWithM)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe, isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
-import Data.List          (intercalate, isPrefixOf, transpose)
+import Data.List          (intercalate, isPrefixOf, transpose, isInfixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
 
 import Data.IORef (readIORef, writeIORef)
@@ -711,7 +711,15 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                              , sbvExceptionExitCode    = Nothing
                                                                                              , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
                                                                                              , sbvExceptionReason      = Nothing
-                                                                                             , sbvExceptionHint        = Nothing
+                                                                                             , sbvExceptionHint        = if "hGetLine: end of file" `isInfixOf` e
+                                                                                                                         then Just [ "Solver process prematurely ended communication."
+                                                                                                                                   , ""
+                                                                                                                                   , "It is likely it was terminated because of a seg-fault."
+                                                                                                                                   , "Run with 'transcript=Just \"bad.smt2\"' option, and feed"
+                                                                                                                                   , "the generated \"bad.smt2\" file directly to the solver"
+                                                                                                                                   , "outside of SBV for further information."
+                                                                                                                                   ]
+                                                                                                                         else Nothing
                                                                                              }
 
                                               SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
