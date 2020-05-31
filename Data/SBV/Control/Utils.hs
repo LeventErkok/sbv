@@ -128,7 +128,8 @@ addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do map
               | True   = "assert"
 
 addQueryAxiom :: (MonadIO m, MonadQuery m) => String -> [String] -> m ()
-addQueryAxiom nm ls = send True $ intercalate "\n" $ (";; -- user given axiom: " ++ nm) : ls
+addQueryAxiom nm ls = do send True $ "; -- user given axiom: " ++ nm
+                         send True $ intercalate "\n" ls
 
 -- | Get the current configuration
 getConfig :: (MonadIO m, MonadQuery m) => m SMTConfig

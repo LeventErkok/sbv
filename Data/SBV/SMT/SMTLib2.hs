@@ -463,7 +463,7 @@ declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
 
 -- NB. We perform no check to as to whether the axiom is meaningful in any way.
 declAx :: (String, [String]) -> String
-declAx (nm, ls) = intercalate "\n" $ (";; -- user given axiom: " ++ nm) : ls
+declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
 constTable :: Bool -> (((Int, Kind, Kind), [SV]), [String]) -> [String]
 constTable afterAPush (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)..] is ++ setup

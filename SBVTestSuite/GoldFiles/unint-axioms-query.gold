@@ -33,22 +33,22 @@
 [GOOD] (define-fun s9 () B (NOT s2))
 [GOOD] (define-fun s10 () B (AND s6 s9))
 [GOOD] (define-fun s11 () B (OR s8 s10))
-[GOOD] (define-fun s12 () Bool (= s5 s11))
+[GOOD] (define-fun s12 () Bool (distinct s5 s11))
 [GOOD] (assert s12)
-[GOOD] ;; -- user given axiom: OR distributes over AND
-       (assert (forall ((p B) (q B) (r B))
+[GOOD] ; -- user given axiom: OR distributes over AND
+[GOOD] (assert (forall ((p B) (q B) (r B))
           (= (AND (OR p q) (OR p r))
              (OR p (AND q r)))))
-[GOOD] ;; -- user given axiom: de Morgan
-       (assert (forall ((p B) (q B))
+[GOOD] ; -- user given axiom: de Morgan
+[GOOD] (assert (forall ((p B) (q B))
           (= (NOT (OR p q))
              (AND (NOT p) (NOT q)))))
-[GOOD] ;; -- user given axiom: double negation
-       (assert (forall ((p B)) (= (NOT (NOT p)) p)))
+[GOOD] ; -- user given axiom: double negation
+[GOOD] (assert (forall ((p B)) (= (NOT (NOT p)) p)))
 [SEND] (check-sat)
-[RECV] sat
+[RECV] unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL:Sat
+ FINAL:Unsat
 DONE!

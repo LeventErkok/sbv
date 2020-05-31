@@ -66,7 +66,7 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
                              aND = uninterpret "AND"
                              nOT :: SB -> SB
                              nOT = uninterpret "NOT"
-                         constrain $ nOT (p `oR` (q `aND` r)) .== (nOT p `aND` nOT q) `oR` (nOT p `aND` nOT r)
+                         constrain $ nOT (p `oR` (q `aND` r)) ./= (nOT p `aND` nOT q) `oR` (nOT p `aND` nOT r)
                          addAxiom "OR distributes over AND" [ "(assert (forall ((p B) (q B) (r B))"
                                                             , "   (= (AND (OR p q) (OR p r))"
                                                             , "      (OR p (AND q r)))))"
