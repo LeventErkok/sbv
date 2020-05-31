@@ -2323,9 +2323,17 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    softConstrain               (SBV c) = imposeConstraint True  []               c
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
    constrainWithAttribute atts (SBV c) = imposeConstraint False atts             c
+   addAxiom                            = addSymAxiom
    contextState                        = symbolicEnv
 
    setOption o = addNewSMTOption  o
+
+-- | Add an axiom. Only used internally, use `addAxiom` from user programs which works over
+-- both regular and query modes of usage.
+addSymAxiom :: (SolverContext m, MonadIO m) => String -> [String] -> m ()
+addSymAxiom nm ax = do
+        st <- contextState
+        liftIO $ modifyState st raxioms ((nm, ax) :) (return ())
 
 -- | Generalization of 'Data.SBV.assertWithPenalty'
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()

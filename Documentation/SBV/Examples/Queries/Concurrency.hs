@@ -86,7 +86,7 @@ queryTwo v = do
                 io $ putStrLn $ "[Two]: Current solution is: " ++ show (xv, yv)
                 return $ Just (xv * yv)
 
--- | Run the demo several times to see that the children threads will change ordering
+-- | Run the demo several times to see that the children threads will change ordering.
 demo :: IO ()
 demo = do
   v <- newEmptyMVar
@@ -96,7 +96,7 @@ demo = do
   putStrLn $ "[Main]: Here they are: "
   putStrLn $ show results
 
-
+-- | Example computation.
 sharedDependent :: MVar (SInteger, SInteger) -> Symbolic ()
 sharedDependent v = do -- constrain positive and sum:
   x <- sInteger "x"
@@ -157,7 +157,7 @@ secondQuery v2 = do
                 io $ putStrLn $ "[Two]: My solution is: " ++ show (zv + xv, zv + yv)
                 return $ Just (zv * xv * yv)
 
--- | in our second demonstration we show how through the use of concurrency
+-- | In our second demonstration we show how through the use of concurrency
 -- constructs the user can have children queries communicate with one another.
 -- Note that the children queries are independent and so anything side-effectual
 -- like a push or a pop will be isolated to that child thread, unless of course
