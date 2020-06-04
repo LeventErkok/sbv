@@ -44,6 +44,7 @@
   * Reworked SBVBenchSuite api, Phase 1 of BenchSuite completed.
   
   * Add support for addAxiom command to work in the interactive mode.
+    Thanks to Martin Lundfall for the feedback.
 
 ### Version 8.6, 2020-02-08
 
