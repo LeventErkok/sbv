@@ -22,7 +22,7 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
-.PHONY: install docs testsuite release tags clean veryclean
+.PHONY: install docs testsuite release tags clean veryclean timeRelease
 
 all: quick
 
@@ -83,6 +83,10 @@ releaseNoBuild: testsuite testInterfaces mkDistro checkLinks
 
 release: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
+
+timeRelease:
+	/bin/rm -rf ~/.ghc/x86_64*
+	$(TIME) make release
 
 # use this as follows:
 #         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
