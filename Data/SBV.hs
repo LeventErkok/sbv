@@ -108,7 +108,7 @@
 --
 --   * ABC from University of Berkeley: <http://www.eecs.berkeley.edu/~alanmi/abc/>
 --
---   * CVC4 from Stanford: <http://cvc4.cs.stanford.edu/web/>
+--   * CVC4 from Stanford: <https://cvc4.github.io/>
 --
 --   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
 --

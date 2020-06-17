@@ -343,7 +343,6 @@ offsetIndexOf s sub offset
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
 -- that is, if it encodes a natural number. Otherwise, it returns '-1'.
--- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 --
 -- >>> prove $ \s -> let n = strToNat s in length s .== 1 .=> (-1) .<= n .&& n .<= 9
 -- Q.E.D.
@@ -359,7 +358,6 @@ strToNat s
 -- | @`natToStr` i@. Retrieve string encoded by integer @i@ (ground rewriting only).
 -- Again, only naturals are supported, any input that is not a natural number
 -- produces empty string, even though we take an integer as an argument.
--- See <http://cvc4.cs.stanford.edu/wiki/Strings> for details.
 --
 -- >>> prove $ \i -> length (natToStr i) .== 3 .=> i .<= 999
 -- Q.E.D.

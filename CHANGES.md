@@ -1903,7 +1903,7 @@ uninterpreted.
 
 ### Version 2.9, 2013-01-02
 
-  * Add support for the CVC4 SMT solver from Stanford: <http://cvc4.cs.stanford.edu/web/>
+  * Add support for the CVC4 SMT solver from Stanford: <https://cvc4.github.io/>
     NB. Z3 remains the default solver for SBV. To use CVC4, use the
     *With variants of the interface (i.e., proveWith, satWith, ..)
     by passing cvc4 as the solver argument. (Similarly, use 'yices'
