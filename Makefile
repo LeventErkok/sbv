@@ -81,12 +81,12 @@ mkDistro:
 releaseNoBuild: testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release! -- no SBV build was done."
 
-release: veryclean install docs testsuite testInterfaces mkDistro checkLinks
+fullRelease: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 
-timeRelease:
+release:
 	/bin/rm -rf ~/.ghc/x86_64*
-	$(TIME) make release
+	$(TIME) make fullRelease
 
 # use this as follows:
 #         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
