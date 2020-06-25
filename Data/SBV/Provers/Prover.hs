@@ -40,7 +40,8 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.DeepSeq        (rnf, NFData(..))
 
 import Control.Concurrent.Async (async, waitAny, asyncThreadId, Async, mapConcurrently)
-import Control.Exception (finally, throwTo, AsyncException(ThreadKilled))
+import Control.Exception (finally, throwTo)
+import System.Exit (ExitCode(ExitSuccess))
 
 import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
@@ -506,7 +507,7 @@ proveWithAll  = (`sbvWithAll` proveWith)
 
 -- | Prove a property with multiple solvers, running them in separate threads. Only
 -- the result of the first one to finish will be returned, remaining threads will be killed.
--- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- Note that we send an exception to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
 proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
@@ -519,7 +520,7 @@ satWithAll = (`sbvWithAll` satWith)
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
 -- the result of the first one to finish will be returned, remaining threads will be killed.
--- Note that we send a @ThreadKilled@ to the losing processes, but we do *not* actually wait for them
+-- Note that we send an exception to the losing processes, but we do *not* actually wait for them
 -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
 -- that some processes take their time to terminate. So, this solution favors quick turnaround.
 satWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
@@ -736,24 +737,22 @@ sbvWithAny solvers what a = do beginTime <- getCurrentTime
    where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
-         cancelFast other = throwTo (asyncThreadId other) ThreadKilled
+         cancelFast other = throwTo (asyncThreadId other) ExitSuccess
 
 
 sbvConcurrentWithAny :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO (Solver, NominalDiffTime, c)
 sbvConcurrentWithAny solver what queries a = snd `fmap` (mapM runQueryInThread queries >>= waitAnyFastCancel)
-  where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
+  where  -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
          -- wait part for killed threads.
          waitAnyFastCancel asyncs = waitAny asyncs `finally` mapM_ cancelFast asyncs
-         cancelFast other = throwTo (asyncThreadId other) ThreadKilled
+         cancelFast other = throwTo (asyncThreadId other) ExitSuccess
          runQueryInThread q = do beginTime <- getCurrentTime
                                  runInThread beginTime (\cfg -> what cfg a q) solver
 
 
 sbvConcurrentWithAll :: NFData c => SMTConfig -> (SMTConfig -> a -> QueryT m b -> IO c) -> [QueryT m b] -> a -> IO [(Solver, NominalDiffTime, c)]
 sbvConcurrentWithAll solver what queries a = mapConcurrently runQueryInThread queries  >>= unsafeInterleaveIO . go
-  where -- Async's `waitAnyCancel` nicely blocks; so we use this variant to ignore the
-         -- wait part for killed threads.
-         runQueryInThread q = do beginTime <- getCurrentTime
+  where  runQueryInThread q = do beginTime <- getCurrentTime
                                  runInThread beginTime (\cfg -> what cfg a q) solver
 
          go []  = return []
