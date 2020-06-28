@@ -46,6 +46,11 @@
   * Add support for addAxiom command to work in the interactive mode.
     Thanks to Martin Lundfall for the feedback.
 
+  * Fixed `proveWithAny` and `satWithAny` functions so they properly
+    kill the solvers that did not terminate first. Previously, they
+    became zombies if they didn't end up quickly. Thanks to
+    Robert Dockins for the investigation and the fix.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
