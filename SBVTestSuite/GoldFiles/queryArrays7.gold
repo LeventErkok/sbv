@@ -24,7 +24,6 @@
 [GOOD] (define-fun s3 () Int 2)
 [GOOD] (declare-fun array_1 () (Array Int Int))
 [GOOD] (define-fun array_1_initializer_0 () Bool (= array_1 (store array_0 s0 s1)))
-[GOOD] (assert array_1_initializer_0)
 [GOOD] (define-fun s2 () Int (select array_1 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
 [GOOD] (define-fun array_1_initializer () Bool array_1_initializer_0)
