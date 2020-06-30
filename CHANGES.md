@@ -51,6 +51,9 @@
     became zombies if they didn't end up quickly. Thanks to
     Robert Dockins for the investigation and the fix.
 
+  * Fixed a bug where resetAssertions call was forgetting to restore the
+    array and table contexts. Thanks to Martin Lundfall for reporting.
+
 ### Version 8.6, 2020-02-08
 
   * Fix typo in error message. Thanks to Oliver Charles
