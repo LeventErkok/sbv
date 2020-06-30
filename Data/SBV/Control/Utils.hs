@@ -40,7 +40,6 @@ module Data.SBV.Control.Utils (
      , executeQuery
      ) where
 
-import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
@@ -155,8 +154,8 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => Bool -> IncState -> m ()
-syncUpSolver afterAPush is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => IncState -> m ()
+syncUpSolver is = do
         cfg <- getConfig
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
@@ -170,7 +169,7 @@ syncUpSolver afterAPush is = do
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as constraints cfg
+                       return $ toIncSMTLib cfg inps ks cnsts arrs tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -200,11 +199,7 @@ modifyQueryState f = do state <- queryState
 inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
 inNewContext act = do st <- queryState
                       (is, r) <- io $ withNewIncState st act
-                      mbQS <- io . readIORef . rQueryState $ st
-                      let afterAPush = case mbQS of
-                                         Nothing -> False
-                                         Just qs -> isJust (queryTblArrPreserveIndex qs)
-                      syncUpSolver afterAPush is
+                      syncUpSolver is
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values

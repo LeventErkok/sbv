@@ -485,31 +485,27 @@ restoreTablesAndArrays :: (MonadIO m, MonadQuery m) => m ()
 restoreTablesAndArrays = do st <- queryState
                             qs <- getQueryState
 
-                            case queryTblArrPreserveIndex qs of
-                              Nothing       -> return ()
-                              Just (tc, ac) -> do tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
-                                                  aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
+                            let (tc, ac) = queryTblArrPreserveIndex qs
+                            tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
+                            aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
 
-                                                  let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [tc .. tCount - 1]]
-                                                      aInits = [ "array_" ++ show i ++ "_initializer" | i <- [ac .. aCount - 1]]
-                                                      inits  = tInits ++ aInits
+                            let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [tc .. tCount - 1]]
+                                aInits = [ "array_" ++ show i ++ "_initializer" | i <- [ac .. aCount - 1]]
+                                inits  = tInits ++ aInits
 
-                                                  case inits of
-                                                    []  -> return ()   -- Nothing to do
-                                                    [x] -> send True $ "(assert " ++ x ++ ")"
-                                                    xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
+                            case inits of
+                              []  -> return ()   -- Nothing to do
+                              [x] -> send True $ "(assert " ++ x ++ ")"
+                              xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
 
 -- | Upon a push, record the cut-off point for table and array restoration, if we haven't already
 recordTablesAndArrayCutOff :: (MonadIO m, MonadQuery m) => m ()
 recordTablesAndArrayCutOff = do st <- queryState
-                                qs <- getQueryState
 
-                                case queryTblArrPreserveIndex qs of
-                                  Just _  -> return () -- already recorded, nothing to do
-                                  Nothing -> do tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
-                                                aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
+                                tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
+                                aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
 
-                                                modifyQueryState $ \s -> s {queryTblArrPreserveIndex = Just (tCount, aCount)}
+                                modifyQueryState $ \s -> s {queryTblArrPreserveIndex = (tCount, aCount)}
 
 -- | Generalization of 'Data.SBV.Control.inNewAssertionStack'
 inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
@@ -578,7 +574,7 @@ resetAssertions = do send True "(reset-assertions)"
 
                      -- Make sure we restore tables and arrays after resetAssertions: See: https://github.com/LeventErkok/sbv/issues/535
                      modifyQueryState $ \s -> s{ queryAssertionStackDepth = 0
-                                               , queryTblArrPreserveIndex = Just (0, 0)
+                                               , queryTblArrPreserveIndex = (0, 0)
                                                }
                      restoreTablesAndArrays
 

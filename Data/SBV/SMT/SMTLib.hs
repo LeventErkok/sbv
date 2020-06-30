@@ -32,9 +32,9 @@ toSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
                                       SMTLib2 -> toSMTLib2
 
 -- | Convert to SMT-Lib, in an incremental query context.
-toIncSMTLib :: Bool -> SMTConfig -> SMTLibIncConverter [String]
-toIncSMTLib afterAPush SMTConfig{smtLibVersion} = case smtLibVersion of
-                                                     SMTLib2 -> toIncSMTLib2 afterAPush
+toIncSMTLib :: SMTConfig -> SMTLibIncConverter [String]
+toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
+                                         SMTLib2 -> toIncSMTLib2
 
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
@@ -69,6 +69,6 @@ toSMTLib2 = cvt SMTLib2
                  where quantifiers = map fst (fst qinps)
 
 -- | Convert to SMTLib-2 format
-toIncSMTLib2 :: Bool -> SMTLibIncConverter [String]
+toIncSMTLib2 :: SMTLibIncConverter [String]
 toIncSMTLib2 = cvt SMTLib2
   where cvt SMTLib2 = SMT2.cvtInc

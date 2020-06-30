@@ -166,7 +166,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType [] s ++ ") ; tracks " ++ nm | (s, nm) <- trackerVars]
              ++ [ "; --- constant tables ---" ]
-             ++ concatMap (constTable False) constTables
+             ++ concatMap constTable constTables
              ++ [ "; --- skolemized tables ---" ]
              ++ map (skolemTable (unwords (map svType foralls))) skolemTables
              ++ [ "; --- arrays ---" ]
@@ -212,7 +212,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False (not (null foralls)) consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg (not (null foralls)) consts skolemMap) arrs
         delayedEqualities = concatMap snd skolemTables
 
         delayedAsserts []              = []
@@ -384,8 +384,8 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
 -- to do as an extra in the incremental context. See `Data.SBV.Core.Symbolic.registerKind`
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
-cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc :: SMTLibIncConverter [String]
+cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -404,7 +404,7 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- uninterpreteds
             ++ concatMap declUI uis
             -- tables
-            ++ concatMap (constTable afterAPush) allTables
+            ++ concatMap constTable allTables
             -- expressions
             ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
@@ -423,7 +423,7 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ svType s ++ ")"
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg afterAPush False consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False consts skolemMap) arrs
 
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         tableMap  = IM.fromList $ map mkTable allTables
@@ -465,20 +465,23 @@ declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
 declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
-constTable :: Bool -> (((Int, Kind, Kind), [SV]), [String]) -> [String]
-constTable afterAPush (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)..] is ++ setup
+constTable :: (((Int, Kind, Kind), [SV]), [String]) -> [String]
+constTable (((i, ak, rk), _elts), is) = decl : concat (zipWith wrap [(0::Int)..] is) ++ setup
   where t       = "table" ++ show i
         decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
         -- Arrange for initializers
         mkInit idx   = "table" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer  = "table" ++ show i ++ "_initializer"
-        wrap index s
-          | afterAPush = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
-          | True       = "(assert " ++ s ++ ")"
-        lis          = length is
+
+        wrap index s = [ "(define-fun " ++ v ++ " () Bool " ++ s ++ ")"
+                       , "(assert " ++ v ++ ")"
+                       ]
+           where v = mkInit index
+
+        lis  = length is
+
         setup
-          | not afterAPush = []
           | lis == 0       = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
                              ]
           | lis == 1       = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
@@ -487,7 +490,6 @@ constTable afterAPush (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)
           | True           = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lis - 1]) ++ "))"
                              , "(assert " ++ initializer ++ ")"
                              ]
-
 
 skolemTable :: String -> (((Int, Kind, Kind), [SV]), [String]) -> String
 skolemTable qsIn (((i, ak, rk), _elts), _) = decl
@@ -517,8 +519,8 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- we might have to skolemize those. Implement this properly.
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
-declArray :: SMTConfig -> Bool -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
+declArray :: SMTConfig -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
+declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : concat (zipWith wrap [(0::Int)..] (map snd pre)), concat (zipWith wrap [lpre..] (map snd post)), setup)
   where constNames = map fst consts
         topLevel = not quantified || case ctx of
                                        ArrayFree mbi      -> maybe True (`elem` constNames) mbi
@@ -554,15 +556,15 @@ declArray cfg afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx))
         mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer   = "array_" ++ show i ++ "_initializer"
 
-        wrap index s
-          | afterAPush = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
-          | True       = "(assert " ++ s ++ ")"
+        wrap index s = [ "(define-fun " ++ v ++ " () Bool " ++ s ++ ")"
+                       , "(assert " ++ v ++ ")"
+                       ]
+           where v = mkInit index
 
         lpre          = length pre
         lAll          = lpre + length post
 
         setup
-          | not afterAPush = []
           | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
                              ]
           | lAll == 1      = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
