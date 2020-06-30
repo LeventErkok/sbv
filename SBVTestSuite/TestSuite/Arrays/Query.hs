@@ -30,7 +30,7 @@ tests =
     , goldenCapturedIO "queryArrays5" $ t q5
     , goldenCapturedIO "queryArrays6" $ t q6
     , goldenCapturedIO "queryArrays7" $ t q7
-    , goldenCapturedIO "queryArrays9" $ t q8
+    , goldenCapturedIO "queryArrays8" $ t q8
     ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
