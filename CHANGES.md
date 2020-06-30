@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.6, 2020-02-08
+* Latest Hackage released version: 8.7, 2020-06-30
 
-### Version 8.7, Not yet released
+### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query
     problems. Similar to 'satWithAny', 'proveWithAny' etc.,
