@@ -29,6 +29,8 @@ tests =
     , goldenCapturedIO "queryArrays4" $ t q4
     , goldenCapturedIO "queryArrays5" $ t q5
     , goldenCapturedIO "queryArrays6" $ t q6
+    , goldenCapturedIO "queryArrays7" $ t q7
+    , goldenCapturedIO "queryArrays9" $ t q8
     ]
     where t tc goldFile = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile} tc
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
@@ -118,5 +120,34 @@ q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
                                         constrain $ d .>= 1 .&& d .< 3
                                         loop (writeArray a 1 (readArray a 1 + d)) (sofar ++ [d])
                             Sat   -> mapM getValue sofar
+
+
+q7 :: Symbolic (CheckSatResult, CheckSatResult)
+q7 = do x :: SArray Integer Integer <- newArray "x" Nothing
+        let y = writeArray x 0 1
+
+        query $ do constrain $ readArray y 0 .== 2
+                   r1 <- checkSat
+
+                   resetAssertions
+
+                   constrain $ readArray y 0 .== 2
+                   r2 <- checkSat
+
+                   pure (r1, r2)
+
+q8 :: Symbolic (CheckSatResult, CheckSatResult)
+q8 = query $ do x :: SArray Integer Integer <- freshArray "x" Nothing
+                let y = writeArray x 0 1
+
+                constrain $ readArray y 0 .== 2
+                r1 <- checkSat
+
+                resetAssertions
+
+                constrain $ readArray y 0 .== 2
+                r2 <- checkSat
+
+                pure (r1, r2)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
