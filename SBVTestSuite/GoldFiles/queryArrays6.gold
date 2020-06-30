@@ -18,6 +18,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
+[GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
 [GOOD] (push 1)
 [GOOD] (define-fun s0 () Int 1)
 [GOOD] (define-fun s2 () Int 5)
@@ -31,7 +32,7 @@
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
-[GOOD] (assert array_1_initializer)
+[GOOD] (assert (and array_0_initializer array_1_initializer))
 [GOOD] (declare-fun s4 () Int)
 [GOOD] (define-fun s6 () Int 3)
 [GOOD] (define-fun s5 () Bool (>= s4 s0))
@@ -50,7 +51,7 @@
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
-[GOOD] (assert (and array_1_initializer array_2_initializer))
+[GOOD] (assert (and array_0_initializer array_1_initializer array_2_initializer))
 [GOOD] (declare-fun s12 () Int)
 [GOOD] (define-fun s13 () Bool (>= s12 s0))
 [GOOD] (define-fun s14 () Bool (< s12 s6))
