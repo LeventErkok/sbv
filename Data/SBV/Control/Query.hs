@@ -575,7 +575,12 @@ caseSplit printCases cases = do cfg <- getConfig
 -- | Generalization of 'Data.SBV.Control.resetAssertions'
 resetAssertions :: (MonadIO m, MonadQuery m) => m ()
 resetAssertions = do send True "(reset-assertions)"
-                     modifyQueryState $ \s -> s{queryAssertionStackDepth = 0}
+
+                     -- Make sure we restore tables and arrays after resetAssertions: See: https://github.com/LeventErkok/sbv/issues/535
+                     modifyQueryState $ \s -> s{ queryAssertionStackDepth = 0
+                                               , queryTblArrPreserveIndex = Just (0, 0)
+                                               }
+                     restoreTablesAndArrays
 
 -- | Generalization of 'Data.SBV.Control.echo'
 echo :: (MonadIO m, MonadQuery m) => String -> m ()
