@@ -880,7 +880,6 @@ runSolver cfg ctx execPath opts pgm continuation
                                                  , queryTerminate           = cleanUp
                                                  , queryTimeOutValue        = Nothing
                                                  , queryAssertionStackDepth = 0
-                                                 , queryTblArrPreserveIndex = (0, 0)
                                                  }
                                  qsp = rQueryState ctx
 

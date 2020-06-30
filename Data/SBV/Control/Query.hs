@@ -483,29 +483,18 @@ getAssertionStackDepth = queryAssertionStackDepth <$> getQueryState
 -- | Upon a pop, we need to restore all arrays and tables. See: http://github.com/LeventErkok/sbv/issues/374
 restoreTablesAndArrays :: (MonadIO m, MonadQuery m) => m ()
 restoreTablesAndArrays = do st <- queryState
-                            qs <- getQueryState
 
-                            let (tc, ac) = queryTblArrPreserveIndex qs
                             tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
                             aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
 
-                            let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [tc .. tCount - 1]]
-                                aInits = [ "array_" ++ show i ++ "_initializer" | i <- [ac .. aCount - 1]]
+                            let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [0 .. tCount - 1]]
+                                aInits = [ "array_" ++ show i ++ "_initializer" | i <- [0 .. aCount - 1]]
                                 inits  = tInits ++ aInits
 
                             case inits of
                               []  -> return ()   -- Nothing to do
                               [x] -> send True $ "(assert " ++ x ++ ")"
                               xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
-
--- | Upon a push, record the cut-off point for table and array restoration, if we haven't already
-recordTablesAndArrayCutOff :: (MonadIO m, MonadQuery m) => m ()
-recordTablesAndArrayCutOff = do st <- queryState
-
-                                tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
-                                aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
-
-                                modifyQueryState $ \s -> s {queryTblArrPreserveIndex = (tCount, aCount)}
 
 -- | Generalization of 'Data.SBV.Control.inNewAssertionStack'
 inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
@@ -520,7 +509,6 @@ push i
  | i <= 0 = error $ "Data.SBV: push requires a strictly positive level argument, received: " ++ show i
  | True   = do depth <- getAssertionStackDepth
                send True $ "(push " ++ show i ++ ")"
-               recordTablesAndArrayCutOff
                modifyQueryState $ \s -> s{queryAssertionStackDepth = depth + i}
 
 -- | Generalization of 'Data.SBV.Control.pop'
@@ -571,11 +559,9 @@ caseSplit printCases cases = do cfg <- getConfig
 -- | Generalization of 'Data.SBV.Control.resetAssertions'
 resetAssertions :: (MonadIO m, MonadQuery m) => m ()
 resetAssertions = do send True "(reset-assertions)"
+                     modifyQueryState $ \s -> s{ queryAssertionStackDepth = 0 }
 
                      -- Make sure we restore tables and arrays after resetAssertions: See: https://github.com/LeventErkok/sbv/issues/535
-                     modifyQueryState $ \s -> s{ queryAssertionStackDepth = 0
-                                               , queryTblArrPreserveIndex = (0, 0)
-                                               }
                      restoreTablesAndArrays
 
 -- | Generalization of 'Data.SBV.Control.echo'

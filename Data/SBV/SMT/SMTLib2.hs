@@ -466,7 +466,7 @@ declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> [String]
-constTable (((i, ak, rk), _elts), is) = decl : concat (zipWith wrap [(0::Int)..] is) ++ setup
+constTable (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)..] is ++ setup
   where t       = "table" ++ show i
         decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
@@ -474,10 +474,7 @@ constTable (((i, ak, rk), _elts), is) = decl : concat (zipWith wrap [(0::Int)..]
         mkInit idx   = "table" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer  = "table" ++ show i ++ "_initializer"
 
-        wrap index s = [ "(define-fun " ++ v ++ " () Bool " ++ s ++ ")"
-                       , "(assert " ++ v ++ ")"
-                       ]
-           where v = mkInit index
+        wrap index s = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
 
         lis  = length is
 
@@ -520,7 +517,7 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
 declArray :: SMTConfig -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : concat (zipWith wrap [(0::Int)..] (map snd pre)), concat (zipWith wrap [lpre..] (map snd post)), setup)
+declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
   where constNames = map fst consts
         topLevel = not quantified || case ctx of
                                        ArrayFree mbi      -> maybe True (`elem` constNames) mbi
@@ -556,17 +553,13 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer   = "array_" ++ show i ++ "_initializer"
 
-        wrap index s = [ "(define-fun " ++ v ++ " () Bool " ++ s ++ ")"
-                       , "(assert " ++ v ++ ")"
-                       ]
-           where v = mkInit index
+        wrap index s = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
 
         lpre          = length pre
         lAll          = lpre + length post
 
         setup
-          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
-                             ]
+          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed" | not quantified]
           | lAll == 1      = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
                              , "(assert " ++ initializer ++ ")"
                              ]

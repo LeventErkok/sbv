@@ -577,7 +577,6 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTerminate           :: IO ()
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
-                             , queryTblArrPreserveIndex :: (Int, Int)
                              }
 
 -- | Computations which support query operations.
