@@ -7,7 +7,10 @@
 
   * Reworked uninterpreted sorts. Added new function
     `mkUninterpretedSort` to make declaration of completely
-    uninterpreted sorts easier.
+    uninterpreted sorts easier. In particular, we now
+    automatically introduce the symbolic variant of the
+    type (by prefixing the underlying type with 'S')
+    so it becomes automatically available.
 
 ### Version 8.7, 2020-06-30
 
