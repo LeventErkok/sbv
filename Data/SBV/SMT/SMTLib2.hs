@@ -47,7 +47,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasDouble      = KDouble    `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
-        usorts         = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
+        usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
@@ -310,14 +310,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                         _ -> ""
 
 -- | Declare new sorts
-declSort :: (String, Either String [String]) -> [String]
+declSort :: (String, Maybe [String]) -> [String]
 declSort (s, _)
   | s == "RoundingMode" -- built-in-sort; so don't declare.
   = []
-declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
-declSort (s, Right fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
-                         , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                         ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
+declSort (s, Nothing) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort." ]
+declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+                        , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
+                        ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
         where body []     _ = ""
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
@@ -389,7 +389,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ concatMap declSort [(s, dt) | KUninterpreted s dt <- newKinds]
+            ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -684,7 +684,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                       | True                = lift2 o
 
         unintComp o [a, b]
-          | KUninterpreted s (Right _) <- kindOf (head arguments)
+          | KUserSort s (Just _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
 
@@ -729,20 +729,20 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssv e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
-                              KBool              -> (2::Integer) > fromIntegral l
-                              KBounded _ n       -> (2::Integer)^n > fromIntegral l
-                              KUnbounded         -> True
-                              KReal              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
-                              KFloat             -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
-                              KDouble            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
-                              KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
-                              KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                              KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
-                              KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
-                              KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
-                              KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
-                              KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KBool         -> (2::Integer) > fromIntegral l
+                              KBounded _ n  -> (2::Integer)^n > fromIntegral l
+                              KUnbounded    -> True
+                              KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
+                              KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
+                              KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                              KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
+                              KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
+                              KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
+                              KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
+                              KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
+                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
 
@@ -751,20 +751,20 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                  | True      = gtl ++ " "
 
                 (less, leq) = case aKnd of
-                                KBool              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
-                                KBounded{}         -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                                KUnbounded         -> ("<", "<=")
-                                KReal              -> ("<", "<=")
-                                KFloat             -> ("fp.lt", "fp.leq")
-                                KDouble            -> ("fp.lt", "fp.geq")
-                                KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
-                                KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
-                                KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
-                                KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
-                                KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
+                                KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded    -> ("<", "<=")
+                                KReal         -> ("<", "<=")
+                                KFloat        -> ("fp.lt", "fp.leq")
+                                KDouble       -> ("fp.lt", "fp.geq")
+                                KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
+                                KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
+                                KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
+                                KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
+                                KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
+                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssv i ++ " " ++ mkCnst 0 ++ ")"
@@ -876,7 +876,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | Just f <- lookup op uninterpretedTable
           = f (map ssv args)
           | True
-          = if not (null args) && isUninterpreted (head args)
+          = if not (null args) && isUserSort (head args)
             then error $ unlines [ ""
                                  , "*** Cannot translate operator        : " ++ show op
                                  , "*** When applied to arguments of kind: " ++ intercalate ", " (nub (map (show . kindOf) args))

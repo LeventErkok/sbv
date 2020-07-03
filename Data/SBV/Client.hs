@@ -22,6 +22,7 @@ module Data.SBV.Client
   , defaultSolverConfig
   , sbvAvailableSolvers
   , mkSymbolicEnumeration
+  , mkUninterpretedSort
   ) where
 
 import Control.Monad (filterM)
@@ -62,8 +63,20 @@ mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
 mkSymbolicEnumeration typeName = do
     let typeCon = TH.conT typeName
     [d| deriving instance Eq       $(typeCon)
-        deriving instance Show     $(typeCon)
         deriving instance Ord      $(typeCon)
+        deriving instance Show     $(typeCon)
+        deriving instance Read     $(typeCon)
+        deriving instance Data     $(typeCon)
+        deriving instance SymVal   $(typeCon)
+        deriving instance HasKind  $(typeCon)
+        deriving instance SatModel $(typeCon)
+      |]
+
+-- | Make an uninterpred sort.
+mkUninterpretedSort :: TH.Name -> TH.Q [TH.Dec]
+mkUninterpretedSort typeName = do
+    let typeCon  = TH.conT typeName
+    [d| deriving instance Show     $(typeCon)
         deriving instance Read     $(typeCon)
         deriving instance Data     $(typeCon)
         deriving instance SymVal   $(typeCon)

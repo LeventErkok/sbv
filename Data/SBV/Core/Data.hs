@@ -482,11 +482,11 @@ class (HasKind a, Typeable a) => SymVal a where
           k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
-  literal x = let k@(KUninterpreted  _ conts) = kindOf x
-                  sx                          = show x
+  literal x = let k@(KUserSort  _ conts) = kindOf x
+                  sx                     = show x
                   mbIdx = case conts of
-                            Right xs -> sx `elemIndex` xs
-                            _        -> Nothing
+                            Just xs -> sx `elemIndex` xs
+                            Nothing -> Nothing
               in SBV $ SVal k (Left (CV k (CUserSort (mbIdx, sx))))
 
   default fromCV :: Read a => CV -> a

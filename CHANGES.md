@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 8.7, 2020-06-30
 
+### Version 8.7.5, Not yet released
+
+  * Reworked uninterpreted sorts. Added new function
+    `mkUninterpretedSort` to make declaration of completely
+    uninterpreted sorts easier.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query

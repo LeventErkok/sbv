@@ -881,20 +881,20 @@ smtComparable op x y
   = True
   | True
   = case k of
-      KBool             -> True
-      KBounded       {} -> True
-      KUnbounded     {} -> True
-      KReal          {} -> True
-      KUninterpreted {} -> True
-      KFloat            -> True
-      KDouble           -> True
-      KChar             -> True
-      KString           -> True
-      KList          {} -> nope     -- Unfortunately, no way for us to desugar this
-      KSet           {} -> nope     -- Ditto here..
-      KTuple         {} -> False
-      KMaybe         {} -> False
-      KEither        {} -> False
+      KBool         -> True
+      KBounded   {} -> True
+      KUnbounded {} -> True
+      KReal      {} -> True
+      KUserSort  {} -> True
+      KFloat        -> True
+      KDouble       -> True
+      KChar         -> True
+      KString       -> True
+      KList      {} -> nope     -- Unfortunately, no way for us to desugar this
+      KSet       {} -> nope     -- Ditto here..
+      KTuple     {} -> False
+      KMaybe     {} -> False
+      KEither    {} -> False
  where k    = kindOf x
        nope = error $ "Data.SBV.OrdSymbolic: SMTLib does not support " ++ op ++ " for " ++ show k
 
@@ -1290,17 +1290,17 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
                       KDouble            -> False
                       KReal              -> True
                       -- Following cases should not happen since these types should *not* be instances of Fractional
-                      k@KBounded{}       -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KUnbounded       -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KBool            -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KString          -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KChar            -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KList{}          -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KSet{}           -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KUninterpreted{} -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KTuple{}         -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KMaybe{}         -> error $ "Unexpected Fractional case for: " ++ show k
-                      k@KEither{}        -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KBool       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KString     -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KChar       -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KList{}     -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KSet{}      -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KUserSort{} -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
 -- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.

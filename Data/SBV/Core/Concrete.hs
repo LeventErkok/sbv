@@ -424,20 +424,20 @@ showCV shk w               = liftCV show show show show show show snd shL shS sh
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
-mkConstCV KBool                a = normCV $ CV KBool      (CInteger (toInteger a))
-mkConstCV k@KBounded{}         a = normCV $ CV k          (CInteger (toInteger a))
-mkConstCV KUnbounded           a = normCV $ CV KUnbounded (CInteger (toInteger a))
-mkConstCV KReal                a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
-mkConstCV KFloat               a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
-mkConstCV KDouble              a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
-mkConstCV KChar                a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
-mkConstCV KString              a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
-mkConstCV (KUninterpreted s _) a = error $ "Unexpected call to mkConstCV with uninterpreted kind: " ++ s ++ " with value: " ++ show (toInteger a)
-mkConstCV k@KList{}            a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV k@KSet{}             a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV k@KTuple{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV k@KMaybe{}           a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
-mkConstCV k@KEither{}          a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV KBool           a = normCV $ CV KBool      (CInteger (toInteger a))
+mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger (toInteger a))
+mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
+mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
+mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
+mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
+mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
+mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
+mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
+mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KMaybe{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KEither{}     a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CVal') of the correct kind.
 randomCVal :: Kind -> IO CVal
@@ -453,7 +453,7 @@ randomCVal k =
     KString            -> do l <- randomRIO (0, 100)
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))
     KChar              -> CChar . chr <$> randomRIO (0, 255)
-    KUninterpreted s _ -> error $ "Unexpected call to randomCVal with uninterpreted kind: " ++ s
+    KUserSort s _      -> error $ "Unexpected call to randomCVal with user kind: " ++ s
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KSet  ek           -> do i <- randomIO                           -- regular or complement
