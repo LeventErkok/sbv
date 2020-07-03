@@ -58,28 +58,32 @@ defaultSolverConfig ABC       = abc
 sbvAvailableSolvers :: IO [SMTConfig]
 sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
 
+-- | Turn a name into a symbolic type. If first argument is true, we'll also derive Eq and Ord instances.
+declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
+declareSymbolic deriveEqOrd typeName = do
+    let typeCon = TH.conT typeName
+
+    deriveEqOrds <- if deriveEqOrd
+                       then [d| deriving instance Eq       $(typeCon)
+                                deriving instance Ord      $(typeCon)
+                            |]
+                       else pure []
+
+    derives <- [d| deriving instance Show     $(typeCon)
+                   deriving instance Read     $(typeCon)
+                   deriving instance Data     $(typeCon)
+                   deriving instance SymVal   $(typeCon)
+                   deriving instance HasKind  $(typeCon)
+                   deriving instance SatModel $(typeCon)
+               |]
+
+    tdecl <- TH.TySynD (TH.mkName ('S' : TH.nameBase typeName)) [] <$> TH.conT ''SBV `TH.appT` typeCon
+    pure $ deriveEqOrds ++ derives ++ [tdecl]
+
 -- | Make an enumeration a symbolic type.
 mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
-mkSymbolicEnumeration typeName = do
-    let typeCon = TH.conT typeName
-    [d| deriving instance Eq       $(typeCon)
-        deriving instance Ord      $(typeCon)
-        deriving instance Show     $(typeCon)
-        deriving instance Read     $(typeCon)
-        deriving instance Data     $(typeCon)
-        deriving instance SymVal   $(typeCon)
-        deriving instance HasKind  $(typeCon)
-        deriving instance SatModel $(typeCon)
-      |]
+mkSymbolicEnumeration = declareSymbolic True
 
 -- | Make an uninterpred sort.
 mkUninterpretedSort :: TH.Name -> TH.Q [TH.Dec]
-mkUninterpretedSort typeName = do
-    let typeCon  = TH.conT typeName
-    [d| deriving instance Show     $(typeCon)
-        deriving instance Read     $(typeCon)
-        deriving instance Data     $(typeCon)
-        deriving instance SymVal   $(typeCon)
-        deriving instance HasKind  $(typeCon)
-        deriving instance SatModel $(typeCon)
-      |]
+mkUninterpretedSort = declareSymbolic False
