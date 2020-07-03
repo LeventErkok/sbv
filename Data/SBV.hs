@@ -244,7 +244,7 @@ module Data.SBV (
 
   -- * Uninterpreted sorts, axioms, constants, and functions
   -- $uninterpreted
-  , Uninterpreted(..), addAxiom
+  , mkUninterpretedSort, Uninterpreted(..), addAxiom
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
