@@ -60,10 +60,10 @@ sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfi
 
 -- | Turn a name into a symbolic type. If first argument is true, we'll also derive Eq and Ord instances.
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
-declareSymbolic deriveEqOrd typeName = do
+declareSymbolic isEnum typeName = do
     let typeCon = TH.conT typeName
 
-    deriveEqOrds <- if deriveEqOrd
+    deriveEqOrds <- if isEnum
                        then [d| deriving instance Eq       $(typeCon)
                                 deriving instance Ord      $(typeCon)
                             |]
