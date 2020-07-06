@@ -36,9 +36,6 @@ data State = Idle     -- ^ Regular work
 -- | Make 'State' a symbolic enumeration
 mkSymbolicEnumeration ''State
 
--- | The type synonym 'SState' is mnemonic for symbolic state.
-type SState = SBV State
-
 -- | Symbolic version of 'Idle'
 idle :: SState
 idle = literal Idle

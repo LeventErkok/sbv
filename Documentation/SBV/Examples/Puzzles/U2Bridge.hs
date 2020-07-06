@@ -40,9 +40,6 @@ data U2Member = Bono | Edge | Adam | Larry
 -- | Make 'U2Member' a symbolic value.
 mkSymbolicEnumeration ''U2Member
 
--- | Symbolic shorthand for a 'U2Member'
-type SU2Member = SBV U2Member
-
 -- | Shorthands for symbolic versions of the members
 bono, edge, adam, larry :: SU2Member
 [bono, edge, adam, larry] = map literal [Bono, Edge, Adam, Larry]
@@ -72,9 +69,6 @@ data Location = Here | There
 
 -- | Make 'Location' a symbolic value.
 mkSymbolicEnumeration ''Location
-
--- | Symbolic variant of 'Location'
-type SLocation = SBV Location
 
 -- | Shorthands for symbolic versions of locations
 here, there :: SLocation

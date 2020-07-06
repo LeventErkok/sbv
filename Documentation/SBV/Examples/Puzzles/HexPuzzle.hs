@@ -58,9 +58,6 @@ data Color = Black | Blue | Green | Red
 -- | Make 'Color' a symbolic value.
 mkSymbolicEnumeration ''Color
 
--- | Give symbolic colors a name for convenience.
-type SColor = SBV Color
-
 -- | Use 8-bit words for button numbers, even though we only have 1 to 19.
 type Button  = Word8
 

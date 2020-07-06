@@ -51,12 +51,6 @@ data UnOp  = Negate | Sqrt | Factorial
 -- | Make 'UnOp' a symbolic value.
 mkSymbolicEnumeration ''UnOp
 
--- | Symbolic variant of 'BinOp'.
-type SBinOp = SBV BinOp
-
--- | Symbolic variant of 'UnOp'.
-type SUnOp  = SBV UnOp
-
 -- | The shape of a tree, either a binary node, or a unary node, or the number @4@, represented hear by
 -- the constructor @F@. We parameterize by the operator type: When doing symbolic computations, we'll fill
 -- those with 'SBinOp' and 'SUnOp'. When finding the shapes, we will simply put unit values, i.e., holes.

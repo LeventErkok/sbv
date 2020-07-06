@@ -28,10 +28,6 @@ data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
 -- | Make 'Day' a symbolic value.
 mkSymbolicEnumeration ''Day
 
--- | The type synonym 'SDay' is the symbolic variant of 'Day'. (Similar to 'SInteger'/'Integer'
--- and others.)
-type SDay = SBV Day
-
 -- | A trivial query to find three consecutive days that's all before 'Thursday'. The point
 -- here is that we can perform queries on such enumerated values and use 'getValue' on them
 -- and return their values from queries just like any other value. We have:

@@ -29,9 +29,6 @@ data Day = Mon | Tue | Wed | Thu | Fri | Sat | Sun
 -- | Make 'Day' a symbolic value.
 mkSymbolicEnumeration ''Day
 
--- | Give a name to the symbolic variants of 'Day', for convenience
-type SDay = SBV Day
-
 -- | Make day an optimizable value, by mapping it to 'Word8' in the most
 -- obvious way. We can map it to any value the underlying solver can optimize,
 -- but 'Word8' is the simplest and it'll fit the bill.

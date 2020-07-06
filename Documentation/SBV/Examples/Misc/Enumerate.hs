@@ -36,9 +36,6 @@ data E = A | B | C
 -- | Make 'E' a symbolic value.
 mkSymbolicEnumeration ''E
 
--- | Give a name to the symbolic variants of 'E', for convenience
-type SE = SBV E
-
 -- | Have the SMT solver enumerate the elements of the domain. We have:
 --
 -- >>> elts
