@@ -10,34 +10,28 @@
 -- Thanks to Eric Seidel for the idea.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Uninterpreted.UISortAllSat where
 
-import Data.Generics
 import Data.SBV
 
 -- | A "list-like" data type, but one we plan to uninterpret at the SMT level.
--- The actual shape is really immaterial for us, but could be used as a proxy
--- to generate test cases or explore data-space in some other part of a program.
--- Note that we neither rely on the shape of this data, nor need the actual
--- constructors.
-data L = Nil
-       | Cons Int L
-       deriving (Eq, Ord, Show, Read, Data)
+-- The actual shape is really immaterial for us.
+data L
 
--- | Declare instances to make 'L' a usable uninterpreted sort. First we need the
--- 'SymVal' instance, with the default definition sufficing.
-instance SymVal L
-
--- | Similarly, 'HasKind's default implementation is sufficient.
-instance HasKind L
+-- | Make 'L' into an uninterpreted sort, automatically introducing 'SL'
+-- as a synonym for 'SBV' 'L'.
+mkUninterpretedSort ''L
 
 -- | An uninterpreted "classify" function. Really, we only care about
 -- the fact that such a function exists, not what it does.
-classify :: SBV L -> SInteger
+classify :: SL -> SInteger
 classify = uninterpret "classify"
 
 -- | Formulate a query that essentially asserts a cardinality constraint on

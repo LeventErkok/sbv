@@ -11,22 +11,26 @@
 
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Uninterpreted.Sort where
 
-import Data.Generics
 import Data.SBV
 
 -- | A new data-type that we expect to use in an uninterpreted fashion
--- in the backend SMT solver. Note the custom @deriving@ clause, which
--- takes care of most of the boilerplate. The () field is needed so
--- SBV will not translate it to an enumerated data-type
-newtype Q = Q () deriving (Eq, Ord, Data, Read, Show, SymVal, HasKind)
+-- in the backend SMT solver.
+data Q
+
+-- | Make 'Q' an uinterpreted sort. This will automatically introduce the
+-- type 'SQ' into our environment, which is the symbolic version of the
+-- carrier type 'Q'.
+mkUninterpretedSort ''Q
 
 -- | Declare an uninterpreted function that works over Q's
-f :: SBV Q -> SBV Q
+f :: SQ -> SQ
 f = uninterpret "f"
 
 -- | A satisfiable example, stating that there is an element of the domain

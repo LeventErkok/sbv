@@ -13,12 +13,13 @@
 
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Uninterpreted.Deduce where
 
-import Data.Generics
 import Data.SBV
 
 -- we will have our own "uninterpreted" functions corresponding
@@ -30,11 +31,11 @@ import Prelude hiding (not, or, and)
 -----------------------------------------------------------------------------
 
 -- | The uninterpreted sort 'B', corresponding to the carrier.
--- To prevent SBV from translating it to an enumerated type, we simply attach an unused field
-newtype B = B () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind)
+data B
 
--- | Handy shortcut for the type of symbolic values over 'B'
-type SB = SBV B
+-- | Make this sort uninterpreted. This splice will automatically introduce
+-- the type 'SB' into the environment, as a synonym for 'SBV' 'B'.
+mkUninterpretedSort ''B
 
 -----------------------------------------------------------------------------
 -- * Uninterpreted connectives over 'B'
