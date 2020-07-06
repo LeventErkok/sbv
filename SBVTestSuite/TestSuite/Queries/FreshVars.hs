@@ -39,8 +39,6 @@ testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} fv
                   appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!\n")
 
-type SBinOp = SBV BinOp
-
 fv :: Symbolic SMTResult
 fv = do a <- sInteger "a"
 
