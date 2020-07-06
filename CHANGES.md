@@ -12,6 +12,9 @@
     type (by prefixing the underlying type with 'S')
     so it becomes automatically available.
 
+  * Handle incremental mode table-declarations that depend on freshly
+    declared variables. Thanks to Gergő Érdi for reporting.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query
