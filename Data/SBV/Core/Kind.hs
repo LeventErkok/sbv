@@ -54,7 +54,7 @@ data Kind = KBool
           deriving (Eq, Ord)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
--- ignores the enumeration constructors. Also, when we construct a 'KUninterpreted', we make sure we don't use any of
+-- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
 -- the reserved names; see 'constructUKind' for details.
 instance Show Kind where
   show KBool              = "SBool"
@@ -163,16 +163,18 @@ constructUKind a
   = case (constrs, concatMap G.constrFields constrs) of
       ([], _)  -> KUserSort sortName   Nothing
       (cs, []) -> KUserSort sortName $ Just (map show cs)
-      _        -> error $ unlines $ [ "*** Data.SBV: " ++ sortName ++ " is not a finite non-empty enumeration."
-                                    , "***"
-                                    , "*** To declare an enumeration, constructors should not have any fields."
-                                    , "*** To declare an uninterpreted sort, use a datatype with no constructors."
-                                    ]
+      _        -> error $ unlines [ "*** Data.SBV: " ++ sortName ++ " is not an enumeration."
+                                  , "***"
+                                  , "*** To declare an enumeration, constructors should not have any fields."
+                                  , "*** To declare an uninterpreted sort, use a datatype with no constructors."
+                                  ]
 
   where -- make sure we don't step on ourselves:
+        -- NB. The sort "RoundingMode" is special. It's treated by SBV as a user-defined
+        -- sort, even though it's internally handled differently. So, that name doesn't appear
+        -- below.
         badPrefixes = [ "SBool",   "SWord", "SInt", "SInteger", "SReal",  "SFloat", "SDouble"
                       , "SString", "SChar", "[",    "SSet",     "STuple", "SMaybe", "SEither"
-                      , "RoundingMode"
                       ]
 
         dataType    = G.dataTypeOf a
