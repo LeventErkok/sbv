@@ -32,6 +32,9 @@ import Utils.SBVTestFramework
 data E = A | B | C
 mkSymbolicEnumeration ''E
 
+__unused :: SE
+__unused = error "this declaration serves to quiet GHC about the unused type SE, and serves no other purpose."
+
 -- Test suite
 tests :: TestTree
 tests = testGroup "Basics.Tuple" [
