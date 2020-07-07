@@ -61,7 +61,7 @@ tables = do
             noun <- genWord
             return $ SBV.tuple (verb, noun)
     query $ do
-            s0 <- return $ initState theGame
+            let s0 = initState theGame
 
             let step cmd = do
                     let (verb, noun) = SBV.untuple cmd
@@ -139,7 +139,7 @@ perform (verb, noun) = sCase verb (return ())
         locs <- gets itemLocations
         here <- gets currentRoom
         items <- asks gameItems
-        let item = SBV.fromMaybe (-1) $ sFindIndex (\nm -> noun .== literal nm) $ items
+        let item = SBV.fromMaybe (-1) $ sFindIndex (\nm -> noun .== literal nm) items
         sWhen (select locs (-1) item .== here) $ modify $ \s ->
           s{ itemLocations = replaceAt item (literal carried) (itemLocations s) }
 
@@ -149,7 +149,7 @@ xs .!! i = case xs of
     lst@(x:_) -> select lst x i
 
 replaceAt :: (Mergeable a) => SInt16 -> a -> [a] -> [a]
-replaceAt i x' = map (\(j, x) -> ite (i .== literal j) x' x) . zip [0..]
+replaceAt i x' = zipWith (\j x -> ite (i .== literal j) x' x) [0..]
 
 sCase :: (Mergeable a) => SInt16 -> a -> [(Int16, a)] -> a
 sCase x def = go
@@ -158,7 +158,7 @@ sCase x def = go
     go ((k,v):kvs) = ite (x .== literal k) v (go kvs)
 
 sUnless :: (Monad m, Mergeable (m ())) => SBool -> m () -> m ()
-sUnless b act = ite b (return ()) act
+sUnless b = ite b (return ())
 
 sWhen :: (Monad m, Mergeable (m ())) => SBool -> m () -> m ()
 sWhen b act = ite b act (return ())
