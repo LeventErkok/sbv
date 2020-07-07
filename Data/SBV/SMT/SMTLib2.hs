@@ -406,7 +406,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- tables
             ++ concatMap constTable allTables
             -- expressions
-            ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            ++ map (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- array setups
