@@ -329,6 +329,7 @@ Test-Suite SBVTest
                   , TestSuite.Queries.Lists
                   , TestSuite.Queries.Strings
                   , TestSuite.Queries.Sums
+                  , TestSuite.Queries.Tables
                   , TestSuite.Queries.Tuples
                   , TestSuite.Queries.Uninterpreted
                   , TestSuite.Queries.UISat

@@ -110,6 +110,7 @@ import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Lists
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Sums
+import qualified TestSuite.Queries.Tables
 import qualified TestSuite.Queries.Tuples
 import qualified TestSuite.Queries.UISat
 import qualified TestSuite.Queries.UISatEx
@@ -250,6 +251,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Lists.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Sums.tests
+               , TestSuite.Queries.Tables.tests
                , TestSuite.Queries.Tuples.tests
                , TestSuite.Queries.UISat.tests
                , TestSuite.Queries.UISatEx.tests
