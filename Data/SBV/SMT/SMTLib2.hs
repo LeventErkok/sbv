@@ -404,17 +404,13 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- uninterpreteds
             ++ concatMap declUI uis
             -- tables
-            ++ concatMap constTable constTables
-            -- skolem-tables can happen if they depend on fresh variables
-            ++ map (skolemTable []) delayedTables
-            ++ map (\(((i, _, _), _), _) -> "(define-fun table" ++ show i ++ "_initializer () Bool true)") delayedTables
+            ++ concatMap constTable allTables
             -- expressions
-            ++ map (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- array setups
             ++ concat arraySetups
-            ++ map (\s -> "(assert " ++ s ++ ")") delayedEqualities
             -- extra constraints
             ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") (F.toList cstrs)
   where -- NB. The below setting of skolemMap to empty is OK, since we do
@@ -429,9 +425,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False consts skolemMap) arrs
 
-        allTables = [(t, genTableData rm skolemMap (False, []) (map fst consts) t) | t <- tbls]
-        (constTables, delayedTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
-        delayedEqualities = concatMap snd delayedTables
+        allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         tableMap  = IM.fromList $ map mkTable allTables
           where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
 
