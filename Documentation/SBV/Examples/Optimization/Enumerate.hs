@@ -35,26 +35,26 @@ mkSymbolicEnumeration ''Day
 instance Metric Day where
   type MetricSpace Day = Word8
 
-  toMetricSpace x   = ite (x .== literal Mon) 0
-                    $ ite (x .== literal Tue) 1
-                    $ ite (x .== literal Wed) 2
-                    $ ite (x .== literal Thu) 3
-                    $ ite (x .== literal Fri) 4
-                    $ ite (x .== literal Sat) 5
-                                              6
+  toMetricSpace x   = ite (x .== sMon) 0
+                    $ ite (x .== sTue) 1
+                    $ ite (x .== sWed) 2
+                    $ ite (x .== sThu) 3
+                    $ ite (x .== sFri) 4
+                    $ ite (x .== sSat) 5
+                                       6
 
-  fromMetricSpace x = ite (x .== 0) (literal Mon)
-                    $ ite (x .== 1) (literal Tue)
-                    $ ite (x .== 2) (literal Wed)
-                    $ ite (x .== 3) (literal Thu)
-                    $ ite (x .== 4) (literal Fri)
-                    $ ite (x .== 5) (literal Sat)
-                                    (literal Sun)
+  fromMetricSpace x = ite (x .== 0) sMon
+                    $ ite (x .== 1) sTue
+                    $ ite (x .== 2) sWed
+                    $ ite (x .== 3) sThu
+                    $ ite (x .== 4) sFri
+                    $ ite (x .== 5) sSat
+                                    sSun
 
 -- | Identify weekend days
 isWeekend :: SDay -> SBool
 isWeekend = (`sElem` weekend)
-  where weekend = map literal [Sat, Sun]
+  where weekend = [sSat, sSun]
 
 -- | Using optimization, find the latest day that is not a weekend.
 -- We have:

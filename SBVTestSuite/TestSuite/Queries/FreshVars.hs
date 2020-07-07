@@ -78,7 +78,7 @@ fv = do a <- sInteger "a"
                    constrain $ vDouble  .== 10
                    constrain $ vReal    .== 11
                    constrain $ vInteger .== 12
-                   constrain $ vBinOp   .== literal Plus
+                   constrain $ vBinOp   .== sPlus
 
                    vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
                    vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray" Nothing

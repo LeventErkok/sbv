@@ -66,10 +66,6 @@ data Location = Here | There
 -- | Make 'Location' a symbolic value.
 mkSymbolicEnumeration ''Location
 
--- | Shorthands for symbolic versions of locations
-here, there :: SLocation
-[here, there]  = map literal [Here, There]
-
 -- | The status of the puzzle after each move
 --
 -- This type is equipped with an automatically derived 'Mergeable' instance
@@ -100,11 +96,11 @@ data Status = Status { time   :: STime       -- ^ elapsed time
 -- | Start configuration, time elapsed is 0 and everybody is 'here'
 start :: Status
 start = Status { time   = 0
-               , flash  = here
-               , lBono  = here
-               , lEdge  = here
-               , lAdam  = here
-               , lLarry = here
+               , flash  = sHere
+               , lBono  = sHere
+               , lEdge  = sHere
+               , lAdam  = sHere
+               , lLarry = sHere
                }
 
 -- | A puzzle move is modeled as a state-transformer
@@ -133,12 +129,12 @@ whereIs p =  ite (p .== sBono) (peek lBono)
 
 -- | Transferring the flash to the other side
 xferFlash :: Move ()
-xferFlash = modify $ \s -> s{flash = ite (flash s .== here) there here}
+xferFlash = modify $ \s -> s{flash = ite (flash s .== sHere) sThere sHere}
 
 -- | Transferring a person to the other side
 xferPerson :: SU2Member -> Move ()
 xferPerson p =  do ~[lb, le, la, ll] <- mapM peek [lBono, lEdge, lAdam, lLarry]
-                   let move l = ite (l .== here) there here
+                   let move l = ite (l .== sHere) sThere sHere
                        lb' = ite (p .== sBono)  (move lb) lb
                        le' = ite (p .== sEdge)  (move le) le
                        la' = ite (p .== sAdam)  (move la) la
@@ -199,7 +195,7 @@ run = mapM step
 -- | Check if a given sequence of actions is valid, i.e., they must all
 -- cross the bridge according to the rules and in less than 17 seconds
 isValid :: Actions -> SBool
-isValid as = time end .<= 17 .&& sAll check as .&& zigZag (cycle [there, here]) (map flash states) .&& sAll (.== there) [lBono end, lEdge end, lAdam end, lLarry end]
+isValid as = time end .<= 17 .&& sAll check as .&& zigZag (cycle [sThere, sHere]) (map flash states) .&& sAll (.== sThere) [lBono end, lEdge end, lAdam end, lLarry end]
   where check (s, p1, p2) =   (sNot s .=> p1 .> p2)       -- for two person moves, ensure first person is "larger"
                           .&& (s      .=> p2 .== sBono)   -- for one person moves, ensure second person is always "bono"
         states = evalState (run as) start

@@ -85,7 +85,7 @@ puzzle = do n <- sInteger "N"
 
             -- Each color is represented:
             constrain $ valid ef1 ef2 ef3
-            constrain $ map col [ef1, ef2, ef3] .== map literal [Red, Yellow, Blue]
+            constrain $ map col [ef1, ef2, ef3] .== [sRed, sYellow, sBlue]
 
             -- Pick any three, at least one is Red
             constrain $ valid af1 af2 af3 .=> count Red    [af1, af2, af3] .>= 1

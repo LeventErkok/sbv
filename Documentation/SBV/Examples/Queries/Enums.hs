@@ -44,7 +44,7 @@ findDays = runSMT $ do (d1 :: SDay) <- free "d1"
                        constrain $ d2 .<= d3
 
                        -- Assert that last day is before 'Thursday'
-                       constrain $ d3 .< literal Thursday
+                       constrain $ d3 .< sThursday
 
                        -- Constraints can be given before or after
                        -- the query mode starts. We will assert that

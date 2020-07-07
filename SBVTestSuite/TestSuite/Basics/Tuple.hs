@@ -105,7 +105,7 @@ enum = do
    constrain $ L.length vTup1 .== 3
 
    case untuple (vTup1 .!! 2)  of
-     (e, b) -> do constrain $ e .== literal C
+     (e, b) -> do constrain $ e .== sC
                   constrain $ L.length b .== 6
                   constrain $ b .!! 4 .== sTrue
 
