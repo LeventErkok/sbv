@@ -36,22 +36,10 @@ data State = Idle     -- ^ Regular work
 -- | Make 'State' a symbolic enumeration
 mkSymbolicEnumeration ''State
 
--- | Symbolic version of 'Idle'
-idle :: SState
-idle = literal Idle
-
--- | Symbolic version of 'Ready'
-ready :: SState
-ready = literal Ready
-
--- | Symbolic version of 'Critical'
-critical :: SState
-critical = literal Critical
-
 -- | A bounded mutex property holds for two sequences of state transitions, if they are not in
 -- their critical section at the same time up to that given bound.
 mutex :: Int -> SList State -> SList State -> SBool
-mutex i p1s p2s = L.band i $ L.bzipWith i (\p1 p2 -> p1 ./= critical .|| p2 ./= critical) p1s p2s
+mutex i p1s p2s = L.band i $ L.bzipWith i (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritical) p1s p2s
 
 -- | A sequence is valid upto a bound if it starts at 'Idle', and follows the mutex rules. That is:
 --
@@ -62,16 +50,16 @@ mutex i p1s p2s = L.band i $ L.bzipWith i (\p1 p2 -> p1 ./= critical .|| p2 ./= 
 -- The variable @me@ identifies the agent id.
 validSequence :: Int -> Integer -> SList Integer -> SList State -> SBool
 validSequence b me pturns proc = sAnd [ L.length proc .== fromIntegral b
-                                      , idle .== L.head proc
-                                      , check b pturns proc idle
+                                      , sIdle .== L.head proc
+                                      , check b pturns proc sIdle
                                       ]
    where check 0 _  _  _    = sTrue
          check i ts ps prev = let (cur,  rest)  = L.uncons ps
                                   (turn, turns) = L.uncons ts
-                                  ok   = ite (prev .== idle)                          (cur `sElem` [idle, ready])
-                                       $ ite (prev .== ready .&& turn .== literal me) (cur `sElem` [critical])
-                                       $ ite (prev .== critical)                      (cur `sElem` [critical, idle])
-                                                                                      (cur `sElem` [prev])
+                                  ok   = ite (prev .== sIdle)                          (cur `sElem` [sIdle, sReady])
+                                       $ ite (prev .== sReady .&& turn .== literal me) (cur `sElem` [sCritical])
+                                       $ ite (prev .== sCritical)                      (cur `sElem` [sCritical, sIdle])
+                                                                                       (cur `sElem` [prev])
                               in ok .&& check (i-1) turns rest cur
 
 -- | The mutex algorithm, coded implicity as an assignment to turns. Turns start at @1@, and at each stage is either
@@ -85,7 +73,7 @@ validTurns b turns process1 process2 = sAnd [ L.length turns .== fromIntegral b
                                             ]
    where check 0 _  _     _     _    = sTrue
          check i ts proc1 proc2 prev =   cur `sElem` [1, 2]
-                                     .&& (p1 .== critical .|| p2 .== critical .=> cur .== prev)
+                                     .&& (p1 .== sCritical .|| p2 .== sCritical .=> cur .== prev)
                                      .&& check (i-1) rest p1s p2s cur
             where (cur, rest) = L.uncons ts
                   (p1,  p1s)  = L.uncons proc1
@@ -153,11 +141,11 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
                         constrain $ validTurns    b turns p1 p2
 
                         -- Ensure that the second process becomes ready in the second cycle:
-                        constrain $ p2 .!! 1 .== ready
+                        constrain $ p2 .!! 1 .== sReady
 
                         -- Find a trace where p2 never goes critical
                         -- counter example, we would've found a violation!
-                        constrain $ sNot $ L.belem b critical p2
+                        constrain $ sNot $ L.belem b sCritical p2
 
                         query $ do cs <- checkSat
                                    case cs of
