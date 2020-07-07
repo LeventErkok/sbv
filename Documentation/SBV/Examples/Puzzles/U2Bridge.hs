@@ -93,7 +93,7 @@ data Status = Status { time   :: STime       -- ^ elapsed time
 --                                    , lLarry = symbolicMerge f t (lLarry s1) (lLarry s2)
 --                                    }
 
--- | Start configuration, time elapsed is 0 and everybody is 'here'
+-- | Start configuration, time elapsed is 0 and everybody is here
 start :: Status
 start = Status { time   = 0
                , flash  = sHere
