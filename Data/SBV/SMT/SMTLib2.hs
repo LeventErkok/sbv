@@ -166,7 +166,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType [] s ++ ") ; tracks " ++ nm | (s, nm) <- trackerVars]
              ++ [ "; --- constant tables ---" ]
-             ++ concatMap constTable constTables
+             ++ concatMap (uncurry (:) . constTable) constTables
              ++ [ "; --- skolemized tables ---" ]
              ++ map (skolemTable (unwords (map svType foralls))) skolemTables
              ++ [ "; --- arrays ---" ]
@@ -403,12 +403,14 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ concat arrayConstants
             -- uninterpreteds
             ++ concatMap declUI uis
-            -- tables
-            ++ concatMap constTable allTables
+            -- table declarations
+            ++ tableDecls
             -- expressions
             ++ map (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
+            -- table setups
+            ++ concat tableAssigns
             -- array setups
             ++ concat arraySetups
             -- extra constraints
@@ -426,6 +428,8 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False consts skolemMap) arrs
 
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
+        (tableDecls, tableAssigns) = unzip $ map constTable allTables
+
         tableMap  = IM.fromList $ map mkTable allTables
           where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
 
@@ -465,8 +469,8 @@ declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
 declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
-constTable :: (((Int, Kind, Kind), [SV]), [String]) -> [String]
-constTable (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)..] is ++ setup
+constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
+constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)
   where t       = "table" ++ show i
         decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
