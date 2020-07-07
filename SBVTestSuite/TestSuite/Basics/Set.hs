@@ -32,7 +32,7 @@ data E = A | B | C
 mkSymbolicEnumeration ''E
 
 __unused :: SE
-__unused = error "this declaration serves to quiet GHC about the unused type SE, and serves no other purpose."
+__unused = error "stop GHC from complaining unused names" sA sB sC
 
 type SC = SSet  Char
 type RC = RCSet Char

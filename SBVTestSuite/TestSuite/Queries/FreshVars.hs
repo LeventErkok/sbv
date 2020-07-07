@@ -28,6 +28,9 @@ import Utils.SBVTestFramework
 data BinOp  = Plus | Minus | Times
 mkSymbolicEnumeration ''BinOp
 
+_unused :: a
+_unused = error "stop GHC from complaining unused names" sPlus sMinus sTimes
+
 -- Test suite
 tests :: TestTree
 tests =
