@@ -23,7 +23,7 @@ import BenchSuite.Bench.Bench as S
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-    [ S.run ("sudoku " ++ show n) (checkPuzzle s) `using` runner allSatWith
+    [ S.run ("sudoku " ++ show n) (checkPuzzle s) `using` runner satWith
        | (n, s) <-
            zip
              [(0::Int)..]
