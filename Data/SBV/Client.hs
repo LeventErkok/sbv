@@ -63,8 +63,8 @@ declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]
 declareSymbolic isEnum typeName = do
     let typeCon = TH.conT typeName
 
-    if isEnum then ensureEnumeration typeName
-              else ensureEmptyData   typeName
+    cstrs <- if isEnum then ensureEnumeration typeName
+                       else ensureEmptyData   typeName
 
     deriveEqOrds <- if isEnum
                        then [d| deriving instance Eq       $(typeCon)
@@ -80,8 +80,19 @@ declareSymbolic isEnum typeName = do
                    deriving instance SatModel $(typeCon)
                |]
 
-    tdecl <- TH.TySynD (TH.mkName ('S' : TH.nameBase typeName)) [] <$> TH.conT ''SBV `TH.appT` typeCon
-    pure $ deriveEqOrds ++ derives ++ [tdecl]
+
+    sType <- TH.conT ''SBV `TH.appT` typeCon
+
+    let declConstructor c = [sig, def]
+          where nm   = TH.mkName $ 's' : TH.nameBase c
+                def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
+                body = TH.AppE (TH.VarE 'literal) (TH.ConE c)
+                sig  = TH.SigD nm sType
+
+        cdecl = concatMap declConstructor cstrs
+
+    let tdecl = TH.TySynD (TH.mkName ('S' : TH.nameBase typeName)) [] sType
+    pure $ deriveEqOrds ++ derives ++ [tdecl] ++ cdecl
 
 -- | Make an enumeration a symbolic type.
 mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
@@ -92,48 +103,50 @@ mkUninterpretedSort :: TH.Name -> TH.Q [TH.Dec]
 mkUninterpretedSort = declareSymbolic False
 
 -- | Make sure the given type is an enumeration
-ensureEnumeration :: TH.Name -> TH.Q ()
+ensureEnumeration :: TH.Name -> TH.Q [TH.Name]
 ensureEnumeration nm = do
         c <- TH.reify nm
         case c of
           TH.TyConI d -> case d of
                            TH.DataD _ _ _ _ cons _ -> case cons of
                                                         [] -> bad "The datatype given has no constructors."
-                                                        xs -> mapM_ check xs
+                                                        xs -> concat <$> mapM check xs
                            _                       -> bad "The name given is not a datatype."
 
           _        -> bad "The name given is not a datatype."
  where n = TH.nameBase nm
 
        check (TH.NormalC c xs) = case xs of
-                                   [] -> pure ()
+                                   [] -> pure [c]
                                    _  -> bad $ "Constructor " ++ show c ++ " has arguments."
 
        check c                 = bad $ "Constructor " ++ show c ++ " is not an enumeration value."
 
-       bad m = TH.reportError $ unlines [ "Data.SBV.mkSymbolicEnumeration: Invalid argument " ++ show n
-                                        , ""
-                                        , "    Expected an enumeration. " ++ m
-                                        , ""
-                                        , "    To create an enumerated sort, use a simple Haskell enumerated type."
-                                        ]
+       bad m = do TH.reportError $ unlines [ "Data.SBV.mkSymbolicEnumeration: Invalid argument " ++ show n
+                                           , ""
+                                           , "    Expected an enumeration. " ++ m
+                                           , ""
+                                           , "    To create an enumerated sort, use a simple Haskell enumerated type."
+                                           ]
+                  pure []
 
 -- | Make sure the given type is an empty data
-ensureEmptyData :: TH.Name -> TH.Q ()
+ensureEmptyData :: TH.Name -> TH.Q [TH.Name]
 ensureEmptyData nm = do
         c <- TH.reify nm
         case c of
           TH.TyConI d -> case d of
                            TH.DataD _ _ _ _ cons _ -> case cons of
-                                                        [] -> pure ()
+                                                        [] -> pure []
                                                         _  -> bad "The datatype given has constructors."
                            _                       -> bad "The name given is not a datatype."
 
           _        -> bad "The name given is not a datatype."
  where n = TH.nameBase nm
-       bad m = TH.reportError $ unlines [ "Data.SBV.mkUninterpretedSort: Invalid argument " ++ show n
-                                        , ""
-                                        , "    Expected an empty datatype. " ++ m
-                                        , ""
-                                        , "    To create an uninterpreted sort, use an empty datatype declaration."
-                                        ]
+       bad m = do TH.reportError $ unlines [ "Data.SBV.mkUninterpretedSort: Invalid argument " ++ show n
+                                           , ""
+                                           , "    Expected an empty datatype. " ++ m
+                                           , ""
+                                           , "    To create an uninterpreted sort, use an empty datatype declaration."
+                                           ]
+                  pure []

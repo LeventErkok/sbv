@@ -878,8 +878,9 @@ The declaration will automatically introduce the type:
     type SX = SBV X
 @
 
-so you can refer to the symbolic version as @SX@, treating it as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
-other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@.
+along with symbolic values of each of the enumerated values @sA@, @sB@, and @sC@. This way,
+you can refer to the symbolic version as @SX@, treating it as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
+other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@. For each enumerated value @X@, the symbolic versions @sX@ is defined to be equal to @literal X@.
 
 A simple query would look like:
 
