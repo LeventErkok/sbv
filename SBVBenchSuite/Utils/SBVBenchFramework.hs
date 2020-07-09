@@ -81,7 +81,7 @@ spaceTo c x | isSpace x = c
 -- | Construct a benchmark file name. The input name should be a time stamp or
 -- whatever you want to name the benchmark
 benchResultsFile :: FilePath -> FilePath
-benchResultsFile nm = "SBVBenchSuite" </> "BenchFiles" </> nm <.> "csv"
+benchResultsFile nm = "SBVBenchSuite" </> "BenchResults" </> nm <.> "csv"
 
 -- | Run bench-show comparisons on a given file. Bench show expects comparisons
 -- to be in a single file and differentiates the runs by a header generated from
