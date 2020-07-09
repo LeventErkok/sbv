@@ -20,7 +20,7 @@ import BenchSuite.Bench.Bench as S
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "DogCatMouse" p `using` runner allSatWith
+benchmarks = rGroup [ S.run "DogCatMouse" p `using` runner allSatWith ]
   where p = do [dog, cat, mouse] <- sIntegers ["dog", "cat", "mouse"]
                solve [ dog   .>= 1                                   -- at least one dog
                      , cat   .>= 1                                   -- at least one cat

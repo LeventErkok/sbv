@@ -33,20 +33,20 @@ import qualified BenchSuite.Puzzles.MagicSquare
 import qualified BenchSuite.Puzzles.NQueens
 import qualified BenchSuite.Puzzles.SendMoreMoney
 import qualified BenchSuite.Puzzles.Sudoku
-import qualified BenchSuite.Puzzles.U2Bridge
+-- import qualified BenchSuite.Puzzles.U2Bridge
 
 -- BitPrecise
 import qualified BenchSuite.BitPrecise.BitTricks
-import qualified BenchSuite.BitPrecise.BrokenSearch
-import qualified BenchSuite.BitPrecise.Legato
-import qualified BenchSuite.BitPrecise.MergeSort
+-- import qualified BenchSuite.BitPrecise.BrokenSearch
+-- import qualified BenchSuite.BitPrecise.Legato
+-- import qualified BenchSuite.BitPrecise.MergeSort
 import qualified BenchSuite.BitPrecise.MultMask
 import qualified BenchSuite.BitPrecise.PrefixSum
 
 -- Queries
 import qualified BenchSuite.Queries.AllSat
 import qualified BenchSuite.Queries.CaseSplit
-import qualified BenchSuite.Queries.Concurrency
+-- import qualified BenchSuite.Queries.Concurrency
 import qualified BenchSuite.Queries.Enums
 import qualified BenchSuite.Queries.FourFours
 import qualified BenchSuite.Queries.GuessNumber
@@ -105,7 +105,7 @@ import qualified BenchSuite.Misc.Floating
 import qualified BenchSuite.Misc.ModelExtract
 import qualified BenchSuite.Misc.Newtypes
 import qualified BenchSuite.Misc.NoDiv0
-import qualified BenchSuite.Misc.Polynomials
+-- import qualified BenchSuite.Misc.Polynomials
 import qualified BenchSuite.Misc.SetAlgebra
 import qualified BenchSuite.Misc.SoftConstrain
 import qualified BenchSuite.Misc.Tuple

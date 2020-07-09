@@ -21,4 +21,4 @@ import BenchSuite.Bench.Bench
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks =  runIO "Tuple" example
+benchmarks =  rGroup [ runIO "Tuple" example ]

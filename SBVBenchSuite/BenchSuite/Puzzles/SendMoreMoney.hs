@@ -21,7 +21,7 @@ import BenchSuite.Bench.Bench as S
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Puzzles.SendMoreMoney" p `using` runner allSatWith
+benchmarks = rGroup [ S.run "Puzzles.SendMoreMoney" p `using` runner allSatWith ]
   where p = do
           ds@[s,e,n,d,m,o,r,y] <- mapM sInteger ["s", "e", "n", "d", "m", "o", "r", "y"]
           let isDigit x = x .>= 0 .&& x .<= 9
