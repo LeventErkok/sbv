@@ -33,7 +33,7 @@ module Data.SBV.Control.Query (
 import Control.Monad          (unless, when, zipWithM)
 import Control.Monad.IO.Class (MonadIO)
 
-import Data.IORef (readIORef)
+import Data.IORef (readIORef, writeIORef)
 
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
@@ -495,6 +495,11 @@ restoreTablesAndArrays = do st <- queryState
                               []  -> return ()   -- Nothing to do
                               [x] -> send True $ "(assert " ++ x ++ ")"
                               xs  -> send True $ "(assert (and " ++ unwords xs ++ "))"
+
+                            -- We have to also clean-out the caches for all functional arrays, as a pop would
+                            -- invalidate the cache. See: https://github.com/LeventErkok/sbv/issues/541
+                            io $ do faMap <- readIORef (rFArrayMap st)
+                                    mapM_ (\(_, c) -> writeIORef c IM.empty) (IM.elems faMap)
 
 -- | Generalization of 'Data.SBV.Control.inNewAssertionStack'
 inNewAssertionStack :: (MonadIO m, MonadQuery m) => m a -> m a
