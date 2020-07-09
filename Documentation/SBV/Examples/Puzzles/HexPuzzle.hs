@@ -65,7 +65,7 @@ type Button  = Word8
 type SButton = SBV Button
 
 -- | The grid is an array mapping each button to its color.
-type Grid = SFunArray Button Color
+type Grid = SArray Button Color
 
 -- | Given a button press, and the current grid, compute the next grid.
 -- If the button is "unpressable", i.e., if it is not one of the center
@@ -130,8 +130,8 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Ju
 -- Searching at depth: 4
 -- Searching at depth: 5
 -- Searching at depth: 6
--- Found: [10,10,11,9,14,6]
 -- Found: [10,10,9,11,14,6]
+-- Found: [10,10,11,9,14,6]
 -- There are no more solutions.
 example :: IO ()
 example = search initBoard finalBoard
