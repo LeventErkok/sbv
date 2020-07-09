@@ -25,6 +25,8 @@ module Utils.SBVBenchFramework
   , dateStamp
   , benchResultsFile
   , compareBenchMarksCli
+  , classifier
+  , filterOverhead
   ) where
 
 import qualified Data.List      as L
@@ -89,15 +91,39 @@ benchResultsFile nm = "SBVBenchSuite" </> "BenchFiles" </> nm <.> "csv"
 compareBenchMarksCli :: FilePath -> IO ()
 compareBenchMarksCli fp = BS.report fp Nothing
                           BS.defaultConfig
-                          { BS.classifyBenchmark = classfier '/'
-                          , BS.presentation = BS.Groups BS.PercentDiff
-                          , BS.selectBenchmarks = \f ->
-                              reverse
-                              $ map fst
+                          { BS.classifyBenchmark = classifier '/'      -- separate groups by slashes
+                          , BS.presentation = BS.Groups BS.PercentDiff -- report percent difference
+                          , BS.selectBenchmarks = \f ->                -- sort from Improvement - Degradation
+                              map fst
                               $ L.sortBy (comparing snd)
                               $ either error id
-                              $ f (BS.ColumnIndex 1) Nothing}
+                              $ f (BS.ColumnIndex 1) Nothing
+                          }
+
+
+-- | The classifier takes a line of text and chunks it into (group-name,
+-- benchmark-name), for example:
+-- >>> classifier '/' "Puzzles//DogCatMouse/standalone"
+-- Just ("standalone","Puzzles//DogCatMouse")
+classifier :: Char -> String -> Maybe (String, String)
+classifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
   where
-   classfier :: Char -> String -> Maybe (String, String)
-   classfier e nm = i >>= return . flip L.splitAt nm
-     where i = L.elemIndex e nm
+    is :: [Int]
+    is = L.elemIndices e nm
+
+    chunks = fmap (flip L.splitAt nm) is
+
+-- | a helper function to remove benchmarks where the over head benchmark
+-- doesn't work or failed for some reason. This will write a filtered version
+-- and return the file path to that filtered version.
+filterOverhead :: Char -> FilePath -> IO FilePath
+filterOverhead e fp = do (header:file) <- L.lines <$> readFile fp
+                         -- only keep instances of 3 or greated. This number
+                         -- comes from splitting benchmark output by '/'.
+                         -- Because our groups are separated by '//' and the
+                         -- overhead by '/' an overhead run will have >3 splits,
+                         -- but a normal benchmark will only have two from '//'
+                         let filteredContent   = filter ((>=3) . length . L.elemIndices e) file
+                             filteredFilePath  = (fp ++ "_filtered")
+                         writeFile  filteredFilePath (concat $ header:filteredContent)
+                         return filteredFilePath
