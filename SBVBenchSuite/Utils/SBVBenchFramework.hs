@@ -103,8 +103,10 @@ compareBenchMarksCli fp = BS.report fp Nothing
 
 -- | The classifier takes a line of text and chunks it into (group-name,
 -- benchmark-name), for example:
+--
 -- >>> classifier '/' "Puzzles//DogCatMouse/standalone"
 -- Just ("standalone","Puzzles//DogCatMouse")
+--
 classifier :: Char -> String -> Maybe (String, String)
 classifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
   where

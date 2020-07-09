@@ -159,16 +159,13 @@ main = do
   G.defaultMainWith benchConfig {csvFile = Just f} $
        [ puzzles
        , bitPrecise
-         -- queries are not running with overHead
-       -- , queries
+       -- , queries :TODO queries are not running with overHead
        , weakestPreconditions
        , optimizations
        , uninterpreted
        , proofTools
-       -- code generation takes too much time and memory
-       -- , codeGeneration
-       -- crypto also is too expensive
-       -- crypto
+       -- , codeGeneration :NOTE code generation takes too much time and memory
+       -- crypto :NOTE crypto also is too expensive
        , misc
        , lists
        , strings
@@ -217,6 +214,7 @@ puzzles = bgroup "Puzzles" $ runOverheadBenchmark <$> puzzleBenchmarks
 --------------------------- BitPrecise ------------------------------------------
 bitPreciseBenchmarks :: [Runner]
 bitPreciseBenchmarks = [ BenchSuite.BitPrecise.BitTricks.benchmarks
+                       -- These benchmarks blow the stack :TODO fix them
                        -- , BenchSuite.BitPrecise.BrokenSearch.benchmarks
                        -- , BenchSuite.BitPrecise.Legato.benchmarks
                        -- , BenchSuite.BitPrecise.MergeSort.benchmarks
