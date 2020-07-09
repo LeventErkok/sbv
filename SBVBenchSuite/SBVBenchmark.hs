@@ -159,13 +159,16 @@ main = do
   G.defaultMainWith benchConfig {csvFile = Just f} $
        [ puzzles
        , bitPrecise
-       , queries
+         -- queries are not running with overHead
+       -- , queries
        , weakestPreconditions
        , optimizations
        , uninterpreted
        , proofTools
-       , codeGeneration
-       , crypto
+       -- code generation takes too much time and memory
+       -- , codeGeneration
+       -- crypto also is too expensive
+       -- crypto
        , misc
        , lists
        , strings
@@ -199,7 +202,9 @@ puzzleBenchmarks = [ BenchSuite.Puzzles.Coins.benchmarks
                    , BenchSuite.Puzzles.NQueens.benchmarks
                    , BenchSuite.Puzzles.MagicSquare.benchmarks
                    , BenchSuite.Puzzles.Sudoku.benchmarks
-                   , BenchSuite.Puzzles.U2Bridge.benchmarks
+                   -- TODO: sbv finishes cnt3 in 100s but z3 does so in 83 ms,
+                   -- probably an issue with z3 here ,
+                   -- BenchSuite.Puzzles.U2Bridge.benchmarks
                    ]
 
 -- | We call `runOverheadBenchmark` run the benchmarks with both sbv and z3
@@ -212,9 +217,9 @@ puzzles = bgroup "Puzzles" $ runOverheadBenchmark <$> puzzleBenchmarks
 --------------------------- BitPrecise ------------------------------------------
 bitPreciseBenchmarks :: [Runner]
 bitPreciseBenchmarks = [ BenchSuite.BitPrecise.BitTricks.benchmarks
-                       , BenchSuite.BitPrecise.BrokenSearch.benchmarks
-                       , BenchSuite.BitPrecise.Legato.benchmarks
-                       , BenchSuite.BitPrecise.MergeSort.benchmarks
+                       -- , BenchSuite.BitPrecise.BrokenSearch.benchmarks
+                       -- , BenchSuite.BitPrecise.Legato.benchmarks
+                       -- , BenchSuite.BitPrecise.MergeSort.benchmarks
                        , BenchSuite.BitPrecise.MultMask.benchmarks
                        , BenchSuite.BitPrecise.PrefixSum.benchmarks
                        ]
@@ -227,7 +232,8 @@ bitPrecise = bgroup "BitPrecise" $ runOverheadBenchmark <$> bitPreciseBenchmarks
 queryBenchmarks :: [Runner]
 queryBenchmarks = [ BenchSuite.Queries.AllSat.benchmarks
                   , BenchSuite.Queries.CaseSplit.benchmarks
-                  , BenchSuite.Queries.Concurrency.benchmarks
+                  -- The concurrency demo has STM blocking when benchmarking
+                  -- , BenchSuite.Queries.Concurrency.benchmarks
                   , BenchSuite.Queries.Enums.benchmarks
                   , BenchSuite.Queries.FourFours.benchmarks
                   , BenchSuite.Queries.GuessNumber.benchmarks
@@ -331,7 +337,8 @@ miscBenchmarks = [ BenchSuite.Misc.Auxiliary.benchmarks
                  , BenchSuite.Misc.ModelExtract.benchmarks
                  , BenchSuite.Misc.Newtypes.benchmarks
                  , BenchSuite.Misc.NoDiv0.benchmarks
-                 , BenchSuite.Misc.Polynomials.benchmarks
+                 -- killed by OS, TODO: Investigate
+                 -- , BenchSuite.Misc.Polynomials.benchmarks
                  , BenchSuite.Misc.SetAlgebra.benchmarks
                  , BenchSuite.Misc.SoftConstrain.benchmarks
                  , BenchSuite.Misc.Tuple.benchmarks

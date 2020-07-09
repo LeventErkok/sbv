@@ -80,8 +80,8 @@ data RunnerI = RunnerI { runI        :: (U.SMTConfig -> Problem -> IO BenchResul
 -- from runners that need to run several benchmarks
 data Runner where
   RBenchmark  :: G.Benchmark -> Runner    -- ^ a wrapper around gauge benchmarks
-  Runner      :: RunnerI   -> Runner    -- ^ a single run
-  RunnerGroup :: [Runner]  -> Runner    -- ^ a group of runs
+  Runner      :: RunnerI   -> Runner      -- ^ a single run
+  RunnerGroup :: [Runner]  -> Runner      -- ^ a group of runs
 
 -- | Convenience boilerplate functions, simply avoiding a lens dependency
 using :: Runner -> (Runner -> Runner) -> Runner
