@@ -9,15 +9,20 @@
 -- Test suite for uninterpreted sorts
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Uninterpreted.Sort(tests) where
 
 import Utils.SBVTestFramework
-import Data.Generics
+
+data L
+mkUninterpretedSort ''L
 
 tests :: TestTree
 tests =
@@ -26,15 +31,7 @@ tests =
         (assert . (==4) . length . (extractModels :: AllSatResult -> [L]) =<< allSat p0)
     ]
 
-data L = Nil | Cons Int L deriving (Eq, Ord, Data, Read, Show)
-instance SymVal L
-instance HasKind L
-instance SatModel L where
-  parseCVs = undefined -- make GHC shut up about the missing method, we won't actually call it
-
-type UList = SBV L
-
-len :: UList -> SInteger
+len :: SL -> SInteger
 len = uninterpret "len"
 
 p0 :: Symbolic SBool

@@ -33,7 +33,6 @@ tests =
     [ goldenCapturedIO "qEnum1" $ \rf -> runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} test
     ]
 
-type SBinOp = SBV BinOp
 
 test :: Symbolic ()
 test = do p :: SBinOp <- free "p"

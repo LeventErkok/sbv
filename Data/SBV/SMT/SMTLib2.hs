@@ -47,7 +47,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         hasDouble      = KDouble    `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
-        usorts         = [(s, dt) | KUninterpreted s dt <- Set.toList kindInfo]
+        usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
@@ -166,7 +166,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType [] s ++ ") ; tracks " ++ nm | (s, nm) <- trackerVars]
              ++ [ "; --- constant tables ---" ]
-             ++ concatMap (constTable False) constTables
+             ++ concatMap (uncurry (:) . constTable) constTables
              ++ [ "; --- skolemized tables ---" ]
              ++ map (skolemTable (unwords (map svType foralls))) skolemTables
              ++ [ "; --- arrays ---" ]
@@ -212,7 +212,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False (not (null foralls)) consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg (not (null foralls)) consts skolemMap) arrs
         delayedEqualities = concatMap snd skolemTables
 
         delayedAsserts []              = []
@@ -310,14 +310,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                         _ -> ""
 
 -- | Declare new sorts
-declSort :: (String, Either String [String]) -> [String]
+declSort :: (String, Maybe [String]) -> [String]
 declSort (s, _)
   | s == "RoundingMode" -- built-in-sort; so don't declare.
   = []
-declSort (s, Left  r ) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted: " ++ r]
-declSort (s, Right fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
-                         , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
-                         ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
+declSort (s, Nothing) = ["(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort." ]
+declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
+                        , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
+                        ] ++ ["   " ++ body fs (0::Int)] ++ [")"]
         where body []     _ = ""
               body [_]    i = show i
               body (c:cs) i = "(ite (= x " ++ c ++ ") " ++ show i ++ " " ++ body cs (i+1) ++ ")"
@@ -384,12 +384,12 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
 -- to do as an extra in the incremental context. See `Data.SBV.Core.Symbolic.registerKind`
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
-cvtInc :: Bool -> SMTLibIncConverter [String]
-cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc :: SMTLibIncConverter [String]
+cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
-            ++ concatMap declSort [(s, dt) | KUninterpreted s dt <- newKinds]
+            ++ concatMap declSort [(s, dt) | KUserSort s dt <- newKinds]
             -- tuples. NB. Only declare the new sizes, old sizes persist.
             ++ concatMap declTuple (findTupleArities newKs)
             -- sums
@@ -403,12 +403,14 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             ++ concat arrayConstants
             -- uninterpreteds
             ++ concatMap declUI uis
-            -- tables
-            ++ concatMap (constTable afterAPush) allTables
+            -- table declarations
+            ++ tableDecls
             -- expressions
-            ++ map  (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            ++ map (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
+            -- table setups
+            ++ concat tableAssigns
             -- array setups
             ++ concat arraySetups
             -- extra constraints
@@ -423,9 +425,11 @@ cvtInc afterAPush inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         declInp (s, _) = "(declare-fun " ++ show s ++ " () " ++ svType s ++ ")"
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg afterAPush False consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False consts skolemMap) arrs
 
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
+        (tableDecls, tableAssigns) = unzip $ map constTable allTables
+
         tableMap  = IM.fromList $ map mkTable allTables
           where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
 
@@ -465,20 +469,20 @@ declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
 declAx :: (String, [String]) -> String
 declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
 
-constTable :: Bool -> (((Int, Kind, Kind), [SV]), [String]) -> [String]
-constTable afterAPush (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)..] is ++ setup
+constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
+constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)
   where t       = "table" ++ show i
         decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
         -- Arrange for initializers
         mkInit idx   = "table" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer  = "table" ++ show i ++ "_initializer"
-        wrap index s
-          | afterAPush = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
-          | True       = "(assert " ++ s ++ ")"
-        lis          = length is
+
+        wrap index s = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
+
+        lis  = length is
+
         setup
-          | not afterAPush = []
           | lis == 0       = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
                              ]
           | lis == 1       = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
@@ -487,7 +491,6 @@ constTable afterAPush (((i, ak, rk), _elts), is) = decl : zipWith wrap [(0::Int)
           | True           = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lis - 1]) ++ "))"
                              , "(assert " ++ initializer ++ ")"
                              ]
-
 
 skolemTable :: String -> (((Int, Kind, Kind), [SV]), [String]) -> String
 skolemTable qsIn (((i, ak, rk), _elts), _) = decl
@@ -517,8 +520,8 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- we might have to skolemize those. Implement this properly.
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
-declArray :: SMTConfig -> Bool -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
+declArray :: SMTConfig -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
+declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
   where constNames = map fst consts
         topLevel = not quantified || case ctx of
                                        ArrayFree mbi      -> maybe True (`elem` constNames) mbi
@@ -554,17 +557,13 @@ declArray cfg afterAPush quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx))
         mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)
         initializer   = "array_" ++ show i ++ "_initializer"
 
-        wrap index s
-          | afterAPush = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
-          | True       = "(assert " ++ s ++ ")"
+        wrap index s = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
 
         lpre          = length pre
         lAll          = lpre + length post
 
         setup
-          | not afterAPush = []
-          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
-                             ]
+          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed" | not quantified]
           | lAll == 1      = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
                              , "(assert " ++ initializer ++ ")"
                              ]
@@ -689,7 +688,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                       | True                = lift2 o
 
         unintComp o [a, b]
-          | KUninterpreted s (Right _) <- kindOf (head arguments)
+          | KUserSort s (Just _) <- kindOf (head arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
 
@@ -734,20 +733,20 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | needsCheck = "(ite " ++ cond ++ ssv e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
-                              KBool              -> (2::Integer) > fromIntegral l
-                              KBounded _ n       -> (2::Integer)^n > fromIntegral l
-                              KUnbounded         -> True
-                              KReal              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
-                              KFloat             -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
-                              KDouble            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
-                              KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
-                              KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                              KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
-                              KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
-                              KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
-                              KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
-                              KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
-                              KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KBool         -> (2::Integer) > fromIntegral l
+                              KBounded _ n  -> (2::Integer)^n > fromIntegral l
+                              KUnbounded    -> True
+                              KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
+                              KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
+                              KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
+                              KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                              KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
+                              KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued: " ++ show k
+                              KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
+                              KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
+                              KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
+                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
 
@@ -756,20 +755,20 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                  | True      = gtl ++ " "
 
                 (less, leq) = case aKnd of
-                                KBool              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
-                                KBounded{}         -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
-                                KUnbounded         -> ("<", "<=")
-                                KReal              -> ("<", "<=")
-                                KFloat             -> ("fp.lt", "fp.leq")
-                                KDouble            -> ("fp.lt", "fp.geq")
-                                KChar              -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KString            -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
-                                KList k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
-                                KSet  k            -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
-                                KTuple k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
-                                KMaybe k           -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
-                                KEither k1 k2      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
-                                KUninterpreted s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KBool         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected boolean valued index"
+                                KBounded{}    -> if hasSign i then ("bvslt", "bvsle") else ("bvult", "bvule")
+                                KUnbounded    -> ("<", "<=")
+                                KReal         -> ("<", "<=")
+                                KFloat        -> ("fp.lt", "fp.leq")
+                                KDouble       -> ("fp.lt", "fp.geq")
+                                KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
+                                KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
+                                KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
+                                KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
+                                KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
+                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
                 le0  = "(" ++ less ++ " " ++ ssv i ++ " " ++ mkCnst 0 ++ ")"
@@ -881,7 +880,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | Just f <- lookup op uninterpretedTable
           = f (map ssv args)
           | True
-          = if not (null args) && isUninterpreted (head args)
+          = if not (null args) && isUserSort (head args)
             then error $ unlines [ ""
                                  , "*** Cannot translate operator        : " ++ show op
                                  , "*** When applied to arguments of kind: " ++ intercalate ", " (nub (map (show . kindOf) args))

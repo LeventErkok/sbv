@@ -244,7 +244,7 @@ module Data.SBV (
 
   -- * Uninterpreted sorts, axioms, constants, and functions
   -- $uninterpreted
-  , Uninterpreted(..), addAxiom
+  , mkUninterpretedSort, Uninterpreted(..), addAxiom
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
@@ -835,18 +835,19 @@ See 'Data.SBV.Control.getUnsatCore' for details and "Documentation.SBV.Examples.
 -}
 
 {- $uninterpreted
-Users can introduce new uninterpreted sorts simply by defining a data-type in Haskell and registering it as such. The
+Users can introduce new uninterpreted sorts simply by defining an empty data-type in Haskell and registering it as such. The
 following example demonstrates:
 
   @
-     data B = B () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind, SatModel)
+     data B
+     mkUninterpretedSort ''B
   @
 
-(Note that you'll also need to use the language pragmas @DeriveDataTypeable@, @DeriveAnyClass@, and import @Data.Generics@ for the above to work.)
+(Note that you'll also need to use pragmas @TemplateHaskell@, @StandAloneDeriving@, @DeriveDataTypeable@, and @DeriveAnyClass@ for this to work, follow GHC's error messages!)
 
 This is all it takes to introduce @B@ as an uninterpreted sort in SBV, which makes the type @SBV B@ automagically become available as the type
-of symbolic values that ranges over @B@ values. Note that the @()@ argument is important to distinguish it from enumerations, which will be
-translated to proper SMT data-types.
+of symbolic values that ranges over @B@ values. Note that this will also introduce the type @SB@ into your environment, which is a synonym
+for @SBV B@.
 
 
 Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
@@ -854,8 +855,9 @@ the 'Data.SBV.Core.Model.Uninterpreted' class.
 -}
 
 {- $enumerations
-If the uninterpreted sort definition takes the form of an enumeration (i.e., a simple data type with all nullary constructors), then SBV will actually
-translate that as just such a data-type to SMT-Lib, and will use the constructors as the inhabitants of the said sort. A simple example is:
+If the uninterpreted sort definition takes the form of an enumeration (i.e., a simple data type with all nullary constructors), then 
+tou can use the 'mkSymbolicEnumeration' functio to turn it into an enumeration in SMTLib.
+A simple example is:
 
 @
     data X = A | B | C
@@ -870,17 +872,17 @@ options turned on:
 >   LANGUAGE DeriveDataTypeable
 >   LANGUAGE DeriveAnyClass
 
-Now, the user can define
+The declaration will automatically introduce the type:
 
 @
     type SX = SBV X
 @
 
-and treat @SX@ as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
-other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@.
+along with symbolic values of each of the enumerated values @sA@, @sB@, and @sC@. This way,
+you can refer to the symbolic version as @SX@, treating it as a regular symbolic type ranging over the values @A@, @B@, and @C@. Such values can be compared for equality, and with the usual
+other comparison operators, such as @.==@, @./=@, @.>@, @.>=@, @<@, and @<=@. For each enumerated value @X@, the symbolic versions @sX@ is defined to be equal to @literal X@.
 
-Note that in this latter case the type is no longer uninterpreted, but is properly represented as a simple enumeration of the said elements. A simple
-query would look like:
+A simple query would look like:
 
 @
      allSat $ \x -> x .== (x :: SX)
@@ -898,8 +900,7 @@ which would list all three elements of this domain as satisfying solutions.
      Found 3 different solutions.
 @
 
-Note that the result is properly typed as @X@ elements; these are not mere strings. So, in a 'getModelAssignment' scenario, the user can recover actual
-elements of the domain and program further with those values as usual.
+Note that the result is properly typed as @X@ elements; these are not mere strings.
 
 See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
 -}

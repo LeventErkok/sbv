@@ -9,17 +9,21 @@
 -- Testing uninterpreted value extraction
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Queries.Uninterpreted where
 
-import Data.Generics
 import Data.SBV.Control
-
 import Utils.SBVTestFramework
+
+data L = A | B
+mkSymbolicEnumeration ''L
 
 -- Test suite
 tests :: TestTree
@@ -33,14 +37,8 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
                   appendFile rf ("\n FINAL:" ++ r ++ "\nDONE!\n")
 
 
-data L = A | B ()
-       deriving (Eq, Ord, Show, Read, Data)
-
-instance SymVal L
-instance HasKind L
-
 unint1 :: Symbolic String
 unint1 = do (x :: SBV L) <- free_
 
             query $ do _ <- checkSat
-                       getUninterpretedValue x
+                       show <$> getValue x

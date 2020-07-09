@@ -11,15 +11,22 @@
 
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Uninterpreted.Axioms(tests) where
 
 import Utils.SBVTestFramework
-import Data.Generics
 
 import Data.SBV.Control
+
+data Bitstring
+mkUninterpretedSort ''Bitstring
+
+data B
+mkUninterpretedSort ''B
 
 tests :: TestTree
 tests =
@@ -27,10 +34,6 @@ tests =
     [ testCase         "unint-axioms"       (assertIsThm p0)
     , goldenCapturedIO "unint-axioms-query" testQuery
     ]
-
--- Example provided by Thomas DuBuisson:
-newtype Bitstring = Bitstring () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind)
-type SBitstring = SBV Bitstring
 
 a :: SBitstring -> SBool
 a = uninterpret "a"
@@ -51,9 +54,6 @@ p0 = do
     constrain $ a p
     constrain $ a k
     return $ a (e k p)
-
-newtype B = B () deriving (Eq, Ord, Show, Read, Data, SymVal, HasKind)
-type SB = SBV B
 
 testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t

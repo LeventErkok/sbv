@@ -3,10 +3,16 @@
 :set -fwarn-unused-binds
 :set -fwarn-unused-imports
 :set -fhide-source-paths
-:set -i./Data -i./SBVTestSuite
+:set -i./Data -i./SBVTestSuite -i./SBVBenchSuite
+:set -package gauge
+:set -package silently
 :{
-loadEverything _ = (":load " ++) . unwords . filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) <$> System.FilePath.Glob.glob "**/*.hs"
-  where ignore = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "Paths_sbv.hs", "SBVBenchSuite"]
+loadEverything _ = do
+       allFiles <- System.FilePath.Glob.glob "**/*.hs"
+       let ignore     = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "SBVBench.hs", "Paths_sbv.hs"]
+           goodFiles  = filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) allFiles
+       pure $    ":load " ++ unwords goodFiles ++ "\n"
+              ++ ":m Data.SBV"
 :}
 :def loadEverything loadEverything
 :loadEverything

@@ -82,6 +82,7 @@
 [GOOD] (define-fun s42 () Bool (= s16 s41))
 [GOOD] (assert s42)
 [GOOD] (declare-fun array_0 () (Array Int Int))
+[GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
 [GOOD] (declare-fun s43 () Int)
 [GOOD] (declare-fun s44 () Bool)
 [GOOD] (define-fun s46 () Int 2)
@@ -95,6 +96,7 @@
 [GOOD] (assert s50)
 [GOOD] (define-fun s51 () Int 42)
 [GOOD] (define-fun array_1 () (Array Int Int) ((as const (Array Int Int)) 42))
+[GOOD] (define-fun array_1_initializer () Bool true) ; no initializiation needed
 [GOOD] (declare-fun s52 () Int)
 [GOOD] (declare-fun s53 () (_ BitVec 8))
 [GOOD] (define-fun s54 () Int 96)

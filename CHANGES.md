@@ -1,18 +1,28 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.6, 2020-02-08
+* Latest Hackage released version: 8.7, 2020-06-30
 
-### Version 8.7, Not yet released
+### Version 8.7.5, Not yet released
 
-  * Add support for concurrent versions of solvers for query
-    problems. Similar to 'satWithAny', 'proveWithAny' etc.,
-    except when we have queries. Thanks to Jeffrey Young
+  * Reworked uninterpreted sorts. Added new function `mkUninterpretedSort` to make
+    declaration of completely uninterpreted sorts easier. In particular, we now
+    automatically introduce the symbolic variant of the type (by prefixing the
+    underlying type with `S`) so it becomes automatically available, both for uninterpreted
+    sorts and enumerations. In the latter case, we also automatically introduce the value `sX`
+    for each enumeration constant `X`, defined to be precisely `literal X`.
+
+  * Handle incremental mode table-declarations that depend on freshly declared variables. Thanks
+    to Gergő Érdi for reporting.
+
+### Version 8.7, 2020-06-30
+
+  * Add support for concurrent versions of solvers for query problems. Similar to
+    `satWithAny`, `proveWithAny` etc., except when we have queries. Thanks to Jeffrey Young
     for the idea and the implementation.
 
-  * Add "Documentation.SBV.Examples.Misc.Newtypes", demonstrating
-    how to use newtypes over existing symbolic types as
-    symbolic quantities themselves. Thanks to Curran McConnell
+  * Add "Documentation.SBV.Examples.Misc.Newtypes", demonstrating how to use newtypes
+    over existing symbolic types as symbolic quantities themselves. Thanks to Curran McConnell
     for the example.
 
   * Added new predicate `sNotElem`, negating `sElem`.
@@ -45,6 +55,14 @@
   
   * Add support for addAxiom command to work in the interactive mode.
     Thanks to Martin Lundfall for the feedback.
+
+  * Fixed `proveWithAny` and `satWithAny` functions so they properly
+    kill the solvers that did not terminate first. Previously, they
+    became zombies if they didn't end up quickly. Thanks to
+    Robert Dockins for the investigation and the fix.
+
+  * Fixed a bug where resetAssertions call was forgetting to restore the
+    array and table contexts. Thanks to Martin Lundfall for reporting.
 
 ### Version 8.6, 2020-02-08
 

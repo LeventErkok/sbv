@@ -28,6 +28,9 @@ import Utils.SBVTestFramework
 data BinOp  = Plus | Minus | Times
 mkSymbolicEnumeration ''BinOp
 
+_unused :: a
+_unused = error "stop GHC from complaining unused names" sPlus sMinus sTimes
+
 -- Test suite
 tests :: TestTree
 tests =
@@ -38,8 +41,6 @@ tests =
 testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} fv
                   appendFile rf ("\n FINAL:" ++ show (SatResult r) ++ "\nDONE!\n")
-
-type SBinOp = SBV BinOp
 
 fv :: Symbolic SMTResult
 fv = do a <- sInteger "a"
@@ -77,7 +78,7 @@ fv = do a <- sInteger "a"
                    constrain $ vDouble  .== 10
                    constrain $ vReal    .== 11
                    constrain $ vInteger .== 12
-                   constrain $ vBinOp   .== literal Plus
+                   constrain $ vBinOp   .== sPlus
 
                    vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
                    vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray" Nothing

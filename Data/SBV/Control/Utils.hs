@@ -40,7 +40,6 @@ module Data.SBV.Control.Utils (
      , executeQuery
      ) where
 
-import Data.Maybe (isJust)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf)
 
 import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
@@ -155,8 +154,8 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => Bool -> IncState -> m ()
-syncUpSolver afterAPush is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => IncState -> m ()
+syncUpSolver is = do
         cfg <- getConfig
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
@@ -170,7 +169,7 @@ syncUpSolver afterAPush is = do
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       return $ toIncSMTLib afterAPush cfg inps ks cnsts arrs tbls uis as constraints cfg
+                       return $ toIncSMTLib cfg inps ks cnsts arrs tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -200,11 +199,7 @@ modifyQueryState f = do state <- queryState
 inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
 inNewContext act = do st <- queryState
                       (is, r) <- io $ withNewIncState st act
-                      mbQS <- io . readIORef . rQueryState $ st
-                      let afterAPush = case mbQS of
-                                         Nothing -> False
-                                         Just qs -> isJust (queryTblArrPreserveIndex qs)
-                      syncUpSolver afterAPush is
+                      syncUpSolver is
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
@@ -673,25 +668,25 @@ getFunction f = do nm <- smtFunName f
 getUninterpretedValue :: (MonadIO m, MonadQuery m, HasKind a) => SBV a -> m String
 getUninterpretedValue s =
         case kindOf s of
-          KUninterpreted _ (Left _) -> do sv <- inNewContext (`sbvToSV` s)
+          KUserSort _ Nothing -> do sv <- inNewContext (`sbvToSV` s)
 
-                                          let nm  = show sv
-                                              cmd = "(get-value (" ++ nm ++ "))"
-                                              bad = unexpected "getValue" cmd "a model value" Nothing
+                                    let nm  = show sv
+                                        cmd = "(get-value (" ++ nm ++ "))"
+                                        bad = unexpected "getValue" cmd "a model value" Nothing
 
-                                          r <- ask cmd
+                                    r <- ask cmd
 
-                                          parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sv -> return v
-                                                              _                                            -> bad r Nothing
+                                    parse r bad $ \case EApp [EApp [ECon o,  ECon v]] | o == show sv -> return v
+                                                        _                                            -> bad r Nothing
 
-          k                         -> error $ unlines [""
-                                                       , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
-                                                       , "*** "
-                                                       , "***    Kind: " ++ show k
-                                                       , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
-                                                       , "*** "
-                                                       , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
-                                                       ]
+          k                   -> error $ unlines [""
+                                                 , "*** SBV.getUninterpretedValue: Called on an 'interpreted' kind"
+                                                 , "*** "
+                                                 , "***    Kind: " ++ show k
+                                                 , "***    Hint: Use 'getValue' to extract value for interpreted kinds."
+                                                 , "*** "
+                                                 , "*** Only truly uninterpreted sorts should be used with 'getUninterpretedValue.'"
+                                                 ]
 
 -- | Get the value of a term, but in CV form. Used internally. The model-index, in particular is extremely Z3 specific!
 getValueCVHelper :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV
@@ -723,25 +718,25 @@ getValueCVHelper mbi s
 defaultKindedValue :: Kind -> Maybe CV
 defaultKindedValue k = CV k <$> cvt k
   where cvt :: Kind -> Maybe CVal
-        cvt KBool                 = Just $ CInteger 0
-        cvt KBounded{}            = Just $ CInteger 0
-        cvt KUnbounded            = Just $ CInteger 0
-        cvt KReal                 = Just $ CAlgReal 0
-        cvt (KUninterpreted _ ui) = uninterp ui
-        cvt KFloat                = Just $ CFloat 0
-        cvt KDouble               = Just $ CDouble 0
-        cvt KChar                 = Just $ CChar '\NUL'                -- why not?
-        cvt KString               = Just $ CString ""
-        cvt (KList  _)            = Just $ CList []
-        cvt (KSet  _)             = Just $ CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
-        cvt (KTuple ks)           = CTuple <$> mapM cvt ks
-        cvt (KMaybe _)            = Just $ CMaybe Nothing
-        cvt (KEither k1 _)        = CEither . Left <$> cvt k1          -- why not?
+        cvt KBool            = Just $ CInteger 0
+        cvt KBounded{}       = Just $ CInteger 0
+        cvt KUnbounded       = Just $ CInteger 0
+        cvt KReal            = Just $ CAlgReal 0
+        cvt (KUserSort _ ui) = uninterp ui
+        cvt KFloat           = Just $ CFloat 0
+        cvt KDouble          = Just $ CDouble 0
+        cvt KChar            = Just $ CChar '\NUL'                -- why not?
+        cvt KString          = Just $ CString ""
+        cvt (KList  _)       = Just $ CList []
+        cvt (KSet  _)        = Just $ CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
+        cvt (KTuple ks)      = CTuple <$> mapM cvt ks
+        cvt (KMaybe _)       = Just $ CMaybe Nothing
+        cvt (KEither k1 _)   = CEither . Left <$> cvt k1          -- why not?
 
         -- Tricky case of uninterpreted
-        uninterp (Right (c:_)) = Just $ CUserSort (Just 1, c)
-        uninterp (Right [])    = Nothing                       -- I don't think this can actually happen, but just in case
-        uninterp (Left _)      = Nothing                       -- Out of luck, truly uninterpreted; we don't even know if it's inhabited.
+        uninterp (Just (c:_)) = Just $ CUserSort (Just 1, c)
+        uninterp (Just [])    = Nothing                       -- I don't think this can actually happen, but just in case
+        uninterp Nothing      = Nothing                       -- Out of luck, truly uninterpreted; we don't even know if it's inhabited.
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
@@ -750,48 +745,48 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
-                           KBool            | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | True             -> Nothing
+                           KBool       | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | True             -> Nothing
 
-                           KBounded{}       | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | True             -> Nothing
+                           KBounded{}  | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | True             -> Nothing
 
-                           KUnbounded       | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | True             -> Nothing
+                           KUnbounded  | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | True             -> Nothing
 
-                           KReal            | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | EReal i     <- e -> Just $ CV KReal (CAlgReal i)
-                                            | True             -> Nothing
+                           KReal       | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | EReal i     <- e -> Just $ CV KReal (CAlgReal i)
+                                       | True             -> Nothing
 
-                           KUninterpreted{} | ECon s <- e -> Just $ CV k $ CUserSort (getUIIndex k s, s)
-                                            | True             -> Nothing
+                           KUserSort{} | ECon s <- e -> Just $ CV k $ CUserSort (getUIIndex k s, s)
+                                       | True             -> Nothing
 
-                           KFloat           | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | EFloat i    <- e -> Just $ CV KFloat (CFloat i)
-                                            | True             -> Nothing
+                           KFloat      | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | EFloat i    <- e -> Just $ CV KFloat (CFloat i)
+                                       | True             -> Nothing
 
-                           KDouble          | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                            | EDouble i   <- e -> Just $ CV KDouble (CDouble i)
-                                            | True             -> Nothing
+                           KDouble     | ENum (i, _) <- e -> Just $ mkConstCV k i
+                                       | EDouble i   <- e -> Just $ CV KDouble (CDouble i)
+                                       | True             -> Nothing
 
-                           KChar            | ENum (i, _) <- e -> Just $ CV KChar $ CChar $ chr $ fromIntegral i
-                                            | True             -> Nothing
+                           KChar       | ENum (i, _) <- e -> Just $ CV KChar $ CChar $ chr $ fromIntegral i
+                                       | True             -> Nothing
 
-                           KString          | ECon s      <- e -> Just $ CV KString $ CString $ interpretString s
-                                            | True             -> Nothing
+                           KString     | ECon s      <- e -> Just $ CV KString $ CString $ interpretString s
+                                       | True             -> Nothing
 
-                           KList ek                            -> Just $ CV k $ CList $ interpretList ek e
+                           KList ek                       -> Just $ CV k $ CList $ interpretList ek e
 
-                           KSet ek                             -> Just $ CV k $ CSet $ interpretSet ek e
+                           KSet ek                        -> Just $ CV k $ CSet $ interpretSet ek e
 
-                           KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
+                           KTuple{}                       -> Just $ CV k $ CTuple $ interpretTuple e
 
-                           KMaybe{}                            -> Just $ CV k $ CMaybe $ interpretMaybe k e
+                           KMaybe{}                       -> Just $ CV k $ CMaybe $ interpretMaybe k e
 
-                           KEither{}                           -> Just $ CV k $ CEither $ interpretEither k e
+                           KEither{}                      -> Just $ CV k $ CEither $ interpretEither k e
 
-  where getUIIndex (KUninterpreted  _ (Right xs)) i = i `elemIndex` xs
-        getUIIndex _                              _ = Nothing
+  where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
+        getUIIndex _                        _ = Nothing
 
         stringLike xs = length xs >= 2 && head xs == '"' && last xs == '"'
 
@@ -1086,7 +1081,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing   -> return ()
                              Just cmds -> mapM_ (send True) cmds
 
-                     let usorts = [s | us@(KUninterpreted s _) <- Set.toAscList ki, isFree us]
+                     let usorts = [s | us@(KUserSort s _) <- Set.toAscList ki, isFree us]
 
                      unless (null usorts) $ queryDebug [ "*** SBV.allSat: Uninterpreted sorts present: " ++ unwords usorts
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
@@ -1113,8 +1108,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      (sc, unk, ms) <- loop grabObservables topState (allUiFuns, uiFuns) qinps vars cfg
                      return (sc, w, unk, reverse ms)
 
-   where isFree (KUninterpreted _ (Left _)) = True
-         isFree _                           = False
+   where isFree (KUserSort _ Nothing) = True
+         isFree _                     = False
 
          loop grabObservables topState (allUiFuns, uiFunsToReject) qinps vars cfg = go (1::Int) []
            where go :: Int -> [SMTResult] -> m (Bool, Bool, [SMTResult])
