@@ -23,7 +23,7 @@ import BenchSuite.Bench.Bench as B
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks =  runIO "Correctness" fibCorrect
+benchmarks =  runIO "Fibonacci.Correctness" fibCorrect
 
 
 instance NFData a => NFData (S a)               where rnf a = seq a ()

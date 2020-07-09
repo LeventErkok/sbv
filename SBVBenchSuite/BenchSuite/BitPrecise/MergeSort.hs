@@ -22,12 +22,10 @@ import Data.SBV
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ B.run    "Correctness.MergeSort 10"   (correctness' 10)   `using` runner Data.SBV.proveWith
-  , B.run    "Correctness.MergeSort 100"  (correctness' 100)  `using` runner Data.SBV.proveWith
-  , B.run    "Correctness.MergeSort 1000" (correctness' 1000) `using` runner Data.SBV.proveWith
-  , B.runIO  "CodeGen.MergeSort 10" $ codeGen 10
-  , B.runIO  "CodeGen.MergeSort 100" $ codeGen 100
-  , B.runIO  "CodeGen.MergeSort 1000" $ codeGen 1000
+  [ B.run    "Correctness.MergeSort 3"  (correctness' 3)  `using` runner Data.SBV.proveWith
+  , B.run    "Correctness.MergeSort 4"  (correctness' 4)  `using` runner Data.SBV.proveWith
+  , B.runIO  "CodeGen.MergeSort 3" $ codeGen 3
+  , B.runIO  "CodeGen.MergeSort 4" $ codeGen 4
   ]
   where correctness' n = do xs <- mkFreeVars n
                             let ys = mergeSort xs

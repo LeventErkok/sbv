@@ -22,7 +22,7 @@ import Data.SBV (proveWith,sInt32,(.>=),(.<=),(.==),sFromIntegral,SInt64,sDiv,co
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ B.run  "Arith.MidPointFixed"  (checkCorrect midPointFixed)      `using` runner Data.SBV.proveWith
+  [ B.run  "Arith.MidPointFixed"  (checkCorrect midPointFixed)        `using` runner Data.SBV.proveWith
   , B.run  "Arith-Overflow"       (checkCorrect midPointAlternative)  `using` runner Data.SBV.proveWith
   ]
 

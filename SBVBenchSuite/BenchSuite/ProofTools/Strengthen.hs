@@ -24,12 +24,12 @@ import BenchSuite.Bench.Bench as B
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ runIO "ex1" ex1
-  , runIO "ex2" ex2
-  , runIO "ex3" ex3
-  , runIO "ex4" ex4
-  , runIO "ex5" ex5
-  , runIO "ex6" ex6
+  [ runIO "Strengthen.ex1" ex1
+  , runIO "Strengthen.ex2" ex2
+  , runIO "Strengthen.ex3" ex3
+  , runIO "Strengthen.ex4" ex4
+  , runIO "Strengthen.ex5" ex5
+  , runIO "Strengthen.ex6" ex6
   ]
 
 instance NFData a => NFData (S a)               where rnf a = seq a ()

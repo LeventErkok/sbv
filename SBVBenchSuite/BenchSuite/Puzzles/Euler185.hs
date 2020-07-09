@@ -22,4 +22,4 @@ import BenchSuite.Bench.Bench as S
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Euler185" euler185 `using` runner allSatWith
+benchmarks = rGroup [ S.run "Euler185" euler185 `using` runner satWith ]

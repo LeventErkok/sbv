@@ -394,6 +394,111 @@ Test-Suite SBVHLint
     main-is:          SBVHLint.hs
     type:             exitcode-stdio-1.0
 
+Benchmark SBVBenchmark
+  type            : exitcode-stdio-1.0
+  default-language: Haskell2010
+  ghc-options     : -with-rtsopts=-K64m -O2
+  other-extensions: DataKinds
+                    DeriveAnyClass
+                    DeriveDataTypeable
+                    FlexibleContexts
+                    GeneralizedNewtypeDeriving
+                    OverloadedLists
+                    OverloadedStrings
+                    Rank2Types
+                    RankNTypes
+                    ScopedTypeVariables
+                    StandaloneDeriving
+                    TemplateHaskell
+                    TupleSections
+                    TypeApplications
+  Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
+                , sbv, directory, random, mtl, containers, time
+                , gauge, process, deepseq, bench-show
+  Hs-Source-Dirs  : SBVBenchSuite
+  main-is         : SBVBenchmark.hs
+  Other-modules   : Utils.SBVBenchFramework
+                  , BenchSuite.Bench.Bench
+                  , BenchSuite.Puzzles.Birthday
+                  , BenchSuite.Puzzles.Coins
+                  , BenchSuite.Puzzles.Counts
+                  , BenchSuite.Puzzles.DogCatMouse
+                  , BenchSuite.Puzzles.Euler185
+                  , BenchSuite.Puzzles.Garden
+                  , BenchSuite.Puzzles.LadyAndTigers
+                  , BenchSuite.Puzzles.MagicSquare
+                  , BenchSuite.Puzzles.NQueens
+                  , BenchSuite.Puzzles.SendMoreMoney
+                  , BenchSuite.Puzzles.Sudoku
+                  , BenchSuite.Puzzles.U2Bridge
+                  , BenchSuite.BitPrecise.BitTricks
+                  , BenchSuite.BitPrecise.BrokenSearch
+                  , BenchSuite.BitPrecise.Legato
+                  , BenchSuite.BitPrecise.MergeSort
+                  , BenchSuite.BitPrecise.MultMask
+                  , BenchSuite.BitPrecise.PrefixSum
+                  , BenchSuite.Queries.AllSat
+                  , BenchSuite.Queries.CaseSplit
+                  , BenchSuite.Queries.Concurrency
+                  , BenchSuite.Queries.Enums
+                  , BenchSuite.Queries.FourFours
+                  , BenchSuite.Queries.GuessNumber
+                  , BenchSuite.Queries.Interpolants
+                  , BenchSuite.Queries.UnsatCore
+                  , BenchSuite.WeakestPreconditions.Instances
+                  , BenchSuite.WeakestPreconditions.Append
+                  , BenchSuite.WeakestPreconditions.Basics
+                  , BenchSuite.WeakestPreconditions.Fib
+                  , BenchSuite.WeakestPreconditions.GCD
+                  , BenchSuite.WeakestPreconditions.IntDiv
+                  , BenchSuite.WeakestPreconditions.IntSqrt
+                  , BenchSuite.WeakestPreconditions.Length
+                  , BenchSuite.WeakestPreconditions.Sum
+                  , BenchSuite.Optimization.Instances
+                  , BenchSuite.Optimization.Enumerate
+                  , BenchSuite.Optimization.ExtField
+                  , BenchSuite.Optimization.LinearOpt
+                  , BenchSuite.Optimization.Production
+                  , BenchSuite.Optimization.VM
+                  , BenchSuite.Uninterpreted.AUF
+                  , BenchSuite.Uninterpreted.Deduce
+                  , BenchSuite.Uninterpreted.Function
+                  , BenchSuite.Uninterpreted.Multiply
+                  , BenchSuite.Uninterpreted.Shannon
+                  , BenchSuite.Uninterpreted.Sort
+                  , BenchSuite.Uninterpreted.UISortAllSat
+                  , BenchSuite.ProofTools.BMC
+                  , BenchSuite.ProofTools.Fibonacci
+                  , BenchSuite.ProofTools.Strengthen
+                  , BenchSuite.ProofTools.Sum
+                  , BenchSuite.CodeGeneration.AddSub
+                  , BenchSuite.CodeGeneration.CRC_USB5
+                  , BenchSuite.CodeGeneration.Fibonacci
+                  , BenchSuite.CodeGeneration.GCD
+                  , BenchSuite.CodeGeneration.PopulationCount
+                  , BenchSuite.CodeGeneration.Uninterpreted
+                  , BenchSuite.Crypto.AES
+                  , BenchSuite.Crypto.RC4
+                  , BenchSuite.Crypto.SHA
+                  , BenchSuite.Misc.Auxiliary
+                  , BenchSuite.Misc.Enumerate
+                  , BenchSuite.Misc.Floating
+                  , BenchSuite.Misc.ModelExtract
+                  , BenchSuite.Misc.Newtypes
+                  , BenchSuite.Misc.NoDiv0
+                  , BenchSuite.Misc.Polynomials
+                  , BenchSuite.Misc.SetAlgebra
+                  , BenchSuite.Misc.SoftConstrain
+                  , BenchSuite.Misc.Tuple
+                  , BenchSuite.Lists.BoundedMutex
+                  , BenchSuite.Lists.Fibonacci
+                  , BenchSuite.Lists.Nested
+                  , BenchSuite.Strings.RegexCrossword
+                  , BenchSuite.Strings.SQLInjection
+                  , BenchSuite.Existentials.CRCPolynomial
+                  , BenchSuite.Existentials.Diophantine
+                  , BenchSuite.Transformers.SymbolicEval
+
 Benchmark SBVBench
   type            : exitcode-stdio-1.0
   default-language: Haskell2010
@@ -413,8 +518,8 @@ Benchmark SBVBench
                     TupleSections
                     TypeApplications
   Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
-                , sbv, directory, random, mtl, containers
-                , gauge, process, deepseq, silently
+                , sbv, directory, random, mtl, containers, time
+                , gauge, process, deepseq, silently, bench-show
   Hs-Source-Dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
   Other-modules   : Utils.SBVBenchFramework

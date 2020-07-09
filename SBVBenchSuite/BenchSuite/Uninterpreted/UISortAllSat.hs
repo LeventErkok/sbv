@@ -20,4 +20,6 @@ import Data.SBV
 import BenchSuite.Bench.Bench
 
 benchmarks :: Runner
-benchmarks =  run "genLs" genLs `using` runner allSatWith -- could be expensive
+benchmarks =  rGroup
+  [ run "genLs" genLs `using` runner allSatWith -- could be expensive
+  ]
