@@ -22,8 +22,8 @@ import BenchSuite.Bench.Bench as B
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-  [ runIO "ex1" ex1
-  , runIO "ex2" ex2
+  [ runIO "BMC.ex1" ex1
+  , runIO "BMC.ex2" ex2
   ]
 
 

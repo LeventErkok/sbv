@@ -22,9 +22,9 @@ import BenchSuite.Bench.Bench
 benchmarks :: Runner
 benchmarks = rGroup
              [ runIO "CheckMutex.1"  $ checkMutex 1
-             , runIO "CheckMutex.10" $ checkMutex 10
-             , runIO "CheckMutex.20" $ checkMutex 20
+             , runIO "CheckMutex.3"  $ checkMutex 3
+             , runIO "CheckMutex.5"  $ checkMutex 5
              , runIO "NotFair.1"     $ notFair 1
-             , runIO "NotFair.10"    $ notFair 10
-             , runIO "NotFair.20"    $ notFair 20
+             , runIO "NotFair.3"     $ notFair 3
+             , runIO "NotFair.5"     $ notFair 5
              ]

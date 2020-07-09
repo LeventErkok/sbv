@@ -21,7 +21,7 @@ import BenchSuite.Bench.Bench as S
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Puzzles.LadyAndTigers" p `using` runner allSatWith
+benchmarks = S.run "LadyAndTigers" p `using` runner allSatWith
   where p = do
 
           -- One boolean for each of the correctness of the signs
