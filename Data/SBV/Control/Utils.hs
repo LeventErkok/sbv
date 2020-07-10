@@ -1541,7 +1541,8 @@ executeQuery queryContext (QueryT userQuery) = do
                                           , "***"
                                           , "***   Current mode: " ++ show rm
                                           , "***"
-                                          , "*** Query calls are only valid within runSMT/runSMTWith calls"
+                                          , "*** Query calls are only valid within runSMT/runSMTWith calls,"
+                                          , "*** and each call to runSMT should have only one query call inside."
                                           ]
 
 {-# ANN module          ("HLint: ignore Reduce duplication" :: String) #-}
