@@ -643,8 +643,6 @@ class SymArray array where
 --
 --   * Cannot be used in code-generation (i.e., compilation to C)
 --
---   * Can be used in query mode, without any restrictions
---
 --   * Cannot quick-check theorems using @SArray@ values
 --
 --   * Typically slower as it heavily relies on SMT-solving for the array theory
@@ -679,8 +677,6 @@ instance SymArray SArray where
 --   * Can be used in code-generation (i.e., compilation to C).
 --
 --   * Can not quick-check theorems using @SFunArray@ values
---
---   * Can be used in query mode, so long as you do not call 'Data.SBV.Control.Query.pop' and 'Data.SBV.Control.Query.resetAssertion' functions
 --
 --   * Typically faster as it gets compiled away during translation.
 newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
