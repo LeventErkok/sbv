@@ -243,6 +243,7 @@ Test-Suite SBVTest
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query
+                  , TestSuite.Arrays.Caching
                   , TestSuite.Basics.AllSat
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver

@@ -24,6 +24,7 @@ import System.Exit (exitSuccess)
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
+import qualified TestSuite.Arrays.Caching
 import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
@@ -175,6 +176,7 @@ otherTests = testGroup "SBVTests" [
                  TestSuite.Arrays.InitVals.tests
                , TestSuite.Arrays.Memory.tests
                , TestSuite.Arrays.Query.tests
+               , TestSuite.Arrays.Caching.tests
                , TestSuite.Basics.AllSat.tests
                , TestSuite.Basics.ArithNoSolver.tests
                , TestSuite.Basics.Assert.tests
