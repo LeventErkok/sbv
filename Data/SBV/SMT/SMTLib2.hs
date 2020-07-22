@@ -114,7 +114,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                      | hasString             = "has strings"
                      | hasArrayInits         = "has array initializers"
                      | True                  = "cannot determine the SMTLib-logic to use"
-             in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
+             in if supportsLogicAll solverCaps
+                then ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
+                else ["; Solver doesn't support logic setting for ALL. Will forgo logic selection."]
 
            | hasDouble || hasFloat || hasRounding
            = if not (null foralls)

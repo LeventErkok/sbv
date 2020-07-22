@@ -33,6 +33,7 @@ mathSAT = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsDefineFun          = True
+                              , supportsLogicAll           = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
