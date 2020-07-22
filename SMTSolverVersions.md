@@ -26,4 +26,4 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jul 22nd, 2020
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
-	always use their latest release.
+        always use their latest release.
