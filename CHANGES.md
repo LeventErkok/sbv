@@ -15,6 +15,9 @@
   * Handle incremental mode table-declarations that depend on freshly declared variables. Thanks
     to Gergő Érdi for reporting.
 
+  * Fix a soundness bug in SFunArray caching. Thanks to to Gergő Érdi for reporting. See
+    https://github.com/LeventErkok/sbv/issues/541 for details.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query problems. Similar to
