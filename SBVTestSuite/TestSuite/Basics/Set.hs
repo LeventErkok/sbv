@@ -31,6 +31,9 @@ import Utils.SBVTestFramework hiding (complement)
 data E = A | B | C
 mkSymbolicEnumeration ''E
 
+__unused :: SE
+__unused = error "stop GHC from complaining unused names" sA sB sC
+
 type SC = SSet  Char
 type RC = RCSet Char
 

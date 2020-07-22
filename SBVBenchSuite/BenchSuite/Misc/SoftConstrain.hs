@@ -22,7 +22,7 @@ import BenchSuite.Bench.Bench
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks =  run "SoftConstrain" softC
+benchmarks =  rGroup [ run "SoftConstrain" softC ]
   where softC = do x <- sString "x"
                    y <- sString "y"
 

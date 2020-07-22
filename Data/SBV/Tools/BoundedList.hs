@@ -145,3 +145,6 @@ binsert cnt a = bpara cnt f (L.singleton a)
 -- | Bounded insertion sort
 bsort :: (Ord a, SymVal a) => Int -> SList a -> SList a
 bsort cnt = bfoldr cnt (binsert cnt) []
+
+-- Hlint is thinking "OverloadedLists" is wrong, but GHC wants it.
+{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}

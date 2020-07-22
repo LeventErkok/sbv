@@ -11,15 +11,19 @@
 
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TemplateHaskell    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Basics.AllSat(tests) where
 
-import Data.Generics
 import Utils.SBVTestFramework
 
 import Data.List (sortOn)
+
+data Q
+mkUninterpretedSort ''Q
 
 tests :: TestTree
 tests =
@@ -34,9 +38,6 @@ tests =
 
 srt :: AllSatResult -> AllSatResult
 srt (AllSatResult (b1, b2, b3, rs)) = AllSatResult (b1, b2, b3, sortOn getModelDictionary rs)
-
-newtype Q = Q () deriving (Eq, Ord, Data, Read, Show, SymVal, HasKind)
-type SQ = SBV Q
 
 t1 :: IO AllSatResult
 t1 = allSat $ do x <- free "x"

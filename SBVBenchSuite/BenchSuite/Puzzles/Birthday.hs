@@ -22,4 +22,6 @@ import Utils.SBVBenchFramework
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.run "Birthday" puzzle `using` runner allSatWith
+benchmarks = rGroup
+  [ S.run "Birthday" puzzle `using` runner allSatWith
+  ]

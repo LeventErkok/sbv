@@ -5,29 +5,37 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
-[GOOD] (declare-datatypes ((L 0)) (((A) (B))))
-[GOOD] (define-fun L_constrIndex ((x L)) Int
-          (ite (= x A) 0 1)
-       )
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
+[GOOD] (define-fun s1 () Int 0)
+[GOOD] (define-fun s3 () Int 2)
+[GOOD] (define-fun s4 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () L)
+[GOOD] (declare-fun s0 () Int) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
+[GOOD] (define-fun s2 () Bool (= s0 s1))
+[GOOD] (define-fun s5 () Int (+ s0 s4))
+[GOOD] (define-fun s6 () Bool (= s1 s5))
+[GOOD] (define-fun s7 () Int (ite s6 s3 s1))
+[GOOD] (define-fun s8 () Int (ite s6 s4 s3))
+[GOOD] (define-fun s9 () Int (ite s2 s7 s8))
+[GOOD] (define-fun s10 () Bool (= s4 s9))
+[GOOD] (assert s10)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 A))
+[RECV] ((s0 (- 1)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL:A
-DONE!
+FINAL OUTPUT:
+Satisfiable. Model:
+  x = -1 :: Integer

@@ -54,7 +54,7 @@ import Data.List (genericIndex, genericLength, genericTake)
 
 import qualified Data.IORef         as R    (modifyIORef', newIORef, readIORef)
 import qualified Data.Map.Strict    as Map  (toList, fromList, lookup)
-import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, fromAscList, lookup, size, insert)
+import qualified Data.IntMap.Strict as IMap (IntMap, empty, toAscList, fromAscList, lookup, size, insert, delete)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -1088,21 +1088,19 @@ writeSFunArr (SFunArr (ak, bk) f) address b
                        SV _ (NodeId addressNodeId) <- svToSV st address
                        val                         <- svToSV st b
 
-                       -- There are three cases:
+                       -- There are two cases:
                        --
                        --    (1) We hit the cache, and old value is the same as new: No write necessary, just return the array
-                       --    (2) We hit the cache, values are different. Simply insert, overriding the old-memo table location
-                       --    (3) We miss the cache: Now we have to walk through all accesses and update the memo table accordingly.
-                       --        Why? Just because we missed the cache doesn't mean that it's not there with a different "symbolic"
-                       --        address. So, we have to walk through and update each entry in case the address matches.
+                       --    (2) We hit the cache, values are different OR we miss the cache. We need to insert this value into
+                       --        the cache, overriding the original if it was there. Note that we also have to walk the cache
+                       --        to update each element, as this write can symbolically be the same as some other addresses.
                        --
                        -- Below, we determine which case we're in and then insert the value at the end and continue
                        cont <- case addressNodeId `IMap.lookup` memoTable of
                                  Just oldVal                    -- Cache hit
                                    | val == oldVal -> return $ Left fArrayIndex   -- Case 1
-                                   | True          -> return $ Right memoTable    -- Case 2
 
-                                 Nothing           -> do        -- Cache miss
+                                 _                 -> do        -- Cache miss, or value is different.
 
                                         let aInfo = (address, addressNodeId `Map.lookup` consts)
 
@@ -1117,7 +1115,7 @@ writeSFunArr (SFunArr (ak, bk) f) address b
                                             modify :: Int -> SV -> IO SV
                                             modify i s = svToSV st $ svIte (svEqualWithConsts (nodeIdToSVal ak i, i `Map.lookup` consts) aInfo) b (swToSVal s)
 
-                                        Right . IMap.fromAscList <$> walk (IMap.toAscList memoTable) []
+                                        Right . IMap.fromAscList <$> walk (IMap.toAscList (IMap.delete addressNodeId memoTable)) []
 
                        case cont of
                          Left j   -> return j  -- There was a hit, and value was unchanged, nothing to do

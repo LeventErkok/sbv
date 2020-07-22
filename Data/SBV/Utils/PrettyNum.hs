@@ -163,7 +163,7 @@ instance PrettyNum Integer where
   bin  = sbinI False False
 
 instance PrettyNum CV where
-  hexS cv | isUninterpreted cv = show cv ++ " :: " ++ show (kindOf cv)
+  hexS cv | isUserSort      cv = show cv ++ " :: " ++ show (kindOf cv)
           | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
           | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
@@ -172,7 +172,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
           | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cv | isUninterpreted cv = show cv  ++ " :: " ++ show (kindOf cv)
+  binS cv | isUserSort      cv = show cv  ++ " :: " ++ show (kindOf cv)
           | isBoolean       cv = binS (cvToBool cv)  ++ " :: Bool"
           | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
@@ -181,7 +181,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
-  hexP cv | isUninterpreted cv = show cv
+  hexP cv | isUserSort      cv = show cv
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -190,7 +190,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
           | True               = let CInteger i = cvVal cv in shex  False True (hasSign cv, intSizeOf cv) i
 
-  binP cv | isUninterpreted cv = show cv
+  binP cv | isUserSort      cv = show cv
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -199,7 +199,7 @@ instance PrettyNum CV where
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
           | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
 
-  hex cv | isUninterpreted cv = show cv
+  hex cv | isUserSort      cv = show cv
          | isBoolean       cv = hexS (cvToBool cv)
          | isFloat         cv = let CFloat   f = cvVal cv in show f
          | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -208,7 +208,7 @@ instance PrettyNum CV where
          | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
          | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
-  bin cv | isUninterpreted cv = show cv
+  bin cv | isUserSort      cv = show cv
          | isBoolean       cv = binS (cvToBool cv)
          | isFloat         cv = let CFloat   f = cvVal cv in show f
          | isDouble        cv = let CDouble  d = cvVal cv in show d
@@ -407,7 +407,7 @@ smtRoundingMode RoundTowardZero        = "roundTowardZero"
 cvToSMTLib :: RoundingMode -> CV -> String
 cvToSMTLib rm x
   | isBoolean       x, CInteger  w      <- cvVal x = if w == 0 then "false" else "true"
-  | isUninterpreted x, CUserSort (_, s) <- cvVal x = roundModeConvert s
+  | isUserSort      x, CUserSort (_, s) <- cvVal x = roundModeConvert s
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
@@ -487,6 +487,6 @@ cvToSMTLib rm x
 
 -- | Create a skolem 0 for the kind
 mkSkolemZero :: RoundingMode -> Kind -> String
-mkSkolemZero _ (KUninterpreted _ (Right (f:_))) = f
-mkSkolemZero _ (KUninterpreted s _)             = error $ "SBV.mkSkolemZero: Unexpected uninterpreted sort: " ++ s
-mkSkolemZero rm k                               = cvToSMTLib rm (mkConstCV k (0::Integer))
+mkSkolemZero _ (KUserSort _ (Just (f:_))) = f
+mkSkolemZero _ (KUserSort s _)            = error $ "SBV.mkSkolemZero: Unexpected user sort: " ++ s
+mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integer))

@@ -21,4 +21,6 @@ import BenchSuite.Bench.Bench
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks =  runIO "FindInjection" $ ("'; DROP TABLE 'users" `Data.List.isSuffixOf`) <$> findInjection exampleProgram
+benchmarks =  rGroup
+  [ runIO "FindInjection" $ ("'; DROP TABLE 'users" `Data.List.isSuffixOf`) <$> findInjection exampleProgram
+  ]

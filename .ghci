@@ -5,8 +5,12 @@
 :set -fhide-source-paths
 :set -i./Data -i./SBVTestSuite
 :{
-loadEverything _ = (":load " ++) . unwords . filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) <$> System.FilePath.Glob.glob "**/*.hs"
-  where ignore = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "Paths_sbv.hs", "SBVBenchSuite"]
+loadEverything _ = do
+       allFiles <- System.FilePath.Glob.glob "**/*.hs"
+       let ignore     = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "SBVBench.hs", "SBVBenchmark.hs", "Paths_sbv.hs", "SBVBenchSuite"]
+           goodFiles  = filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) allFiles
+       pure $    ":load " ++ unwords goodFiles ++ "\n"
+              ++ ":m Data.SBV"
 :}
 :def loadEverything loadEverything
 :loadEverything

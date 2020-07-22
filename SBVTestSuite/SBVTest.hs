@@ -24,6 +24,7 @@ import System.Exit (exitSuccess)
 import qualified TestSuite.Arrays.InitVals
 import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
+import qualified TestSuite.Arrays.Caching
 import qualified TestSuite.Basics.AllSat
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
@@ -110,6 +111,7 @@ import qualified TestSuite.Queries.Interpolants
 import qualified TestSuite.Queries.Lists
 import qualified TestSuite.Queries.Strings
 import qualified TestSuite.Queries.Sums
+import qualified TestSuite.Queries.Tables
 import qualified TestSuite.Queries.Tuples
 import qualified TestSuite.Queries.UISat
 import qualified TestSuite.Queries.UISatEx
@@ -174,6 +176,7 @@ otherTests = testGroup "SBVTests" [
                  TestSuite.Arrays.InitVals.tests
                , TestSuite.Arrays.Memory.tests
                , TestSuite.Arrays.Query.tests
+               , TestSuite.Arrays.Caching.tests
                , TestSuite.Basics.AllSat.tests
                , TestSuite.Basics.ArithNoSolver.tests
                , TestSuite.Basics.Assert.tests
@@ -250,6 +253,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Queries.Lists.tests
                , TestSuite.Queries.Strings.tests
                , TestSuite.Queries.Sums.tests
+               , TestSuite.Queries.Tables.tests
                , TestSuite.Queries.Tuples.tests
                , TestSuite.Queries.UISat.tests
                , TestSuite.Queries.UISatEx.tests

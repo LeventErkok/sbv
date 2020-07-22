@@ -577,7 +577,6 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , queryTerminate           :: IO ()
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
-                             , queryTblArrPreserveIndex :: Maybe (Int, Int)
                              }
 
 -- | Computations which support query operations.
@@ -702,9 +701,9 @@ instance Show Result where
     where sh2 :: Show a => [a] -> [String]
           sh2 = map (("  "++) . show)
 
-          usorts = [sh s t | KUninterpreted s t <- Set.toList kinds]
-                   where sh s (Left   _) = s
-                         sh s (Right es) = s ++ " (" ++ intercalate ", " es ++ ")"
+          usorts = [sh s t | KUserSort s t <- Set.toList kinds]
+                   where sh s Nothing   = s
+                         sh s (Just es) = s ++ " (" ++ intercalate ", " es ++ ")"
 
           shs sv = show sv ++ " :: " ++ show (swKind sv)
 
@@ -1103,7 +1102,7 @@ newSV st k = do ctr <- incrementInternalCounter st
 -- allow for this.
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUninterpreted sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
+  | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1119,31 +1118,31 @@ registerKind st k
                           -- order: In particular, if an uninterpreted kind is already in there, we don't
                           -- want to re-add because double-declaration would be wrong. See 'cvtInc' for details.
                           let needsAdding = case k of
-                                              KUninterpreted{} -> k `notElem` existingKinds
-                                              KList{}          -> k `notElem` existingKinds
-                                              KTuple nks       -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
-                                              KMaybe{}         -> k `notElem` existingKinds
-                                              KEither{}        -> k `notElem` existingKinds
-                                              _                -> False
+                                              KUserSort{} -> k `notElem` existingKinds
+                                              KList{}     -> k `notElem` existingKinds
+                                              KTuple nks  -> length nks `notElem` [length oks | KTuple oks <- Set.toList existingKinds]
+                                              KMaybe{}    -> k `notElem` existingKinds
+                                              KEither{}   -> k `notElem` existingKinds
+                                              _           -> False
 
                           when needsAdding $ modifyIncState st rNewKinds (Set.insert k)
 
        -- Don't forget to register subkinds!
        case k of
-         KBool          {}    -> return ()
-         KBounded       {}    -> return ()
-         KUnbounded     {}    -> return ()
-         KReal          {}    -> return ()
-         KUninterpreted {}    -> return ()
-         KFloat         {}    -> return ()
-         KDouble        {}    -> return ()
-         KChar          {}    -> return ()
-         KString        {}    -> return ()
-         KList          ek    -> registerKind st ek
-         KSet           ek    -> registerKind st ek
-         KTuple         eks   -> mapM_ (registerKind st) eks
-         KMaybe         ke    -> registerKind st ke
-         KEither        k1 k2 -> mapM_ (registerKind st) [k1, k2]
+         KBool     {}    -> return ()
+         KBounded  {}    -> return ()
+         KUnbounded{}    -> return ()
+         KReal     {}    -> return ()
+         KUserSort {}    -> return ()
+         KFloat    {}    -> return ()
+         KDouble   {}    -> return ()
+         KChar     {}    -> return ()
+         KString   {}    -> return ()
+         KList     ek    -> registerKind st ek
+         KSet      ek    -> registerKind st ek
+         KTuple    eks   -> mapM_ (registerKind st) eks
+         KMaybe    ke    -> registerKind st ke
+         KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
@@ -1311,8 +1310,8 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
             disallow what  = error $ "Data.SBV: Unsupported: " ++ what ++ varInfo ++ " in mode: " ++ show rm
 
             noUI cont
-              | isUninterpreted k  = disallow "Uninterpreted sorts"
-              | True               = cont
+              | isUserSort k  = disallow "User defined sorts"
+              | True          = cont
 
             mkS q = do (sv, internalName) <- newSV st k
                        let nm = fromMaybe internalName mbNm
@@ -1345,8 +1344,8 @@ svMkSymVarGen isTracker mbQ k mbNm st = do
                             cant   = "Validation engine is not capable of handling this case. Failed to validate."
                             report = "Please report this as a bug in SBV!"
 
-                        in if isUninterpreted k
-                           then bad ("Cannot validate models in the presence of uninterpeted kinds, saw: " ++ show k) cant
+                        in if isUserSort k
+                           then bad ("Cannot validate models in the presence of user defined kinds, saw: " ++ show k) cant
                            else do (sv, internalName) <- newSV st k
 
                                    let nm = fromMaybe internalName mbNm

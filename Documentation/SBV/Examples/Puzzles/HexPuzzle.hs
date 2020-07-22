@@ -58,9 +58,6 @@ data Color = Black | Blue | Green | Red
 -- | Make 'Color' a symbolic value.
 mkSymbolicEnumeration ''Color
 
--- | Give symbolic colors a name for convenience.
-type SColor = SBV Color
-
 -- | Use 8-bit words for button numbers, even though we only have 1 to 19.
 type Button  = Word8
 
@@ -74,7 +71,7 @@ type Grid = SFunArray Button Color
 -- If the button is "unpressable", i.e., if it is not one of the center
 -- buttons or it is currently colored black, we return the grid unchanged.
 next :: SButton -> Grid -> Grid
-next b g = ite (readArray g b .== literal Black) g
+next b g = ite (readArray g b .== sBlack) g
          $ ite (b .==  5)                        (rot [ 1,  2,  6, 10,  9,  4])
          $ ite (b .==  6)                        (rot [ 2,  3,  7, 11, 10,  5])
          $ ite (b .==  9)                        (rot [ 4,  5, 10, 14, 13,  8])
@@ -89,7 +86,7 @@ next b g = ite (readArray g b .== literal Black) g
 -- | Iteratively search at increasing depths of button-presses to see if we can
 -- transform from the initial board position to a final board position.
 search :: [Color] -> [Color] -> IO ()
-search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Just (literal Black))
+search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Just sBlack)
                                    let initGrid = foldr (\(i, c) a -> writeArray a (literal i) (literal c)) emptyGrid (zip [1..] initial)
                                    query $ loop (0 :: Int) initGrid []
 

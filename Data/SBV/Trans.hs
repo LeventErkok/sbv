@@ -81,7 +81,7 @@ module Data.SBV.Trans (
   , mkSymbolicEnumeration
 
   -- * Uninterpreted sorts, axioms, constants, and functions
-  , Uninterpreted(..), addAxiom
+  , mkUninterpretedSort, Uninterpreted(..), addAxiom
 
   -- * Properties, proofs, and satisfiability
   , Predicate, Goal, MProvable(..), Provable, proveWithAll, proveWithAny , satWithAll

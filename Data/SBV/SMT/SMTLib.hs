@@ -32,9 +32,9 @@ toSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
                                       SMTLib2 -> toSMTLib2
 
 -- | Convert to SMT-Lib, in an incremental query context.
-toIncSMTLib :: Bool -> SMTConfig -> SMTLibIncConverter [String]
-toIncSMTLib afterAPush SMTConfig{smtLibVersion} = case smtLibVersion of
-                                                     SMTLib2 -> toIncSMTLib2 afterAPush
+toIncSMTLib :: SMTConfig -> SMTLibIncConverter [String]
+toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
+                                         SMTLib2 -> toIncSMTLib2
 
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
@@ -52,7 +52,7 @@ toSMTLib2 = cvt SMTLib2
          = unsupported "uninterpreted sorts"
          | True
          = SMTLibPgm v pgm
-         where sorts = [s | KUninterpreted s _ <- Set.toList kindInfo]
+         where sorts = [s | KUserSort s _ <- Set.toList kindInfo]
                solverCaps = capabilities (solver config)
                unsupported w = error $ unlines [ "SBV: Given problem needs " ++ w
                                                , "*** Which is not supported by SBV for the chosen solver: " ++ show (name (solver config))
@@ -69,6 +69,6 @@ toSMTLib2 = cvt SMTLib2
                  where quantifiers = map fst (fst qinps)
 
 -- | Convert to SMTLib-2 format
-toIncSMTLib2 :: Bool -> SMTLibIncConverter [String]
+toIncSMTLib2 :: SMTLibIncConverter [String]
 toIncSMTLib2 = cvt SMTLib2
   where cvt SMTLib2 = SMT2.cvtInc

@@ -153,8 +153,8 @@ As another example, let us put a post assertion that @y@ is even:
 Following proof obligation failed:
 ==================================
   Abort "y is even" condition is satisfiable:
-    Before: IncS {x = 2, y = 0}
-    After : IncS {x = 2, y = 3}
+    Before: IncS {x = 0, y = 0}
+    After : IncS {x = 0, y = 1}
 
 It is important to emphasize that you can put whatever invariant you might want:
 

@@ -208,7 +208,7 @@ Following proof obligation failed:
     After : SumS {n = 2, i = 2, s = 3}
 
 Here, we posed the extra incorrect invariant that @s <= i@ must be maintained, and SBV found us a reachable state that violates the invariant. The
-show /before/ state indeed satisfies @s <= i@, but the /after/ state does not. Note that the proof fails in this case not because the program
+/before/ state indeed satisfies @s <= i@, but the /after/ state does not. Note that the proof fails in this case not because the program
 is incorrect, but the stipulated invariant is not valid.
 
 == Having a bad measure, Part I
@@ -221,8 +221,8 @@ The termination measure must always be non-negative:
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 2, i = 1, s = 1}
-    Measure: -1
+    State  : SumS {n = 3, i = 2, s = 3}
+    Measure: -2
 
 The failure is pretty obvious in this case: Measure produces a negative value.
 
@@ -233,19 +233,15 @@ The other way we can have a bad measure is if it fails to decrease through the l
 >>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> let measure   SumS{n, i}    = [n + i]
 >>> void $ correctness invariant (Just measure)
-Following proof obligations failed:
-===================================
-  Measure for loop "i < n" is negative:
-    State  : SumS {n = -56, i = -57, s = 1596}
-    Measure: -113
+Following proof obligation failed:
+==================================
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = -56, i = -57, s = 1596}
-    Measure: -113
-    After  : SumS {n = -56, i = -56, s = 1540}
-    Measure: -112
+    Before : SumS {n = 1, i = 0, s = 0}
+    Measure: 1
+    After  : SumS {n = 1, i = 1, s = 1}
+    Measure: 2
 
-Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that this counterexample might be a bit
-confusing at first as @n@ and @i@ are negative, but the point here is that measure goes down if we start with
-these values, not that these values are actually reachable. (In other words, this is a counter-example to
-induction; and still needs to be addressed for a full proof.)
+Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that a counterexample where @i@ is
+negative is also possible for this failure, as the SMT solver will find a counter-example to induction, not
+necessarily a reachable state. Obviously, all such failures need to be addressed for the full proof.
 -}

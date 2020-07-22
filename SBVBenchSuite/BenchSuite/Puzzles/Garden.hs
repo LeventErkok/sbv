@@ -24,5 +24,5 @@ import BenchSuite.Bench.Bench as S
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = S.runWith s "Garden" puzzle `using` runner allSatWith
+benchmarks = rGroup [ S.runWith s "Garden" puzzle `using` runner allSatWith ]
   where s = z3{satTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)}
