@@ -370,11 +370,14 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isTheoremWith'
   isTheoremWith :: SMTConfig -> a -> m Bool
   isTheoremWith cfg p = do r <- proveWith cfg p
+                           let bad = error $ "SBV.isTheorem: Received:\n" ++ show r
                            case r of
                              ThmResult Unsatisfiable{} -> return True
                              ThmResult Satisfiable{}   -> return False
-                             _                         -> error $ "SBV.isTheorem: Received:\n" ++ show r
-
+                             ThmResult DeltaSat{}      -> return False
+                             ThmResult SatExtField{}   -> return False
+                             ThmResult Unknown{}       -> bad
+                             ThmResult ProofError{}    -> bad
 
   -- | Generalization of 'Data.SBV.isSatisfiable'
   isSatisfiable :: a -> m Bool
