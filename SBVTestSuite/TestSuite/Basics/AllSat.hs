@@ -37,7 +37,7 @@ tests =
     ]
 
 srt :: AllSatResult -> AllSatResult
-srt (AllSatResult (b1, b2, b3, rs)) = AllSatResult (b1, b2, b3, sortOn getModelDictionary rs)
+srt r@AllSatResult{allSatResults = ms} = r { allSatResults = sortOn (show . SatResult) ms }
 
 t1 :: IO AllSatResult
 t1 = allSat $ do x <- free "x"

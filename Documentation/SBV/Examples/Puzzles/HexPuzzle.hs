@@ -100,6 +100,8 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Ju
                             case cs of
                               Unk   -> error $ "Solver said Unknown, depth: " ++ show i
 
+                              DSat  -> error $ "Solver returned a delta-satisfiable result, depth: " ++ show i
+
                               Unsat -> do -- It didn't work out. Pop and try again with one more move:
                                           pop 1
                                           b <- freshVar ("press_" ++ show i)
@@ -115,6 +117,7 @@ search initial final = runSMT $ do emptyGrid :: Grid <- newArray "emptyGrid" (Ju
                                       cs <- checkSat
                                       case cs of
                                        Unk   -> error "Unknown!"
+                                       DSat  -> error "Delta-sat!"
                                        Unsat -> io $ putStrLn "There are no more solutions."
                                        Sat   -> do newVals <- mapM getValue vs
                                                    io $ putStrLn $ "Found: " ++ show newVals

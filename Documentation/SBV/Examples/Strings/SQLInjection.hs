@@ -149,5 +149,6 @@ findInjection expr = runSMT $ do
     query $ do cs <- checkSat
                case cs of
                  Unk   -> error "Solver returned unknown!"
+                 DSat  -> error "Solver returned delta-satisfiable!"
                  Unsat -> error "No exploits are found"
                  Sat   -> getValue badTopic

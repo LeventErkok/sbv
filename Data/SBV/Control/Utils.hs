@@ -82,7 +82,7 @@ import Data.SBV.Core.AlgReals   (mergeAlgReals)
 import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
-import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel)
+import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
 import Data.SBV.SMT.Utils   (showTimeoutValue, addAnnotations, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -997,10 +997,11 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
 
                        r <- askIgnoring cmd ignoreList
 
-                       parse r bad $ \case ECon "sat"     -> return Sat
-                                           ECon "unsat"   -> return Unsat
-                                           ECon "unknown" -> return Unk
-                                           _              -> bad r Nothing
+                       parse r bad $ \case ECon "sat"       -> return Sat
+                                           ECon "unsat"     -> return Unsat
+                                           ECon "unknown"   -> return Unk
+                                           ECon "delta-sat" -> return DSat
+                                           _                -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
 getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m [(Quantifier, NamedSymVar)]
@@ -1039,8 +1040,8 @@ getUIs = do State{rUIMap, rIncState} <- queryState
             return $ nub $ sort $ Map.toList prior ++ Map.toList new
 
 -- | Repeatedly issue check-sat, after refuting the previous model.
--- The bool is true if the model is unique upto prefix existentials.
-getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m (Bool, Bool, Bool, [SMTResult])
+-- For the meaning of the booleans, see the comment on 'AllSatResult'
+getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m AllSatResult
 getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
@@ -1105,39 +1106,54 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     (sc, unk, ms) <- loop grabObservables topState (allUiFuns, uiFuns) qinps vars cfg
-                     return (sc, w, unk, reverse ms)
+                     res <- loop grabObservables topState (allUiFuns, uiFuns) qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
+                                                                                                          , allSatHasPrefixExistentials = w
+                                                                                                          , allSatSolverReturnedUnknown = False
+                                                                                                          , allSatSolverReturnedDSat    = False
+                                                                                                          , allSatResults               = []
+                                                                                                          }
+                     -- results come out in reverse order, so reverse them:
+                     pure $ res { allSatResults = reverse (allSatResults res) }
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
 
-         loop grabObservables topState (allUiFuns, uiFunsToReject) qinps vars cfg = go (1::Int) []
-           where go :: Int -> [SMTResult] -> m (Bool, Bool, [SMTResult])
+         loop grabObservables topState (allUiFuns, uiFunsToReject) qinps vars cfg = go (1::Int)
+           where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
 
                         when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
 
-                        return (True, False, sofar)
+                        return $ sofar { allSatMaxModelCountReached = True }
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
 
-                        let endMsg = when (allSatPrintAlong cfg && not (null sofar)) $ do
-                                             let msg 0 = "No solutions found."
-                                                 msg 1 = "This is the only solution."
-                                                 msg n = "Found " ++ show n ++ " different solutions."
-                                             io . putStrLn $ msg (cnt - 1)
+                        let endMsg extra = when (allSatPrintAlong cfg && not (null (allSatResults sofar))) $ do
+                                              let msg 0 = "No solutions found."
+                                                  msg 1 = "This is the only solution."
+                                                  msg n = "Found " ++ show n ++ " different solutions."
+                                              io . putStrLn $ msg (cnt - 1)
+                                              case extra of
+                                                Nothing -> pure ()
+                                                Just m  -> io $ putStrLn m
 
                         cs <- checkSat
 
                         case cs of
-                          Unsat -> do endMsg
-                                      return (False, False, sofar)
+                          Unsat -> do endMsg Nothing
+                                      return sofar
 
-                          Unk   -> do queryDebug ["*** Solver returned unknown, terminating query."]
-                                      endMsg
-                                      return (False, True, sofar)
+                          Unk   -> do let m = "Solver returned unknown, terminating query."
+                                      queryDebug ["*** " ++ m]
+                                      endMsg $ Just $ "[" ++ m ++ "]"
+                                      return sofar{ allSatSolverReturnedUnknown = True }
+
+                          DSat  -> do let m = "Solver returned delta-sat, terminating query."
+                                      queryDebug ["*** " ++ m]
+                                      endMsg $ Just $ "[" ++ m ++ "]"
+                                      return sofar{ allSatSolverReturnedDSat = True }
 
                           Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
                                                                              return (sv, (n, (sval, cv)))) vars
@@ -1254,7 +1270,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
                                         io $ putStrLn $ showModel cfg model
 
-                                      let resultsSoFar = m : sofar
+                                      let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
 
                                           -- This is clunky, but let's not generate a rejector unless we really need it
                                           needMoreIterations
@@ -1281,7 +1297,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                  -- send the disallow clause and the uninterpreted rejector:
                                                  case (disallow, rejectFuncs) of
-                                                    (Nothing, Nothing) -> return (False, False, resultsSoFar)
+                                                    (Nothing, Nothing) -> pure resultsSoFar
                                                     (Just d,  Nothing) -> do constrain d
                                                                              go (cnt+1) resultsSoFar
                                                     (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"

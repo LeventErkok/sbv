@@ -59,6 +59,7 @@ queryOne v = do
   cs <- checkSat
   case cs of
     Unk   -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat  -> error "Unexpected dsat result.."       -- Won't happen
     Unsat -> do io $ putStrLn "No other solution!"
                 return Nothing
 
@@ -78,6 +79,7 @@ queryTwo v = do
   cs <- checkSat
   case cs of
     Unk   -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat  -> error "Unexpected dsat result.."       -- Won't happen
     Unsat -> do io $ putStrLn "No other solution!"
                 return Nothing
 
@@ -121,6 +123,7 @@ firstQuery v1 v2 = do
   cs <- checkSat
   case cs of
     Unk   -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat  -> error "Unexpected dsat result.."       -- Won't happen
     Unsat -> do io $ putStrLn "No other solution!"
                 return Nothing
 
@@ -148,6 +151,7 @@ secondQuery v2 = do
   cs <- checkSat
   case cs of
     Unk   -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat  -> error "Unexpected dsat result.."       -- Won't happen
     Unsat -> do io $ putStrLn "No other solution!"
                 return Nothing
 

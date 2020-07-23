@@ -41,6 +41,7 @@ checkWith cfg spec = runSMTWith cfg{verbose=True} $ do
         query $ do cs <- checkSat
                    case cs of
                      Unsat -> return ()
+                     DSat  -> error "Expected Unsat, got delta-sat"
                      Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
                      Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
 

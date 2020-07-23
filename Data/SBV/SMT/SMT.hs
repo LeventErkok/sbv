@@ -75,10 +75,13 @@ import Data.SBV.Utils.TDiff     (Timing(..), showTDiff)
 
 import qualified System.Timeout as Timeout (timeout)
 
+import Numeric
+
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c _  ) = c
 resultConfig (Satisfiable   c _  ) = c
+resultConfig (DeltaSat      c _  ) = c
 resultConfig (SatExtField   c _  ) = c
 resultConfig (Unknown       c _  ) = c
 resultConfig (ProofError    c _ _) = c
@@ -92,11 +95,13 @@ newtype ThmResult = ThmResult SMTResult
 newtype SatResult = SatResult SMTResult
                   deriving NFData
 
--- | An 'Data.SBV.allSat' call results in a 'AllSatResult'. The first boolean says whether we
--- hit the max-model limit as we searched. The second boolean says whether
--- there were prefix-existentials. The third boolean says whether we stopped because
--- the solver returned 'Unknown'.
-newtype AllSatResult = AllSatResult (Bool, Bool, Bool, [SMTResult])
+-- | An 'Data.SBV.allSat' call results in a 'AllSatResult'
+data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: Bool          -- ^ Did we reach the user given model count limit?
+                                 , allSatHasPrefixExistentials :: Bool          -- ^ Were there quantifiers in the problem (unique upto prefix existentials)
+                                 , allSatSolverReturnedUnknown :: Bool          -- ^ Did the solver report unknown at the end?
+                                 , allSatSolverReturnedDSat    :: Bool          -- ^ Did the solver report delta-satisfiable at the end?
+                                 , allSatResults               :: [SMTResult]   -- ^ All satisfying models
+                                 }
 
 -- | A 'Data.SBV.safe' call results in a 'SafeResult'
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
@@ -108,30 +113,51 @@ data OptimizeResult = LexicographicResult SMTResult
                     | ParetoResult        (Bool, [SMTResult])
                     | IndependentResult   [(String, SMTResult)]
 
+getPrecision :: SMTResult -> String
+getPrecision r = case dsatPrecision (resultConfig r) of
+                   Nothing -> "tool default"
+                   Just d  -> showFFloat Nothing d ""
+
 -- User friendly way of printing theorem results
 instance Show ThmResult where
   show (ThmResult r) = showSMTResult "Q.E.D."
                                      "Unknown"
-                                     "Falsifiable" "Falsifiable. Counter-example:\n" "Falsifiable in an extension field:\n" r
+                                     "Falsifiable"
+                                     "Falsifiable. Counter-example:\n"
+                                     ("Delta falsifiable, precision: " ++ getPrecision r ++ ". Counter-example:\n")
+                                     "Falsifiable in an extension field:\n"
+                                     r
 
 -- User friendly way of printing satisfiablity results
 instance Show SatResult where
   show (SatResult r) = showSMTResult "Unsatisfiable"
                                      "Unknown"
-                                     "Satisfiable" "Satisfiable. Model:\n" "Satisfiable in an extension field. Model:\n" r
+                                     "Satisfiable"
+                                     "Satisfiable. Model:\n"
+                                     ("Delta satisfiable, precision: " ++ getPrecision r ++ ". Model:\n")
+                                     "Satisfiable in an extension field. Model:\n"
+                                     r
 
 -- User friendly way of printing safety results
 instance Show SafeResult where
    show (SafeResult (mbLoc, msg, r)) = showSMTResult (tag "No violations detected")
                                                      (tag "Unknown")
-                                                     (tag "Violated") (tag "Violated. Model:\n") (tag "Violated in an extension field:\n") r
+                                                     (tag "Violated")
+                                                     (tag "Violated. Model:\n")
+                                                     (tag "Violated in a delta-satisfiable context, precision: " ++ getPrecision r ++ ". Model:\n")
+                                                     (tag "Violated in an extension field:\n")
+                                                     r
         where loc   = maybe "" (++ ": ") mbLoc
               tag s = loc ++ msg ++ ": " ++ s
 
--- The Show instance of AllSatResults. Note that we have to be careful in being lazy enough
--- as the typical use case is to pull results out as they become available.
+-- The Show instance of AllSatResults.
 instance Show AllSatResult where
-  show (AllSatResult (l, e, u, xs)) = go (0::Int) xs
+  show (AllSatResult { allSatMaxModelCountReached  = l
+                     , allSatHasPrefixExistentials = e
+                     , allSatSolverReturnedUnknown = u
+                     , allSatSolverReturnedDSat    = d
+                     , allSatResults               = xs
+                     }) = go (0::Int) xs
     where warnings = case (e, u) of
                        (False, False) -> ""
                        (False, True)  -> " (Search stopped since solver has returned unknown.)"
@@ -141,15 +167,17 @@ instance Show AllSatResult where
           go c (s:ss) = let c'      = c+1
                             (ok, o) = sh c' s
                         in c' `seq` if ok then o ++ "\n" ++ go c' ss else o
-          go c []     = case (l, c) of
-                          (True,  _) -> "Search stopped since model count request was reached." ++ warnings
-                          (False, 0) -> "No solutions found."
-                          (False, 1) -> "This is the only solution." ++ warnings
-                          (False, _) -> "Found " ++ show c ++ " different solutions." ++ warnings
+          go c []     = case (l, d, c) of
+                          (True,  _   , _) -> "Search stopped since model count request was reached."  ++ warnings
+                          (_   ,  True, _) -> "Search stopped since the result was delta-satisfiable." ++ warnings
+                          (False, _   , 0) -> "No solutions found."
+                          (False, _   , 1) -> "This is the only solution." ++ warnings
+                          (False, _   , _) -> "Found " ++ show c ++ " different solutions." ++ warnings
 
           sh i c = (ok, showSMTResult "Unsatisfiable"
                                       "Unknown"
                                       ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n")
+                                      ("Solution $" ++ show i ++ " with delta-satisfiability, precision: " ++ getPrecision c ++ ":\n")
                                       ("Solution $" ++ show i ++ " in an extension field:\n")
                                       c)
               where ok = case c of
@@ -175,11 +203,13 @@ instance Show OptimizeResult where
              shI n = sh (\s -> "Objective "     ++ show n ++ ": " ++ s)
              shP i = sh (\s -> "Pareto front #" ++ show i ++ ": " ++ s)
 
-             sh tag = showSMTResult (tag "Unsatisfiable.")
-                                    (tag "Unknown.")
-                                    (tag "Optimal with no assignments.")
-                                    (tag "Optimal model:" ++ "\n")
-                                    (tag "Optimal in an extension field:" ++ "\n")
+             sh tag r = showSMTResult (tag "Unsatisfiable.")
+                                      (tag "Unknown.")
+                                      (tag "Optimal with no assignments.")
+                                      (tag "Optimal model:" ++ "\n")
+                                      (tag "Optimal model with delta-satisfiability, precision: " ++ getPrecision r ++ ":" ++ "\n")
+                                      (tag "Optimal in an extension field:" ++ "\n")
+                                      r
 
 -- | Instances of 'SatModel' can be automatically extracted from models returned by the
 -- solvers. The idea is that the sbv infrastructure provides a stream of CV's (constant values)
@@ -369,19 +399,19 @@ class Modelable a where
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
-extractModels (AllSatResult (_, _, _, xs)) = [ms | Right (_, ms) <- map getModelAssignment xs]
+extractModels (AllSatResult {allSatResults = xs}) = [ms | Right (_, ms) <- map getModelAssignment xs]
 
 -- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
 getModelDictionaries :: AllSatResult -> [M.Map String CV]
-getModelDictionaries (AllSatResult (_, _, _, xs)) = map getModelDictionary xs
+getModelDictionaries (AllSatResult {allSatResults = xs}) = map getModelDictionary xs
 
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymVal b => String -> AllSatResult -> [Maybe b]
-getModelValues s (AllSatResult (_, _, _, xs)) =  map (s `getModelValue`) xs
+getModelValues s (AllSatResult {allSatResults = xs}) =  map (s `getModelValue`) xs
 
 -- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.
 getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
-getModelUninterpretedValues s (AllSatResult (_, _, _, xs)) =  map (s `getModelUninterpretedValue`) xs
+getModelUninterpretedValues s (AllSatResult {allSatResults = xs}) =  map (s `getModelUninterpretedValue`) xs
 
 -- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
@@ -403,6 +433,7 @@ instance Modelable SatResult where
 instance Modelable SMTResult where
   getModelAssignment (Unsatisfiable _ _  ) = Left "SBV.getModelAssignment: Unsatisfiable result"
   getModelAssignment (Satisfiable   _ m  ) = Right (False, parseModelOut m)
+  getModelAssignment (DeltaSat      _ m  ) = Right (False, parseModelOut m)
   getModelAssignment (SatExtField   _ _  ) = Left "SBV.getModelAssignment: The model is in an extension field"
   getModelAssignment (Unknown       _ m  ) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
   getModelAssignment (ProofError    _ s _) = error $ unlines $ "SBV.getModelAssignment: Failed to produce a model: " : s
@@ -413,18 +444,21 @@ instance Modelable SMTResult where
 
   getModelDictionary Unsatisfiable{}   = M.empty
   getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
+  getModelDictionary (DeltaSat    _ m) = M.fromList (modelAssocs m)
   getModelDictionary SatExtField{}     = M.empty
   getModelDictionary Unknown{}         = M.empty
   getModelDictionary ProofError{}      = M.empty
 
   getModelObjectives Unsatisfiable{}   = M.empty
   getModelObjectives (Satisfiable _ m) = M.fromList (modelObjectives m)
+  getModelObjectives (DeltaSat    _ m) = M.fromList (modelObjectives m)
   getModelObjectives (SatExtField _ m) = M.fromList (modelObjectives m)
   getModelObjectives Unknown{}         = M.empty
   getModelObjectives ProofError{}      = M.empty
 
   getModelUIFuns Unsatisfiable{}   = M.empty
   getModelUIFuns (Satisfiable _ m) = M.fromList (modelUIFuns m)
+  getModelUIFuns (DeltaSat    _ m) = M.fromList (modelUIFuns m)
   getModelUIFuns (SatExtField _ m) = M.fromList (modelUIFuns m)
   getModelUIFuns Unknown{}         = M.empty
   getModelUIFuns ProofError{}      = M.empty
@@ -442,18 +476,19 @@ parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
 -- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown).
 -- The arrange argument can sort the results in any way you like, if necessary.
 displayModels :: SatModel a => ([(Bool, a)] -> [(Bool, a)]) -> (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
-displayModels arrange disp (AllSatResult (_, _, _, ms)) = do
+displayModels arrange disp (AllSatResult {allSatResults = ms}) = do
     let models = [a | Right a <- map (getModelAssignment . SatResult) ms]
     inds <- zipWithM display (arrange models) [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i
 
 -- | Show an SMTResult; generic version
-showSMTResult :: String -> String -> String -> String -> String -> SMTResult -> String
-showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result of
+showSMTResult :: String -> String -> String -> String -> String -> String -> SMTResult -> String
+showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg result = case result of
   Unsatisfiable _ uc                 -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ _ [] []) -> satMsg
-  Satisfiable _ m                    -> satMsgModel ++ showModel cfg m
+  Satisfiable _ m                    -> satMsgModel  ++ showModel cfg m
+  DeltaSat    _ m                    -> dSatMsgModel ++ showModel cfg m
   SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
   Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
   ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."
@@ -463,7 +498,7 @@ showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg result = case result 
                                                             , "*** Alleged model:"
                                                             , "***"
                                                             ]
-                                                         ++ ["*** "  ++ l | l <- lines (showSMTResult unsatMsg unkMsg satMsg satMsgModel satExtMsg r)]
+                                                         ++ ["*** "  ++ l | l <- lines (showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg r)]
 
  where cfg = resultConfig result
        showUnsatCore Nothing   = ""

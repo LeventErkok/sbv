@@ -227,7 +227,9 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                              if t then msg "Total correctness is established."
                                   else msg "Partial correctness is established."
 
-                             return $ Proven t
+                             pure $ Proven t
+
+                 DSat  -> pure $ Indeterminate "Unsupported: Solver returned a delta-satisfiable answer."
 
                  Sat   -> do let checkVC :: (SBool, VC st SInteger) -> Query [VC res Integer]
                                  checkVC (cond, vc) = do c <- getValue cond

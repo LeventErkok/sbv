@@ -53,6 +53,7 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
                    unless (cs == csExpected) $
                      case cs of
                        Unsat -> error "Failed! Expected Sat, got UNSAT"
+                       DSat  -> error "Failed! Expected Sat, got delta-sat"
                        Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
                        Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
 

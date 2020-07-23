@@ -101,6 +101,7 @@ q5 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
                    case cs of
                      Unsat -> return Nothing
                      Unk   -> error "solver returned Unknown!"
+                     DSat  -> error "solver returned Delta-satisfiable!"
                      Sat   -> do av <- getValue a
                                  vv <- getValue v
                                  return $ Just (av, vv)
@@ -119,6 +120,7 @@ q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
                                         d <- freshVar $ "d" ++ show (length sofar)
                                         constrain $ d .>= 1 .&& d .< 3
                                         loop (writeArray a 1 (readArray a 1 + d)) (sofar ++ [d])
+                            DSat  -> error "solver returned Delta-satisfiable!"
                             Sat   -> mapM getValue sofar
 
 

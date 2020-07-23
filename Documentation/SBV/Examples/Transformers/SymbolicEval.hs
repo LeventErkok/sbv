@@ -164,6 +164,7 @@ mkQuery env = do
         Sat   -> Counterexample <$> getValue (envX env)
                                 <*> getValue (envY env)
         Unsat -> pure Proved
+        DSat  -> throwError "delta-sat"
         Unk   -> throwError "unknown"
 
 -- | Checks a 'Property' of a 'Program' (or fails).

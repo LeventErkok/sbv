@@ -39,6 +39,7 @@ guess input = do g <- sInteger "guess"
                           cs <- checkSat
                           case cs of
                             Unk   -> error "Too bad, solver said Unknown.." -- Won't really happen
+                            DSat  -> error "Unexpected delta-sat result.."  -- Won't really happen
                             Unsat ->
                                   -- This cannot happen! If it does, the input was
                                   -- not properly constrainted. Note that we found this

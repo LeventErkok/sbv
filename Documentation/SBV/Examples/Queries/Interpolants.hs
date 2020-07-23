@@ -79,6 +79,7 @@ exampleMathSAT = do
        query $ do cs <- checkSat
                   case cs of
                     Unsat -> getInterpolantMathSAT ["A"]
+                    DSat  -> error "Unexpected delta-sat result!"
                     Sat   -> error "Unexpected sat result!"
                     Unk   -> error "Unexpected unknown result!"
 

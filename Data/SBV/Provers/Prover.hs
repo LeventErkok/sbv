@@ -84,6 +84,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , transcript                  = Nothing
                                             , solver                      = s
                                             , smtLibVersion               = smtVersion
+                                            , dsatPrecision               = Nothing
                                             , satCmd                      = "(check-sat)"
                                             , satTrackUFs                 = True                   -- i.e., yes, do extract UI function values
                                             , allSatMaxModelCount         = Nothing                -- i.e., return all satisfying models
@@ -194,11 +195,11 @@ class ExtractIO m => MProvable m a where
 
   -- | Generalization of 'Data.SBV.allSatWith'
   allSatWith :: SMTConfig -> a -> m AllSatResult
-  allSatWith cfg a = do f@(mm, pe, un, rs) <- runWithQuery True (checkNoOptimizations >> Control.getAllSatResult) cfg a
-                        AllSatResult <$> if validationRequested cfg
-                                         then do rs' <- mapM (validate True cfg a) rs
-                                                 return (mm, pe, un, rs')
-                                         else return f
+  allSatWith cfg a = do asr <- runWithQuery True (checkNoOptimizations >> Control.getAllSatResult) cfg a
+                        if validationRequested cfg
+                           then do rs' <- mapM (validate True cfg a) (allSatResults asr)
+                                   return asr{allSatResults = rs'}
+                           else return asr
 
   -- | Generalization of 'Data.SBV.optimize'
   optimize :: OptimizeStyle -> a -> m OptimizeResult
@@ -331,6 +332,7 @@ class ExtractIO m => MProvable m a where
                   case cs of
                     Control.Unsat -> return True
                     Control.Sat   -> return False
+                    Control.DSat  -> return False
                     Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
 
   -- | Generalization of 'Data.SBV.isTheorem'
@@ -363,20 +365,27 @@ class ExtractIO m => MProvable m a where
   validate isSAT cfg p res = case res of
                                Unsatisfiable{} -> return res
                                Satisfiable _ m -> case modelBindings m of
-                                                    Nothing  -> error "Data.SBV.validate: Impossible happaned; no bindings generated during model validation."
+                                                    Nothing  -> error "Data.SBV.validate: Impossible happened; no bindings generated during model validation."
                                                     Just env -> check env
-                               SatExtField{}   -> return $ ProofError cfg [ "The model requires an extension field value."
-                                                                          , "Cannot validate models with infinities/epsilons produced during optimization."
-                                                                          , ""
-                                                                          , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
-                                                                          , ""
-                                                                          , "Unable to validate the produced model."
-                                                                          ]
-                                                                          (Just res)
+
+                               DeltaSat {}     -> cant [ "The model is delta-satisfiable."
+                                                       , "Cannot validate delta-satisfiable models."
+                                                       ]
+
+                               SatExtField{}   -> cant [ "The model requires an extension field value."
+                                                       , "Cannot validate models with infinities/epsilons produced during optimization."
+                                                       ]
+
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
-    where check env = do let univs    = [n | ((ALL, (_, n)), _) <- env]
+    where cant msg = return $ ProofError cfg (msg ++ [ ""
+                                                     , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
+                                                     , ""
+                                                     , "Unable to validate the produced model."
+                                                     ]) (Just res)
+
+          check env = do let univs    = [n | ((ALL, (_, n)), _) <- env]
                              envShown = showModelDictionary True True cfg modelBinds
                                 where modelBinds = [(n, fake q s v) | ((q, (s, n)), v) <- env]
                                       fake q s Nothing
@@ -722,6 +731,7 @@ isSafe :: SafeResult -> Bool
 isSafe (SafeResult (_, _, result)) = case result of
                                        Unsatisfiable{} -> True
                                        Satisfiable{}   -> False
+                                       DeltaSat{}      -> False   -- conservative
                                        SatExtField{}   -> False   -- conservative
                                        Unknown{}       -> False   -- conservative
                                        ProofError{}    -> False   -- conservative

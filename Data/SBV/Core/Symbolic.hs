@@ -1687,6 +1687,7 @@ instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y
 instance NFData SMTResult where
   rnf (Unsatisfiable _ xs   ) = rnf xs
   rnf (Satisfiable _   xs   ) = rnf xs
+  rnf (DeltaSat    _   xs   ) = rnf xs
   rnf (SatExtField _   xs   ) = rnf xs
   rnf (Unknown _       xs   ) = rnf xs
   rnf (ProofError _    xs mr) = rnf xs `seq` rnf mr
@@ -1764,6 +1765,7 @@ data SMTConfig = SMTConfig {
        , optimizeValidateConstraints :: Bool           -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
        , transcript                  :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
        , smtLibVersion               :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
+       , dsatPrecision               :: Maybe Double   -- ^ Delta-sat precision
        , solver                      :: SMTSolver      -- ^ The actual SMT solver.
        , allowQuantifiedQueries      :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
        , roundingMode                :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
@@ -1798,6 +1800,7 @@ data SMTModel = SMTModel {
 -- it. (Custom Show instances and model extractors.)
 data SMTResult = Unsatisfiable SMTConfig (Maybe [String])            -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
                | Satisfiable   SMTConfig SMTModel                    -- ^ Satisfiable with model
+               | DeltaSat      SMTConfig SMTModel                    -- ^ Delta satisfiable with model
                | SatExtField   SMTConfig SMTModel                    -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
                | Unknown       SMTConfig SMTReasonUnknown            -- ^ Prover returned unknown, with the given reason
                | ProofError    SMTConfig [String] (Maybe SMTResult)  -- ^ Prover errored out, with possibly a bogus result

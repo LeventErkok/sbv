@@ -56,6 +56,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
         query $ do cs <- checkSat
                    case cs of
                      Unk   -> error "Solver returned unknown!"
+                     DSat  -> error "Solver returned delta-sat!"
                      Unsat -> error "There are no solutions to this puzzle!"
                      Sat   -> mapM getValue rows
 

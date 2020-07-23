@@ -43,6 +43,7 @@ goodSum = do x <- sInteger "x"
 
                     case cs of
                       Unk   -> error "Too bad, solver said unknown.." -- Won't happen
+                      DSat  -> error "Unexpected dsat result.."       -- Won't happen
                       Unsat -> do io $ putStrLn "No other solution!"
                                   return $ reverse sofar
 

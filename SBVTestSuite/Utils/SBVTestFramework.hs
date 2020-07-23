@@ -124,12 +124,17 @@ goldenCapturedIO n res = goldenVsFileDiff n diff gf gfTmp (rm gfTmp >> res gfTmp
 -- that was hit, or the search was stopped because the
 -- solver said 'Unknown' at some point.
 numberOfModels :: Provable a => a -> IO Int
-numberOfModels p = do AllSatResult (maxHit, _, unk, rs) <- allSat p
+numberOfModels p = do AllSatResult { allSatMaxModelCountReached  = maxHit
+                                   , allSatSolverReturnedUnknown = unk
+                                   , allSatSolverReturnedDSat    = ds
+                                   , allSatResults               = rs
+                                   } <- allSat p
                       let l = length rs
-                      case (unk, maxHit) of
-                        (True, _)   -> error $ "Data.SBV.numberOfModels: Search was stopped because solver said 'Unknown'. At this point, we saw: " ++ show l ++ " model(s)."
-                        (_,   True) -> error $ "Data.SBV.numberOfModels: Search was stopped because the user-specified max-model count was hit at " ++ show l ++ " model(s)."
-                        _           -> return l
+                      case (unk, ds, maxHit) of
+                        (True, _, _)   -> error $ "Data.SBV.numberOfModels: Search was stopped because solver said 'Unknown'. At this point, we saw: " ++ show l ++ " model(s)."
+                        (_, True, _)   -> error $ "Data.SBV.numberOfModels: Search was stopped because solver returned 'delta satisfiable'. At this point, we saw: " ++ show l ++ " model(s)."
+                        (_,   _, True) -> error $ "Data.SBV.numberOfModels: Search was stopped because the user-specified max-model count was hit at " ++ show l ++ " model(s)."
+                        _              -> return l
 
 -- | Symbolicly run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
@@ -182,6 +187,7 @@ qc1 nm opC opS = [cf, sm]
                                                                                    case cs of
                                                                                      Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
                                                                                      Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                     DSat  -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
                                                                                      Sat   -> do r <- getValue res
                                                                                                  return (pre, Right r)
 
@@ -239,6 +245,7 @@ qc2 nm opC opS = [cf, sm]
                                                                                         case cs of
                                                                                           Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
                                                                                           Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                          DSat  -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
                                                                                           Sat   -> do r <- getValue res
                                                                                                       return (pre, Right r)
 

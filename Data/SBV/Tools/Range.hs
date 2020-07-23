@@ -176,6 +176,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                            query $ do cs <- checkSat
                                                       case cs of
                                                         Unsat -> return False
+                                                        DSat  -> error "Data.SBV.interval.isFeasible: Solver returned a delta-satisfiable result!"
                                                         Unk   -> error "Data.SBV.interval.isFeasible: Solver said unknown!"
                                                         Sat   -> return True
 
@@ -187,6 +188,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                                      query $ do cs <- checkSat
                                                                 case cs of
                                                                   Unsat -> return Nothing
+                                                                  DSat  -> error "Data.SBV.interval.bisect: Solver returned a delta-satisfiable result!"
                                                                   Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
                                                                   Sat   -> do midV <- Open <$> getValue x
                                                                               return $ Just [Range lo midV, Range midV hi]

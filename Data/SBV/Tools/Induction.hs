@@ -131,6 +131,7 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
                                    cs <- checkSat
                                    case cs of
                                      Unk   -> error "Solver said unknown"
+                                     DSat  -> error "Solver returned a delta-sat result"
                                      Unsat -> return Nothing
                                      Sat   -> do io $ msg "Failed:"
                                                  ex <- project st

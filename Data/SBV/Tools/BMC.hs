@@ -61,6 +61,7 @@ bmcWith cfg mbLimit chatty setup initial trans goal
                                   constrain $ goal curState
                                   cs <- checkSat
                                   case cs of
+                                    DSat  -> error "BMC: Solver returned an unexpected delta-sat result."
                                     Sat   -> do when chatty $ io $ putStrLn $ "BMC: Solution found at iteration " ++ show i
                                                 ms <- mapM project (curState : sofar)
                                                 return $ Right (i, reverse ms)

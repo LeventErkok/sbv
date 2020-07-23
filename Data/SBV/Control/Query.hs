@@ -208,12 +208,13 @@ ensureSat :: (MonadIO m, MonadQuery m) => m ()
 ensureSat = do cfg <- getConfig
                cs <- checkSatUsing $ satCmd cfg
                case cs of
-                 Sat -> return ()
-                 Unk -> do s <- getUnknownReason
-                           error $ unlines [ ""
-                                           , "*** Data.SBV.ensureSat: Solver reported Unknown!"
-                                           , "*** Reason: " ++ show s
-                                           ]
+                 Sat   -> return ()
+                 DSat  -> return ()
+                 Unk   -> do s <- getUnknownReason
+                             error $ unlines [ ""
+                                             , "*** Data.SBV.ensureSat: Solver reported Unknown!"
+                                             , "*** Reason: " ++ show s
+                                             ]
                  Unsat -> error "Data.SBV.ensureSat: Solver reported Unsat!"
 
 -- | Generalization of 'Data.SBV.Control.getSMTResult'
@@ -223,6 +224,7 @@ getSMTResult = do cfg <- getConfig
                   case cs of
                     Unsat -> Unsatisfiable cfg <$> getUnsatCoreIfRequested
                     Sat   -> Satisfiable   cfg <$> getModel
+                    DSat  -> DeltaSat      cfg <$> getModel
                     Unk   -> Unknown       cfg <$> getUnknownReason
 
 -- | Classify a model based on whether it has unbound objectives or not.
@@ -239,6 +241,7 @@ getLexicographicOptResults = do cfg <- getConfig
                                 case cs of
                                   Unsat -> Unsatisfiable cfg <$> getUnsatCoreIfRequested
                                   Sat   -> classifyModel cfg <$> getModelWithObjectives
+                                  DSat  -> classifyModel cfg <$> getModelWithObjectives
                                   Unk   -> Unknown       cfg <$> getUnknownReason
    where getModelWithObjectives = do objectiveValues <- getObjectiveValues
                                      m               <- getModel
@@ -252,6 +255,7 @@ getIndependentOptResults objNames = do cfg <- getConfig
                                        case cs of
                                          Unsat -> getUnsatCoreIfRequested >>= \mbUC -> return [(nm, Unsatisfiable cfg mbUC) | nm <- objNames]
                                          Sat   -> continue (classifyModel cfg)
+                                         DSat  -> continue (classifyModel cfg)
                                          Unk   -> do ur <- Unknown cfg <$> getUnknownReason
                                                      return [(nm, ur) | nm <- objNames]
 
@@ -273,6 +277,7 @@ getParetoOptResults mbN      = do cfg <- getConfig
                                   case cs of
                                     Unsat -> return (False, [])
                                     Sat   -> continue (classifyModel cfg)
+                                    DSat  -> continue (classifyModel cfg)
                                     Unk   -> do ur <- getUnknownReason
                                                 return (False, [ProofError cfg [show ur] Nothing])
 
@@ -287,6 +292,7 @@ getParetoOptResults mbN      = do cfg <- getConfig
                                                      case cs of
                                                        Unsat -> return (False, sofar)
                                                        Sat   -> more
+                                                       DSat  -> more
                                                        Unk   -> more
 
 -- | Generalization of 'Data.SBV.Control.getModel'
@@ -550,6 +556,10 @@ caseSplit printCases cases = do cfg <- getConfig
 
                                   Sat   -> do notify "Satisfiable"
                                               res <- Satisfiable cfg <$> getModel
+                                              return $ Just (n, res)
+
+                                  DSat  -> do notify "Delta satisfiable"
+                                              res <- DeltaSat cfg <$> getModel
                                               return $ Just (n, res)
 
                                   Unk   -> do notify "Unknown"
