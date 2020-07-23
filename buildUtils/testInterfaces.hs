@@ -32,7 +32,11 @@ main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, cvc4, 
 
               (requiredBad, requiredPresent) = partition (\(n, _) -> n `elem` map solverName badSolvers) chosenSolvers
 
-          mapM_ (test . snd) requiredPresent
+              pickTest s = case name (solver s) of
+                             DReal -> testI s
+                             _     -> test  s
+
+          mapM_ (pickTest . snd) requiredPresent
 
           let tested   = sort $ map fst requiredPresent
               allKnown = sort $ map fst allSolvers
@@ -62,3 +66,16 @@ test s = do check  "t0" t0 (== False)
         t2 x = x*x .== (4::SWord8)
         t3 x = x*x .== (3::SWord8)
         t4 x = x*3 .== (12::SWord8)
+
+-- integer only test, for dReal mostly
+testI :: SMTConfig -> IO ()
+testI s = do check "t0" t0 (== True)
+             check "t1" t1 (== False)
+  where check m p f = thm p >>= decide m f
+        decide m f r
+          | f r  = return ()
+          | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
+                      exitFailure
+        thm = isTheoremWith s
+        t0 x = x .== (x :: SReal)
+        t1 x = x .== (2 :: SReal) .&& (x .== 3)
