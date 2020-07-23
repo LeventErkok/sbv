@@ -18,6 +18,8 @@ module Data.SBV.Provers.DReal(dReal) where
 import Data.SBV.Core.Data
 import Data.SBV.SMT.SMT
 
+import Numeric
+
 -- | The description of the dReal SMT solver
 -- The default executable is @\"dReal\"@, which must be in your path. You can use the @SBV_DREAL@ environment variable to point to the executable on your system.
 -- You can use the @SBV_DREAL_OPTIONS@ environment variable to override the options.
@@ -26,7 +28,7 @@ dReal = SMTSolver {
            name         = DReal
          , executable   = "dReal"
          , preprocess   = id
-         , options      = const ["--in", "--format", "smt2", "--smtlib2-compliant"]
+         , options      = modConfig ["--in", "--format", "smt2"]
          , engine       = standardEngine "SBV_DREAL" "SBV_DREAL_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
@@ -47,3 +49,14 @@ dReal = SMTSolver {
                               , supportsFlattenedModels    = Nothing
                               }
          }
+  where -- If dsat precision is given, pass that as an argument
+       modConfig :: [String] -> SMTConfig -> [String]
+       modConfig opts cfg = case dsatPrecision cfg of
+                              Nothing -> opts
+                              Just d  -> let sd = showFFloat Nothing d ""
+                                         in if d > 0
+                                            then opts ++ ["--precision", sd]
+                                            else error $ unlines [ ""
+                                                                 , "*** Data.SBV: Invalid precision to dReal: " ++ sd
+                                                                 , "***           Precision must be non-negative."
+                                                                 ]

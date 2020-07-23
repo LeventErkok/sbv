@@ -56,6 +56,8 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
+import Data.Maybe (isNothing)
+
 import Data.IORef (readIORef, writeIORef)
 
 import Data.Time (getZonedTime)
@@ -1489,18 +1491,30 @@ executeQuery queryContext (QueryT userQuery) = do
         -- Transitioning from setup
         SMTMode qc stage isSAT cfg | not (isRunIStage stage) -> do
 
-                                                let backend = engine (solver cfg)
+                  let slvr    = solver cfg
+                      backend = engine slvr
 
-                                                res     <- liftIO $ extractSymbolicSimulationState st
-                                                setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
+                  -- make sure if we have dsat precision, then solver supports it
+                  let dsatOK = isNothing (dsatPrecision cfg)
+                             || supportsDeltaSat (capabilities slvr)
 
-                                                let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
-                                                    cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
-                                                    pgm  = smtLibPgm cfg'
+                  unless dsatOK $ error $ unlines
+                                     [ ""
+                                     , "*** Data.SBV: Delta-sat precision is specified."
+                                     , "***           But the chosen solver (" ++ show (name slvr) ++ ") does not support"
+                                     , "***           delta-satisfiability."
+                                     ]
 
-                                                liftIO $ writeIORef (runMode st) $ SMTMode qc IRun isSAT cfg
+                  res     <- liftIO $ extractSymbolicSimulationState st
+                  setOpts <- liftIO $ reverse <$> readIORef (rSMTOptions st)
 
-                                                lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
+                  let SMTProblem{smtLibPgm} = runProofOn rm queryContext [] res
+                      cfg' = cfg { solverSetOptions = solverSetOptions cfg ++ setOpts }
+                      pgm  = smtLibPgm cfg'
+
+                  liftIO $ writeIORef (runMode st) $ SMTMode qc IRun isSAT cfg
+
+                  lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with
