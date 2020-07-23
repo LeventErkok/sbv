@@ -31,7 +31,7 @@ module Data.SBV.Provers.Prover (
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
-       , boolector, cvc4, yices, dReal, z3, mathSAT, abc, defaultSMTCfg
+       , boolector, cvc4, yices, dReal, z3, mathSAT, abc, defaultSMTCfg, defaultDeltaSMTCfg
        ) where
 
 
@@ -139,6 +139,11 @@ abc = mkConfig ABC.abc SMTLib2 [allOnStdOut]
 defaultSMTCfg :: SMTConfig
 defaultSMTCfg = z3
 
+-- | The default solver used by SBV for delta-satisfiability problems. This is currently set to dReal,
+-- which is also the only solver that supports delta-satisfiability.
+defaultDeltaSMTCfg :: SMTConfig
+defaultDeltaSMTCfg = dReal
+
 -- | A predicate is a symbolic program that returns a (symbolic) boolean value. For all intents and
 -- purposes, it can be treated as an n-ary function from symbolic-values to a boolean. The 'Symbolic'
 -- monad captures the underlying representation, and can/should be ignored by the users of the library,
@@ -179,6 +184,17 @@ class ExtractIO m => MProvable m a where
                                      then validate False cfg a r
                                      else return r
 
+  -- | Generalization of 'Data.SBV.dprove'
+  dprove :: a -> m ThmResult
+  dprove = dproveWith defaultDeltaSMTCfg
+
+  -- | Generalization of 'Data.SBV.dproveWith'
+  dproveWith :: SMTConfig -> a -> m ThmResult
+  dproveWith cfg a = do r <- runWithQuery False (checkNoOptimizations >> Control.getSMTResult) cfg a
+                        ThmResult <$> if validationRequested cfg
+                                      then validate False cfg a r
+                                      else return r
+
   -- | Generalization of 'Data.SBV.sat'
   sat :: a -> m SatResult
   sat = satWith defaultSMTCfg
@@ -189,6 +205,17 @@ class ExtractIO m => MProvable m a where
                      SatResult <$> if validationRequested cfg
                                    then validate True cfg a r
                                    else return r
+
+  -- | Generalization of 'Data.SBV.sat'
+  dsat :: a -> m SatResult
+  dsat = dsatWith defaultDeltaSMTCfg
+
+  -- | Generalization of 'Data.SBV.satWith'
+  dsatWith :: SMTConfig -> a -> m SatResult
+  dsatWith cfg a = do r <- runWithQuery True (checkNoOptimizations >> Control.getSMTResult) cfg a
+                      SatResult <$> if validationRequested cfg
+                                    then validate True cfg a r
+                                    else return r
 
   -- | Generalization of 'Data.SBV.allSat'
   allSat :: a -> m AllSatResult

@@ -253,8 +253,13 @@ module Data.SBV (
   -- $noteOnNestedQuantifiers
   -- $multiIntro
   , Predicate, Goal
-  , Provable, forAll_, forAll, forSome_, forSome, prove, proveWith, sat
-  , satWith, allSat, allSatWith, optimize, optimizeWith, isVacuous
+  , Provable, forAll_, forAll, forSome_, forSome
+  , prove, proveWith
+  , dprove, dproveWith
+  , sat, satWith
+  , dsat, dsatWith
+  , allSat, allSatWith
+  , optimize, optimizeWith, isVacuous
   , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
   , proveWithAll, proveWithAny, satWithAll
   , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
@@ -327,7 +332,7 @@ module Data.SBV (
   -- ** Solvers
   , boolector, cvc4, yices, dReal, z3, mathSAT, abc
   -- ** Configurations
-  , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
   -- ** SBV exceptions
   , SBVException(..)
@@ -372,6 +377,7 @@ import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
 import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
                                        prove, proveWith, sat, satWith, allSat,
+                                       dsat, dsatWith, dprove, dproveWith,
                                        allSatWith, optimize, optimizeWith,
                                        isVacuous, isVacuousWith, isTheorem,
                                        isTheoremWith, isSatisfiable,

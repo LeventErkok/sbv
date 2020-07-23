@@ -103,6 +103,18 @@ prove = Trans.prove
 proveWith :: Provable a => SMTConfig -> a -> IO ThmResult
 proveWith = Trans.proveWith
 
+-- | Prove a predicate with delta-satisfiability, using the default solver.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.prove'
+dprove :: Provable a => a -> IO ThmResult
+dprove = Trans.dprove
+
+-- | Prove the predicate with delta-satisfiability using the given SMT-solver.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.proveWith'
+dproveWith :: Provable a => SMTConfig -> a -> IO ThmResult
+dproveWith = Trans.dproveWith
+
 -- | Find a satisfying assignment for a predicate, using the default solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sat'
@@ -114,6 +126,18 @@ sat = Trans.sat
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satWith'
 satWith :: Provable a => SMTConfig -> a -> IO SatResult
 satWith = Trans.satWith
+
+-- | Find a delta-satisfying assignment for a predicate, using the default solver for delta-satisfiability.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.dsat'
+dsat :: Provable a => a -> IO SatResult
+dsat = Trans.dsat
+
+-- | Find a satisfying assignment using the given SMT-solver.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satWith'
+dsatWith :: Provable a => SMTConfig -> a -> IO SatResult
+dsatWith = Trans.dsatWith
 
 -- | Find all satisfying assignments, using the default solver.
 -- Equivalent to @'allSatWith' 'Data.SBV.defaultSMTCfg'@. See 'allSatWith' for details.
