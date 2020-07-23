@@ -31,6 +31,7 @@ z3 = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsDefineFun          = True
+                              , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True

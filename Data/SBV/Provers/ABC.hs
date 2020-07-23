@@ -31,6 +31,7 @@ abc = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsDefineFun          = True
+                              , supportsBitVectors         = True
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
                               , supportsReals              = False

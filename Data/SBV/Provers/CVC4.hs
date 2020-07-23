@@ -33,6 +33,7 @@ cvc4 = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsDefineFun          = True
+                              , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..

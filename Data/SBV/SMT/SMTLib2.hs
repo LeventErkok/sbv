@@ -63,8 +63,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not have]
-           where checks = [ ("data types",     supportsDataTypes solverCaps, hasTuples || hasEither || hasMaybe)
-                          , ("set operations", supportsSets      solverCaps, hasSets)
+           where checks = [ ("data types",     supportsDataTypes  solverCaps, hasTuples || hasEither || hasMaybe)
+                          , ("set operations", supportsSets       solverCaps, hasSets)
+                          , ("bit vectors",    supportsBitVectors solverCaps, hasBVs)
                           ]
 
                  nope w = [ "***     Given problem requires support for " ++ w
