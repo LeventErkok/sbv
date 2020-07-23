@@ -27,6 +27,8 @@ module Data.SBV.Core.AlgReals (
            )
    where
 
+import Data.Char       (isDigit)
+
 import Data.List       (sortBy, isPrefixOf, partition)
 import Data.Ratio      ((%), numerator, denominator)
 import Data.Function   (on)
@@ -57,7 +59,17 @@ mkPolyReal :: Either (Bool, String) (Integer, [(Integer, Integer)]) -> AlgReal
 mkPolyReal (Left (exact, str))
  = case (str, break (== '.') str) of
       ("", (_, _))    -> AlgRational exact 0
-      (_, (x, '.':y)) -> AlgRational exact (read (x++y) % (10 ^ length y))
+      (_, (x, '.':y)) -> if all isDigit y
+                            then AlgRational exact (read (x++y) % (10 ^ length y))
+                            else -- see if we can read it as a double:
+                                 case reads str :: [(Double, String)] of
+                                   [(v, "")] -> AlgRational exact (toRational v)
+                                   _         -> error $ unlines [ "*** Data.SBV: Unable to read a number from:"
+                                                                , "***"
+                                                                , "*** " ++ str
+                                                                , "***"
+                                                                , "*** Please report this as an SBV bug."
+                                                                ]
       (_, (x, _))     -> AlgRational exact (read x % 1)
 mkPolyReal (Right (k, coeffs))
  = AlgPolyRoot (k, AlgRealPoly (normalize coeffs)) Nothing
