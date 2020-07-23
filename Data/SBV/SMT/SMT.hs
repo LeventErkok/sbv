@@ -152,12 +152,12 @@ instance Show SafeResult where
 
 -- The Show instance of AllSatResults.
 instance Show AllSatResult where
-  show (AllSatResult { allSatMaxModelCountReached  = l
-                     , allSatHasPrefixExistentials = e
-                     , allSatSolverReturnedUnknown = u
-                     , allSatSolverReturnedDSat    = d
-                     , allSatResults               = xs
-                     }) = go (0::Int) xs
+  show AllSatResult { allSatMaxModelCountReached  = l
+                    , allSatHasPrefixExistentials = e
+                    , allSatSolverReturnedUnknown = u
+                    , allSatSolverReturnedDSat    = d
+                    , allSatResults               = xs
+                    } = go (0::Int) xs
     where warnings = case (e, u) of
                        (False, False) -> ""
                        (False, True)  -> " (Search stopped since solver has returned unknown.)"
@@ -399,19 +399,19 @@ class Modelable a where
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
 -- is suitable for the case of multiple results.
 extractModels :: SatModel a => AllSatResult -> [a]
-extractModels (AllSatResult {allSatResults = xs}) = [ms | Right (_, ms) <- map getModelAssignment xs]
+extractModels AllSatResult{allSatResults = xs} = [ms | Right (_, ms) <- map getModelAssignment xs]
 
 -- | Get dictionaries from an all-sat call. Similar to `getModelDictionary`.
 getModelDictionaries :: AllSatResult -> [M.Map String CV]
-getModelDictionaries (AllSatResult {allSatResults = xs}) = map getModelDictionary xs
+getModelDictionaries AllSatResult{allSatResults = xs} = map getModelDictionary xs
 
 -- | Extract value of a variable from an all-sat call. Similar to `getModelValue`.
 getModelValues :: SymVal b => String -> AllSatResult -> [Maybe b]
-getModelValues s (AllSatResult {allSatResults = xs}) =  map (s `getModelValue`) xs
+getModelValues s AllSatResult{allSatResults = xs} =  map (s `getModelValue`) xs
 
 -- | Extract value of an uninterpreted variable from an all-sat call. Similar to `getModelUninterpretedValue`.
 getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
-getModelUninterpretedValues s (AllSatResult {allSatResults = xs}) =  map (s `getModelUninterpretedValue`) xs
+getModelUninterpretedValues s AllSatResult{allSatResults = xs} =  map (s `getModelUninterpretedValue`) xs
 
 -- | 'ThmResult' as a generic model provider
 instance Modelable ThmResult where
@@ -476,7 +476,7 @@ parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
 -- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown).
 -- The arrange argument can sort the results in any way you like, if necessary.
 displayModels :: SatModel a => ([(Bool, a)] -> [(Bool, a)]) -> (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
-displayModels arrange disp (AllSatResult {allSatResults = ms}) = do
+displayModels arrange disp AllSatResult{allSatResults = ms} = do
     let models = [a | Right a <- map (getModelAssignment . SatResult) ms]
     inds <- zipWithM display (arrange models) [(1::Int)..]
     return $ last (0:inds)
