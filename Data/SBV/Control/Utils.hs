@@ -711,10 +711,13 @@ getValueCVHelper mbi s
 
        r <- ask cmd
 
-       parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> case recoverKindedValue (kindOf s) val of
-                                                                    Just cv -> return cv
-                                                                    Nothing -> bad r Nothing
-                           _                                   -> bad r Nothing
+       let recover val = case recoverKindedValue (kindOf s) val of
+                           Just cv -> return cv
+                           Nothing -> bad r Nothing
+
+       parse r bad $ \case EApp [EApp [ECon v, EApp [ECon "exact", val]]] | v == nm -> recover val
+                           EApp [EApp [ECon v, val]]                      | v == nm -> recover val
+                           _                                                        -> bad r Nothing
 
 -- | "Make up" a CV for this type. Like zero, but smarter.
 defaultKindedValue :: Kind -> Maybe CV
