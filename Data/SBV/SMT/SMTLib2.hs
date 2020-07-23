@@ -453,7 +453,7 @@ declDef cfg skolemMap tableMap (s, expr) =
 defineFun :: SMTConfig -> (SV, String) -> Maybe String -> String
 defineFun cfg (s, def) mbComment
    | hasDefFun = "(define-fun "  ++ varT ++ " " ++ def ++ ")" ++ cmnt
-   | True      = "(declare-fun " ++ varT ++ "); (assert (= " ++ var ++ " " ++ def ++ ")) " ++ cmnt
+   | True      = "(declare-fun " ++ varT ++ ") (assert (= " ++ var ++ " " ++ def ++ ")) " ++ cmnt
   where var  = show s
         varT = var ++ " " ++ svFunType [] s
         cmnt = maybe "" (" ; " ++) mbComment

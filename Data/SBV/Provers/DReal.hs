@@ -33,16 +33,16 @@ dReal = SMTSolver {
                               , supportsDefineFun          = False
                               , supportsBitVectors         = False
                               , supportsUninterpretedSorts = True     -- TBD
-                              , supportsUnboundedInts      = True     -- TBD
-                              , supportsReals              = True     -- TBD
-                              , supportsApproxReals        = True     -- TBD
-                              , supportsIEEE754            = True     -- TBD
-                              , supportsSets               = True     -- TBD
+                              , supportsUnboundedInts      = True
+                              , supportsReals              = True
+                              , supportsApproxReals        = False
+                              , supportsIEEE754            = False
+                              , supportsSets               = False
                               , supportsOptimization       = True     -- TBD
-                              , supportsPseudoBooleans     = True     -- TBD
+                              , supportsPseudoBooleans     = False
                               , supportsCustomQueries      = False
-                              , supportsGlobalDecls        = True     -- TBD
-                              , supportsDataTypes          = True     -- TBD
-                              , supportsFlattenedModels    = Nothing  -- TBD
+                              , supportsGlobalDecls        = False
+                              , supportsDataTypes          = False
+                              , supportsFlattenedModels    = Nothing
                               }
          }
