@@ -38,6 +38,7 @@ mathSAT = SMTSolver {
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
                               , supportsApproxReals        = False
+                              , supportsDeltaSat           = False
                               , supportsIEEE754            = True
                               , supportsSets               = False
                               , supportsOptimization       = False

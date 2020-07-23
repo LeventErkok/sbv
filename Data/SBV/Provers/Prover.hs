@@ -118,7 +118,8 @@ yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Yices SMT Solver.
 dReal :: SMTConfig
-dReal = mkConfig DReal.dReal SMTLib2 []
+dReal = mkConfig DReal.dReal SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
+                                     ]
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig

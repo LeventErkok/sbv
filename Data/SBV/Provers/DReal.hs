@@ -36,6 +36,7 @@ dReal = SMTSolver {
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
                               , supportsApproxReals        = False
+                              , supportsDeltaSat           = True
                               , supportsIEEE754            = False
                               , supportsSets               = False
                               , supportsOptimization       = False

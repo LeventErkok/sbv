@@ -34,6 +34,7 @@ boolector = SMTSolver {
                               , supportsUnboundedInts      = False
                               , supportsReals              = False
                               , supportsApproxReals        = False
+                              , supportsDeltaSat           = False
                               , supportsIEEE754            = False
                               , supportsSets               = False
                               , supportsOptimization       = False

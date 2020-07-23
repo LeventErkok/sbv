@@ -1707,6 +1707,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
        , supportsReals              :: Bool           -- ^ Supports reals?
        , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
+       , supportsDeltaSat           :: Bool           -- ^ Supports delta-satisfiability?
        , supportsIEEE754            :: Bool           -- ^ Supports floating point numbers?
        , supportsSets               :: Bool           -- ^ Supports set operations?
        , supportsOptimization       :: Bool           -- ^ Supports optimization routines?

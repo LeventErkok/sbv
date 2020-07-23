@@ -38,6 +38,7 @@ cvc4 = SMTSolver {
                               , supportsUnboundedInts      = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
                               , supportsApproxReals        = False
+                              , supportsDeltaSat           = False
                               , supportsIEEE754            = True
                               , supportsSets               = False
                               , supportsOptimization       = False

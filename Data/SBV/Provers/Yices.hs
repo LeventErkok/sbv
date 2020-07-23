@@ -36,6 +36,7 @@ yices = SMTSolver {
                               , supportsUnboundedInts      = True
                               , supportsReals              = True
                               , supportsApproxReals        = False
+                              , supportsDeltaSat           = False
                               , supportsIEEE754            = False
                               , supportsSets               = False
                               , supportsOptimization       = False
