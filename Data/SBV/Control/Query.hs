@@ -303,7 +303,7 @@ getModel = getModelAtIndex Nothing
 getModelAtIndex :: (MonadIO m, MonadQuery m) => Maybe Int -> m SMTModel
 getModelAtIndex mbi = do
     State{runMode} <- queryState
-    rm     <- io $ readIORef runMode
+    rm <- io $ readIORef runMode
     case rm of
       m@CodeGen           -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
       m@Concrete{}        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
