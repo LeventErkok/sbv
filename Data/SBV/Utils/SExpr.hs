@@ -124,11 +124,16 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         pTok ('#':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('#':'x':r)                                 = mkNum (Just (4 * length r)) $ readHex r
 
-        pTok n
-          | not (null n) && isDigit (head n)
-          = if '.' `elem` n then getReal n
-            else mkNum Nothing $ readDec n
+        pTok n | possiblyNum n = if all intChar n then mkNum Nothing $ readDec n else getReal n
         pTok n                 = return $ ECon (constantMap n)
+
+        -- crude, but effective!
+        possiblyNum s = case s of
+                          ""        -> False
+                          ('-':c:_) -> isDigit c
+                          (c:_)     -> isDigit c
+
+        intChar c = c == '-' || isDigit c
 
         mkNum l [(n, "")] = return $ ENum (n, l)
         mkNum _ _         = die "cannot read number"
