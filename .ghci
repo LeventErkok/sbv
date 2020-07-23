@@ -9,8 +9,10 @@ loadEverything _ = do
        allFiles <- System.FilePath.Glob.glob "**/*.hs"
        let ignore     = ["buildUtils", "SBVHLint.hs", "SBVDocTest.hs", "Setup.hs", "SBVBench.hs", "SBVBenchmark.hs", "Paths_sbv.hs", "SBVBenchSuite"]
            goodFiles  = filter (\f -> not (any (`Data.List.isInfixOf` f) ignore)) allFiles
-       pure $    ":load " ++ unwords goodFiles ++ "\n"
-              ++ ":m Data.SBV"
+       pure $ unlines [ ":load " ++ unwords goodFiles
+                      , ":m"
+                      , ":m Data.SBV"
+                      ]
 :}
 :def loadEverything loadEverything
 :loadEverything
