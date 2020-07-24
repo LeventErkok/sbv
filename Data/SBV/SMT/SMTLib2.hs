@@ -130,7 +130,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
            | True
            = case ctx of
                QueryExternal -> ["(set-logic ALL) ; external query, using all logics."]
-               QueryInternal -> ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
+               QueryInternal -> if supportsBitVectors solverCaps
+                                then ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
+                                else ["(set-logic ALL)"] -- fall-thru
           where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
                     | True                     = ""
                 as  | null arrs                = ""
