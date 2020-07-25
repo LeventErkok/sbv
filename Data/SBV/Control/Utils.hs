@@ -1023,8 +1023,7 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                        parse r bad $ \case ECon "sat"       -> return Sat
                                            ECon "unsat"     -> return Unsat
                                            ECon "unknown"   -> return Unk
-                                           ECon "delta-sat" -> do p <- getPrecision
-                                                                  return $ DSat p
+                                           ECon "delta-sat" -> DSat <$> getPrecision
                                            _                -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
