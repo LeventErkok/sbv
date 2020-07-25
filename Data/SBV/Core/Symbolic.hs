@@ -249,11 +249,29 @@ instance Show FPOp where
 
 -- | Non-linear operations
 data NROp = NR_Sin
+          | NR_Cos
+          | NR_Tan
+          | NR_ASin
+          | NR_ACos
+          | NR_ATan
+          | NR_Sqrt
+          | NR_Sinh
+          | NR_Cosh
+          | NR_Tanh
           deriving (Eq, Ord)
 
 -- | The show instance carefully arranges for these to be printed as it can be understood by dreal
 instance Show NROp where
-  show NR_Sin = "sin"
+  show NR_Sin  = "sin"
+  show NR_Cos  = "cos"
+  show NR_Tan  = "tan"
+  show NR_ASin = "asin"
+  show NR_ACos = "acos"
+  show NR_ATan = "atan"
+  show NR_Sinh = "sinh"
+  show NR_Cosh = "cosh"
+  show NR_Tanh = "tanh"
+  show NR_Sqrt = "sqrt"
 
 -- | Pseudo-boolean operations
 data PBOp = PB_AtMost  Int        -- ^ At most k

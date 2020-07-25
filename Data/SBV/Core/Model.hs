@@ -1351,6 +1351,36 @@ lift2FNS nm f sv1 sv2
   , Just v2 <- unliteral sv2 = literal $ f v1 v2
   | True                     = error $ "SBV." ++ nm ++ ": not supported for symbolic values of type " ++ show (kindOf sv1)
 
+-- | SReal Floating instance, used in conjunction with the dReal solver for delta-satisfiability. Note that
+-- we do not constant fold these values (except for pi), as Haskell doesn't really have any means of computing
+-- them for arbitrary rationals.
+instance {-# OVERLAPPING #-} Floating SReal where
+  pi      = fromRational . toRational $ (pi :: Double)
+  exp     = error "TBD"
+  log     = error "TBD"
+  sqrt    = lift1SReal NR_Sqrt
+  sin     = lift1SReal NR_Sin
+  cos     = lift1SReal NR_Cos
+  tan     = lift1SReal NR_Tan
+  asin    = lift1SReal NR_ASin
+  acos    = lift1SReal NR_ACos
+  atan    = lift1SReal NR_ATan
+  sinh    = lift1SReal NR_Sinh
+  cosh    = lift1SReal NR_Cosh
+  tanh    = lift1SReal NR_Tanh
+  asinh   = error "Data.SBV.SReal: asinh is currently not supported. Please request this as a feature!"
+  acosh   = error "Data.SBV.SReal: acosh is currently not supported. Please request this as a feature!"
+  atanh   = error "Data.SBV.SReal: atanh is currently not supported. Please request this as a feature!"
+  (**)    = error "TBD"
+  logBase = error "TBD"
+
+-- | Lift an sreal unary function
+lift1SReal :: NROp -> SReal -> SReal
+lift1SReal w a = SBV $ SVal k $ Right $ cache r
+  where k    = kindOf a
+        r st = do swa <- sbvToSV st a
+                  newExpr st k (SBVApp (NonLinear w) [swa])
+
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
 -- | Using 'popCount' or 'testBit' on non-concrete values will result in an
