@@ -14,7 +14,7 @@ report any issues you might see with newer releases.
   * dReal:
       * https://dreal.github.io/
       * Version installed via "brew rm dreal; brew install dreal --HEAD"
-        on Jul 22, 2020.
+        on Jul 24, 2020.
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.6.3
