@@ -1888,3 +1888,4 @@ instance Show QueryContext where
 {-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type OvOp ("HLint: ignore Use camelCase" :: String) #-}
+{-# ANN type NROp ("HLint: ignore Use camelCase" :: String) #-}
