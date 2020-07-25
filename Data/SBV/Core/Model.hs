@@ -1356,8 +1356,8 @@ lift2FNS nm f sv1 sv2
 -- them for arbitrary rationals.
 instance {-# OVERLAPPING #-} Floating SReal where
   pi      = fromRational . toRational $ (pi :: Double)
-  exp     = error "TBD"
-  log     = error "TBD"
+  exp     = lift1SReal NR_Exp
+  log     = lift1SReal NR_Log
   sqrt    = lift1SReal NR_Sqrt
   sin     = lift1SReal NR_Sin
   cos     = lift1SReal NR_Cos
@@ -1371,8 +1371,9 @@ instance {-# OVERLAPPING #-} Floating SReal where
   asinh   = error "Data.SBV.SReal: asinh is currently not supported. Please request this as a feature!"
   acosh   = error "Data.SBV.SReal: acosh is currently not supported. Please request this as a feature!"
   atanh   = error "Data.SBV.SReal: atanh is currently not supported. Please request this as a feature!"
-  (**)    = error "TBD"
-  logBase = error "TBD"
+  (**)    = lift2SReal NR_Pow
+
+  logBase x y = log y  / log x
 
 -- | Lift an sreal unary function
 lift1SReal :: NROp -> SReal -> SReal
@@ -1380,6 +1381,14 @@ lift1SReal w a = SBV $ SVal k $ Right $ cache r
   where k    = kindOf a
         r st = do swa <- sbvToSV st a
                   newExpr st k (SBVApp (NonLinear w) [swa])
+
+-- | Lift an sreal binary function
+lift2SReal :: NROp -> SReal -> SReal -> SReal
+lift2SReal w a b = SBV $ SVal k $ Right $ cache r
+  where k    = kindOf a
+        r st = do swa <- sbvToSV st a
+                  swb <- sbvToSV st b
+                  newExpr st k (SBVApp (NonLinear w) [swa, swb])
 
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values

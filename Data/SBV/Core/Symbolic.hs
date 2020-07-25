@@ -258,6 +258,9 @@ data NROp = NR_Sin
           | NR_Sinh
           | NR_Cosh
           | NR_Tanh
+          | NR_Exp
+          | NR_Log
+          | NR_Pow
           deriving (Eq, Ord)
 
 -- | The show instance carefully arranges for these to be printed as it can be understood by dreal
@@ -272,6 +275,9 @@ instance Show NROp where
   show NR_Cosh = "cosh"
   show NR_Tanh = "tanh"
   show NR_Sqrt = "sqrt"
+  show NR_Exp  = "exp"
+  show NR_Log  = "log"
+  show NR_Pow  = "pow"
 
 -- | Pseudo-boolean operations
 data PBOp = PB_AtMost  Int        -- ^ At most k
