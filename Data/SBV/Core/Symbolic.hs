@@ -30,7 +30,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
   , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, newUninterpreted
@@ -176,8 +176,9 @@ data Op = Plus
         | Uninterpreted String
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
-        | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
+        | NonLinear NROp                        -- Non-linear ops (mostly trigonometric), categorized separately
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
+        | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | SetOp SetOp                           -- Set operations, categorized separately
@@ -245,6 +246,14 @@ instance Show FPOp where
    show FP_IsNaN             = "fp.isNaN"
    show FP_IsNegative        = "fp.isNegative"
    show FP_IsPositive        = "fp.isPositive"
+
+-- | Non-linear operations
+data NROp = NR_Sin
+          deriving (Eq, Ord)
+
+-- | The show instance carefully arranges for these to be printed as it can be understood by dreal
+instance Show NROp where
+  show NR_Sin = "sin"
 
 -- | Pseudo-boolean operations
 data PBOp = PB_AtMost  Int        -- ^ At most k
@@ -446,6 +455,8 @@ instance Show Op where
   show (Label s)            = "[label] " ++ s
 
   show (IEEEFP w)           = show w
+
+  show (NonLinear w)        = show w
 
   show (PseudoBoolean p)    = show p
 

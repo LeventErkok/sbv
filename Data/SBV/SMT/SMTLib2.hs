@@ -826,6 +826,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssv m) (unwords (map ssv args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssv args) ++ ")"
 
+        sh (SBVApp (NonLinear w) args) = "(" ++ show w ++ " " ++ unwords (map ssv args) ++ ")"
+
         sh (SBVApp (PseudoBoolean pb) args)
           | supportsPB = handlePB pb args'
           | True       = reducePB pb args'
@@ -912,6 +914,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 , (LessEq,        lift2S  "bvule" "bvsle")
                                 , (GreaterEq,     lift2S  "bvuge" "bvsge")
                                 ]
+
                 -- Boolean comparisons.. SMTLib's bool type doesn't do comparisons, but Haskell does.. Sigh
                 boolComps      = [ (LessThan,      blt)
                                  , (GreaterThan,   blt . swp)
@@ -924,15 +927,19 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      blq xs     = error $ "SBV.SMT.SMTLib2.boolComps.blq: Impossible happened, incorrect arity (expected 2): " ++ show xs
                                      swp [x, y] = [y, x]
                                      swp xs     = error $ "SBV.SMT.SMTLib2.boolComps.swp: Impossible happened, incorrect arity (expected 2): " ++ show xs
+
                 smtOpRealTable =  smtIntRealShared
                                ++ [ (Quot,        lift2WM "/" "fp.div")
                                   ]
+
                 smtOpIntTable  = smtIntRealShared
                                ++ [ (Quot,        lift2   "div")
                                   , (Rem,         lift2   "mod")
                                   ]
+
                 smtOpFloatDoubleTable = smtIntRealShared
                                   ++ [(Quot, lift2WM "/" "fp.div")]
+
                 smtIntRealShared  = [ (Plus,          lift2WM "+" "fp.add")
                                     , (Minus,         lift2WM "-" "fp.sub")
                                     , (Times,         lift2WM "*" "fp.mul")
@@ -945,6 +952,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (LessEq,        lift2Cmp  "<=" "fp.leq")
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
+
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
                                      , (NotEqual,    liftNS "distinct" "distinct" True)
@@ -953,6 +961,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      , (LessEq,      unintComp "<=")
                                      , (GreaterEq,   unintComp ">=")
                                      ]
+
                 -- For chars, the underlying type is currently SWord8, so we go with the regular bit-vector operations
                 -- TODO: This will change when we move to unicode!
                 smtCharTable = [ (Equal,         eqBV)
@@ -962,6 +971,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (LessEq,        lift2S  "bvule" (error "smtChar.<=: did-not expect signed char here!"))
                                , (GreaterEq,     lift2S  "bvuge" (error "smtChar.>=: did-not expect signed char here!"))
                                ]
+
                 -- For strings, equality and comparisons are the only operators
                 -- TODO: The string comparison operators will most likely change with the new theory!
                 smtStringTable = [ (Equal,       lift2S "="        "="        True)
@@ -971,6 +981,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                  , (LessEq,      stringCmp False "str.<=")
                                  , (GreaterEq,   stringCmp True  "str.<=")
                                  ]
+
                 -- For lists, equality is really the only operator
                 -- Likewise here, things might change for comparisons
                 smtListTable = [ (Equal,       lift2S "="        "="        True)

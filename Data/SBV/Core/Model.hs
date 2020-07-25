@@ -1302,28 +1302,29 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
 
--- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat and SDouble
--- Note that most of the fields are "undefined" for symbolic values, we add methods as they are supported by SMTLib.
--- Currently, the only symbolicly available function in this class is sqrt.
+-- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat, SDouble, and SReal.
+-- Note that unless you use delta-sat via dReal on SReal, most of the fields are "undefined" for symbolic values. We will
+-- add methods as they are supported by SMTLib. Currently, the only symbolicly available function in this class is sqrt
+-- for SFloat and SDouble.
 instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
-    pi      = literal pi
-    exp     = lift1FNS "exp"     exp
-    log     = lift1FNS "log"     log
-    sqrt    = lift1F   FP_Sqrt   sqrt
-    sin     = lift1FNS "sin"     sin
-    cos     = lift1FNS "cos"     cos
-    tan     = lift1FNS "tan"     tan
-    asin    = lift1FNS "asin"    asin
-    acos    = lift1FNS "acos"    acos
-    atan    = lift1FNS "atan"    atan
-    sinh    = lift1FNS "sinh"    sinh
-    cosh    = lift1FNS "cosh"    cosh
-    tanh    = lift1FNS "tanh"    tanh
-    asinh   = lift1FNS "asinh"   asinh
-    acosh   = lift1FNS "acosh"   acosh
-    atanh   = lift1FNS "atanh"   atanh
-    (**)    = lift2FNS "**"      (**)
-    logBase = lift2FNS "logBase" logBase
+  pi      = literal pi
+  exp     = lift1FNS "exp"     exp
+  log     = lift1FNS "log"     log
+  sqrt    = lift1F   FP_Sqrt   sqrt
+  sin     = lift1FNS "sin"     sin
+  cos     = lift1FNS "cos"     cos
+  tan     = lift1FNS "tan"     tan
+  asin    = lift1FNS "asin"    asin
+  acos    = lift1FNS "acos"    acos
+  atan    = lift1FNS "atan"    atan
+  sinh    = lift1FNS "sinh"    sinh
+  cosh    = lift1FNS "cosh"    cosh
+  tanh    = lift1FNS "tanh"    tanh
+  asinh   = lift1FNS "asinh"   asinh
+  acosh   = lift1FNS "acosh"   acosh
+  atanh   = lift1FNS "atanh"   atanh
+  (**)    = lift2FNS "**"      (**)
+  logBase = lift2FNS "logBase" logBase
 
 -- | Lift a 1 arg FP-op, using sRNE default
 lift1F :: SymVal a => FPOp -> (a -> a) -> SBV a -> SBV a
