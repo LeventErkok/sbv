@@ -405,14 +405,14 @@ class ExtractIO m => MProvable m a where
 
                                SatExtField{}   -> cant [ "The model requires an extension field value."
                                                        , "Cannot validate models with infinities/epsilons produced during optimization."
+                                                       , ""
+                                                       , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
                                                        ]
 
                                Unknown{}       -> return res
                                ProofError{}    -> return res
 
     where cant msg = return $ ProofError cfg (msg ++ [ ""
-                                                     , "To turn validation off, use `cfg{optimizeValidateConstraints = False}`"
-                                                     , ""
                                                      , "Unable to validate the produced model."
                                                      ]) (Just res)
 
