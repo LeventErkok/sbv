@@ -80,7 +80,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               )
 
-import Data.SBV.Core.AlgReals   (mergeAlgReals)
+import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), Border(..))
 import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
@@ -715,9 +715,8 @@ getValueCVHelper mbi s
                            Just cv -> return cv
                            Nothing -> bad r Nothing
 
-       parse r bad $ \case EApp [EApp [ECon v, EApp [ECon "exact", val]]] | v == nm -> recover val
-                           EApp [EApp [ECon v, val]]                      | v == nm -> recover val
-                           _                                                        -> bad r Nothing
+       parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> recover val
+                           _                                   -> bad r Nothing
 
 -- | "Make up" a CV for this type. Like zero, but smarter.
 defaultKindedValue :: Kind -> Maybe CV
@@ -761,7 +760,7 @@ recoverKindedValue k e = case k of
 
                            KReal       | ENum (i, _) <- e -> Just $ mkConstCV k i
                                        | EReal i     <- e -> Just $ CV KReal (CAlgReal i)
-                                       | True             -> Nothing
+                                       | True             -> interpretInterval e
 
                            KUserSort{} | ECon s <- e -> Just $ CV k $ CUserSort (getUIIndex k s, s)
                                        | True             -> Nothing
@@ -921,6 +920,19 @@ recoverKindedValue k e = case k of
         interpretEither ek (EApp [EApp [ECon "as", ECon "right_SBVEither", _], b]) = interpretEither ek (EApp [ECon "right_SBVEither", b])
 
         interpretEither _ other = error $ "Expected an SEither sexpr, but received: " ++ show (k, other)
+
+        -- Intervals, for dReal
+        interpretInterval expr = case expr of
+                                   EApp [ECon "interval", lo, hi] -> do vlo <- getBorder lo
+                                                                        vhi <- getBorder hi
+                                                                        pure $ CV KReal (CAlgReal (AlgInterval vlo vhi))
+                                   _                              -> Nothing
+          where getBorder (EApp [ECon "open",   v]) = recoverKindedValue KReal v >>= border Open
+                getBorder (EApp [ECon "closed", v]) = recoverKindedValue KReal v >>= border Closed
+                getBorder _                         = Nothing
+
+                border b (CV KReal (CAlgReal v)) = pure $ b v
+                border _ other                   = error $ "Data.SBV.interpretInterval.border: Expected a real-valued sexp, but received: " ++ show other
 
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
