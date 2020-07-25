@@ -358,10 +358,10 @@ class ExtractIO m => MProvable m a where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
                   case cs of
-                    Control.Unsat -> return True
-                    Control.Sat   -> return False
-                    Control.DSat  -> return False
-                    Control.Unk   -> error "SBV: isVacuous: Solver returned unknown!"
+                    Control.Unsat  -> return True
+                    Control.Sat    -> return False
+                    Control.DSat{} -> return False
+                    Control.Unk    -> error "SBV: isVacuous: Solver returned unknown!"
 
   -- | Generalization of 'Data.SBV.isTheorem'
   isTheorem :: a -> m Bool

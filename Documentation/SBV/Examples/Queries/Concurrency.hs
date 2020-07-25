@@ -58,15 +58,15 @@ queryOne v = do
 
   cs <- checkSat
   case cs of
-    Unk   -> error "Too bad, solver said unknown.." -- Won't happen
-    DSat  -> error "Unexpected dsat result.."       -- Won't happen
-    Unsat -> do io $ putStrLn "No other solution!"
-                return Nothing
+    Unk    -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat{} -> error "Unexpected dsat result.."       -- Won't happen
+    Unsat  -> do io $ putStrLn "No other solution!"
+                 return Nothing
 
-    Sat   -> do xv <- getValue x
-                yv <- getValue y
-                io $ putStrLn $ "[One]: Current solution is: " ++ show (xv, yv)
-                return $ Just (xv + yv)
+    Sat    -> do xv <- getValue x
+                 yv <- getValue y
+                 io $ putStrLn $ "[One]: Current solution is: " ++ show (xv, yv)
+                 return $ Just (xv + yv)
 
 -- | In the second query we constrain for an answer where y is smaller than x,
 -- and then return the product of the found values.
@@ -78,15 +78,15 @@ queryTwo v = do
 
   cs <- checkSat
   case cs of
-    Unk   -> error "Too bad, solver said unknown.." -- Won't happen
-    DSat  -> error "Unexpected dsat result.."       -- Won't happen
-    Unsat -> do io $ putStrLn "No other solution!"
-                return Nothing
+    Unk    -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat{} -> error "Unexpected dsat result.."       -- Won't happen
+    Unsat  -> do io $ putStrLn "No other solution!"
+                 return Nothing
 
-    Sat   -> do yv <- getValue y
-                xv <- getValue x
-                io $ putStrLn $ "[Two]: Current solution is: " ++ show (xv, yv)
-                return $ Just (xv * yv)
+    Sat    -> do yv <- getValue y
+                 xv <- getValue x
+                 io $ putStrLn $ "[Two]: Current solution is: " ++ show (xv, yv)
+                 return $ Just (xv * yv)
 
 -- | Run the demo several times to see that the children threads will change ordering.
 demo :: IO ()
@@ -122,17 +122,17 @@ firstQuery v1 v2 = do
 
   cs <- checkSat
   case cs of
-    Unk   -> error "Too bad, solver said unknown.." -- Won't happen
-    DSat  -> error "Unexpected dsat result.."       -- Won't happen
-    Unsat -> do io $ putStrLn "No other solution!"
-                return Nothing
+    Unk    -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat{} -> error "Unexpected dsat result.."       -- Won't happen
+    Unsat  -> do io $ putStrLn "No other solution!"
+                 return Nothing
 
-    Sat   -> do xv <- getValue x
-                yv <- getValue y
-                io $ putStrLn $ "[One]: Current solution is: " ++ show (xv, yv)
-                io $ putStrLn $ "[One]: Place vars for [Two]"
-                liftIO $ putMVar v2 (literal (xv + yv), literal (xv * yv))
-                return $ Just (xv + yv)
+    Sat    -> do xv <- getValue x
+                 yv <- getValue y
+                 io $ putStrLn $ "[One]: Current solution is: " ++ show (xv, yv)
+                 io $ putStrLn $ "[One]: Place vars for [Two]"
+                 liftIO $ putMVar v2 (literal (xv + yv), literal (xv * yv))
+                 return $ Just (xv + yv)
 
 -- | In the second query we create a new variable z, and then a symbolic query
 -- using information from the first query and return a solution that uses the
@@ -150,16 +150,16 @@ secondQuery v2 = do
 
   cs <- checkSat
   case cs of
-    Unk   -> error "Too bad, solver said unknown.." -- Won't happen
-    DSat  -> error "Unexpected dsat result.."       -- Won't happen
-    Unsat -> do io $ putStrLn "No other solution!"
-                return Nothing
+    Unk    -> error "Too bad, solver said unknown.." -- Won't happen
+    DSat{} -> error "Unexpected dsat result.."       -- Won't happen
+    Unsat  -> do io $ putStrLn "No other solution!"
+                 return Nothing
 
-    Sat   -> do yv <- getValue y
-                xv <- getValue x
-                zv <- getValue z
-                io $ putStrLn $ "[Two]: My solution is: " ++ show (zv + xv, zv + yv)
-                return $ Just (zv * xv * yv)
+    Sat    -> do yv <- getValue y
+                 xv <- getValue x
+                 zv <- getValue z
+                 io $ putStrLn $ "[Two]: My solution is: " ++ show (zv + xv, zv + yv)
+                 return $ Just (zv * xv * yv)
 
 -- | In our second demonstration we show how through the use of concurrency
 -- constructs the user can have children queries communicate with one another.

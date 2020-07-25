@@ -99,12 +99,12 @@ q5 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
                    cs <- checkSat
 
                    case cs of
-                     Unsat -> return Nothing
-                     Unk   -> error "solver returned Unknown!"
-                     DSat  -> error "solver returned Delta-satisfiable!"
-                     Sat   -> do av <- getValue a
-                                 vv <- getValue v
-                                 return $ Just (av, vv)
+                     Unsat  -> return Nothing
+                     Unk    -> error "solver returned Unknown!"
+                     DSat{} -> error "solver returned Delta-satisfiable!"
+                     Sat    -> do av <- getValue a
+                                  vv <- getValue v
+                                  return $ Just (av, vv)
 
 q6 :: Symbolic [Integer]
 q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
@@ -115,13 +115,13 @@ q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
                           constrain $ readArray a 1 .== 5
                           cs <- checkSat
                           case cs of
-                            Unk   -> error "Unknown"
-                            Unsat -> do pop 1
-                                        d <- freshVar $ "d" ++ show (length sofar)
-                                        constrain $ d .>= 1 .&& d .< 3
-                                        loop (writeArray a 1 (readArray a 1 + d)) (sofar ++ [d])
-                            DSat  -> error "solver returned Delta-satisfiable!"
-                            Sat   -> mapM getValue sofar
+                            Unk    -> error "Unknown"
+                            Unsat  -> do pop 1
+                                         d <- freshVar $ "d" ++ show (length sofar)
+                                         constrain $ d .>= 1 .&& d .< 3
+                                         loop (writeArray a 1 (readArray a 1 + d)) (sofar ++ [d])
+                            DSat{} -> error "solver returned Delta-satisfiable!"
+                            Sat    -> mapM getValue sofar
 
 
 q7 :: Symbolic (CheckSatResult, CheckSatResult)

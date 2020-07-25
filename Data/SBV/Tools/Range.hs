@@ -175,10 +175,10 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
                                            query $ do cs <- checkSat
                                                       case cs of
-                                                        Unsat -> return False
-                                                        DSat  -> error "Data.SBV.interval.isFeasible: Solver returned a delta-satisfiable result!"
-                                                        Unk   -> error "Data.SBV.interval.isFeasible: Solver said unknown!"
-                                                        Sat   -> return True
+                                                        Unsat  -> return False
+                                                        DSat{} -> error "Data.SBV.interval.isFeasible: Solver returned a delta-satisfiable result!"
+                                                        Unk    -> error "Data.SBV.interval.isFeasible: Solver said unknown!"
+                                                        Sat    -> return True
 
         bisect :: Range a -> IO (Maybe [Range a])
         bisect r@(Range lo hi) = runSMTWith cfg $ do x <- witness r
@@ -187,11 +187,11 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
                                                      query $ do cs <- checkSat
                                                                 case cs of
-                                                                  Unsat -> return Nothing
-                                                                  DSat  -> error "Data.SBV.interval.bisect: Solver returned a delta-satisfiable result!"
-                                                                  Unk   -> error "Data.SBV.interval.bisect: Solver said unknown!"
-                                                                  Sat   -> do midV <- Open <$> getValue x
-                                                                              return $ Just [Range lo midV, Range midV hi]
+                                                                  Unsat  -> return Nothing
+                                                                  DSat{} -> error "Data.SBV.interval.bisect: Solver returned a delta-satisfiable result!"
+                                                                  Unk    -> error "Data.SBV.interval.bisect: Solver said unknown!"
+                                                                  Sat    -> do midV <- Open <$> getValue x
+                                                                               return $ Just [Range lo midV, Range midV hi]
 
         search :: [Range a] -> [Range a] -> IO [Range a]
         search []     sofar = return $ reverse sofar

@@ -130,13 +130,13 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
 
                                    cs <- checkSat
                                    case cs of
-                                     Unk   -> error "Solver said unknown"
-                                     DSat  -> error "Solver returned a delta-sat result"
-                                     Unsat -> return Nothing
-                                     Sat   -> do io $ msg "Failed:"
-                                                 ex <- project st
-                                                 io $ msg $ show ex
-                                                 return $ Just ex
+                                     Unk    -> error "Solver said unknown"
+                                     DSat{} -> error "Solver returned a delta-sat result"
+                                     Unsat  -> return Nothing
+                                     Sat    -> do io $ msg "Failed:"
+                                                  ex <- project st
+                                                  io $ msg $ show ex
+                                                  return $ Just ex
 
         strengthen []             cont = cont
         strengthen ((nm, st):sts) cont = try ("Proving strengthening initation  : " ++ nm)

@@ -220,54 +220,54 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
 
                cs <- checkSat
                case cs of
-                 Unk   -> Indeterminate . show <$> getUnknownReason
+                 Unk    -> Indeterminate . show <$> getUnknownReason
 
-                 Unsat -> do let t = isTotal program
+                 Unsat  -> do let t = isTotal program
 
-                             if t then msg "Total correctness is established."
-                                  else msg "Partial correctness is established."
+                              if t then msg "Total correctness is established."
+                                   else msg "Partial correctness is established."
 
-                             pure $ Proven t
+                              pure $ Proven t
 
-                 DSat  -> pure $ Indeterminate "Unsupported: Solver returned a delta-satisfiable answer."
+                 DSat{} -> pure $ Indeterminate "Unsupported: Solver returned a delta-satisfiable answer."
 
-                 Sat   -> do let checkVC :: (SBool, VC st SInteger) -> Query [VC res Integer]
-                                 checkVC (cond, vc) = do c <- getValue cond
-                                                         if c
-                                                            then return []   -- The VC was OK
-                                                            else do vc' <- case vc of
-                                                                             BadPrecondition     s                 -> BadPrecondition     <$> project s
-                                                                             BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
-                                                                             Unstable          l s1 s2             -> Unstable          l <$> project s1 <*> project s2
-                                                                             AbortReachable    l s1 s2             -> AbortReachable    l <$> project s1 <*> project s2
-                                                                             InvariantPre      l s                 -> InvariantPre      l <$> project s
-                                                                             InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
-                                                                             MeasureBound      l (s, m)            -> do r <- project s
-                                                                                                                         v <- mapM getValue m
-                                                                                                                         return $ MeasureBound l (r, v)
-                                                                             MeasureDecrease   l (s1, i1) (s2, i2) -> do r1 <- project s1
-                                                                                                                         v1 <- mapM getValue i1
-                                                                                                                         r2 <- project s2
-                                                                                                                         v2 <- mapM getValue i2
-                                                                                                                         return $ MeasureDecrease l (r1, v1) (r2, v2)
-                                                                    return [vc']
+                 Sat    -> do let checkVC :: (SBool, VC st SInteger) -> Query [VC res Integer]
+                                  checkVC (cond, vc) = do c <- getValue cond
+                                                          if c
+                                                             then return []   -- The VC was OK
+                                                             else do vc' <- case vc of
+                                                                              BadPrecondition     s                 -> BadPrecondition     <$> project s
+                                                                              BadPostcondition    s1 s2             -> BadPostcondition    <$> project s1 <*> project s2
+                                                                              Unstable          l s1 s2             -> Unstable          l <$> project s1 <*> project s2
+                                                                              AbortReachable    l s1 s2             -> AbortReachable    l <$> project s1 <*> project s2
+                                                                              InvariantPre      l s                 -> InvariantPre      l <$> project s
+                                                                              InvariantMaintain l s1 s2             -> InvariantMaintain l <$> project s1 <*> project s2
+                                                                              MeasureBound      l (s, m)            -> do r <- project s
+                                                                                                                          v <- mapM getValue m
+                                                                                                                          return $ MeasureBound l (r, v)
+                                                                              MeasureDecrease   l (s1, i1) (s2, i2) -> do r1 <- project s1
+                                                                                                                          v1 <- mapM getValue i1
+                                                                                                                          r2 <- project s2
+                                                                                                                          v2 <- mapM getValue i2
+                                                                                                                          return $ MeasureDecrease l (r1, v1) (r2, v2)
+                                                                     return [vc']
 
-                             badVCs <- concat <$> mapM checkVC vcs
+                              badVCs <- concat <$> mapM checkVC vcs
 
-                             when (null badVCs) $ error "Data.SBV.proveWP: Impossible happened. Proof failed, but no failing VC found!"
+                              when (null badVCs) $ error "Data.SBV.proveWP: Impossible happened. Proof failed, but no failing VC found!"
 
-                             let plu w (_:_:_) = w ++ "s"
-                                 plu w _       = w
+                              let plu w (_:_:_) = w ++ "s"
+                                  plu w _       = w
 
-                                 m = "Following proof " ++ plu "obligation" badVCs ++ " failed:"
+                                  m = "Following proof " ++ plu "obligation" badVCs ++ " failed:"
 
-                             msg m
-                             msg $ replicate (length m) '='
+                              msg m
+                              msg $ replicate (length m) '='
 
-                             let disp c = mapM_ msg ["  " ++ l | l <- lines (show c)]
-                             mapM_ disp badVCs
+                              let disp c = mapM_ msg ["  " ++ l | l <- lines (show c)]
+                              mapM_ disp badVCs
 
-                             return $ Failed badVCs
+                              return $ Failed badVCs
 
         msg = io . when wpVerbose . putStrLn
 

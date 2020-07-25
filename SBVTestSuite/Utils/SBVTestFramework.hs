@@ -185,11 +185,11 @@ qc1 nm opC opS = [cf, sm]
 
                                                                         query $ do cs <- checkSat
                                                                                    case cs of
-                                                                                     Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
-                                                                                     Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
-                                                                                     DSat  -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
-                                                                                     Sat   -> do r <- getValue res
-                                                                                                 return (pre, Right r)
+                                                                                     Unk    -> return (pre, Left "Unexpected: Solver responded Unknown!")
+                                                                                     Unsat  -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                     DSat{} -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
+                                                                                     Sat    -> do r <- getValue res
+                                                                                                  return (pre, Right r)
 
                         let getCV vnm (SBV (SVal _ (Left c))) = (vnm, c)
                             getCV vnm (SBV (SVal k _       )) = error $ "qc2.getCV: Impossible happened, non-CV value while extracting: " ++ show (vnm, k)
@@ -243,11 +243,11 @@ qc2 nm opC opS = [cf, sm]
 
                                                                              query $ do cs <- checkSat
                                                                                         case cs of
-                                                                                          Unk   -> return (pre, Left "Unexpected: Solver responded Unknown!")
-                                                                                          Unsat -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
-                                                                                          DSat  -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
-                                                                                          Sat   -> do r <- getValue res
-                                                                                                      return (pre, Right r)
+                                                                                          Unk    -> return (pre, Left "Unexpected: Solver responded Unknown!")
+                                                                                          Unsat  -> return (pre, Left "Unexpected: Solver responded Unsatisfiable!")
+                                                                                          DSat{} -> return (pre, Left "Unexpected: Solver responded Delta-satisfiable!")
+                                                                                          Sat    -> do r <- getValue res
+                                                                                                       return (pre, Right r)
 
                         let getCV vnm (SBV (SVal _ (Left c))) = (vnm, c)
                             getCV vnm (SBV (SVal k _       )) = error $ "qc2.getCV: Impossible happened, non-CV value while extracting: " ++ show (vnm, k)

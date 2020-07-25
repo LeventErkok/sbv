@@ -47,7 +47,7 @@ genFibs = do fibs <- sList "fibs"
 
              query $ do cs <- checkSat
                         case cs of
-                          Unk   -> error "Solver returned unknown!"
-                          DSat  -> error "Unexpected dsat result!"
-                          Unsat -> error "Solver couldn't generate the fibonacci sequence!"
-                          Sat   -> getValue fibs
+                          Unk    -> error "Solver returned unknown!"
+                          DSat{} -> error "Unexpected dsat result!"
+                          Unsat  -> error "Solver couldn't generate the fibonacci sequence!"
+                          Sat    -> getValue fibs

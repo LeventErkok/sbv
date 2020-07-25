@@ -61,13 +61,13 @@ bmcWith cfg mbLimit chatty setup initial trans goal
                                   constrain $ goal curState
                                   cs <- checkSat
                                   case cs of
-                                    DSat  -> error "BMC: Solver returned an unexpected delta-sat result."
-                                    Sat   -> do when chatty $ io $ putStrLn $ "BMC: Solution found at iteration " ++ show i
-                                                ms <- mapM project (curState : sofar)
-                                                return $ Right (i, reverse ms)
-                                    Unk   -> do when chatty $ io $ putStrLn $ "BMC: Backend solver said unknown at iteration " ++ show  i
-                                                return $ Left $ "BMC: Solver said unknown in iteration " ++ show i
-                                    Unsat -> do pop 1
-                                                nextState <- create
-                                                constrain $ sAny (nextState .==) (trans curState)
-                                                go (i+1) nextState (curState : sofar)
+                                    DSat{} -> error "BMC: Solver returned an unexpected delta-sat result."
+                                    Sat    -> do when chatty $ io $ putStrLn $ "BMC: Solution found at iteration " ++ show i
+                                                 ms <- mapM project (curState : sofar)
+                                                 return $ Right (i, reverse ms)
+                                    Unk    -> do when chatty $ io $ putStrLn $ "BMC: Backend solver said unknown at iteration " ++ show  i
+                                                 return $ Left $ "BMC: Solver said unknown in iteration " ++ show i
+                                    Unsat  -> do pop 1
+                                                 nextState <- create
+                                                 constrain $ sAny (nextState .==) (trans curState)
+                                                 go (i+1) nextState (curState : sofar)

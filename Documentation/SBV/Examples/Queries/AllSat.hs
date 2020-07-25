@@ -42,24 +42,24 @@ goodSum = do x <- sInteger "x"
                     cs <- checkSatAssuming [x .== literal (i-1)]
 
                     case cs of
-                      Unk   -> error "Too bad, solver said unknown.." -- Won't happen
-                      DSat  -> error "Unexpected dsat result.."       -- Won't happen
-                      Unsat -> do io $ putStrLn "No other solution!"
-                                  return $ reverse sofar
+                      Unk    -> error "Too bad, solver said unknown.." -- Won't happen
+                      DSat{} -> error "Unexpected dsat result.."       -- Won't happen
+                      Unsat  -> do io $ putStrLn "No other solution!"
+                                   return $ reverse sofar
 
-                      Sat   -> do xv <- getValue x
-                                  yv <- getValue y
+                      Sat    -> do xv <- getValue x
+                                   yv <- getValue y
 
-                                  io $ putStrLn $ "Current solution is: " ++ show (xv, yv)
+                                   io $ putStrLn $ "Current solution is: " ++ show (xv, yv)
 
-                                  -- For next iteration: Put in constraints outlawing the current one:
-                                  -- Note that we do *not* put these separately, as we do want
-                                  -- to allow repetition on one value if the other is different!
-                                  constrain $   x ./= literal xv
-                                            .|| y ./= literal yv
+                                   -- For next iteration: Put in constraints outlawing the current one:
+                                   -- Note that we do *not* put these separately, as we do want
+                                   -- to allow repetition on one value if the other is different!
+                                   constrain $   x ./= literal xv
+                                             .|| y ./= literal yv
 
-                                  -- loop around!
-                                  next (i+1) ((xv, yv) : sofar)
+                                   -- loop around!
+                                   next (i+1) ((xv, yv) : sofar)
 
              -- Go into query mode and execute the loop:
              query $ do io $ putStrLn "Starting the all-sat engine!"

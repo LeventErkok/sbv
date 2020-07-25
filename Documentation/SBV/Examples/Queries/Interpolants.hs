@@ -78,10 +78,10 @@ exampleMathSAT = do
        -- To obtain the interpolant, we run a query
        query $ do cs <- checkSat
                   case cs of
-                    Unsat -> getInterpolantMathSAT ["A"]
-                    DSat  -> error "Unexpected delta-sat result!"
-                    Sat   -> error "Unexpected sat result!"
-                    Unk   -> error "Unexpected unknown result!"
+                    Unsat  -> getInterpolantMathSAT ["A"]
+                    DSat{} -> error "Unexpected delta-sat result!"
+                    Sat    -> error "Unexpected sat result!"
+                    Unk    -> error "Unexpected unknown result!"
 
 -- | Z3 example. Compute the interpolant for formulas @y = 2x@ and @y = 2z+1@.
 --

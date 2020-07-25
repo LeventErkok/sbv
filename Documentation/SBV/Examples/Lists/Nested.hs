@@ -37,8 +37,8 @@ nestedExample = runSMT $ do a :: SList [Integer] <- free "a"
 
                             query $ do cs <- checkSat
                                        case cs of
-                                         Unk   -> error "Solver said unknown!"
-                                         DSat  -> error "Unexpected dsat result.."
-                                         Unsat -> io $ putStrLn "Unsat"
-                                         Sat   -> do v <- getValue a
-                                                     io $ print v
+                                         Unk    -> error "Solver said unknown!"
+                                         DSat{} -> error "Unexpected dsat result.."
+                                         Unsat  -> io $ putStrLn "Unsat"
+                                         Sat    -> do v <- getValue a
+                                                      io $ print v

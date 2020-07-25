@@ -45,9 +45,9 @@ q = do a <- sInt32 "a"
                   cs <- checkSat
 
                   case cs of
-                    Unk   -> getInfo ReasonUnknown >>= error . show
-                    Unsat -> error "Got UNSAT!"
-                    DSat  -> error "Got Delta-satisfiable!"
-                    Sat   -> do -- Query a/b
-                                res <- (,) <$> getValue a <*> getValue b
-                                unless (res == (1, 1)) $ error $ "Didn't get (1,1): " ++ show res
+                    Unk    -> getInfo ReasonUnknown >>= error . show
+                    Unsat  -> error "Got UNSAT!"
+                    DSat{} -> error "Got Delta-satisfiable!"
+                    Sat    -> do -- Query a/b
+                                 res <- (,) <$> getValue a <*> getValue b
+                                 unless (res == (1, 1)) $ error $ "Didn't get (1,1): " ++ show res

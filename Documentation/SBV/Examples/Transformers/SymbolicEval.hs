@@ -161,11 +161,11 @@ mkQuery :: Env -> Q CheckResult
 mkQuery env = do
     satResult <- checkSat
     case satResult of
-        Sat   -> Counterexample <$> getValue (envX env)
-                                <*> getValue (envY env)
-        Unsat -> pure Proved
-        DSat  -> throwError "delta-sat"
-        Unk   -> throwError "unknown"
+        Sat    -> Counterexample <$> getValue (envX env)
+                                 <*> getValue (envY env)
+        Unsat  -> pure Proved
+        DSat{} -> throwError "delta-sat"
+        Unk    -> throwError "unknown"
 
 -- | Checks a 'Property' of a 'Program' (or fails).
 check :: Program a -> Property -> IO (Either String CheckResult)

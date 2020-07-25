@@ -40,10 +40,10 @@ checkWith cfg spec = runSMTWith cfg{verbose=True} $ do
         constrain $ sNot (spec bs)
         query $ do cs <- checkSat
                    case cs of
-                     Unsat -> return ()
-                     DSat  -> error "Expected Unsat, got delta-sat"
-                     Sat   -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                     Unk   -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+                     Unsat  -> return ()
+                     DSat{} -> error "Expected Unsat, got delta-sat"
+                     Sat    -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
+                     Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
 
 propPbAtMost :: [SBool] -> SBool
 propPbAtMost bs = pbAtMost bs 8 .== (sum (map oneIf bs) .<= (8::SWord32))

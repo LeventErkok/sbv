@@ -38,23 +38,23 @@ guess input = do g <- sInteger "guess"
                           -- Issue a check-sat
                           cs <- checkSat
                           case cs of
-                            Unk   -> error "Too bad, solver said Unknown.." -- Won't really happen
-                            DSat  -> error "Unexpected delta-sat result.."  -- Won't really happen
-                            Unsat ->
-                                  -- This cannot happen! If it does, the input was
-                                  -- not properly constrainted. Note that we found this
-                                  -- by getting an Unsat, not by checking the value!
-                                  error $ unlines [ "There's no solution!"
-                                                  , "Guess sequence: " ++ show (reverse sofar)
-                                                  ]
-                            Sat   -> do gv <- getValue g
-                                        case gv `compare` input of
-                                          EQ -> -- Got it, return:
-                                                return (reverse (gv : sofar))
-                                          LT -> -- Solver guess is too small, increase the lower bound:
-                                                loop ((lb+1) `max` (lb + (input - lb) `div` 2)) ub (gv : sofar)
-                                          GT -> -- Solver guess is too big, decrease the upper bound:
-                                                loop lb ((ub-1) `min` (ub - (ub - input) `div` 2)) (gv : sofar)
+                            Unk    -> error "Too bad, solver said Unknown.." -- Won't really happen
+                            DSat{} -> error "Unexpected delta-sat result.."  -- Won't really happen
+                            Unsat  ->
+                                   -- This cannot happen! If it does, the input was
+                                   -- not properly constrainted. Note that we found this
+                                   -- by getting an Unsat, not by checking the value!
+                                   error $ unlines [ "There's no solution!"
+                                                   , "Guess sequence: " ++ show (reverse sofar)
+                                                   ]
+                            Sat    -> do gv <- getValue g
+                                         case gv `compare` input of
+                                           EQ -> -- Got it, return:
+                                                 return (reverse (gv : sofar))
+                                           LT -> -- Solver guess is too small, increase the lower bound:
+                                                 loop ((lb+1) `max` (lb + (input - lb) `div` 2)) ub (gv : sofar)
+                                           GT -> -- Solver guess is too big, decrease the upper bound:
+                                                 loop lb ((ub-1) `min` (ub - (ub - input) `div` 2)) (gv : sofar)
 
                  -- Start the search
                  query $ loop 0 1000 []

@@ -102,17 +102,17 @@ checkMutex b = runSMT $ do
 
                   query $ do cs <- checkSat
                              case cs of
-                               Unk   -> error "Solver said Unknown!"
-                               DSat  -> error "Solver said delta-satisfiable!"
-                               Unsat -> io . putStrLn $ "All is good!"
-                               Sat   -> do io . putStrLn $ "Violation detected!"
-                                           do p1V <- getValue p1
-                                              p2V <- getValue p2
-                                              ts  <- getValue turns
+                               Unk    -> error "Solver said Unknown!"
+                               DSat{} -> error "Solver said delta-satisfiable!"
+                               Unsat  -> io . putStrLn $ "All is good!"
+                               Sat    -> do io . putStrLn $ "Violation detected!"
+                                            do p1V <- getValue p1
+                                               p2V <- getValue p2
+                                               ts  <- getValue turns
 
-                                              io . putStrLn $ "P1: " ++ show p1V
-                                              io . putStrLn $ "P2: " ++ show p2V
-                                              io . putStrLn $ "Ts: " ++ show ts
+                                               io . putStrLn $ "P1: " ++ show p1V
+                                               io . putStrLn $ "P2: " ++ show p2V
+                                               io . putStrLn $ "Ts: " ++ show ts
 
 -- | Our algorithm is correct, but it is not fair. It does not guarantee that a process that
 -- wants to enter its critical-section will always do so eventually. Demonstrate this by
@@ -150,16 +150,16 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
 
                         query $ do cs <- checkSat
                                    case cs of
-                                     Unk   -> error "Solver said Unknown!"
-                                     DSat  -> error "Solver said delta-satisfiable!"
-                                     Unsat -> error "Solver couldn't find a violating trace!"
-                                     Sat   -> do io . putStrLn $ "Fairness is violated at bound: " ++ show b
-                                                 do p1V <- getValue p1
-                                                    p2V <- getValue p2
-                                                    ts  <- getValue turns
+                                     Unk    -> error "Solver said Unknown!"
+                                     DSat{} -> error "Solver said delta-satisfiable!"
+                                     Unsat  -> error "Solver couldn't find a violating trace!"
+                                     Sat    -> do io . putStrLn $ "Fairness is violated at bound: " ++ show b
+                                                  do p1V <- getValue p1
+                                                     p2V <- getValue p2
+                                                     ts  <- getValue turns
 
-                                                    io . putStrLn $ "P1: " ++ show p1V
-                                                    io . putStrLn $ "P2: " ++ show p2V
-                                                    io . putStrLn $ "Ts: " ++ show ts
+                                                     io . putStrLn $ "P1: " ++ show p1V
+                                                     io . putStrLn $ "P2: " ++ show p2V
+                                                     io . putStrLn $ "Ts: " ++ show ts
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

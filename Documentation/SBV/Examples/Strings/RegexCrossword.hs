@@ -55,10 +55,10 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
         -- Now query to extract the solution
         query $ do cs <- checkSat
                    case cs of
-                     Unk   -> error "Solver returned unknown!"
-                     DSat  -> error "Solver returned delta-sat!"
-                     Unsat -> error "There are no solutions to this puzzle!"
-                     Sat   -> mapM getValue rows
+                     Unk    -> error "Solver returned unknown!"
+                     DSat{} -> error "Solver returned delta-sat!"
+                     Unsat  -> error "There are no solutions to this puzzle!"
+                     Sat    -> mapM getValue rows
 
 -- | Solve <http://regexcrossword.com/challenges/intermediate/puzzles/1>
 --

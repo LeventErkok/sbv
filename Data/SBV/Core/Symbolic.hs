@@ -1685,12 +1685,12 @@ instance NFData (Cached a)   where rnf (Cached f) = f `seq` ()
 instance NFData SVal         where rnf (SVal x y) = rnf x `seq` rnf y
 
 instance NFData SMTResult where
-  rnf (Unsatisfiable _ xs   ) = rnf xs
-  rnf (Satisfiable _   xs   ) = rnf xs
-  rnf (DeltaSat    _   xs   ) = rnf xs
-  rnf (SatExtField _   xs   ) = rnf xs
-  rnf (Unknown _       xs   ) = rnf xs
-  rnf (ProofError _    xs mr) = rnf xs `seq` rnf mr
+  rnf (Unsatisfiable _   m   ) = rnf m
+  rnf (Satisfiable   _   m   ) = rnf m
+  rnf (DeltaSat      _ p m   ) = rnf m `seq` rnf p
+  rnf (SatExtField   _   m   ) = rnf m
+  rnf (Unknown       _   m   ) = rnf m
+  rnf (ProofError    _   m mr) = rnf m `seq` rnf mr
 
 instance NFData SMTModel where
   rnf (SMTModel objs bndgs assocs uifuns) = rnf objs `seq` rnf bndgs `seq` rnf assocs `seq` rnf uifuns
@@ -1707,7 +1707,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
        , supportsReals              :: Bool           -- ^ Supports reals?
        , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
-       , supportsDeltaSat           :: Bool           -- ^ Supports delta-satisfiability?
+       , supportsDeltaSat           :: Maybe String   -- ^ Supports delta-satisfiability? (With given precision query)
        , supportsIEEE754            :: Bool           -- ^ Supports floating point numbers?
        , supportsSets               :: Bool           -- ^ Supports set operations?
        , supportsOptimization       :: Bool           -- ^ Supports optimization routines?
@@ -1802,7 +1802,7 @@ data SMTModel = SMTModel {
 -- it. (Custom Show instances and model extractors.)
 data SMTResult = Unsatisfiable SMTConfig (Maybe [String])            -- ^ Unsatisfiable. If unsat-cores are enabled, they will be returned in the second parameter.
                | Satisfiable   SMTConfig SMTModel                    -- ^ Satisfiable with model
-               | DeltaSat      SMTConfig SMTModel                    -- ^ Delta satisfiable with model
+               | DeltaSat      SMTConfig (Maybe String) SMTModel     -- ^ Delta satisfiable with queried string if available and model
                | SatExtField   SMTConfig SMTModel                    -- ^ Prover returned a model, but in an extension field containing Infinite/epsilon
                | Unknown       SMTConfig SMTReasonUnknown            -- ^ Prover returned unknown, with the given reason
                | ProofError    SMTConfig [String] (Maybe SMTResult)  -- ^ Prover errored out, with possibly a bogus result

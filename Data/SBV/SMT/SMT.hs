@@ -81,7 +81,7 @@ import Numeric
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c _  ) = c
 resultConfig (Satisfiable   c _  ) = c
-resultConfig (DeltaSat      c _  ) = c
+resultConfig (DeltaSat      c _ _) = c
 resultConfig (SatExtField   c _  ) = c
 resultConfig (Unknown       c _  ) = c
 resultConfig (ProofError    c _ _) = c
@@ -113,10 +113,12 @@ data OptimizeResult = LexicographicResult SMTResult
                     | ParetoResult        (Bool, [SMTResult])
                     | IndependentResult   [(String, SMTResult)]
 
-getPrecision :: SMTResult -> String
-getPrecision r = case dsatPrecision (resultConfig r) of
-                   Nothing -> "tool default"
-                   Just d  -> showFFloat Nothing d ""
+-- | What's the precision of a delta-sat query?
+getPrecision :: SMTResult -> Maybe String -> String
+getPrecision r queriedPrecision = case (queriedPrecision, dsatPrecision (resultConfig r)) of
+                                   (Just s, _     ) -> s
+                                   (_,      Just d) -> showFFloat Nothing d ""
+                                   _                -> "tool default"
 
 -- User friendly way of printing theorem results
 instance Show ThmResult where
@@ -124,7 +126,7 @@ instance Show ThmResult where
                                      "Unknown"
                                      "Falsifiable"
                                      "Falsifiable. Counter-example:\n"
-                                     ("Delta falsifiable, precision: " ++ getPrecision r ++ ". Counter-example:\n")
+                                     (\mbP -> "Delta falsifiable, precision: " ++ getPrecision r mbP ++ ". Counter-example:\n")
                                      "Falsifiable in an extension field:\n"
                                      r
 
@@ -134,7 +136,7 @@ instance Show SatResult where
                                      "Unknown"
                                      "Satisfiable"
                                      "Satisfiable. Model:\n"
-                                     ("Delta satisfiable, precision: " ++ getPrecision r ++ ". Model:\n")
+                                     (\mbP -> "Delta satisfiable, precision: " ++ getPrecision r mbP ++ ". Model:\n")
                                      "Satisfiable in an extension field. Model:\n"
                                      r
 
@@ -144,7 +146,7 @@ instance Show SafeResult where
                                                      (tag "Unknown")
                                                      (tag "Violated")
                                                      (tag "Violated. Model:\n")
-                                                     (tag "Violated in a delta-satisfiable context, precision: " ++ getPrecision r ++ ". Model:\n")
+                                                     (\mbP -> tag "Violated in a delta-satisfiable context, precision: " ++ getPrecision r mbP ++ ". Model:\n")
                                                      (tag "Violated in an extension field:\n")
                                                      r
         where loc   = maybe "" (++ ": ") mbLoc
@@ -177,7 +179,7 @@ instance Show AllSatResult where
           sh i c = (ok, showSMTResult "Unsatisfiable"
                                       "Unknown"
                                       ("Solution #" ++ show i ++ ":\nSatisfiable") ("Solution #" ++ show i ++ ":\n")
-                                      ("Solution $" ++ show i ++ " with delta-satisfiability, precision: " ++ getPrecision c ++ ":\n")
+                                      (\mbP -> "Solution $" ++ show i ++ " with delta-satisfiability, precision: " ++ getPrecision c mbP ++ ":\n")
                                       ("Solution $" ++ show i ++ " in an extension field:\n")
                                       c)
               where ok = case c of
@@ -207,7 +209,7 @@ instance Show OptimizeResult where
                                       (tag "Unknown.")
                                       (tag "Optimal with no assignments.")
                                       (tag "Optimal model:" ++ "\n")
-                                      (tag "Optimal model with delta-satisfiability, precision: " ++ getPrecision r ++ ":" ++ "\n")
+                                      (\mbP -> tag "Optimal model with delta-satisfiability, precision: " ++ getPrecision r mbP ++ ":" ++ "\n")
                                       (tag "Optimal in an extension field:" ++ "\n")
                                       r
 
@@ -432,8 +434,8 @@ instance Modelable SatResult where
 -- | 'SMTResult' as a generic model provider
 instance Modelable SMTResult where
   getModelAssignment (Unsatisfiable _ _  ) = Left "SBV.getModelAssignment: Unsatisfiable result"
-  getModelAssignment (Satisfiable   _ m  ) = Right (False, parseModelOut m)
-  getModelAssignment (DeltaSat      _ m  ) = Right (False, parseModelOut m)
+  getModelAssignment (Satisfiable   _   m) = Right (False, parseModelOut m)
+  getModelAssignment (DeltaSat      _ _ m) = Right (False, parseModelOut m)
   getModelAssignment (SatExtField   _ _  ) = Left "SBV.getModelAssignment: The model is in an extension field"
   getModelAssignment (Unknown       _ m  ) = Left $ "SBV.getModelAssignment: Solver state is unknown: " ++ show m
   getModelAssignment (ProofError    _ s _) = error $ unlines $ "SBV.getModelAssignment: Failed to produce a model: " : s
@@ -442,26 +444,26 @@ instance Modelable SMTResult where
   modelExists Unknown{}       = False -- don't risk it
   modelExists _               = False
 
-  getModelDictionary Unsatisfiable{}   = M.empty
-  getModelDictionary (Satisfiable _ m) = M.fromList (modelAssocs m)
-  getModelDictionary (DeltaSat    _ m) = M.fromList (modelAssocs m)
-  getModelDictionary SatExtField{}     = M.empty
-  getModelDictionary Unknown{}         = M.empty
-  getModelDictionary ProofError{}      = M.empty
+  getModelDictionary Unsatisfiable{}     = M.empty
+  getModelDictionary (Satisfiable _   m) = M.fromList (modelAssocs m)
+  getModelDictionary (DeltaSat    _ _ m) = M.fromList (modelAssocs m)
+  getModelDictionary SatExtField{}       = M.empty
+  getModelDictionary Unknown{}           = M.empty
+  getModelDictionary ProofError{}        = M.empty
 
-  getModelObjectives Unsatisfiable{}   = M.empty
-  getModelObjectives (Satisfiable _ m) = M.fromList (modelObjectives m)
-  getModelObjectives (DeltaSat    _ m) = M.fromList (modelObjectives m)
-  getModelObjectives (SatExtField _ m) = M.fromList (modelObjectives m)
-  getModelObjectives Unknown{}         = M.empty
-  getModelObjectives ProofError{}      = M.empty
+  getModelObjectives Unsatisfiable{}     = M.empty
+  getModelObjectives (Satisfiable _ m  ) = M.fromList (modelObjectives m)
+  getModelObjectives (DeltaSat    _ _ m) = M.fromList (modelObjectives m)
+  getModelObjectives (SatExtField _ m  ) = M.fromList (modelObjectives m)
+  getModelObjectives Unknown{}           = M.empty
+  getModelObjectives ProofError{}        = M.empty
 
-  getModelUIFuns Unsatisfiable{}   = M.empty
-  getModelUIFuns (Satisfiable _ m) = M.fromList (modelUIFuns m)
-  getModelUIFuns (DeltaSat    _ m) = M.fromList (modelUIFuns m)
-  getModelUIFuns (SatExtField _ m) = M.fromList (modelUIFuns m)
-  getModelUIFuns Unknown{}         = M.empty
-  getModelUIFuns ProofError{}      = M.empty
+  getModelUIFuns Unsatisfiable{}     = M.empty
+  getModelUIFuns (Satisfiable _ m  ) = M.fromList (modelUIFuns m)
+  getModelUIFuns (DeltaSat    _ _ m) = M.fromList (modelUIFuns m)
+  getModelUIFuns (SatExtField _ m  ) = M.fromList (modelUIFuns m)
+  getModelUIFuns Unknown{}           = M.empty
+  getModelUIFuns ProofError{}        = M.empty
 
 -- | Extract a model out, will throw error if parsing is unsuccessful
 parseModelOut :: SatModel a => SMTModel -> a
@@ -483,12 +485,12 @@ displayModels arrange disp AllSatResult{allSatResults = ms} = do
   where display r i = disp i r >> return i
 
 -- | Show an SMTResult; generic version
-showSMTResult :: String -> String -> String -> String -> String -> String -> SMTResult -> String
+showSMTResult :: String -> String -> String -> String -> (Maybe String -> String) -> String -> SMTResult -> String
 showSMTResult unsatMsg unkMsg satMsg satMsgModel dSatMsgModel satExtMsg result = case result of
   Unsatisfiable _ uc                 -> unsatMsg ++ showUnsatCore uc
   Satisfiable _ (SMTModel _ _ [] []) -> satMsg
-  Satisfiable _ m                    -> satMsgModel  ++ showModel cfg m
-  DeltaSat    _ m                    -> dSatMsgModel ++ showModel cfg m
+  Satisfiable _   m                  -> satMsgModel    ++ showModel cfg m
+  DeltaSat    _ p m                  -> dSatMsgModel p ++ showModel cfg m
   SatExtField _ (SMTModel b _ _ _)   -> satExtMsg   ++ showModelDictionary True False cfg b
   Unknown     _ r                    -> unkMsg ++ ".\n" ++ "  Reason: " `alignPlain` show r
   ProofError  _ [] Nothing           -> "*** An error occurred. No additional information available. Try running in verbose mode."

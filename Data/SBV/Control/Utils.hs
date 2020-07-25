@@ -56,7 +56,7 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
-import Data.Maybe (isNothing)
+import Data.Maybe (isNothing, isJust)
 
 import Data.IORef (readIORef, writeIORef)
 
@@ -1014,10 +1014,17 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
 
                        r <- askIgnoring cmd ignoreList
 
+                       -- query for the precision if supported
+                       let getPrecision = do cfg <- getConfig
+                                             case supportsDeltaSat (capabilities (solver cfg)) of
+                                               Nothing -> pure Nothing
+                                               Just o  -> Just <$> ask o
+
                        parse r bad $ \case ECon "sat"       -> return Sat
                                            ECon "unsat"     -> return Unsat
                                            ECon "unknown"   -> return Unk
-                                           ECon "delta-sat" -> return DSat
+                                           ECon "delta-sat" -> do p <- getPrecision
+                                                                  return $ DSat p
                                            _                -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
@@ -1159,172 +1166,172 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                         cs <- checkSat
 
                         case cs of
-                          Unsat -> do endMsg Nothing
-                                      return sofar
+                          Unsat  -> do endMsg Nothing
+                                       return sofar
 
-                          Unk   -> do let m = "Solver returned unknown, terminating query."
-                                      queryDebug ["*** " ++ m]
-                                      endMsg $ Just $ "[" ++ m ++ "]"
-                                      return sofar{ allSatSolverReturnedUnknown = True }
+                          Unk    -> do let m = "Solver returned unknown, terminating query."
+                                       queryDebug ["*** " ++ m]
+                                       endMsg $ Just $ "[" ++ m ++ "]"
+                                       return sofar{ allSatSolverReturnedUnknown = True }
 
-                          DSat  -> do let m = "Solver returned delta-sat, terminating query."
-                                      queryDebug ["*** " ++ m]
-                                      endMsg $ Just $ "[" ++ m ++ "]"
-                                      return sofar{ allSatSolverReturnedDSat = True }
+                          DSat _ -> do let m = "Solver returned delta-sat, terminating query."
+                                       queryDebug ["*** " ++ m]
+                                       endMsg $ Just $ "[" ++ m ++ "]"
+                                       return sofar{ allSatSolverReturnedDSat = True }
 
-                          Sat   -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
-                                                                             return (sv, (n, (sval, cv)))) vars
+                          Sat    -> do assocs <- mapM (\(sval, (sv, n)) -> do cv <- getValueCV Nothing sv
+                                                                              return (sv, (n, (sval, cv)))) vars
 
-                                      let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
-                                                                   return (nm, (t, cvs))
-                                      uiFunVals <- mapM getUIFun allUiFuns
+                                       let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
+                                                                    return (nm, (t, cvs))
+                                       uiFunVals <- mapM getUIFun allUiFuns
 
-                                      -- Add on observables if we're asked to do so:
-                                      obsvs <- if grabObservables
-                                                  then getObservables
-                                                  else do queryDebug ["*** In a quantified context, observables will not be printed."]
-                                                          return []
+                                       -- Add on observables if we're asked to do so:
+                                       obsvs <- if grabObservables
+                                                   then getObservables
+                                                   else do queryDebug ["*** In a quantified context, observables will not be printed."]
+                                                           return []
 
-                                      bindings <- let grab i@(ALL, _)      = return (i, Nothing)
-                                                      grab i@(EX, (sv, _)) = case sv `lookup` assocs of
-                                                                               Just (_, (_, cv)) -> return (i, Just cv)
-                                                                               Nothing           -> do cv <- getValueCV Nothing sv
-                                                                                                       return (i, Just cv)
-                                                  in if validationRequested cfg
-                                                        then Just <$> mapM grab qinps
-                                                        else return Nothing
+                                       bindings <- let grab i@(ALL, _)      = return (i, Nothing)
+                                                       grab i@(EX, (sv, _)) = case sv `lookup` assocs of
+                                                                                Just (_, (_, cv)) -> return (i, Just cv)
+                                                                                Nothing           -> do cv <- getValueCV Nothing sv
+                                                                                                        return (i, Just cv)
+                                                   in if validationRequested cfg
+                                                         then Just <$> mapM grab qinps
+                                                         else return Nothing
 
-                                      let model = SMTModel { modelObjectives = []
-                                                           , modelBindings   = bindings
-                                                           , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (_, (n, (_, cv))) <- assocs]
-                                                           , modelUIFuns     = uiFunVals
-                                                           }
-                                          m = Satisfiable cfg model
+                                       let model = SMTModel { modelObjectives = []
+                                                            , modelBindings   = bindings
+                                                            , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (_, (n, (_, cv))) <- assocs]
+                                                            , modelUIFuns     = uiFunVals
+                                                            }
+                                           m = Satisfiable cfg model
 
-                                          (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map (snd . snd) assocs)
+                                           (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map (snd . snd) assocs)
 
-                                          -- For each interpreted variable, figure out the model equivalence
-                                          -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
-                                          -- and equality don't get along!
-                                          interpretedEqs :: [SVal]
-                                          interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpreteds]
-                                             where mkNotEq k a b
-                                                    | isDouble k || isFloat k = svNot (a `fpNotEq` b)
-                                                    | True                    = a `svNotEqual` b
+                                           -- For each interpreted variable, figure out the model equivalence
+                                           -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
+                                           -- and equality don't get along!
+                                           interpretedEqs :: [SVal]
+                                           interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpreteds]
+                                              where mkNotEq k a b
+                                                     | isDouble k || isFloat k = svNot (a `fpNotEq` b)
+                                                     | True                    = a `svNotEqual` b
 
-                                                   fpNotEq a b = SVal KBool $ Right $ cache r
-                                                       where r st = do sva <- svToSV st a
-                                                                       svb <- svToSV st b
-                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
+                                                    fpNotEq a b = SVal KBool $ Right $ cache r
+                                                        where r st = do sva <- svToSV st a
+                                                                        svb <- svToSV st b
+                                                                        newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
 
-                                          -- For each uninterpreted constant, use equivalence class
-                                          uninterpretedEqs :: [SVal]
-                                          uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
-                                                           . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
-                                                           . map (map fst)                -- throw away values, we only need svals
-                                                           . groupBy ((==) `on` snd)      -- make sure they belong to the same sort and have the same value
-                                                           . sortOn snd                   -- sort them according to their CV (i.e., sort/value)
-                                                           $ uninterpreteds
-                                            where pwDistinct :: [SVal] -> [SVal]
-                                                  pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
+                                           -- For each uninterpreted constant, use equivalence class
+                                           uninterpretedEqs :: [SVal]
+                                           uninterpretedEqs = concatMap pwDistinct         -- Assert that they are pairwise distinct
+                                                            . filter (\l -> length l > 1)  -- Only need this class if it has at least two members
+                                                            . map (map fst)                -- throw away values, we only need svals
+                                                            . groupBy ((==) `on` snd)      -- make sure they belong to the same sort and have the same value
+                                                            . sortOn snd                   -- sort them according to their CV (i.e., sort/value)
+                                                            $ uninterpreteds
+                                             where pwDistinct :: [SVal] -> [SVal]
+                                                   pwDistinct ss = [x `svNotEqual` y | (x:ys) <- tails ss, y <- ys]
 
-                                          -- For each uninterpreted function, create a disqualifying equation
-                                          -- We do this rather brute-force, since we need to create a new function
-                                          -- and do an existential assertion.
-                                          uninterpretedReject :: Maybe [String]
-                                          uninterpretedFuns    :: [String]
-                                          (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
-                                              where uiReject = case rejects of
-                                                                 []  -> Nothing
-                                                                 xs  -> Just xs
+                                           -- For each uninterpreted function, create a disqualifying equation
+                                           -- We do this rather brute-force, since we need to create a new function
+                                           -- and do an existential assertion.
+                                           uninterpretedReject :: Maybe [String]
+                                           uninterpretedFuns    :: [String]
+                                           (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
+                                               where uiReject = case rejects of
+                                                                  []  -> Nothing
+                                                                  xs  -> Just xs
 
-                                                    (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
+                                                     (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
-                                                    -- Otherwise, we have things to refute, go for it:
-                                                    mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
-                                                      where nm' = nm ++ "_model" ++ show cnt
+                                                     -- Otherwise, we have things to refute, go for it:
+                                                     mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
+                                                       where nm' = nm ++ "_model" ++ show cnt
 
-                                                            reject = nm' ++ "_reject"
+                                                             reject = nm' ++ "_reject"
 
-                                                            -- rounding mode doesn't matter here, just pick one
-                                                            scv = cvToSMTLib RoundNearestTiesToEven
+                                                             -- rounding mode doesn't matter here, just pick one
+                                                             scv = cvToSMTLib RoundNearestTiesToEven
 
-                                                            (ats, rt) = (init ts, last ts)
+                                                             (ats, rt) = (init ts, last ts)
 
-                                                            args = unwords ["(x!" ++ show i ++ " " ++ smtType t ++ ")" | (t, i) <- zip ats [(0::Int)..]]
-                                                            res  = smtType rt
+                                                             args = unwords ["(x!" ++ show i ++ " " ++ smtType t ++ ")" | (t, i) <- zip ats [(0::Int)..]]
+                                                             res  = smtType rt
 
-                                                            params = ["x!" ++ show i | (_, i) <- zip ats [(0::Int)..]]
+                                                             params = ["x!" ++ show i | (_, i) <- zip ats [(0::Int)..]]
 
-                                                            uparams = unwords params
+                                                             uparams = unwords params
 
-                                                            chain (vals, fallThru) = walk vals
-                                                              where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
-                                                                    walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r ++ "") :  walk rest
+                                                             chain (vals, fallThru) = walk vals
+                                                               where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
+                                                                     walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r ++ "") :  walk rest
 
-                                                                    cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
-                                                                    eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
+                                                                     cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
+                                                                     eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"
 
-                                                            def =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
-                                                                  :  chain vs
-                                                                  ++ [")"]
+                                                             def =    ("(define-fun " ++ nm' ++ " (" ++ args ++ ") " ++ res)
+                                                                   :  chain vs
+                                                                   ++ [")"]
 
-                                                            pad = replicate (1 + length nm' - length nm) ' '
+                                                             pad = replicate (1 + length nm' - length nm) ' '
 
-                                                            dif = [ "(define-fun " ++  reject ++ " () Bool"
-                                                                  , "   (exists (" ++ args ++ ")"
-                                                                  , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
-                                                                  , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
-                                                                  ]
+                                                             dif = [ "(define-fun " ++  reject ++ " () Bool"
+                                                                   , "   (exists (" ++ args ++ ")"
+                                                                   , "           (distinct (" ++ nm  ++ pad ++ uparams ++ ")"
+                                                                   , "                     (" ++ nm' ++ " " ++ uparams ++ "))))"
+                                                                   ]
 
-                                          eqs = interpretedEqs ++ uninterpretedEqs
+                                           eqs = interpretedEqs ++ uninterpretedEqs
 
-                                          disallow = case eqs of
-                                                       [] -> Nothing
-                                                       _  -> Just $ SBV $ foldr1 svOr eqs
+                                           disallow = case eqs of
+                                                        [] -> Nothing
+                                                        _  -> Just $ SBV $ foldr1 svOr eqs
 
-                                      when (allSatPrintAlong cfg) $ do
-                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
-                                        io $ putStrLn $ showModel cfg model
+                                       when (allSatPrintAlong cfg) $ do
+                                         io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
+                                         io $ putStrLn $ showModel cfg model
 
-                                      let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
+                                       let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
 
-                                          -- This is clunky, but let's not generate a rejector unless we really need it
-                                          needMoreIterations
-                                                | Just maxModels <- allSatMaxModelCount cfg, (cnt+1) > maxModels = False
-                                                | True                                                           = True
+                                           -- This is clunky, but let's not generate a rejector unless we really need it
+                                           needMoreIterations
+                                                 | Just maxModels <- allSatMaxModelCount cfg, (cnt+1) > maxModels = False
+                                                 | True                                                           = True
 
-                                      -- Send function disequalities, if any:
-                                      if not needMoreIterations
-                                         then go (cnt+1) resultsSoFar
-                                         else do let uiFunRejector   = "uiFunRejector_model_" ++ show cnt
-                                                     header          = "define-fun " ++ uiFunRejector ++ " () Bool "
+                                       -- Send function disequalities, if any:
+                                       if not needMoreIterations
+                                          then go (cnt+1) resultsSoFar
+                                          else do let uiFunRejector   = "uiFunRejector_model_" ++ show cnt
+                                                      header          = "define-fun " ++ uiFunRejector ++ " () Bool "
 
-                                                     defineRejector []     = return ()
-                                                     defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
-                                                     defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
-                                                                                                            :  ("        (or " ++ x)
-                                                                                                            :  ["            " ++ e | e <- xs]
-                                                                                                            ++ ["        ))"]
-                                                 rejectFuncs <- case uninterpretedReject of
-                                                                  Nothing -> return Nothing
-                                                                  Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
-                                                                                defineRejector fs
-                                                                                return $ Just uiFunRejector
+                                                      defineRejector []     = return ()
+                                                      defineRejector [x]    = send True $ "(" ++ header ++ x ++ ")"
+                                                      defineRejector (x:xs) = mapM_ (send True) $ mergeSExpr $  ("(" ++ header)
+                                                                                                             :  ("        (or " ++ x)
+                                                                                                             :  ["            " ++ e | e <- xs]
+                                                                                                             ++ ["        ))"]
+                                                  rejectFuncs <- case uninterpretedReject of
+                                                                   Nothing -> return Nothing
+                                                                   Just fs -> do mapM_ (send True) $ mergeSExpr uninterpretedFuns
+                                                                                 defineRejector fs
+                                                                                 return $ Just uiFunRejector
 
-                                                 -- send the disallow clause and the uninterpreted rejector:
-                                                 case (disallow, rejectFuncs) of
-                                                    (Nothing, Nothing) -> pure resultsSoFar
-                                                    (Just d,  Nothing) -> do constrain d
-                                                                             go (cnt+1) resultsSoFar
-                                                    (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"
-                                                                             go (cnt+1) resultsSoFar
-                                                    (Just d,  Just f)  -> -- This is where it gets ugly. We have an SBV and a string and we need to "or" them.
-                                                                          -- But we need a way to force 'd' to be produced. So, go ahead and force it:
-                                                                          do constrain $ d .=> d  -- NB: Redundant, but it makes sure the corresponding constraint gets shown
-                                                                             svd <- io $ svToSV topState (unSBV d)
-                                                                             send True $ "(assert (or " ++ f ++ " " ++ show svd ++ "))"
-                                                                             go (cnt+1) resultsSoFar
+                                                  -- send the disallow clause and the uninterpreted rejector:
+                                                  case (disallow, rejectFuncs) of
+                                                     (Nothing, Nothing) -> pure resultsSoFar
+                                                     (Just d,  Nothing) -> do constrain d
+                                                                              go (cnt+1) resultsSoFar
+                                                     (Nothing, Just f)  -> do send True $ "(assert " ++ f ++ ")"
+                                                                              go (cnt+1) resultsSoFar
+                                                     (Just d,  Just f)  -> -- This is where it gets ugly. We have an SBV and a string and we need to "or" them.
+                                                                           -- But we need a way to force 'd' to be produced. So, go ahead and force it:
+                                                                           do constrain $ d .=> d  -- NB: Redundant, but it makes sure the corresponding constraint gets shown
+                                                                              svd <- io $ svToSV topState (unSBV d)
+                                                                              send True $ "(assert (or " ++ f ++ " " ++ show svd ++ "))"
+                                                                              go (cnt+1) resultsSoFar
 
 -- | Generalization of 'Data.SBV.Control.getUnsatAssumptions'
 getUnsatAssumptions :: (MonadIO m, MonadQuery m) => [String] -> [(String, a)] -> m [a]
@@ -1510,8 +1517,8 @@ executeQuery queryContext (QueryT userQuery) = do
                       backend = engine slvr
 
                   -- make sure if we have dsat precision, then solver supports it
-                  let dsatOK = isNothing (dsatPrecision cfg)
-                             || supportsDeltaSat (capabilities slvr)
+                  let dsatOK =  isNothing (dsatPrecision cfg)
+                             || isJust    (supportsDeltaSat (capabilities slvr))
 
                   unless dsatOK $ error $ unlines
                                      [ ""
