@@ -16,6 +16,7 @@
 module Data.SBV.Core.AlgReals (
              AlgReal(..)
            , AlgRealPoly(..)
+           , Border(..)
            , mkPolyReal
            , algRealToSMTLib2
            , algRealToHaskell
@@ -37,11 +38,21 @@ import Test.QuickCheck (Arbitrary(..))
 
 import Numeric (readSigned, readFloat)
 
+-- | Is the endpoint included in the interval?
+data Border a = Open   a -- ^ open: i.e., doesn't include the point
+              | Closed a -- ^ closed: i.e., includes the point
+
+-- | Extract the value out of a border
+borderVal :: Border a -> a
+borderVal (Open   a) = a
+borderVal (Closed a) = a
+
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
 data AlgReal = AlgRational Bool Rational                          -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
              | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String) -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
+             | AlgInterval (Border AlgReal) (Border AlgReal)      -- ^ interval
 
 -- | Check wheter a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
@@ -58,19 +69,15 @@ newtype AlgRealPoly = AlgRealPoly [(Integer, Integer)]
 mkPolyReal :: Either (Bool, String) (Integer, [(Integer, Integer)]) -> AlgReal
 mkPolyReal (Left (exact, str))
  = case (str, break (== '.') str) of
-      ("", (_, _))    -> AlgRational exact 0
-      (_, (x, '.':y)) -> if all isDigit y
-                            then AlgRational exact (read (x++y) % (10 ^ length y))
-                            else -- see if we can read it as a double:
-                                 case reads str :: [(Double, String)] of
-                                   [(v, "")] -> AlgRational exact (toRational v)
-                                   _         -> error $ unlines [ "*** Data.SBV: Unable to read a number from:"
+      ("", _)                                -> AlgRational exact 0
+      (_, (x, '.':y)) | all isDigit (x ++ y) -> AlgRational exact (read (x++y) % (10 ^ length y))
+      (_, (x, ""))    | all isDigit x        -> AlgRational exact (read x % 1)
+      _                                      -> error $ unlines [ "*** Data.SBV.mkPolyReal: Unable to read a number from:"
                                                                 , "***"
                                                                 , "*** " ++ str
                                                                 , "***"
-                                                                , "*** Please report this as an SBV bug."
+                                                                , "*** Please report this as a bug."
                                                                 ]
-      (_, (x, _))     -> AlgRational exact (read x % 1)
 mkPolyReal (Right (k, coeffs))
  = AlgPolyRoot (k, AlgRealPoly (normalize coeffs)) Nothing
  where normalize :: [(Integer, Integer)] -> [(Integer, Integer)]
@@ -105,6 +112,11 @@ instance Show AlgReal where
   show (AlgPolyRoot (i, p) mbApprox) = "root(" ++ show i ++ ", " ++ show p ++ ")" ++ maybe "" app mbApprox
      where app v | last v == '?' = " = " ++ init v ++ "..."
                  | True          = " = " ++ v
+  show (AlgInterval a b)         = case (a, b) of
+                                     (Open   l, Open h)   -> "(" ++ show l ++ ", " ++ show h ++ ")"
+                                     (Open   l, Closed h) -> "(" ++ show l ++ ", " ++ show h ++ "]"
+                                     (Closed l, Open h)   -> "[" ++ show l ++ ", " ++ show h ++ ")"
+                                     (Closed l, Closed h) -> "[" ++ show l ++ ", " ++ show h ++ "]"
 
 -- lift unary op through an exact rational, otherwise bail
 lift1 :: String -> (Rational -> Rational) -> AlgReal -> AlgReal
@@ -138,8 +150,25 @@ _               `algRealStructuralEqual` _               = False
 algRealStructuralCompare :: AlgReal -> AlgReal -> Ordering
 AlgRational a b `algRealStructuralCompare` AlgRational c d = (a, b) `compare` (c, d)
 AlgRational _ _ `algRealStructuralCompare` AlgPolyRoot _ _ = LT
+AlgRational _ _ `algRealStructuralCompare` AlgInterval _ _ = LT
 AlgPolyRoot _ _ `algRealStructuralCompare` AlgRational _ _ = GT
 AlgPolyRoot a b `algRealStructuralCompare` AlgPolyRoot c d = (a, b) `compare` (c, d)
+AlgPolyRoot _ _ `algRealStructuralCompare` AlgInterval _ _ = LT
+AlgInterval _ _ `algRealStructuralCompare` AlgRational _ _ = GT
+AlgInterval _ _ `algRealStructuralCompare` AlgPolyRoot _ _ = GT
+AlgInterval a b `algRealStructuralCompare` AlgInterval c d =
+        let classify :: Border a -> Border a -> Int
+            classify Open{}   Open{}   = 0
+            classify Open{}   Closed{} = 1
+            classify Closed{} Open{}   = 2
+            classify Closed{} Closed{} = 3
+        in case classify a b `compare` classify c d of
+             LT -> LT
+             GT -> GT
+             EQ -> case (borderVal a `algRealStructuralCompare` borderVal c, borderVal b `algRealStructuralCompare` borderVal d) of
+                     (LT, _) -> LT
+                     (GT, _) -> GT
+                     (EQ, r) -> r
 
 instance Num AlgReal where
   (+)         = lift2 "+"      (+)
@@ -197,6 +226,8 @@ algRealToSMTLib2 (AlgPolyRoot (i, AlgRealPoly xs) _) = "(root-obj (+ " ++ unword
         term (k, p) = ["(* " ++ coeff k ++ " (^ x " ++ show p ++ "))"]
         coeff n | n < 0 = "(- " ++ show (abs n) ++ ")"
                 | True  = show n
+algRealToSMTLib2 r@AlgInterval{}
+   = error $ "SBV: Unexpected inexact rational to be converted to SMTLib2: " ++ show r
 
 -- | Render an 'AlgReal' as a Haskell value. Only supports rationals, since there is no corresponding
 -- standard Haskell type that can represent root-of-polynomial variety.
@@ -216,20 +247,21 @@ algRealToRational :: AlgReal -> Either Rational Rational
 algRealToRational a = case a of
                         AlgRational True  r        -> Left r
                         AlgRational False r        -> Left r
-                        AlgPolyRoot _     Nothing  -> bad
+                        AlgPolyRoot _     Nothing  -> bad "represents an irrational number that cannot be approximated"
                         AlgPolyRoot _     (Just s) -> let trimmed = case reverse s of
                                                                      '.':'.':'.':rest -> reverse rest
                                                                      _                -> s
                                                       in case readSigned readFloat trimmed of
                                                            [(v, "")] -> Right v
-                                                           _         -> bad
-   where bad = error $ unlines [ ""
-                               , "SBV.algRealToRational: Unsupported argument:"
-                               , ""
-                               , "   " ++ show a
-                               , ""
-                               , "represents an irrational number that cannot be approximated."
-                               ]
+                                                           _         -> bad "represents a value that cannot be converted to a rational"
+                        AlgInterval{}              -> bad "represents an interval that cannot be converted to a rational"
+   where bad w = error $ unlines [ ""
+                                 , "SBV.algRealToRational: Unsupported argument:"
+                                 , ""
+                                 , "   " ++ show a
+                                 , ""
+                                 , w
+                                 ]
 
 -- Try to show a rational precisely if we can, with finite number of
 -- digits. Otherwise, show it as a rational value.
