@@ -241,13 +241,22 @@ cvToBool x = cvVal x /= CInteger 0
 normCV :: CV -> CV
 normCV c@(CV (KBounded signed sz) (CInteger v)) = c { cvVal = CInteger norm }
  where norm | sz == 0 = 0
+
             | signed  = let rg = 2 ^ (sz - 1)
                         in case divMod v rg of
                                   (a, b) | even a -> b
                                   (_, b)          -> b - rg
-            | True    = v `mod` (2 ^ sz)
+
+            | True    = {- We really want to do:
+
+                                v `mod` (2 ^ sz)
+
+                           Below is equivalent, and hopefully faster!
+                        -}
+                        v .&. (((1 :: Integer) `shiftL` sz) - 1)
 normCV c@(CV KBool (CInteger v)) = c { cvVal = CInteger (v .&. 1) }
 normCV c                         = c
+{-# INLINE normCV #-}
 
 -- | Constant False as a 'CV'. We represent it using the integer value 0.
 falseCV :: CV
