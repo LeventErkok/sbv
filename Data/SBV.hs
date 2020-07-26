@@ -158,7 +158,7 @@ module Data.SBV (
   , SFloat, SDouble
   -- ** Algebraic reals
   -- $algReals
-  , SReal, AlgReal, sRealToSInteger, algRealToRational
+  , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), RationalCV(..)
   -- ** Characters, Strings and Regular Expressions
   -- $strings
   , SChar, SString
