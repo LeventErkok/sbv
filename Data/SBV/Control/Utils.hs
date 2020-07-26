@@ -80,7 +80,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               )
 
-import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), Border(..))
+import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
 
@@ -927,8 +927,8 @@ recoverKindedValue k e = case k of
                                                                         vhi <- getBorder hi
                                                                         pure $ CV KReal (CAlgReal (AlgInterval vlo vhi))
                                    _                              -> Nothing
-          where getBorder (EApp [ECon "open",   v]) = recoverKindedValue KReal v >>= border Open
-                getBorder (EApp [ECon "closed", v]) = recoverKindedValue KReal v >>= border Closed
+          where getBorder (EApp [ECon "open",   v]) = recoverKindedValue KReal v >>= border OpenPoint
+                getBorder (EApp [ECon "closed", v]) = recoverKindedValue KReal v >>= border ClosedPoint
                 getBorder _                         = Nothing
 
                 border b (CV KReal (CAlgReal v)) = pure $ b v
