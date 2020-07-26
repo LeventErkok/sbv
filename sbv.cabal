@@ -319,6 +319,7 @@ Test-Suite SBVTest
                   , TestSuite.Puzzles.U2Bridge
                   , TestSuite.Queries.BasicQuery
                   , TestSuite.Queries.BadOption
+                  , TestSuite.Queries.DSat
                   , TestSuite.Queries.Enums
                   , TestSuite.Queries.FreshVars
                   , TestSuite.Queries.Int_ABC

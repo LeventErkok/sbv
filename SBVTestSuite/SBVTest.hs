@@ -99,6 +99,7 @@ import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
 import qualified TestSuite.Queries.BasicQuery
 import qualified TestSuite.Queries.BadOption
+import qualified TestSuite.Queries.DSat
 import qualified TestSuite.Queries.Enums
 import qualified TestSuite.Queries.FreshVars
 import qualified TestSuite.Queries.Int_ABC
@@ -160,6 +161,7 @@ localOnlyTests = testGroup "SBVLocalOnlyTests" [
                    , TestSuite.Basics.BarrelRotate.tests      -- Requires CVC4
                    , TestSuite.Basics.ModelValidate.testsABC  -- Requires ABC
                    , TestSuite.Queries.BasicQuery.tests
+                   , TestSuite.Queries.DSat.tests             -- Requires dReal
                    , TestSuite.Queries.BadOption.tests
                    , TestSuite.Queries.Int_ABC.tests
                    , TestSuite.Queries.Int_Boolector.tests
