@@ -9,6 +9,7 @@
 -- Algrebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -16,7 +17,8 @@
 module Data.SBV.Core.AlgReals (
              AlgReal(..)
            , AlgRealPoly(..)
-           , Border(..)
+           , RationalCV(..)
+           , RealPoint(..)
            , mkPolyReal
            , algRealToSMTLib2
            , algRealToHaskell
@@ -39,20 +41,16 @@ import Test.QuickCheck (Arbitrary(..))
 import Numeric (readSigned, readFloat)
 
 -- | Is the endpoint included in the interval?
-data Border a = Open   a -- ^ open: i.e., doesn't include the point
-              | Closed a -- ^ closed: i.e., includes the point
-
--- | Extract the value out of a border
-borderVal :: Border a -> a
-borderVal (Open   a) = a
-borderVal (Closed a) = a
+data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
+                 | ClosedPoint a -- ^ closed: i.e., includes the point
+                deriving (Functor, Show)
 
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
-data AlgReal = AlgRational Bool Rational                          -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
-             | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String) -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
-             | AlgInterval (Border AlgReal) (Border AlgReal)      -- ^ interval
+data AlgReal = AlgRational Bool Rational                           -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
+             | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String)  -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
+             | AlgInterval (RealPoint AlgReal) (RealPoint AlgReal) -- ^ interval, with low and high bounds
 
 -- | Check wheter a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
@@ -113,10 +111,10 @@ instance Show AlgReal where
      where app v | last v == '?' = " = " ++ init v ++ "..."
                  | True          = " = " ++ v
   show (AlgInterval a b)         = case (a, b) of
-                                     (Open   l, Open h)   -> "(" ++ show l ++ ", " ++ show h ++ ")"
-                                     (Open   l, Closed h) -> "(" ++ show l ++ ", " ++ show h ++ "]"
-                                     (Closed l, Open h)   -> "[" ++ show l ++ ", " ++ show h ++ ")"
-                                     (Closed l, Closed h) -> "[" ++ show l ++ ", " ++ show h ++ "]"
+                                     (OpenPoint   l, OpenPoint   h) -> "(" ++ show l ++ ", " ++ show h ++ ")"
+                                     (OpenPoint   l, ClosedPoint h) -> "(" ++ show l ++ ", " ++ show h ++ "]"
+                                     (ClosedPoint l, OpenPoint   h) -> "[" ++ show l ++ ", " ++ show h ++ ")"
+                                     (ClosedPoint l, ClosedPoint h) -> "[" ++ show l ++ ", " ++ show h ++ "]"
 
 -- lift unary op through an exact rational, otherwise bail
 lift1 :: String -> (Rational -> Rational) -> AlgReal -> AlgReal
@@ -157,15 +155,19 @@ AlgPolyRoot _ _ `algRealStructuralCompare` AlgInterval _ _ = LT
 AlgInterval _ _ `algRealStructuralCompare` AlgRational _ _ = GT
 AlgInterval _ _ `algRealStructuralCompare` AlgPolyRoot _ _ = GT
 AlgInterval a b `algRealStructuralCompare` AlgInterval c d =
-        let classify :: Border a -> Border a -> Int
-            classify Open{}   Open{}   = 0
-            classify Open{}   Closed{} = 1
-            classify Closed{} Open{}   = 2
-            classify Closed{} Closed{} = 3
+        let classify :: RealPoint a -> RealPoint a -> Int
+            classify OpenPoint{}   OpenPoint{}   = 0
+            classify OpenPoint{}   ClosedPoint{} = 1
+            classify ClosedPoint{} OpenPoint{}   = 2
+            classify ClosedPoint{} ClosedPoint{} = 3
+
+            pointVal :: RealPoint AlgReal -> AlgReal
+            pointVal (OpenPoint   v) = v
+            pointVal (ClosedPoint v) = v
         in case classify a b `compare` classify c d of
              LT -> LT
              GT -> GT
-             EQ -> case (borderVal a `algRealStructuralCompare` borderVal c, borderVal b `algRealStructuralCompare` borderVal d) of
+             EQ -> case (pointVal a `algRealStructuralCompare` pointVal c, pointVal b `algRealStructuralCompare` pointVal d) of
                      (LT, _) -> LT
                      (GT, _) -> GT
                      (EQ, r) -> r
@@ -241,20 +243,27 @@ algRealToHaskell r                    = error $ unlines [ ""
                                                         , "represents an irrational number, and cannot be converted to a Haskell value."
                                                         ]
 
+-- | Conversion from internal rationals to Haskell values
+data RationalCV = RatIrreducible AlgReal                                       -- ^ Root of a polynomial, cannot be reduced
+                | RatExact       Rational                                      -- ^ An exact rational
+                | RatApprox      Rational                                      -- ^ An approximated value
+                | RatInterval    (RealPoint RationalCV) (RealPoint RationalCV) -- ^ Interval. If bool is 'True' then closed, otherwise open.
+                deriving Show
+
 -- | Convert an 'AlgReal' to a 'Rational'. If the 'AlgReal' is exact, then you get a 'Left' value. Otherwise,
 -- you get a 'Right' value which is simply an approximation.
-algRealToRational :: AlgReal -> Either Rational Rational
+algRealToRational :: AlgReal -> RationalCV
 algRealToRational a = case a of
-                        AlgRational True  r        -> Left r
-                        AlgRational False r        -> Left r
-                        AlgPolyRoot _     Nothing  -> bad "represents an irrational number that cannot be approximated"
+                        AlgRational True  r        -> RatExact r
+                        AlgRational False r        -> RatExact r
+                        AlgPolyRoot _     Nothing  -> RatIrreducible a
                         AlgPolyRoot _     (Just s) -> let trimmed = case reverse s of
                                                                      '.':'.':'.':rest -> reverse rest
                                                                      _                -> s
                                                       in case readSigned readFloat trimmed of
-                                                           [(v, "")] -> Right v
+                                                           [(v, "")] -> RatApprox v
                                                            _         -> bad "represents a value that cannot be converted to a rational"
-                        AlgInterval{}              -> bad "represents an interval that cannot be converted to a rational"
+                        AlgInterval lo hi          -> RatInterval (algRealToRational <$> lo) (algRealToRational <$> hi)
    where bad w = error $ unlines [ ""
                                  , "SBV.algRealToRational: Unsupported argument:"
                                  , ""
