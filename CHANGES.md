@@ -18,6 +18,9 @@
   * Fix a soundness bug in SFunArray caching. Thanks to to Gergő Érdi for reporting. See
     https://github.com/LeventErkok/sbv/issues/541 for details.
 
+  * Add support for the dReal solver, and introduce the notion of delta-satisfiability,
+    where you can now check properties to be satisfiable against delta-perturbations.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query problems. Similar to
