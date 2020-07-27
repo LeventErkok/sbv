@@ -10,10 +10,11 @@ report any issues you might see with newer releases.
       * Version 3.2.0
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version as downloaded from the above site on May 19, 2020
+      * Version installed via `brew tap cvc4/cvc4, brew install cvc4/cvc4/cvc4 --HEAD --with-java-bindings`
+        on Jul 27, 2020.
   * dReal:
       * https://dreal.github.io/
-      * Version installed via "brew rm dreal; brew install dreal --HEAD"
+      * Version installed via `brew rm dreal; brew install dreal --HEAD`
         on Jul 25, 2020.
   * MathSAT:
       * http://mathsat.fbk.eu/
@@ -23,7 +24,7 @@ report any issues you might see with newer releases.
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Jul 25th, 2020
+      * Version as downloaded from the above site on Jul 27th, 2020
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
         always use their latest release.
