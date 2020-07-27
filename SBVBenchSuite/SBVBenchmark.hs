@@ -26,7 +26,7 @@ import qualified BenchSuite.Puzzles.Birthday
 import qualified BenchSuite.Puzzles.Coins
 -- import qualified BenchSuite.Puzzles.Counts -- see comment below
 import qualified BenchSuite.Puzzles.DogCatMouse
-import qualified BenchSuite.Puzzles.Euler185
+-- import qualified BenchSuite.Puzzles.Euler185
 import qualified BenchSuite.Puzzles.Garden
 import qualified BenchSuite.Puzzles.LadyAndTigers
 import qualified BenchSuite.Puzzles.MagicSquare
@@ -41,7 +41,7 @@ import qualified BenchSuite.BitPrecise.BitTricks
 -- import qualified BenchSuite.BitPrecise.Legato
 -- import qualified BenchSuite.BitPrecise.MergeSort
 import qualified BenchSuite.BitPrecise.MultMask
-import qualified BenchSuite.BitPrecise.PrefixSum
+-- import qualified BenchSuite.BitPrecise.PrefixSum
 
 -- Queries
 import qualified BenchSuite.Queries.AllSat
@@ -101,7 +101,7 @@ import qualified BenchSuite.Crypto.SHA
 -- Miscellaneous
 import qualified BenchSuite.Misc.Auxiliary
 import qualified BenchSuite.Misc.Enumerate
-import qualified BenchSuite.Misc.Floating
+-- import qualified BenchSuite.Misc.Floating
 import qualified BenchSuite.Misc.ModelExtract
 import qualified BenchSuite.Misc.Newtypes
 import qualified BenchSuite.Misc.NoDiv0
@@ -141,14 +141,19 @@ for the file, e.g., '2020-06-27-15:54:05.447753608-UTC.csv', run the benchmarks
 and output the statistics to that file in 'sbv/BenchSuite/BenchFiles\/'. The
 workflow for fine grained performance analysis is to run a benchmark, make your
 changes, then rerun the benchmark. We analyze these results using the
-<http://hackage.haskell.org/package/bench-show-0.3.1 bench-show> package, which
-expects subsequent runs in the same file, thus you'll need to change the file
-name to something other then a UTC time stamp. To only run one or a few
-benchmarks we use the '--match' command from the
-<https://hackage.haskell.org/package/gauge-0.2.5 gauge> library. For example to
-run only NQueens you would do the following: `cabal build SBVBench; ./SBVBench
---match=pattern -- 'NQueens'`. Note that comparisons with benchmarks run on
-different machines will be spurious so use your best judgment.
+<http://hackage.haskell.org/package/bench-show-0.3.1 bench-show> package, we
+provide a few wrappers to ease the details in Utils.SBVBenchFramework.hs. So to
+generate a report call compareBenchmarks <file-before-change>
+<file-after-change> for example: > compareBenchmarks
+"SBVBenchSuite/BenchResults/2020-07-27-17:04:04.261168259-UTC.csv"
+"SBVBenchSuite/BenchResults/2020-07-27-17:23:53.048061816-UTC.csv". If you have
+the results already aggregated to a single file then use the ticked versions,
+e.g., compareBenchmarks'. To only run one or a few benchmarks we use the
+'--match' command from the <https://hackage.haskell.org/package/gauge-0.2.5
+gauge> library. For example to run only NQueens you would do the following:
+`cabal build SBVBench; ./SBVBench --match=pattern -- 'NQueens'`. Note that
+comparisons with benchmarks run on different machines will be spurious so use
+your best judgment.
 -}
 main :: IO ()
 main = do
@@ -192,7 +197,8 @@ puzzleBenchmarks = [ BenchSuite.Puzzles.Coins.benchmarks
  --                , BenchSuite.Puzzles.Counts.benchmarks
                    , BenchSuite.Puzzles.Birthday.benchmarks
                    , BenchSuite.Puzzles.DogCatMouse.benchmarks
-                   , BenchSuite.Puzzles.Euler185.benchmarks
+                   -- expensive
+                   -- , BenchSuite.Puzzles.Euler185.benchmarks
                    , BenchSuite.Puzzles.Garden.benchmarks
                    , BenchSuite.Puzzles.LadyAndTigers.benchmarks
                    , BenchSuite.Puzzles.SendMoreMoney.benchmarks
@@ -208,7 +214,7 @@ puzzleBenchmarks = [ BenchSuite.Puzzles.Coins.benchmarks
 -- native on the same program. To construct a benchmark for only sbv one would
 -- call `runBenchmark`
 puzzles :: Benchmark
-puzzles = bgroup "Puzzles" $ runOverheadBenchmark <$> puzzleBenchmarks
+puzzles = bgroup "Puzzles" $ runBenchmark <$> puzzleBenchmarks
 
 
 --------------------------- BitPrecise ------------------------------------------
@@ -219,11 +225,12 @@ bitPreciseBenchmarks = [ BenchSuite.BitPrecise.BitTricks.benchmarks
                        -- , BenchSuite.BitPrecise.Legato.benchmarks
                        -- , BenchSuite.BitPrecise.MergeSort.benchmarks
                        , BenchSuite.BitPrecise.MultMask.benchmarks
-                       , BenchSuite.BitPrecise.PrefixSum.benchmarks
+                       -- expensive
+                       -- , BenchSuite.BitPrecise.PrefixSum.benchmarks
                        ]
 
 bitPrecise :: Benchmark
-bitPrecise = bgroup "BitPrecise" $ runOverheadBenchmark <$> bitPreciseBenchmarks
+bitPrecise = bgroup "BitPrecise" $ runBenchmark <$> bitPreciseBenchmarks
 
 
 --------------------------- Query -----------------------------------------------
@@ -240,7 +247,7 @@ queryBenchmarks = [ BenchSuite.Queries.AllSat.benchmarks
                   ]
 
 queries :: Benchmark
-queries = bgroup "Queries" $ runOverheadBenchmark <$> queryBenchmarks
+queries = bgroup "Queries" $ runBenchmark <$> queryBenchmarks
 
 
 --------------------------- WeakestPreconditions --------------------------------
@@ -271,7 +278,7 @@ optimizationBenchmarks = [ BenchSuite.Optimization.Enumerate.benchmarks
                          ]
 
 optimizations :: Benchmark
-optimizations = bgroup "Optimizations" $ runOverheadBenchmark <$> optimizationBenchmarks
+optimizations = bgroup "Optimizations" $ runBenchmark <$> optimizationBenchmarks
 
 
 --------------------------- Uninterpreted ---------------------------------------
@@ -286,7 +293,7 @@ uninterpretedBenchmarks = [ BenchSuite.Uninterpreted.AUF.benchmarks
                           ]
 
 uninterpreted :: Benchmark
-uninterpreted = bgroup "Uninterpreted" $ runOverheadBenchmark <$> uninterpretedBenchmarks
+uninterpreted = bgroup "Uninterpreted" $ runBenchmark <$> uninterpretedBenchmarks
 
 
 --------------------------- ProofTools -----------------------------------------
@@ -298,7 +305,7 @@ proofToolBenchmarks = [ BenchSuite.ProofTools.BMC.benchmarks
                       ]
 
 proofTools :: Benchmark
-proofTools = bgroup "ProofTools" $ runOverheadBenchmark <$> proofToolBenchmarks
+proofTools = bgroup "ProofTools" $ runBenchmark <$> proofToolBenchmarks
 
 
 --------------------------- Code Generation -------------------------------------
@@ -313,7 +320,7 @@ codeGenerationBenchmarks = [ BenchSuite.CodeGeneration.AddSub.benchmarks
 
 codeGeneration :: Benchmark
 codeGeneration = bgroup "CodeGeneration" $
-                 runOverheadBenchmark <$> codeGenerationBenchmarks
+                 runBenchmark <$> codeGenerationBenchmarks
 
 
 --------------------------- Crypto ----------------------------------------------
@@ -324,14 +331,15 @@ cryptoBenchmarks = [ BenchSuite.Crypto.AES.benchmarks
                    ]
 
 crypto :: Benchmark
-crypto = bgroup "Crypto" $ runOverheadBenchmark <$> cryptoBenchmarks
+crypto = bgroup "Crypto" $ runBenchmark <$> cryptoBenchmarks
 
 
 --------------------------- Miscellaneous ---------------------------------------
 miscBenchmarks :: [Runner]
 miscBenchmarks = [ BenchSuite.Misc.Auxiliary.benchmarks
                  , BenchSuite.Misc.Enumerate.benchmarks
-                 , BenchSuite.Misc.Floating.benchmarks
+                 -- expensive
+                 -- , BenchSuite.Misc.Floating.benchmarks
                  , BenchSuite.Misc.ModelExtract.benchmarks
                  , BenchSuite.Misc.Newtypes.benchmarks
                  , BenchSuite.Misc.NoDiv0.benchmarks
@@ -343,7 +351,7 @@ miscBenchmarks = [ BenchSuite.Misc.Auxiliary.benchmarks
                  ]
 
 misc :: Benchmark
-misc = bgroup "Miscellaneous" $ runOverheadBenchmark <$> miscBenchmarks
+misc = bgroup "Miscellaneous" $ runBenchmark <$> miscBenchmarks
 
 
 --------------------------- Lists -----------------------------------------------
@@ -354,7 +362,7 @@ listBenchmarks = [ BenchSuite.Lists.BoundedMutex.benchmarks
                  ]
 
 lists :: Benchmark
-lists = bgroup "Lists" $ runOverheadBenchmark <$> listBenchmarks
+lists = bgroup "Lists" $ runBenchmark <$> listBenchmarks
 
 
 --------------------------- Strings ---------------------------------------------
@@ -364,7 +372,7 @@ stringBenchmarks = [ BenchSuite.Strings.RegexCrossword.benchmarks
                    ]
 
 strings :: Benchmark
-strings = bgroup "Strings" $ runOverheadBenchmark <$> stringBenchmarks
+strings = bgroup "Strings" $ runBenchmark <$> stringBenchmarks
 
 
 --------------------------- Existentials ----------------------------------------
@@ -374,7 +382,7 @@ existentialBenchmarks = [ BenchSuite.Existentials.CRCPolynomial.benchmarks
                         ]
 
 existentials :: Benchmark
-existentials = bgroup "Existentials" $ runOverheadBenchmark <$> existentialBenchmarks
+existentials = bgroup "Existentials" $ runBenchmark <$> existentialBenchmarks
 
 
 --------------------------- Transformers ----------------------------------------
@@ -383,4 +391,4 @@ transformerBenchmarks = [ BenchSuite.Transformers.SymbolicEval.benchmarks
                         ]
 
 transformers :: Benchmark
-transformers = bgroup "Transformers" $ runOverheadBenchmark <$> transformerBenchmarks
+transformers = bgroup "Transformers" $ runBenchmark <$> transformerBenchmarks
