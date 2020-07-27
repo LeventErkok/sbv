@@ -116,7 +116,7 @@
 --
 --   * Yices from SRI: <http://yices.csl.sri.com/>
 --
---   * DReal from CMU: <https://dreal.github.io/>
+--   * DReal from CMU: <http://dreal.github.io/>
 --
 --   * Z3 from Microsoft: <http://github.com/Z3Prover/z3/wiki>
 --
