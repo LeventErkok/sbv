@@ -10,8 +10,10 @@
 [ISSUE] ; --- tuples ---
 [ISSUE] ; --- sums ---
 [ISSUE] ; --- literal constants ---
-[ISSUE] (declare-fun s3 () Real) (assert (= s3 (/ 2.0 1.0))) 
-[ISSUE] (declare-fun s5 () Real) (assert (= s5 (/ 5.0 1.0))) 
+[ISSUE] (declare-fun s3 () Real)
+[ISSUE] (assert (= s3 (/ 2.0 1.0)))
+[ISSUE] (declare-fun s5 () Real)
+[ISSUE] (assert (= s5 (/ 5.0 1.0)))
 [ISSUE] ; --- skolem constants ---
 [ISSUE] (declare-fun s0 () Real) ; tracks user variable "a0"
 [ISSUE] (declare-fun s1 () Int) ; tracks user variable "i0"
@@ -22,18 +24,24 @@
 [ISSUE] ; --- uninterpreted constants ---
 [ISSUE] ; --- user given axioms ---
 [ISSUE] ; --- formula ---
-[ISSUE] (declare-fun s4 () Bool) (assert (= s4 (> s0 s3))) 
-[ISSUE] (declare-fun s6 () Bool) (assert (= s6 (<= s0 s5))) 
+[ISSUE] (declare-fun s4 () Bool)
+[ISSUE] (assert (= s4 (> s0 s3)))
+[ISSUE] (declare-fun s6 () Bool)
+[ISSUE] (assert (= s6 (<= s0 s5)))
 [ISSUE] (assert s4)
 [ISSUE] (assert s6)
 [FIRE] (declare-fun s7 () Real)
 [FIRE] (declare-fun s8 () Int)
 [FIRE] (declare-fun s9 () Bool)
-[FIRE] (declare-fun s10 () Real) (assert (= s10 (/ 3.0 1.0))) 
-[FIRE] (declare-fun s11 () Bool) (assert (= s11 (> s7 s10))) 
+[FIRE] (declare-fun s10 () Real)
+[FIRE] (assert (= s10 (/ 3.0 1.0)))
+[FIRE] (declare-fun s11 () Bool)
+[FIRE] (assert (= s11 (> s7 s10)))
 [FIRE] (assert s11)
-[FIRE] (declare-fun s12 () Real) (assert (= s12 (/ 12.0 1.0))) 
-[FIRE] (declare-fun s13 () Bool) (assert (= s13 (<= s7 s12))) 
+[FIRE] (declare-fun s12 () Real)
+[FIRE] (assert (= s12 (/ 12.0 1.0)))
+[FIRE] (declare-fun s13 () Bool)
+[FIRE] (assert (= s13 (<= s7 s12)))
 [FIRE] (assert s13)
 [SEND] (check-sat)
 [RECV] delta-sat
