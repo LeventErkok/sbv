@@ -59,7 +59,7 @@ fv = do a0 <- sReal    "a0"
                                       rva1 = algRealToRational va1
 
                                       check r = case r of
-                                                  RatInterval lo hi -> if realPointVal lo <= realPointVal hi
+                                                  RatInterval lo hi -> if realPoint lo <= realPoint hi
                                                                        then r
                                                                        else error $ "Bounds violated for: " ++ show r
                                                   _                 -> r

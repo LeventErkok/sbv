@@ -9,7 +9,6 @@
 -- Algrebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -18,7 +17,7 @@ module Data.SBV.Core.AlgReals (
              AlgReal(..)
            , AlgRealPoly(..)
            , RationalCV(..)
-           , RealPoint(..)
+           , RealPoint(..), realPoint
            , mkPolyReal
            , algRealToSMTLib2
            , algRealToHaskell
@@ -41,9 +40,14 @@ import Test.QuickCheck (Arbitrary(..))
 import Numeric (readSigned, readFloat)
 
 -- | Is the endpoint included in the interval?
-data RealPoint a = OpenPoint   { realPointVal :: a } -- ^ open: i.e., doesn't include the point
-                 | ClosedPoint { realPointVal :: a } -- ^ closed: i.e., includes the point
-                deriving (Functor, Show)
+data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
+                 | ClosedPoint a -- ^ closed: i.e., includes the point
+                 deriving (Show, Eq, Ord)
+
+-- | Extract the point associated with the open-closed point
+realPoint :: RealPoint a -> a
+realPoint (OpenPoint   a) = a
+realPoint (ClosedPoint a) = a
 
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
@@ -154,16 +158,7 @@ AlgPolyRoot a b `algRealStructuralCompare` AlgPolyRoot c d = (a, b) `compare` (c
 AlgPolyRoot _ _ `algRealStructuralCompare` AlgInterval _ _ = LT
 AlgInterval _ _ `algRealStructuralCompare` AlgRational _ _ = GT
 AlgInterval _ _ `algRealStructuralCompare` AlgPolyRoot _ _ = GT
-AlgInterval a b `algRealStructuralCompare` AlgInterval c d =
-        let classify :: RealPoint a -> RealPoint a -> Int
-            classify OpenPoint{}   OpenPoint{}   = 0
-            classify OpenPoint{}   ClosedPoint{} = 1
-            classify ClosedPoint{} OpenPoint{}   = 2
-            classify ClosedPoint{} ClosedPoint{} = 3
-        in case classify a b `compare` classify c d of
-             LT -> LT
-             GT -> GT
-             EQ -> realPointVal a `compare` realPointVal b
+AlgInterval a b `algRealStructuralCompare` AlgInterval c d = (a, b) `compare` (c, d)
 
 instance Num AlgReal where
   (+)         = lift2 "+"      (+)
