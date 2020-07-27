@@ -10,11 +10,11 @@ report any issues you might see with newer releases.
       * Version 3.2.0
   * CVC4:
       * https://github.com/CVC4/CVC4
-      * Version installed via `brew tap cvc4/cvc4, brew install cvc4/cvc4/cvc4 --HEAD --with-java-bindings`
+      * Version installed via `brew tap cvc4/cvc4; brew rm cvc4; brew install cvc4/cvc4/cvc4 --HEAD`
         on Jul 27, 2020.
   * dReal:
       * https://dreal.github.io/
-      * Version installed via `brew rm dreal; brew install dreal --HEAD`
+      * Version installed via `brew tap dreal/dreal; brew rm dreal; brew install dreal --HEAD`
         on Jul 25, 2020.
   * MathSAT:
       * http://mathsat.fbk.eu/
