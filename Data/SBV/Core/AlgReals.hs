@@ -41,16 +41,16 @@ import Test.QuickCheck (Arbitrary(..))
 import Numeric (readSigned, readFloat)
 
 -- | Is the endpoint included in the interval?
-data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
-                 | ClosedPoint a -- ^ closed: i.e., includes the point
+data RealPoint a = OpenPoint   { realPointVal :: a } -- ^ open: i.e., doesn't include the point
+                 | ClosedPoint { realPointVal :: a } -- ^ closed: i.e., includes the point
                 deriving (Functor, Show)
 
 -- | Algebraic reals. Note that the representation is left abstract. We represent
 -- rational results explicitly, while the roots-of-polynomials are represented
 -- implicitly by their defining equation
-data AlgReal = AlgRational Bool Rational                           -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
-             | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String)  -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
-             | AlgInterval (RealPoint AlgReal) (RealPoint AlgReal) -- ^ interval, with low and high bounds
+data AlgReal = AlgRational Bool Rational                             -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
+             | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String)    -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
+             | AlgInterval (RealPoint Rational) (RealPoint Rational) -- ^ interval, with low and high bounds
 
 -- | Check wheter a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
@@ -160,17 +160,10 @@ AlgInterval a b `algRealStructuralCompare` AlgInterval c d =
             classify OpenPoint{}   ClosedPoint{} = 1
             classify ClosedPoint{} OpenPoint{}   = 2
             classify ClosedPoint{} ClosedPoint{} = 3
-
-            pointVal :: RealPoint AlgReal -> AlgReal
-            pointVal (OpenPoint   v) = v
-            pointVal (ClosedPoint v) = v
         in case classify a b `compare` classify c d of
              LT -> LT
              GT -> GT
-             EQ -> case (pointVal a `algRealStructuralCompare` pointVal c, pointVal b `algRealStructuralCompare` pointVal d) of
-                     (LT, _) -> LT
-                     (GT, _) -> GT
-                     (EQ, r) -> r
+             EQ -> realPointVal a `compare` realPointVal b
 
 instance Num AlgReal where
   (+)         = lift2 "+"      (+)
@@ -244,10 +237,10 @@ algRealToHaskell r                    = error $ unlines [ ""
                                                         ]
 
 -- | Conversion from internal rationals to Haskell values
-data RationalCV = RatIrreducible AlgReal                                       -- ^ Root of a polynomial, cannot be reduced
-                | RatExact       Rational                                      -- ^ An exact rational
-                | RatApprox      Rational                                      -- ^ An approximated value
-                | RatInterval    (RealPoint RationalCV) (RealPoint RationalCV) -- ^ Interval. If bool is 'True' then closed, otherwise open.
+data RationalCV = RatIrreducible AlgReal                                   -- ^ Root of a polynomial, cannot be reduced
+                | RatExact       Rational                                  -- ^ An exact rational
+                | RatApprox      Rational                                  -- ^ An approximated value
+                | RatInterval    (RealPoint Rational) (RealPoint Rational) -- ^ Interval. If bool is 'True' then closed, otherwise open.
                 deriving Show
 
 -- | Convert an 'AlgReal' to a 'Rational'. If the 'AlgReal' is exact, then you get a 'Left' value. Otherwise,
@@ -263,7 +256,7 @@ algRealToRational a = case a of
                                                       in case readSigned readFloat trimmed of
                                                            [(v, "")] -> RatApprox v
                                                            _         -> bad "represents a value that cannot be converted to a rational"
-                        AlgInterval lo hi          -> RatInterval (algRealToRational <$> lo) (algRealToRational <$> hi)
+                        AlgInterval lo hi          -> RatInterval lo hi
    where bad w = error $ unlines [ ""
                                  , "SBV.algRealToRational: Unsupported argument:"
                                  , ""

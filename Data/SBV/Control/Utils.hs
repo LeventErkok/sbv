@@ -931,8 +931,8 @@ recoverKindedValue k e = case k of
                 getBorder (EApp [ECon "closed", v]) = recoverKindedValue KReal v >>= border ClosedPoint
                 getBorder _                         = Nothing
 
-                border b (CV KReal (CAlgReal v)) = pure $ b v
-                border _ other                   = error $ "Data.SBV.interpretInterval.border: Expected a real-valued sexp, but received: " ++ show other
+                border b (CV KReal (CAlgReal (AlgRational True v))) = pure $ b v
+                border _ other                                      = error $ "Data.SBV.interpretInterval.border: Expected a real-valued sexp, but received: " ++ show other
 
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'

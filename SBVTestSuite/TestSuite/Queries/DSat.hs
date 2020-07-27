@@ -55,6 +55,15 @@ fv = do a0 <- sReal    "a0"
                                   vb0 <- getValue b0
                                   vb1 <- getValue b1
 
-                                  pure (p, [va0, va1], map algRealToRational [va0, va1], [vi0, vi1], [vb0, vb1])
+                                  let rva0 = algRealToRational va0
+                                      rva1 = algRealToRational va1
+
+                                      check r = case r of
+                                                  RatInterval lo hi -> if realPointVal lo <= realPointVal hi
+                                                                       then r
+                                                                       else error $ "Bounds violated for: " ++ show r
+                                                  _                 -> r
+
+                                  pure (p, [va0, va1], map check [rva0, rva1], [vi0, vi1], [vb0, vb1])
 
                      _   -> error "didn't expect non-DSat here!"
