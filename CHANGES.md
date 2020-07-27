@@ -20,6 +20,7 @@
 
   * Add support for the dReal solver, and introduce the notion of delta-satisfiability,
     where you can now check properties to be satisfiable against delta-perturbations.
+    See "Documentation.SBV.Examples.DeltaSat.DeltaSat" for a basic example.
 
 ### Version 8.7, 2020-06-30
 
