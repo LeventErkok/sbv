@@ -28,7 +28,7 @@ flyspeck = dsat $ do
         constrain $ x1 `inRange` ( 3, 3.14)
         constrain $ x2 `inRange` (-7, 5)
 
-        let pi'  = 3.14159265
+        let pi' = 3.14159265
             lhs = 2 * pi' - 2 * x1 * asin (cos 0.979 * sin (pi' / x1))
             rhs = -0.591 - 0.0331 * x2 + 0.506 + 1
 
