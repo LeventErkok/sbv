@@ -116,6 +116,7 @@ Library
                   , Documentation.SBV.Examples.Crypto.AES
                   , Documentation.SBV.Examples.Crypto.RC4
                   , Documentation.SBV.Examples.Crypto.SHA
+                  , Documentation.SBV.Examples.DeltaSat.DeltaSat
                   , Documentation.SBV.Examples.Existentials.CRCPolynomial
                   , Documentation.SBV.Examples.Existentials.Diophantine
                   , Documentation.SBV.Examples.Lists.Fibonacci
