@@ -180,12 +180,12 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
              ++ map declAx axs
              ++ [ "; --- formula ---" ]
 
-             ++ map (declDef cfg skolemMap tableMap) preQuantifierAssigns
+             ++ concatMap (declDef cfg skolemMap tableMap) preQuantifierAssigns
              ++ ["(assert (forall (" ++ intercalate "\n                 "
                                         ["(" ++ show s ++ " " ++ svType s ++ ")" | s <- foralls] ++ ")"
                 | not (null foralls)
                 ]
-             ++ map mkAssign postQuantifierAssigns
+             ++ concatMap mkAssign postQuantifierAssigns
 
              ++ concat arrayDelayeds
 
@@ -302,7 +302,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         mkAssign a
           | null foralls = declDef cfg skolemMap tableMap a
-          | True         = letShift (mkLet a)
+          | True         = [letShift (mkLet a)]
 
         mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSV                skolemMap          e ++ ")) ; " ++ m
         mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
@@ -409,7 +409,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ map (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- table setups
@@ -444,7 +444,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> String
+declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> [String]
 declDef cfg skolemMap tableMap (s, expr) =
         case expr of
           SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV          skolemMap          e) (Just m)
@@ -452,10 +452,12 @@ declDef cfg skolemMap tableMap (s, expr) =
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
-defineFun :: SMTConfig -> (SV, String) -> Maybe String -> String
+defineFun :: SMTConfig -> (SV, String) -> Maybe String -> [String]
 defineFun cfg (s, def) mbComment
-   | hasDefFun = "(define-fun "  ++ varT ++ " " ++ def ++ ")" ++ cmnt
-   | True      = "(declare-fun " ++ varT ++ ") (assert (= " ++ var ++ " " ++ def ++ ")) " ++ cmnt
+   | hasDefFun = ["(define-fun "  ++ varT ++ " " ++ def ++ ")" ++ cmnt]
+   | True      = [ "(declare-fun " ++ varT ++ ")" ++ cmnt
+                 , "(assert (= " ++ var ++ " " ++ def ++ "))"
+                 ]
   where var  = show s
         varT = var ++ " " ++ svFunType [] s
         cmnt = maybe "" (" ; " ++) mbComment
@@ -468,7 +470,7 @@ declConst cfg (s, c)
   | s == falseSV || s == trueSV
   = []
   | True
-  = [defineFun cfg (s, cvtCV (roundingMode cfg) c) Nothing]
+  = defineFun cfg (s, cvtCV (roundingMode cfg) c) Nothing
 
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
