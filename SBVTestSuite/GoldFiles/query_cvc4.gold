@@ -43,7 +43,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (_ bv1 32)))
+[RECV] ((s0 #b00000000000000000000000000000001))
 [GOOD] (pop 1)
 [GOOD] (define-fun s16 () (_ BitVec 32) #x00000001)
 [GOOD] (define-fun s17 () Bool (bvsgt s0 s16))
@@ -52,9 +52,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (_ bv2 32)))
+[RECV] ((s0 #b00000000000000000000000000000010))
 [SEND] (get-value (s1))
-[RECV] ((s1 (_ bv1 32)))
+[RECV] ((s1 #b00000000000000000000000000000001))
 *** Solver   : CVC4
 *** Exit code: ExitSuccess
 *** Std-out  : 
