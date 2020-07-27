@@ -260,8 +260,8 @@ rGroup = RunnerGroup
 
 -- | Orphaned instances just for benchmarking
 instance NFData U.AllSatResult where
-  rnf (U.AllSatResult (a, b, c, results)) =
-    rnf a `seq` rnf b `seq` rnf c `seq` rwhnf results
+  rnf (U.AllSatResult a b c d results) =
+    rnf a `seq` rnf b `seq` rnf c `seq` rnf d `seq` rwhnf results
 
 -- | Unwrap the existential type to make gauge happy
 instance NFData BenchResult where rnf (BenchResult a) = rnf a

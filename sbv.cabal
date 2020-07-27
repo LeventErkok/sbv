@@ -418,7 +418,7 @@ Benchmark SBVBenchmark
                     TypeApplications
   Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
                 , sbv, directory, random, mtl, containers, time
-                , gauge, process, deepseq, bench-show
+                , gauge, process, deepseq, bench-show, silently
   Hs-Source-Dirs  : SBVBenchSuite
   main-is         : SBVBenchmark.hs
   Other-modules   : Utils.SBVBenchFramework
