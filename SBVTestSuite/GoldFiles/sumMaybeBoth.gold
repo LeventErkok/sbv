@@ -28,9 +28,9 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () Bool ((_ is left_SBVEither) s0))
+[GOOD] (define-fun s2 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s0))
 [GOOD] (define-fun s3 () Bool (ite s2 true false))
-[GOOD] (define-fun s4 () Bool ((_ is nothing_SBVMaybe) s1))
+[GOOD] (define-fun s4 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s1))
 [GOOD] (define-fun s5 () Bool (ite s4 false true))
 [GOOD] (assert s3)
 [GOOD] (assert s5)
