@@ -494,18 +494,20 @@ instance Show Op where
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n
   show (TupleAccess      i n) = "proj_" ++ show i ++ "_SBVTuple" ++ show n
 
+  -- Remember, while we try to maintain SMTLib compabitibility here, these output
+  -- is merely for debugging purposes. For how we actually render these in SMTLib,
+  -- look at the file SBV/SMT/SMTLib2.hs for these constructors.
   show (EitherConstructor k1 k2  False) = "(_ left_SBVEither "  ++ show (KEither k1 k2) ++ ")"
   show (EitherConstructor k1 k2  True ) = "(_ right_SBVEither " ++ show (KEither k1 k2) ++ ")"
   show (EitherIs          k1 k2  False) = "(_ is (left_SBVEither ("  ++ show k1 ++ ") " ++ show (KEither k1 k2) ++ "))"
   show (EitherIs          k1 k2  True ) = "(_ is (right_SBVEither (" ++ show k2 ++ ") " ++ show (KEither k1 k2) ++ "))"
   show (EitherAccess             False) = "get_left_SBVEither"
   show (EitherAccess             True ) = "get_right_SBVEither"
-
-  show (MaybeConstructor k False) = "(_ nothing_SBVMaybe " ++ show (KMaybe k) ++ ")"
-  show (MaybeConstructor k True)  = "(_ just_SBVMaybe "    ++ show (KMaybe k) ++ ")"
-  show (MaybeIs          k False) = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
-  show (MaybeIs          k True ) = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
-  show MaybeAccess               = "get_just_SBVMaybe"
+  show (MaybeConstructor k False)       = "(_ nothing_SBVMaybe " ++ show (KMaybe k) ++ ")"
+  show (MaybeConstructor k True)        = "(_ just_SBVMaybe "    ++ show (KMaybe k) ++ ")"
+  show (MaybeIs          k False)       = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
+  show (MaybeIs          k True )       = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
+  show MaybeAccess                      = "get_just_SBVMaybe"
 
   show op
     | Just s <- op `lookup` syms = s
