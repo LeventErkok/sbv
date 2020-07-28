@@ -27,7 +27,7 @@
 [GOOD] (declare-fun s1 () (SBVMaybe Int))
 [GOOD] (declare-fun s2 () Bool)
 [GOOD] (define-fun s3 () (SBVMaybe Int) (ite s2 s0 s1))
-[GOOD] (define-fun s4 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s3))
+[GOOD] (define-fun s4 () Bool ((_ is nothing_SBVMaybe) s3))
 [GOOD] (define-fun s5 () Bool (ite s4 true false))
 [GOOD] (assert s5)
 [SEND] (check-sat)

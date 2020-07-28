@@ -27,7 +27,7 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s3 () (SBVEither Int Bool) (ite s2 s0 s1))
-[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Bool))) s3))
+[GOOD] (define-fun s4 () Bool ((_ is left_SBVEither) s3))
 [GOOD] (define-fun s5 () Bool (ite s4 true false))
 [GOOD] (assert s5)
 [SEND] (check-sat)
