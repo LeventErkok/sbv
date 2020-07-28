@@ -223,14 +223,14 @@ class SymVal a => IEEEFloatConvertible a where
   -- >>> prove $ roundTrip @Int32
   -- Falsifiable. Counter-example:
   --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =             -264306721 :: Int32
+  --   s1 =             -206897400 :: Int32
   --
   -- Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
   --
-  -- >>> toRational (-264306721 :: Float)
-  -- (-264306720) % 1
+  -- >>> toRational (-206897400 :: Float)
+  -- (-206897408) % 1
   --
-  -- Note how the numerator is different, it is off by 1. This is hardly surprising, since floats become sparser as
+  -- Note how the numerator is different, it is off by 8. This is hardly surprising, since floats become sparser as
   -- the magnitude increases to be able to cover all the integer values representable.
   toSFloat :: SRoundingMode -> SBV a -> SFloat
 
@@ -263,16 +263,16 @@ class SymVal a => IEEEFloatConvertible a where
   -- Q.E.D.
   -- >>> prove $ roundTrip @Int64
   -- Falsifiable. Counter-example:
-  --   s0 =  RoundTowardNegative :: RoundingMode
-  --   s1 = -8069753317450726624 :: Int64
+  --   s0 = RoundTowardNegative :: RoundingMode
+  --   s1 =  -18014398509481983 :: Int64
   --
   -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
   -- integer value for all possible values:
   --
-  -- >>>  toRational ( -8069753317450726624 :: Double)
-  -- (-8069753317450726400) % 1
+  -- >>>  toRational (-18014398509481983 :: Double)
+  -- (-18014398509481984) % 1
   --
-  -- In this case the numerator is off by 224!
+  -- In this case the numerator is off by 1.
   toSDouble :: SRoundingMode -> SBV a -> SDouble
 
   -- default definition if we have an integral like

@@ -58,19 +58,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =    128.00029 :: Float
---   y =  -7.27236e-4 :: Float
---   z = -6.875994e-3 :: Float
+--   x = -4.73427e15 :: Float
+--   y = 3.718088e19 :: Float
+--   z = 4.500073e20 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x =    128.00029 :: Float
--- >>> let y =  -7.27236e-4 :: Float
--- >>> let z = -6.875994e-3 :: Float
+-- >>> let x = -4.73427e15 :: Float
+-- >>> let y = 3.718088e19 :: Float
+-- >>> let z = 4.500073e20 :: Float
 -- >>> x + (y + z)
--- 127.99268
+-- 4.8718343e20
 -- >>> (x + y) + z
--- 127.99269
+-- 4.8718347e20
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
@@ -92,13 +92,13 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a =  5.060287e28 :: Float
---   b = 3.6780381e19 :: Float
+--   a = 1.3408534e37 :: Float
+--   b =  6.977023e21 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a =  5.060287e28 :: Float
--- >>> let b = 3.6780381e19 :: Float
+-- >>> let a = 1.3408534e37 :: Float
+-- >>> let b =  6.977023e21 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
@@ -121,13 +121,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 2.4907063e38 :: Float
+--   a = 7.660899e-39 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 2.4907063e38 :: Float
+-- >>> let a = 7.660899e-39 :: Float
 -- >>> a * (1/a)
--- 1.0000001
+-- 0.99999994
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
@@ -148,29 +148,29 @@ multInverse = prove $ do a <- sFloat "a"
 -- >>> roundingAdd
 -- Satisfiable. Model:
 --   rm = RoundTowardPositive :: RoundingMode
---   x  =      -2.3509886e-38 :: Float
---   y  =            -6.0e-45 :: Float
+--   x  =       -2.240786e-38 :: Float
+--   y  =        -1.10355e-39 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
 -- 'RoundNearestTiesToEven'. We have:
 --
--- >>> -2.3509886e-38 + (-6.0e-45) :: Float
--- -2.3509893e-38
+-- >>> -2.240786e-38 + (-1.10355e-39) :: Float
+-- -2.3511412e-38
 --
 -- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
 -- SBV to provide us with that result thusly:
 --
--- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-2.3509886e-38) (-6.0e-45 :: SFloat)
+-- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-2.240786e-38) (-1.10355e-39 :: SFloat)
 -- Satisfiable. Model:
---   s0 = -2.350989e-38 :: Float
+--   s0 = -2.351141e-38 :: Float
 --
 -- We can see why these two resuls are indeed different: The 'RoundTowardPositive'
 -- (which rounds towards positive infinity from zero) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >> -2.3509886e-38 + (-6.0e-45) :: Double
--- -2.3509892e-38
+-- >> -2.240786e-38 + (-1.10355e-39) :: Double
+-- -2.351141e-38
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
 -- larger value with 'RoundTowardPositive'. A more detailed study is beyond our current scope, so we'll
