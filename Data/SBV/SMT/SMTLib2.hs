@@ -733,9 +733,16 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map ssv args) ++ ")"
 
         -- Similarly, we fully qualify the accessors with their types to work around type checking issues
+        {- Jul 28, 2020: This code used to be:
+
         dtAccessor fld params res = result
           where ps       = " (" ++ unwords (map smtType params) ++ ") "
                 result   = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
+
+        But CVC4 doesn't like it, and looks like the old problems are fixed, so we're simplifying it to:
+        -}
+        dtAccessor fld _params _res = result
+          where result   = "(_ is " ++ fld ++ ")"
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
 
