@@ -44,6 +44,7 @@ z3 = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
+                              , supportsDirectAccessors    = False -- Needs ascriptions. (See the CVC4 version of this)
                               , supportsFlattenedModels    = Just [ "(set-option :pp.max_depth      4294967295)"
                                                                   , "(set-option :pp.min_alias_size 4294967295)"
                                                                   , "(set-option :model.inline_def  true      )"

@@ -1752,6 +1752,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
        , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
+       , supportsDirectAccessors    :: Bool           -- ^ Supports data-type accessors without full ascription?
        , supportsFlattenedModels    :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
        }
 

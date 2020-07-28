@@ -44,6 +44,7 @@ yices = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = False
                               , supportsDataTypes          = False
+                              , supportsDirectAccessors    = False
                               , supportsFlattenedModels    = Nothing
                               }
          }
