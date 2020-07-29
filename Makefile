@@ -92,7 +92,6 @@ fullRelease: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 
 release:
-	/bin/rm -rf ~/.ghc/x86_64*
 	$(TIME) make fullRelease
 
 # use this as follows:
