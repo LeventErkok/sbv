@@ -1,3 +1,5 @@
+Cabal-Version: 2.2
+
 Name:          sbv
 Version:       8.7.5
 Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
@@ -8,7 +10,7 @@ Description:   Express properties about Haskell programs and automatically prove
                For details, please see: <http://leventerkok.github.com/sbv/>
 
 Copyright:     Levent Erkok, 2010-2020
-License:       BSD3
+License:       BSD-3-Clause
 License-file:  LICENSE
 Stability:     Experimental
 Author:        Levent Erkok
@@ -16,7 +18,6 @@ Homepage:      http://leventerkok.github.com/sbv/
 Bug-reports:   http://github.com/LeventErkok/sbv/issues
 Maintainer:    Levent Erkok (erkokl@gmail.com)
 Build-Type:    Simple
-Cabal-Version: 1.14
 Data-Files: SBVTestSuite/GoldFiles/*.gold
 Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
 
@@ -31,9 +32,16 @@ flag skipHLintTester
     default: False
     manual: True
 
+common common-settings
+   default-language: Haskell2010
+   ghc-options     : -Wall -O2
+   build-depends   : base >= 4.11 && < 5
+
+   if impl(ghc >= 8.10.1)
+      ghc-options  : -Wunused-packages
+
 Library
-  default-language: Haskell2010
-  ghc-options     : -Wall -O2
+  import          : common-settings
   other-extensions: BangPatterns
                     CPP
                     ConstraintKinds
@@ -70,8 +78,7 @@ Library
                     TypeSynonymInstances
                     UndecidableInstances
                     ViewPatterns
-  Build-Depends   : base >= 4.11 && < 5
-                  , crackNum >= 2.3
+  Build-Depends   : crackNum
                   , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, transformers
@@ -219,9 +226,9 @@ Library
                   , Data.SBV.Utils.SExpr
 
 Test-Suite SBVTest
+  import          : common-settings
   type            : exitcode-stdio-1.0
-  default-language: Haskell2010
-  ghc-options     : -Wall -with-rtsopts=-K64m -O2
+  ghc-options     : -with-rtsopts=-K64m
   other-extensions: DataKinds
                     DeriveAnyClass
                     DeriveDataTypeable
@@ -236,9 +243,9 @@ Test-Suite SBVTest
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
-                , sbv, directory, random, mtl, containers
-                , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
+  Build-depends   : filepath, syb, crackNum
+                  , sbv, directory, random, mtl, containers
+                  , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   Hs-Source-Dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   Other-modules   : Utils.SBVTestFramework
@@ -347,10 +354,10 @@ Test-Suite SBVTest
                   , TestSuite.Uninterpreted.Uninterpreted
 
 Test-Suite SBVDocTest
-    Build-Depends:    base, directory, filepath, random
+    import          : common-settings
+    Build-Depends   : base, directory, filepath, random
                     , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random
                     , sbv
-    ghc-options     : -Wall -O2
     other-extensions: DataKinds
                       DeriveAnyClass
                       DeriveDataTypeable
@@ -365,19 +372,20 @@ Test-Suite SBVDocTest
                       TemplateHaskell
                       TupleSections
                       TypeApplications
-    default-language: Haskell2010
     Hs-Source-Dirs  : SBVTestSuite
     main-is:          SBVDocTest.hs
     Other-modules   : Utils.SBVTestFramework
     type:             exitcode-stdio-1.0
 
 Test-Suite SBVHLint
+    import          : common-settings
+
     if flag(skipHLintTester)
       buildable: False
-    build-depends:    base, directory, filepath, random
+
+    build-depends   : base, directory, filepath, random
                     , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck
                     , sbv
-    ghc-options     : -Wall -O2
     other-extensions: DataKinds
                       DeriveAnyClass
                       DeriveDataTypeable
@@ -392,16 +400,15 @@ Test-Suite SBVHLint
                       TemplateHaskell
                       TupleSections
                       TypeApplications
-    default-language: Haskell2010
     hs-source-dirs:   SBVTestSuite
     Other-modules   : Utils.SBVTestFramework
     main-is:          SBVHLint.hs
     type:             exitcode-stdio-1.0
 
 Benchmark SBVBenchmark
+  import          : common-settings
   type            : exitcode-stdio-1.0
-  default-language: Haskell2010
-  ghc-options     : -with-rtsopts=-K64m -O2
+  ghc-options     : -with-rtsopts=-K64m
   other-extensions: DataKinds
                     DeriveAnyClass
                     DeriveDataTypeable
@@ -416,9 +423,9 @@ Benchmark SBVBenchmark
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
-                , sbv, directory, random, mtl, containers, time
-                , gauge, process, deepseq, bench-show, silently
+  Build-depends   : filepath, syb, crackNum
+                  , sbv, directory, random, mtl, containers, time
+                  , gauge, process, deepseq, bench-show, silently
   Hs-Source-Dirs  : SBVBenchSuite
   main-is         : SBVBenchmark.hs
   Other-modules   : Utils.SBVBenchFramework
@@ -504,9 +511,9 @@ Benchmark SBVBenchmark
                   , BenchSuite.Transformers.SymbolicEval
 
 Benchmark SBVBench
+  import          : common-settings
   type            : exitcode-stdio-1.0
-  default-language: Haskell2010
-  ghc-options     : -with-rtsopts=-K64m -O2
+  ghc-options     : -with-rtsopts=-K64m
   other-extensions: DataKinds
                     DeriveAnyClass
                     DeriveDataTypeable
@@ -521,9 +528,9 @@ Benchmark SBVBench
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends : base >= 4.11, filepath, syb, crackNum >= 2.3
-                , sbv, directory, random, mtl, containers, time
-                , gauge, process, deepseq, silently, bench-show
+  Build-depends   : filepath, syb, crackNum
+                  , sbv, directory, random, mtl, containers, time
+                  , gauge, process, deepseq, silently, bench-show
   Hs-Source-Dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
   Other-modules   : Utils.SBVBenchFramework
