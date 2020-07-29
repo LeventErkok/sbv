@@ -49,18 +49,12 @@ main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, cvc4, 
           unless (null skipped)     $ putStrLn $ "*** NB: The following solvers are skipped: "      ++ intercalate ", " skipped
 
 test :: SMTConfig -> IO ()
-test s = do check  "t0" t0 (== False)
-            check  "t1" t1 (== True)
+test s = do check  s "t0" t0 (== False)
+            check  s "t1" t1 (== True)
             models "t2" t2 (== ([2,62,66,126,130,190,194,254]::[Word8]))
             models "t3" t3 (== ([]::[Word8]))
             models "t4" t4 (== [4::Word8])
-  where check m p f = thm p >>= decide m f
-        decide m f r
-          | f r  = return ()
-          | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
-                      exitFailure
-        thm = isTheoremWith s
-        models m p f = (extractModels <$> allSat p) >>= decide m f . sort
+  where models m p f = (extractModels <$> allSat p) >>= decide s m f . sort
         t0 x = x   .== x+(1::SWord8)
         t1 x = x*2 .== x+(x::SWord8)
         t2 x = x*x .== (4::SWord8)
@@ -69,13 +63,16 @@ test s = do check  "t0" t0 (== False)
 
 -- integer only test, for dReal mostly
 testI :: SMTConfig -> IO ()
-testI s = do check "t0" t0 (== True)
-             check "t1" t1 (== False)
-  where check m p f = thm p >>= decide m f
-        decide m f r
-          | f r  = return ()
-          | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
-                      exitFailure
-        thm = isTheoremWith s
-        t0 x = x .== (x :: SReal)
+testI s = do check s "t0" t0 (== True)
+             check s "t1" t1 (== False)
+  where t0 x = x .== (x :: SReal)
         t1 x = x .== (2 :: SReal) .&& (x .== 3)
+
+check :: Provable a => SMTConfig -> String -> a -> (Bool -> Bool) -> IO ()
+check s m p f = isTheoremWith s p >>= decide s m f
+
+decide :: Show a => SMTConfig -> String -> (a -> Bool) -> a -> IO ()
+decide s m f r
+  | f r  = return ()
+  | True = do putStrLn $ m ++ "[" ++ solverName s ++ "] FAIL. Got: " ++ show r
+              exitFailure
