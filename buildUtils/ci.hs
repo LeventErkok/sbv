@@ -34,10 +34,11 @@ z3OSXName = "z3-" ++ z3Version ++ "-x64-osx-10.14.6.zip"
 z3OSXPath = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ z3OSXName
 
 -- Get these from whatever the "official" latest GHC release is
+-- Prev versions are what's available from ppa: https://launchpad.net/~hvr/+archive/ubuntu/ghc/
 ghcLatest, cabalLatest, ghcPrev, cabalPrev :: String
 ghcLatest   = "8.10.1"
 cabalLatest = "3.2"
-ghcPrev     = "8.8.4"
+ghcPrev     = "8.8.3"
 cabalPrev   = "3.0"
 
 ---------------------------------------------------------------------------------
