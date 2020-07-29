@@ -242,9 +242,9 @@ Test-Suite SBVTest
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, syb, crackNum
+  build-depends   : filepath, crackNum
                   , sbv, directory, random, mtl, containers
-                  , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
+                  , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework
