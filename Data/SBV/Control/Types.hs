@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -23,9 +22,6 @@ module Data.SBV.Control.Types (
      , SMTReasonUnknown(..)
      , SMTInfoResponse(..)
      ) where
-
-import Generics.Deriving.Base (Generic)
-import Generics.Deriving.Show (GShow, gshow)
 
 import Control.DeepSeq (NFData(..))
 
@@ -56,7 +52,9 @@ data SMTReasonUnknown = UnknownMemOut
                       | UnknownIncomplete
                       | UnknownTimeOut
                       | UnknownOther      String
-                      deriving (Generic, NFData)
+
+-- | Trivial rnf instance
+instance NFData SMTReasonUnknown where rnf a = seq a ()
 
 -- | Show instance for unknown
 instance Show SMTReasonUnknown where
@@ -115,7 +113,7 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | OptionKeyword             String  [String]
                | SetLogic                  Logic
                | SetInfo                   String  [String]
-               deriving (Show, Generic, NFData)
+               deriving Show
 
 -- | Can this command only be run at the very beginning? If 'True' then
 -- we will reject setting these options in the query mode. Note that this
@@ -198,14 +196,40 @@ data Logic
   | Logic_ALL          -- ^ The catch-all value.
   | Logic_NONE         -- ^ Use this value when you want SBV to simply not set the logic.
   | CustomLogic String -- ^ In case you need a really custom string!
-  deriving (Generic, NFData)
 
 -- The show instance is "almost" the derived one, but not quite!
-instance GShow Logic
 instance Show Logic where
+  show AUFLIA          = "AUFLIA"
+  show AUFLIRA         = "AUFLIRA"
+  show AUFNIRA         = "AUFNIRA"
+  show LRA             = "LRA"
+  show QF_ABV          = "QF_ABV"
+  show QF_AUFBV        = "QF_AUFBV"
+  show QF_AUFLIA       = "QF_AUFLIA"
+  show QF_AX           = "QF_AX"
+  show QF_BV           = "QF_BV"
+  show QF_IDL          = "QF_IDL"
+  show QF_LIA          = "QF_LIA"
+  show QF_LRA          = "QF_LRA"
+  show QF_NIA          = "QF_NIA"
+  show QF_NRA          = "QF_NRA"
+  show QF_RDL          = "QF_RDL"
+  show QF_UF           = "QF_UF"
+  show QF_UFBV         = "QF_UFBV"
+  show QF_UFIDL        = "QF_UFIDL"
+  show QF_UFLIA        = "QF_UFLIA"
+  show QF_UFLRA        = "QF_UFLRA"
+  show QF_UFNRA        = "QF_UFNRA"
+  show QF_UFNIRA       = "QF_UFNIRA"
+  show UFLRA           = "UFLRA"
+  show UFNIA           = "UFNIA"
+  show QF_FPBV         = "QF_FPBV"
+  show QF_FP           = "QF_FP"
+  show QF_FD           = "QF_FD"
+  show QF_S            = "QF_S"
   show Logic_ALL       = "ALL"
+  show Logic_NONE      = "Logic_NONE"
   show (CustomLogic l) = l
-  show l               = gshow l
 
 {-# ANN type SMTInfoResponse ("HLint: ignore Use camelCase" :: String) #-}
 {-# ANN type Logic           ("HLint: ignore Use camelCase" :: String) #-}
