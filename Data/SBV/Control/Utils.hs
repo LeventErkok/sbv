@@ -204,7 +204,7 @@ inNewContext act = do st <- queryState
                       syncUpSolver is
                       return r
 
--- | Generic 'Queriable' instance for 'SymVal'/'SMTValue' values
+-- | Generic 'Queriable' instance for 'SymVal' values
 instance (MonadIO m, SymVal a) => Queriable m (SBV a) a where
   create  = freshVar_
   project = getValue
