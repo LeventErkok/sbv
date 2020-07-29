@@ -41,7 +41,7 @@ import qualified Data.IntMap.Strict as IM
 
 import Data.Char     (toLower)
 import Data.List     (intercalate, nubBy, sortBy, sortOn)
-import Data.Maybe    (listToMaybe, catMaybes, maybe)
+import Data.Maybe    (listToMaybe, catMaybes)
 import Data.Function (on)
 
 import Data.SBV.Core.Data
