@@ -53,7 +53,8 @@ lintTest:
 	@$(TIME) cabal new-test SBVHLint
 
 docTest:
-	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
+	echo "docTest doesn't work with SBV on 8.10.1"
+	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 vdocTest:
 	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
