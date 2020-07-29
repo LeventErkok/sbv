@@ -37,8 +37,8 @@ common common-settings
    ghc-options     : -Wall -O2
    build-depends   : base >= 4.11 && < 5
 
-   if impl(ghc >= 8.10.1)
-      ghc-options  : -Wunused-packages
+--   if impl(ghc >= 8.10.1)
+--      ghc-options  : -Wunused-packages
 
 Library
   import          : common-settings
@@ -356,7 +356,7 @@ Test-Suite SBVTest
 Test-Suite SBVDocTest
     import          : common-settings
     Build-Depends   : base, directory, filepath, random
-                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random
+                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random, generic-deriving
                     , sbv
     other-extensions: DataKinds
                       DeriveAnyClass
