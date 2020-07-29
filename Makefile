@@ -38,6 +38,12 @@ install: tags
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
+ghci:
+	cabal new-repl
+
+ghcid:
+	ghcid
+
 bench:
 	cabal new-bench
 
