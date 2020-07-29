@@ -9,8 +9,6 @@
 -- Types related to interactive queries
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Control.Types (
