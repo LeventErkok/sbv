@@ -8,7 +8,7 @@ Please see: http://leventerkok.github.io/sbv/
 
  - Linux:
      - GHC 8.10.1 [![Build1][3]][1]
-     - GHC 8.8.4 [![Build1][4]][1]
+     - GHC 8.8.3 [![Build1][4]][1]
  - Mac OSX:
      - GHC 8.10.1 [![Build1][5]][1]
  - Windows:
