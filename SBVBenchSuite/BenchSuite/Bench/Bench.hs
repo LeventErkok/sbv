@@ -128,10 +128,10 @@ onProblem f r@RunnerI{..} = r{problem = (helper problem)}
 
 -- | Filepath to /dev/null
 devNull :: FilePath
-#ifndef WINDOWS
-devNull = "/dev/null"
-#else
+#ifdef mingw32_HOST_OS
 devNull = "NUL"
+#else
+devNull = "/dev/null"
 #endif
 
 -- | to bench a solver without interfacing through SBV we call transcript to
