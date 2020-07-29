@@ -52,6 +52,9 @@ testsuite: lintTest docTest test
 lintTest:
 	@$(TIME) cabal new-test SBVHLint
 
+testInterfaces:
+	@$(TIME) cabal new-test SBVConnections
+
 docTest:
 	echo "docTest doesn't work with SBV on 8.10.1"
 	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
@@ -75,11 +78,6 @@ endif
 
 checkLinks:
 	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
-
-testInterfaces:
-	@make -C buildUtils veryclean
-	@make -C buildUtils
-	buildUtils/testInterfaces
 
 mkDistro:
 	$(TIME) cabal new-sdist
