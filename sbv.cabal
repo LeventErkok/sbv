@@ -1,25 +1,25 @@
 Cabal-Version: 2.2
 
-Name:          sbv
-Version:       8.7.5
-Category:      Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
-Synopsis:      SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
-Description:   Express properties about Haskell programs and automatically prove them using SMT
+Name        : sbv
+Version     : 8.7.5
+Category    : Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
+Synopsis    : SMT Based Verification                                                           : Symbolic Haskell theorem prover using SMT solving.
+Description : Express properties about Haskell programs and automatically prove them using SMT
                (Satisfiability Modulo Theories) solvers.
                .
                For details, please see: <http://leventerkok.github.com/sbv/>
 
-Copyright:     Levent Erkok, 2010-2020
-License:       BSD-3-Clause
-License-file:  LICENSE
-Stability:     Experimental
-Author:        Levent Erkok
-Homepage:      http://leventerkok.github.com/sbv/
-Bug-reports:   http://github.com/LeventErkok/sbv/issues
-Maintainer:    Levent Erkok (erkokl@gmail.com)
-Build-Type:    Simple
-Data-Files: SBVTestSuite/GoldFiles/*.gold
-Extra-Source-Files: INSTALL, README.md, COPYRIGHT, CHANGES.md
+Copyright          : Levent Erkok, 2010-2020
+License            : BSD-3-Clause
+License-file       : LICENSE
+Stability          : Experimental
+Author             : Levent Erkok
+Homepage           : http://leventerkok.github.com/sbv/
+Bug-reports        : http://github.com/LeventErkok/sbv/issues
+Maintainer         : Levent Erkok (erkokl@gmail.com)
+Build-Type         : Simple
+Data-Files         : SBVTestSuite/GoldFiles/*.gold
+Extra-Source-Files : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 source-repository head
     type:       git
@@ -29,8 +29,8 @@ source-repository head
 -- we use this flag to skip that build.
 flag skipHLintTester
     description: Do not build the HLint tester
-    default: False
-    manual: True
+    default    : False
+    manual     : True
 
 common common-settings
    default-language: Haskell2010
@@ -41,8 +41,8 @@ common common-settings
 --      ghc-options  : -Wunused-packages
 
 Library
-  import          : common-settings
-  other-extensions: BangPatterns
+  import           : common-settings
+  other-extensions : BangPatterns
                     CPP
                     ConstraintKinds
                     DataKinds
@@ -78,7 +78,7 @@ Library
                     TypeSynonymInstances
                     UndecidableInstances
                     ViewPatterns
-  Build-Depends   : crackNum
+  build-depends   : crackNum
                   , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, transformers
@@ -187,7 +187,7 @@ Library
                   , Documentation.SBV.Examples.Uninterpreted.Shannon
                   , Documentation.SBV.Examples.Uninterpreted.Sort
                   , Documentation.SBV.Examples.Uninterpreted.UISortAllSat
-  Other-modules   : Data.SBV.Client
+  other-modules   : Data.SBV.Client
                   , Data.SBV.Client.BaseIO
                   , Data.SBV.Core.AlgReals
                   , Data.SBV.Core.Concrete
@@ -225,10 +225,10 @@ Library
                   , Data.SBV.Utils.SExpr
 
 Test-Suite SBVTest
-  import          : common-settings
-  type            : exitcode-stdio-1.0
-  ghc-options     : -with-rtsopts=-K64m
-  other-extensions: DataKinds
+  import           : common-settings
+  type             : exitcode-stdio-1.0
+  ghc-options      : -with-rtsopts=-K64m
+  other-extensions : DataKinds
                     DeriveAnyClass
                     DeriveDataTypeable
                     FlexibleContexts
@@ -242,12 +242,12 @@ Test-Suite SBVTest
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends   : filepath, syb, crackNum
+  build-depends   : filepath, syb, crackNum
                   , sbv, directory, random, mtl, containers
                   , template-haskell, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
-  Hs-Source-Dirs  : SBVTestSuite
+  hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
-  Other-modules   : Utils.SBVTestFramework
+  other-modules   : Utils.SBVTestFramework
                   , TestSuite.Arrays.InitVals
                   , TestSuite.Arrays.Memory
                   , TestSuite.Arrays.Query
@@ -352,9 +352,16 @@ Test-Suite SBVTest
                   , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Uninterpreted
 
+Test-Suite SBVConnections
+    import          : common-settings
+    build-depends   : sbv
+    hs-source-dirs  : SBVTestSuite
+    main-is         : SBVConnectionTest.hs
+    type:             exitcode-stdio-1.0
+
 Test-Suite SBVDocTest
     import          : common-settings
-    Build-Depends   : base, directory, filepath, random
+    build-depends   : base, directory, filepath, random
                     , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random, sbv
     other-extensions: DataKinds
                       DeriveAnyClass
@@ -370,9 +377,9 @@ Test-Suite SBVDocTest
                       TemplateHaskell
                       TupleSections
                       TypeApplications
-    Hs-Source-Dirs  : SBVTestSuite
+    hs-source-dirs  : SBVTestSuite
     main-is:          SBVDocTest.hs
-    Other-modules   : Utils.SBVTestFramework
+    other-modules   : Utils.SBVTestFramework
     type:             exitcode-stdio-1.0
 
 Test-Suite SBVHLint
@@ -382,8 +389,7 @@ Test-Suite SBVHLint
       buildable: False
 
     build-depends   : base, directory, filepath, random
-                    , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck
-                    , sbv
+                    , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, sbv
     other-extensions: DataKinds
                       DeriveAnyClass
                       DeriveDataTypeable
@@ -398,10 +404,10 @@ Test-Suite SBVHLint
                       TemplateHaskell
                       TupleSections
                       TypeApplications
-    hs-source-dirs:   SBVTestSuite
-    Other-modules   : Utils.SBVTestFramework
-    main-is:          SBVHLint.hs
-    type:             exitcode-stdio-1.0
+    hs-source-dirs  : SBVTestSuite
+    other-modules   : Utils.SBVTestFramework
+    main-is         : SBVHLint.hs
+    type            : exitcode-stdio-1.0
 
 Benchmark SBVBenchmark
   import          : common-settings
@@ -421,12 +427,12 @@ Benchmark SBVBenchmark
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends   : filepath, syb, crackNum
+  build-depends   : filepath, syb, crackNum
                   , sbv, directory, random, mtl, containers, time
                   , gauge, process, deepseq, bench-show, silently
-  Hs-Source-Dirs  : SBVBenchSuite
+  hs-source-dirs  : SBVBenchSuite
   main-is         : SBVBenchmark.hs
-  Other-modules   : Utils.SBVBenchFramework
+  other-modules   : Utils.SBVBenchFramework
                   , BenchSuite.Bench.Bench
                   , BenchSuite.Puzzles.Birthday
                   , BenchSuite.Puzzles.Coins
@@ -526,12 +532,12 @@ Benchmark SBVBench
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  Build-depends   : filepath, syb, crackNum
+  build-depends   : filepath, syb, crackNum
                   , sbv, directory, random, mtl, containers, time
                   , gauge, process, deepseq, silently, bench-show
-  Hs-Source-Dirs  : SBVBenchSuite
+  hs-source-dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
-  Other-modules   : Utils.SBVBenchFramework
+  other-modules   : Utils.SBVBenchFramework
                   , BenchSuite.Bench.Bench
                   , BenchSuite.Puzzles.Birthday
                   , BenchSuite.Puzzles.Coins
