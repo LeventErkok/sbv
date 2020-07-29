@@ -39,10 +39,10 @@ docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
 
 ghci:
-	cabal new-repl
+	cabal new-repl --repl-options=-Wno-unused-packages
 
 ghcid:
-	ghcid
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
 
 bench:
 	cabal new-bench

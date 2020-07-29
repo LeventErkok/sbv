@@ -37,8 +37,8 @@ common common-settings
    ghc-options     : -Wall -O2
    build-depends   : base >= 4.11 && < 5
 
---   if impl(ghc >= 8.10.1)
---      ghc-options  : -Wunused-packages
+   if impl(ghc >= 8.10.1)
+      ghc-options  : -Wunused-packages
 
 Library
   import           : common-settings
