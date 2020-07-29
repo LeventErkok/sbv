@@ -3,7 +3,7 @@ Cabal-Version: 2.2
 Name        : sbv
 Version     : 8.7.5
 Category    : Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
-Synopsis    : SMT Based Verification                                                           : Symbolic Haskell theorem prover using SMT solving.
+Synopsis    : SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description : Express properties about Haskell programs and automatically prove them using SMT
                (Satisfiability Modulo Theories) solvers.
                .
