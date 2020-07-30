@@ -85,6 +85,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , solver                      = s
                                             , smtLibVersion               = smtVersion
                                             , dsatPrecision               = Nothing
+                                            , extraArgs                   = []
                                             , satCmd                      = "(check-sat)"
                                             , satTrackUFs                 = True                   -- i.e., yes, do extract UI function values
                                             , allSatMaxModelCount         = Nothing                -- i.e., return all satisfying models

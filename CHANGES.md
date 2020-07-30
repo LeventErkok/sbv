@@ -22,6 +22,9 @@
     where you can now check properties to be satisfiable against delta-perturbations.
     See "Documentation.SBV.Examples.DeltaSat.DeltaSat" for a basic example.
 
+  * Add "extraArgs" parameter to SMTConfig to simplify passing extra command line
+    arguments to the solver.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query problems. Similar to

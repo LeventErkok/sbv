@@ -645,7 +645,7 @@ standardSolver config ctx pgm continuation = do
     let msg s    = debug config ["** " ++ s]
         smtSolver= solver config
         exec     = executable smtSolver
-        opts     = options smtSolver config
+        opts     = options smtSolver config ++ extraArgs config
     msg $ "Calling: "  ++ (exec ++ (if null opts then "" else " ") ++ joinArgs opts)
     rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
 

@@ -1807,6 +1807,7 @@ data SMTConfig = SMTConfig {
        , smtLibVersion               :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
        , dsatPrecision               :: Maybe Double   -- ^ Delta-sat precision
        , solver                      :: SMTSolver      -- ^ The actual SMT solver.
+       , extraArgs                   :: [String]       -- ^ Extra command line arguments to pass to the solver.
        , allowQuantifiedQueries      :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
        , roundingMode                :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        , solverSetOptions            :: [SMTOption]    -- ^ Options to set as we start the solver
