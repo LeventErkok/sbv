@@ -14,7 +14,7 @@
 module Data.SBV.Control.Types (
        CheckSatResult(..)
      , Logic(..)
-     , SMTOption(..), isStartModeOption, setSMTOption
+     , SMTOption(..), isStartModeOption, isOnlyOnceOption, setSMTOption
      , SMTInfoFlag(..)
      , SMTErrorBehavior(..)
      , SMTReasonUnknown(..)
@@ -130,6 +130,24 @@ isStartModeOption SMTVerbosity{}              = False
 isStartModeOption OptionKeyword{}             = True  -- Conservative.
 isStartModeOption SetLogic{}                  = True
 isStartModeOption SetInfo{}                   = False
+
+-- | Can this option be set multiple times? I'm only making a guess here.
+-- If this returns True, then we'll only send the last instance we see.
+-- We might need to update as necessary.
+isOnlyOnceOption :: SMTOption -> Bool
+isOnlyOnceOption DiagnosticOutputChannel{}   = True
+isOnlyOnceOption ProduceAssertions{}         = True
+isOnlyOnceOption ProduceAssignments{}        = True
+isOnlyOnceOption ProduceProofs{}             = True
+isOnlyOnceOption ProduceInterpolants{}       = True
+isOnlyOnceOption ProduceUnsatAssumptions{}   = True
+isOnlyOnceOption ProduceUnsatCores{}         = True
+isOnlyOnceOption RandomSeed{}                = False
+isOnlyOnceOption ReproducibleResourceLimit{} = False
+isOnlyOnceOption SMTVerbosity{}              = False
+isOnlyOnceOption OptionKeyword{}             = False -- This is really hard to determine. Just being permissive
+isOnlyOnceOption SetLogic{}                  = True
+isOnlyOnceOption SetInfo{}                   = False
 
 -- SMTLib's True/False is spelled differently than Haskell's.
 smtBool :: Bool -> String

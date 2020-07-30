@@ -144,10 +144,20 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         getModels   = "(set-option :produce-models true)"
                     : concat [flattenConfig | any needsFlattening kindInfo, Just flattenConfig <- [supportsFlattenedModels solverCaps]]
 
-        -- process all other settings we're given
-        userSettings = concatMap opts $ solverSetOptions cfg
-           where opts SetLogic{} = []     -- processed already
-                 opts o          = [setSMTOption o]
+        -- process all other settings we're given. If an option cannot be repeated, we only take the last one.
+        userSettings = map setSMTOption $ filter (not . isLogic) $ foldr comb [] $ solverSetOptions cfg
+           where -- Logic is already processed, so drop it:
+                 isLogic SetLogic{} = True
+                 isLogic _          = False
+
+                 -- SBV sets diagnostic-output channel on some solvers. If the user also gives it, let's just
+                 -- take it by only taking the last one
+                 isDiagOutput DiagnosticOutputChannel{} = True
+                 isDiagOutput _                         = False
+
+                 comb o rest
+                   | isDiagOutput o && any isDiagOutput rest =     rest
+                   | True                                    = o : rest
 
         settings =  userSettings        -- NB. Make sure this comes first!
                  ++ getModels

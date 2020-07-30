@@ -103,7 +103,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
 -- | If supported, this makes all output go to stdout, which works better with SBV
 -- Alas, not all solvers support it..
 allOnStdOut :: Control.SMTOption
-allOnStdOut = Control.OptionKeyword ":diagnostic-output-channel" [show "stdout"]
+allOnStdOut = Control.DiagnosticOutputChannel "stdout"
 
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
