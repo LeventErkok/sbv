@@ -1,9 +1,2 @@
-workflow "Code Checks" {
-  on = "push"
-  resolves = ["haskell-lint"]
-}
-
-action "haskell-lint" {
-  uses = "domdere/haskell-lint-action@master"
-  secrets = ["GITHUB_TOKEN"]
-}
+- name: Haskell Linter
+  uses: domdere/haskell-lint-action@v1.0.2
