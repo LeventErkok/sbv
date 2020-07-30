@@ -28,12 +28,12 @@ all: quick
 
 quick: tags
 	@$(TIME) cabal new-build
-	@$(TIME) cabal new-install --lib
+	@$(TIME) cabal new-install --lib --overwrite-policy=always
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal new-build
-	@$(TIME) cabal new-install --lib
+	@$(TIME) cabal new-install --lib --overwrite-policy=always
 
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
