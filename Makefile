@@ -9,7 +9,6 @@ SHELL := /usr/bin/env bash
 CONFIGOPTS = "-Wall -fhide-source-paths"
 
 export SBV_TEST_ENVIRONMENT := local
-unexport GHC_ENVIRONMENT
 
 DOCTESTSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation/SBV -name "*.hs")
 
