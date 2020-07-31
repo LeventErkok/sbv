@@ -27,11 +27,11 @@ endif
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-install --lib --overwrite-policy=always
+	@$(TIME) cabal new-install --lib
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal new-install --lib --overwrite-policy=always
+	@$(TIME) cabal new-install --lib
 
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
