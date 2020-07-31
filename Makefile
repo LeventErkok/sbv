@@ -27,12 +27,10 @@ endif
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-build
 	@$(TIME) cabal new-install --lib --overwrite-policy=always
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal new-build
 	@$(TIME) cabal new-install --lib --overwrite-policy=always
 
 docs:
@@ -109,4 +107,3 @@ clean:
 
 veryclean: clean
 	@make -C buildUtils clean
-	@-ghc-pkg unregister sbv
