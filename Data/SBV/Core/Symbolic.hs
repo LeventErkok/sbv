@@ -1739,6 +1739,7 @@ instance NFData SMTScript where
 data SolverCapabilities = SolverCapabilities {
          supportsQuantifiers        :: Bool           -- ^ Supports SMT-Lib2 style quantifiers?
        , supportsDefineFun          :: Bool           -- ^ Supports define-fun construct?
+       , supportsDistinct           :: Bool           -- ^ Supports calls to distinct?
        , supportsBitVectors         :: Bool           -- ^ Supports bit-vectors?
        , supportsUninterpretedSorts :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?

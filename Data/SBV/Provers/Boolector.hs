@@ -29,6 +29,7 @@ boolector = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsDefineFun          = True
+                              , supportsDistinct           = True
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False

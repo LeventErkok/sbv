@@ -631,6 +631,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         supportsPB = supportsPseudoBooleans caps
 
+        hasDistinct = supportsDistinct caps
+
         bvOp     = all isBounded   arguments
         intOp    = any isUnbounded arguments
         realOp   = any isReal      arguments
@@ -690,16 +692,13 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | True     = lift2 "="     sgn sbvs
 
         notEqual sgn sbvs
-          | doubleOp = liftP sbvs
-          | floatOp  = liftP sbvs
-          | True     = liftN "distinct" sgn sbvs
+          | doubleOp || floatOp || not hasDistinct = liftP sbvs
+          | True                                   = liftN "distinct" sgn sbvs
           where liftP [_, _] = "(not " ++ equal sgn sbvs ++ ")"
                 liftP args   = "(and " ++ unwords (walk args) ++ ")"
 
                 walk []     = []
-                walk (e:es) = map (pair e) es ++ walk es
-
-                pair e1 e2  = "(not (fp.eq " ++ e1 ++ " " ++ e2 ++ "))"
+                walk (e:es) = map (\e' -> liftP [e, e']) es ++ walk es
 
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         liftNS oU oS sgn = liftN (if sgn then oS else oU) sgn

@@ -33,6 +33,7 @@ cvc4 = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = True
                               , supportsDefineFun          = True
+                              , supportsDistinct           = True
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True

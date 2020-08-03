@@ -33,6 +33,7 @@ dReal = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsDefineFun          = True
+                              , supportsDistinct           = False
                               , supportsBitVectors         = False
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = True

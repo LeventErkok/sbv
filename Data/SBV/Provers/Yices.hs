@@ -31,6 +31,7 @@ yices = SMTSolver {
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
                               , supportsDefineFun          = True
+                              , supportsDistinct           = True
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
