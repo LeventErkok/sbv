@@ -9,8 +9,7 @@
 -- Testing arrays with initializers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types       #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE Rank2Types #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
