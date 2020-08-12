@@ -173,7 +173,7 @@ module Data.SBV (
   -- ** Sets
   , RCSet(..), SSet
   -- * Arrays of symbolic values
-  , SymArray(readArray, writeArray, mergeArrays), newArray_, newArray, SArray, SFunArray
+  , SymArray(readArray, writeArray, mergeArrays, sListArray), newArray_, newArray, SArray, SFunArray
 
   -- * Creating symbolic values
   -- ** Single value

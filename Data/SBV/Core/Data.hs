@@ -73,6 +73,9 @@ import Data.Typeable          (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
 
+import qualified Data.IORef         as R    (readIORef, newIORef)
+import qualified Data.IntMap.Strict as IMap (size, insert, empty)
+
 import System.Random
 
 import Data.SBV.Core.AlgReals
@@ -613,6 +616,8 @@ class SymArray array where
   newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
   -- | Generalization of 'Data.SBV.newArray'
   newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
+  -- | Create a literal array
+  sListArray     :: (HasKind a, SymVal b) => Maybe (SBV b) -> [(SBV a, SBV b)] -> array a b
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
@@ -624,7 +629,7 @@ class SymArray array where
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
-  {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState) #-}
+  {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState), sListArray #-}
   newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   mbVal
   newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) mbVal
 
@@ -655,6 +660,22 @@ instance SymArray SArray where
   readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
+
+  sListArray :: forall a b. (HasKind a, SymVal b) => Maybe (SBV b) -> [(SBV a, SBV b)] -> SArray a b
+  sListArray mbInit = foldl (uncurry . writeArray) arr
+    where arr = SArray $ SArr ks $ cache r
+           where ks   = (kindOf (Proxy @a), kindOf (Proxy @b))
+                 r st = do amap <- R.readIORef (rArrayMap st)
+
+                           iv <- case mbInit of
+                                   Nothing  -> pure Nothing
+                                   Just sbv -> Just <$> sbvToSV st sbv
+
+                           let k   = ArrayIndex $ IMap.size amap
+                               upd = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree iv)
+
+                           k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
+                           return k
 
   newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SArray a b)
   newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]
@@ -688,6 +709,27 @@ instance SymArray SFunArray where
   readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
   writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
   mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
+
+  sListArray :: forall a b. (HasKind a, SymVal b) => Maybe (SBV b) -> [(SBV a, SBV b)] -> SFunArray a b
+  sListArray mbInit = foldl (uncurry . writeArray) arr
+    where arr = SFunArray $ SFunArr ks $ cache r
+           where ks@(_, bk) = (kindOf (Proxy @a), kindOf (Proxy @b))
+
+                 r st = do amap <- R.readIORef (rFArrayMap st)
+
+                           memoTable <- R.newIORef IMap.empty
+
+                           let k  = FArrayIndex $ IMap.size amap
+                               nm = "funArray_" ++ show (unFArrayIndex k)
+
+                               mkUninitialized = case mbInit of
+                                                   Nothing  -> \i -> svUninterpreted bk (nm ++ "_uninitializedRead") Nothing [i]
+                                                   Just sbv -> const (unSBV sbv)
+
+                           let upd = IMap.insert (unFArrayIndex k) (mkUninitialized, memoTable)
+
+                           k `seq` modifyState st rFArrayMap upd (return ())
+                           return k
 
   newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SFunArray a b)
   newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]

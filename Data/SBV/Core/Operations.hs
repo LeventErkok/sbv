@@ -42,7 +42,7 @@ module Data.SBV.Core.Operations
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
   -- ** Basic array operations
-  , SArr,         readSArr,     writeSArr,     mergeSArr,     newSArr,     eqSArr
+  , SArr(..),     readSArr,     writeSArr,     mergeSArr,     newSArr,     eqSArr
   , SFunArr(..),  readSFunArr,  writeSFunArr,  mergeSFunArr,  newSFunArr
   -- Utils
   , mkSymOp

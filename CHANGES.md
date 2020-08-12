@@ -25,6 +25,17 @@
   * Add "extraArgs" parameter to SMTConfig to simplify passing extra command line
     arguments to the solver.
 
+  * Add a method 
+
+      sListArray :: (HasKind a, SymVal b) => Maybe (SBV b) -> [(SBV a, SBV b)] -> array a b
+
+    which allows for creation of arrays from lists of constant or symbolic lists of pairs. The
+    first argument is the value to use for uninitialized entries, if any. (If not given, a
+    read from an unwritten position will be uninterpreted.) Latter elements of the list
+    will overwrite the earlier ones, if there are repeated keys. You can create a fresh
+    array using this method by passing Nothing as the first argument and the empty list
+    as the second.
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query problems. Similar to
