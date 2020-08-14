@@ -676,19 +676,21 @@ instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
 
 -- SFunArrays (memory, functional representation), only supported universally for the time being
 instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
-  forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
-  forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
-  forAll []     k = forAll_ k
-  forSome_      _ = error "SBV.forSome.SFunArray: Existential arrays are not currently supported."
-  forSome _     _ = error "SBV.forSome.SFunArray: Existential arrays are not currently supported."
+  forAll_        k = newArray_  Nothing >>= \a -> forAll_   $ k a
+  forAll  (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
+  forAll  []     k = forAll_ k
+  forSome_       k = newArray_  Nothing >>= \a -> forSome_   $ k a
+  forSome (s:ss) k = newArray s Nothing >>= \a -> forSome ss $ k a
+  forSome []     k = forSome_ k
 
 -- SArrays (memory, SMT-Lib notion of arrays), only supported universally for the time being
 instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SFunArray a b -> p) where
-  forAll_       k = newArray_  Nothing >>= \a -> forAll_   $ k a
-  forAll (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
-  forAll []     k = forAll_ k
-  forSome_      _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
-  forSome _     _ = error "SBV.forSome.SArray: Existential arrays are not currently supported."
+  forAll_        k = newArray_  Nothing >>= \a -> forAll_   $ k a
+  forAll (s:ss)  k = newArray s Nothing >>= \a -> forAll ss $ k a
+  forAll []      k = forAll_ k
+  forSome_       k = newArray_  Nothing >>= \a -> forSome_   $ k a
+  forSome (s:ss) k = newArray s Nothing >>= \a -> forSome ss $ k a
+  forSome []     k = forSome_ k
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
