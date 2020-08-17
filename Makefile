@@ -38,6 +38,9 @@ docs:
 ghci:
 	cabal new-repl --repl-options=-Wno-unused-packages
 
+ghci_SBVTest:
+	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
+
 ghcid:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
 
