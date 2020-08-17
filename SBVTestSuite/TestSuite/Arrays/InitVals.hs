@@ -44,19 +44,33 @@ constArr proxy = do i <- sInteger "i"
                     constrain $ i ./= j
                     constrain $ i `sElem` [1, 2, 3, 75]
                     pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
-  where myArray = sListArray (Just 7) [(1, 12), (2, 5) , (3, 6), (75, 5)]
+  where myArray = sListArray 7 [(1, 12), (2, 5) , (3, 6), (75, 5)]
+
+constArr2 :: forall m. SymArray m => m Integer Integer -> Predicate
+constArr2 proxy = do i <- sInteger "i"
+                     j <- sInteger "j"
+
+                     constrain $ i ./= j
+                     constrain $ i `sElem` [1, 2, 3, 75]
+                     pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
+  where myArray = sListArray (uninterpret "constArr2") [(1, 12), (2, 5) , (3, 6), (75, 5)]
 
 tests :: TestTree
 tests =
   testGroup "Arrays.InitVals"
-    [ testCase "readDef_SArray"             $ assertIsThm (readDef (undefined :: SArray    Integer Integer))
-    , testCase "readDef_SFunArray"          $ assertIsThm (readDef (undefined :: SFunArray Integer Integer))
+    [ testCase "readDef_SArray"              $ assertIsThm (readDef (undefined :: SArray    Integer Integer))
+    , testCase "readDef_SFunArray"           $ assertIsThm (readDef (undefined :: SFunArray Integer Integer))
 
-    , testCase "readDef_SArray"             $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
-    , testCase "readDef_SFunArray"          $ assertIsSat (readNoDef (undefined :: SFunArray Integer Integer))
+    , testCase "readDef_SArray"              $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
+    , testCase "readDef_SFunArray"           $ assertIsSat (readNoDef (undefined :: SFunArray Integer Integer))
 
-    , goldenCapturedIO "constArr_SArray"    $ t (undefined :: SArray    Integer Integer)
-    , goldenCapturedIO "constArr_SFunArray" $ t (undefined :: SFunArray Integer Integer)
+    , goldenCapturedIO "constArr_SArray"     $ t  (undefined :: SArray    Integer Integer)
+    , goldenCapturedIO "constArr_SFunArray"  $ t  (undefined :: SFunArray Integer Integer)
+
+    , goldenCapturedIO "constArr2_SArray"    $ t2 (undefined :: SArray    Integer Integer)
+    , goldenCapturedIO "constArr2_SFunArray" $ t2 (undefined :: SFunArray Integer Integer)
     ]
     where t p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr p)
                             appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+          t2 p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr2 p)
+                             appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
