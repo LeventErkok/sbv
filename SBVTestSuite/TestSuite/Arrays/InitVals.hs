@@ -74,3 +74,5 @@ tests =
                             appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
           t2 p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr2 p)
                              appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
