@@ -612,17 +612,15 @@ instance (Random a, SymVal a) => Random (SBV a) where
 -- the backend solver has hard time solving the generated problems, switch to
 -- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
 --
--- NB. 'sListArray' insists on an initializer, because not having one would break
+-- NB. 'sListArray' insists on a concrete initializer, because not having one would break
 -- referential transparency. See https://github.com/LeventErkok/sbv/issues/553 for details.
--- If you want to have an arbitrary value, simply create an uninterpreted constant and
--- pass it yourself.
 class SymArray array where
   -- | Generalization of 'Data.SBV.newArray_'
   newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
   -- | Generalization of 'Data.SBV.newArray'
   newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
   -- | Create a literal array
-  sListArray     :: (HasKind a, SymVal b) => SBV b -> [(SBV a, SBV b)] -> array a b
+  sListArray     :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
   -- | Read the array element at @a@
   readArray      :: array a b -> SBV a -> SBV b
   -- | Update the element at @a@ to be @b@
@@ -666,16 +664,18 @@ instance SymArray SArray where
   writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
   mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
 
-  sListArray :: forall a b. (HasKind a, SymVal b) => SBV b -> [(SBV a, SBV b)] -> SArray a b
+  sListArray :: forall a b. (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> SArray a b
   sListArray initializer = foldl (uncurry . writeArray) arr
     where arr = SArray $ SArr ks $ cache r
            where ks   = (kindOf (Proxy @a), kindOf (Proxy @b))
                  r st = do amap <- R.readIORef (rArrayMap st)
 
-                           iVal <- sbvToSV st initializer
+                           let k    = ArrayIndex $ IMap.size amap
+                               iVal = literal initializer
 
-                           let k   = ArrayIndex $ IMap.size amap
-                               upd = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree (Just iVal))
+                           iSV <- sbvToSV st iVal
+
+                           let upd  = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree (Just iSV))
 
                            k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
                            return k
@@ -713,7 +713,7 @@ instance SymArray SFunArray where
   writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
   mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
 
-  sListArray :: forall a b. (HasKind a, SymVal b) => SBV b -> [(SBV a, SBV b)] -> SFunArray a b
+  sListArray :: forall a b. (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> SFunArray a b
   sListArray initializer = foldl (uncurry . writeArray) arr
     where arr = SFunArray $ SFunArr ks $ cache r
            where ks = (kindOf (Proxy @a), kindOf (Proxy @b))
@@ -723,7 +723,8 @@ instance SymArray SFunArray where
                            memoTable <- R.newIORef IMap.empty
 
                            let k               = FArrayIndex $ IMap.size amap
-                               mkUninitialized = const (unSBV initializer)
+                               iVal            = literal initializer
+                               mkUninitialized = const (unSBV iVal)
                                upd             = IMap.insert (unFArrayIndex k) (mkUninitialized, memoTable)
 
                            k `seq` modifyState st rFArrayMap upd (return ())

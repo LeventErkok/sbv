@@ -27,14 +27,12 @@
 
   * Add a method 
 
-        sListArray :: (HasKind a, SymVal b) => SBV b -> [(SBV a, SBV b)] -> array a b
+        sListArray :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
 
     to the `SymArray` class, which allows for creation of arrays from lists of constant or 
     symbolic lists of pairs. The first argument is the value to use for uninitialized entries.
-    (You can give an uninterpreted value if you want it to be arbitrary.) Latter elements
-    of the list will overwrite the earlier ones, if there are repeated keys. You can create a fresh
-    array using this method by passing Nothing as the first argument and the empty list
-    as the second.
+    Note that the initializer must be a known constant, i.e., it cannot be symbolic. Latter
+    elements of the list will overwrite the earlier ones, if there are repeated keys.
 
 ### Version 8.7, 2020-06-30
 

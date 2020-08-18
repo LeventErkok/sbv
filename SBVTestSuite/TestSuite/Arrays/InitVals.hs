@@ -53,7 +53,7 @@ constArr2 proxy = do i <- sInteger "i"
                      constrain $ i ./= j
                      constrain $ i `sElem` [1, 2, 3, 75]
                      pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
-  where myArray = sListArray (uninterpret "constArr2") [(1, 12), (2, 5) , (3, 6), (75, 5)]
+  where myArray = sListArray 2 [(1, 12), (2, 5) , (3, 6), (75, 5)]
 
 tests :: TestTree
 tests =
@@ -61,8 +61,8 @@ tests =
     [ testCase "readDef_SArray"              $ assertIsThm (readDef (undefined :: SArray    Integer Integer))
     , testCase "readDef_SFunArray"           $ assertIsThm (readDef (undefined :: SFunArray Integer Integer))
 
-    , testCase "readDef_SArray"              $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
-    , testCase "readDef_SFunArray"           $ assertIsSat (readNoDef (undefined :: SFunArray Integer Integer))
+    , testCase "readDef2_SArray2"            $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
+    , testCase "readDef2_SFunArray"          $ assertIsSat (readNoDef (undefined :: SFunArray Integer Integer))
 
     , goldenCapturedIO "constArr_SArray"     $ t  (undefined :: SArray    Integer Integer)
     , goldenCapturedIO "constArr_SFunArray"  $ t  (undefined :: SFunArray Integer Integer)
