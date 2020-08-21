@@ -1496,7 +1496,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
-                  , rQueryState   = qstate
+                  , rQueryState  = qstate
                   }
    _ <- liftIO $ newConst st falseCV -- s(-2) == falseSV
    _ <- liftIO $ newConst st trueCV  -- s(-1) == trueSV
