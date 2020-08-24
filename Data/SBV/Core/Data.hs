@@ -371,8 +371,8 @@ sbvToSV st (SBV s) = svToSV st s
 -------------------------------------------------------------------------
 
 -- | Generalization of 'Data.SBV.mkSymSBV'
-mkSymSBV :: forall a m. MonadSymbolic m => Maybe Quantifier -> Kind -> Maybe String -> m (SBV a)
-mkSymSBV mbQ k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
+mkSymSBV :: forall a m. MonadSymbolic m => VarContext -> Kind -> Maybe String -> m (SBV a)
+mkSymSBV vc k mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc k mbNm)
 
 -- | Generalization of 'Data.SBV.sbvToSymSW'
 sbvToSymSV :: MonadSymbolic m => SBV a -> m SV
@@ -464,7 +464,7 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 -- | A 'SymVal' is a potential symbolic value that can be created instances of to be fed to a symbolic program.
 class (HasKind a, Typeable a) => SymVal a where
   -- | Generalization of 'Data.SBV.mkSymVal'
-  mkSymVal :: MonadSymbolic m => Maybe Quantifier -> Maybe String -> m (SBV a)
+  mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
   -- | Extract a literal, from a CV representation
@@ -476,8 +476,8 @@ class (HasKind a, Typeable a) => SymVal a where
   -- Giving no instances is okay when defining an uninterpreted/enumerated sort, but otherwise you really
   -- want to define: literal, fromCV, mkSymVal
 
-  default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => Maybe Quantifier -> Maybe String -> m (SBV a)
-  mkSymVal mbQ mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar mbQ k mbNm)
+  default mkSymVal :: (MonadSymbolic m, Read a, G.Data a) => VarContext -> Maybe String -> m (SBV a)
+  mkSymVal vc mbNm = SBV <$> (symbolicEnv >>= liftIO . svMkSymVar vc k mbNm)
     where -- NB.A call of the form
           --      constructUKind (Proxy @a)
           -- would be wrong here, as it would uninterpret the Proxy datatype!
@@ -502,11 +502,11 @@ class (HasKind a, Typeable a) => SymVal a where
 
   -- | Generalization of 'Data.SBV.forall'
   forall :: MonadSymbolic m => String -> m (SBV a)
-  forall = mkSymVal (Just ALL) . Just
+  forall = mkSymVal (NonQueryVar (Just ALL)) . Just
 
   -- | Generalization of 'Data.SBV.forall_'
   forall_ :: MonadSymbolic m => m (SBV a)
-  forall_ = mkSymVal (Just ALL) Nothing
+  forall_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
 
   -- | Generalization of 'Data.SBV.mkForallVars'
   mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
@@ -514,11 +514,11 @@ class (HasKind a, Typeable a) => SymVal a where
 
   -- | Generalization of 'Data.SBV.exists'
   exists :: MonadSymbolic m => String -> m (SBV a)
-  exists = mkSymVal (Just EX) . Just
+  exists = mkSymVal (NonQueryVar (Just EX)) . Just
 
   -- | Generalization of 'Data.SBV.exists_'
   exists_ :: MonadSymbolic m => m (SBV a)
-  exists_ = mkSymVal (Just EX) Nothing
+  exists_ = mkSymVal (NonQueryVar (Just EX)) Nothing
 
   -- | Generalization of 'Data.SBV.mkExistVars'
   mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
@@ -526,11 +526,11 @@ class (HasKind a, Typeable a) => SymVal a where
 
   -- | Generalization of 'Data.SBV.free'
   free :: MonadSymbolic m => String -> m (SBV a)
-  free = mkSymVal Nothing . Just
+  free = mkSymVal (NonQueryVar Nothing) . Just
 
   -- | Generalization of 'Data.SBV.free_'
   free_ :: MonadSymbolic m => m (SBV a)
-  free_ = mkSymVal Nothing Nothing
+  free_ = mkSymVal (NonQueryVar Nothing) Nothing
 
   -- | Generalization of 'Data.SBV.mkFreeVars'
   mkFreeVars :: MonadSymbolic m => Int -> m [SBV a]
