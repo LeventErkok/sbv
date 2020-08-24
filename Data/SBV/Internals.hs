@@ -21,7 +21,7 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-    Result(..), SBVRunMode(..), IStage(..), QueryContext(..)
+    Result(..), SBVRunMode(..), IStage(..), QueryContext(..), VarContext(..)
 
   -- * Solver capabilities
   , SolverCapabilities(..)
@@ -59,7 +59,7 @@ import Control.Monad.IO.Class (MonadIO)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
-import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind)
+import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..))
 
 import Data.SBV.Core.Floating   (sFloatAsComparableSWord32, sDoubleAsComparableSWord64)
 

@@ -17,7 +17,7 @@ module TestSuite.Basics.SmallShifts(tests) where
 import Utils.SBVTestFramework hiding (proveWith)
 
 import Data.SBV.Dynamic
-import Data.SBV.Internals  (genMkSymVar, unSBV)
+import Data.SBV.Internals  (genMkSymVar, unSBV, VarContext(..))
 
 k1, k32, k33 :: Kind
 k1   = KBounded False  1
@@ -43,8 +43,8 @@ average4 x y =   ((x `svShiftRight` b1) `svPlus` (y `svShiftRight` b1))
                 `svPlus` (x `svAnd` (y `svAnd` svInteger k32 1))
 
 prop :: Symbolic SVal
-prop = do x <- unSBV <$> genMkSymVar k32 Nothing (Just "x")
-          y <- unSBV <$> genMkSymVar k32 Nothing (Just "y")
+prop = do x <- unSBV <$> genMkSymVar k32 (NonQueryVar Nothing) (Just "x")
+          y <- unSBV <$> genMkSymVar k32 (NonQueryVar Nothing) (Just "y")
           return $ average33 x y `svEqual` average4 x y
 
 checkThm :: ThmResult -> Assertion

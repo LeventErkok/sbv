@@ -15,7 +15,7 @@ module TestSuite.Basics.Recursive(tests) where
 
 import Utils.SBVTestFramework
 
-import Data.SBV.Internals  (genMkSymVar, unSBV)
+import Data.SBV.Internals  (genMkSymVar, unSBV, VarContext(..))
 
 import qualified Data.SBV.Dynamic as D
 
@@ -29,7 +29,7 @@ mgcdDyn :: Int -> IO ThmResult
 mgcdDyn i = D.proveWith z3 $ do
 
               let var8 :: String -> Symbolic D.SVal
-                  var8 nm = unSBV <$> genMkSymVar word8 (Just D.ALL) (Just nm)
+                  var8 nm = unSBV <$> genMkSymVar word8 (NonQueryVar (Just D.ALL)) (Just nm)
 
                   word8   = KBounded False 8
                   zero8   = D.svInteger word8 0

@@ -16,10 +16,10 @@ module TestSuite.Basics.DynSign(tests) where
 import Utils.SBVTestFramework hiding (proveWith)
 
 import Data.SBV.Dynamic
-import Data.SBV.Internals  (genMkSymVar, unSBV)
+import Data.SBV.Internals  (genMkSymVar, unSBV, VarContext(..))
 
 prop :: Symbolic SVal
-prop = do x <- unSBV <$> genMkSymVar w8 Nothing (Just "x")
+prop = do x <- unSBV <$> genMkSymVar w8 (NonQueryVar Nothing) (Just "x")
           let lhs = svUnsign (svSign x `svShiftRight` sfour)
               rhs = svExtract 7 0    x `svShiftRight` ufour
           return $ lhs `svEqual` rhs
