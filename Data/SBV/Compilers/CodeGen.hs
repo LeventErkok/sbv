@@ -55,7 +55,7 @@ import           Text.PrettyPrint.HughesPJ      (Doc, vcat)
 import qualified Text.PrettyPrint.HughesPJ as P (render)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputSVal, VarContext(..))
+import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputSVal)
 
 #if MIN_VERSION_base(4,11,0)
 import Control.Monad.Fail as Fail
@@ -216,7 +216,7 @@ cgAddLDFlags ss = modify' (\s -> s { cgLDFlags = cgLDFlags s ++ ss })
 
 -- | Creates an atomic input in the generated code.
 svCgInput :: Kind -> String -> SBVCodeGen SVal
-svCgInput k nm = do r  <- symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar (Just ALL)) k Nothing
+svCgInput k nm = do r  <- symbolicEnv >>= liftIO . svMkSymVar (Just ALL) k Nothing
                     sv <- svToSymSV r
                     modify' (\s -> s { cgInputs = (nm, CgAtomic sv) : cgInputs s })
                     return r
@@ -225,7 +225,7 @@ svCgInput k nm = do r  <- symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar (Just
 svCgInputArr :: Kind -> Int -> String -> SBVCodeGen [SVal]
 svCgInputArr k sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
-  | True   = do rs  <- symbolicEnv >>= liftIO . replicateM sz . svMkSymVar (NonQueryVar (Just ALL)) k Nothing
+  | True   = do rs  <- symbolicEnv >>= liftIO . replicateM sz . svMkSymVar (Just ALL) k Nothing
                 sws <- mapM svToSymSV rs
                 modify' (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
                 return rs

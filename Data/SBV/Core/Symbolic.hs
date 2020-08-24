@@ -31,7 +31,7 @@ module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
-  , Quantifier(..), needsExistentials, VarContext(..)
+  , Quantifier(..), needsExistentials
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, newUninterpreted
   , SVal(..)
@@ -531,10 +531,6 @@ instance Show Quantifier where
   show ALL = "Forall"
   show EX  = "Exists"
 
--- | Which context is this variable being created?
-data VarContext = NonQueryVar (Maybe Quantifier)  -- in this case, it can be quantified
-                | QueryVar                        -- in this case, it is always existential
-
 -- | Are there any existential quantifiers?
 needsExistentials :: [Quantifier] -> Bool
 needsExistentials = (EX `elem`)
@@ -1024,13 +1020,6 @@ noInteractive ss = error $ unlines $  ""
                                    :  map ("***  " ++) ss
                                    ++ ["*** Data.SBV: Please report this as a feature request!"]
 
--- | Things we do not support in interactive mode, nor we ever intend to
-noInteractiveEver :: [String] -> [String] -> a
-noInteractiveEver ss hint = error $ unlines $  ""
-                                            :  "*** Data.SBV: Unsupported interactive/query mode feature."
-                                            :  map ("***  " ++) ss
-                                            ++ hint
-
 -- | Modification of the state, but carefully handling the interactive tasks.
 -- Note that the state is always updated regardless of the mode, but we get
 -- to also perform extra operation in interactive mode. (Typically error out, but also simply
@@ -1319,36 +1308,36 @@ type Symbolic = SymbolicT IO
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCV@ is used for generating random values for this variable
 -- when used for @quickCheck@ or 'Data.SBV.Tools.GenTest.genTest' purposes.
-svMkSymVar :: VarContext -> Kind -> Maybe String -> State -> IO SVal
+svMkSymVar :: Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
 svMkSymVar = svMkSymVarGen False
 
 -- | Create an existentially quantified tracker variable
 svMkTrackerVar :: Kind -> String -> State -> IO SVal
-svMkTrackerVar k nm = svMkSymVarGen True (NonQueryVar (Just EX)) k (Just nm)
+svMkTrackerVar k nm = svMkSymVarGen True (Just EX) k (Just nm)
 
 -- | Generalization of 'Data.SBV.sWordN'
 sWordN :: MonadSymbolic m => Int -> String -> m SVal
-sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar Nothing) (KBounded False w) (Just nm)
+sWordN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) (Just nm)
 
 -- | Generalization of 'Data.SBV.sWordN_'
 sWordN_ :: MonadSymbolic m => Int -> m SVal
-sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar Nothing) (KBounded False w) Nothing
+sWordN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded False w) Nothing
 
 -- | Generalization of 'Data.SBV.sIntN'
 sIntN :: MonadSymbolic m => Int -> String -> m SVal
-sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar Nothing) (KBounded True w) (Just nm)
+sIntN w nm = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) (Just nm)
 
 -- | Generalization of 'Data.SBV.sIntN_'
 sIntN_ :: MonadSymbolic m => Int -> m SVal
-sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar Nothing) (KBounded True w) Nothing
+sIntN_ w = symbolicEnv >>= liftIO . svMkSymVar Nothing (KBounded True w) Nothing
 
 -- | Create a symbolic value, based on the quantifier we have. If an
 -- explicit quantifier is given, we just use that. If not, then we
 -- pick the quantifier appropriately based on the run-mode.
 -- @randomCV@ is used for generating random values for this variable
 -- when used for @quickCheck@ or 'Data.SBV.Tools.GenTest.genTest' purposes.
-svMkSymVarGen :: Bool -> VarContext -> Kind -> Maybe String -> State -> IO SVal
-svMkSymVarGen isTracker varContext k mbNm st = do
+svMkSymVarGen :: Bool -> Maybe Quantifier -> Kind -> Maybe String -> State -> IO SVal
+svMkSymVarGen isTracker mbQ k mbNm st = do
         rm <- readIORef (runMode st)
 
         let varInfo = case mbNm of
@@ -1361,13 +1350,9 @@ svMkSymVarGen isTracker varContext k mbNm st = do
               | isUserSort k  = disallow "User defined sorts"
               | True          = cont
 
-            (isQueryVar, mbQ) = case varContext of
-                                  NonQueryVar mq -> (False, mq)
-                                  QueryVar       -> (True,  Just EX)
-
             mkS q = do (sv, internalName) <- newSV st k
                        let nm = fromMaybe internalName mbNm
-                       introduceUserName st (isQueryVar, isTracker) nm k q sv
+                       introduceUserName st isTracker nm k q sv
 
             mkC cv = do registerKind st k
                         modifyState st rCInfo ((fromMaybe "_" mbNm, cv):) (return ())
@@ -1424,8 +1409,8 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                    mkC cv
 
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
-introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV -> IO SVal
-introduceUserName st (isQueryVar, isTracker) nmOrig k q sv = do
+introduceUserName :: State -> Bool -> String -> Kind -> Quantifier -> SV -> IO SVal
+introduceUserName st isTracker nmOrig k q sv = do
         (_, old) <- readIORef (rinps st)
 
         let nm  = mkUnique nmOrig old
@@ -1445,11 +1430,7 @@ introduceUserName st (isQueryVar, isTracker) nmOrig k q sv = do
                       then modifyState st rinps (second ((sv, nm) :) *** Set.insert nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
                       else modifyState st rinps (first ((q, (sv, nm)) :) *** Set.insert nm)
-                                     $ if isQueryVar
-                                          then noInteractiveEver ["Adding a new input variable in query mode: " ++ show nm]
-                                                                 ["*** Hint: Use freshVar/freshVar_ for introducing new inputs in query mode."
-                                                                 ]
-                                          else modifyIncState st rNewInps newInp
+                                     $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
    where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
