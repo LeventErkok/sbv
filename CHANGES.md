@@ -34,6 +34,9 @@
     Note that the initializer must be a known constant, i.e., it cannot be symbolic. Latter
     elements of the list will overwrite the earlier ones, if there are repeated keys.
 
+  * Thanks to Jan Hrcek, a whole bunch of typos were fixed in the documentation and
+    the source code. Much appreciated!
+
 ### Version 8.7, 2020-06-30
 
   * Add support for concurrent versions of solvers for query problems. Similar to
