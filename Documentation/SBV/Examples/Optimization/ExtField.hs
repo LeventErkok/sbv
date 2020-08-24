@@ -16,8 +16,8 @@ module Documentation.SBV.Examples.Optimization.ExtField where
 import Data.SBV
 
 -- | Optimization goals where min/max values might require assignments
--- to values that are infinite (integer case), or infinite/epsion (real case).
--- This simple example demostrates how SBV can be used to extract such values.
+-- to values that are infinite (integer case), or infinite/epsilon (real case).
+-- This simple example demonstrates how SBV can be used to extract such values.
 --
 -- We have:
 --

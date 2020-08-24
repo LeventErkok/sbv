@@ -75,7 +75,7 @@ genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Jus
 --    Polynomial #3. x^16 + x^3 + x + 1
 --    Polynomial #4. x^16 + x^15 + x^2 + 1
 --    Polynomial #5. x^16 + x^15 + x^2 + x + 1
---    Found: 5 polynomail(s).
+--    Found: 5 polynomial(s).
 --  @
 --
 -- Note that different runs can produce different results, depending on the random

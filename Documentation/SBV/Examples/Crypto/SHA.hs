@@ -62,7 +62,7 @@ maj :: Bits a => a -> a -> a -> a
 maj x y z = (x .&. y) `xor` (x .&. z) `xor` (y .&. z)
 
 -- | The sum-0 function. We parameterize over the rotation amounts as different
--- variants of SHA use different rotation amnounts.
+-- variants of SHA use different rotation amounts.
 sum0 :: Bits a => SHA w -> a -> a
 sum0 SHA{sum0Coefficients = (a, b, c)} x = (x `rotateR` a) `xor` (x `rotateR` b) `xor` (x `rotateR` c)
 

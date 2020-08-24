@@ -82,7 +82,7 @@ data CVal = CAlgReal  !AlgReal              -- ^ Algebraic real
           | CMaybe    !(Maybe CVal)         -- ^ Maybe
           | CEither   !(Either CVal CVal)   -- ^ Disjoint union
 
--- | Assing a rank to constant values, this is structural and helps with ordering
+-- | Assign a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
 cvRank CAlgReal  {} =  0
 cvRank CInteger  {} =  1
@@ -160,7 +160,7 @@ data CV = CV { _cvKind  :: !Kind
 data GeneralizedCV = ExtendedCV ExtCV
                    | RegularCV  CV
 
--- | A simple expression type over extendent values, covering infinity, epsilon and intervals.
+-- | A simple expression type over extended values, covering infinity, epsilon and intervals.
 data ExtCV = Infinite  Kind         -- infinity
            | Epsilon   Kind         -- epsilon
            | Interval  ExtCV ExtCV  -- closed interval

@@ -30,7 +30,7 @@ merge xs     []           = xs
 merge xs@(x:xr) ys@(y:yr) = ite (x .< y) (x : merge xr ys) (y : merge xs yr)
 
 -- | Simple merge-sort implementation. We simply divide the input list
--- in two two halves so long as it has at least two elements, sort
+-- in two halves so long as it has at least two elements, sort
 -- each half on its own, and then merge.
 mergeSort :: [E] -> [E]
 mergeSort []  = []

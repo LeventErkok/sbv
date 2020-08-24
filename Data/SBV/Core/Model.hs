@@ -654,7 +654,7 @@ observeIf cond m x
                   recordObservable st m (cond . fromCV) xsv
                   return xsv
 
--- | Observe the value of an expression, uncoditionally. See 'observeIf' for a generalized version.
+-- | Observe the value of an expression, unconditionally. See 'observeIf' for a generalized version.
 observe :: SymVal a => String -> SBV a -> SBV a
 observe = observeIf (const True)
 
@@ -1034,7 +1034,7 @@ class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
     setBitTo            :: SBV a -> Int -> SBool -> SBV a
     -- | Full adder, returns carry-out from the addition. Only for unsigned quantities.
     fullAdder           :: SBV a -> SBV a -> (SBool, SBV a)
-    -- | Full multipler, returns both high and low-order bits. Only for unsigned quantities.
+    -- | Full multiplier, returns both high and low-order bits. Only for unsigned quantities.
     fullMultiplier      :: SBV a -> SBV a -> (SBV a, SBV a)
     -- | Count leading zeros in a word, big-endian interpretation.
     sCountLeadingZeros  :: SBV a -> SWord8
@@ -1304,7 +1304,7 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat, SDouble, and SReal.
 -- Note that unless you use delta-sat via dReal on SReal, most of the fields are "undefined" for symbolic values. We will
--- add methods as they are supported by SMTLib. Currently, the only symbolicly available function in this class is sqrt
+-- add methods as they are supported by SMTLib. Currently, the only symbolically available function in this class is sqrt
 -- for SFloat and SDouble.
 instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
   pi      = literal pi
@@ -2504,7 +2504,7 @@ instance Testable (Symbolic SVal) where
                              return (SBV s :: SBool)
 
 -- | Explicit sharing combinator. The SBV library has internal caching/hash-consing mechanisms
--- built in, based on Andy Gill's type-safe obervable sharing technique (see: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>).
+-- built in, based on Andy Gill's type-safe observable sharing technique (see: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>).
 -- However, there might be times where being explicit on the sharing can help, especially in experimental code. The 'slet' combinator
 -- ensures that its first argument is computed once and passed on to its continuation, explicitly indicating the intent of sharing. Most
 -- use cases of the SBV library should simply use Haskell's @let@ construct for this purpose.

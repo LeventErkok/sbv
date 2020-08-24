@@ -25,7 +25,7 @@ import Data.SBV
 -- no computation going on here, aside from simply passing the arguments
 -- to the uninterpreted functions and stitching it back together.
 --
--- NB. While definining @mul22_lo@ we used our domain knowledge that the
+-- NB. While defining @mul22_lo@ we used our domain knowledge that the
 -- low-bit of the multiplication only depends on the low bits of the inputs.
 -- However, this is merely a simplifying assumption; we could have passed
 -- all the arguments as well.

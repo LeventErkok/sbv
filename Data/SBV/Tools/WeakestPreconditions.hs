@@ -173,7 +173,7 @@ instance (Show st, Show m) => Show (VC st m) where
                                                          ]
   show (InvariantPre      nm s)                 = dispVC ("Invariant for loop " ++ show nm ++ " fails upon entry")
                                                          [("", show s)]
-  show (InvariantMaintain nm s1 s2)             = dispVC ("Invariant for loop " ++ show nm ++ " is not maintaned by the body")
+  show (InvariantMaintain nm s1 s2)             = dispVC ("Invariant for loop " ++ show nm ++ " is not maintained by the body")
                                                          [ ("Before", show s1)
                                                          , ("After ", show s2)
                                                          ]

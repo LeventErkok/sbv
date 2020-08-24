@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Some basic aspects of weakest preconditions, demostrating programs
+-- Some basic aspects of weakest preconditions, demonstrating programs
 -- that do not use while loops. We use a simple increment program as
 -- an example.
 -----------------------------------------------------------------------------

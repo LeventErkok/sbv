@@ -203,7 +203,7 @@ is an example:
 >>> void $ correctness invariant Nothing
 Following proof obligation failed:
 ==================================
-  Invariant for loop "i < n" is not maintaned by the body:
+  Invariant for loop "i < n" is not maintained by the body:
     Before: SumS {n = 2, i = 1, s = 1}
     After : SumS {n = 2, i = 2, s = 3}
 

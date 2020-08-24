@@ -151,7 +151,7 @@ digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0'
   where uc = toUpper c
         o  = ord uc
 
--- | Convert an an integer to a digit, inverse of 'digitToInt'. If the integer is out of
+-- | Convert an integer to a digit, inverse of 'digitToInt'. If the integer is out of
 -- bounds, we return the arbitrarily chosen space character. Note that for hexadecimal
 -- letters, we return the corresponding lowercase letter.
 --

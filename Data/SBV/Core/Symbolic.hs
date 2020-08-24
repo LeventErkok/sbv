@@ -1649,7 +1649,7 @@ outputSVal (SVal _ (Right f)) = do
 -- level. This is similar to the "type-safe observable sharing" work, but also
 -- takes into the account of how symbolic simulation executes.
 --
--- See Andy Gill's type-safe obervable sharing trick for the inspiration behind
+-- See Andy Gill's type-safe observable sharing trick for the inspiration behind
 -- this technique: <http://ku-fpg.github.io/files/Gill-09-TypeSafeReification.pdf>
 --
 -- Note that this is *not* a general memo utility!

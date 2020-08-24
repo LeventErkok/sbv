@@ -402,7 +402,7 @@ class SolverContext m where
    -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
    -- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
    -- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
-   -- itself, to see whether it's actually well-formed or is sensical by any means.
+   -- itself, to see whether it's actually well-formed or is sensible by any means.
    -- A separate formalization of SMT-Lib would be very useful here.
    addAxiom :: String -> [String] -> m ()
    -- | Set a solver time-out value, in milli-seconds. This function

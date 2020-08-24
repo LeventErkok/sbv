@@ -475,7 +475,7 @@ parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
 -- | Given an 'Data.SBV.allSat' call, we typically want to iterate over it and print the results in sequence. The
 -- 'displayModels' function automates this task by calling @disp@ on each result, consecutively. The first
 -- 'Int' argument to @disp@ 'is the current model number. The second argument is a tuple, where the first
--- element indicates whether the model is alleged (i.e., if the solver is not sure, returing Unknown).
+-- element indicates whether the model is alleged (i.e., if the solver is not sure, returning Unknown).
 -- The arrange argument can sort the results in any way you like, if necessary.
 displayModels :: SatModel a => ([(Bool, a)] -> [(Bool, a)]) -> (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
 displayModels arrange disp AllSatResult{allSatResults = ms} = do

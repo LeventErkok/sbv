@@ -28,13 +28,13 @@ tests =
 
 type Temp = SInteger
 
--- convert celcius to fahrenheit, rounding up/down properly
+-- convert celsius to fahrenheit, rounding up/down properly
 -- we have to be careful here to make sure rounding is done properly..
 d2f :: Temp -> Temp
 d2f d = 32 + ite (fr .>= 5) (1+fi) fi
   where (fi, fr) = (18 * d) `sQuotRem` 10
 
--- puzzle: What 2 digit fahrenheit/celcius values are reverses of each other?
+-- puzzle: What 2 digit fahrenheit/celsius values are reverses of each other?
 revOf :: Temp -> SBool
 revOf c = swap (digits c) .== digits (d2f c)
   where digits x = x `sQuotRem` 10

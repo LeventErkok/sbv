@@ -173,7 +173,7 @@ cgSRealType :: CgSRealType -> SBVCodeGen ()
 cgSRealType rt = modify' (\s -> s {cgFinalConfig = (cgFinalConfig s) { cgReal = Just rt }})
 
 -- | Should we generate a driver program? Default: 'True'. When a library is generated, it will have
--- a driver if any of the contituent functions has a driver. (See 'Data.SBV.Tools.CodeGen.compileToCLib'.)
+-- a driver if any of the constituent functions has a driver. (See 'Data.SBV.Tools.CodeGen.compileToCLib'.)
 cgGenerateDriver :: Bool -> SBVCodeGen ()
 cgGenerateDriver b = modify' (\s -> s { cgFinalConfig = (cgFinalConfig s) { cgGenDriver = b } })
 

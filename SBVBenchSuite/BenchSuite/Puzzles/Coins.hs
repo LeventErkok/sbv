@@ -28,7 +28,7 @@ benchmarks = rGroup [ S.run "Coins" coinsPgm ]
                       constrain $ sAnd $ zipWith (.>=) cs (tail cs)
                       -- normally we would call output here, but returning
                       -- several outputs from a symbolic computation doesn't
-                      -- play nice with either the transcript generation or the benchmarking apparantly
+                      -- play nice with either the transcript generation or the benchmarking apparently
 
                       -- output $ sum cs .== 115
 

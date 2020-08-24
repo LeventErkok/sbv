@@ -48,14 +48,14 @@ class (Num a, Bits a) => Polynomial a where
  --
  --     @polynomial [0, 1, 3] :: SWord8@
  -- 
- -- will evaluate to @11@, since it sets the bits @0@, @1@, and @3@. Mathematicans would write this polynomial
+ -- will evaluate to @11@, since it sets the bits @0@, @1@, and @3@. Mathematicians would write this polynomial
  -- as @x^3 + x + 1@. And in fact, 'showPoly' will show it like that.
  polynomial :: [Int] -> a
  -- | Add two polynomials in GF(2^n).
  pAdd  :: a -> a -> a
  -- | Multiply two polynomials in GF(2^n), and reduce it by the irreducible specified by
  -- the polynomial as specified by coefficients of the third argument. Note that the third
- -- argument is specifically left in this form as it is usally in GF(2^(n+1)), which is not available in our
+ -- argument is specifically left in this form as it is usually in GF(2^(n+1)), which is not available in our
  -- formalism. (That is, we would need SWord9 for SWord8 multiplication, etc.) Also note that we do not
  -- support symbolic irreducibles, which is a minor shortcoming. (Most GF's will come with fixed irreducibles,
  -- so this should not be a problem in practice.)

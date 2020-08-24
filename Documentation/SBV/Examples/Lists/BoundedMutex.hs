@@ -62,7 +62,7 @@ validSequence b me pturns proc = sAnd [ L.length proc .== fromIntegral b
                                                                                        (cur `sElem` [prev])
                               in ok .&& check (i-1) turns rest cur
 
--- | The mutex algorithm, coded implicity as an assignment to turns. Turns start at @1@, and at each stage is either
+-- | The mutex algorithm, coded implicitly as an assignment to turns. Turns start at @1@, and at each stage is either
 -- @1@ or @2@; giving preference to that process. The only condition is that if either process is in its critical
 -- section, then the turn value stays the same. Note that this is sufficient to satisfy safety (i.e., mutual
 -- exclusion), though it does not guarantee liveness.

@@ -181,7 +181,7 @@ overheadClassifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
 -- and return the file path to that filtered version.
 filterOverhead :: Char -> FilePath -> IO FilePath
 filterOverhead e fp = do (header:file) <- L.lines <$> readFile fp
-                         -- only keep instances of 3 or greated. This number
+                         -- only keep instances of 3 or greater. This number
                          -- comes from splitting benchmark output by '/'.
                          -- Because our groups are separated by '//' and the
                          -- overhead by '/' an overhead run will have >3 splits,

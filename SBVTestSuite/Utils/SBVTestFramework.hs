@@ -136,7 +136,7 @@ numberOfModels p = do AllSatResult { allSatMaxModelCountReached  = maxHit
                         (_,   _, True) -> error $ "Data.SBV.numberOfModels: Search was stopped because the user-specified max-model count was hit at " ++ show l ++ " model(s)."
                         _              -> return l
 
--- | Symbolicly run a SAT instance using the default config
+-- | Symbolically run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
 runSAT cmp = snd <$> runSymbolic (SMTMode QueryInternal ISetup True defaultSMTCfg) cmp
 
