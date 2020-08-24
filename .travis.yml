@@ -30,14 +30,14 @@ notifications:
 
 matrix:
   include:
-    - compiler: "ghc-8.10.1"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.10.1], sources: [hvr-ghc]}}
+    - compiler: "ghc-8.10.2"
+      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.10.2], sources: [hvr-ghc]}}
       env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=15 TASTY_HIDE_SUCCESSES=True
-    - compiler: "ghc-8.8.3"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.0,ghc-8.8.3], sources: [hvr-ghc]}}
+    - compiler: "ghc-8.8.4"
+      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.8.4], sources: [hvr-ghc]}}
       env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=True SBV_TEST_ENVIRONMENT=linux SBV_HEAVYTEST_PERCENTAGE=30 TASTY_HIDE_SUCCESSES=True
-    - compiler: "ghc-8.10.1"
-      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.10.1], sources: [hvr-ghc]}}
+    - compiler: "ghc-8.10.2"
+      addons: {apt: {packages: [ghc-ppa-tools,cabal-install-3.2,ghc-8.10.2], sources: [hvr-ghc]}}
       os: osx
       env: TASTY_HIDE_SUCCESSES=True SBV_EXTRA_CHECKS=False SBV_TEST_ENVIRONMENT=osx SBV_HEAVYTEST_PERCENTAGE=15 TASTY_HIDE_SUCCESSES=True
 

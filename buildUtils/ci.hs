@@ -36,10 +36,10 @@ z3OSXPath = "https://github.com/Z3Prover/z3/releases/download/Nightly/" ++ z3OSX
 -- Get these from whatever the "official" latest GHC release is
 -- Prev versions are what's available from ppa: https://launchpad.net/~hvr/+archive/ubuntu/ghc/
 ghcLatest, cabalLatest, ghcPrev, cabalPrev :: String
-ghcLatest   = "8.10.1"
+ghcLatest   = "8.10.2"
 cabalLatest = "3.2"
-ghcPrev     = "8.8.3"
-cabalPrev   = "3.0"
+ghcPrev     = "8.8.4"
+cabalPrev   = "3.2"
 
 ---------------------------------------------------------------------------------
 -- Hopefully none of the below needs to change. At least that's the goal!
