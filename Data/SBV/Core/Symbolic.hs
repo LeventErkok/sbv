@@ -1025,11 +1025,10 @@ noInteractive ss = error $ unlines $  ""
                                    ++ ["*** Data.SBV: Please report this as a feature request!"]
 
 -- | Things we do not support in interactive mode, nor we ever intend to
-noInteractiveEver :: [String] -> [String] -> a
-noInteractiveEver ss hint = error $ unlines $  ""
-                                            :  "*** Data.SBV: Unsupported interactive/query mode feature."
-                                            :  map ("***  " ++) ss
-                                            ++ hint
+noInteractiveEver :: [String] -> a
+noInteractiveEver ss = error $ unlines $  ""
+                                       :  "*** Data.SBV: Unsupported interactive/query mode feature."
+                                       :  map ("***  " ++) ss
 
 -- | Modification of the state, but carefully handling the interactive tasks.
 -- Note that the state is always updated regardless of the mode, but we get
@@ -1425,10 +1424,24 @@ svMkSymVarGen isTracker varContext k mbNm st = do
 
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
 introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV -> IO SVal
-introduceUserName st (isQueryVar, isTracker) nmOrig k q sv = do
+introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
         (_, old) <- readIORef (rinps st)
 
         let nm  = mkUnique nmOrig old
+
+        -- If this is not a query variable and we're in a query, reject it.
+        -- See https://github.com/LeventErkok/sbv/issues/554 for the rationale.
+        -- In theory, it should be possible to support this, but fixing it is
+        -- rather costly as we'd have to track the regular updates and sync the
+        -- incremental state appropriately. Instead, we issue an error message
+        -- and ask the user to obey the query mode rules.
+        rm <- readIORef runMode
+        case rm of
+          SMTMode _ IRun _ _ | not isQueryVar -> noInteractiveEver [ "Adding a new input variable in query mode: " ++ show nm
+                                                                   , ""
+                                                                   , "Hint: Use freshVar/freshVar_ for introducing new inputs in query mode."
+                                                                   ]
+          _                                   -> pure ()
 
         if isTracker && q == ALL
            then error $ "SBV: Impossible happened! A universally quantified tracker variable is being introduced: " ++ show nm
@@ -1445,11 +1458,7 @@ introduceUserName st (isQueryVar, isTracker) nmOrig k q sv = do
                       then modifyState st rinps (second ((sv, nm) :) *** Set.insert nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
                       else modifyState st rinps (first ((q, (sv, nm)) :) *** Set.insert nm)
-                                     $ if isQueryVar
-                                          then noInteractiveEver ["Adding a new input variable in query mode: " ++ show nm]
-                                                                 ["*** Hint: Use freshVar/freshVar_ for introducing new inputs in query mode."
-                                                                 ]
-                                          else modifyIncState st rNewInps newInp
+                                     $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
    where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
