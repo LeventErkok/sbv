@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Algrebraic reals in Haskell.
+-- Algebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleInstances #-}
@@ -56,7 +56,7 @@ data AlgReal = AlgRational Bool Rational                             -- ^ bool s
              | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String)    -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
              | AlgInterval (RealPoint Rational) (RealPoint Rational) -- ^ interval, with low and high bounds
 
--- | Check wheter a given argument is an exact rational
+-- | Check whether a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
 isExactRational (AlgRational True _) = True
 isExactRational _                    = False

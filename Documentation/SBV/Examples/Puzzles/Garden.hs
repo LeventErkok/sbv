@@ -70,7 +70,7 @@ puzzle = do n <- sInteger "N"
 
             let valid = validPick n
 
-            -- Declare three existential flowers. We declar these with
+            -- Declare three existential flowers. We declare these with
             -- _modelIgnore suffix, because we don't care different assignments
             -- to them to be a different model. See 'isNonModelVar' below.
             ef1 <- exists "ef1_modelIgnore"

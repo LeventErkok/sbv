@@ -101,7 +101,7 @@ exampleMathSAT = do
 --
 -- Notice that the only symbol is @y@, as required. To establish that this is
 -- indeed an interpolant, we should establish that when @y@ is even, this formula
--- is @True@; and if @y@ is odd, then then it should be @False@. You can argue
+-- is @True@; and if @y@ is odd, then it should be @False@. You can argue
 -- mathematically that this indeed the case, but let's just use SBV to prove these:
 --
 -- >>> prove $ \y -> (y `sMod` 2 .== 0) .=> ((y .== 0) .|| (y .== 2 * (y `sDiv` (2::SInteger))))

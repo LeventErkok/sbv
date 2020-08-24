@@ -16,7 +16,7 @@
 -- as possible in Haskell, and have SBV's code-generator generate fast C code automatically.
 -- Therefore, we merely use ordinary Haskell lists as our data-structures, and do not
 -- bother with any unboxing or strictness annotations. Thus, we achieve the separation
--- of concerns: Correctness via clairty and simplicity and proofs on the Haskell side,
+-- of concerns: Correctness via clarity and simplicity and proofs on the Haskell side,
 -- performance by relying on SBV's code generator. If necessary, the generated code
 -- can be FFI'd back into Haskell to complete the loop.
 --
@@ -51,7 +51,7 @@ import Numeric (showHex)
 -- maximum degree 7. They are conveniently represented as values between 0 and 255.
 type GF28 = SWord 8
 
--- | Multiplication in GF(2^8). This is simple polynomial multipliation, followed
+-- | Multiplication in GF(2^8). This is simple polynomial multiplication, followed
 -- by the irreducible polynomial @x^8+x^4+x^3+x^1+1@. We simply use the 'pMult'
 -- function exported by SBV to do the operation. 
 gf28Mult :: GF28 -> GF28 -> GF28
@@ -471,7 +471,7 @@ aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
    For the purposes of illustration, we only show here how to generate code for a 128-bit AES block-encrypt
    function, that takes 8 32-bit words as an argument. The first 4 are the 128-bit input, and the final
    four are the 128-bit key. The impact of this is that the generated function would expand the key for
-   each block of encryption, a needless task unless we change the key in every block. In a more serios application,
+   each block of encryption, a needless task unless we change the key in every block. In a more serious application,
    we would instead generate code for both the 'aesKeySchedule' and the 'aesEncrypt' functions, thus reusing the
    key-schedule over many applications of the encryption call. (Unfortunately doing this is rather cumbersome right
    now, since Haskell does not support fixed-size lists.)

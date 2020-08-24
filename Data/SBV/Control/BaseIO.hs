@@ -54,7 +54,7 @@ getUnknownReason = Trans.getUnknownReason
 getObservables :: Query [(String, CV)]
 getObservables = Trans.getObservables
 
--- | Get the uinterpreted constants/functions recorded during a run.
+-- | Get the uninterpreted constants/functions recorded during a run.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUIs'
 getUIs :: Query [(String, SBVType)]
@@ -488,7 +488,7 @@ getUnsatAssumptions = Trans.getUnsatAssumptions
 -- Semantics: The call @timeout n q@ causes the timeout value to be applied to all interactive calls that take place
 -- as we execute the query @q@. That is, each call that happens during the execution of @q@ gets a separate
 -- time-out value, as opposed to one timeout value that limits the whole query. This is typically the intended behavior.
--- It is advisible to apply this combinator to calls that involve a single call to the solver for
+-- It is advisable to apply this combinator to calls that involve a single call to the solver for
 -- finer control, as opposed to an entire set of interactions. However, different use cases might call for different scenarios.
 --
 -- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out

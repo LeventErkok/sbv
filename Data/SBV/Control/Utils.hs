@@ -981,7 +981,7 @@ getUIFunCVAssoc mbi (nm, typ) = do
       toRes :: SExpr -> Maybe CV
       toRes = recoverKindedValue rt
 
-      -- In case we end up in the pointwise scenerio, boolify the result
+      -- In case we end up in the pointwise scenario, boolify the result
       -- as that's the only type we support here.
       tryPointWise bailOut = do mbSExprs <- pointWiseExtract nm typ
                                 case mbSExprs of

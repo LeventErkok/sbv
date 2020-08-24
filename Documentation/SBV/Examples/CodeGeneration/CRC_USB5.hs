@@ -80,7 +80,7 @@ cg1 = compileToC (Just "crcUSB1") "crcUSB1" $ do
         cgOutput "crc" (crcUSB msg)
 
 -- | Generate a C function to compute the USB CRC, using the mathematical
--- definition of the CRCs. While this version generates functionally eqivalent
+-- definition of the CRCs. While this version generates functionally equivalent
 -- C code, it's less efficient; it has about 30% more code. So, the above
 -- version is preferable for code generation purposes.
 cg2 :: IO ()

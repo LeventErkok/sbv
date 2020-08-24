@@ -914,7 +914,7 @@ See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how t
 -}
 
 {- $noteOnNestedQuantifiers
-=== A note on reasoning in the presence of quantifers
+=== A note on reasoning in the presence of quantifiers
 
 Note that SBV allows reasoning with quantifiers: Inputs can be existentially or universally quantified. Predicates can be built
 with arbitrary nesting of such quantifiers as well. However, SBV always /assumes/ that the input is in

@@ -195,7 +195,7 @@ runOverheadBenchmark (RunnerGroup rs)       = G.bgroup "" $ -- leave the descrip
 runOverheadBenchmark (RBenchmark b)         = b
 {-# INLINE runOverheadBenchmark #-}
 
--- | make a normal benchmark without the overhead comparision. Notice this is
+-- | make a normal benchmark without the overhead comparison. Notice this is
 -- just unpacking the Runner record
 mkBenchmark :: RunnerI -> G.Benchmark
 mkBenchmark RunnerI{..} = G.bench description . G.nfIO $! runI config problem

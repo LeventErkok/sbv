@@ -15,7 +15,7 @@
   * Handle incremental mode table-declarations that depend on freshly declared variables. Thanks
     to Gergő Érdi for reporting.
 
-  * Fix a soundness bug in SFunArray caching. Thanks to to Gergő Érdi for reporting. See
+  * Fix a soundness bug in SFunArray caching. Thanks to Gergő Érdi for reporting. See
     https://github.com/LeventErkok/sbv/issues/541 for details.
 
   * Add support for the dReal solver, and introduce the notion of delta-satisfiability,
@@ -319,7 +319,7 @@
     'SDouble'. For the floating types, it is object equality, that is 'NaN .=== Nan'
     and '0 ./== -0'. Use the regular equality for float/double's as they follow the
     IEEE754 rules, but occasionally we need to express object equality in a polymorphic
-    way. Essentially this method is the polymorphic equaivalent of 'fpIsEqualObject'
+    way. Essentially this method is the polymorphic equivalent of 'fpIsEqualObject'
     except it works on all types.
 
   * Removed the redundant 'SDivisible' constraint on rotate-left and rotate-right operations.
@@ -347,11 +347,11 @@
     It accepts bit-vectors as arguments and an unsigned rotation quantity to keep
     things simple.
 
-  * Added new configuration option 'allowQueryQuantifers', default is set to False.
+  * Added new configuration option 'allowQuantifiedQueries', default is set to False.
     SBV normally doesn't allow quantifiers in a query context, because there are
     issues surrounding 'getValue'. However, Joel Burget pointed out this check
     is too strict for certain scenarios. So, as an escape hatch, you can define
-    'allowQueryQuantifers' to be 'True' and SBV will bypass this check. Of course,
+    'allowQuantifiedQueries' to be 'True' and SBV will bypass this check. Of course,
     if you do this, then you are on your own regarding calls to `getValue` with
     quantified parameters! See http://github.com/LeventErkok/sbv/issues/459
     for details.
@@ -797,7 +797,7 @@
     suggestion.
 
   * Add 'observe'. This function allows internal expressions to be
-    given values, which will be part of the satisfyin model or
+    given values, which will be part of the satisfying model or
     the counter-example upon model construction. Useful for tracking
     expected/returned values. Also works with quickCheck.
 
@@ -828,7 +828,7 @@
 
 ### Version 7.5, Released 2018-01-13
 
-  * Remove obsolote references to tactics in a few haddock comments. Thanks
+  * Remove obsolete references to tactics in a few haddock comments. Thanks
     to Matthew Pickering for reporting.
 
   * Added logic Logic_NONE, to be used in cases where SBV should not
@@ -877,7 +877,7 @@
             sPopCount           :: SBV a -> SWord8                  -- ^ Variant of 'popCount', returning a symbolic value.
             setBitTo            :: SBV a -> Int -> SBool -> SBV a   -- ^ A combo of 'setBit' and 'clearBit', when the bit to be set is symbolic.
             fullAdder           :: SBV a -> SBV a -> (SBool, SBV a) -- ^ Full adder, returns carry-out from the addition. Only for unsigned quantities.
-            fullMultiplier      :: SBV a -> SBV a -> (SBV a, SBV a) -- ^ Full multipler, returns both high and low-order bits. Only for unsigned quantities.
+            fullMultiplier      :: SBV a -> SBV a -> (SBV a, SBV a) -- ^ Full multiplier, returns both high and low-order bits. Only for unsigned quantities.
             sCountLeadingZeros  :: SBV a -> SWord8                  -- ^ Count leading zeros in a word, big-endian interpretation
             sCountTrailingZeros :: SBV a -> SWord8                  -- ^ Count trailing zeros in a word, big-endian interpretation
 
@@ -1291,7 +1291,7 @@
 
 ### Version 5.12, 2016-06-06
 
-  * Fix GHC8.0 compliation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
+  * Fix GHC8.0 compilation issues, and warning clean-up. Thanks to Adam Foltzer for the bulk
     of the work and Tom Sydney Kerckhove for the initial patch for 8.0 compatibility.
 
   * Minor fix to printing models with floats when the base is 2/16, making sure the alignment
@@ -1414,7 +1414,7 @@
 
   * fpMin, fpMax: If these functions receive +0/-0 as their two arguments, i.e., both
     zeros but alternating signs in any order, then SMTLib requires the output to be
-    nondeterministicly chosen. Previously, we fixed this result as +0 following the
+    nondeterministically chosen. Previously, we fixed this result as +0 following the
     interpretation in Z3, but Z3 recently changed and now incorporates the nondeterministic
     output. SBV similarly changed to allow for non-determinism here.
 
@@ -1601,7 +1601,7 @@
                  Value: +2.0 (NORMAL)
       ```
 
-  * Change how we print type info; for models insted of SType just print Type (i.e.,
+  * Change how we print type info; for models instead of SType just print Type (i.e.,
     for SWord8, instead print Word8) which makes more sense and is more consistent.
     This change should be mostly relevant as how we see the counter-example output.
 

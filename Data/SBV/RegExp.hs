@@ -8,7 +8,7 @@
 --
 -- A collection of regular-expression related utilities. The recommended
 -- workflow is to import this module qualified as the names of the functions
--- are specificly chosen to be common identifiers. Also, it is recommended
+-- are specifically chosen to be common identifiers. Also, it is recommended
 -- you use the @OverloadedStrings@ extension to allow literal strings to be
 -- used as symbolic-strings and regular-expressions when working with
 -- this module.

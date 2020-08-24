@@ -51,7 +51,7 @@ import Data.Proxy
 class ArithOverflow a where
   -- | Bit-vector addition. Unsigned addition can only overflow. Signed addition can underflow and overflow.
   --
-  -- A tell tale sign of unsigned addition overflow is when the sum is less than minumum of the arguments.
+  -- A tell tale sign of unsigned addition overflow is when the sum is less than minimum of the arguments.
   --
   -- >>> prove $ \x y -> snd (bvAddO x (y::SWord16)) .<=> x + y .< x `smin` y
   -- Q.E.D.

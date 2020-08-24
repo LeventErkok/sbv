@@ -828,7 +828,7 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
                      rs <- unsafeInterleaveIO $ go (filter (/= d) as)
                      return (r : rs)
 
--- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficently populated internally to cover most use
+-- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficiently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
 class ExtractIO m => SExecutable m a where
    -- | Generalization of 'Data.SBV.sName_'

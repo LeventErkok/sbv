@@ -511,7 +511,7 @@ svExtract i j x@(SVal (KBounded s _) _)
                   newExpr st k (SBVApp (Extract i j) [sv])
 svExtract _ _ _ = error "extract: non-bitvector type"
 
--- | Join two words, by concataneting
+-- | Join two words, by concatenating
 svJoin :: SVal -> SVal -> SVal
 svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
   | i == 0 = y
@@ -577,7 +577,7 @@ svSymbolicMerge k force t a b
                                      where k = x+5
 
                                 If we tracked the assumptions, we would recompute @k@ twice, since the branch assumptions would differ. Clearly, there is no need to
-                                re-compute @k@ in this case since its value is independent of @y@. Note that the whole SBV performance story is based on agressive sharing,
+                                re-compute @k@ in this case since its value is independent of @y@. Note that the whole SBV performance story is based on aggressive sharing,
                                 and losing that would have other significant ramifications.
 
                                 The "proper" solution would be to track, with each shared computation, precisely which assumptions it actually *depends* on, rather
@@ -605,7 +605,7 @@ svSymbolicMerge k force t a b
                                   ite e1 (f e2 e4) (f e3 e5) --> f (ite e1 e2 e3) (ite e1 e4 e5)
 
                                 especially if this expression happens to be inside 'f's body itself (i.e., when f is recursive), since it reduces the number of
-                                recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast alltogether.
+                                recursive calls. Clearly, programming with symbolic simulation in mind is another kind of beast altogether.
                              -}
                              let sta = st `extendSValPathCondition` svAnd t
                              let stb = st `extendSValPathCondition` svAnd (svNot t)
@@ -1005,7 +1005,7 @@ swToSVal :: SV -> SVal
 swToSVal sv@(SV k _) = SVal k $ Right $ cache $ const $ return sv
 
 -- | A variant of SVal equality, but taking into account of constants
--- NB. The rationalCheck is paranid perhaps, but is necessary in case
+-- NB. The rationalCheck is paranoid perhaps, but is necessary in case
 -- we have some funky polynomial roots in there. We do allow for
 -- floating-points here though. Why? Because the Eq instance of 'CV'
 -- does the right thing by using object equality. (i.e., it does
@@ -1302,7 +1302,7 @@ We can fix this, by looking up the constants table in liftSV2, along the lines o
 
 (with obvious modifications to call sites to get the proper arguments.)
 
-But this means that we have to grab the constant list for every symbolicly lifted operation, also do the
+But this means that we have to grab the constant list for every symbolically lifted operation, also do the
 same for other places, etc.; for the rare opportunity of catching a @x .== x@ optimization. Even then, the
 constants for the branches would still be generated. (i.e., in the above example we would still generate
 @s1@ and @s2@, but would skip @s3@.)

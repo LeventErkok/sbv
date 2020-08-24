@@ -38,7 +38,7 @@ solveCrossword rowRegExps colRegExps = runSMT $ do
 
         rows <- mapM mkRow rowRegExps
 
-        -- constrain colums
+        -- constrain columns
         let mkCol colRegExp = do col <- free_
                                  constrain $ col `R.match` colRegExp
                                  constrain $ S.length col .== literal numRows

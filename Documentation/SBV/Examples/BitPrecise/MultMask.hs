@@ -40,7 +40,7 @@ import Data.SBV
 --   mask = 0x8080808080808080 :: Word64
 --   mult = 0x0002040810204081 :: Word64
 --
--- That is, any 64 bit value masked by the first and multipled by the second
+-- That is, any 64 bit value masked by the first and multiplied by the second
 -- value above will have its bits at positions @[7,15,23,31,39,47,55,63]@ moved
 -- to positions @[56,57,58,59,60,61,62,63]@ respectively.
 --

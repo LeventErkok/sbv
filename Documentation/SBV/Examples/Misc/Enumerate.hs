@@ -68,7 +68,7 @@ maxE = sat $ do mx <- exists "maxE"
                 e  <- forall "e"
                 return $ mx .>= (e::SE)
 
--- | Similarly, we get the minumum element. We have:
+-- | Similarly, we get the minimum element. We have:
 --
 -- >>> minE
 -- Satisfiable. Model:

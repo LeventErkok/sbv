@@ -122,7 +122,7 @@ peek a m = memory m ! a
 poke :: Location -> Value -> Program
 poke a v m = m {memory = memory m // [(a, v)]}
 
--- | Checking overflow. In Legato's multipler the @ADC@ instruction
+-- | Checking overflow. In Legato's multiplier the @ADC@ instruction
 -- needs to see if the expression x + y + c overflowed, as checked
 -- by this function. Note that we verify the correctness of this check
 -- separately below in `checkOverflowCorrect`.
