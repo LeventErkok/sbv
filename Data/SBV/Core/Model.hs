@@ -87,11 +87,11 @@ import Data.SBV.Utils.Lib      (isKString)
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
-genVar :: MonadSymbolic m => Maybe Quantifier -> Kind -> String -> m (SBV a)
+genVar :: MonadSymbolic m => VarContext -> Kind -> String -> m (SBV a)
 genVar q k = mkSymSBV q k . Just
 
 -- | Generate a finite symbolic bitvector, unnamed
-genVar_ :: MonadSymbolic m => Maybe Quantifier -> Kind -> m (SBV a)
+genVar_ :: MonadSymbolic m => VarContext -> Kind -> m (SBV a)
 genVar_ q k = mkSymSBV q k Nothing
 
 -- | Generate a finite constant bitvector
@@ -104,7 +104,7 @@ genFromCV (CV _ (CInteger x)) = fromInteger x
 genFromCV c                   = error $ "genFromCV: Unsupported non-integral value: " ++ show c
 
 -- | Generalization of 'Data.SBV.genMkSymVar'
-genMkSymVar :: MonadSymbolic m => Kind -> Maybe Quantifier -> Maybe String -> m (SBV a)
+genMkSymVar :: MonadSymbolic m => Kind -> VarContext -> Maybe String -> m (SBV a)
 genMkSymVar k mbq Nothing  = genVar_ mbq k
 genMkSymVar k mbq (Just s) = genVar  mbq k s
 
