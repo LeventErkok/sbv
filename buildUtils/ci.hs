@@ -41,6 +41,10 @@ cabalLatest = "3.2"
 ghcPrev     = "8.8.4"
 cabalPrev   = "3.2"
 
+-- GHC to use on windows. Hopefully the latest
+ghcOnWin :: String
+ghcOnWin = "8.10.1"  -- For some reason 8.10.2 isn't working on windows
+
 ---------------------------------------------------------------------------------
 -- Hopefully none of the below needs to change. At least that's the goal!
 ---------------------------------------------------------------------------------
@@ -90,7 +94,7 @@ mkEnvs perc extraChecks os suff =    "env: TASTY_HIDE_SUCCESSES=True"
 
 winTweaks :: Tweaks
 winTweaks = Tweaks { heavyTestPercentage = 0
-                   , ghcVersion          = ghcLatest
+                   , ghcVersion          = ghcOnWin
                    , cabalInstallVersion = cabalLatest
                    , z3Name              = z3WindowsName
                    , z3Path              = z3WindowsPath
