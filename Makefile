@@ -56,8 +56,7 @@ testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
 docTest:
-	echo "docTest doesn't work with SBV on 8.10.1"
-	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
+	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 vdocTest:
 	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)

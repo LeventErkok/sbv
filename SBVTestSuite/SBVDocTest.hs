@@ -45,11 +45,20 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                              let allFiles  = srcFiles ++ docFiles
                                                  testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm || skipLocal nm)) allFiles
 
-                                                 args = ["--fast", "--no-magic"]
+                                                 packages = [ "async"
+                                                            , "crackNum"
+                                                            , "mtl"
+                                                            , "QuickCheck"
+                                                            , "random"
+                                                            , "syb"
+                                                            ]
+
+                                                 pargs = concatMap (\p -> ["-package", p]) packages
+                                                 args  = ["--fast", "--no-magic"]
 
                                              tfs <- pickPercentage tp testFiles
 
-                                             doctest $ args ++ tfs
+                                             doctest $ pargs ++ args ++ tfs
 
          where noGood nm = any $ (`isSuffixOf` map toLower nm) . map toLower
 
