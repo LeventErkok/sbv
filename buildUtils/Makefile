@@ -8,8 +8,11 @@ ci: ci.hs
 
 genCI: ../.travis.yml ../.appveyor.yml
 
-../.travis.yml: ci
-	@./ci travis
+# We now use haskell-ci for travis.
+../.travis.yml:
+	# @./ci travis
+	@cd ..; haskell-ci sbv.cabal --osx 8.10.2 --no-tests --no-benchmarks --no-doctest --no-hlint --email-notifications
+
 
 ../.appveyor.yml: ci
 	@./ci appveyor
