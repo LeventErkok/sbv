@@ -91,6 +91,9 @@ fullRelease: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 release:
 	$(TIME) make fullRelease
 
+ci:
+	haskell-ci sbv.cabal --osx 1 --no-tests --no-benchmarks
+
 # use this as follows:
 #         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
 docTestPattern:
