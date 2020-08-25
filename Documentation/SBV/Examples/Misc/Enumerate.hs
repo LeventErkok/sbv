@@ -60,7 +60,7 @@ four = sat $ \a b c (d::SE) -> distinct [a, b, c, d]
 -- | Enumerations are automatically ordered, so we can ask for the maximum
 -- element. Note the use of quantification. We have:
 --
--- >>> maxE
+-- maxE
 -- Satisfiable. Model:
 --   maxE = C :: E
 maxE :: IO SatResult
