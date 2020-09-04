@@ -1,6 +1,6 @@
 ## SBV: SMT Based Verification in Haskell
 
-[On Hackage](http://hackage.haskell.org/package/sbv)
+On Hackage: http://hackage.haskell.org/package/sbv
 
 Please see: http://leventerkok.github.io/sbv/
 
