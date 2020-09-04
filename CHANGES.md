@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.7, 2020-06-30
+* Latest Hackage released version: 8.8, 2020-09-04
 
-### Version 8.7.5, Not yet released
+### Version 8.8, 2020-09-04
 
   * Reworked uninterpreted sorts. Added new function `mkUninterpretedSort` to make
     declaration of completely uninterpreted sorts easier. In particular, we now
