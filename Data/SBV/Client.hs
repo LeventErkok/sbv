@@ -40,7 +40,7 @@ import Data.SBV.Provers.Prover
 -- simple call to the solver to ensure all is well.
 sbvCheckSolverInstallation :: SMTConfig -> IO Bool
 sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> return False)
-  where check = do ThmResult r <- proveWith cfg $ \x -> (x+x) .== ((x*2) :: SWord8)
+  where check = do ThmResult r <- proveWith cfg $ \x -> sNot (sNot x) .== (x :: SBool)
                    case r of
                      Unsatisfiable{} -> return True
                      _               -> return False
