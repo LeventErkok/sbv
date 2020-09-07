@@ -629,8 +629,8 @@ cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> SBVExpr
 cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
   where ssv = cvtSV skolemMap
 
-        supportsPB = supportsPseudoBooleans caps
-
+        hasPB       = supportsPseudoBooleans caps
+        hasInt2bv   = supportsInt2bv caps
         hasDistinct = supportsDistinct caps
 
         bvOp     = all isBounded   arguments
@@ -797,7 +797,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                 le0  = "(" ++ less ++ " " ++ ssv i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssv i ++ ")"
 
-        sh (SBVApp (KindCast f t) [a]) = handleKindCast f t (ssv a)
+        sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (ssv a)
 
         sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
         sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssv a ++ ")"
@@ -844,8 +844,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (NonLinear w) args) = "(" ++ show w ++ " " ++ unwords (map ssv args) ++ ")"
 
         sh (SBVApp (PseudoBoolean pb) args)
-          | supportsPB = handlePB pb args'
-          | True       = reducePB pb args'
+          | hasPB = handlePB pb args'
+          | True  = reducePB pb args'
           where args' = map ssv args
 
         -- NB: Z3 semantics have the predicates reversed: i.e., it returns true if overflow isn't possible. Hence the not.
@@ -1079,8 +1079,8 @@ shft ssv oW oS x c = "(" ++ o ++ " " ++ ssv x ++ " " ++ ssv c ++ ")"
    where o = if hasSign x then oS else oW
 
 -- Various casts
-handleKindCast :: Kind -> Kind -> String -> String
-handleKindCast kFrom kTo a
+handleKindCast :: Bool -> Kind -> Kind -> String -> String
+handleKindCast hasInt2bv kFrom kTo a
   | kFrom == kTo
   = a
   | True
@@ -1129,15 +1129,17 @@ handleKindCast kFrom kTo a
         zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
         extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
 
-        -- NB. The following works regardless n < 0 or not, because the first thing we
+        -- Some solvers support int2bv, but not all. So, we use a capability to determine.
+        --
+        -- NB. The "manual" implementation works regardless n < 0 or not, because the first thing we
         -- do is to compute "reduced" to bring it down to the correct range. It also works
         -- regardless were mapping to signed or unsigned bit-vector; because the representation
         -- is the same.
-        --
-        -- NB2. (TODO) There is an SMTLib equivalent of this function, called int2bv. However, it
-        -- used to be uninterpreted for a long time by Z3; though I think that got fixed. We
-        -- might want to simply use that if it's reliably available across the board in solvers.
-        i2b n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
+        i2b n
+          | hasInt2bv
+          = "((_ int2bv " ++ show n ++ ") " ++ a ++ ")"
+          | True
+          = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
           where b i      = show (bit i :: Integer)
                 reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
                 mkBit 0  = "(__a0 (ite (= (mod __a 2) 0) #b0 #b1))"

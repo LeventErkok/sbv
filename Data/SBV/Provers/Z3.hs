@@ -35,6 +35,7 @@ z3 = SMTSolver {
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
+                              , supportsInt2bv             = True
                               , supportsReals              = True
                               , supportsApproxReals        = True
                               , supportsDeltaSat           = Nothing

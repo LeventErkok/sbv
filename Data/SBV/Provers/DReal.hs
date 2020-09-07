@@ -37,6 +37,7 @@ dReal = SMTSolver {
                               , supportsBitVectors         = False
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = True
+                              , supportsInt2bv             = False
                               , supportsReals              = True
                               , supportsApproxReals        = False
                               , supportsDeltaSat           = Just "(get-option :precision)"

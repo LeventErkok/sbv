@@ -1771,6 +1771,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsBitVectors         :: Bool           -- ^ Supports bit-vectors?
        , supportsUninterpretedSorts :: Bool           -- ^ Supports SMT-Lib2 style uninterpreted-sorts
        , supportsUnboundedInts      :: Bool           -- ^ Supports unbounded integers?
+       , supportsInt2bv             :: Bool           -- ^ Supports int2bv?
        , supportsReals              :: Bool           -- ^ Supports reals?
        , supportsApproxReals        :: Bool           -- ^ Supports printing of approximations of reals?
        , supportsDeltaSat           :: Maybe String   -- ^ Supports delta-satisfiability? (With given precision query)

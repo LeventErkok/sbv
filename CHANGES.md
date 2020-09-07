@@ -7,6 +7,13 @@
 
   * Rename 'sbvAvailableSolvers' to 'getAvailableSolvers'.
 
+  * Use SMTLib's int2bv if supported by the backend solver. If not, we still
+    do a manual translation. (CVC4 and z3 support it natively, Yices and
+    MathSAT does not, for which we do the manual translation. ABC and dReal
+    doesn't support the coversion at all, since former doesn't support integers
+    and the latter doesn't support bit-vectors.) Thanks to Martin Lundfall
+    for the initial pull request.
+
 ### Version 8.8, 2020-09-04
 
   * Reworked uninterpreted sorts. Added new function `mkUninterpretedSort` to make
