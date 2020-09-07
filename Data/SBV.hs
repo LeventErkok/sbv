@@ -332,7 +332,7 @@ module Data.SBV (
   -- ** Solvers
   , boolector, cvc4, yices, dReal, z3, mathSAT, abc
   -- ** Configurations
-  , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
   -- ** SBV exceptions
   , SBVException(..)
@@ -458,7 +458,7 @@ in parallel, and return the results of the first one finishing. The other thread
 are useful when you do not care if the solvers produce the same result, but rather want to get the
 solution as quickly as possible, taking advantage of modern many-core machines.
 
-Note that the function 'sbvAvailableSolvers' will return all the installed solvers, which can be
+Note that the function 'getAvailableSolvers' will return all the installed solvers, which can be
 used as the first argument to all these functions, if you simply want to try all available solvers on a machine.
 -}
 

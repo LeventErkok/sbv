@@ -139,7 +139,7 @@ module Data.SBV.Trans (
   -- ** Solvers
   , boolector, cvc4, yices, z3, mathSAT, abc
   -- ** Configurations
-  , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, sbvAvailableSolvers
+  , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
   -- ** SBV exceptions
   , SBVException(..)

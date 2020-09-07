@@ -20,7 +20,7 @@
 module Data.SBV.Client
   ( sbvCheckSolverInstallation
   , defaultSolverConfig
-  , sbvAvailableSolvers
+  , getAvailableSolvers
   , mkSymbolicEnumeration
   , mkUninterpretedSort
   ) where
@@ -56,8 +56,8 @@ defaultSolverConfig MathSAT   = mathSAT
 defaultSolverConfig ABC       = abc
 
 -- | Return the known available solver configs, installed on your machine.
-sbvAvailableSolvers :: IO [SMTConfig]
-sbvAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
+getAvailableSolvers :: IO [SMTConfig]
+getAvailableSolvers = filterM sbvCheckSolverInstallation (map defaultSolverConfig [minBound .. maxBound])
 
 -- | Turn a name into a symbolic type. If first argument is true, we'll also derive Eq and Ord instances.
 declareSymbolic :: Bool -> TH.Name -> TH.Q [TH.Dec]

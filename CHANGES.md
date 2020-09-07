@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.8, 2020-09-04
 
+### Version 8.8.5, Not yet released
+
+  * Rename 'sbvAvailableSolvers' to 'getAvailableSolvers'.
+
 ### Version 8.8, 2020-09-04
 
   * Reworked uninterpreted sorts. Added new function `mkUninterpretedSort` to make
