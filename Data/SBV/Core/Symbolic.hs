@@ -1844,6 +1844,10 @@ data SMTConfig = SMTConfig {
        , redirectVerbose             :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
 
+-- | We show the name of the solver for the config. Arguably this is misleading, but better than nothing.
+instance Show SMTConfig where
+  show = show . name . solver
+
 -- | Returns true if we have to perform validation
 validationRequested :: SMTConfig -> Bool
 validationRequested SMTConfig{validateModel, optimizeValidateConstraints} = validateModel || optimizeValidateConstraints
