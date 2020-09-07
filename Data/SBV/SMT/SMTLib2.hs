@@ -15,7 +15,6 @@
 
 module Data.SBV.SMT.SMTLib2(cvt, cvtInc) where
 
-import Data.Bits  (bit)
 import Data.List  (intercalate, partition, nub, sort)
 import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
 
@@ -1137,13 +1136,7 @@ handleKindCast kFrom kTo a
         -- NB2. (TODO) There is an SMTLib equivalent of this function, called int2bv. However, it
         -- used to be uninterpreted for a long time by Z3; though I think that got fixed. We
         -- might want to simply use that if it's reliably available across the board in solvers.
-        i2b n = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
-          where b i      = show (bit i :: Integer)
-                reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
-                mkBit 0  = "(__a0 (ite (= (mod __a 2) 0) #b0 #b1))"
-                mkBit i  = "(__a" ++ show i ++ " (ite (= (mod (div __a " ++ b i ++ ") 2) 0) #b0 #b1))"
-                defs     = unwords (map mkBit [0 .. n - 1])
-                body     = foldr1 (\c r -> "(concat " ++ c ++ " " ++ r ++ ")") ["__a" ++ show i | i <- [n-1, n-2 .. 0]]
+        i2b n = "((_ int2bv " ++ show n ++ ") " ++ a ++ ")"
 
 -- Translation of pseudo-booleans, in case the solver supports them
 handlePB :: PBOp -> [String] -> String
