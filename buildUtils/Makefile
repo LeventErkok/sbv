@@ -1,21 +1,10 @@
-TARGETS=../.travis.yml ../.appveyor.yml
+TARGETS=../.travis.yml
 
 all: $(TARGETS)
 
-ci: ci.hs
-	ghc -O2 -Wall -Werror --make $@
-	@rm -f *.o *.hi
-
-genCI: ../.travis.yml ../.appveyor.yml
-
 # We now use haskell-ci for travis.
 ../.travis.yml:
-	# @./ci travis
 	@cd ..; haskell-ci sbv.cabal --osx 8.10.2 --no-tests --no-benchmarks --no-doctest --no-hlint --email-notifications
-
-
-../.appveyor.yml: ci
-	@./ci appveyor
 
 clean:
 	@rm -f *.o *.hi
@@ -33,4 +22,3 @@ generateBounds: generateBounds.hs
 	@rm -f *.o *.hi
 # 	@echo "*** The following takes about 6 minutes to run, be patient!"
 # 	time ./generateBounds +RTS -N4 > ../Data/SBV/Utils/FloatConversionBounds.hs
-
