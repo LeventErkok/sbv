@@ -1,23 +1,11 @@
-#####################################################
-# Automatically generated CI build file. Do not edit!
-#####################################################
-
 build: off
 
-environment:
-    SBV_TEST_ENVIRONMENT: win
-    SBV_HEAVYTEST_PERCENTAGE: 0
-    TASTY_HIDE_SUCCESSES: True
-
 before_build:
-- curl -fsSL https://github.com/Z3Prover/z3/releases/download/Nightly/z3-4.8.9-x64-win.zip -o z3-4.8.9-x64-win.zip
-- 7z e z3-4.8.9-x64-win.zip -oc:\projects\sbv\z3_downloaded -r -y
 - choco install -y cabal
 - choco install -y ghc --version 8.10.1
 - refreshenv
 - set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - ghc --version
-- z3 --version
 
 skip_tags: true
 
@@ -28,9 +16,4 @@ build_script:
 - cabal new-update
 - cabal new-build --only-dependencies --enable-tests -f skipHLintTester
 - cabal new-install all --lib
-# Skipping tests till we find a CI solution that can handle it.
-# - cabal new-test
 - cabal new-sdist
-#####################################################
-# End of automatically generated CI build file.
-#####################################################
