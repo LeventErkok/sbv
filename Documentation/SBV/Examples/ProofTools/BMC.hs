@@ -83,7 +83,7 @@ problem lim initial = bmc (Just lim) True setup initial trans goal
 -- BMC: Iteration: 2
 -- BMC: Iteration: 3
 -- BMC: Solution found at iteration 3
--- Right (3,[(0,10),(2,10),(2,6),(2,2)])
+-- Right (3,[(0,10),(0,6),(2,6),(2,2)])
 --
 -- As expected, there's a solution in this case. Furthermore, since the BMC engine
 -- found a solution at depth @3@, we also know that there is no solution at

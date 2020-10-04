@@ -150,7 +150,7 @@
                       (seq.unit (_ +zero 8 24)))
               210)))
 [SEND] (get-value (q6))
-[RECV] ((q6 (_ as-array q6)))
+[RECV] ((q6 ((as const Array) false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

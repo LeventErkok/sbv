@@ -25,11 +25,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (fp #b1 #xfe #b11111111111111111111111)))
+[RECV] ((s0 (_ +zero 8 24)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model. Assignment:
-[VALIDATE]       x = -3.4028235e38 :: Float
+[VALIDATE]       x = 0.0 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 
@@ -38,7 +38,7 @@ FINAL OUTPUT:
 *** 
 *** Assignment:
 *** 
-***       x = -3.4028235e38 :: Float
+***       x = 0.0 :: Float
 *** 
 *** Not all floating point operations are supported concretely.
 *** 
@@ -48,4 +48,4 @@ FINAL OUTPUT:
 *** Alleged model:
 ***
 *** Satisfiable. Model:
-***   x = -3.4028235e38 :: Float
+***   x = 0.0 :: Float

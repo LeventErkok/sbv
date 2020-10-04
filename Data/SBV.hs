@@ -19,7 +19,7 @@
 --
 -- >>> prove $ \x -> x `shiftL` 2 .== 2 * (x :: SWord8)
 -- Falsifiable. Counter-example:
---   s0 = 32 :: Word8
+--   s0 = 64 :: Word8
 --
 -- The function 'prove' has the following type:
 --
@@ -479,8 +479,8 @@ We can use 'safe' to statically see if such a violation is possible before we us
 
 >>> safe (sub :: SInt8 -> SInt8 -> SInt8)
 [sub: x >= y must hold!: Violated. Model:
-  s0 = 30 :: Int8
-  s1 = 32 :: Int8]
+  s0 = 0 :: Int8
+  s1 = 1 :: Int8]
 
 What happens if we make sure to arrange for this invariant? Consider this version:
 

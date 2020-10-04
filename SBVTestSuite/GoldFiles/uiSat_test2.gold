@@ -27,7 +27,7 @@ Looking for solution 1
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (_ as-array q2)))
+[RECV] ((q2 ((as const Array) false)))
 [GOOD] (define-fun q2_model1 ((x!0 Bool) (x!1 Bool)) Bool
           false
        )
@@ -290,7 +290,7 @@ Looking for solution 14
 [RECV] sat
 [SEND] (get-value (q2))
 [RECV] ((q2 (lambda ((x!1 Bool) (x!2 Bool))
-         (or (and (not x!1) (not x!2)) (and (not x!1) x!2)))))
+         (or (and (not x!1) x!2) (and (not x!1) (not x!2))))))
 [SEND] (get-value ((q2 false false)))
 [RECV] (((q2 false false) true))
 [SEND] (get-value ((q2 false true)))

@@ -74,7 +74,7 @@ guess input = do g <- sInteger "guess"
 -- Current bounds: (41,521)
 -- Current bounds: (42,521)
 -- Solved in: 9 guesses:
---   971 0 21 31 36 39 40 41 42
+--   776 0 21 31 36 39 40 41 42
 play :: IO ()
 play = do gs <- runSMT (guess 42)
           putStrLn $ "Solved in: " ++ show (length gs) ++ " guesses:"
