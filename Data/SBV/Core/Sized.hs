@@ -73,7 +73,7 @@ type ZeroWidth = 'Text "Zero-width BV's are not allowed."
 -- | Type family to create the appropriate non-zero constraint
 type family IsNonZero (arg :: Nat) :: Constraint where
    IsNonZero 0 = TypeError ZeroWidth
-   IsNonZero n = ()
+   IsNonZero _ = ()
 
 -- | 'WordN' has a kind
 instance (KnownNat n, IsNonZero n) => HasKind (WordN n) where
