@@ -9,7 +9,8 @@
 -- Conversion of symbolic programs to SMTLib format, Using v2 of the standard
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE PatternGuards       #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,12 +27,14 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..))
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..))
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
+
+import qualified Data.Generics.Uniplate.Data as G
 
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
@@ -52,6 +55,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
         hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
+        hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
@@ -71,6 +75,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
                  nope w = [ "***     Given problem requires support for " ++ w
                           , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
                           ]
+
+        setAll reason = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
 
         -- Determining the logic is surprisingly tricky!
         logic
@@ -102,20 +108,19 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
            -- we never set QF_S (ALL seems to work better in all cases)
 
-           | hasInteger || hasReal || not (null trueUSorts) || hasNonBVArrays || hasTuples || hasEither || hasMaybe || hasSets || hasList || hasString || hasArrayInits
-           = let why | hasInteger            = "has unbounded values"
-                     | hasReal               = "has algebraic reals"
-                     | not (null trueUSorts) = "has user-defined sorts"
-                     | hasNonBVArrays        = "has non-bitvector arrays"
-                     | hasTuples             = "has tuples"
-                     | hasEither             = "has either type"
-                     | hasMaybe              = "has maybe type"
-                     | hasSets               = "has sets"
-                     | hasList               = "has lists"
-                     | hasString             = "has strings"
-                     | hasArrayInits         = "has array initializers"
-                     | True                  = "cannot determine the SMTLib-logic to use"
-             in ["(set-logic ALL) ; "  ++ why ++ ", using catch-all."]
+           -- Things that require ALL
+           | hasInteger            = setAll "has unbounded values"
+           | hasReal               = setAll "has algebraic reals"
+           | not (null trueUSorts) = setAll "has user-defined sorts"
+           | hasNonBVArrays        = setAll "has non-bitvector arrays"
+           | hasTuples             = setAll "has tuples"
+           | hasEither             = setAll "has either type"
+           | hasMaybe              = setAll "has maybe type"
+           | hasSets               = setAll "has sets"
+           | hasList               = setAll "has lists"
+           | hasString             = setAll "has strings"
+           | hasArrayInits         = setAll "has array initializers"
+           | hasOverflows          = setAll "has overflow checks"
 
            | hasDouble || hasFloat || hasRounding
            = if not (null foralls)

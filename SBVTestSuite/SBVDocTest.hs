@@ -51,6 +51,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                                             , "QuickCheck"
                                                             , "random"
                                                             , "syb"
+                                                            , "uniplate"
                                                             ]
 
                                                  pargs = concatMap (\p -> ["-package", p]) packages

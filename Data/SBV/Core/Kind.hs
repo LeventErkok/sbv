@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DefaultSignatures   #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -51,7 +52,7 @@ data Kind = KBool
           | KTuple [Kind]
           | KMaybe  Kind
           | KEither Kind Kind
-          deriving (Eq, Ord)
+          deriving (Eq, Ord, G.Data)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
