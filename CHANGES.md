@@ -14,6 +14,9 @@
     and the latter doesn't support bit-vectors.) Thanks to Martin Lundfall
     for the initial pull request.
 
+  * Added missing instances for overflow-checking arithmetic of arbitrary
+    sized signed and unsigned bitvectors.
+
 ### Version 8.8, 2020-09-04
 
   * Reworked uninterpreted sorts. Added new function `mkUninterpretedSort` to make

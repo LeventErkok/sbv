@@ -10,12 +10,13 @@
 -- Based on: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE ImplicitParams      #-}
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ImplicitParams       #-}
+{-# LANGUAGE Rank2Types           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -33,6 +34,9 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
+import Data.SBV.Core.Sized
+
+import GHC.TypeLits
 
 import GHC.Stack
 
@@ -94,6 +98,9 @@ instance ArithOverflow SInt8   where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bv
 instance ArithOverflow SInt16  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 instance ArithOverflow SInt32  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 instance ArithOverflow SInt64  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+
+instance (KnownNat n, IsNonZero n) => ArithOverflow (SWord n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance (KnownNat n, IsNonZero n) => ArithOverflow (SInt  n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 
 instance ArithOverflow SVal where
   bvAddO     = signPick2 bvuaddo     bvsaddo
@@ -171,6 +178,21 @@ instance CheckedArithmetic Int64 where
   (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
   (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
   negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance (KnownNat n, IsNonZero n) => CheckedArithmetic (WordN n) where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
+instance (KnownNat n, IsNonZero n) => CheckedArithmetic (IntN n) where
+  (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
+  (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
+  (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
+  (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
+  negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
+
 
 -- | Zero-extend to given bits
 zx :: Int -> SVal -> SVal
