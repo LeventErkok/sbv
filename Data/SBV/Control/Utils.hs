@@ -24,7 +24,7 @@
 module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getFunction, getUninterpretedValue
-     , getValueCV, getUIFunCVAssoc, getUnsatAssumptions
+     , getValueCV, getUICVal, getUIFunCVAssoc, getUnsatAssumptions
      , SMTFunction(..), registerUISMTFunction
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
@@ -698,25 +698,7 @@ getValueCVHelper mbi s
   | s == falseSV
   = return falseCV
   | True
-  = do let nm  = show s
-           k   = kindOf s
-
-           modelIndex = case mbi of
-                          Nothing -> ""
-                          Just i  -> " :model_index " ++ show i
-
-           cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
-
-           bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
-
-       r <- ask cmd
-
-       let recover val = case recoverKindedValue (kindOf s) val of
-                           Just cv -> return cv
-                           Nothing -> bad r Nothing
-
-       parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> recover val
-                           _                                   -> bad r Nothing
+  = extractValue mbi (show s) (kindOf s)
 
 -- | "Make up" a CV for this type. Like zero, but smarter.
 defaultKindedValue :: Kind -> Maybe CV
@@ -955,6 +937,32 @@ getValueCV mbi s
                   case (rep1, rep2) of
                     (CV KReal (CAlgReal a), CV KReal (CAlgReal b)) -> return $ CV KReal (CAlgReal (mergeAlgReals ("Cannot merge real-values for " ++ show s) a b))
                     _                                              -> bad
+
+-- | Retrieve value from the solver
+extractValue :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> String -> Kind -> m CV
+extractValue mbi nm k = do
+       let modelIndex = case mbi of
+                          Nothing -> ""
+                          Just i  -> " :model_index " ++ show i
+
+           cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
+
+           bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
+
+       r <- ask cmd
+
+       let recover val = case recoverKindedValue k val of
+                           Just cv -> return cv
+                           Nothing -> bad r Nothing
+
+       parse r bad $ \case EApp [EApp [ECon v, val]] | v == nm -> recover val
+                           _                                   -> bad r Nothing
+
+-- | Generalization of 'Data.SBV.Control.getUICVal'
+getUICVal :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m CV
+getUICVal mbi (nm, t) = case t of
+                          SBVType [k] -> extractValue mbi nm k
+                          _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpeted value of a base type, received something else: " ++ show (nm, t)
 
 -- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
 getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m ([([CV], CV)], CV)

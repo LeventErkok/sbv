@@ -17,6 +17,10 @@
   * Added missing instances for overflow-checking arithmetic of arbitrary
     sized signed and unsigned bitvectors.
 
+  * In a sat call, also return the values of the uninterpreted values, along with
+    all the explicitly named inputs. Strictly speaking, this is backwards-incompatible,
+    but it the new behavior is consistent with how we handle uninterpreted values in general.
+
   * Improve SMTLib logic-detection code to use generics.
 
 ### Version 8.8, 2020-09-04

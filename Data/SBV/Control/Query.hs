@@ -13,6 +13,7 @@
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -335,8 +336,9 @@ getModelAtIndex mbi = do
           let assocs =  sortOn fst obsvs
                      ++ sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
 
-          -- collect UIs if requested
-          let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as > 1, satTrackUFs cfg] -- functions have at least two things in their type!
+          -- collect UIs, and UI functions if requested
+          let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as >  1, satTrackUFs cfg] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(_, SBVType as) <- uis, length as == 1]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
@@ -361,12 +363,14 @@ getModelAtIndex mbi = do
                          then Just <$> mapM (get . flipQ) qinps
                          else return Nothing
 
-          uivs <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
+          uiFunVals <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
+
+          uiVals    <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
           return SMTModel { modelObjectives = []
                           , modelBindings   = bindings
-                          , modelAssocs     = assocs
-                          , modelUIFuns     = uivs
+                          , modelAssocs     = uiVals ++ assocs
+                          , modelUIFuns     = uiFunVals
                           }
 
 -- | Just after a check-sat is issued, collect objective values. Used
