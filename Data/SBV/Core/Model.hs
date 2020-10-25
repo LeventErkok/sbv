@@ -2135,12 +2135,16 @@ class Uninterpreted a where
   -- | Most generalized form of uninterpretation, this function should not be needed
   -- by end-user-code, but is rather useful for the library development.
   sbvUninterpret :: Maybe ([String], a) -> String -> a
+  -- | A synonym for 'uninterpret'. Allows us to create variables without
+  -- having to call 'free' explicitly, i.e., without being in the symbolic monad.
+  sym :: String -> a
 
   {-# MINIMAL sbvUninterpret #-}
 
   -- defaults:
   uninterpret             = sbvUninterpret Nothing
   cgUninterpret nm code v = sbvUninterpret (Just (code, v)) nm
+  sym                     = uninterpret
 
 -- Plain constants
 instance HasKind a => Uninterpreted (SBV a) where
