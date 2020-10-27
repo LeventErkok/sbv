@@ -337,8 +337,8 @@ getModelAtIndex mbi = do
                      ++ sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(_, SBVType as) <- uis, length as >  1, satTrackUFs cfg] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(_, SBVType as) <- uis, length as == 1]
+          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
