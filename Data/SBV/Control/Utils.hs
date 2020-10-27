@@ -1092,7 +1092,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
-                         collectAcceptable []                              sofar = return sofar
+                         collectAcceptable []                           sofar = return sofar
                          collectAcceptable ((nm, t@(SBVType ats)):rest) sofar
                            | not (any hasUninterpretedSorts ats)
                            = collectAcceptable rest (nm : sofar)
