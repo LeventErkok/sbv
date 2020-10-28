@@ -1108,7 +1108,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                 collectAcceptable rest sofar
 
                      uiFuns <- reverse <$> collectAcceptable allUiFuns []
-                     uiRegs <- reverse <$> collectAcceptable allUiRegs []
+                     _      <- collectAcceptable allUiRegs [] -- only done to get the queryDebug output. Actual result not needed/used
 
                      -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
                      -- as cex's tend to get larger
@@ -1142,21 +1142,19 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     res <- loop grabObservables topState (allUiFuns, uiFuns)
-                                                          (allUiRegs, uiRegs)
-                                                          qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
-                                                                                      , allSatHasPrefixExistentials = w
-                                                                                      , allSatSolverReturnedUnknown = False
-                                                                                      , allSatSolverReturnedDSat    = False
-                                                                                      , allSatResults               = []
-                                                                                      }
+                     res <- loop grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
+                                                                                                                    , allSatHasPrefixExistentials = w
+                                                                                                                    , allSatSolverReturnedUnknown = False
+                                                                                                                    , allSatSolverReturnedDSat    = False
+                                                                                                                    , allSatResults               = []
+                                                                                                                    }
                      -- results come out in reverse order, so reverse them:
                      pure $ res { allSatResults = reverse (allSatResults res) }
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
 
-         loop grabObservables topState (allUiFuns, uiFunsToReject) (allUiRegs, _uiRegsToReject) qinps vars cfg = go (1::Int)
+         loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -1226,11 +1224,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                            (interpreteds, uninterpreteds) = partition (not . isFree . kindOf . fst) (map (snd . snd) assocs)
 
+                                           interpretedRegUis = filter (not . isFree . kindOf . snd) uiRegVals
+
+                                           interpretedRegUiSVs = [(cvt n (kindOf cv), cv) | (n, cv) <- interpretedRegUis]
+                                             where cvt :: String -> Kind -> SVal
+                                                   cvt nm k = SVal k $ Right $ cache r
+                                                     where r st = newExpr st k (SBVApp (Uninterpreted nm) [])
+
                                            -- For each interpreted variable, figure out the model equivalence
                                            -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
                                            -- and equality don't get along!
                                            interpretedEqs :: [SVal]
-                                           interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpreteds]
+                                           interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpretedRegUiSVs ++ interpreteds]
                                               where mkNotEq k a b
                                                      | isDouble k || isFloat k = svNot (a `fpNotEq` b)
                                                      | True                    = a `svNotEqual` b
