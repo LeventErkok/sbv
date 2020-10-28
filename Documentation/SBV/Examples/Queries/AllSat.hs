@@ -20,9 +20,9 @@ module Documentation.SBV.Examples.Queries.AllSat where
 import Data.SBV
 import Data.SBV.Control
 
--- | Find all solutions to @x + y .== 10@ for positive @x@ and @y@, but at each
--- iteration we would like to ensure that the value of @x@ we get is one more than
--- the previous one. This is rather silly, but demonstrates how we can dynamically
+-- | Find all solutions to @x + y .== 10@ for positive @x@ and @y@.
+-- This is rather silly to do in the query mode as `allSat` can do
+-- this automatically, but it demonstrates how we can dynamically
 -- query the result and put in new constraints based on those.
 goodSum :: Symbolic [(Integer, Integer)]
 goodSum = do x <- sInteger "x"
