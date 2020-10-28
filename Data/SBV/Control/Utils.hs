@@ -1090,6 +1090,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         , not (isNonModelVar cfg nm)                              -- make sure they aren't explicitly ignored
                                      ]
 
+                         allUiRegs = [u | u@(nm, SBVType as) <- allUninterpreteds, length as == 1  -- non-function ones
+                                        , not (isNonModelVar cfg nm)                               -- make sure not ignored
+                                     ]
+
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
                          collectAcceptable []                           sofar = return sofar
@@ -1098,12 +1102,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                            = collectAcceptable rest (nm : sofar)
                            | True
                            = do queryDebug [ "*** SBV.allSat: Uninterpreted function: " ++ nm ++ " :: " ++ show t
-                                           , "*** Will *not* be used in allSat consideretions since its type"
+                                           , "*** Will *not* be used in allSat considerations since its type"
                                            , "*** has uninterpreted sorts present."
                                            ]
                                 collectAcceptable rest sofar
 
                      uiFuns <- reverse <$> collectAcceptable allUiFuns []
+                     uiRegs <- reverse <$> collectAcceptable allUiRegs []
 
                      -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
                      -- as cex's tend to get larger
@@ -1137,19 +1142,21 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` map fst qinps
 
-                     res <- loop grabObservables topState (allUiFuns, uiFuns) qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
-                                                                                                          , allSatHasPrefixExistentials = w
-                                                                                                          , allSatSolverReturnedUnknown = False
-                                                                                                          , allSatSolverReturnedDSat    = False
-                                                                                                          , allSatResults               = []
-                                                                                                          }
+                     res <- loop grabObservables topState (allUiFuns, uiFuns)
+                                                          (allUiRegs, uiRegs)
+                                                          qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
+                                                                                      , allSatHasPrefixExistentials = w
+                                                                                      , allSatSolverReturnedUnknown = False
+                                                                                      , allSatSolverReturnedDSat    = False
+                                                                                      , allSatResults               = []
+                                                                                      }
                      -- results come out in reverse order, so reverse them:
                      pure $ res { allSatResults = reverse (allSatResults res) }
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
 
-         loop grabObservables topState (allUiFuns, uiFunsToReject) qinps vars cfg = go (1::Int)
+         loop grabObservables topState (allUiFuns, uiFunsToReject) (allUiRegs, _uiRegsToReject) qinps vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -1193,6 +1200,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                     return (nm, (t, cvs))
                                        uiFunVals <- mapM getUIFun allUiFuns
 
+                                       uiRegVals <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal Nothing ui) allUiRegs
+
                                        -- Add on observables if we're asked to do so:
                                        obsvs <- if grabObservables
                                                    then getObservables
@@ -1210,7 +1219,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                        let model = SMTModel { modelObjectives = []
                                                             , modelBindings   = bindings
-                                                            , modelAssocs     = sortOn fst obsvs ++ [(n, cv) | (_, (n, (_, cv))) <- assocs]
+                                                            , modelAssocs     = uiRegVals ++ sortOn fst obsvs ++ [(n, cv) | (_, (n, (_, cv))) <- assocs]
                                                             , modelUIFuns     = uiFunVals
                                                             }
                                            m = Satisfiable cfg model
@@ -1246,7 +1255,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                            -- We do this rather brute-force, since we need to create a new function
                                            -- and do an existential assertion.
                                            uninterpretedReject :: Maybe [String]
-                                           uninterpretedFuns    :: [String]
+                                           uninterpretedFuns   :: [String]
                                            (uninterpretedReject, uninterpretedFuns) = (uiReject, concat defs)
                                                where uiReject = case rejects of
                                                                   []  -> Nothing
