@@ -964,7 +964,7 @@ startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
                                   , ";;;"
                                   , ";;;           Solver    : " ++ show name
                                   , ";;;           Executable: " ++ fromMaybe "Unable to locate the executable" mbPath
-                                  , ";;;           Options   : " ++ unwords (options cfg)
+                                  , ";;;           Options   : " ++ unwords (options cfg ++ extraArgs cfg)
                                   , ";;;"
                                   , ";;; This file is an auto-generated loadable SMT-Lib file."
                                   , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
