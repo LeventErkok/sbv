@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.9, 2020-10-28
 
+### Version 8.9.5, Not released yet.
+
+  * Current dev version
+
 ### Version 8.9, 2020-10-28
 
   * Rename 'sbvAvailableSolvers' to 'getAvailableSolvers'.
