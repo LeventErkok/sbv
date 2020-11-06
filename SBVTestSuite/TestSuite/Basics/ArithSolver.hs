@@ -346,12 +346,8 @@ genIEEE754 origin vs =  [tst1 ("pred_"   ++ nm, x, y)    | (nm, x, y)    <- pred
                ++ [("fpIsEqualObject", show x, show y, mkThm2P fpIsEqualObject  x y (fpIsEqualObjectH x y)) | x <- vs, y <- vs]
                ++ [("fpRem",           show x, show y, mkThm2  fpRem            x y (fpRemH           x y)) | x <- vsFPRem, y <- vsFPRem]
 
-        -- Turning off fpRem tests for the time being. See: https://github.com/LeventErkok/sbv/issues/482
-        issue482 = True
-
         -- TODO: For doubles fpRem takes too long, so we only do a subset
         vsFPRem
-          | issue482               = []
           | origin == "genDoubles" = [nan, infinity, 0, 0.5, -infinity, -0, -0.5]
           | True                   = vs
 
