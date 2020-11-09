@@ -18,7 +18,7 @@ report any issues you might see with newer releases.
         on Jul 25, 2020.
   * MathSAT:
       * http://mathsat.fbk.eu/
-      * Version 5.6.4
+      * Version 5.6.5
   * Yices:
       * https://github.com/SRI-CSL/yices2
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
