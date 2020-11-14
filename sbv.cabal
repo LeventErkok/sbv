@@ -133,6 +133,7 @@ Library
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.Floating
                   , Documentation.SBV.Examples.Misc.ModelExtract
+                  , Documentation.SBV.Examples.Misc.NestedArray
                   , Documentation.SBV.Examples.Misc.Auxiliary
                   , Documentation.SBV.Examples.Misc.NoDiv0
                   , Documentation.SBV.Examples.Misc.Newtypes

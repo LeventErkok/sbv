@@ -5,7 +5,8 @@
 
 ### Version 8.9.5, Not released yet.
 
-  * Current dev version
+  * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
+    to model multi-dimensional arrays in SBV.
 
 ### Version 8.9, 2020-10-28
 
