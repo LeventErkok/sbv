@@ -33,12 +33,12 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (just_SBVMaybe 0)))
+[RECV] ((s0 (just_SBVMaybe 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 0)))
+[RECV] ((s1 (just_SBVMaybe 2)))
 [SEND] (get-value (s2))
 [RECV] ((s2 false))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("s0",Just 0 :: Maybe Integer),("s1",Just 0 :: Maybe Integer),("s2",False :: Bool)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("s0",Just 2 :: Maybe Integer),("s1",Just 2 :: Maybe Integer),("s2",False :: Bool)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

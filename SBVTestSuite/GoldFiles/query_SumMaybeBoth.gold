@@ -40,11 +40,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (left_SBVEither 0)))
+[RECV] ((s0 (left_SBVEither 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 1)))
+[RECV] ((s1 (just_SBVMaybe 3)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(Left 0,Just 1)
+(Left 2,Just 3)

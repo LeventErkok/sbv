@@ -33,13 +33,13 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (just_SBVMaybe 0)))
+[RECV] ((s0 (just_SBVMaybe 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (just_SBVMaybe 0)))
+[RECV] ((s1 (just_SBVMaybe 2)))
 [SEND] (get-value (s2))
 [RECV] ((s2 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(Just 0,Just 0,False)
+(Just 2,Just 2,False)
