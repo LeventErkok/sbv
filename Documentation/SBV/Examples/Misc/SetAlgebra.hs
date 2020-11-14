@@ -362,9 +362,9 @@ Subset relation does /not/ distribute over union on the left:
 
 >>> prove $ \(a :: SI) b c -> a `isSubsetOf` (b `union` c) .=> a `isSubsetOf` b .&& a `isSubsetOf` c
 Falsifiable. Counter-example:
-  s0 =     {0} :: {Integer}
+  s0 =     {2} :: {Integer}
   s1 =       U :: {Integer}
-  s2 = U - {0} :: {Integer}
+  s2 = U - {2} :: {Integer}
 
 Similarly, subset relation does /not/ distribute over intersection on the right:
 
@@ -372,7 +372,7 @@ Similarly, subset relation does /not/ distribute over intersection on the right:
 
 >>> prove $ \(a :: SI) b c -> (b `intersection` c) `isSubsetOf` a .=> b `isSubsetOf` a .&& c `isSubsetOf` a
 Falsifiable. Counter-example:
-  s0 = U - {0} :: {Integer}
+  s0 = U - {2} :: {Integer}
   s1 =      {} :: {Integer}
-  s2 =     {0} :: {Integer}
+  s2 =     {2} :: {Integer}
 -}

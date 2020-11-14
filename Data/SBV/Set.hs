@@ -138,8 +138,8 @@ complement ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
 -- Falsifiable. Counter-example:
---   s0 =   0 :: Integer
---   s1 = {0} :: {Integer}
+--   s0 =   2 :: Integer
+--   s1 = {2} :: {Integer}
 --
 -- But the above is true if the element isn't in the set to start with:
 --
@@ -181,7 +181,7 @@ insert se ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `insert` (x `delete` s) .== s
 -- Falsifiable. Counter-example:
---   s0 =  0 :: Integer
+--   s0 =  2 :: Integer
 --   s1 = {} :: {Integer}
 --
 -- But the above is true if the element is in the set to start with:
@@ -283,8 +283,8 @@ isEmpty = null
 --
 -- >>> prove $ \x -> isFull (observe "set" (x `delete` (full :: SSet Integer)))
 -- Falsifiable. Counter-example:
---   set = U - {0} :: {Integer}
---   s0  =       0 :: Integer
+--   set = U - {2} :: {Integer}
+--   s0  =       2 :: Integer
 --
 -- >>> isFull (full :: SSet Integer)
 -- True
@@ -371,7 +371,7 @@ isSubsetOf sa sb
 --
 -- >>> prove $ \x (s :: SSet Integer) -> s `isProperSubsetOf` (x `insert` s)
 -- Falsifiable. Counter-example:
---   s0 = 0 :: Integer
+--   s0 = 2 :: Integer
 --   s1 = U :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `notMember` s .=> s `isProperSubsetOf` (x `insert` s)
@@ -379,8 +379,8 @@ isSubsetOf sa sb
 --
 -- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isProperSubsetOf` s
 -- Falsifiable. Counter-example:
---   s0 =         0 :: Integer
---   s1 = U - {0,1} :: {Integer}
+--   s0 =         2 :: Integer
+--   s1 = U - {2,3} :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `member` s .=> (x `delete` s) `isProperSubsetOf` s
 -- Q.E.D.
