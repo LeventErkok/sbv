@@ -7,7 +7,7 @@
 -- Stability : experimental
 --
 -- Demonstrates how to model nested-arrays, i.e., arrays of arrays in SBV.
--- Instead of SMTLibs nested model, in SBV we use a tuple as an index,
+-- Instead of SMTLib's nested model, in SBV we use a tuple as an index,
 -- which is isomorphic to nested arrays.
 -----------------------------------------------------------------------------
 
