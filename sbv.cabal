@@ -168,6 +168,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.HexPuzzle
                   , Documentation.SBV.Examples.Puzzles.LadyAndTigers
                   , Documentation.SBV.Examples.Puzzles.MagicSquare
+                  , Documentation.SBV.Examples.Puzzles.Murder
                   , Documentation.SBV.Examples.Puzzles.NQueens
                   , Documentation.SBV.Examples.Puzzles.SendMoreMoney
                   , Documentation.SBV.Examples.Puzzles.Sudoku

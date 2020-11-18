@@ -8,6 +8,8 @@
   * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
     to model multi-dimensional arrays in SBV.
 
+  * Add "Documentation/SBV/Examples/Puzzles/Murder.hs" as another puzzle example.
+
 ### Version 8.9, 2020-10-28
 
   * Rename 'sbvAvailableSolvers' to 'getAvailableSolvers'.
