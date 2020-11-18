@@ -85,11 +85,11 @@ getPerson Person{nm, age, location, sex, role} = Person nm <$> (Const <$> getVal
 -- | Solve the puzzle. We have:
 --
 -- >>> killer
--- alice     47  Bar    Female  Bystander
--- husband   46  Beach  Male    Killer
--- brother   47  Beach  Male    Victim
--- daughter  20  Alone  Female  Bystander
--- son       20  Bar    Male    Bystander
+-- Alice     47  Bar    Female  Bystander
+-- Husband   46  Beach  Male    Killer
+-- Brother   47  Beach  Male    Victim
+-- Daughter  20  Alone  Female  Bystander
+-- Son       20  Bar    Male    Bystander
 --
 -- That is, Alice's brother was the victim and Alice's husband was the killer.
 killer :: IO ()
@@ -104,11 +104,11 @@ killer = do
 -- | Constraints of the puzzle, coded following the English description.
 puzzle :: IO [Person Const]
 puzzle = runSMT $ do
-  alice    <- newPerson "alice"
-  husband  <- newPerson "husband"
-  brother  <- newPerson "brother"
-  daughter <- newPerson "daughter"
-  son      <- newPerson "son"
+  alice    <- newPerson "Alice"
+  husband  <- newPerson "Husband"
+  brother  <- newPerson "Brother"
+  daughter <- newPerson "Daughter"
+  son      <- newPerson "Son"
 
   -- Sex of each character
   constrain $ sex alice    .== sFemale
@@ -119,26 +119,30 @@ puzzle = runSMT $ do
 
   let chars = [alice, husband, brother, daughter, son]
 
-  -- Age relationships
-  constrain $ age son .== age daughter .|| age alice .== age brother
+  -- Age relationships. To come up with "reasonable" numbers,
+  -- we make the kids at least 25 years younger than the parents
   constrain $ age son      .<  age alice    - 25
   constrain $ age son      .<  age husband  - 25
   constrain $ age daughter .<  age alice    - 25
   constrain $ age daughter .<  age husband  - 25
 
+  -- Ensure that there's a twin. Looking at the characters, the
+  -- only possibilities are either Alice's kids, or Alice and her brother
+  constrain $ age son .== age daughter .|| age alice .== age brother
+
   -- One victim, one killer
   constrain $ sum (map (\c -> oneIf (role c .== sVictim)) chars) .== (1 :: SInteger)
   constrain $ sum (map (\c -> oneIf (role c .== sKiller)) chars) .== (1 :: SInteger)
-
-  -- A man and a woman were together in a bar at the time of the murder.
-  constrain $ sOr (map (\c -> sex c .== sFemale .&& location c .== sBar)  chars)
-  constrain $ sOr (map (\c -> sex c .== sMale   .&& location c .== sBar)  chars)
 
   let ifVictim p = role p .== sVictim
       ifKiller p = role p .== sKiller
 
       every f = sAnd (map f chars)
       some  f = sOr  (map f chars)
+
+  -- A man and a woman were together in a bar at the time of the murder.
+  constrain $ some $ \c -> sex c .== sFemale .&& location c .== sBar
+  constrain $ some $ \c -> sex c .== sMale   .&& location c .== sBar
 
   -- The victim and the killer were together on a beach at the time of the murder.
   constrain $ every $ \c -> ifVictim c .=> location c .== sBeach
