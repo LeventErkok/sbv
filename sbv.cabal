@@ -214,13 +214,13 @@ Library
                   , Data.SBV.SMT.SMTLibNames
                   , Data.SBV.SMT.Utils
                   , Data.SBV.Provers.Prover
+                  , Data.SBV.Provers.ABC
                   , Data.SBV.Provers.Boolector
                   , Data.SBV.Provers.CVC4
-                  , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.DReal
-                  , Data.SBV.Provers.Z3
                   , Data.SBV.Provers.MathSAT
-                  , Data.SBV.Provers.ABC
+                  , Data.SBV.Provers.Yices
+                  , Data.SBV.Provers.Z3
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff

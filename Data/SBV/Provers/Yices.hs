@@ -20,7 +20,7 @@ import Data.SBV.SMT.SMT
 
 -- | The description of the Yices SMT solver
 -- The default executable is @\"yices-smt2\"@, which must be in your path. You can use the @SBV_YICES@ environment variable to point to the executable on your system.
--- SBV does not pass any arguments to yices. You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
+-- You can use the @SBV_YICES_OPTIONS@ environment variable to override the options.
 yices :: SMTSolver
 yices = SMTSolver {
            name         = Yices

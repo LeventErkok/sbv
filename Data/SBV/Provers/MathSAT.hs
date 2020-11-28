@@ -22,7 +22,7 @@ import Data.SBV.Control.Types
 
 -- | The description of the MathSAT SMT solver
 -- The default executable is @\"mathsat\"@, which must be in your path. You can use the @SBV_MATHSAT@ environment variable to point to the executable on your system.
--- The default options are @\"-input=smt2\"@. You can use the @SBV_MATHSAT_OPTIONS@ environment variable to override the options.
+-- You can use the @SBV_MATHSAT_OPTIONS@ environment variable to override the options.
 mathSAT :: SMTSolver
 mathSAT = SMTSolver {
            name         = MathSAT

@@ -22,7 +22,7 @@ import Data.SBV.SMT.SMT
 
 -- | The description of the CVC4 SMT solver
 -- The default executable is @\"cvc4\"@, which must be in your path. You can use the @SBV_CVC4@ environment variable to point to the executable on your system.
--- The default options are @\"--lang smt\"@. You can use the @SBV_CVC4_OPTIONS@ environment variable to override the options.
+-- You can use the @SBV_CVC4_OPTIONS@ environment variable to override the options.
 cvc4 :: SMTSolver
 cvc4 = SMTSolver {
            name         = CVC4
