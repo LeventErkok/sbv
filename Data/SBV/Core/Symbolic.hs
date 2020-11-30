@@ -27,6 +27,7 @@
 {-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-} -- for undetermined s in MonadState
+{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -44,7 +45,10 @@ module Data.SBV.Core.Symbolic
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
   , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
-  , NamedSymVar(..), getSV, swNodeId, namedNodeId
+  , NamedSymVar(..), getSV, swNodeId, namedNodeId, getUniversals, prefixExistentials
+  , prefixUniversals, onUserInputs, onInternInputs, onAllInputs, addInternInput
+  , addUserInput, getInputs, inputsFromListWith, userInputsToList
+  , internInputsToList, inputsToList
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
@@ -91,7 +95,7 @@ import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, 
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>))
+import qualified Data.Sequence               as S    (Seq, empty, (|>), filter, takeWhileL, fromList)
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -593,9 +597,12 @@ type Name = T.Text
 
 -- | 'NamedSymVar' pairs symbolic values and user given/automatically generated names
 data NamedSymVar = NamedSymVar !SV !Name
-                 deriving (Eq,Show,Generic)
+                 deriving (Show,Generic)
 
 -- | For comparison purposes, we simply use the SV and ignore the name
+instance Eq NamedSymVar where
+  (==) (NamedSymVar l _) (NamedSymVar r _) = l == r
+
 instance Ord NamedSymVar where
   compare (NamedSymVar l _) (NamedSymVar r _) = compare l r
 
@@ -966,6 +973,121 @@ withNewIncState st cont = do
         r  <- cont st
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
+
+
+-- | User defined, with proper quantifiers
+type UserInputs = S.Seq (Quantifier, NamedSymVar)
+
+-- | Internally declared, always existential
+type InternInps = Set.Set NamedSymVar
+
+-- | Entire set of names, for faster lookup
+type AllInps = Set.Set Name
+
+-- | Inputs as a record of maps and sets. See above type-synonyms for their roles.
+data Inputs = Inputs { userInputs   :: !UserInputs
+                     , internInputs :: !InternInps
+                     , allInputs    :: !AllInps
+                     } deriving (Eq,Show)
+
+-- | Semigroup instance; combining according to indexes.
+instance Semigroup Inputs where
+  (Inputs lui lii lai) <> (Inputs rui rii rai) = Inputs (lui <> rui) (lii <> rii) (lai <> rai)
+
+-- | Monoid instance, we start with no maps.
+instance Monoid Inputs where
+  mempty = Inputs { userInputs   = mempty
+                  , internInputs = mempty
+                  , allInputs    = mempty
+                  }
+
+-- | Get the quantifier
+quantifier :: (Quantifier, NamedSymVar) -> Quantifier
+quantifier = fst
+
+-- | Get the named symbolic variable
+namedSymVar :: (Quantifier, NamedSymVar) -> NamedSymVar
+namedSymVar = snd
+
+-- | Modify the user-inputs field
+onUserInputs :: (UserInputs -> UserInputs) -> Inputs -> Inputs
+onUserInputs f inp@Inputs{userInputs} = inp{userInputs = f userInputs}
+
+-- | Modify the internal-inputs field
+onInternInputs :: (InternInps -> InternInps) -> Inputs -> Inputs
+onInternInputs f inp@Inputs{internInputs} = inp{internInputs = f internInputs}
+
+-- | Modify the all-inputs field
+onAllInputs :: (AllInps -> AllInps) -> Inputs -> Inputs
+onAllInputs f inp@Inputs{allInputs} = inp{allInputs = f allInputs}
+
+-- | Add a new internal input
+addInternInput :: SV -> Name -> Inputs -> Inputs
+addInternInput sv nm = goAll . goIntern
+  where !new = toNamedSV sv nm
+        goIntern = onInternInputs (Set.insert new)
+        goAll    = onAllInputs    (Set.insert nm)
+
+-- | Add a new user input
+addUserInput :: Quantifier -> SV -> Name -> Inputs -> Inputs
+addUserInput q sv nm = goAll . goUser
+  where new = toNamedSV sv nm
+        goUser = onUserInputs (S.|> (q, new)) -- add to the end of the sequence
+        goAll  = onAllInputs  (Set.insert nm)
+
+-- | Return user and internal inputs
+getInputs :: Inputs -> (UserInputs, InternInps)
+getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
+
+-- | Find a user-input from its SV
+-- lookupUserInputs :: SV -> UserInputs -> (Quantifier, NamedSymVar)
+-- lookupUserInputs sv ui = res
+--   where
+--     i = getId . swNodeId $ sv
+--     res = -- Seq lookup = Nothing on negative Int or Int > length seq
+--           case S.lookup i ui of
+--             Nothing -> error "Tried to lookup a user input that doesn't exist!"
+--             Just x@(_, getSV -> nsv)  ->
+--               -- we try the fast lookup first, if the node ids don't match then
+--               -- we use the more expensive find
+--               if nsv == sv
+--               then x
+--               else
+
+-- | Extract universals
+getUniversals :: UserInputs -> S.Seq NamedSymVar
+getUniversals = fmap namedSymVar . S.filter ((== ALL) . quantifier)
+
+-- | Get a prefix of the user inputs by a predicate. Note that we could not rely
+-- on fusion here but this is cheap and easy until there is an observable slow down from not fusing.
+userInpsPrefixBy :: ((Quantifier, NamedSymVar) -> Bool) -> UserInputs -> UserInputs
+userInpsPrefixBy = S.takeWhileL
+
+-- | Find prefix existentials, i.e., those that are at skolem positions and have valid model values.
+prefixExistentials :: UserInputs -> UserInputs
+prefixExistentials = userInpsPrefixBy ((/= ALL) . quantifier)
+
+-- | Find prefix universals. Corresponds to the above in a proof context.
+prefixUniversals :: UserInputs -> UserInputs
+prefixUniversals = userInpsPrefixBy ((== ALL) . quantifier)
+
+-- | Conversion from named-symvars to user-inputs
+inputsFromListWith :: (NamedSymVar -> Quantifier) -> [NamedSymVar] -> UserInputs
+inputsFromListWith f = S.fromList . fmap go
+  where go n = (f n, n)
+
+-- | Helper functions around inputs.
+-- TODO: remove these functions once lists have been pushed to edges of code base.
+userInputsToList :: UserInputs -> [(Quantifier, NamedSymVar)]
+userInputsToList = F.toList
+
+-- | Conversion from internal-inputs to list of named sym vars
+internInputsToList :: InternInps -> [NamedSymVar]
+internInputsToList = Set.toList
+
+-- | Convert to regular lists
+inputsToList :: Inputs -> ([(Quantifier, NamedSymVar)], [NamedSymVar])
+inputsToList =  (userInputsToList *** internInputsToList) . getInputs
 
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
