@@ -1043,14 +1043,11 @@ getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
 lookupInput :: Eq a => (a -> SV) -> a -> S.Seq a -> Maybe a
 lookupInput f n ns = res
   where
-    sv = f n
-    i = getId (swNodeId sv)
-    res = -- Seq lookup = Nothing on negative Int or Int > length seq
-          case S.lookup i ns of
-            Nothing    -> Nothing
-            x@(Just e) -> if sv == f e
-                          then x
-                          else secondLookup
+    sv  = f n
+    i   = getId (swNodeId sv)
+    res = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
+            Nothing    -> secondLookup
+            x@(Just e) -> if sv == f e then x else secondLookup
               -- we try the fast lookup first, if the node ids don't match then
               -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL n ns >>= flip S.lookup ns
