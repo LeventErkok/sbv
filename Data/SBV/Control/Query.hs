@@ -44,7 +44,7 @@ import qualified Data.Text          as T
 
 
 import Data.Char      (toLower)
-import Data.List      (intercalate, nubBy, sortBy, sortOn)
+import Data.List      (intercalate, nubBy)
 import Data.Maybe     (listToMaybe, catMaybes)
 import Data.Function  (on)
 import Data.Bifunctor (first)
@@ -55,8 +55,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
                                 , incrementInternalCounter, validationRequested
                                 , prefixExistentials, prefixUniversals
-                                , NamedSymVar(..), namedSymVar, getUserName
-                                , lookupInput, getSV
+                                , NamedSymVar(..), namedSymVar, getSV
+                                , lookupInput, userInputsToList
                                 )
 
 import Data.SBV.Utils.SExpr
@@ -390,7 +390,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                         r <- ask cmd
 
-                        inputs <- map snd <$> getQuantifiedInputs
+                        inputs <- toList . fmap namedSymVar <$> getQuantifiedInputs
 
                         parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue (bad r) inputs) es
                                             _                             -> bad r Nothing
@@ -403,9 +403,9 @@ getObjectiveValues = do let cmd = "(get-objectives)"
                   EApp [ECon nm, v] -> locate nm v               -- Regular case
                   _                 -> dontUnderstand (show expr)
 
-          where locate nm v = case listToMaybe [p | p@(sv, _) <- inputs, show sv == nm] of
-                                Nothing               -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
-                                Just (sv, actualName) -> grab sv v >>= \val -> return $ Just (actualName, val)
+          where locate nm v = case listToMaybe [p | p@(NamedSymVar sv _) <- inputs, show sv == nm] of
+                                Nothing                          -> return Nothing -- Happens when the soft assertion has a group-id that's not one of the input names
+                                Just (NamedSymVar sv actualName) -> grab sv v >>= \val -> return $ Just (T.unpack actualName, val)
 
                 dontUnderstand s = bailOut $ Just [ "Unable to understand solver output."
                                                   , "While trying to process: " ++ s
@@ -771,7 +771,7 @@ SBV a |-> v = case literal v of
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
-             inps <- getQuantifiedInputs
+             inps <- userInputsToList <$> getQuantifiedInputs
 
              let grabValues st = do let extract (Assign s n) = sbvToSV st (SBV s) >>= \sv -> return (sv, n)
 
@@ -784,8 +784,8 @@ mkSMTResult asgns = do
                                     let userSS = map fst modelAssignment
 
                                         missing, extra, dup :: [String]
-                                        missing = [n | (EX, (s, n)) <- inps, s `notElem` userSS]
-                                        extra   = [show s | s <- userSS, s `notElem` map (fst . snd) inps]
+                                        missing = [T.unpack n | (EX, NamedSymVar s n) <- inps, s `notElem` userSS]
+                                        extra   = [show s | s <- userSS, s `notElem` map (getSV . namedSymVar) inps]
                                         dup     = let walk []     = []
                                                       walk (n:ns)
                                                         | n `elem` ns = show n : walk (filter (/= n) ns)
@@ -816,7 +816,7 @@ mkSMTResult asgns = do
                                                             , "*** Data.SBV: Check your query result construction!"
                                                             ]
 
-                                    let findName s = case [nm | (_, (i, nm)) <- inps, s == i] of
+                                    let findName s = case [T.unpack nm | (_, NamedSymVar i nm) <- inps, s == i] of
                                                         [nm] -> nm
                                                         []   -> error "*** Data.SBV: Impossible happened: Cannot find " ++ show s ++ " in the input list"
                                                         nms  -> error $ unlines [ ""
