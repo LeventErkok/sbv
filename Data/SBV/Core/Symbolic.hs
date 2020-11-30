@@ -47,7 +47,7 @@ module Data.SBV.Core.Symbolic
   , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
   , NamedSymVar(..), getSV, swNodeId, namedNodeId, getUniversals, prefixExistentials
   , prefixUniversals, onUserInputs, onInternInputs, onAllInputs, addInternInput
-  , addUserInput, getInputs, inputsFromListWith, userInputsToList
+  , addUserInput, getInputs, inputsFromListWith, userInputsToList, getUserName'
   , internInputsToList, inputsToList
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
