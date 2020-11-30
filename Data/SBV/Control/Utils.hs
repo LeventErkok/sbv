@@ -44,8 +44,9 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
-import Data.Char     (isPunctuation, isSpace, chr, ord, isDigit)
-import Data.Function (on)
+import Data.Char      (isPunctuation, isSpace, chr, ord, isDigit)
+import Data.Function  (on)
+import Data.Bifunctor (first)
 
 import Data.Proxy
 
@@ -84,7 +85,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               , UserInputs, getInputs, prefixExistentials, getSV, quantifier, getUserName
                               , namedSymVar, NamedSymVar(..), lookupInput, userInputs, userInputsToList
-                              , getUserName'
+                              , getUserName', Name
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -1053,19 +1054,19 @@ getQuantifiedInputs = do State{rinps} <- queryState
                          return $ preQs <> trackers <> postQs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
-getObservables :: (MonadIO m, MonadQuery m) => m [(String, CV)]
+getObservables :: (MonadIO m, MonadQuery m) => m (S.Seq (Name, CV))
 getObservables = do State{rObservables} <- queryState
 
                     rObs <- liftIO $ readIORef rObservables
 
                     -- This intentionally reverses the result; since 'rObs' stores in reversed order
-                    let walk []             sofar = return sofar
-                        walk ((n, f, s):os) sofar = do cv <- getValueCV Nothing s
-                                                       if f cv
+                    let walk []             !sofar = return sofar
+                        walk ((n, f, s):os) !sofar = do cv <- getValueCV Nothing s
+                                                        if f cv
                                                           then walk os ((n, cv) : sofar)
                                                           else walk os            sofar
 
-                    walk rObs []
+                    fmap S.fromList . flip walk mempty . F.toList $ rObs
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
 -- | Generalization of 'Data.SBV.Control.getUIs'.
@@ -1208,7 +1209,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                        obsvs <- if grabObservables
                                                    then getObservables
                                                    else do queryDebug ["*** In a quantified context, observables will not be printed."]
-                                                           return []
+                                                           return mempty
 
                                        bindings <- let grab i@(ALL, _)          = return (i, Nothing)
                                                        grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
@@ -1221,7 +1222,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                        let model = SMTModel { modelObjectives = []
                                                             , modelBindings   = F.toList <$> bindings
-                                                            , modelAssocs     = uiRegVals ++ sortOn fst obsvs <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
+                                                            , modelAssocs     = uiRegVals
+                                                                                <> F.toList (first T.unpack <$> S.sortOn fst obsvs)
+                                                                                <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
                                                             , modelUIFuns     = uiFunVals
                                                             }
                                            m = Satisfiable cfg model

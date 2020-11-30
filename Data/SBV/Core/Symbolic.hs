@@ -45,7 +45,7 @@ module Data.SBV.Core.Symbolic
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
   , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
-  , NamedSymVar(..), UserInputs, Inputs(..), getSV, swNodeId, namedNodeId, getUniversals
+  , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId, getUniversals
   , prefixExistentials, prefixUniversals, onUserInputs, onInternInputs, onAllInputs
   , addInternInput, addUserInput, getInputs, inputsFromListWith, userInputsToList
   , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
