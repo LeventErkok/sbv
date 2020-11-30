@@ -1040,17 +1040,17 @@ getInputs :: Inputs -> (UserInputs, InternInps)
 getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
 
 -- | Find a user-input from its SV
-lookupInput :: Eq a => (a -> SV) -> a -> S.Seq a -> Maybe a
-lookupInput f n ns = res
+lookupInput :: Eq a => (a -> SV) -> SV -> S.Seq a -> Maybe a
+lookupInput f sv ns = res
   where
-    sv  = f n
     i   = getId (swNodeId sv)
+    svs = fmap f ns
     res = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
             Nothing    -> secondLookup
             x@(Just e) -> if sv == f e then x else secondLookup
               -- we try the fast lookup first, if the node ids don't match then
               -- we use the more expensive O (n) to find the index and the elem
-    secondLookup = S.elemIndexL n ns >>= flip S.lookup ns
+    secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
 
 -- | Extract universals
