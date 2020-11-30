@@ -48,8 +48,8 @@ module Data.SBV.Core.Symbolic
   , NamedSymVar(..), UserInputs, getSV, swNodeId, namedNodeId, getUniversals
   , prefixExistentials, prefixUniversals, onUserInputs, onInternInputs, onAllInputs
   , addInternInput, addUserInput, getInputs, inputsFromListWith, userInputsToList
-  , getUserName', internInputsToList, inputsToList, Name
-  , getSValPathCondition, extendSValPathCondition
+  , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
+  , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
@@ -95,7 +95,7 @@ import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, 
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), filter, takeWhileL, fromList)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), filter, takeWhileL, fromList, lookup, elemIndexL)
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -1040,19 +1040,21 @@ getInputs :: Inputs -> (UserInputs, InternInps)
 getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
 
 -- | Find a user-input from its SV
--- lookupUserInputs :: SV -> UserInputs -> (Quantifier, NamedSymVar)
--- lookupUserInputs sv ui = res
---   where
---     i = getId . swNodeId $ sv
---     res = -- Seq lookup = Nothing on negative Int or Int > length seq
---           case S.lookup i ui of
---             Nothing -> error "Tried to lookup a user input that doesn't exist!"
---             Just x@(_, getSV -> nsv)  ->
---               -- we try the fast lookup first, if the node ids don't match then
---               -- we use the more expensive find
---               if nsv == sv
---               then x
---               else
+lookupInput :: Eq a => (a -> SV) -> a -> S.Seq a -> Maybe a
+lookupInput f n ns = res
+  where
+    sv = f n
+    i = getId (swNodeId sv)
+    res = -- Seq lookup = Nothing on negative Int or Int > length seq
+          case S.lookup i ns of
+            Nothing    -> Nothing
+            x@(Just e) -> if sv == f e
+                          then x
+                          else secondLookup
+              -- we try the fast lookup first, if the node ids don't match then
+              -- we use the more expensive O (n) to find the index and the elem
+    secondLookup = S.elemIndexL n ns >>= flip S.lookup ns
+
 
 -- | Extract universals
 getUniversals :: UserInputs -> S.Seq NamedSymVar
