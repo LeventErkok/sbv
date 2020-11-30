@@ -979,7 +979,7 @@ withNewIncState st cont = do
 type UserInputs = S.Seq (Quantifier, NamedSymVar)
 
 -- | Internally declared, always existential
-type InternInps = Set.Set NamedSymVar
+type InternInps = S.Seq NamedSymVar
 
 -- | Entire set of names, for faster lookup
 type AllInps = Set.Set Name
@@ -1025,7 +1025,7 @@ onAllInputs f inp@Inputs{allInputs} = inp{allInputs = f allInputs}
 addInternInput :: SV -> Name -> Inputs -> Inputs
 addInternInput sv nm = goAll . goIntern
   where !new = toNamedSV sv nm
-        goIntern = onInternInputs (Set.insert new)
+        goIntern = onInternInputs (S.|> new)
         goAll    = onAllInputs    (Set.insert nm)
 
 -- | Add a new user input
@@ -1083,7 +1083,7 @@ userInputsToList = F.toList
 
 -- | Conversion from internal-inputs to list of named sym vars
 internInputsToList :: InternInps -> [NamedSymVar]
-internInputsToList = Set.toList
+internInputsToList = F.toList
 
 -- | Convert to regular lists
 inputsToList :: Inputs -> ([(Quantifier, NamedSymVar)], [NamedSymVar])
