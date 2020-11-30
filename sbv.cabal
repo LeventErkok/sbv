@@ -83,7 +83,7 @@ Library
   build-depends   : crackNum
                   , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
-                  , pretty, process, mtl, random, syb, transformers, uniplate
+                  , pretty, process, mtl, random, syb, text, transformers, uniplate
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
                   , Data.SBV.Dynamic

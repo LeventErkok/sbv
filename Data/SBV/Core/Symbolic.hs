@@ -9,15 +9,18 @@
 -- Symbolic values
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -41,7 +44,7 @@ module Data.SBV.Core.Symbolic
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
   , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
-  , NamedSymVar
+  , NamedSymVar(..), getSV, swNodeId, namedNodeId
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
@@ -76,6 +79,7 @@ import Data.String                 (IsString(fromString))
 import Data.Time (getCurrentTime, UTCTime)
 
 import GHC.Stack
+import GHC.Generics (Generic)
 
 import qualified Control.Monad.State.Lazy    as LS
 import qualified Control.Monad.State.Strict  as SS
@@ -88,6 +92,7 @@ import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>))
+import qualified Data.Text                   as T
 
 import System.Mem.StableName
 
@@ -104,7 +109,8 @@ import Control.Monad.Fail as Fail
 #endif
 
 -- | A symbolic node id
-newtype NodeId = NodeId Int deriving (Eq, Ord, G.Data)
+newtype NodeId = NodeId { getId :: Int }
+  deriving (Eq, Ord, G.Data)
 
 -- | A symbolic word, tracking it's signedness and size.
 data SV = SV !Kind !NodeId
@@ -130,6 +136,10 @@ instance Show SV where
 -- | Kind of a symbolic word.
 swKind :: SV -> Kind
 swKind (SV k _) = k
+
+-- | retrieve the node id of a symbolic word
+swNodeId :: SV -> NodeId
+swNodeId (SV _ nid) = nid
 
 -- | Forcing an argument; this is a necessary evil to make sure all the arguments
 -- to an uninterpreted function are evaluated before called; the semantics of uinterpreted
@@ -578,8 +588,40 @@ instance Show SBVExpr where
 -- | A program is a sequence of assignments
 newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SV, SBVExpr)}
 
+-- | Helper synonym for text, in case we switch to something else later.
+type Name = T.Text
+
 -- | 'NamedSymVar' pairs symbolic values and user given/automatically generated names
-type NamedSymVar = (SV, String)
+data NamedSymVar = NamedSymVar !SV !Name
+                 deriving (Eq,Show,Generic)
+
+-- | For comparison purposes, we simply use the SV and ignore the name
+instance Ord NamedSymVar where
+  compare (NamedSymVar l _) (NamedSymVar r _) = compare l r
+
+-- | Convert to a named symvar, from string
+toNamedSV' :: SV -> String -> NamedSymVar
+toNamedSV' s = NamedSymVar s . T.pack
+
+-- | Convert to a named symvar, from text
+toNamedSV :: SV -> Name -> NamedSymVar
+toNamedSV = NamedSymVar
+
+-- | Get the node id from a named sym var
+namedNodeId :: NamedSymVar -> NodeId
+namedNodeId = swNodeId . getSV
+
+-- | Get the SV from a named sym var
+getSV :: NamedSymVar -> SV
+getSV (NamedSymVar s _) = s
+
+-- | Get the user-name typed value from named sym var
+getUserName :: NamedSymVar -> Name
+getUserName (NamedSymVar _ nm) = nm
+
+-- | Get the string typed value from named sym var
+getUserName' :: NamedSymVar -> String
+getUserName' = T.unpack . getUserName
 
 -- | Style of optimization. Note that in the pareto case the user is allowed
 -- to specify a max number of fronts to query the solver for, since there might
@@ -759,11 +801,11 @@ instance Show Result where
 
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
 
-          shn (q, (sv, nm)) = "  " ++ ni ++ " :: " ++ show (swKind sv) ++ ex ++ alias
+          shn (q, NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ ex ++ alias
             where ni = show sv
                   ex | q == ALL = ""
                      | True     = ", existential"
-                  alias | ni == nm = ""
+                  alias | ni == T.unpack nm = ""
                         | True     = ", aliasing " ++ show nm
 
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ show ai ++ " -> " ++ show bi ++ alias
@@ -935,7 +977,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
-                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set String) -- First : User defined, with proper quantifiers
+                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set Name) -- First : User defined, with proper quantifiers
                                                                                                            -- Second: Internally declared, always existential
                                                                                                            -- Third : Entire set of names, for faster lookup
                     , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
@@ -1096,8 +1138,8 @@ newUninterpreted st nm t mbCode
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
 
-        validChar x = isAlphaNum x || x `elem` "_"
-        enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` "|\\") (tail (init nm)))
+        validChar x = isAlphaNum x || x `elem` ("_" :: String)
+        enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` ("|\\" :: String)) (tail (init nm)))
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()
@@ -1111,32 +1153,32 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 -- Such variables are existentially quantified in a SAT context, and universally quantified
 -- in a proof context.
 internalVariable :: State -> Kind -> IO SV
-internalVariable st k = do (sv, nm) <- newSV st k
+internalVariable st k = do (NamedSymVar sv nm) <- newSV st k
                            rm <- readIORef (runMode st)
                            let q = case rm of
                                      SMTMode  _ _ True  _ -> EX
                                      SMTMode  _ _ False _ -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
-                               n = "__internal_sbv_" ++ nm
-                               v = (sv, n)
+                               !n = "__internal_sbv_" <> nm
+                               !v = NamedSymVar sv n
                            modifyState st rinps (first ((q, v) :) *** Set.insert n)
                                      $ modifyIncState st rNewInps (\newInps -> case q of
                                                                                  EX -> v : newInps
                                                                                  -- I don't think the following can actually happen
                                                                                  -- but just be safe:
                                                                                  ALL  -> noInteractive [ "Internal universally quantified variable creation:"
-                                                                                                       , "  Named: " ++ nm
+                                                                                                       , "  Named: " <> T.unpack nm
                                                                                                        ])
                            return sv
 {-# INLINE internalVariable #-}
 
 -- | Create a new SV
-newSV :: State -> Kind -> IO (SV, String)
+newSV :: State -> Kind -> IO NamedSymVar
 newSV st k = do ctr <- incrementInternalCounter st
                 let sv = SV k (NodeId ctr)
                 registerKind st k
-                return (sv, 's' : show ctr)
+                return $ NamedSymVar sv $ 's' `T.cons` T.pack (show ctr)
 {-# INLINE newSV #-}
 
 -- | Register a new kind with the system, used for uninterpreted sorts.
@@ -1218,7 +1260,7 @@ newConst st c = do
     -- has the kind we asked for, because the constMap stores the full CV
     -- which already has a kind field in it.
     Just sv -> return sv
-    Nothing -> do (sv, _) <- newSV st (kindOf c)
+    Nothing -> do (NamedSymVar sv _) <- newSV st (kindOf c)
                   let ins = Map.insert c sv
                   modifyState st rconstMap ins $ modifyIncState st rNewConsts ins
                   return sv
@@ -1248,7 +1290,7 @@ newExpr st k app = do
      -- get the same expression but at a different type. See
      -- <http://github.com/GaloisInc/cryptol/issues/566> as an example.
      Just sv | kindOf sv == k -> return sv
-     _                        -> do (sv, _) <- newSV st k
+     _                        -> do (NamedSymVar sv _) <- newSV st k
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))
                                     modifyState st spgm append $ modifyIncState st rNewAsgns append
                                     modifyState st rexprMap (Map.insert e sv) (return ())
@@ -1365,8 +1407,8 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                   NonQueryVar mq -> (False, mq)
                                   QueryVar       -> (True,  Just EX)
 
-            mkS q = do (sv, internalName) <- newSV st k
-                       let nm = fromMaybe internalName mbNm
+            mkS q = do (NamedSymVar sv internalName) <- newSV st k
+                       let nm = fromMaybe (T.unpack internalName) mbNm
                        introduceUserName st (isQueryVar, isTracker) nm k q sv
 
             mkC cv = do registerKind st k
@@ -1398,10 +1440,10 @@ svMkSymVarGen isTracker varContext k mbNm st = do
 
                         in if isUserSort k
                            then bad ("Cannot validate models in the presence of user defined kinds, saw: " ++ show k) cant
-                           else do (sv, internalName) <- newSV st k
+                           else do (NamedSymVar sv internalName) <- newSV st k
 
-                                   let nm = fromMaybe internalName mbNm
-                                       nsv = (sv, nm)
+                                   let nm = fromMaybe (T.unpack internalName) mbNm
+                                       nsv = toNamedSV' sv nm
 
                                        cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
                                               []              -> if isTracker
@@ -1416,7 +1458,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                                                  -- we'd have to validate for each possible value. But that's more or less useless. Instead,
                                                                  -- just issue a warning and use 0 for this value.
                                                                  mkConstCV k (0::Integer)
-                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (snd nsv)) report
+                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (getUserName' nsv)) report
                                               [(EX, Just c)]  -> c
                                               r               -> bad (   "Found multiple matching values for variable: " ++ show nsv
                                                                       ++ "\n*** " ++ show r) report
@@ -1428,7 +1470,7 @@ introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV
 introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
         (_, old) <- readIORef (rinps st)
 
-        let nm  = mkUnique nmOrig old
+        let nm  = mkUnique (T.pack nmOrig) old
 
         -- If this is not a query variable and we're in a query, reject it.
         -- See https://github.com/LeventErkok/sbv/issues/554 for the rationale.
@@ -1447,7 +1489,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
         if isTracker && q == ALL
            then error $ "SBV: Impossible happened! A universally quantified tracker variable is being introduced: " ++ show nm
            else do let newInp olds = case q of
-                                      EX  -> (sv, nm) : olds
+                                      EX  -> toNamedSV sv nm : olds
                                       ALL -> noInteractive [ "Adding a new universally quantified variable: "
                                                            , "  Name      : " ++ show nm
                                                            , "  Kind      : " ++ show k
@@ -1456,16 +1498,17 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
                                                            , "Only existential variables are supported in query mode."
                                                            ]
                    if isTracker
-                      then modifyState st rinps (second ((sv, nm) :) *** Set.insert nm)
+                      then modifyState st rinps (second (toNamedSV sv nm :) *** Set.insert nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                      else modifyState st rinps (first ((q, (sv, nm)) :) *** Set.insert nm)
+                      else modifyState st rinps (first ((q, (toNamedSV sv nm)) :) *** Set.insert nm)
                                      $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
    where -- The following can be rather slow if we keep reusing the same prefix, but I doubt it'll be a problem in practice
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
-         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix ++ "_" ++ show i | i <- [(0::Int)..]])
+         mkUnique :: T.Text -> Set.Set Name -> T.Text
+         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> (T.pack $ show i) | i <- [(0::Int)..]])
 
 -- | Generalization of 'Data.SBV.runSymbolic'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
@@ -1732,6 +1775,9 @@ instance NFData GeneralizedCV where
 instance NFData CallStack where
   rnf _ = ()
 #endif
+
+instance NFData NamedSymVar where
+  rnf (NamedSymVar s n) = rnf s `seq` rnf n
 
 instance NFData Result where
   rnf (Result kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
