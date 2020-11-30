@@ -95,7 +95,7 @@ import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, 
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), filter, takeWhileL, fromList, lookup, elemIndexL)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -1094,7 +1094,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CV)]
-                    , rObservables :: IORef [(String, CV -> Bool, SV)]
+                    , rObservables :: IORef (S.Seq (Name, CV -> Bool, SV))
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
@@ -1212,7 +1212,7 @@ modifyIncState State{rIncState} field update = do
 
 -- | Add an observable
 recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
-recordObservable st nm chk sv = modifyState st rObservables ((nm, chk, sv):) (return ())
+recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables ((nm, chk, sv) S.<|) (return ())
 
 -- | Increment the variable counter
 incrementInternalCounter :: State -> IO Int
@@ -1637,7 +1637,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
      rm        <- newIORef currentRunMode
      ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
      cInfo     <- newIORef []
-     observes  <- newIORef []
+     observes  <- newIORef mempty
      pgm       <- newIORef (SBVPgm S.empty)
      emap      <- newIORef Map.empty
      cmap      <- newIORef Map.empty
@@ -1725,7 +1725,8 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    cgMap <- Map.toList <$> readIORef cgs
 
    traceVals   <- reverse <$> readIORef cInfo
-   observables <- reverse <$> readIORef observes
+   observables <- reverse . fmap (\(n,f,sv) -> (T.unpack n, f, sv)) . F.toList
+                  <$> readIORef observes
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
