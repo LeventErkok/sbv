@@ -45,10 +45,10 @@ module Data.SBV.Core.Symbolic
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
   , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
-  , NamedSymVar(..), getSV, swNodeId, namedNodeId, getUniversals, prefixExistentials
-  , prefixUniversals, onUserInputs, onInternInputs, onAllInputs, addInternInput
-  , addUserInput, getInputs, inputsFromListWith, userInputsToList, getUserName'
-  , internInputsToList, inputsToList
+  , NamedSymVar(..), UserInputs, getSV, swNodeId, namedNodeId, getUniversals
+  , prefixExistentials, prefixUniversals, onUserInputs, onInternInputs, onAllInputs
+  , addInternInput, addUserInput, getInputs, inputsFromListWith, userInputsToList
+  , getUserName', internInputsToList, inputsToList
   , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, State(..), withNewIncState, IncState(..), incrementInternalCounter
@@ -64,7 +64,7 @@ module Data.SBV.Core.Symbolic
   , validationRequested, outputSVal
   ) where
 
-import Control.Arrow               (first, second, (***))
+import Control.Arrow               ((***))
 import Control.DeepSeq             (NFData(..))
 import Control.Monad               (when)
 import Control.Monad.Except        (MonadError, ExceptT)
@@ -1099,9 +1099,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rctr         :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
-                    , rinps        :: IORef (([(Quantifier, NamedSymVar)], [NamedSymVar]), Set.Set Name) -- First : User defined, with proper quantifiers
-                                                                                                           -- Second: Internally declared, always existential
-                                                                                                           -- Third : Entire set of names, for faster lookup
+                    , rinps        :: IORef Inputs
                     , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                     , routs        :: IORef [SV]
                     , rtblMap      :: IORef TableMap
@@ -1284,7 +1282,7 @@ internalVariable st k = do (NamedSymVar sv nm) <- newSV st k
                                      Concrete{}           -> ALL
                                !n = "__internal_sbv_" <> nm
                                !v = NamedSymVar sv n
-                           modifyState st rinps (first ((q, v) :) *** Set.insert n)
+                           modifyState st rinps (addUserInput q sv n)
                                      $ modifyIncState st rNewInps (\newInps -> case q of
                                                                                  EX -> v : newInps
                                                                                  -- I don't think the following can actually happen
@@ -1590,7 +1588,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
 -- | Introduce a new user name. We simply append a suffix if we have seen this variable before.
 introduceUserName :: State -> (Bool, Bool) -> String -> Kind -> Quantifier -> SV -> IO SVal
 introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
-        (_, old) <- readIORef (rinps st)
+        old <- allInputs <$> readIORef (rinps st)
 
         let nm  = mkUnique (T.pack nmOrig) old
 
@@ -1620,9 +1618,9 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
                                                            , "Only existential variables are supported in query mode."
                                                            ]
                    if isTracker
-                      then modifyState st rinps (second (toNamedSV sv nm :) *** Set.insert nm)
+                      then modifyState st rinps (addInternInput sv nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                      else modifyState st rinps (first ((q, (toNamedSV sv nm)) :) *** Set.insert nm)
+                      else modifyState st rinps (addUserInput q sv nm)
                                      $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
@@ -1644,7 +1642,7 @@ runSymbolic currentRunMode (SymbolicT c) = do
      pgm       <- newIORef (SBVPgm S.empty)
      emap      <- newIORef Map.empty
      cmap      <- newIORef Map.empty
-     inps      <- newIORef (([], []), Set.empty)
+     inps      <- newIORef mempty
      outs      <- newIORef []
      tables    <- newIORef Map.empty
      arrays    <- newIORef IMap.empty
@@ -1712,7 +1710,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
                                        , rObservables=observes
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
-   inpsO <- (reverse *** reverse) . fst <$> readIORef inps
+   inpsO <- inputsToList <$> readIORef inps
    outsO <- reverse <$> readIORef outs
 
    let swap  (a, b)              = (b, a)
