@@ -12,8 +12,10 @@
 {-# LANGUAGE DefaultSignatures          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -59,6 +61,7 @@ import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.Map.Strict as M
+import qualified Data.Text       as T
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
@@ -531,9 +534,9 @@ showModelDictionary warnEmpty includeEverything cfg allVars
   where warn s = if warnEmpty then s else ""
 
         relevantVars  = filter (not . ignore) allVars
-        ignore (s, _)
+        ignore (T.pack -> s, _)
           | includeEverything = False
-          | True              = "__internal_sbv_" `isPrefixOf` s || isNonModelVar cfg s
+          | True              = "__internal_sbv_" `T.isPrefixOf` s || isNonModelVar cfg s
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))
