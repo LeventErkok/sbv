@@ -14,6 +14,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -38,17 +39,24 @@ import Data.IORef (readIORef)
 
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Sequence      as S
+import qualified Data.Text          as T
 
 
-import Data.Char     (toLower)
-import Data.List     (intercalate, nubBy, sortBy, sortOn)
-import Data.Maybe    (listToMaybe, catMaybes)
-import Data.Function (on)
+import Data.Char      (toLower)
+import Data.List      (intercalate, nubBy, sortBy, sortOn)
+import Data.Maybe     (listToMaybe, catMaybes)
+import Data.Function  (on)
+import Data.Bifunctor (first)
+import Data.Foldable  (toList)
 
 import Data.SBV.Core.Data
 
 import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
                                 , incrementInternalCounter, validationRequested
+                                , prefixExistentials, prefixUniversals
+                                , NamedSymVar(..), namedSymVar, getUserName
+                                , lookupInput, getSV
                                 )
 
 import Data.SBV.Utils.SExpr
@@ -314,31 +322,31 @@ getModelAtIndex mbi = do
           uis   <- getUIs
 
            -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-          let allModelInputs = if isSAT then takeWhile ((/= ALL) . fst) qinps
-                                        else takeWhile ((== ALL) . fst) qinps
+          let allModelInputs = if isSAT then prefixExistentials qinps
+                                        else prefixUniversals   qinps
 
               -- Add on observables only if we're not in a quantified context
-              grabObservables = length allModelInputs == length qinps -- i.e., we didn't drop anything
+              grabObservables = S.length allModelInputs == S.length qinps -- i.e., we didn't drop anything
 
           obsvs <- if grabObservables
                       then getObservables
                       else do queryDebug ["*** In a quantified context, obvservables will not be printed."]
-                              return []
+                              return mempty
 
-          let sortByNodeId :: [(SV, (String, CV))] -> [(String, CV)]
-              sortByNodeId = map snd . sortBy (compare `on` (\(SV _ nid, _) -> nid))
+          let grab (NamedSymVar sv nm) = wrap <$> getValueCV mbi sv
+                where wrap c = (sv, (nm, c))
 
-              grab (sv, nm) = wrap <$> getValueCV mbi sv
-                 where wrap c = (sv, (nm, c))
+          inputAssocs <- mapM (grab . namedSymVar) allModelInputs
 
-          inputAssocs <- mapM (grab . snd) allModelInputs
-
-          let assocs =  sortOn fst obsvs
-                     ++ sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
+          let name     = fst . snd
+              removeSV = snd
+              prepare  = S.unstableSort . S.filter (not . isNonModelVar cfg . name)
+              assocs   =  S.sortOn fst obsvs <> fmap removeSV (prepare inputAssocs)
+                     -- sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
+          let uiFuns = [ui | ui@(T.pack -> nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(T.pack -> nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
@@ -349,10 +357,10 @@ getModelAtIndex mbi = do
                   Just cmds -> mapM_ (send True) cmds
 
           bindings <- let get i@(ALL, _)      = return (i, Nothing)
-                          get i@(EX, (sv, _)) = case sv `lookup` inputAssocs of
-                                                  Just (_, cv) -> return (i, Just cv)
-                                                  Nothing      -> do cv <- getValueCV mbi sv
-                                                                     return (i, Just cv)
+                          get i@(EX, getSV -> sv) = case lookupInput fst sv inputAssocs of
+                                                      Just (_, (_, cv)) -> return (i, Just cv)
+                                                      Nothing           -> do cv <- getValueCV mbi sv
+                                                                              return (i, Just cv)
 
                           flipQ i@(q, sv) = case (isSAT, q) of
                                              (True,  _ )  -> i
@@ -368,8 +376,8 @@ getModelAtIndex mbi = do
           uiVals    <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
           return SMTModel { modelObjectives = []
-                          , modelBindings   = bindings
-                          , modelAssocs     = uiVals ++ assocs
+                          , modelBindings   = toList <$> bindings
+                          , modelAssocs     = uiVals ++ toList (first T.unpack <$> assocs)
                           , modelUIFuns     = uiFunVals
                           }
 
