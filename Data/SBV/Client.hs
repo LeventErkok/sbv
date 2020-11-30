@@ -28,7 +28,7 @@ module Data.SBV.Client
 import Control.Monad (filterM)
 import Data.Generics
 
-import qualified Control.Exception   as C
+import qualified Control.Exception as C
 
 import qualified "template-haskell" Language.Haskell.TH as TH
 
@@ -47,13 +47,13 @@ sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> ret
 
 -- | The default configs corresponding to supported SMT solvers
 defaultSolverConfig :: Solver -> SMTConfig
-defaultSolverConfig Z3        = z3
-defaultSolverConfig Yices     = yices
-defaultSolverConfig DReal     = dReal
+defaultSolverConfig ABC       = abc
 defaultSolverConfig Boolector = boolector
 defaultSolverConfig CVC4      = cvc4
+defaultSolverConfig DReal     = dReal
 defaultSolverConfig MathSAT   = mathSAT
-defaultSolverConfig ABC       = abc
+defaultSolverConfig Yices     = yices
+defaultSolverConfig Z3        = z3
 
 -- | Return the known available solver configs, installed on your machine.
 getAvailableSolvers :: IO [SMTConfig]

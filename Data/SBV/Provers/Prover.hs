@@ -31,7 +31,7 @@ module Data.SBV.Provers.Prover (
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
-       , boolector, cvc4, yices, dReal, z3, mathSAT, abc, defaultSMTCfg, defaultDeltaSMTCfg
+       , abc, boolector, cvc4, dReal, mathSAT, yices, z3, defaultSMTCfg, defaultDeltaSMTCfg
        ) where
 
 
@@ -68,13 +68,13 @@ import qualified Data.SBV.Control.Utils as Control
 
 import GHC.Stack
 
-import qualified Data.SBV.Provers.Boolector  as Boolector
-import qualified Data.SBV.Provers.CVC4       as CVC4
-import qualified Data.SBV.Provers.Yices      as Yices
-import qualified Data.SBV.Provers.DReal      as DReal
-import qualified Data.SBV.Provers.Z3         as Z3
-import qualified Data.SBV.Provers.MathSAT    as MathSAT
-import qualified Data.SBV.Provers.ABC        as ABC
+import qualified Data.SBV.Provers.ABC       as ABC
+import qualified Data.SBV.Provers.Boolector as Boolector
+import qualified Data.SBV.Provers.CVC4      as CVC4
+import qualified Data.SBV.Provers.DReal     as DReal
+import qualified Data.SBV.Provers.MathSAT   as MathSAT
+import qualified Data.SBV.Provers.Yices     as Yices
+import qualified Data.SBV.Provers.Z3        as Z3
 
 mkConfig :: SMTSolver -> SMTLibVersion -> [Control.SMTOption] -> SMTConfig
 mkConfig s smtVersion startOpts = SMTConfig { verbose                     = False
@@ -105,6 +105,10 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
 allOnStdOut :: Control.SMTOption
 allOnStdOut = Control.DiagnosticOutputChannel "stdout"
 
+-- | Default configuration for the ABC synthesis and verification tool.
+abc :: SMTConfig
+abc = mkConfig ABC.abc SMTLib2 [allOnStdOut]
+
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
 boolector = mkConfig Boolector.boolector SMTLib2 []
@@ -114,27 +118,23 @@ cvc4 :: SMTConfig
 cvc4 = mkConfig CVC4.cvc4 SMTLib2 [allOnStdOut]
 
 -- | Default configuration for the Yices SMT Solver.
-yices :: SMTConfig
-yices = mkConfig Yices.yices SMTLib2 []
-
--- | Default configuration for the Yices SMT Solver.
 dReal :: SMTConfig
 dReal = mkConfig DReal.dReal SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
                                      ]
+
+-- | Default configuration for the MathSAT SMT solver
+mathSAT :: SMTConfig
+mathSAT = mkConfig MathSAT.mathSAT SMTLib2 [allOnStdOut]
+
+-- | Default configuration for the Yices SMT Solver.
+yices :: SMTConfig
+yices = mkConfig Yices.yices SMTLib2 []
 
 -- | Default configuration for the Z3 SMT solver
 z3 :: SMTConfig
 z3 = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
                             , allOnStdOut
                             ]
-
--- | Default configuration for the MathSAT SMT solver
-mathSAT :: SMTConfig
-mathSAT = mkConfig MathSAT.mathSAT SMTLib2 [allOnStdOut]
-
--- | Default configuration for the ABC synthesis and verification tool.
-abc :: SMTConfig
-abc = mkConfig ABC.abc SMTLib2 [allOnStdOut]
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig

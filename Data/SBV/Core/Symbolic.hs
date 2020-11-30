@@ -1896,13 +1896,13 @@ type SMTEngine =  forall res.
                -> IO res
 
 -- | Solvers that SBV is aware of
-data Solver = Z3
-            | Yices
-            | DReal
+data Solver = ABC
             | Boolector
             | CVC4
+            | DReal
             | MathSAT
-            | ABC
+            | Yices
+            | Z3
             deriving (Show, Enum, Bounded)
 
 -- | An SMT solver
