@@ -50,6 +50,7 @@ import Data.Proxy
 import qualified Data.Map.Strict    as Map
 import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
+import qualified Data.Foldable      as F (toList)
 
 import Control.Monad            (join, unless, zipWithM, when, replicateM)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
@@ -78,6 +79,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
+                              , UserInputs, getInputs
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -1035,17 +1037,15 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                            _                -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
-getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m [(Quantifier, NamedSymVar)]
+getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m UserInputs
 getQuantifiedInputs = do State{rinps} <- queryState
-                         ((rQinps, rTrackers), _) <- liftIO $ readIORef rinps
+                         (rQinps, rTrackers) <- liftIO $ getInputs <$> readIORef rinps
 
-                         let qinps    = reverse rQinps
-                             trackers = map (EX,) $ reverse rTrackers
-
+                         let trackers = (EX,) <$> rTrackers
                              -- separate the existential prefix, which will go first
-                             (preQs, postQs) = span (\(q, _) -> q == EX) qinps
+                             (preQs, postQs) = S.spanL (\(q, _) -> q == EX) qinps
 
-                         return $ preQs ++ trackers ++ postQs
+                         return $ preQs <> trackers <> postQs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
 getObservables :: (MonadIO m, MonadQuery m) => m [(String, CV)]
