@@ -54,6 +54,7 @@ import Data.Maybe (mapMaybe, listToMaybe)
 
 import qualified Data.Map.Strict as M
 import qualified Data.Foldable   as S (toList)
+import qualified Data.Text       as T
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -276,21 +277,19 @@ class ExtractIO m => MProvable m a where
                                           ]
 
 
-                   let universals = [s | (ALL, s) <- qinps]
+                   let universals = S.toList $ getUniversals qinps
 
                        firstUniversal
                          | null universals = error "Data.SBV: Impossible happened! Universal optimization with no universals!"
-                         | True            = minimum (map (nodeId . fst) universals)
-
-                       nodeId (SV _ n) = n
+                         | True            = minimum $ fmap (swNodeId . getSV) universals
 
                        mappings :: M.Map SV SBVExpr
                        mappings = M.fromList (S.toList (pgmAssignments spgm))
 
-                       chaseUniversal entry = map snd $ go entry []
+                       chaseUniversal entry = go entry []
                          where go x sofar
                                 | nx >= firstUniversal
-                                = nub $ [unm | unm@(u, _) <- universals, nx >= nodeId u] ++ sofar
+                                = nub $ [unm | unm <- universals, nx >= swNodeId (getSV unm)] ++ sofar
                                 | True
                                 = let oVars (LkUp _ a b)             = [a, b]
                                       oVars (IEEEFP (FP_Cast _ _ o)) = [o]
@@ -299,7 +298,7 @@ class ExtractIO m => MProvable m a where
                                                Nothing            -> []
                                                Just (SBVApp o ss) -> nub (oVars o ++ ss)
                                   in foldr go sofar vars
-                                where nx = nodeId x
+                                where nx = swNodeId x
 
                    let needsUniversalOpt = let tag _  [] = Nothing
                                                tag nm xs = Just (nm, xs)
@@ -315,7 +314,7 @@ class ExtractIO m => MProvable m a where
                                                , "*** Data.SBV: Problem needs optimization of metric in the scope of universally quantified variable(s):"
                                                , "***"
                                                ]
-                                           ++  [ "***          " ++  pad s ++ " [Depends on: " ++ intercalate ", " xs ++ "]"  | (s, xs) <- needsUniversalOpt ]
+                                           ++  [ "***          " ++  pad s ++ " [Depends on: " ++ intercalate ", " (getUserName' <$> xs) ++ "]"  | (s, xs) <- needsUniversalOpt ]
                                            ++  [ "***"
                                                , "*** Optimization is only meaningful with existentially quantified metrics."
                                                ]
@@ -417,9 +416,9 @@ class ExtractIO m => MProvable m a where
                                                      , "Unable to validate the produced model."
                                                      ]) (Just res)
 
-          check env = do let univs    = [n | ((ALL, (_, n)), _) <- env]
+          check env = do let univs    = [T.unpack n | ((ALL, NamedSymVar _ n), _) <- env]
                              envShown = showModelDictionary True True cfg modelBinds
-                                where modelBinds = [(n, fake q s v) | ((q, (s, n)), v) <- env]
+                                where modelBinds = [(T.unpack n, fake q s v) | ((q, NamedSymVar s n), v) <- env]
                                       fake q s Nothing
                                         | q == ALL
                                         = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<universally quantified>")
