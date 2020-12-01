@@ -55,7 +55,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
                                 , incrementInternalCounter, validationRequested
                                 , prefixExistentials, prefixUniversals
-                                , NamedSymVar(..), namedSymVar, getSV
+                                , namedSymVar, getSV
                                 , lookupInput, userInputsToList
                                 )
 
