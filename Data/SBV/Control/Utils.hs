@@ -1447,9 +1447,9 @@ runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is 
 
          skolemize :: [(Quantifier, NamedSymVar)] -> [Either SV (SV, [SV])]
          skolemize quants = go quants ([], [])
-           where go []                   (_,  sofar) = reverse sofar
-                 go ((ALL, (getSV -> v)):rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                 go ((EX,  (getSV -> v)):rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
+           where go []                        (_,  sofar) = reverse sofar
+                 go ((ALL, getSV -> v) :rest) (us, sofar) = go rest (v:us, Left v : sofar)
+                 go ((EX,  getSV -> v) :rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
 
          qinps      = if isSat then fst is else map flipQ (fst is)
          skolemMap  = skolemize qinps

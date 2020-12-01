@@ -810,10 +810,11 @@ instance Show Result where
 
           shn (q, NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ ex ++ alias
             where ni = show sv
-                  ex | q == ALL = ""
-                     | True     = ", existential"
+                  ex    | q == ALL          = ""
+                        | True              = ", existential"
+
                   alias | ni == T.unpack nm = ""
-                        | True     = ", aliasing " ++ show nm
+                        | True              = ", aliasing " ++ show nm
 
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ show ai ++ " -> " ++ show bi ++ alias
                                        ++ "\n     Context: "     ++ show ctx
@@ -1052,7 +1053,6 @@ lookupInput f sv ns = res
               -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
-
 -- | Extract universals
 getUniversals :: UserInputs -> S.Seq NamedSymVar
 getUniversals = fmap namedSymVar . S.filter ((== ALL) . quantifier)
@@ -1211,8 +1211,8 @@ modifyIncState State{rIncState} field update = do
         R.modifyIORef' (field incState) update
 
 -- | Add an observable
-recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
 -- notice that we cons like a list, we should build at the end of the seq, but cons to preserve semantics for now
+recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
 recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables ((nm, chk, sv) S.<|) (return ())
 
 -- | Increment the variable counter

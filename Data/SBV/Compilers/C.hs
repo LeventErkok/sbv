@@ -510,7 +510,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins preConsts tbls arrs
                          $$ vcat (map text ls)
                          $$ text ""
 
-       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, (NamedSymVar s _)) <- fst ins]
+       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, NamedSymVar s _) <- fst ins]
                 where len KReal{}            = 5
                       len KFloat{}           = 6 -- SFloat
                       len KDouble{}          = 7 -- SDouble
