@@ -10,6 +10,9 @@
 
   * Add "Documentation/SBV/Examples/Puzzles/Murder.hs" as another puzzle example.
 
+  * Performance updates: Thanks to Jeff Young, SBV now uses better underlying
+    data structures, performing better for heavy use-case scenarios.
+
 ### Version 8.9, 2020-10-28
 
   * Rename 'sbvAvailableSolvers' to 'getAvailableSolvers'.
