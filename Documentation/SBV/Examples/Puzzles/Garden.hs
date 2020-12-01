@@ -30,6 +30,7 @@
 
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 
@@ -38,7 +39,7 @@
 module Documentation.SBV.Examples.Puzzles.Garden where
 
 import Data.SBV
-import Data.List(isSuffixOf)
+import Data.Text(isSuffixOf)
 
 -- | Colors of the flowers
 data Color = Red | Yellow | Blue
