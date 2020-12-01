@@ -45,7 +45,7 @@ import qualified Data.Text          as T
 
 
 import Data.Char      (toLower)
-import Data.List      (intercalate, nubBy)
+import Data.List      (intercalate, nubBy, sortOn)
 import Data.Maybe     (listToMaybe, catMaybes)
 import Data.Function  (on)
 import Data.Bifunctor (first)
@@ -342,8 +342,7 @@ getModelAtIndex mbi = do
           let name     = fst . snd
               removeSV = snd
               prepare  = S.unstableSort . S.filter (not . isNonModelVar cfg . name)
-              assocs   =  S.sortOn fst obsvs <> fmap removeSV (prepare inputAssocs)
-                     -- sortByNodeId [p | p@(_, (nm, _)) <- inputAssocs, not (isNonModelVar cfg nm)]
+              assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
 
           -- collect UIs, and UI functions if requested
           let uiFuns = [ui | ui@(T.pack -> nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!

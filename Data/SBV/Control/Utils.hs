@@ -1054,7 +1054,7 @@ getQuantifiedInputs = do State{rinps} <- queryState
                          return $ preQs <> trackers <> postQs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
-getObservables :: (MonadIO m, MonadQuery m) => m (S.Seq (Name, CV))
+getObservables :: (MonadIO m, MonadQuery m) => m [(Name, CV)]
 getObservables = do State{rObservables} <- queryState
 
                     rObs <- liftIO $ readIORef rObservables
@@ -1066,7 +1066,7 @@ getObservables = do State{rObservables} <- queryState
                                                           then walk os ((n, cv) : sofar)
                                                           else walk os            sofar
 
-                    fmap S.fromList . flip walk mempty . F.toList $ rObs
+                    walk (F.toList rObs) []
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
 -- | Generalization of 'Data.SBV.Control.getUIs'.
@@ -1196,8 +1196,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                        endMsg $ Just $ "[" ++ m ++ "]"
                                        return sofar{ allSatSolverReturnedDSat = True }
 
-                          Sat    -> do assocs <- mapM (\(sval, (NamedSymVar sv n)) -> do !cv <- getValueCV Nothing sv
-                                                                                         return (sv, (n, (sval, cv)))) vars
+                          Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
+                                                                                       return (sv, (n, (sval, cv)))) vars
 
                                        let getUIFun ui@(nm, t) = do cvs <- getUIFunCVAssoc Nothing ui
                                                                     return (nm, (t, cvs))
@@ -1222,8 +1222,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                        let model = SMTModel { modelObjectives = []
                                                             , modelBindings   = F.toList <$> bindings
-                                                            , modelAssocs     = uiRegVals
-                                                                                <> F.toList (first T.unpack <$> S.sortOn fst obsvs)
+                                                            , modelAssocs     =    uiRegVals
+                                                                                <> (first T.unpack <$> sortOn fst obsvs)
                                                                                 <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
                                                             , modelUIFuns     = uiFunVals
                                                             }
