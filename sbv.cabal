@@ -247,7 +247,7 @@ Test-Suite SBVTest
                     TupleSections
                     TypeApplications
   build-depends   : filepath, crackNum
-                  , sbv, directory, random, mtl, containers
+                  , sbv, directory, random, mtl, containers, text
                   , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs

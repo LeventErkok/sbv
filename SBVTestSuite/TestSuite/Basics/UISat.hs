@@ -8,6 +8,7 @@
 --
 -- Testing UI function sat examples
 -----------------------------------------------------------------------------
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
