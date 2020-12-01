@@ -15,6 +15,10 @@
 
 module Data.SBV.Control.BaseIO where
 
+import Data.Bifunctor         (first)
+import Data.Foldable          (toList)
+import Data.Text              (unpack)
+
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
 import Data.SBV.Core.Concrete (CV)
@@ -52,7 +56,7 @@ getUnknownReason = Trans.getUnknownReason
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getObservables'
 getObservables :: Query [(String, CV)]
-getObservables = Trans.getObservables
+getObservables = fmap (first unpack) . toList <$> Trans.getObservables
 
 -- | Get the uninterpreted constants/functions recorded during a run.
 --
