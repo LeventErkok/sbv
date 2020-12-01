@@ -1212,6 +1212,7 @@ modifyIncState State{rIncState} field update = do
 
 -- | Add an observable
 recordObservable :: State -> String -> (CV -> Bool) -> SV -> IO ()
+-- notice that we cons like a list, we should build at the end of the seq, but cons to preserve semantics for now
 recordObservable st (T.pack -> nm) chk sv = modifyState st rObservables ((nm, chk, sv) S.<|) (return ())
 
 -- | Increment the variable counter
@@ -1279,8 +1280,8 @@ internalVariable st k = do (NamedSymVar sv nm) <- newSV st k
                                      SMTMode  _ _ False _ -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
-                               !n = "__internal_sbv_" <> nm
-                               !v = NamedSymVar sv n
+                               n = "__internal_sbv_" <> nm
+                               v = NamedSymVar sv n
                            modifyState st rinps (addUserInput q sv n)
                                      $ modifyIncState st rNewInps (\newInps -> case q of
                                                                                  EX -> v : newInps
@@ -1627,7 +1628,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
          mkUnique :: T.Text -> Set.Set Name -> T.Text
-         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> (T.pack $ show i) | i <- [(0::Int)..]])
+         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> T.pack (show i) | i <- [(0::Int)..]])
 
 -- | Generalization of 'Data.SBV.runSymbolic'
 runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
@@ -1784,7 +1785,7 @@ addSValOptGoal obj = do st <- symbolicEnv
                             walk (Maximize          nm v)     = Maximize nm                     <$> mkGoal nm v
                             walk (AssertWithPenalty nm v mbP) = flip (AssertWithPenalty nm) mbP <$> mkGoal nm v
 
-                        obj' <- walk obj
+                        !obj' <- walk obj
                         liftIO $ modifyState st rOptGoals (obj' :)
                                            $ noInteractive [ "Adding an optimization objective:"
                                                            , "  Objective: " ++ show obj

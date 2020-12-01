@@ -9,6 +9,7 @@
 -- Querying a solver interactively.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE Rank2Types          #-}
@@ -55,8 +56,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
                                 , incrementInternalCounter, validationRequested
                                 , prefixExistentials, prefixUniversals
-                                , namedSymVar, getSV
-                                , lookupInput, userInputsToList
+                                , namedSymVar, getSV, lookupInput, userInputsToList
                                 )
 
 import Data.SBV.Utils.SExpr
@@ -334,7 +334,8 @@ getModelAtIndex mbi = do
                               return mempty
 
           let grab (NamedSymVar sv nm) = wrap <$> getValueCV mbi sv
-                where wrap c = (sv, (nm, c))
+                where
+                  wrap !c = (sv, (nm, c))
 
           inputAssocs <- mapM (grab . namedSymVar) allModelInputs
 
