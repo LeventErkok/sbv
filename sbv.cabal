@@ -431,7 +431,7 @@ Benchmark SBVBenchmark
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, syb, crackNum
+  build-depends   : filepath, syb, crackNum, text
                   , sbv, directory, random, mtl, containers, time
                   , gauge, process, deepseq, bench-show, silently
   hs-source-dirs  : SBVBenchSuite

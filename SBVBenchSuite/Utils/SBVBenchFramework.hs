@@ -10,7 +10,6 @@
 -- Various goodies for benchmarking SBV
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -102,7 +101,7 @@ benchResultsFile nm = "SBVBenchSuite" </> "BenchResults" </> nm <.> "csv"
 compareBenchmarksWith :: BS.Config -> FilePath -> FilePath -> IO ()
 compareBenchmarksWith conf old new = do
   -- make the file name
-  let fname = benchResultsFile $ (takeBaseName old) ++ "_vs_" ++ (takeBaseName new)
+  let fname = benchResultsFile $ takeBaseName old ++ "_vs_" ++ takeBaseName new
   -- this is lazy IO !!!
   readFile old >>= appendFile fname
   readFile new >>= appendFile fname

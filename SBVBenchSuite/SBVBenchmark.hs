@@ -130,7 +130,7 @@ import qualified BenchSuite.Transformers.SymbolicEval
 -- because we can easily generate benchmarks that take a lot of wall time to
 -- solve, especially with 'Data.SBV.allSatWith' calls
 benchConfig :: Config
-benchConfig = defaultConfig { timeLimit = Just 1.00 }
+benchConfig = defaultConfig { timeLimit = Just 120.00 }
 
 {-
 To benchmark sbv we require two use cases: For continuous integration we want a
@@ -214,7 +214,7 @@ puzzleBenchmarks = [ BenchSuite.Puzzles.Coins.benchmarks
 -- native on the same program. To construct a benchmark for only sbv one would
 -- call `runBenchmark`
 puzzles :: Benchmark
-puzzles = bgroup "Puzzles" $ runBenchmark <$> puzzleBenchmarks
+puzzles = bgroup "Puzzles" $ runOverheadBenchmark <$> puzzleBenchmarks
 
 
 --------------------------- BitPrecise ------------------------------------------
@@ -230,7 +230,7 @@ bitPreciseBenchmarks = [ BenchSuite.BitPrecise.BitTricks.benchmarks
                        ]
 
 bitPrecise :: Benchmark
-bitPrecise = bgroup "BitPrecise" $ runBenchmark <$> bitPreciseBenchmarks
+bitPrecise = bgroup "BitPrecise" $ runOverheadBenchmark <$> bitPreciseBenchmarks
 
 
 --------------------------- Query -----------------------------------------------
@@ -247,7 +247,7 @@ queryBenchmarks = [ BenchSuite.Queries.AllSat.benchmarks
                   ]
 
 queries :: Benchmark
-queries = bgroup "Queries" $ runBenchmark <$> queryBenchmarks
+queries = bgroup "Queries" $ runOverheadBenchmark <$> queryBenchmarks
 
 
 --------------------------- WeakestPreconditions --------------------------------
@@ -278,7 +278,7 @@ optimizationBenchmarks = [ BenchSuite.Optimization.Enumerate.benchmarks
                          ]
 
 optimizations :: Benchmark
-optimizations = bgroup "Optimizations" $ runBenchmark <$> optimizationBenchmarks
+optimizations = bgroup "Optimizations" $ runOverheadBenchmark <$> optimizationBenchmarks
 
 
 --------------------------- Uninterpreted ---------------------------------------
@@ -293,7 +293,7 @@ uninterpretedBenchmarks = [ BenchSuite.Uninterpreted.AUF.benchmarks
                           ]
 
 uninterpreted :: Benchmark
-uninterpreted = bgroup "Uninterpreted" $ runBenchmark <$> uninterpretedBenchmarks
+uninterpreted = bgroup "Uninterpreted" $ runOverheadBenchmark <$> uninterpretedBenchmarks
 
 
 --------------------------- ProofTools -----------------------------------------
@@ -305,7 +305,7 @@ proofToolBenchmarks = [ BenchSuite.ProofTools.BMC.benchmarks
                       ]
 
 proofTools :: Benchmark
-proofTools = bgroup "ProofTools" $ runBenchmark <$> proofToolBenchmarks
+proofTools = bgroup "ProofTools" $ runOverheadBenchmark <$> proofToolBenchmarks
 
 
 --------------------------- Code Generation -------------------------------------
@@ -320,7 +320,7 @@ codeGenerationBenchmarks = [ BenchSuite.CodeGeneration.AddSub.benchmarks
 
 codeGeneration :: Benchmark
 codeGeneration = bgroup "CodeGeneration" $
-                 runBenchmark <$> codeGenerationBenchmarks
+                 runOverheadBenchmark <$> codeGenerationBenchmarks
 
 
 --------------------------- Crypto ----------------------------------------------
@@ -331,7 +331,7 @@ cryptoBenchmarks = [ BenchSuite.Crypto.AES.benchmarks
                    ]
 
 crypto :: Benchmark
-crypto = bgroup "Crypto" $ runBenchmark <$> cryptoBenchmarks
+crypto = bgroup "Crypto" $ runOverheadBenchmark <$> cryptoBenchmarks
 
 
 --------------------------- Miscellaneous ---------------------------------------
@@ -351,7 +351,7 @@ miscBenchmarks = [ BenchSuite.Misc.Auxiliary.benchmarks
                  ]
 
 misc :: Benchmark
-misc = bgroup "Miscellaneous" $ runBenchmark <$> miscBenchmarks
+misc = bgroup "Miscellaneous" $ runOverheadBenchmark <$> miscBenchmarks
 
 
 --------------------------- Lists -----------------------------------------------
@@ -362,7 +362,7 @@ listBenchmarks = [ BenchSuite.Lists.BoundedMutex.benchmarks
                  ]
 
 lists :: Benchmark
-lists = bgroup "Lists" $ runBenchmark <$> listBenchmarks
+lists = bgroup "Lists" $ runOverheadBenchmark <$> listBenchmarks
 
 
 --------------------------- Strings ---------------------------------------------
@@ -372,7 +372,7 @@ stringBenchmarks = [ BenchSuite.Strings.RegexCrossword.benchmarks
                    ]
 
 strings :: Benchmark
-strings = bgroup "Strings" $ runBenchmark <$> stringBenchmarks
+strings = bgroup "Strings" $ runOverheadBenchmark <$> stringBenchmarks
 
 
 --------------------------- Existentials ----------------------------------------
@@ -382,7 +382,7 @@ existentialBenchmarks = [ BenchSuite.Existentials.CRCPolynomial.benchmarks
                         ]
 
 existentials :: Benchmark
-existentials = bgroup "Existentials" $ runBenchmark <$> existentialBenchmarks
+existentials = bgroup "Existentials" $ runOverheadBenchmark <$> existentialBenchmarks
 
 
 --------------------------- Transformers ----------------------------------------
@@ -391,4 +391,4 @@ transformerBenchmarks = [ BenchSuite.Transformers.SymbolicEval.benchmarks
                         ]
 
 transformers :: Benchmark
-transformers = bgroup "Transformers" $ runBenchmark <$> transformerBenchmarks
+transformers = bgroup "Transformers" $ runOverheadBenchmark <$> transformerBenchmarks

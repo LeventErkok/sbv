@@ -10,11 +10,12 @@
 -- Bench suite for Documentation.SBV.Examples.Puzzles.Garden
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module BenchSuite.Puzzles.Garden(benchmarks) where
 
-import Data.List (isSuffixOf)
+import Data.Text (isSuffixOf)
 
 import Documentation.SBV.Examples.Puzzles.Garden
 
