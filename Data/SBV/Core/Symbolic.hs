@@ -1856,7 +1856,7 @@ uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a
 uncacheGen getCache (Cached f) st = do
         let rCache = getCache st
         stored <- readIORef rCache
-        sn <- f `seq` makeStableName f
+        sn <- makeStableName f
         case (sn `HMap.lookup` stored) of
           Just r  -> return r
           Nothing -> do r <- f st
