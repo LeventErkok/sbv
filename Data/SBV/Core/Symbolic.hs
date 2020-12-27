@@ -93,6 +93,7 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.HashMap.Strict         as HMap (HashMap, lookup,insert,empty)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
@@ -880,7 +881,7 @@ type UIMap     = Map.Map String SBVType
 type CgMap     = Map.Map String [String]
 
 -- | Cached values, implementing sharing
-type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
+type Cache a   = HMap.HashMap (StableName (State -> IO a))  a
 
 -- | Stage of an interactive run
 data IStage = ISetup        -- Before we initiate contact.
@@ -1856,11 +1857,10 @@ uncacheGen getCache (Cached f) st = do
         let rCache = getCache st
         stored <- readIORef rCache
         sn <- f `seq` makeStableName f
-        let h = hashStableName sn
-        case (h `IMap.lookup` stored) >>= (sn `lookup`) of
+        case (sn `HMap.lookup` stored) of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` R.modifyIORef' rCache (HMap.insert sn r)
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support
