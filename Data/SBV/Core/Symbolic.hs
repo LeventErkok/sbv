@@ -91,11 +91,12 @@ import qualified Control.Monad.Writer.Lazy   as LW
 import qualified Control.Monad.Writer.Strict as SW
 import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
-import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList)
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.HashMap.Strict         as HMap (HashMap, lookup,empty,insertWith)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL, findIndexL, (><))
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -880,7 +881,16 @@ type UIMap     = Map.Map String SBVType
 type CgMap     = Map.Map String [String]
 
 -- | Cached values, implementing sharing
-type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
+type Cache a   = HMap.HashMap (StableName (State -> IO a)) (S.Seq (SPair (StableName (State -> IO a)) a))
+
+-- | A strict pair
+data SPair a b = SPair !a !b
+
+fstStrict :: SPair a b -> a
+fstStrict (SPair a _) = a
+
+sndStrict :: SPair a b -> b
+sndStrict (SPair _ b) = b
 
 -- | Stage of an interactive run
 data IStage = ISetup        -- Before we initiate contact.
@@ -1650,9 +1660,9 @@ runSymbolic currentRunMode (SymbolicT c) = do
      uis       <- newIORef Map.empty
      cgs       <- newIORef Map.empty
      axioms    <- newIORef []
-     swCache   <- newIORef IMap.empty
-     aiCache   <- newIORef IMap.empty
-     faiCache  <- newIORef IMap.empty
+     swCache   <- newIORef HMap.empty
+     aiCache   <- newIORef HMap.empty
+     faiCache  <- newIORef HMap.empty
      usedKinds <- newIORef Set.empty
      usedLbls  <- newIORef Set.empty
      cstrs     <- newIORef S.empty
@@ -1855,12 +1865,13 @@ uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a
 uncacheGen getCache (Cached f) st = do
         let rCache = getCache st
         stored <- readIORef rCache
-        sn <- f `seq` makeStableName f
-        let h = hashStableName sn
-        case (h `IMap.lookup` stored) >>= (sn `lookup`) of
+        sn <- makeStableName f
+        let find ss = do i <- S.findIndexL (eqStableName sn . fstStrict) ss
+                         sndStrict <$> S.lookup i ss
+        case (sn `HMap.lookup` stored) >>= find of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` R.modifyIORef' rCache (IMap.insertWith (++) h [(sn, r)])
+                        r `seq` R.modifyIORef' rCache (HMap.insertWith (S.><) sn . pure $ SPair sn r)
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support
