@@ -93,10 +93,10 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList)
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
-import qualified Data.HashMap.Strict         as HMap (HashMap, lookup,insert,empty)
+import qualified Data.HashMap.Strict         as HMap (HashMap, lookup,empty,insertWith)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL, findIndexL, (><))
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -881,7 +881,16 @@ type UIMap     = Map.Map String SBVType
 type CgMap     = Map.Map String [String]
 
 -- | Cached values, implementing sharing
-type Cache a   = HMap.HashMap (StableName (State -> IO a))  a
+type Cache a   = HMap.HashMap (StableName (State -> IO a)) (S.Seq (SPair (StableName (State -> IO a)) a))
+
+-- | A strict pair
+data SPair a b = SPair !a !b
+
+fstStrict :: SPair a b -> a
+fstStrict (SPair a _) = a
+
+sndStrict :: SPair a b -> b
+sndStrict (SPair _ b) = b
 
 -- | Stage of an interactive run
 data IStage = ISetup        -- Before we initiate contact.
@@ -1857,10 +1866,12 @@ uncacheGen getCache (Cached f) st = do
         let rCache = getCache st
         stored <- readIORef rCache
         sn <- makeStableName f
-        case (sn `HMap.lookup` stored) of
+        let find ss = do i <- S.findIndexL (eqStableName sn . fstStrict) ss
+                         sndStrict <$> S.lookup i ss
+        case (sn `HMap.lookup` stored) >>= find of
           Just r  -> return r
           Nothing -> do r <- f st
-                        r `seq` R.modifyIORef' rCache (HMap.insert sn r)
+                        r `seq` R.modifyIORef' rCache (HMap.insertWith (S.><) sn . pure $ SPair sn r)
                         return r
 
 -- | Representation of SMTLib Program versions. As of June 2015, we're dropping support
