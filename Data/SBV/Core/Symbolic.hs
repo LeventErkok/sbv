@@ -91,7 +91,7 @@ import qualified Control.Monad.Writer.Lazy   as LW
 import qualified Control.Monad.Writer.Strict as SW
 import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
-import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList)
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.HashMap.Strict         as HMap (HashMap, lookup,insert,empty)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
@@ -1651,9 +1651,9 @@ runSymbolic currentRunMode (SymbolicT c) = do
      uis       <- newIORef Map.empty
      cgs       <- newIORef Map.empty
      axioms    <- newIORef []
-     swCache   <- newIORef IMap.empty
-     aiCache   <- newIORef IMap.empty
-     faiCache  <- newIORef IMap.empty
+     swCache   <- newIORef HMap.empty
+     aiCache   <- newIORef HMap.empty
+     faiCache  <- newIORef HMap.empty
      usedKinds <- newIORef Set.empty
      usedLbls  <- newIORef Set.empty
      cstrs     <- newIORef S.empty
