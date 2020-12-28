@@ -84,7 +84,6 @@ Library
                   , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, text, transformers, uniplate
-                  , unordered-containers
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
                   , Data.SBV.Dynamic
