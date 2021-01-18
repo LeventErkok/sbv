@@ -9,7 +9,7 @@ Description : Express properties about Haskell programs and automatically prove 
                .
                For details, please see: <http://leventerkok.github.com/sbv/>
 
-Copyright          : Levent Erkok, 2010-2020
+Copyright          : Levent Erkok, 2010-2021
 License            : BSD-3-Clause
 License-file       : LICENSE
 Stability          : Experimental
