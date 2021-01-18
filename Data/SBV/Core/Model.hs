@@ -2476,7 +2476,7 @@ instance Testable (Symbolic SBool) where
                                      QC.pre cond
                                      unless (r || null modelVals) $ QC.monitor (QC.counterexample (complain modelVals))
                                      QC.assert r
-     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=cs, resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic (Concrete Nothing) prop
+     where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic (Concrete Nothing) prop
 
                      let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
                          cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component

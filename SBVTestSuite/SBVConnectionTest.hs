@@ -54,7 +54,7 @@ test s = do check  s "t0" t0 (== False)
             models "t2" t2 (== ([2,62,66,126,130,190,194,254]::[Word8]))
             models "t3" t3 (== ([]::[Word8]))
             models "t4" t4 (== [4::Word8])
-  where models m p f = (extractModels <$> allSat p) >>= decide s m f . sort
+  where models m p f = allSat p >>= (decide s m f . sort) . extractModels
         t0 x = x   .== x+(1::SWord8)
         t1 x = x*2 .== x+(x::SWord8)
         t2 x = x*x .== (4::SWord8)

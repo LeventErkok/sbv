@@ -63,7 +63,7 @@ import Control.Monad.Reader     (runReaderT)
 
 import Data.Maybe (isNothing, isJust)
 
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, writeIORef, IORef)
 
 import Data.Time (getZonedTime)
 
@@ -85,7 +85,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               , UserInputs, getInputs, prefixExistentials, getSV, quantifier, getUserName
                               , namedSymVar, NamedSymVar(..), lookupInput, userInputs, userInputsToList
-                              , getUserName', Name
+                              , getUserName', Name, CnstMap
                               )
 
 import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -164,22 +164,31 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => IncState -> m ()
-syncUpSolver is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => IORef CnstMap -> IncState -> m ()
+syncUpSolver rGlobalConsts is = do
         cfg <- getConfig
+
+        -- update global consts to have the new ones
+        (newConsts, allConsts) <- liftIO $ do nc <- readIORef (rNewConsts is)
+                                              oc <- readIORef rGlobalConsts
+                                              let allConsts = Map.union nc oc
+                                              writeIORef rGlobalConsts allConsts
+                                              pure (nc, allConsts)
+
         ls  <- io $ do let swap  (a, b)        = (b, a)
                            cmp   (a, _) (b, _) = a `compare` b
                            arrange (i, (at, rt, es)) = ((i, at, rt), es)
                        inps        <- reverse <$> readIORef (rNewInps is)
                        ks          <- readIORef (rNewKinds is)
-                       cnsts       <- sortBy cmp . map swap . Map.toList <$> readIORef (rNewConsts is)
                        arrs        <- IMap.toAscList <$> readIORef (rNewArrs is)
                        tbls        <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
                        uis         <- Map.toAscList <$> readIORef (rNewUIs is)
                        as          <- readIORef (rNewAsgns is)
                        constraints <- readIORef (rNewConstraints is)
 
-                       return $ toIncSMTLib cfg inps ks cnsts arrs tbls uis as constraints cfg
+                       let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
+
+                       return $ toIncSMTLib cfg inps ks (allConsts, cnsts) arrs tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -207,9 +216,9 @@ modifyQueryState f = do state <- queryState
 
 -- | Generalization of 'Data.SBV.Control.inNewContext'
 inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
-inNewContext act = do st <- queryState
+inNewContext act = do st@State{rconstMap} <- queryState
                       (is, r) <- io $ withNewIncState st act
-                      syncUpSolver is
+                      syncUpSolver rconstMap is
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal' values

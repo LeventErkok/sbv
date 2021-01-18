@@ -31,7 +31,7 @@ import qualified Control.Exception as C
 import Control.Monad.Trans (MonadIO, liftIO)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext)
+import Data.SBV.Core.Symbolic (QueryContext, CnstMap)
 import Data.SBV.Utils.Lib (joinArgs)
 
 import Data.List (intercalate)
@@ -47,7 +47,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> [String]                                      -- ^ extra comments to place on top
                        -> ([(Quantifier, NamedSymVar)], [NamedSymVar])  -- ^ inputs and aliasing names and trackers
                        -> [Either SV (SV, [SV])]                        -- ^ skolemized inputs
-                       -> [(SV, CV)]                                    -- ^ constants
+                       -> (CnstMap, [(SV, CV)])                         -- ^ constants. The map, and as rendered in order
                        -> [((Int, Kind, Kind), [SV])]                   -- ^ auto-generated tables
                        -> [(Int, ArrayInfo)]                            -- ^ user specified arrays
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
@@ -61,7 +61,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibIncConverter a =  [NamedSymVar]                         -- ^ inputs
                           -> Set.Set Kind                          -- ^ new kinds
-                          -> [(SV, CV)]                            -- ^ constants
+                          -> (CnstMap, [(SV, CV)])                  -- ^ all constants sofar, and new constants
                           -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
                           -> [(String, SBVType)]                   -- ^ newly created uninterpreted functions/constants

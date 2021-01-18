@@ -28,8 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..)
-                              , getUserName', getSV)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..), CnstMap, getUserName', getSV)
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -43,7 +42,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFloat       = KFloat     `Set.member` kindInfo
@@ -232,7 +231,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps consts tbls arr
 
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
         allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg (not (null foralls)) consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg (not (null foralls)) allConsts skolemMap) arrs
         delayedEqualities = concatMap snd skolemTables
 
         delayedAsserts []              = []
@@ -405,7 +404,7 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: SMTLibIncConverter [String]
-cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -445,7 +444,7 @@ cvtInc inps newKs consts arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         declInp (getSV -> s) = "(declare-fun " ++ show s ++ " () " ++ svType s ++ ")"
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False consts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False allConsts skolemMap) arrs
 
         allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
         (tableDecls, tableAssigns) = unzip $ map constTable allTables
@@ -547,9 +546,11 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- we might have to skolemize those. Implement this properly.
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
-declArray :: SMTConfig -> Bool -> [(SV, CV)] -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
+declArray :: SMTConfig -> Bool -> CnstMap -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
 declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
-  where constNames = map fst consts
+  where constMapping = M.fromList [(s, c) | (c, s) <- M.assocs consts]
+        constNames   = M.keys constMapping
+
         topLevel = not quantified || case ctx of
                                        ArrayFree mbi      -> maybe True (`elem` constNames) mbi
                                        ArrayMutate _ a b  -> all (`elem` constNames) [a, b]
@@ -571,7 +572,7 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
 
         -- CVC4 chokes if the initializer is not a constant. (Z3 is ok with it.) So, print it as
         -- a constant if we have it in the constants; otherwise, we merely print it and hope for the best.
-        constInit v = case v `lookup` consts of
+        constInit v = case v `M.lookup` constMapping of
                         Nothing -> ssv v                      -- Z3 will work, CVC4 will choke. Others don't even support this.
                         Just c  -> cvtCV (roundingMode cfg) c -- Z3 and CVC4 will work. Other's don't support this.
 

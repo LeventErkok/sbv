@@ -57,7 +57,7 @@ module Data.SBV.Core.Symbolic
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
-  , extractSymbolicSimulationState
+  , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
@@ -745,7 +745,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
                      , resUISegs      :: [(String, [String])]                         -- ^ uninterpeted code segments
                      , resInputs      :: ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- ^ inputs (possibly existential) + tracker vars
-                     , resConsts      :: [(SV, CV)]                                   -- ^ constants
+                     , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
@@ -761,10 +761,10 @@ instance Show Result where
   -- If there's nothing interesting going on, just print the constant. Note that the
   -- definiton of interesting here is rather subjective; but essentially if we reduced
   -- the result to a single constant already, without any reference to anything.
-  show Result{resConsts=cs, resOutputs=[r]}
+  show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ _ cgs is cs ts as uis axs xs cstrs asserts os) = intercalate "\n" $
+  show (Result kinds _ _ cgs is (_, cs) ts as uis axs xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn (fst is)
@@ -1717,7 +1717,9 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
        cmp   (a, _) (b, _)       = a `compare` b
        arrange (i, (at, rt, es)) = ((i, at, rt), es)
 
-   cnsts <- sortBy cmp . map swap . Map.toList <$> readIORef (rconstMap st)
+   constMap <- readIORef (rconstMap st)
+   let cnsts = sortBy cmp . map swap . Map.toList $ constMap
+
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
    unint <- Map.toList <$> readIORef uis
@@ -1731,7 +1733,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
-   return $ Result knds traceVals observables cgMap inpsO cnsts tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
