@@ -44,7 +44,7 @@ module Data.SBV.Control.Utils (
 
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
 
-import Data.Char      (isPunctuation, isSpace, chr, ord, isDigit)
+import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
 import Data.Bifunctor (first)
 
@@ -772,7 +772,7 @@ recoverKindedValue k e = case k of
                                        | EDouble i   <- e -> Just $ CV KDouble (CDouble i)
                                        | True             -> Nothing
 
-                           KChar       | ENum (i, _) <- e -> Just $ CV KChar $ CChar $ chr $ fromIntegral i
+                           KChar       | ECon s      <- e -> Just $ CV KChar $ CChar $ interpretChar s
                                        | True             -> Nothing
 
                            KString     | ECon s      <- e -> Just $ CV KString $ CString $ interpretString s
@@ -800,13 +800,10 @@ recoverKindedValue k e = case k of
           | True
           = qfsToString $ tail (init xs)
 
-        isStringSequence (KList (KBounded _ 8)) = True
-        isStringSequence _                      = False
+        interpretChar xs = case interpretString xs of
+                             [c] -> c
+                             _   -> error $ "Expected a singleton char constant, received: <" ++ xs ++ ">"
 
-        -- Lists are tricky since z3 prints the 8-bit variants as strings. See: <http://github.com/Z3Prover/z3/issues/1808>
-        interpretList _ (ECon s)
-          | isStringSequence k && stringLike s
-          = map (CInteger . fromIntegral . ord) $ interpretString s
         interpretList ek topExpr = walk topExpr
           where walk (EApp [ECon "as", ECon "seq.empty", _]) = []
                 walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek v of
