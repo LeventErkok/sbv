@@ -50,7 +50,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         hasChar        = KChar      `Set.member` kindInfo
         hasDouble      = KDouble    `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
-        hasBVs         = hasChar || not (null [() | KBounded{} <- Set.toList kindInfo])   -- Remember, characters map to Word8
+        hasBVs         = not (null [() | KBounded{} <- Set.toList kindInfo])
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
@@ -119,6 +119,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            | hasMaybe              = setAll "has maybe type"
            | hasSets               = setAll "has sets"
            | hasList               = setAll "has lists"
+           | hasChar               = setAll "has chars"
            | hasString             = setAll "has strings"
            | hasArrayInits         = setAll "has array initializers"
            | hasOverflows          = setAll "has overflow checks"
@@ -719,9 +720,11 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
 
-        -- NB. String comparisons are currently not supported by Z3; but will be with the new logic.
+        stringOrChar KString = True
+        stringOrChar KChar   = True
+        stringOrChar _       = False
         stringCmp swap o [a, b]
-          | KString <- kindOf (head arguments)
+          | stringOrChar (kindOf (head arguments))
           = let [a1, a2] | swap = [b, a]
                          | True = [a, b]
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
@@ -861,6 +864,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         -- Note the unfortunate reversal in StrInRe..
         sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map ssv args) ++ " " ++ show r ++ ")"
+        -- StrUnit is no-op, since a character in SMTLib is the same as a string
+        sh (SBVApp (StrOp StrUnit)     [a])  = ssv a
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
@@ -904,9 +909,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssv args)
           | floatOp || doubleOp, Just f <- lookup op smtOpFloatDoubleTable
           = f (any hasSign args) (map ssv args)
-          | charOp, Just f <- lookup op smtCharTable
-          = f False (map ssv args)
-          | stringOp, Just f <- lookup op smtStringTable
+          | charOp || stringOp, Just f <- lookup op smtStringTable
           = f (map ssv args)
           | listOp, Just f <- lookup op smtListTable
           = f (map ssv args)
@@ -984,16 +987,6 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      , (LessEq,      unintComp "<=")
                                      , (GreaterEq,   unintComp ">=")
                                      ]
-
-                -- For chars, the underlying type is currently SWord8, so we go with the regular bit-vector operations
-                -- TODO: This will change when we move to unicode!
-                smtCharTable = [ (Equal,         eqBV)
-                               , (NotEqual,      neqBV)
-                               , (LessThan,      lift2S  "bvult" (error "smtChar.<: did-not expect signed char here!"))
-                               , (GreaterThan,   lift2S  "bvugt" (error "smtChar.>: did-not expect signed char here!"))
-                               , (LessEq,        lift2S  "bvule" (error "smtChar.<=: did-not expect signed char here!"))
-                               , (GreaterEq,     lift2S  "bvuge" (error "smtChar.>=: did-not expect signed char here!"))
-                               ]
 
                 -- For strings, equality and comparisons are the only operators
                 -- TODO: The string comparison operators will most likely change with the new theory!
