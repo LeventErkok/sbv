@@ -419,7 +419,7 @@ cvToSMTLib rm x
   | hasSign x        , CInteger  w      <- cvVal x = if w == negate (2 ^ intSizeOf x)
                                                      then mkMinBound (intSizeOf x)
                                                      else negIf (w < 0) $ smtLibHex (intSizeOf x) (abs w)
-  | isChar x         , CChar c          <- cvVal x = smtLibHex 8 (fromIntegral (ord c))
+  | isChar x         , CChar c          <- cvVal x = "(_ char " ++ smtLibHex 8 (fromIntegral (ord c)) ++ ")"
   | isString x       , CString s        <- cvVal x = '\"' : stringToQFS s ++ "\""
   | isList x         , CList xs         <- cvVal x = smtLibSeq (kindOf x) xs
   | isSet x          , CSet s           <- cvVal x = smtLibSet (kindOf x) s
