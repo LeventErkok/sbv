@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.9, 2020-10-28
+* Latest Hackage released version: 8.10, 2021-02-08
 
-### Version 8.9.5, Not released yet.
+### Version 8.10, 2021-02-08
 
   * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
     to model multi-dimensional arrays in SBV.
@@ -12,6 +12,16 @@
 
   * Performance updates: Thanks to Jeff Young, SBV now uses better underlying
     data structures, performing better for heavy use-case scenarios.
+
+  * SBV now tracks constants more closely in query mode, providing more support
+    for constant arrays in a seamless way. (See #574 for details.)
+
+  * Pop-calls are now support for Yices and Boolector. (#577)
+
+  * Changes required to make SBV work with latest version of z3 regarding
+    String and Characters, which now allow for unicode characters. The changes
+    should be transparent to the end user, though please report any issues you
+    might run into when you use SChar and SString types.
 
 ### Version 8.9, 2020-10-28
 
