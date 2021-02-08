@@ -404,8 +404,8 @@ instance Show RegExp where
 instance Show StrOp where
   show StrConcat   = "str.++"
   show StrLen      = "str.len"
-  show StrUnit     = "seq.unit"      -- NB. The "seq" prefix is intentional; works uniformly.
-  show StrNth      = "seq.nth"       -- NB. The "seq" prefix is intentional; works uniformly.
+  show StrUnit     = "str.unit"      -- NB. This is actually a no-op, since in SMTLib characters are the same as strings.
+  show StrNth      = "str.at"
   show StrSubstr   = "str.substr"
   show StrIndexOf  = "str.indexof"
   show StrContains = "str.contains"
@@ -435,7 +435,7 @@ instance Show SeqOp where
   show SeqConcat   = "seq.++"
   show SeqLen      = "seq.len"
   show SeqUnit     = "seq.unit"
-  show SeqNth      = "seq.nth"
+  show SeqNth      = "seq.at"
   show SeqSubseq   = "seq.extract"
   show SeqIndexOf  = "seq.indexof"
   show SeqContains = "seq.contains"
