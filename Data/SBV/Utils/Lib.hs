@@ -127,6 +127,7 @@ qfsToString = go
 stringToQFS :: String -> String
 stringToQFS = concatMap cvt
   where cvt c
+         | c == '"'                 = "\"\""
          | oc >= 0x20 && oc <= 0x7E = [c]
          | True                     = "\\u{" ++ showHex oc "" ++ "}"
          where oc = ord c
