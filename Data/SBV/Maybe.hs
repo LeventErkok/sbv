@@ -99,7 +99,7 @@ fromMaybe :: SymVal a => SBV a -> SMaybe a -> SBV a
 fromMaybe def = maybe def id
 
 -- | Return the value of an optional value. The behavior is undefined if
--- passed Nothing. Compare to 'fromMaybe'.
+-- passed Nothing, i.e., it can return any value. Compare to 'fromMaybe'.
 --
 -- >>> fromJust (sJust (literal 'a'))
 -- 'a' :: SChar
@@ -107,7 +107,7 @@ fromMaybe def = maybe def id
 -- Q.E.D.
 -- >>> sat $ \x -> x .== (fromJust sNothing :: SChar)
 -- Satisfiable. Model:
---   s0 = '\NUL' :: Char
+--   s0 = 'A' :: Char
 --
 -- Note how we get a satisfying assignment in the last case: The behavior
 -- is unspecified, thus the SMT solver picks whatever satisfies the

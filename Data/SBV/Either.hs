@@ -182,7 +182,7 @@ second :: (SymVal a, SymVal b, SymVal c) => (SBV b -> SBV c) -> SEither a b -> S
 second = bimap id
 
 -- | Return the value from the left component. The behavior is undefined if
--- passed a right value.
+-- passed a right value, i.e., it can return any value.
 --
 -- >>> fromLeft (sLeft (literal 'a') :: SEither Char Integer)
 -- 'a' :: SChar
@@ -190,7 +190,7 @@ second = bimap id
 -- Q.E.D.
 -- >>> sat $ \x -> x .== (fromLeft (sRight 4 :: SEither Char Integer))
 -- Satisfiable. Model:
---   s0 = '\NUL' :: Char
+--   s0 = 'A' :: Char
 --
 -- Note how we get a satisfying assignment in the last case: The behavior
 -- is unspecified, thus the SMT solver picks whatever satisfies the
@@ -227,7 +227,7 @@ fromLeft sab
                     return e
 
 -- | Return the value from the right component. The behavior is undefined if
--- passed a left value.
+-- passed a left value, i.e., it can return any value.
 --
 -- >>> fromRight (sRight (literal 'a') :: SEither Integer Char)
 -- 'a' :: SChar

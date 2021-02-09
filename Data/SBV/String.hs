@@ -57,7 +57,7 @@ import Data.Proxy
 --
 -- >>> sat $ \s -> length s .== 2
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL" :: String
+--   s0 = "AB" :: String
 -- >>> sat $ \s -> length s .< 0
 -- Unsatisfiable
 -- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 .++ s2)
@@ -133,7 +133,7 @@ singleton = lift1 StrUnit (Just wrap)
 -- Q.E.D.
 -- >>> sat $ \s -> length s .>= 2 .&& strToStrAt s 0 ./= strToStrAt s (length s - 1)
 -- Satisfiable. Model:
---   s0 = "\NUL\NUL\DLE" :: String
+--   s0 = "ABC" :: String
 strToStrAt :: SString -> SInteger -> SString
 strToStrAt s offset = subStr s offset 1
 
