@@ -30,6 +30,7 @@
 ***                  trace (bool) (default: false)
 ***                  trace_file_name (string) (default: z3.log)
 ***                  type_check (bool) (default: true)
+***                  unicode (bool)
 ***                  unsat_core (bool) (default: false)
 ***                  verbose (unsigned int) (default: 0)
 ***                  warning (bool) (default: true)
