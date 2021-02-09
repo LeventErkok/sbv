@@ -34,7 +34,8 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), SeqOp(..), SetOp(..), RegExp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), SeqOp(..), SetOp(..)
+  , RegExp(..), regExpToSMTString
   , Quantifier(..), needsExistentials, VarContext(..)
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, newUninterpreted
@@ -328,6 +329,8 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrReplace      -- ^ Replace the first occurrence of @src@ by @dst@ in @s@
            | StrStrToNat     -- ^ Retrieve integer encoded by string @s@ (ground rewriting only)
            | StrNatToStr     -- ^ Retrieve string encoded by integer @i@ (ground rewriting only)
+           | StrToCode       -- ^ Equivalent to Haskell's ord
+           | StrFromCode     -- ^ Equivalent to Haskell's chr
            | StrInRe RegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord, G.Data)
 
@@ -378,26 +381,33 @@ instance Num RegExp where
 
   negate      = error "Num.RegExp: no negate method"
 
--- | Show instance for `RegExp`. The mapping is done so the outcome matches the
--- SMTLib string reg-exp operations
+-- | Convert a reg-exp to a Haskell-like string
 instance Show RegExp where
-  show (Literal s)       = "(str.to.re \"" ++ stringToQFS s ++ "\")"
-  show All               = "re.allchar"
-  show None              = "re.nostr"
-  show (Range ch1 ch2)   = "(re.range \"" ++ stringToQFS [ch1] ++ "\" \"" ++ stringToQFS [ch2] ++ "\")"
-  show (Conc [])         = show (1 :: Integer)
-  show (Conc [x])        = show x
-  show (Conc xs)         = "(re.++ " ++ unwords (map show xs) ++ ")"
-  show (KStar r)         = "(re.* " ++ show r ++ ")"
-  show (KPlus r)         = "(re.+ " ++ show r ++ ")"
-  show (Opt   r)         = "(re.opt " ++ show r ++ ")"
-  show (Loop  lo hi r)
-     | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ show r ++ ")"
-     | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
-  show (Inter r1 r2)     = "(re.inter " ++ show r1 ++ " " ++ show r2 ++ ")"
-  show (Union [])        = "re.nostr"
-  show (Union [x])       = show x
-  show (Union xs)        = "(re.union " ++ unwords (map show xs) ++ ")"
+  show = regExpToString show
+
+-- | Convert a reg-exp to a SMT-lib acceptable representation
+regExpToSMTString :: RegExp -> String
+regExpToSMTString = regExpToString (\s -> '"' : stringToQFS s ++ "\"")
+
+-- | Convert a RegExp to a string, parameterized by how strings are converted
+regExpToString :: (String -> String) -> RegExp -> String
+regExpToString fs (Literal s)       = "(str.to.re " ++ fs s ++ ")"
+regExpToString _  All               = "re.allchar"
+regExpToString _  None              = "re.nostr"
+regExpToString fs (Range ch1 ch2)   = "(re.range " ++ fs [ch1] ++ " " ++ fs [ch2] ++ ")"
+regExpToString _  (Conc [])         = show (1 :: Integer)
+regExpToString fs (Conc [x])        = regExpToString fs x
+regExpToString fs (Conc xs)         = "(re.++ " ++ unwords (map (regExpToString fs) xs) ++ ")"
+regExpToString fs (KStar r)         = "(re.* " ++ regExpToString fs r ++ ")"
+regExpToString fs (KPlus r)         = "(re.+ " ++ regExpToString fs r ++ ")"
+regExpToString fs (Opt   r)         = "(re.opt " ++ regExpToString fs r ++ ")"
+regExpToString fs (Loop  lo hi r)
+   | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ regExpToString fs r ++ ")"
+   | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
+regExpToString fs (Inter r1 r2)     = "(re.inter " ++ regExpToString fs r1 ++ " " ++ regExpToString fs r2 ++ ")"
+regExpToString _  (Union [])        = "re.nostr"
+regExpToString fs (Union [x])       = regExpToString fs x
+regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToString fs) xs) ++ ")"
 
 -- | Show instance for @StrOp@. Note that the mapping here is
 -- important to match the SMTLib equivalents, see here: <http://rise4fun.com/z3/tutorialcontent/sequences>
@@ -414,8 +424,10 @@ instance Show StrOp where
   show StrReplace  = "str.replace"
   show StrStrToNat = "str.to.int"    -- NB. SMTLib uses "int" here though only nats are supported
   show StrNatToStr = "int.to.str"    -- NB. SMTLib uses "int" here though only nats are supported
+  show StrToCode   = "str.to_code"
+  show StrFromCode = "str.from_code"
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
-  show (StrInRe s) = "str.in.re " ++ show s
+  show (StrInRe s) = "str.in.re " ++ regExpToSMTString s
 
 -- | Sequence operations.
 data SeqOp = SeqConcat    -- ^ See StrConcat

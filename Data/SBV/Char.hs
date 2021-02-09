@@ -86,11 +86,9 @@ ord c
  | Just cc <- unliteral c
  = literal (fromIntegral (C.ord cc))
  | True
- = SBV $ SVal kTo $ Right $ cache r
- where kFrom = KBounded False 8
-       kTo   = KUnbounded
-       r st = do csv <- sbvToSV st c
-                 newExpr st kTo (SBVApp (KindCast kFrom kTo) [csv])
+ = SBV $ SVal KUnbounded $ Right $ cache r
+ where r st = do csv <- sbvToSV st c
+                 newExpr st KUnbounded (SBVApp (StrOp StrToCode) [csv])
 
 -- | Conversion from an integer to a character.
 --
@@ -104,10 +102,8 @@ chr w
  = literal (C.chr (fromIntegral cw))
  | True
  = SBV $ SVal KChar $ Right $ cache r
- where w8 :: SWord8
-       w8 = sFromIntegral w
-       r st = do SV _ n <- sbvToSV st w8
-                 return $ SV KChar n
+ where r st = do wsv <- sbvToSV st w
+                 newExpr st KChar (SBVApp (StrOp StrFromCode) [wsv])
 
 -- | Convert to lower-case.
 --

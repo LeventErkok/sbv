@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..), CnstMap, getUserName', getSV)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..), CnstMap, getUserName', getSV, regExpToSMTString)
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -866,7 +866,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (OverflowOp op) args) = "(not (" ++ show op ++ " " ++ unwords (map ssv args) ++ "))"
 
         -- Note the unfortunate reversal in StrInRe..
-        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map ssv args) ++ " " ++ show r ++ ")"
+        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map ssv args) ++ " " ++ regExpToSMTString r ++ ")"
         -- StrUnit is no-op, since a character in SMTLib is the same as a string
         sh (SBVApp (StrOp StrUnit)     [a])  = ssv a
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
