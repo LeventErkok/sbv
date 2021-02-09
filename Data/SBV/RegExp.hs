@@ -149,7 +149,7 @@ newline = oneOf "\n\r\f"
 -- | Recognize a tab.
 --
 -- >>> tab
--- (str.to.re "\x09")
+-- (str.to.re "\t")
 -- >>> prove $ \c -> c `match` tab .=> c .== literal '\t'
 -- Q.E.D.
 tab :: RegExp
@@ -158,7 +158,7 @@ tab = oneOf "\t"
 -- | Recognize white-space, but without a new line.
 --
 -- >>> whiteSpaceNoNewLine
--- (re.union (str.to.re "\x09") (re.union (str.to.re "\v") (str.to.re "\xa0") (str.to.re " ")))
+-- (re.union (str.to.re "\t") (re.union (str.to.re "\v") (str.to.re "\160") (str.to.re " ")))
 -- >>> prove $ \c -> c `match` whiteSpaceNoNewLine .=> c `match` whiteSpace .&& c ./= literal '\n'
 -- Q.E.D.
 whiteSpaceNoNewLine :: RegExp
