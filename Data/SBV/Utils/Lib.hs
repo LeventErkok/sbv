@@ -25,7 +25,7 @@ import Data.Char    (isSpace, chr, ord)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 
-import Numeric (readHex, readOct, showHex)
+import Numeric (readHex, showHex)
 
 -- | We have a nasty issue with the usual String/List confusion in Haskell. However, we can
 -- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
@@ -107,42 +107,26 @@ splitArgs = join . f Init
           f m (x:xs)                = Just x : f m xs
           f _ []                    = []
 
--- | Given a QF_S string (i.e., one that works in the string theory), convert it to a Haskell equivalent
+-- | Given an SMTLib string (i.e., one that works in the string theory), convert it to a Haskell equivalent
 qfsToString :: String -> String
 qfsToString = go
-  where go ""                                                          = ""
-        go ('\\':'n'       : rest)                                     = chr 10 : go rest
-        go ('\\':'\\'       : rest)                                    = '\\'   : go rest
-        go ('\\':'v'       : rest)                                     = chr 11 : go rest
-        go ('\\':'f'       : rest)                                     = chr 12 : go rest
-        go ('\\':'r'       : rest)                                     = chr 13 : go rest
-        go ('\\':'x':c1:c2 : rest) | [(v, "")] <- readHex [c1, c2]     = chr  v : go rest
-        go ('\\':c1:c2:c3  : rest) | [(v, "")] <- readOct [c1, c2, c3] = chr  v : go rest
-        go (c              : rest)                                     = c      : go rest
+  where go "" = ""
 
--- | Given a Haskell, convert it to one that's understood by the QF_S logic
--- TODO: This function will require mods with the new String logic; as escapes
+        go ('\\':'u':'{':d4:d3:d2:d1:d0:'}' : rest) | [(v, "")] <- readHex [d4, d3, d2, d1, d0] = chr v : go rest
+        go ('\\':'u':       d3:d2:d1:d0     : rest) | [(v, "")] <- readHex [    d3, d2, d1, d0] = chr v : go rest
+        go ('\\':'u':'{':   d3:d2:d1:d0:'}' : rest) | [(v, "")] <- readHex [    d3, d2, d1, d0] = chr v : go rest
+        go ('\\':'u':'{':      d2:d1:d0:'}' : rest) | [(v, "")] <- readHex [        d2, d1, d0] = chr v : go rest
+        go ('\\':'u':'{':         d1:d0:'}' : rest) | [(v, "")] <- readHex [            d1, d0] = chr v : go rest
+        go ('\\':'u':'{':            d0:'}' : rest) | [(v, "")] <- readHex [                d0] = chr v : go rest
+
+        -- Otherwise, just proceed; hopefully we covered everything above
+        go (c : rest) = c : go rest
+
+-- | Given a Haskell string, convert it to SMTLib. if ord is 0x00020 to 0x0007E, then we print it
 -- will completely be different!
 stringToQFS :: String -> String
 stringToQFS = concatMap cvt
-  where -- strings are almost just show, but escapes are different. Sigh
-        cvt c
-         | 0 <= o && o < 32
-         = escapeTable !! o
-         | c == '\\'
-         = "\\\\"
-         | c == '"'
-         = "\"\""
-         | o >= 128 && o < 256
-         = "\\x" ++ showHex (ord c) ""
-         | o > 256
-         = error $ "Data.SBV: stringToQFS: Haskell character: " ++ show c ++ " is not representable in QF_S"
-         | True
-         = [c]
-         where o = ord c
-
-        -- | First 32 values are coded in a custom way by Z3:
-        escapeTable :: [String]
-        escapeTable = [ "\\x00", "\\x01", "\\x02", "\\x03", "\\x04", "\\x05", "\\x06", "\\x07", "\\x08", "\\x09", "\\n",   "\\v",   "\\f",   "\\r",   "\\x0E", "\\x0F"
-                      , "\\x10", "\\x11", "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17", "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D", "\\x1E", "\\x1F"
-                      ]
+  where cvt c
+         | oc >= 0x20 && oc <= 0x7E = [c]
+         | True                     = "\\u{" ++ showHex oc "" ++ "}"
+         where oc = ord c

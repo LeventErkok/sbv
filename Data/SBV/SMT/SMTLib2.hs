@@ -182,9 +182,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
-             ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType ss s ++ ")" ++ userName s | Right (s, ss) <- skolemInps]
+             ++ concat [declareFun s (SBVType (map kindOf (ss ++ [s]))) (userName s) | Right (s, ss) <- skolemInps]
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
-             ++ [ "(declare-fun " ++ show s ++ " " ++ svFunType [] s ++ ") ; tracks " <> nm | var <- trackerVars, let s = getSV var, let nm = getUserName' var ]
+             ++ concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> nm)) | var <- trackerVars, let s = getSV var, let nm = getUserName' var]
              ++ [ "; --- constant tables ---" ]
              ++ concatMap (uncurry (:) . constTable) constTables
              ++ [ "; --- skolemized tables ---" ]
@@ -326,8 +326,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
 
         userNameMap = M.fromList $ map ((\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) . snd) inputs
         userName s = case M.lookup s userNameMap of
-                        Just u  | show s /= u -> " ; tracks user variable " ++ show u
-                        _ -> ""
+                        Just u  | show s /= u -> Just $ "tracks user variable " ++ show u
+                        _ -> Nothing
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -418,7 +418,7 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
             -- constants
             ++ concatMap (declConst cfg) consts
             -- inputs
-            ++ map declInp inps
+            ++ concatMap declInp inps
             -- arrays
             ++ concat arrayConstants
             -- uninterpreteds
@@ -443,7 +443,7 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
 
         newKinds = Set.toList newKs
 
-        declInp (getSV -> s) = "(declare-fun " ++ show s ++ " () " ++ svType s ++ ")"
+        declInp (getSV -> s) = declareFun s (SBVType [kindOf s]) Nothing
 
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False allConsts skolemMap) arrs
 
@@ -490,7 +490,7 @@ declConst cfg (s, c)
   = defineFun cfg (s, cvtCV (roundingMode cfg) c) Nothing
 
 declUI :: (String, SBVType) -> [String]
-declUI (i, t) = ["(declare-fun " ++ i ++ " " ++ cvtType t ++ ")"]
+declUI (i, t) = declareName i t Nothing
 
 -- NB. We perform no check to as to whether the axiom is meaningful in any way.
 declAx :: (String, [String]) -> String
@@ -569,6 +569,9 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
 
         adecl = case ctx of
                   ArrayFree (Just v) -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " ((as const " ++ atyp ++ ") " ++ constInit v ++ "))"
+                  ArrayFree Nothing
+                    | bKnd == KChar  ->  -- Can't support yet, because we need to make sure all the elements are length-1 strings. So, punt for now.
+                                         tbd "Free array declarations containing SChars"
                   _                  -> "(declare-fun " ++ nm ++ " () " ++ atyp ++                                                  ")"
 
         -- CVC4 chokes if the initializer is not a constant. (Z3 is ok with it.) So, print it as
@@ -1007,6 +1010,17 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                , (LessEq,      seqCmp False "seq.<=")
                                , (GreaterEq,   seqCmp True  "seq.<=")
                                ]
+
+declareFun :: SV -> SBVType -> Maybe String -> [String]
+declareFun = declareName . show
+
+declareName :: String -> SBVType -> Maybe String -> [String]
+declareName s t@(SBVType ks) mbCmnt = case reverse ks of
+                                        [KChar]     -> [simple,  needsAssert]
+                                        (KChar : _) -> tbd "Functions that return SChar values"
+                                        _           -> [simple]
+  where simple      = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
+        needsAssert = "(assert (= 1 (str.len " ++ s ++ ")))"
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
