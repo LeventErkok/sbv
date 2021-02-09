@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.10, 2021-02-08
+* Latest Hackage released version: 8.9, 2020-10-28
 
-### Version 8.10, 2021-02-08
+### Version 8.9.5, Current development version
 
   * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
     to model multi-dimensional arrays in SBV.
