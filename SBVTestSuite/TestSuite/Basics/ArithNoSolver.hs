@@ -100,7 +100,7 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
-     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs ]
+     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- cs,   y <- cs  ] [x `opS` y | x <- scs,   y <- scs  ]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssm,  y <- ssm ] [x `opS` y | x <- ssm,   y <- ssm  ]
@@ -736,16 +736,11 @@ ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
 sds :: [SDouble]
 sds = map literal ds
 
--- Currently we test over all latin-1 characters. But when Unicode comes along, we'll have to be more selective.
 cs :: String
-cs = map C.chr [0..255]
+cs = map C.chr $ [0..5] ++ [65..70] ++ [98..102] ++ [250..255]
 
--- For pair character ops, just take a subset
-iCs :: String
-iCs = map C.chr $ [0..5] ++ [98..102] ++ [250..255]
-
-siCs :: [SChar]
-siCs = map literal iCs
+scs :: [SChar]
+scs = map literal cs
 
 -- Ditto for strings, just a few things
 ss :: [String]
