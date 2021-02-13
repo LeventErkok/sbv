@@ -25,6 +25,14 @@ import Utils.SBVTestFramework (getTestEnvironment, TestEnvironment(..), CIOS(..)
 
 import System.Random (randomRIO)
 
+-- For temporarily testing only a few files
+testOnly :: FilePath -> Bool
+testOnly f = case only of
+               Nothing -> True
+               Just xs -> any (`isSuffixOf` f) xs
+  where only :: Maybe [FilePath]
+        only = Nothing
+
 main :: IO ()
 main = do (testEnv, testPercentage) <- getTestEnvironment
 
@@ -42,7 +50,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
  where runDocTest onWindows onRemote tp = do srcFiles <- glob "Data/SBV/**/*.hs"
                                              docFiles <- glob "Documentation/SBV/**/*.hs"
 
-                                             let allFiles  = srcFiles ++ docFiles
+                                             let allFiles  = [f | f <- srcFiles ++ docFiles, testOnly f]
                                                  testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm || skipLocal nm)) allFiles
 
                                                  packages = [ "async"

@@ -74,9 +74,6 @@ c `elem` s
  = singleton c `isInfixOf` s
 
 -- | Is the character not in the string?
---
--- >>> prove $ \c s -> c `elem` s .<=> sNot (c `notElem` s)
--- Q.E.D.
 notElem :: SChar -> SString -> SBool
 c `notElem` s = sNot (c `elem` s)
 
@@ -92,8 +89,6 @@ ord c
 
 -- | Conversion from an integer to a character.
 --
--- >>> prove $ \x -> 0 .<= x .&& x .< 256 .=> ord (chr x) .== x
--- Q.E.D.
 -- >>> prove $ \x -> chr (ord x) .== x
 -- Q.E.D.
 chr :: SInteger -> SChar
@@ -118,22 +113,12 @@ liftPred :: (Char -> Bool) -> SChar -> SBool
 liftPred predicate c = c `sElem` [literal g | g <- [minBound .. maxBound :: Char], predicate g]
 
 -- | Convert to lower-case.
---
--- >>> prove $ \c -> toLower (toLower c) .== toLower c
--- Q.E.D.
--- >>> prove $ \c -> isLower c .=> toLower (toUpper c) .== c
--- Q.E.D.
 toLower :: SChar -> SChar
-toLower = liftFun C.toUpper
+toLower = liftFun C.toLower
 
 -- | Convert to upper-case.
---
--- >>> prove $ \c -> toUpper (toUpper c) .== toUpper c
--- Q.E.D.
--- >>> prove $ \c -> isUpper c .=> toUpper (toLower c) .== c
--- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper = liftFun C.toLower
+toUpper = liftFun C.toUpper
 
 -- | Convert to title-case.
 toTitle :: SChar -> SChar
@@ -141,11 +126,6 @@ toTitle = liftFun C.toTitle
 
 -- | Convert a digit to an integer. Works for hexadecimal digits too. If the input isn't a digit,
 -- then return -1.
---
--- >>> prove $ \c -> isDigit c .|| isHexDigit c .=> digitToInt c .>= 0 .&& digitToInt c .<= 15
--- Q.E.D.
--- >>> prove $ \c -> sNot (isDigit c .|| isHexDigit c) .=> digitToInt c .== -1
--- Q.E.D.
 digitToInt :: SChar -> SInteger
 digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0')))
              $ ite (uc `elem` "ABCDEF")     (sFromIntegral (o - ord (literal 'A') + 10))
@@ -156,13 +136,6 @@ digitToInt c = ite (uc `elem` "0123456789") (sFromIntegral (o - ord (literal '0'
 -- | Convert an integer to a digit, inverse of 'digitToInt'. If the integer is out of
 -- bounds, we return the arbitrarily chosen space character. Note that for hexadecimal
 -- letters, we return the corresponding lowercase letter.
---
--- >>> prove $ \i -> i .>= 0 .&& i .<= 15 .=> digitToInt (intToDigit i) .== i
--- Q.E.D.
--- >>> prove $ \i -> i .<  0 .|| i .>  15 .=> digitToInt (intToDigit i) .== -1
--- Q.E.D.
--- >>> prove $ \c -> digitToInt c .== -1 .<=> intToDigit (digitToInt c) .== literal ' '
--- Q.E.D.
 intToDigit :: SInteger -> SChar
 intToDigit i = ite (i .>=  0 .&& i .<=  9) (chr (sFromIntegral i + ord (literal '0')))
              $ ite (i .>= 10 .&& i .<= 15) (chr (sFromIntegral i + ord (literal 'a') - 10))
@@ -177,16 +150,11 @@ isSpace :: SChar -> SBool
 isSpace = liftPred C.isSpace
 
 -- | Is this a lower-case character?
---
--- >>> prove $ \c -> isUpper c .=> isLower (toLower c)
 -- Q.E.D.
 isLower :: SChar -> SBool
 isLower = liftPred C.isLower
 
 -- | Is this an upper-case character?
---
--- >>> prove $ \c -> sNot (isLower c .&& isUpper c)
--- Q.E.D.
 isUpper :: SChar -> SBool
 isUpper = liftPred C.isUpper
 
@@ -195,9 +163,6 @@ isAlpha :: SChar -> SBool
 isAlpha = liftPred C.isAlpha
 
 -- | Is this an 'isAlpha' or 'isNumber'.
---
--- >>> prove $ \c -> isAlphaNum c .<=> isAlpha c .|| isNumber c
--- Q.E.D.
 isAlphaNum :: SChar -> SBool
 isAlphaNum = liftPred C.isAlphaNum
 
@@ -206,30 +171,18 @@ isPrint :: SChar -> SBool
 isPrint = liftPred C.isPrint
 
 -- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumber'
---
--- >>> prove $ \c -> isDigit c .=> isNumber c
--- Q.E.D.
 isDigit :: SChar -> SBool
 isDigit = liftPred C.isDigit
 
 -- | Is this an Octal digit, i.e., one of @0@..@7@.
---
--- >>> prove $ \c -> isOctDigit c .=> isDigit c
--- Q.E.D.
 isOctDigit :: SChar -> SBool
 isOctDigit = liftPred C.isOctDigit
 
 -- | Is this a Hex digit, i.e, one of @0@..@9@, @a@..@f@, @A@..@F@.
---
--- >>> prove $ \c -> isHexDigit c .=> isAlphaNum c
--- Q.E.D.
 isHexDigit :: SChar -> SBool
 isHexDigit = liftPred C.isHexDigit
 
 -- | Is this an alphabet character. Note that this function is equivalent to 'isAlpha'.
---
--- >>> prove $ \c -> isLetter c .<=> isAlpha c
--- Q.E.D.
 isLetter :: SChar -> SBool
 isLetter = liftPred C.isLetter
 
@@ -250,9 +203,6 @@ isSymbol :: SChar -> SBool
 isSymbol = liftPred C.isSymbol
 
 -- | Is this a separator?
---
--- >>> prove $ \c -> isSeparator c .=> isSpace c
--- Q.E.D.
 isSeparator :: SChar -> SBool
 isSeparator = liftPred C.isSeparator
 
@@ -265,19 +215,9 @@ isLatin1 :: SChar -> SBool
 isLatin1 = liftPred C.isLatin1
 
 -- | Is this an ASCII Upper-case letter? i.e., @A@ thru @Z@
---
--- >>> prove $ \c -> isAsciiUpper c .<=> ord c .>= ord (literal 'A') .&& ord c .<= ord (literal 'Z')
--- Q.E.D.
--- >>> prove $ \c -> isAsciiUpper c .<=> isAscii c .&& isUpper c
--- Q.E.D.
 isAsciiUpper :: SChar -> SBool
 isAsciiUpper = liftPred C.isAsciiUpper
 
 -- | Is this an ASCII Lower-case letter? i.e., @a@ thru @z@
---
--- >>> prove $ \c -> isAsciiLower c .<=> ord c .>= ord (literal 'a') .&& ord c .<= ord (literal 'z')
--- Q.E.D.
--- >>> prove $ \c -> isAsciiLower c .<=> isAscii c .&& isLower c
--- Q.E.D.
 isAsciiLower :: SChar -> SBool
 isAsciiLower = liftPred C.isAsciiLower

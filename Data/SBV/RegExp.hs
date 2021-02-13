@@ -155,38 +155,32 @@ newline = oneOf "\n\r\f"
 tab :: RegExp
 tab = oneOf "\t"
 
+-- | Lift a char function to a regular expression that recognizes it.
+liftPred :: (Char -> Bool) -> RegExp
+liftPred predicate = oneOf $ filter predicate [minBound .. maxBound :: Char]
+
 -- | Recognize white-space, but without a new line.
 --
--- >>> whiteSpaceNoNewLine
--- (re.union (str.to.re "\t") (re.union (str.to.re "\v") (str.to.re "\160") (str.to.re " ")))
 -- >>> prove $ \c -> c `match` whiteSpaceNoNewLine .=> c `match` whiteSpace .&& c ./= literal '\n'
 -- Q.E.D.
 whiteSpaceNoNewLine :: RegExp
-whiteSpaceNoNewLine = tab + oneOf "\v\160 "
+whiteSpaceNoNewLine = liftPred (\c -> C.isSpace c && c `P.notElem` ("\n" :: String))
 
 -- | Recognize white space.
 --
 -- >>> prove $ \c -> c `match` whiteSpace .=> isSpace c
 -- Q.E.D.
 whiteSpace :: RegExp
-whiteSpace = newline + whiteSpaceNoNewLine
+whiteSpace = liftPred C.isSpace
 
--- | Recognize a punctuation character. Anything that satisfies the predicate 'isPunctuation' will
--- be accepted.  (TODO: Will need modification when we move to unicode.)
+-- | Recognize a punctuation character.
 --
 -- >>> prove $ \c -> c `match` punctuation .=> isPunctuation c
 -- Q.E.D.
 punctuation :: RegExp
-punctuation = oneOf $ filter C.isPunctuation $ map C.chr [0..255]
+punctuation = liftPred C.isPunctuation
 
 -- | Recognize an alphabet letter, i.e., @A@..@Z@, @a@..@z@.
---
--- >>> asciiLetter
--- (re.union (re.range "a" "z") (re.range "A" "Z"))
--- >>> prove $ \c -> c `match` asciiLetter .<=> toUpper c `match` asciiLetter
--- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter .<=> toLower c `match` asciiLetter
--- Q.E.D.
 asciiLetter :: RegExp
 asciiLetter = asciiLower + asciiUpper
 
