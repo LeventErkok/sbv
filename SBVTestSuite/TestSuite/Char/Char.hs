@@ -38,6 +38,7 @@ tests =
     , goldenCapturedIO "charConstr08" $ \rf -> checkWith rf t08
     , goldenCapturedIO "charConstr09" $ \rf -> checkWith rf t09
     , goldenCapturedIO "charConstr10" $ \rf -> checkWith rf t10
+    , goldenCapturedIO "charConstr11" $ \rf -> checkWith rf t11
     ]
 
 checkWith :: FilePath -> Symbolic () -> IO ()
@@ -45,8 +46,8 @@ checkWith rf props = runSMTWith z3{verbose=True, redirectVerbose = Just rf} $ do
         _ <- props
         query $ do cs <- checkSat
                    case cs of
-                     Unsat  -> io $ appendFile rf $ "\nUNSAT"
-                     DSat{} -> io $ appendFile rf $ "\nDSAT"
+                     Unsat  -> io $ appendFile rf "\nUNSAT"
+                     DSat{} -> io $ appendFile rf "\nDSAT"
                      Sat{}  -> getModel         >>= \m -> io $ appendFile rf $ "\nMODEL: "   ++ show m ++ "\nDONE."
                      Unk    -> getUnknownReason >>= \r -> io $ appendFile rf $ "\nUNKNOWN: " ++ show r ++ "\nDONE."
 
@@ -98,3 +99,13 @@ t10 :: Symbolic ()
 t10 = do x :: SList ((Char, Char), [Integer]) <- free "x"
          constrain $ L.length x .== 1
          constrain $ (x L..!! 0)^._1^._1 .== literal 'B'
+
+cf4 :: SInteger -> SChar -> SList ((Char, Char), [Integer])
+cf4 = uninterpret "cf4"
+
+t11 :: Symbolic ()
+t11 = do x <- sInteger "x"
+         c <- sChar "c"
+         constrain $ L.length (cf4 x c) .== 1
+
+{-# ANN module ("HLint: ignore Redundant ^." :: String) #-}
