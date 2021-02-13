@@ -1015,12 +1015,12 @@ declareFun :: SV -> SBVType -> Maybe String -> [String]
 declareFun = declareName . show
 
 declareName :: String -> SBVType -> Maybe String -> [String]
-declareName s t@(SBVType ks) mbCmnt = decl : restrict
+declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
   where decl        = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
 
-        (args, result) = case ks of
+        (args, result) = case inputKS of
                           [] -> error $ "SBV.declareName: Unexpected empty type for: " ++ show s
-                          _  -> (init ks, last ks)
+                          _  -> (init inputKS, last inputKS)
 
         -- Does the kind KChar *not* occur in the result anywhere?
         noChars    = null [() | KChar <- G.universe result]
@@ -1049,29 +1049,33 @@ declareName s t@(SBVType ks) mbCmnt = decl : restrict
                                  [x]    -> ["(assert " ++ x ++ ")"]
                                  (x:xs) -> ( "(assert (and " ++ x)
                                         :  [ "             " ++ c | c <- xs]
-                                        ++ [ "        )"]
+                                        ++ [ "        ))"]
 
-        constraints = walk resultVar result []
+        constraints = walk resultVar result
 
-        walk :: String -> Kind -> [String] -> [String]
-        walk _nm KBool     {} sofar = reverse sofar
-        walk _nm KBounded  {} sofar = reverse sofar
-        walk _nm KUnbounded{} sofar = reverse sofar
-        walk _nm KReal     {} sofar = reverse sofar
-        walk _nm KUserSort {} sofar = reverse sofar
-        walk _nm KFloat    {} sofar = reverse sofar
-        walk _nm KDouble   {} sofar = reverse sofar
-        walk  nm KChar     {} sofar = reverse $ ("(= 1 (str.len " ++ nm ++ "))") : sofar
-        walk _nm KString   {} sofar = reverse sofar
-        walk _ _ sofar = reverse sofar
-        {-
-        walk _nm KList Kind
-        walk _nm KSet  Kind
-        walk _nm KTuple [Kind]
-        walk _nm KMaybe  Kind
-        walk _nm KEither Kind Kind
-        -}
-
+        walk :: String -> Kind -> [String]
+        walk _nm KBool     {}       = []
+        walk _nm KBounded  {}       = []
+        walk _nm KUnbounded{}       = []
+        walk _nm KReal     {}       = []
+        walk _nm KUserSort {}       = []
+        walk _nm KFloat    {}       = []
+        walk _nm KDouble   {}       = []
+        walk  nm KChar     {}       = [("(= 1 (str.len " ++ nm ++ "))")]
+        walk _nm KString   {}       = []
+        -- walk _nm KList Kind
+        -- walk _nm KSet  Kind
+        walk  nm (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
+                                          project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
+                                          nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
+                                      in concatMap (uncurry walk) nmks
+        -- walk _nm KMaybe  Kind
+        walk  nm ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
+                                          n2 = "(get_right_SBVEither " ++ nm ++ ")"
+                                          c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n1 k1]
+                                          c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n2 k2]
+                                      in c1 ++ c2
+        walk _ _ = []
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
