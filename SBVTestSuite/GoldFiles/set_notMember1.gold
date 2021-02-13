@@ -19,6 +19,7 @@
 [GOOD] (declare-fun s0 () String) ; tracks user variable "a"
 [GOOD] (assert (= 1 (str.len s0)))
 [GOOD] (declare-fun s1 () (Array String Bool)) ; tracks user variable "b"
+[GOOD] (assert (forall ((set0 String)) (=> (select s1 set0) (= 1 (str.len set0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---

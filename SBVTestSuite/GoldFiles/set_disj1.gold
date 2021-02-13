@@ -16,7 +16,9 @@
 [GOOD] (define-fun s2 () (Array String Bool) (store ((as const (Array String Bool)) false) (_ char #x61) true))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
+[GOOD] (assert (forall ((set0 String)) (=> (select s0 set0) (= 1 (str.len set0)))))
 [GOOD] (declare-fun s1 () (Array String Bool)) ; tracks user variable "b"
+[GOOD] (assert (forall ((set0 String)) (=> (select s1 set0) (= 1 (str.len set0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---

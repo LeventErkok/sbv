@@ -20,6 +20,7 @@
 [GOOD] (define-fun s3 () String (_ char #x63))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVTuple2 Int (SBVTuple2 String SBVTuple0))) ; tracks user variable "a"
+[GOOD] (assert (= 1 (str.len (proj_1_SBVTuple2 (proj_2_SBVTuple2 s0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---

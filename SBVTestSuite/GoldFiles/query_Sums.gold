@@ -19,6 +19,7 @@
 [GOOD] (define-fun s2 () Int 1)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVEither Int String)) ; tracks user variable "a"
+[GOOD] (assert (=> ((_ is (right_SBVEither (String) (SBVEither Int String))) s0) (= 1 (str.len (get_right_SBVEither s0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---

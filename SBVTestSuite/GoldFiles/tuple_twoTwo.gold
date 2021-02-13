@@ -21,6 +21,7 @@
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVTuple2 Int String)) ; tracks user variable "ab"
 [GOOD] (declare-fun s1 () (SBVTuple2 String (_ BitVec 8))) ; tracks user variable "cd"
+[GOOD] (assert (= 1 (str.len (proj_1_SBVTuple2 s1))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---

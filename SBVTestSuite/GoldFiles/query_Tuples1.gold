@@ -18,7 +18,8 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVTuple2 Int (_ BitVec 8))) ; tracks user variable "a"
+[GOOD] (declare-fun s0 () (SBVTuple2 Int String)) ; tracks user variable "a"
+[GOOD] (assert (= 1 (str.len (proj_2_SBVTuple2 s0))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -31,9 +32,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 1 #x00)))
+[RECV] ((s0 (mkSBVTuple2 1 "A")))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(1,'\NUL')
+(1,'A')

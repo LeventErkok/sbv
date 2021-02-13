@@ -65,6 +65,7 @@
                                                          (proj_2_SBVTuple3 T2)
                                                          (proj_3_SBVTuple3 T3))))))
 [GOOD] (declare-fun s24 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E String (_ FloatingPoint  8 24))))
+[GOOD] (assert (= 1 (str.len (proj_2_SBVTuple3 (proj_2_SBVTuple2 s24)))))
 [GOOD] (define-fun s25 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E String (_ FloatingPoint  8 24))) (mkSBVTuple2 #x05 (mkSBVTuple3 C (_ char #x41) ((_ to_fp 8 24) roundNearestTiesToEven (/ 8514437.0 1048576.0)))))
 [GOOD] (define-fun s26 () Bool (= s24 s25))
 [GOOD] (assert s26)

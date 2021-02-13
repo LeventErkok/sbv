@@ -20,7 +20,8 @@
 [GOOD] (define-fun s4 () Int 0)
 [GOOD] (define-fun s8 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Seq (SBVMaybe (_ BitVec 8)))) ; tracks user variable "lst"
+[GOOD] (declare-fun s0 () (Seq (SBVMaybe String))) ; tracks user variable "lst"
+[GOOD] (assert (forall ((seq0 Int)) (=> (and (>= seq0 0) (< seq0 (seq.len s0))) (=> ((_ is (just_SBVMaybe (String) (SBVMaybe String))) (seq.nth s0 seq0)) (= 1 (str.len (get_just_SBVMaybe (seq.nth s0 seq0))))))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -29,13 +30,13 @@
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s1 () Int (seq.len s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
-[GOOD] (define-fun s5 () (SBVMaybe (_ BitVec 8)) (seq.nth s0 s4))
-[GOOD] (define-fun s6 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (_ BitVec 8)))) s5))
+[GOOD] (define-fun s5 () (SBVMaybe String) (seq.nth s0 s4))
+[GOOD] (define-fun s6 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe String))) s5))
 [GOOD] (define-fun s7 () Bool (ite s6 false true))
 [GOOD] (define-fun s9 () Int (- s1 s8))
-[GOOD] (define-fun s10 () (Seq (SBVMaybe (_ BitVec 8))) (seq.extract s0 s8 s9))
-[GOOD] (define-fun s11 () (SBVMaybe (_ BitVec 8)) (seq.nth s10 s4))
-[GOOD] (define-fun s12 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe (_ BitVec 8)))) s11))
+[GOOD] (define-fun s10 () (Seq (SBVMaybe String)) (seq.extract s0 s8 s9))
+[GOOD] (define-fun s11 () (SBVMaybe String) (seq.nth s10 s4))
+[GOOD] (define-fun s12 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe String))) s11))
 [GOOD] (define-fun s13 () Bool (ite s12 true false))
 [GOOD] (assert s3)
 [GOOD] (assert s7)
@@ -43,9 +44,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.++ (seq.unit (just_SBVMaybe #x00)) (seq.unit nothing_SBVMaybe))))
+[RECV] ((s0 (seq.++ (seq.unit (just_SBVMaybe "A")) (seq.unit nothing_SBVMaybe))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-[Just '\NUL',Nothing]
+[Just 'A',Nothing]
