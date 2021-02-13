@@ -1022,8 +1022,9 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                           [] -> error $ "SBV.declareName: Unexpected empty type for: " ++ show s
                           _  -> (init inputKS, last inputKS)
 
-        -- Does the kind KChar *not* occur in the result anywhere?
-        noChars    = null [() | KChar <- G.universe result]
+        -- Does the kind KChar *not* occur in the kind anywhere?
+        charFree k = null [() | KChar <- G.universe k]
+        noChars    = charFree result
         needsQuant = not $ null args
 
         resultVar | needsQuant = "result"
@@ -1051,32 +1052,41 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                         :  [ "             " ++ c | c <- xs]
                                         ++ [ "        ))"]
 
-        constraints = walk resultVar result
+        constraints = walk 0 resultVar (\nm -> "(= 1 (str.len " ++ nm ++ "))") result
 
-        walk :: String -> Kind -> [String]
-        walk _nm KBool     {}       = []
-        walk _nm KBounded  {}       = []
-        walk _nm KUnbounded{}       = []
-        walk _nm KReal     {}       = []
-        walk _nm KUserSort {}       = []
-        walk _nm KFloat    {}       = []
-        walk _nm KDouble   {}       = []
-        walk  nm KChar     {}       = [("(= 1 (str.len " ++ nm ++ "))")]
-        walk _nm KString   {}       = []
+        walk :: Int -> String -> (String -> String) -> Kind -> [String]
+        walk _d _nm _f KBool     {}       = []
+        walk _d _nm _f KBounded  {}       = []
+        walk _d _nm _f KUnbounded{}       = []
+        walk _d _nm _f KReal     {}       = []
+        walk _d _nm _f KUserSort {}       = []
+        walk _d _nm _f KFloat    {}       = []
+        walk _d _nm _f KDouble   {}       = []
+        walk _d  nm  f KChar     {}       = [f nm]
+        walk _d _nm _f KString   {}       = []
         -- walk _nm KList Kind
-        -- walk _nm KSet  Kind
-        walk  nm (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
-                                          project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
-                                          nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
-                                      in concatMap (uncurry walk) nmks
-        walk nm  km@(KMaybe k)      = let n1 = "(get_just_SBVMaybe " ++ nm ++ ")"
-                                      in  ["(=> " ++ "((_ is (just_SBVMaybe (" ++ smtType k ++ ") " ++ smtType km ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n1 k]
-        walk  nm ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
-                                          n2 = "(get_right_SBVEither " ++ nm ++ ")"
-                                          c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n1 k1]
-                                          c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n2 k2]
-                                      in c1 ++ c2
-        walk _ _ = []
+        walk  d  nm  _f (KSet k)
+          | charFree k                    = []
+          | True                          = let fnm    = "set" ++ show d
+                                                cstrs  = walk (d+1) nm (\snm -> "(=> (select " ++ snm ++ " " ++ fnm ++ ") (= 1 (str.len " ++ fnm ++ ")))") k
+
+                                                join []  = "true"
+                                                join [c] = c
+                                                join cs  = "(and " ++ unwords cs ++ ")"
+
+                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ join cstrs ++ ")"]
+        walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
+                                                project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
+                                                nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
+                                            in concatMap (\(n, k) -> walk (d+1) n f k) nmks
+        walk  d  nm  f km@(KMaybe k)      = let n = "(get_just_SBVMaybe " ++ nm ++ ")"
+                                            in  ["(=> " ++ "((_ is (just_SBVMaybe (" ++ smtType k ++ ") " ++ smtType km ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n f k]
+        walk  d  nm  f ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
+                                                n2 = "(get_right_SBVEither " ++ nm ++ ")"
+                                                c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n1 f k1]
+                                                c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n2 f k2]
+                                            in c1 ++ c2
+        walk _ _ _ _ = []
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)

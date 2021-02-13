@@ -847,15 +847,22 @@ recoverKindedValue k e = case k of
 
                  mbAssocs = parseSExprFunction setExpr
 
-                 decode (args, r) | isTrue r = ComplementSet $ Set.fromList [x | (x, False) <- map contents args]  -- deletions from universal
-                                  | True     = RegularSet    $ Set.fromList [x | (x, True)  <- map contents args]  -- additions to empty
+                 decode (args, r) | isTrue r = ComplementSet $ Set.fromList [x | (x, False) <- concatMap (contents True)  args]  -- deletions from universal
+                                  | True     = RegularSet    $ Set.fromList [x | (x, True)  <- concatMap (contents False) args]  -- additions to empty
 
-                 contents ([v], r) = (element v, isTrue r)
-                 contents bad      = tbd $ "Multi-valued set member seen: " ++ show bad
+                 contents cvt ([v], r) = let t = isTrue r in map (, t) (element cvt v)
+                 contents _   bad      = tbd $ "Multi-valued set member seen: " ++ show bad
 
-                 element x = case recoverKindedValue ke x of
-                               Just v  -> cvVal v
-                               Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                 element cvt x = case (cvt, ke) of
+                                   (True, KChar) -> case recoverKindedValue KString x of
+                                                      Just v  -> case cvVal v of
+                                                                  CString [c] -> [CChar c]
+                                                                  CString _   -> []
+                                                                  _           -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                                                      Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
+                                   _             -> case recoverKindedValue ke x of
+                                                      Just v  -> [cvVal v]
+                                                      Nothing -> tbd $ "Unexpected value for kind: " ++ show (x, ke)
 
         interpretTuple te = walk (1 :: Int) (zipWith recoverKindedValue ks args) []
                 where (ks, n) = case k of
