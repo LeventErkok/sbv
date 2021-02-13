@@ -57,6 +57,7 @@ import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
 import qualified TestSuite.BitPrecise.MergeSort
 import qualified TestSuite.BitPrecise.PrefixSum
+import qualified TestSuite.Char.Char
 import qualified TestSuite.CodeGeneration.AddSub
 import qualified TestSuite.CodeGeneration.CgTests
 import qualified TestSuite.CodeGeneration.CRC_USB5
@@ -209,6 +210,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.BitPrecise.Legato.tests
                , TestSuite.BitPrecise.MergeSort.tests
                , TestSuite.BitPrecise.PrefixSum.tests
+               , TestSuite.Char.Char.tests
                , TestSuite.CodeGeneration.AddSub.tests
                , TestSuite.CodeGeneration.CgTests.tests
                , TestSuite.CodeGeneration.CRC_USB5.tests

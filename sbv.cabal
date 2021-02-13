@@ -284,6 +284,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.TOut
                   , TestSuite.Basics.Tuple
                   , TestSuite.Basics.UISat
+                  , TestSuite.Char.Char
                   , TestSuite.BitPrecise.BitTricks
                   , TestSuite.BitPrecise.Legato
                   , TestSuite.BitPrecise.MergeSort
