@@ -19,9 +19,10 @@
   * Pop-calls are now support for Yices and Boolector. (#577)
 
   * Changes required to make SBV work with latest version of z3 regarding
-    String and Characters, which now allow for unicode characters. The changes
-    should be transparent to the end user, though please report any issues you
-    might run into when you use SChar and SString types.
+    String and Characters, which now allow for unicode characters. This required
+    renaming of certain recognizers in 'Data.SBV.Char' to restrict them to the
+    Latin1 subset. Otherwise, the changes should be transparent to the end user.
+    Please report any issues you might run into when you use SChar and SString types.
 
 ### Version 8.9, 2020-10-28
 

@@ -73,9 +73,6 @@ import Data.SBV.Char
 -- >>> :set -XScopedTypeVariables
 
 -- | Matchable class. Things we can match against a 'RegExp'.
--- (TODO: Currently SBV does *not* optimize this call if the input is a concrete string or
--- a character, but rather directly calls down to the solver. We might want to perform the
--- operation on the Haskell side for performance reasons, should this become important.)
 --
 -- For instance, you can generate valid-looking phone numbers like this:
 --
@@ -141,7 +138,7 @@ oneOf xs = Union [exactly [x] | x <- xs]
 --
 -- >>> newline
 -- (re.union (str.to.re "\n") (str.to.re "\r") (str.to.re "\f"))
--- >>> prove $ \c -> c `match` newline .=> isSpace c
+-- >>> prove $ \c -> c `match` newline .=> isSpaceL1 c
 -- Q.E.D.
 newline :: RegExp
 newline = oneOf "\n\r\f"
@@ -156,29 +153,29 @@ tab :: RegExp
 tab = oneOf "\t"
 
 -- | Lift a char function to a regular expression that recognizes it.
-liftPred :: (Char -> Bool) -> RegExp
-liftPred predicate = oneOf $ filter predicate [minBound .. maxBound :: Char]
+liftPredL1 :: (Char -> Bool) -> RegExp
+liftPredL1 predicate = oneOf $ filter predicate (map C.chr [0 .. 255])
 
 -- | Recognize white-space, but without a new line.
 --
 -- >>> prove $ \c -> c `match` whiteSpaceNoNewLine .=> c `match` whiteSpace .&& c ./= literal '\n'
 -- Q.E.D.
 whiteSpaceNoNewLine :: RegExp
-whiteSpaceNoNewLine = liftPred (\c -> C.isSpace c && c `P.notElem` ("\n" :: String))
+whiteSpaceNoNewLine = liftPredL1 (\c -> C.isSpace c && c `P.notElem` ("\n" :: String))
 
 -- | Recognize white space.
 --
--- >>> prove $ \c -> c `match` whiteSpace .=> isSpace c
+-- >>> prove $ \c -> c `match` whiteSpace .=> isSpaceL1 c
 -- Q.E.D.
 whiteSpace :: RegExp
-whiteSpace = liftPred C.isSpace
+whiteSpace = liftPredL1 C.isSpace
 
 -- | Recognize a punctuation character.
 --
--- >>> prove $ \c -> c `match` punctuation .=> isPunctuation c
+-- >>> prove $ \c -> c `match` punctuation .=> isPunctuationL1 c
 -- Q.E.D.
 punctuation :: RegExp
-punctuation = liftPred C.isPunctuation
+punctuation = liftPredL1 C.isPunctuation
 
 -- | Recognize an alphabet letter, i.e., @A@..@Z@, @a@..@z@.
 asciiLetter :: RegExp
@@ -190,9 +187,9 @@ asciiLetter = asciiLower + asciiUpper
 -- (re.range "a" "z")
 -- >>> prove $ \c -> (c :: SChar) `match` asciiLower  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLower  .=> toUpper c `match` asciiUpper
+-- >>> prove $ \c -> c `match` asciiLower  .=> toUpperL1 c `match` asciiUpper
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter .=> toLower c `match` asciiLower
+-- >>> prove $ \c -> c `match` asciiLetter .=> toLowerL1 c `match` asciiLower
 -- Q.E.D.
 asciiLower :: RegExp
 asciiLower = Range 'a' 'z'
@@ -203,9 +200,9 @@ asciiLower = Range 'a' 'z'
 -- (re.range "A" "Z")
 -- >>> prove $ \c -> (c :: SChar) `match` asciiUpper  .=> c `match` asciiLetter
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiUpper  .=> toLower c `match` asciiLower
+-- >>> prove $ \c -> c `match` asciiUpper  .=> toLowerL1 c `match` asciiLower
 -- Q.E.D.
--- >>> prove $ \c -> c `match` asciiLetter .=> toUpper c `match` asciiUpper
+-- >>> prove $ \c -> c `match` asciiLetter .=> toUpperL1 c `match` asciiUpper
 -- Q.E.D.
 asciiUpper :: RegExp
 asciiUpper = Range 'A' 'Z'
@@ -307,7 +304,7 @@ concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
 
 -- | Quiet GHC about testing only imports
 __unused :: a
-__unused = undefined isSpace length take elem notElem head
+__unused = undefined isSpaceL1 length take elem notElem head
 
 {- $matching
 A symbolic string or a character ('SString' or 'SChar') can be matched against a regular-expression. Note

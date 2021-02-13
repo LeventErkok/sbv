@@ -100,7 +100,7 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
-     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- cs,   y <- cs  ] [x `opS` y | x <- scs,   y <- scs  ]
+     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- cs,   y <- cs  ] [x `opS` y | x <- siCs,  y <- siCs ]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssm,  y <- ssm ] [x `opS` y | x <- ssm,   y <- ssm  ]
@@ -457,31 +457,31 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
                      ]
 
 genChars :: [TestTree]
-genChars = map mkTest $  [("ord",           show c, check SC.ord           cord            c) | c <- cs]
-                      ++ [("toLower",       show c, check SC.toLower       C.toLower       c) | c <- cs]
-                      ++ [("toUpper",       show c, check SC.toUpper       C.toUpper       c) | c <- cs, toUpperExceptions c]
-                      ++ [("digitToInt",    show c, check SC.digitToInt    dig2Int         c) | c <- cs, digitToIntRange c]
-                      ++ [("intToDigit",    show c, check SC.intToDigit    int2Dig         c) | c <- [0 .. 15]]
-                      ++ [("isControl",     show c, check SC.isControl     C.isControl     c) | c <- cs]
-                      ++ [("isSpace",       show c, check SC.isSpace       C.isSpace       c) | c <- cs]
-                      ++ [("isLower",       show c, check SC.isLower       C.isLower       c) | c <- cs]
-                      ++ [("isUpper",       show c, check SC.isUpper       C.isUpper       c) | c <- cs]
-                      ++ [("isAlpha",       show c, check SC.isAlpha       C.isAlpha       c) | c <- cs]
-                      ++ [("isAlphaNum",    show c, check SC.isAlphaNum    C.isAlphaNum    c) | c <- cs]
-                      ++ [("isPrint",       show c, check SC.isPrint       C.isPrint       c) | c <- cs]
-                      ++ [("isDigit",       show c, check SC.isDigit       C.isDigit       c) | c <- cs]
-                      ++ [("isOctDigit",    show c, check SC.isOctDigit    C.isOctDigit    c) | c <- cs]
-                      ++ [("isHexDigit",    show c, check SC.isHexDigit    C.isHexDigit    c) | c <- cs]
-                      ++ [("isLetter",      show c, check SC.isLetter      C.isLetter      c) | c <- cs]
-                      ++ [("isMark",        show c, check SC.isMark        C.isMark        c) | c <- cs]
-                      ++ [("isNumber",      show c, check SC.isNumber      C.isNumber      c) | c <- cs]
-                      ++ [("isPunctuation", show c, check SC.isPunctuation C.isPunctuation c) | c <- cs]
-                      ++ [("isSymbol",      show c, check SC.isSymbol      C.isSymbol      c) | c <- cs]
-                      ++ [("isSeparator",   show c, check SC.isSeparator   C.isSeparator   c) | c <- cs]
-                      ++ [("isAscii",       show c, check SC.isAscii       C.isAscii       c) | c <- cs]
-                      ++ [("isLatin1",      show c, check SC.isLatin1      C.isLatin1      c) | c <- cs]
-                      ++ [("isAsciiUpper",  show c, check SC.isAsciiUpper  C.isAsciiUpper  c) | c <- cs]
-                      ++ [("isAsciiLower",  show c, check SC.isAsciiLower  C.isAsciiLower  c) | c <- cs]
+genChars = map mkTest $  [("ord",           show c, check SC.ord             cord            c) | c <- cs]
+                      ++ [("toLower",       show c, check SC.toLowerL1       C.toLower       c) | c <- cs]
+                      ++ [("toUpper",       show c, check SC.toUpperL1       C.toUpper       c) | c <- cs, toUpperExceptions c]
+                      ++ [("digitToInt",    show c, check SC.digitToInt      dig2Int         c) | c <- cs, digitToIntRange c]
+                      ++ [("intToDigit",    show c, check SC.intToDigit      int2Dig         c) | c <- [0 .. 15]]
+                      ++ [("isControl",     show c, check SC.isControlL1     C.isControl     c) | c <- cs]
+                      ++ [("isSpace",       show c, check SC.isSpaceL1       C.isSpace       c) | c <- cs]
+                      ++ [("isLower",       show c, check SC.isLowerL1       C.isLower       c) | c <- cs]
+                      ++ [("isUpper",       show c, check SC.isUpperL1       C.isUpper       c) | c <- cs]
+                      ++ [("isAlpha",       show c, check SC.isAlphaL1       C.isAlpha       c) | c <- cs]
+                      ++ [("isAlphaNum",    show c, check SC.isAlphaNumL1    C.isAlphaNum    c) | c <- cs]
+                      ++ [("isPrint",       show c, check SC.isPrintL1       C.isPrint       c) | c <- cs]
+                      ++ [("isDigit",       show c, check SC.isDigit         C.isDigit       c) | c <- cs]
+                      ++ [("isOctDigit",    show c, check SC.isOctDigit      C.isOctDigit    c) | c <- cs]
+                      ++ [("isHexDigit",    show c, check SC.isHexDigit      C.isHexDigit    c) | c <- cs]
+                      ++ [("isLetter",      show c, check SC.isLetterL1      C.isLetter      c) | c <- cs]
+                      ++ [("isMark",        show c, check SC.isMarkL1        C.isMark        c) | c <- cs]
+                      ++ [("isNumber",      show c, check SC.isNumberL1      C.isNumber      c) | c <- cs]
+                      ++ [("isPunctuation", show c, check SC.isPunctuationL1 C.isPunctuation c) | c <- cs]
+                      ++ [("isSymbol",      show c, check SC.isSymbolL1      C.isSymbol      c) | c <- cs]
+                      ++ [("isSeparator",   show c, check SC.isSeparatorL1   C.isSeparator   c) | c <- cs]
+                      ++ [("isAscii",       show c, check SC.isAscii         C.isAscii       c) | c <- cs]
+                      ++ [("isLatin1",      show c, check SC.isLatin1        C.isLatin1      c) | c <- cs]
+                      ++ [("isAsciiUpper",  show c, check SC.isAsciiUpper    C.isAsciiUpper  c) | c <- cs]
+                      ++ [("isAsciiLower",  show c, check SC.isAsciiLower    C.isAsciiLower  c) | c <- cs]
   where toUpperExceptions = (`notElem` "\181\255")
         digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
         cord :: Char -> Integer
@@ -736,11 +736,16 @@ ds = xs ++ map (* (-1)) (filter (not . isNaN) xs) -- -nan is the same as nan
 sds :: [SDouble]
 sds = map literal ds
 
+-- Currently we test over all latin-1 characters. Maybe we should add some unicode here. Oh well.
 cs :: String
-cs = map C.chr $ [0..5] ++ [65..70] ++ [98..102] ++ [250..255]
+cs = map C.chr [0..255]
 
-scs :: [SChar]
-scs = map literal cs
+-- For pair character ops, just take a subset
+iCs :: String
+iCs = map C.chr $ [0..5] ++ [98..102] ++ [250..255]
+
+siCs :: [SChar]
+siCs = map literal iCs
 
 -- Ditto for strings, just a few things
 ss :: [String]
