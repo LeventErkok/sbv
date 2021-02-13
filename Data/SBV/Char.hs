@@ -32,13 +32,13 @@ module Data.SBV.Char (
         -- * Conversion to\/from 'SInteger'
         , ord, chr
         -- * Conversion to upper\/lower case
-        , toLower, toUpper
+        , toLower, toUpper, toTitle
         -- * Converting digits to ints and back
         , digitToInt, intToDigit
         -- * Character classification
         , isControl, isSpace, isLower, isUpper, isAlpha, isAlphaNum, isPrint, isDigit, isOctDigit, isHexDigit, isLetter, isMark, isNumber, isPunctuation, isSymbol, isSeparator
         -- * Subranges
-        , isAscii, isLatin1, isAsciiLetter, isAsciiUpper, isAsciiLower
+        , isAscii, isLatin1, isAsciiUpper, isAsciiLower
         ) where
 
 import Prelude hiding (elem, notElem)
@@ -105,6 +105,18 @@ chr w
  where r st = do wsv <- sbvToSV st w
                  newExpr st KChar (SBVApp (StrOp StrFromCode) [wsv])
 
+-- | Lift a char function to a symbolic version. If the given char is
+-- not in the class recognized by predicate, the output is the same as the input.
+liftFun :: (Char -> Char) -> SChar -> SChar
+liftFun f c = walk kernel
+  where kernel = [g | g <- [minBound .. maxBound :: Char], g /= f g]
+        walk []     = c
+        walk (d:ds) = ite (literal d .== c) (literal (f d)) (walk ds)
+
+-- | Lift a char predicate to a symbolic version.
+liftPred :: (Char -> Bool) -> SChar -> SBool
+liftPred predicate c = c `sElem` [literal g | g <- [minBound .. maxBound :: Char], predicate g]
+
 -- | Convert to lower-case.
 --
 -- >>> prove $ \c -> toLower (toLower c) .== toLower c
@@ -112,26 +124,20 @@ chr w
 -- >>> prove $ \c -> isLower c .=> toLower (toUpper c) .== c
 -- Q.E.D.
 toLower :: SChar -> SChar
-toLower c = ite (isUpper c) (chr (ord c + 32)) c
+toLower = liftFun C.toUpper
 
--- | Convert to upper-case. N.B. There are three special cases!
---
---   * The character \223 is special. It corresponds to the German Eszett, it is considered lower-case,
---     and furthermore it's upper-case maps back to itself within our character-set. So, we leave it
---     untouched.
---
---   * The character \181 maps to upper-case \924, which is beyond our character set. We leave it
---     untouched. (This is the A with an acute accent.)
---
---   * The character \255 maps to upper-case \376, which is beyond our character set. We leave it
---     untouched. (This is the non-breaking space character.)
+-- | Convert to upper-case.
 --
 -- >>> prove $ \c -> toUpper (toUpper c) .== toUpper c
 -- Q.E.D.
 -- >>> prove $ \c -> isUpper c .=> toUpper (toLower c) .== c
 -- Q.E.D.
 toUpper :: SChar -> SChar
-toUpper c = ite (isLower c .&& c `notElem` "\181\223\255") (chr (ord c - 32)) c
+toUpper = liftFun C.toLower
+
+-- | Convert to title-case.
+toTitle :: SChar -> SChar
+toTitle = liftFun C.toTitle
 
 -- | Convert a digit to an integer. Works for hexadecimal digits too. If the input isn't a digit,
 -- then return -1.
@@ -164,124 +170,99 @@ intToDigit i = ite (i .>=  0 .&& i .<=  9) (chr (sFromIntegral i + ord (literal 
 
 -- | Is this a control character? Control characters are essentially the non-printing characters.
 isControl :: SChar -> SBool
-isControl = (`elem` controls)
-  where controls = "\NUL\SOH\STX\ETX\EOT\ENQ\ACK\a\b\t\n\v\f\r\SO\SI\DLE\DC1\DC2\DC3\DC4\NAK\SYN\ETB\CAN\EM\SUB\ESC\FS\GS\RS\US\DEL\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159"
+isControl = liftPred C.isControl
 
 -- | Is this white-space? That is, one of "\t\n\v\f\r \160".
 isSpace :: SChar -> SBool
-isSpace = (`elem` spaces)
-  where spaces = "\t\n\v\f\r \160"
+isSpace = liftPred C.isSpace
 
 -- | Is this a lower-case character?
 --
 -- >>> prove $ \c -> isUpper c .=> isLower (toLower c)
 -- Q.E.D.
 isLower :: SChar -> SBool
-isLower = (`elem` lower)
-  where lower = "abcdefghijklmnopqrstuvwxyz\181\223\224\225\226\227\228\229\230\231\232\233\234\235\236\237\238\239\240\241\242\243\244\245\246\248\249\250\251\252\253\254\255"
+isLower = liftPred C.isLower
 
 -- | Is this an upper-case character?
 --
 -- >>> prove $ \c -> sNot (isLower c .&& isUpper c)
 -- Q.E.D.
 isUpper :: SChar -> SBool
-isUpper = (`elem` upper)
-  where upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\216\217\218\219\220\221\222"
+isUpper = liftPred C.isUpper
 
 -- | Is this an alphabet character? That is lower-case, upper-case and title-case letters, plus letters of caseless scripts and modifiers letters.
 isAlpha :: SChar -> SBool
-isAlpha = (`elem` alpha)
-  where alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\170\181\186\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\216\217\218\219\220\221\222\223\224\225\226\227\228\229\230\231\232\233\234\235\236\237\238\239\240\241\242\243\244\245\246\248\249\250\251\252\253\254\255"
+isAlpha = liftPred C.isAlpha
 
 -- | Is this an 'isAlpha' or 'isNumber'.
 --
 -- >>> prove $ \c -> isAlphaNum c .<=> isAlpha c .|| isNumber c
 -- Q.E.D.
 isAlphaNum :: SChar -> SBool
-isAlphaNum c = isAlpha c .|| isNumber c
+isAlphaNum = liftPred C.isAlphaNum
 
--- | Is this a printable character? Essentially the complement of 'isControl', with one
--- exception. The Latin-1 character \173 is neither control nor printable. Go figure.
---
--- >>> prove $ \c -> c .== literal '\173' .|| isControl c .<=> sNot (isPrint c)
--- Q.E.D.
+-- | Is this a printable character?
 isPrint :: SChar -> SBool
-isPrint c = c ./= literal '\173' .&& sNot (isControl c)
+isPrint = liftPred C.isPrint
 
 -- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumber'
 --
 -- >>> prove $ \c -> isDigit c .=> isNumber c
 -- Q.E.D.
 isDigit :: SChar -> SBool
-isDigit = (`elem` "0123456789")
+isDigit = liftPred C.isDigit
 
 -- | Is this an Octal digit, i.e., one of @0@..@7@.
 --
 -- >>> prove $ \c -> isOctDigit c .=> isDigit c
 -- Q.E.D.
 isOctDigit :: SChar -> SBool
-isOctDigit = (`elem` "01234567")
+isOctDigit = liftPred C.isOctDigit
 
 -- | Is this a Hex digit, i.e, one of @0@..@9@, @a@..@f@, @A@..@F@.
 --
 -- >>> prove $ \c -> isHexDigit c .=> isAlphaNum c
 -- Q.E.D.
 isHexDigit :: SChar -> SBool
-isHexDigit = (`elem` "0123456789abcdefABCDEF")
+isHexDigit = liftPred C.isHexDigit
 
 -- | Is this an alphabet character. Note that this function is equivalent to 'isAlpha'.
 --
 -- >>> prove $ \c -> isLetter c .<=> isAlpha c
 -- Q.E.D.
 isLetter :: SChar -> SBool
-isLetter = isAlpha
+isLetter = liftPred C.isLetter
 
--- | Is this a mark? Note that the Latin-1 subset doesn't have any marks; so this function
--- is simply constant false for the time being.
---
--- >>> prove $ sNot . isMark
--- Q.E.D.
+-- | Is this a mark?
 isMark :: SChar -> SBool
-isMark = const sFalse
+isMark = liftPred C.isMark
 
--- | Is this a number character? Note that this set contains not only the digits, but also
--- the codes for a few numeric looking characters like 1/2 etc. Use 'isDigit' for the digits @0@ through @9@.
+-- | Is this a number character?
 isNumber :: SChar -> SBool
-isNumber = (`elem` "0123456789\178\179\185\188\189\190")
+isNumber = liftPred C.isNumber
 
 -- | Is this a punctuation mark?
 isPunctuation :: SChar -> SBool
-isPunctuation = (`elem` "!\"#%&'()*,-./:;?@[\\]_{}\161\167\171\182\183\187\191")
+isPunctuation = liftPred C.isPunctuation
 
 -- | Is this a symbol?
 isSymbol :: SChar -> SBool
-isSymbol = (`elem` "$+<=>^`|~\162\163\164\165\166\168\169\172\174\175\176\177\180\184\215\247")
+isSymbol = liftPred C.isSymbol
 
 -- | Is this a separator?
 --
 -- >>> prove $ \c -> isSeparator c .=> isSpace c
 -- Q.E.D.
 isSeparator :: SChar -> SBool
-isSeparator = (`elem` " \160")
+isSeparator = liftPred C.isSeparator
 
 -- | Is this an ASCII character, i.e., the first 128 characters.
 isAscii :: SChar -> SBool
-isAscii c = ord c .< 128
+isAscii = liftPred C.isAscii
 
--- | Is this a Latin1 character? Note that this function is always true since 'SChar' corresponds
--- precisely to Latin1 for the time being.
---
--- >>> prove isLatin1
--- Q.E.D.
+-- | Is this a Latin1 character?
 isLatin1 :: SChar -> SBool
-isLatin1 = const sTrue
-
--- | Is this an ASCII letter?
---
--- >>> prove $ \c -> isAsciiLetter c .<=> isAsciiUpper c .|| isAsciiLower c
--- Q.E.D.
-isAsciiLetter :: SChar -> SBool
-isAsciiLetter c = isAsciiUpper c .|| isAsciiLower c
+isLatin1 = liftPred C.isLatin1
 
 -- | Is this an ASCII Upper-case letter? i.e., @A@ thru @Z@
 --
@@ -290,7 +271,7 @@ isAsciiLetter c = isAsciiUpper c .|| isAsciiLower c
 -- >>> prove $ \c -> isAsciiUpper c .<=> isAscii c .&& isUpper c
 -- Q.E.D.
 isAsciiUpper :: SChar -> SBool
-isAsciiUpper = (`elem` literal ['A' .. 'Z'])
+isAsciiUpper = liftPred C.isAsciiUpper
 
 -- | Is this an ASCII Lower-case letter? i.e., @a@ thru @z@
 --
@@ -299,4 +280,4 @@ isAsciiUpper = (`elem` literal ['A' .. 'Z'])
 -- >>> prove $ \c -> isAsciiLower c .<=> isAscii c .&& isLower c
 -- Q.E.D.
 isAsciiLower :: SChar -> SBool
-isAsciiLower = (`elem` literal ['a' .. 'z'])
+isAsciiLower = liftPred C.isAsciiLower
