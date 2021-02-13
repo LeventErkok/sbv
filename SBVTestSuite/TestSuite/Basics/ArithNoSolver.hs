@@ -100,7 +100,7 @@ genBoolTest nm op opS = map mkTest $
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i32s, y <- i32s] [x `opS` y | x <- si32s, y <- si32s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- i64s, y <- i64s] [x `opS` y | x <- si64s, y <- si64s]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iUBs, y <- iUBs] [x `opS` y | x <- siUBs, y <- siUBs]
-     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- cs,   y <- cs  ] [x `opS` y | x <- siCs,  y <- siCs ]
+     ++ zipWith pair [(show x, show y, x     `op` y)     | x <- iCs,  y <- iCs ] [x `opS` y | x <- siCs,  y <- siCs ]
      ++ zipWith pair [(show x, show y, x     `op` y)     | x <- ss,   y <- ss  ] [x `opS` y | x <- sss,   y <- sss  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssl,  y <- ssl ] [x `opS` y | x <- ssl,   y <- ssl  ]
      ++ zipWith pair [(show x, show y, toL x `op` toL y) | x <- ssm,  y <- ssm ] [x `opS` y | x <- ssm,   y <- ssm  ]
