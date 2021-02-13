@@ -1015,12 +1015,63 @@ declareFun :: SV -> SBVType -> Maybe String -> [String]
 declareFun = declareName . show
 
 declareName :: String -> SBVType -> Maybe String -> [String]
-declareName s t@(SBVType ks) mbCmnt = case reverse ks of
-                                        [KChar]     -> [simple,  needsAssert]
-                                        (KChar : _) -> tbd "Functions that return SChar values"
-                                        _           -> [simple]
-  where simple      = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
-        needsAssert = "(assert (= 1 (str.len " ++ s ++ ")))"
+declareName s t@(SBVType ks) mbCmnt = decl : restrict
+  where decl        = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
+
+        (args, result) = case ks of
+                          [] -> error $ "SBV.declareName: Unexpected empty type for: " ++ show s
+                          _  -> (init ks, last ks)
+
+        -- Does the kind KChar *not* occur in the result anywhere?
+        noChars    = null [() | KChar <- G.universe result]
+        needsQuant = not $ null args
+
+        resultVar | needsQuant = "result"
+                  | True       = s
+
+        argList   = ["a" ++ show i | (i, _) <- zip [1::Int ..] args]
+        argTList  = ["(" ++ a ++ " " ++ smtType k ++ ")" | (a, k) <- zip argList args]
+        resultExp = "(" ++ s ++ " " ++ unwords argList ++ ")"
+
+        restrict | noChars    = []
+                 | needsQuant =    [               "(assert (forall (" ++ unwords argTList ++ ")"
+                                   ,               "                (let ((" ++ resultVar ++ " " ++ resultExp ++ "))"
+                                   ]
+                                ++ (case constraints of
+                                      []     ->  [ "                     true"]
+                                      [x]    ->  [ "                     " ++ x]
+                                      (x:xs) ->  ( "                     (and " ++ x)
+                                              :  [ "                          " ++ c | c <- xs]
+                                              ++ [ "                     )"])
+                                ++ [        "                )))"]
+                 | True       = case constraints of
+                                 []     -> []
+                                 [x]    -> ["(assert " ++ x ++ ")"]
+                                 (x:xs) -> ( "(assert (and " ++ x)
+                                        :  [ "             " ++ c | c <- xs]
+                                        ++ [ "        )"]
+
+        constraints = walk resultVar result []
+
+        walk :: String -> Kind -> [String] -> [String]
+        walk _nm KBool     {} sofar = reverse sofar
+        walk _nm KBounded  {} sofar = reverse sofar
+        walk _nm KUnbounded{} sofar = reverse sofar
+        walk _nm KReal     {} sofar = reverse sofar
+        walk _nm KUserSort {} sofar = reverse sofar
+        walk _nm KFloat    {} sofar = reverse sofar
+        walk _nm KDouble   {} sofar = reverse sofar
+        walk  nm KChar     {} sofar = reverse $ ("(= 1 (str.len " ++ nm ++ "))") : sofar
+        walk _nm KString   {} sofar = reverse sofar
+        walk _ _ sofar = reverse sofar
+        {-
+        walk _nm KList Kind
+        walk _nm KSet  Kind
+        walk _nm KTuple [Kind]
+        walk _nm KMaybe  Kind
+        walk _nm KEither Kind Kind
+        -}
+
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
