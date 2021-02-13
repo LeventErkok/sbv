@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.9, 2021-02-13
 
+### Version 8.10.5, Not yet released
+
+  * Current development version
+
 ### Version 8.10, 2021-02-13
 
   * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
