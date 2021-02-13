@@ -13,11 +13,12 @@
 -- symbolic-strings when working with symbolic characters
 -- and strings.
 --
--- Note that currently 'SChar' type only covers Latin1 (i.e., the first 256
--- characters), as opposed to Haskell's Unicode character support. However,
--- there is a pending SMTLib proposal to extend this set to Unicode, at
--- which point we will update these functions to match the implementations.
--- For details, see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
+-- 'SChar' type only covers all unicode characters, following the specification
+-- in <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>.
+-- However, some of the recognizers only support the Latin1 subset, suffixed
+-- by @L1@. The reason for this is that there is no performant way of performing
+-- these functions for the entire unicode set. As SMTLib's capabilities increase,
+-- we will provide full unicode versions as well.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedStrings   #-}
@@ -108,7 +109,8 @@ chr w
 
 -- | Lift a char function to a symbolic version. If the given char is
 -- not in the class recognized by predicate, the output is the same as the input.
--- Only works for the Latin1 set, i.e., the first 256 characters.
+-- Only works for the Latin1 set, i.e., the first 256 characters. If the given
+-- character is outside this range, it's returned unchanged.
 liftFunL1 :: (Char -> Char) -> SChar -> SChar
 liftFunL1 f c = walk kernel
   where kernel = [g | g <- map C.chr [0 .. 255], g /= f g]
