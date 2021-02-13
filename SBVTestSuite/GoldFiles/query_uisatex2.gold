@@ -29,12 +29,12 @@
 [GOOD] (define-fun s32 () Int 121)
 [GOOD] (define-fun s37 () Int 8)
 [GOOD] (define-fun s39 () (_ FloatingPoint  8 24) (_ +oo 8 24))
-[GOOD] (define-fun s41 () (_ BitVec 8) #x63)
+[GOOD] (define-fun s41 () String (_ char #x63))
 [GOOD] (define-fun s42 () String "hey")
 [GOOD] (define-fun s44 () (_ FloatingPoint  8 24) ((_ to_fp 8 24) roundNearestTiesToEven (/ 78.0 1.0)))
 [GOOD] (define-fun s46 () String "tey")
 [GOOD] (define-fun s48 () (_ FloatingPoint  8 24) ((_ to_fp 8 24) roundNearestTiesToEven (/ 92.0 1.0)))
-[GOOD] (define-fun s50 () (_ BitVec 8) #x72)
+[GOOD] (define-fun s50 () String (_ char #x72))
 [GOOD] (define-fun s51 () String "foo")
 [GOOD] (define-fun s53 () (_ FloatingPoint  8 24) ((_ to_fp 8 24) roundNearestTiesToEven (/ 7.0 2.0)))
 [GOOD] (define-fun s55 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3)))
@@ -54,7 +54,7 @@
 [GOOD] (declare-fun q1 (Int) Int)
 [GOOD] (declare-fun q2 (Bool Int) Int)
 [GOOD] (declare-fun q3 ((_ FloatingPoint  8 24) Bool Int) (_ FloatingPoint  8 24))
-[GOOD] (declare-fun q4 ((_ BitVec 8) String) (_ FloatingPoint  8 24))
+[GOOD] (declare-fun q4 (String String) (_ FloatingPoint  8 24))
 [GOOD] (declare-fun q5 ((Seq Int) (Seq (_ FloatingPoint  8 24))) Int)
 [GOOD] (declare-fun q6 (Int) Bool)
 [GOOD] ; --- user given axioms ---
@@ -133,10 +133,10 @@
               (_ +oo 8 24))))
 [SEND] (get-value (q4))
 [RECV] ((q4 (store (store ((as const Array) (fp #b0 #x85 #b00111000000000000000000))
-                     #x63
+                     "c"
                      "tey"
                      (fp #b0 #x85 #b01110000000000000000000))
-              #x72
+              "r"
               "foo"
               (fp #b0 #x80 #b11000000000000000000000))))
 [SEND] (get-value (q5))
