@@ -21,6 +21,7 @@ import Utils.SBVTestFramework
 
 import Data.SBV.String ((.!!), (.++))
 import qualified Data.SBV.String as S
+import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
 
 import Control.Monad (unless)
@@ -176,9 +177,12 @@ strExamples13 = do
    constrain $ s .== "13"
    constrain $ sNot $ S.strToNat s .== 13
 
--- Generate all length one strings, to enumerate all and making sure we can parse correctly
+-- Generate all length one strings consisting of letters A-Z, to enumerate all and making sure we can parse correctly
 strExamples14 :: IO Bool
 strExamples14 = do m <- allSat $ do s <- sString "s"
+                                    let c = SC.ord (S.head s)
+                                    constrain $ c .>= SC.ord (literal 'A')
+                                    constrain $ c .<= SC.ord (literal 'Z')
                                     return $ S.length s .== 1
                    let dicts = getModelDictionaries m
 
@@ -186,5 +190,5 @@ strExamples14 = do m <- allSat $ do s <- sString "s"
                        vals = map C.ord $ concat $ sort $ map (fromCV . snd) (concatMap M.assocs dicts)
 
                    case length dicts of
-                     256 -> return $ vals == [0 .. 255]
+                     26 -> return $ vals == map C.ord ['A' .. 'Z']
                      _   -> return False
