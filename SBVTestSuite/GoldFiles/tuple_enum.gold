@@ -64,8 +64,8 @@
                                            ((mkSBVTuple3 (proj_1_SBVTuple3 T1)
                                                          (proj_2_SBVTuple3 T2)
                                                          (proj_3_SBVTuple3 T3))))))
-[GOOD] (declare-fun s24 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E (_ BitVec 8) (_ FloatingPoint  8 24))))
-[GOOD] (define-fun s25 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E (_ BitVec 8) (_ FloatingPoint  8 24))) (mkSBVTuple2 #x05 (mkSBVTuple3 C #x41 ((_ to_fp 8 24) roundNearestTiesToEven (/ 8514437.0 1048576.0)))))
+[GOOD] (declare-fun s24 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E String (_ FloatingPoint  8 24))))
+[GOOD] (define-fun s25 () (SBVTuple2 (_ BitVec 8) (SBVTuple3 E String (_ FloatingPoint  8 24))) (mkSBVTuple2 #x05 (mkSBVTuple3 C (_ char #x41) ((_ to_fp 8 24) roundNearestTiesToEven (/ 8514437.0 1048576.0)))))
 [GOOD] (define-fun s26 () Bool (= s24 s25))
 [GOOD] (assert s26)
 [GOOD] (define-fun s27 () (Seq (SBVTuple2 E (Seq Bool))) (seq.++ (seq.unit (mkSBVTuple2 B (as seq.empty (Seq Bool)))) (seq.unit (mkSBVTuple2 A (seq.++ (seq.unit true) (seq.unit false)))) (seq.unit (mkSBVTuple2 C (seq.++ (seq.unit false) (seq.unit false) (seq.unit false) (seq.unit false) (seq.unit true) (seq.unit false))))))
@@ -83,7 +83,7 @@
                                               (seq.unit false)
                                               (seq.++ (seq.unit true) (seq.unit false))))))))
 [SEND] (get-value (s24))
-[RECV] ((s24 (mkSBVTuple2 #x05 (mkSBVTuple3 C #x41 (fp #b0 #x82 #b00000011110101110000101)))))
+[RECV] ((s24 (mkSBVTuple2 #x05 (mkSBVTuple3 C "A" (fp #b0 #x82 #b00000011110101110000101)))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

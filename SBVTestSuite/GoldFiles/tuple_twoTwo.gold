@@ -17,10 +17,10 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s3 () Int 1)
-[GOOD] (define-fun s6 () (_ BitVec 8) #x63)
+[GOOD] (define-fun s6 () String (_ char #x63))
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () (SBVTuple2 Int String)) ; tracks user variable "ab"
-[GOOD] (declare-fun s1 () (SBVTuple2 (_ BitVec 8) (_ BitVec 8))) ; tracks user variable "cd"
+[GOOD] (declare-fun s1 () (SBVTuple2 String (_ BitVec 8))) ; tracks user variable "cd"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -29,7 +29,7 @@
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s2 () Int (proj_1_SBVTuple2 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] (define-fun s5 () (_ BitVec 8) (proj_1_SBVTuple2 s1))
+[GOOD] (define-fun s5 () String (proj_1_SBVTuple2 s1))
 [GOOD] (define-fun s7 () Bool (= s5 s6))
 [GOOD] (assert s4)
 [GOOD] (assert s7)
@@ -38,7 +38,7 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (mkSBVTuple2 1 "")))
 [SEND] (get-value (s1))
-[RECV] ((s1 (mkSBVTuple2 #x63 #x00)))
+[RECV] ((s1 (mkSBVTuple2 "c" #x00)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

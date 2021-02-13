@@ -18,18 +18,19 @@
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
-[GOOD] (declare-fun s1 () (_ BitVec 8)) ; tracks user variable "c"
+[GOOD] (declare-fun s1 () String) ; tracks user variable "c"
+[GOOD] (assert (= 1 (str.len s1)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s2 () (SBVEither Int (_ BitVec 8)) ((as left_SBVEither (SBVEither Int (_ BitVec 8))) s0))
-[GOOD] (define-fun s3 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int (_ BitVec 8)))) s2))
+[GOOD] (define-fun s2 () (SBVEither Int String) ((as left_SBVEither (SBVEither Int String)) s0))
+[GOOD] (define-fun s3 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s2))
 [GOOD] (define-fun s4 () Bool (ite s3 true false))
-[GOOD] (define-fun s5 () (SBVEither Int (_ BitVec 8)) ((as right_SBVEither (SBVEither Int (_ BitVec 8))) s1))
-[GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int (_ BitVec 8)))) s5))
+[GOOD] (define-fun s5 () (SBVEither Int String) ((as right_SBVEither (SBVEither Int String)) s1))
+[GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s5))
 [GOOD] (define-fun s7 () Bool (ite s6 false true))
 [GOOD] (assert s4)
 [GOOD] (assert s7)
@@ -38,8 +39,8 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 0))
 [SEND] (get-value (s1))
-[RECV] ((s1 #x00))
+[RECV] ((s1 "A"))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("i",0 :: Integer),("c",'\NUL' :: Char)], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("i",0 :: Integer),("c",'A' :: Char)], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

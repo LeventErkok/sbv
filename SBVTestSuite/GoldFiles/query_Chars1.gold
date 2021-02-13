@@ -13,14 +13,15 @@
 [GOOD] (define-fun s2 () Int 65)
 [GOOD] (define-fun s4 () Int 66)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a"
+[GOOD] (declare-fun s0 () String) ; tracks user variable "a"
+[GOOD] (assert (= 1 (str.len s0)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- formula ---
-[GOOD] (define-fun s1 () Int (bv2nat s0))
+[GOOD] (define-fun s1 () Int (str.to_code s0))
 [GOOD] (define-fun s3 () Bool (>= s1 s2))
 [GOOD] (define-fun s5 () Bool (< s1 s4))
 [GOOD] (assert s3)
@@ -28,7 +29,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #x41))
+[RECV] ((s0 "A"))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

@@ -18,7 +18,7 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 1)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (SBVEither Int (_ BitVec 8))) ; tracks user variable "a"
+[GOOD] (declare-fun s0 () (SBVEither Int String)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -27,7 +27,7 @@
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
-[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int (_ BitVec 8)))) s0))
+[GOOD] (define-fun s4 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s0))
 [GOOD] (define-fun s5 () Bool (ite s4 s3 false))
 [GOOD] (assert s5)
 [SEND] (check-sat)
