@@ -1054,6 +1054,10 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
 
         constraints = walk 0 resultVar (\nm -> "(= 1 (str.len " ++ nm ++ "))") result
 
+        mkAnd []  = "true"
+        mkAnd [c] = c
+        mkAnd cs  = "(and " ++ unwords cs ++ ")"
+
         walk :: Int -> String -> (String -> String) -> Kind -> [String]
         walk _d _nm _f KBool     {}       = []
         walk _d _nm _f KBounded  {}       = []
@@ -1064,17 +1068,17 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d _nm _f KDouble   {}       = []
         walk _d  nm  f KChar     {}       = [f nm]
         walk _d _nm _f KString   {}       = []
-        -- walk _nm KList Kind
+        walk  d  nm _f  (KList k)
+          | charFree k                    = []
+          | True                          = let fnm   = "seq" ++ show d
+                                                cstrs = walk (d+1) ("(seq.nth " ++ nm ++ " " ++ fnm ++ ")")
+                                                             (\snm -> "(= 1 (str.len " ++ snm ++ "))") k
+                                            in ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) " ++ "(=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ mkAnd cstrs ++ "))"]
         walk  d  nm  _f (KSet k)
           | charFree k                    = []
           | True                          = let fnm    = "set" ++ show d
                                                 cstrs  = walk (d+1) nm (\snm -> "(=> (select " ++ snm ++ " " ++ fnm ++ ") (= 1 (str.len " ++ fnm ++ ")))") k
-
-                                                join []  = "true"
-                                                join [c] = c
-                                                join cs  = "(and " ++ unwords cs ++ ")"
-
-                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ join cstrs ++ ")"]
+                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ mkAnd cstrs ++ ")"]
         walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
                                                 project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
@@ -1086,7 +1090,6 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                                 c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n1 f k1]
                                                 c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n2 f k2]
                                             in c1 ++ c2
-        walk _ _ _ _ = []
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
