@@ -13,9 +13,9 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Array (_ BitVec 8) Bool) (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) false) #x6f true) #x6c true) #x68 true) #x65 true))
+[GOOD] (define-fun s1 () (Array String Bool) (store (store (store (store ((as const (Array String Bool)) false) (_ char #x6f) true) (_ char #x6c) true) (_ char #x68) true) (_ char #x65) true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Array (_ BitVec 8) Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -27,20 +27,18 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store ((as const (Array (_ BitVec 8) Bool)) false)
-                                   #x65
-                                   true)
-                            #x68
+[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
+                            "l"
                             true)
-                     #x6c
+                     "h"
                      true)
-              #x6f
+              "e"
               true)))
-[GOOD] (define-fun s3 () (Array (_ BitVec 8) Bool) ((as const (Array (_ BitVec 8) Bool)) false))
+[GOOD] (define-fun s3 () (Array String Bool) ((as const (Array String Bool)) false))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [SEND] (get-value (s4))
 [RECV] ((s4 false))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) (complement s0))
+[GOOD] (define-fun s5 () (Array String Bool) (complement s0))
 [GOOD] (define-fun s6 () Bool (= s5 s3))
 [SEND] (get-value (s6))
 [RECV] ((s6 false))

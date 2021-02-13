@@ -13,10 +13,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
+[GOOD] (define-fun s2 () (Array String Bool) (store ((as const (Array String Bool)) false) (_ char #x61) true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Array (_ BitVec 8) Bool)) ; tracks user variable "a"
-[GOOD] (declare-fun s1 () (Array (_ BitVec 8) Bool)) ; tracks user variable "b"
+[GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s1 () (Array String Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -30,23 +30,23 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[RECV] ((s0 (store ((as const (Array String Bool)) false) "a" true)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s5 () (Array (_ BitVec 8) Bool) (setminus s0 s1))
+[RECV] ((s1 (store ((as const (Array String Bool)) false) "a" true)))
+[GOOD] (define-fun s5 () (Array String Bool) (setminus s0 s1))
 [SEND] (get-value (s5))
-[RECV] ((s5 ((as const (Array (_ BitVec 8) Bool)) false)))
-[GOOD] (define-fun s6 () (Array (_ BitVec 8) Bool) (complement s1))
-[GOOD] (define-fun s7 () (Array (_ BitVec 8) Bool) (setminus s0 s6))
+[RECV] ((s5 ((as const (Array String Bool)) false)))
+[GOOD] (define-fun s6 () (Array String Bool) (complement s1))
+[GOOD] (define-fun s7 () (Array String Bool) (setminus s0 s6))
 [SEND] (get-value (s7))
-[RECV] ((s7 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
-[GOOD] (define-fun s8 () (Array (_ BitVec 8) Bool) (complement s0))
-[GOOD] (define-fun s9 () (Array (_ BitVec 8) Bool) (setminus s8 s1))
+[RECV] ((s7 (store ((as const (Array String Bool)) false) "a" true)))
+[GOOD] (define-fun s8 () (Array String Bool) (complement s0))
+[GOOD] (define-fun s9 () (Array String Bool) (setminus s8 s1))
 [SEND] (get-value (s9))
-[RECV] ((s9 (store ((as const (Array (_ BitVec 8) Bool)) true) #x61 false)))
-[GOOD] (define-fun s10 () (Array (_ BitVec 8) Bool) (setminus s8 s6))
+[RECV] ((s9 (store ((as const (Array String Bool)) true) "a" false)))
+[GOOD] (define-fun s10 () (Array String Bool) (setminus s8 s6))
 [SEND] (get-value (s10))
-[RECV] ((s10 ((as const (Array (_ BitVec 8) Bool)) false)))
+[RECV] ((s10 ((as const (Array String Bool)) false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

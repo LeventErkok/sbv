@@ -13,10 +13,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (Array (_ BitVec 8) Bool) (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true))
+[GOOD] (define-fun s2 () (Array String Bool) (store ((as const (Array String Bool)) false) (_ char #x61) true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Array (_ BitVec 8) Bool)) ; tracks user variable "a"
-[GOOD] (declare-fun s1 () (Array (_ BitVec 8) Bool)) ; tracks user variable "b"
+[GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s1 () (Array String Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -30,23 +30,23 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[RECV] ((s0 (store ((as const (Array String Bool)) false) "a" true)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store ((as const (Array (_ BitVec 8) Bool)) false) #x61 true)))
+[RECV] ((s1 (store ((as const (Array String Bool)) false) "a" true)))
 [GOOD] (define-fun s5 () Bool (subset s0 s1))
 [GOOD] (define-fun s6 () Bool (= s0 s1))
 [GOOD] (define-fun s7 () Bool (not s6))
 [GOOD] (define-fun s8 () Bool (and s5 s7))
 [SEND] (get-value (s8))
 [RECV] ((s8 false))
-[GOOD] (define-fun s9 () (Array (_ BitVec 8) Bool) (complement s1))
+[GOOD] (define-fun s9 () (Array String Bool) (complement s1))
 [GOOD] (define-fun s10 () Bool (subset s0 s9))
 [GOOD] (define-fun s11 () Bool (= s0 s9))
 [GOOD] (define-fun s12 () Bool (not s11))
 [GOOD] (define-fun s13 () Bool (and s10 s12))
 [SEND] (get-value (s13))
 [RECV] ((s13 false))
-[GOOD] (define-fun s14 () (Array (_ BitVec 8) Bool) (complement s0))
+[GOOD] (define-fun s14 () (Array String Bool) (complement s0))
 [GOOD] (define-fun s15 () Bool (subset s14 s1))
 [GOOD] (define-fun s16 () Bool (= s14 s1))
 [GOOD] (define-fun s17 () Bool (not s16))
