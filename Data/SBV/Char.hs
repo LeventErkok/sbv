@@ -260,11 +260,11 @@ isSeparatorL1 = liftPredL1 C.isSeparator
 
 -- | Is this an ASCII character, i.e., the first 128 characters.
 isAscii :: SChar -> SBool
-isAscii c = ord c .<= 128
+isAscii c = ord c .< 128
 
 -- | Is this a Latin1 character?
 isLatin1 :: SChar -> SBool
-isLatin1 c = ord c .<= literal 256
+isLatin1 c = ord c .< 256
 
 -- | Is this an ASCII Upper-case letter? i.e., @A@ thru @Z@
 --
