@@ -1069,7 +1069,8 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                           project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
                                           nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
                                       in concatMap (uncurry walk) nmks
-        -- walk _nm KMaybe  Kind
+        walk nm  km@(KMaybe k)      = let n1 = "(get_just_SBVMaybe " ++ nm ++ ")"
+                                      in  ["(=> " ++ "((_ is (just_SBVMaybe (" ++ smtType k ++ ") " ++ smtType km ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n1 k]
         walk  nm ke@(KEither k1 k2) = let n1 = "(get_left_SBVEither "  ++ nm ++ ")"
                                           n2 = "(get_right_SBVEither " ++ nm ++ ")"
                                           c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk n1 k1]
