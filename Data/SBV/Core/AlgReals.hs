@@ -235,7 +235,7 @@ algRealToHaskell r                    = error $ unlines [ ""
 data RationalCV = RatIrreducible AlgReal                                   -- ^ Root of a polynomial, cannot be reduced
                 | RatExact       Rational                                  -- ^ An exact rational
                 | RatApprox      Rational                                  -- ^ An approximated value
-                | RatInterval    (RealPoint Rational) (RealPoint Rational) -- ^ Interval. If bool is 'True' then closed, otherwise open.
+                | RatInterval    (RealPoint Rational) (RealPoint Rational) -- ^ Interval. Can be open/closed on both ends.
                 deriving Show
 
 -- | Convert an 'AlgReal' to a 'Rational'. If the 'AlgReal' is exact, then you get a 'Left' value. Otherwise,
