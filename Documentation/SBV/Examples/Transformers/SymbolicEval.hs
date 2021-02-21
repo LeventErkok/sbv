@@ -34,6 +34,7 @@ import Control.Monad.Identity (Identity(runIdentity))
 import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Reader   (MonadReader(reader), asks, ReaderT, runReaderT)
 import Control.Monad.Trans    (lift)
+import Data.Kind              (Type)
 
 import Data.SBV.Dynamic   (SVal)
 import Data.SBV.Internals (SBV(SBV), unSBV)
@@ -72,7 +73,7 @@ allocEnv = do
 -- * Symbolic term evaluation
 
 -- | The term language we use to express programs and properties.
-data Term :: * -> * where
+data Term :: Type -> Type where
     Var         :: String                       -> Term r
     Lit         :: Integer                      -> Term Integer
     Plus        :: Term Integer -> Term Integer -> Term Integer
