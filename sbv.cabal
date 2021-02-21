@@ -27,13 +27,6 @@ source-repository head
     type:       git
     location:   git://github.com/LeventErkok/sbv.git
 
--- On build-bots, building HLint takes inordinately long and times out. So
--- we use this flag to skip that build.
-flag skipHLintTester
-    description: Do not build the HLint tester
-    default    : False
-    manual     : True
-
 common common-settings
    default-language: Haskell2010
    ghc-options     : -Wall -O2
@@ -389,9 +382,6 @@ Test-Suite SBVDocTest
 
 Test-Suite SBVHLint
     import          : common-settings
-
-    if flag(skipHLintTester)
-      buildable: False
 
     build-depends   : base, directory, filepath, random
                     , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, sbv
