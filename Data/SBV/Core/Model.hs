@@ -57,6 +57,7 @@ import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
 import Data.Char   (toLower, isDigit)
 import Data.Int    (Int8, Int16, Int32, Int64)
+import Data.Kind   (Type)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
@@ -2400,7 +2401,7 @@ class Metric a where
   -- | The metric space we optimize the goal over. Usually the same as the type itself, but not always!
   -- For instance, signed bit-vectors are optimized over their unsigned counterparts, floats are
   -- optimized over their 'Word32' comparable counterparts, etc.
-  type MetricSpace a :: *
+  type MetricSpace a :: Type
   type MetricSpace a = a
 
   -- | Compute the metric value to optimize.

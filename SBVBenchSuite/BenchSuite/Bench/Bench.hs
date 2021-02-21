@@ -91,9 +91,9 @@ using = flip ($)
 -- | Set the runner function
 runner :: (Show c, NFData c) =>
   (forall a. U.Provable a => U.SMTConfig -> a -> IO c) -> Runner -> Runner
-runner r' (Runner r@RunnerI{..}) = Runner $ r{runI = toRun r'}
-runner r' (RunnerGroup rs)       = RunnerGroup $ runner r' <$> rs
-runner _  x                      = x
+runner r' (Runner r@RunnerI{}) = Runner $ r{runI = toRun r'}
+runner r' (RunnerGroup rs)     = RunnerGroup $ runner r' <$> rs
+runner _  x                    = x
 {-# INLINE runner #-}
 
 toRun :: (Show c, NFData c) =>
@@ -189,10 +189,10 @@ mkOverheadBenchMark' r@RunnerI{..} =
 {-# INLINE mkOverheadBenchMark' #-}
 
 runOverheadBenchmark :: Runner -> G.Benchmark
-runOverheadBenchmark (Runner r@RunnerI{..}) = mkOverheadBenchMark' r
-runOverheadBenchmark (RunnerGroup rs)       = G.bgroup "" $ -- leave the description close to the benchmark/problem definition
-                                             runOverheadBenchmark <$> rs
-runOverheadBenchmark (RBenchmark b)         = b
+runOverheadBenchmark (Runner r@RunnerI{}) = mkOverheadBenchMark' r
+runOverheadBenchmark (RunnerGroup rs)     = G.bgroup "" $ -- leave the description close to the benchmark/problem definition
+                                            runOverheadBenchmark <$> rs
+runOverheadBenchmark (RBenchmark b)       = b
 {-# INLINE runOverheadBenchmark #-}
 
 -- | make a normal benchmark without the overhead comparison. Notice this is
@@ -205,9 +205,9 @@ mkBenchmark RunnerI{..} = G.bench description . G.nfIO $! runI config problem
 -- function to convert the runners defined in each file to benchmarks which can
 -- be run by gauge
 runBenchmark :: Runner -> G.Benchmark
-runBenchmark (Runner r@RunnerI{..}) = mkBenchmark r
-runBenchmark (RunnerGroup rs)       = G.bgroup "" $ runBenchmark <$> rs
-runBenchmark (RBenchmark b)         = b
+runBenchmark (Runner r@RunnerI{}) = mkBenchmark r
+runBenchmark (RunnerGroup rs)     = G.bgroup "" $ runBenchmark <$> rs
+runBenchmark (RBenchmark b)       = b
 {-# INLINE runBenchmark #-}
 
 -- | This is just a wrapper around the RunnerI constructor and serves as the main
