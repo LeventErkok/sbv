@@ -178,27 +178,27 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat         $ getTripleFloat  s e m
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble        $ getTripleDouble s e m
-        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just eb), ENum (m, Just sb)])           = return $ EFloatingPoint $ fpReg s (e, eb) (m, sb)
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just eb), ENum (m, Just sb)])           = return $ EFloatingPoint $ fpcReg s (e, eb) (m, sb+1)
 
         cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           nan
         cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          nan
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpNaN eb sb
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcNaN eb (sb+1)
 
         cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           infinity
         cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          infinity
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpInf False eb sb
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcInf False eb (sb+1)
 
         cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -infinity
         cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -infinity
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpInf True eb sb
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcInf True eb (sb+1)
 
         cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  0
         cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble 0
-        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpZero False eb sb
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcZero False eb (sb+1)
 
         cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -0
         cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -0
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpZero True eb sb
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcZero True eb (sb+1)
 
         cvt x                                                                                        = return x
 
@@ -263,42 +263,6 @@ getTripleDouble s e m = wordToDouble w64
         mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]
         positions = [i | (i, b) <- zip [63, 62 .. 0] (sign ++ expt ++ mantissa), b]
         w64       = foldr (flip setBit) (0::Word64) positions
-
--- | Convert to an arbitrary float value
-fpReg :: Integer -> (Integer, Int) -> (Integer, Int) -> FPC
-fpReg sign (e, es) (s, sb) = FP { fpSign          = sign == 1
-                                , fpExponentSize  = es
-                                , fpExponent      = e
-                                , fpSignificandSz = sb + 1  -- Add the "hidden" bit
-                                , fpSignificand   = s
-                                }
-
--- | Make NaN of FPC. Exponent is all 1s. Significand is 1.
-fpNaN :: Integer -> Integer -> FPC
-fpNaN eb sb = FP { fpSign           = False
-                 , fpExponentSize   = fromIntegral eb
-                 , fpExponent       = 2 ^ eb - 1
-                 , fpSignificandSz = fromIntegral sb + 1
-                 , fpSignificand   = 1
-                 }
-
--- | Make Infinity of FPC. Exponent is all 1s. Significand is 0.
-fpInf :: Bool -> Integer -> Integer -> FPC
-fpInf sign eb sb = FP { fpSign          = sign
-                      , fpExponentSize  = fromIntegral eb
-                      , fpExponent      = 2 ^ eb - 1
-                      , fpSignificandSz = fromIntegral sb + 1
-                      , fpSignificand   = 0
-                      }
-
--- | Make zero of FPC
-fpZero :: Bool -> Integer -> Integer -> FPC
-fpZero sign eb sb = FP { fpSign          = sign
-                       , fpExponentSize  = fromIntegral eb
-                       , fpExponent      = 0
-                       , fpSignificandSz = fromIntegral sb + 1
-                       , fpSignificand   = 0
-                      }
 
 -- | Special constants of SMTLib2 and their internal translation. Mainly
 -- rounding modes for now.
