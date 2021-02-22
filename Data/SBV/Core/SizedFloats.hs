@@ -41,6 +41,12 @@ data FP (eb :: Nat) (sb :: Nat) = FP FPRep
 instance Show (FP eb sb) where
   show (FP r) = show r
 
+-- | Internal representation of a parameterized float.
+-- If we have eb exponent bits, and sb significand bits, then
+-- the total number of floats is 2^sb*(2^eb-1) + 3: All exponents
+-- except 11..11 is allowed. So we get, 2^eb-1, different
+-- combinations, each with a sign, giving us 2^sb*(2^eb-1) totals.
+-- Then we have two infinities, and one NaN, adding 3 more.
 data FPRep = FPRep { fpSign            :: Bool
                    , fpExponentSize    :: Int
                    , fpExponent        :: Integer
@@ -65,7 +71,7 @@ fprReg sign (e, es) (s, sb) = FPRep { fpSign            = sign == 1
                                     , fpSignificand     = s
                                     }
 
--- | Make NaN. Exponent is all 1s. Significand is 1.
+-- | Make NaN. Exponent is all 1s. Significand is non-zero. (So, we pick 1.) The sign is irrelevant, we arbitrarily pick False.
 fprNaN :: Int -> Int -> FPRep
 fprNaN eb sb = FPRep { fpSign            = False
                      , fpExponentSize    = eb
@@ -76,7 +82,7 @@ fprNaN eb sb = FPRep { fpSign            = False
 
 -- | Is this a NaN?
 fprIsNaN :: FPRep -> Bool
-fprIsNaN FPRep { fpExponentSize, fpExponent, fpSignificand } = fpExponent == 2 ^ (fromIntegral fpExponentSize :: Integer) - 1 && fpSignificand == 1
+fprIsNaN FPRep { fpExponentSize, fpExponent, fpSignificand } = fpExponent == 2 ^ (fromIntegral fpExponentSize :: Integer) - 1 && fpSignificand >= 1
 
 -- | Make Infinity. Exponent is all 1s. Significand is 0.
 fprInf :: Bool -> Int -> Int -> FPRep
@@ -91,11 +97,11 @@ fprInf sign eb sb = FPRep { fpSign            = sign
 fprIsInfinite :: FPRep -> Bool
 fprIsInfinite FPRep { fpExponentSize, fpExponent, fpSignificand } = fpExponent == 2 ^ (fromIntegral fpExponentSize :: Integer) - 1 && fpSignificand == 0
 
--- | Is this an infinity?
+-- | Is this the zero? Note that this recognizes both positive and negative zero.
 fprIsZero :: FPRep -> Bool
 fprIsZero FPRep { fpExponent, fpSignificand } = fpExponent == 0 && fpSignificand == 0
 
--- | Make zero.
+-- | Make a signed zero.
 fprZero :: Bool -> Int -> Int -> FPRep
 fprZero sign eb sb = FPRep { fpSign            = sign
                            , fpExponentSize    = eb
@@ -122,17 +128,19 @@ fprToSMTLib2 f@FPRep {fpSign, fpExponentSize, fpExponent, fpSignificandSize, fpS
  | fprIsNaN f      = as "NaN"
  | fprIsInfinite f = as $ if fpSign then "-oo"   else "+oo"
  | fprIsZero f     = as $ if fpSign then "-zero" else "+zero"
- | True            = "(fp " ++ unwords [if fpSign then "#b1" else "#b0", mkB fpExponentSize fpExponent, mkB fpSignificandSize fpSignificand] ++ ")"
+ | True            = generic
  where e = show fpExponentSize
        s = show fpSignificandSize
+
+       generic = "(fp " ++ unwords [if fpSign then "#b1" else "#b0", mkB fpExponentSize fpExponent, mkB (fpSignificandSize - 1) fpSignificand] ++ ")"
 
        as x = "(_ " ++ x ++ " " ++ e ++ " " ++ s ++ ")"
 
        mkB sz val = "#b" ++ pad sz (showBin val "")
        showBin = showIntAtBase 2 intToDigit
-       pad l str = replicate (l - length s) '0' ++ str
+       pad l str = replicate (l - length str) '0' ++ str
 
-instance (KnownNat eb, IsNonZero eb, KnownNat sb, IsNonZero sb) => Num (FP eb sb) where
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FP eb sb) where
   (+)         = error "FP-TODO: +"
   (*)         = error "FP-TODO: *"
   abs         = error "FP-TODO: abs"
