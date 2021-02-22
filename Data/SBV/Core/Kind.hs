@@ -25,7 +25,7 @@
 
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
-        , IsNonZero, intOfProxy
+        , BVIsNonZero, FPIsAtLeastTwo, intOfProxy
         , showBaseKind, needsFlattening
         ) where
 
@@ -395,9 +395,18 @@ needsFlattening KMaybe{}    = True
 needsFlattening KEither{}   = True
 
 -- | Catch 0-width cases
-type ZeroWidth = 'Text "Zero-width fields are not allowed."
+type BVZeroWidth = 'Text "Zero-width bit-vectors are not allowed."
 
 -- | Type family to create the appropriate non-zero constraint
-type family IsNonZero (arg :: Nat) :: Constraint where
-   IsNonZero 0 = TypeError ZeroWidth
-   IsNonZero _ = ()
+type family BVIsNonZero (arg :: Nat) :: Constraint where
+   BVIsNonZero 0 = TypeError BVZeroWidth
+   BVIsNonZero _ = ()
+
+-- Catch < 1 cases
+type FPAtLeastTwo = 'Text "Floating-point field width must be at least 2"
+
+-- | Type family to create the appropriate non-zero constraint
+type family FPIsAtLeastTwo (arg :: Nat) :: Constraint where
+   FPIsAtLeastTwo 0 = TypeError FPAtLeastTwo
+   FPIsAtLeastTwo 1 = TypeError FPAtLeastTwo
+   FPIsAtLeastTwo _ = ()

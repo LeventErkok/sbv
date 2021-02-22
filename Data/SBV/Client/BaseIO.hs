@@ -29,7 +29,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
 import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
-import Data.SBV.Core.Kind      (IsNonZero)
+import Data.SBV.Core.Kind      (BVIsNonZero)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
@@ -449,19 +449,19 @@ sWord64s = Trans.sWord64s
 -- | Declare a named 'SWord'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord'
-sWord :: (KnownNat n, IsNonZero n) => String -> Symbolic (SWord n)
+sWord :: (KnownNat n, BVIsNonZero n) => String -> Symbolic (SWord n)
 sWord = Trans.sWord
 
 -- | Declare an unnamed 'SWord'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord_'
-sWord_ :: (KnownNat n, IsNonZero n) => Symbolic (SWord n)
+sWord_ :: (KnownNat n, BVIsNonZero n) => Symbolic (SWord n)
 sWord_ = Trans.sWord_
 
 -- | Declare a list of 'SWord8's
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWords'
-sWords :: (KnownNat n, IsNonZero n) => [String] -> Symbolic [SWord n]
+sWords :: (KnownNat n, BVIsNonZero n) => [String] -> Symbolic [SWord n]
 sWords = Trans.sWords
 
 -- | Declare a named 'SInt8'
@@ -539,19 +539,19 @@ sInt64s = Trans.sInt64s
 -- | Declare a named 'SInt'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt'
-sInt :: (KnownNat n, IsNonZero n) => String -> Symbolic (SInt n)
+sInt :: (KnownNat n, BVIsNonZero n) => String -> Symbolic (SInt n)
 sInt = Trans.sInt
 
 -- | Declare an unnamed 'SInt'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInt_'
-sInt_ :: (KnownNat n, IsNonZero n) => Symbolic (SInt n)
+sInt_ :: (KnownNat n, BVIsNonZero n) => Symbolic (SInt n)
 sInt_ = Trans.sInt_
 
 -- | Declare a list of 'SInt's
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sInts'
-sInts :: (KnownNat n, IsNonZero n) => [String] -> Symbolic [SInt n]
+sInts :: (KnownNat n, BVIsNonZero n) => [String] -> Symbolic [SInt n]
 sInts = Trans.sInts
 
 -- | Declare a named 'SInteger'

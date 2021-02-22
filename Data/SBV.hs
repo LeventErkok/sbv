@@ -151,13 +151,13 @@ module Data.SBV (
   -- *** Signed bit-vectors
   , SInt8, SInt16, SInt32, SInt64, SInt, IntN
   -- *** Converting between fixed-size and arbitrary bitvectors
-  , IsNonZero, FromSized, ToSized, fromSized, toSized
+  , BVIsNonZero, FromSized, ToSized, fromSized, toSized
   -- ** Unbounded integers
   -- $unboundedLimitations
   , SInteger
   -- ** Floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble, SFloatingPoint
+  , FPIsAtLeastTwo, SFloat, SDouble, SFloatingPoint
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)

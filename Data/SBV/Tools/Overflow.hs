@@ -100,8 +100,8 @@ instance ArithOverflow SInt16  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bv
 instance ArithOverflow SInt32  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 instance ArithOverflow SInt64  where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 
-instance (KnownNat n, IsNonZero n) => ArithOverflow (SWord n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
-instance (KnownNat n, IsNonZero n) => ArithOverflow (SInt  n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance (KnownNat n, BVIsNonZero n) => ArithOverflow (SWord n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
+instance (KnownNat n, BVIsNonZero n) => ArithOverflow (SInt  n) where {bvAddO = l2 bvAddO; bvSubO = l2 bvSubO; bvMulO = l2 bvMulO; bvMulOFast = l2 bvMulOFast; bvDivO = l2 bvDivO; bvNegO = l1 bvNegO}
 
 instance ArithOverflow SVal where
   bvAddO     = signPick2 bvuaddo     bvsaddo
@@ -180,14 +180,14 @@ instance CheckedArithmetic Int64 where
   (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
   negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
 
-instance (KnownNat n, IsNonZero n) => CheckedArithmetic (WordN n) where
+instance (KnownNat n, BVIsNonZero n) => CheckedArithmetic (WordN n) where
   (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
   (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
   (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
   (/!)          = checkOp2 ?loc "division"       sDiv   bvDivO
   negateChecked = checkOp1 ?loc "unary negation" negate bvNegO
 
-instance (KnownNat n, IsNonZero n) => CheckedArithmetic (IntN n) where
+instance (KnownNat n, BVIsNonZero n) => CheckedArithmetic (IntN n) where
   (+!)          = checkOp2 ?loc "addition"       (+)    bvAddO
   (-!)          = checkOp2 ?loc "subtraction"    (-)    bvSubO
   (*!)          = checkOp2 ?loc "multiplication" (*)    bvMulO
