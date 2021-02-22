@@ -226,7 +226,8 @@ instance (KnownNat eb, IsNonZero eb, KnownNat sb, IsNonZero sb) => HasKind (FP e
 
 instance (KnownNat eb, IsNonZero eb, KnownNat sb, IsNonZero sb) => SymVal (FP eb sb) where
   mkSymVal = genMkSymVar (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
-  literal  = error "FP-TODO: FP.literal"
+  literal (FP r) = let k = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+                   in SBV $ SVal k $ Left $ CV k (CFP r)
   fromCV   = error "FP-TODO: FP.fromCV"
 
 toCV :: SymVal a => a -> CVal

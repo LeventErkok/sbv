@@ -89,7 +89,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
-import Data.SBV.Core.SizedFloats (FP(..))
+import Data.SBV.Core.SizedFloats (fprZero)
 import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr)
 
@@ -729,7 +729,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUserSort _ ui) = uninterp ui
         cvt KFloat           = Just $ CFloat 0
         cvt KDouble          = Just $ CDouble 0
-        cvt (KFP eb sb)      = Just $ CFP (FP False eb 0 sb 0)
+        cvt (KFP eb sb)      = Just $ CFP (fprZero False eb sb)
         cvt KChar            = Just $ CChar '\NUL'                -- why not?
         cvt KString          = Just $ CString ""
         cvt (KList  _)       = Just $ CList []

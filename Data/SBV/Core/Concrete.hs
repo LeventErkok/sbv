@@ -75,7 +75,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CInteger  !Integer             -- ^ Bit-vector/unbounded integer
           | CFloat    !Float               -- ^ Float
           | CDouble   !Double              -- ^ Double
-          | CFP       !FPC                 -- ^ Arbitrary float
+          | CFP       !FPRep               -- ^ Arbitrary float
           | CChar     !Char                -- ^ Character
           | CString   !String              -- ^ String
           | CList     ![CVal]              -- ^ List
@@ -275,7 +275,7 @@ liftCV :: (AlgReal             -> b)
        -> (Integer             -> b)
        -> (Float               -> b)
        -> (Double              -> b)
-       -> (FPC                 -> b)
+       -> (FPRep               -> b)
        -> (Char                -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)

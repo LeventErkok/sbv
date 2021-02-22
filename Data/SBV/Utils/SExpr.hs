@@ -37,7 +37,7 @@ data SExpr = ECon           String
            | ENum           (Integer, Maybe Int)  -- Second argument is how wide the field was in bits, if known. Useful in FP parsing.
            | EReal          AlgReal
            | EFloat         Float
-           | EFloatingPoint FPC
+           | EFloatingPoint FPRep
            | EDouble        Double
            | EApp    [SExpr]
            deriving Show
@@ -178,27 +178,27 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat         $ getTripleFloat  s e m
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble        $ getTripleDouble s e m
-        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just eb), ENum (m, Just sb)])           = return $ EFloatingPoint $ fpcReg s (e, eb) (m, sb+1)
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just eb), ENum (m, Just sb)])           = return $ EFloatingPoint $ fprReg s (e, eb) (m, sb+1)
 
         cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           nan
         cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          nan
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcNaN eb (sb+1)
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fprNaN (fromIntegral eb) (fromIntegral (sb+1))
 
         cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           infinity
         cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          infinity
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcInf False eb (sb+1)
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fprInf False (fromIntegral eb) (fromIntegral (sb+1))
 
         cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -infinity
         cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -infinity
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcInf True eb (sb+1)
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fprInf True (fromIntegral eb) (fromIntegral (sb+1))
 
         cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  0
         cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble 0
-        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcZero False eb (sb+1)
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fprZero False (fromIntegral eb) (fromIntegral (sb+1))
 
         cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -0
         cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -0
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpcZero True eb (sb+1)
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fprZero True (fromIntegral eb) (fromIntegral (sb+1))
 
         cvt x                                                                                        = return x
 

@@ -22,63 +22,63 @@
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
-          FP(..), FPC, fpcReg, fpcNaN, fpcInf, fpcZero
+          FP(..), FPRep(..), fprReg, fprNaN, fprInf, fprZero
        ) where
 
 import GHC.TypeLits
 
 -- | A floating point value, indexed by its exponent and significand sizes.
-data FP (eb :: Nat) (sb :: Nat) = FP { fpSign          :: Bool
-                                     , fpExponentSize  :: Int
-                                     , fpExponent      :: Integer
-                                     , fpSignificandSz :: Int
-                                     , fpSignificand   :: Integer
-                                     }
-                                     deriving (Eq, Ord, Show)
+data FP (eb :: Nat) (sb :: Nat) = FP FPRep
+                                deriving (Eq, Ord, Show)
 
-type FPC = FP 1 1
+data FPRep = FPRep { fpSign          :: Bool
+                   , fpExponentSize  :: Int
+                   , fpExponent      :: Integer
+                   , fpSignificandSz :: Int
+                   , fpSignificand   :: Integer
+                   }
+                   deriving (Eq, Ord, Show)
 
 -- | Convert to an arbitrary float value
-fpcReg :: Integer -> (Integer, Int) -> (Integer, Int) -> FPC
-fpcReg sign (e, es) (s, sb) = FP { fpSign          = sign == 1
-                                 , fpExponentSize  = es
-                                 , fpExponent      = e
-                                 , fpSignificandSz = sb
-                                 , fpSignificand   = s
-                                 }
+fprReg :: Integer -> (Integer, Int) -> (Integer, Int) -> FPRep
+fprReg sign (e, es) (s, sb) = FPRep { fpSign          = sign == 1
+                                    , fpExponentSize  = es
+                                    , fpExponent      = e
+                                    , fpSignificandSz = sb
+                                    , fpSignificand   = s
+                                    }
 
--- | Make NaN of FPC. Exponent is all 1s. Significand is 1.
-fpcNaN :: Integer -> Integer -> FPC
-fpcNaN eb sb = FP { fpSign           = False
-                  , fpExponentSize   = fromIntegral eb
-                  , fpExponent       = 2 ^ eb - 1
-                  , fpSignificandSz = fromIntegral sb
-                  , fpSignificand   = 1
-                  }
+-- | Make NaN. Exponent is all 1s. Significand is 1.
+fprNaN :: Int -> Int -> FPRep
+fprNaN eb sb = FPRep { fpSign          = False
+                     , fpExponentSize  = eb
+                     , fpExponent      = 2 ^ (fromIntegral eb :: Integer) - 1
+                     , fpSignificandSz = sb
+                     , fpSignificand   = 1
+                     }
 
--- | Make Infinity of FPC. Exponent is all 1s. Significand is 0.
-fpcInf :: Bool -> Integer -> Integer -> FPC
-fpcInf sign eb sb = FP { fpSign          = sign
-                       , fpExponentSize  = fromIntegral eb
-                       , fpExponent      = 2 ^ eb - 1
-                       , fpSignificandSz = fromIntegral sb
-                       , fpSignificand   = 0
-                       }
+-- | Make Infinity. Exponent is all 1s. Significand is 0.
+fprInf :: Bool -> Int -> Int -> FPRep
+fprInf sign eb sb = FPRep { fpSign          = sign
+                          , fpExponentSize  = eb
+                          , fpExponent      = 2 ^ (fromIntegral eb :: Integer) - 1
+                          , fpSignificandSz = sb
+                          , fpSignificand   = 0
+                          }
 
--- | Make zero of FPC
-fpcZero :: Bool -> Integer -> Integer -> FPC
-fpcZero sign eb sb = FP { fpSign          = sign
-                        , fpExponentSize  = fromIntegral eb
-                        , fpExponent      = 0
-                        , fpSignificandSz = fromIntegral sb
-                        , fpSignificand   = 0
-                        }
-
+-- | Make zero.
+fprZero :: Bool -> Int -> Int -> FPRep
+fprZero sign eb sb = FPRep { fpSign          = sign
+                           , fpExponentSize  = eb
+                           , fpExponent      = 0
+                           , fpSignificandSz = sb
+                           , fpSignificand   = 0
+                           }
 
 instance Num (FP eb sb) where
-  (+)         = error "FP.+"
-  (*)         = error "FP.*"
-  abs         = error "FP.abs"
-  signum      = error "FP.signum"
-  fromInteger = error "FP.fromInteger"
-  negate      = error "FP.negate"
+  (+)         = error "FP-TODO: +"
+  (*)         = error "FP-TODO: *"
+  abs         = error "FP-TODO: abs"
+  signum      = error "FP-TODO: signum"
+  fromInteger = error "FP-TODO: fromInteger"
+  negate      = error "FP-TODO: negate"
