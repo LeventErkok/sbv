@@ -395,7 +395,7 @@ needsFlattening KMaybe{}    = True
 needsFlattening KEither{}   = True
 
 -- | Catch 0-width cases
-type ZeroWidth = 'Text "Zero-width BV's are not allowed."
+type ZeroWidth = 'Text "Zero-width fields are not allowed."
 
 -- | Type family to create the appropriate non-zero constraint
 type family IsNonZero (arg :: Nat) :: Constraint where
