@@ -194,6 +194,7 @@ Library
                   , Data.SBV.Core.Operations
                   , Data.SBV.Core.Floating
                   , Data.SBV.Core.Sized
+                  , Data.SBV.Core.SizedFloats
                   , Data.SBV.Core.Symbolic
                   , Data.SBV.Control.BaseIO
                   , Data.SBV.Control.Query

@@ -9,15 +9,17 @@
 -- Instance declarations for our symbolic world
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns        #-}
-{-# LANGUAGE DefaultSignatures   #-}
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE Rank2Types          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE TypeFamilies        #-}
-{-# LANGUAGE TypeOperators       #-}
+{-# LANGUAGE BangPatterns         #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE Rank2Types           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -52,6 +54,7 @@ import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
+import GHC.TypeLits
 
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
@@ -76,9 +79,11 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 import qualified Data.Foldable as F (toList)
 
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
+import Data.SBV.Core.Kind
 
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
@@ -215,6 +220,14 @@ instance SymVal a => SymVal [a] where
                                         (fromDynamic (toDyn a))
   fromCV (CV _ (CList a))   = fromCV . CV (kindOf (Proxy @a)) <$> a
   fromCV c                  = error $ "SymVal.fromCV: Unexpected non-list value: " ++ show c
+
+instance (KnownNat eb, IsNonZero eb, KnownNat sb, IsNonZero sb) => HasKind (FP eb sb) where
+  kindOf _ = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+
+instance (KnownNat eb, IsNonZero eb, KnownNat sb, IsNonZero sb) => SymVal (FP eb sb) where
+  mkSymVal = genMkSymVar (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
+  literal  = error "FP-TODO: FP.literal"
+  fromCV   = error "FP-TODO: FP.fromCV"
 
 toCV :: SymVal a => a -> CVal
 toCV a = case literal a of
@@ -889,6 +902,7 @@ smtComparable op x y
       KUserSort  {} -> True
       KFloat        -> True
       KDouble       -> True
+      KFP        {} -> True
       KChar         -> True
       KString       -> True
       KList      {} -> nope     -- Unfortunately, no way for us to desugar this
@@ -1289,6 +1303,7 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
              div0 = case kindOf sy of
                       KFloat             -> False
                       KDouble            -> False
+                      KFP{}              -> False
                       KReal              -> True
                       -- Following cases should not happen since these types should *not* be instances of Fractional
                       k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k

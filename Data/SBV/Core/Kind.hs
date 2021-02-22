@@ -9,17 +9,25 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DefaultSignatures   #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-{-# LANGUAGE ViewPatterns        #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE KindSignatures       #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE ViewPatterns         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
-module Data.SBV.Core.Kind (Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts, showBaseKind, needsFlattening) where
+module Data.SBV.Core.Kind (
+          Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
+        , IsNonZero, intOfProxy
+        , showBaseKind, needsFlattening
+        ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
@@ -30,10 +38,13 @@ import Data.Word
 import Data.SBV.Core.AlgReals
 
 import Data.Proxy
+import Data.Kind
 
 import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
+
+import GHC.TypeLits
 
 import Data.SBV.Utils.Lib (isKString)
 
@@ -45,6 +56,7 @@ data Kind = KBool
           | KUserSort String (Maybe [String])  -- name. Uninterpreted, or enumeration constants.
           | KFloat
           | KDouble
+          | KFP !Int !Int
           | KChar
           | KString
           | KList Kind
@@ -66,6 +78,7 @@ instance Show Kind where
   show (KUserSort s _)    = s
   show KFloat             = "SFloat"
   show KDouble            = "SDouble"
+  show (KFP eb sb)        = "SFloatingPoint " ++ show eb ++ " " ++ show sb
   show KString            = "SString"
   show KChar              = "SChar"
   show (KList e)          = "[" ++ show e ++ "]"
@@ -85,6 +98,7 @@ showBaseKind = sh
         sh k@KUserSort{}      = show k     -- Leave user-sorts untouched!
         sh k@KFloat           = noS (show k)
         sh k@KDouble          = noS (show k)
+        sh k@KFP{}            = noS (show k)
         sh k@KChar            = noS (show k)
         sh k@KString          = noS (show k)
         sh (KList k)          = "[" ++ sh k ++ "]"
@@ -118,6 +132,7 @@ smtType KUnbounded      = "Int"
 smtType KReal           = "Real"
 smtType KFloat          = "(_ FloatingPoint  8 24)"
 smtType KDouble         = "(_ FloatingPoint 11 53)"
+smtType (KFP eb sb)     = "(_ FloatingPoint " ++ show eb ++ " " ++ show sb ++ ")"
 smtType KString         = "String"
 smtType KChar           = "String"
 smtType (KList k)       = "(Seq "   ++ smtType k ++ ")"
@@ -142,6 +157,7 @@ kindHasSign = \case KBool        -> False
                     KReal        -> True
                     KFloat       -> True
                     KDouble      -> True
+                    KFP{}        -> True
                     KUserSort{}  -> False
                     KString      -> False
                     KChar        -> False
@@ -196,6 +212,7 @@ class HasKind a where
   isReal      :: a -> Bool
   isFloat     :: a -> Bool
   isDouble    :: a -> Bool
+  isFP        :: a -> Bool
   isUnbounded :: a -> Bool
   isUserSort  :: a -> Bool
   isChar      :: a -> Bool
@@ -216,6 +233,7 @@ class HasKind a where
                   KReal         -> error "SBV.HasKind.intSizeOf((S)Real)"
                   KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
                   KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
+                  KFP{}         -> error "SBV.HasKind.intSizeOf((S)FP)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
@@ -239,6 +257,9 @@ class HasKind a where
 
   isDouble        (kindOf -> KDouble{})    = True
   isDouble        _                        = False
+
+  isFP            (kindOf -> KFP{})        = True
+  isFP            _                        = False
 
   isUnbounded     (kindOf -> KUnbounded{}) = True
   isUnbounded     _                        = False
@@ -293,6 +314,10 @@ instance HasKind Float   where kindOf _ = KFloat
 instance HasKind Double  where kindOf _ = KDouble
 instance HasKind Char    where kindOf _ = KChar
 
+-- | Grab the bit-size from the proxy
+intOfProxy :: KnownNat n => Proxy n -> Int
+intOfProxy = fromEnum . natVal
+
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool
 hasUninterpretedSorts KBool                  = False
@@ -303,6 +328,7 @@ hasUninterpretedSorts (KUserSort _ (Just _)) = False  -- These are the enumerate
 hasUninterpretedSorts (KUserSort _ Nothing)  = True   -- These are the completely uninterpreted sorts, which we are looking for here
 hasUninterpretedSorts KFloat                 = False
 hasUninterpretedSorts KDouble                = False
+hasUninterpretedSorts KFP{}                  = False
 hasUninterpretedSorts KChar                  = False
 hasUninterpretedSorts KString                = False
 hasUninterpretedSorts (KList k)              = hasUninterpretedSorts k
@@ -359,6 +385,7 @@ needsFlattening KReal       = False
 needsFlattening KUserSort{} = False
 needsFlattening KFloat      = False
 needsFlattening KDouble     = False
+needsFlattening KFP{}       = False
 needsFlattening KChar       = False
 needsFlattening KString     = False
 needsFlattening KList{}     = True
@@ -366,3 +393,11 @@ needsFlattening KSet{}      = True
 needsFlattening KTuple{}    = True
 needsFlattening KMaybe{}    = True
 needsFlattening KEither{}   = True
+
+-- | Catch 0-width cases
+type ZeroWidth = 'Text "Zero-width BV's are not allowed."
+
+-- | Type family to create the appropriate non-zero constraint
+type family IsNonZero (arg :: Nat) :: Constraint where
+   IsNonZero 0 = TypeError ZeroWidth
+   IsNonZero _ = ()

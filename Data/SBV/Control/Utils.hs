@@ -88,9 +88,10 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , getUserName', Name, CnstMap
                               )
 
-import Data.SBV.Core.AlgReals   (mergeAlgReals, AlgReal(..), RealPoint(..))
-import Data.SBV.Core.Kind       (smtType, hasUninterpretedSorts)
-import Data.SBV.Core.Operations (svNot, svNotEqual, svOr)
+import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
+import Data.SBV.Core.SizedFloats (FP(..))
+import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
+import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
@@ -728,6 +729,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUserSort _ ui) = uninterp ui
         cvt KFloat           = Just $ CFloat 0
         cvt KDouble          = Just $ CDouble 0
+        cvt (KFP eb sb)      = Just $ CFP (FP False eb 0 sb 0)
         cvt KChar            = Just $ CChar '\NUL'                -- why not?
         cvt KString          = Just $ CString ""
         cvt (KList  _)       = Just $ CList []
@@ -748,45 +750,48 @@ sexprToVal e = fromCV <$> recoverKindedValue (kindOf (Proxy @a)) e
 -- | Recover a given solver-printed value with a possible interpretation
 recoverKindedValue :: Kind -> SExpr -> Maybe CV
 recoverKindedValue k e = case k of
-                           KBool       | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | True             -> Nothing
+                           KBool       | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | True                  -> Nothing
 
-                           KBounded{}  | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | True             -> Nothing
+                           KBounded{}  | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | True                  -> Nothing
 
-                           KUnbounded  | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | True             -> Nothing
+                           KUnbounded  | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | True                  -> Nothing
 
-                           KReal       | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | EReal i     <- e -> Just $ CV KReal (CAlgReal i)
-                                       | True             -> interpretInterval e
+                           KReal       | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | EReal i     <- e      -> Just $ CV KReal (CAlgReal i)
+                                       | True                  -> interpretInterval e
 
-                           KUserSort{} | ECon s <- e -> Just $ CV k $ CUserSort (getUIIndex k s, s)
-                                       | True             -> Nothing
+                           KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, s)
+                                       | True                  -> Nothing
 
-                           KFloat      | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | EFloat i    <- e -> Just $ CV KFloat (CFloat i)
-                                       | True             -> Nothing
+                           KFloat      | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | EFloat i    <- e      -> Just $ CV KFloat (CFloat i)
+                                       | True                  -> Nothing
 
-                           KDouble     | ENum (i, _) <- e -> Just $ mkConstCV k i
-                                       | EDouble i   <- e -> Just $ CV KDouble (CDouble i)
-                                       | True             -> Nothing
+                           KDouble     | ENum (i, _) <- e      -> Just $ mkConstCV k i
+                                       | EDouble i   <- e      -> Just $ CV KDouble (CDouble i)
+                                       | True                  -> Nothing
 
-                           KChar       | ECon s      <- e -> Just $ CV KChar $ CChar $ interpretChar s
-                                       | True             -> Nothing
+                           KFP{}       | EFloatingPoint c <- e -> Just $ CV k (CFP c)
+                                       | True                  -> Nothing
 
-                           KString     | ECon s      <- e -> Just $ CV KString $ CString $ interpretString s
-                                       | True             -> Nothing
+                           KChar       | ECon s      <- e      -> Just $ CV KChar $ CChar $ interpretChar s
+                                       | True                  -> Nothing
 
-                           KList ek                       -> Just $ CV k $ CList $ interpretList ek e
+                           KString     | ECon s      <- e      -> Just $ CV KString $ CString $ interpretString s
+                                       | True                  -> Nothing
 
-                           KSet ek                        -> Just $ CV k $ CSet $ interpretSet ek e
+                           KList ek                            -> Just $ CV k $ CList $ interpretList ek e
 
-                           KTuple{}                       -> Just $ CV k $ CTuple $ interpretTuple e
+                           KSet ek                             -> Just $ CV k $ CSet $ interpretSet ek e
 
-                           KMaybe{}                       -> Just $ CV k $ CMaybe $ interpretMaybe k e
+                           KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
 
-                           KEither{}                      -> Just $ CV k $ CEither $ interpretEither k e
+                           KMaybe{}                            -> Just $ CV k $ CMaybe $ interpretMaybe k e
+
+                           KEither{}                           -> Just $ CV k $ CEither $ interpretEither k e
 
   where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
         getUIIndex _                        _ = Nothing

@@ -52,6 +52,8 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
+--   * 'SFloatingPoint': IEEE-754 arbitrary-precision floating point values
+--
 --   * 'SChar', 'SString', 'RegExp': Characters, strings and regular expressions
 --
 --   * 'SList': Symbolic lists (which can be nested)
@@ -155,7 +157,7 @@ module Data.SBV (
   , SInteger
   -- ** Floating point numbers
   -- $floatingPoints
-  , SFloat, SDouble
+  , SFloat, SDouble, SFloatingPoint
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
@@ -371,6 +373,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
 import Data.SBV.Core.Sized      hiding (sWord, sWord_, sWords, sInt, sInt_, sInts)
+import Data.SBV.Core.Kind
 
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)

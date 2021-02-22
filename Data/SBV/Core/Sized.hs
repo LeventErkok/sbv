@@ -25,12 +25,10 @@ module Data.SBV.Core.Sized (
           SWord, WordN, sWord, sWord_, sWords
         -- * Type-sized signed bit-vectors
         , SInt, IntN, sInt, sInt_, sInts
-        -- Bit-vector operations
+        -- * Bit-vector operations
         , bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake
-        -- Splitting and reconstructing from bytes
+        -- * Splitting and reconstructing from bytes
         , ByteConverter(..)
-        -- Non-zero constraint
-        , IsNonZero
        ) where
 
 import Data.Bits
@@ -38,9 +36,9 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy(..))
 
 import GHC.TypeLits
-import Data.Kind
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Symbolic
@@ -62,18 +60,6 @@ type SWord (n :: Nat) = SBV (WordN n)
 -- | Show instance for 'WordN'
 instance Show (WordN n) where
   show (WordN v) = show v
-
--- | Grab the bit-size from the proxy
-intOfProxy :: KnownNat n => Proxy n -> Int
-intOfProxy = fromEnum . natVal
-
--- | Catch 0-width cases
-type ZeroWidth = 'Text "Zero-width BV's are not allowed."
-
--- | Type family to create the appropriate non-zero constraint
-type family IsNonZero (arg :: Nat) :: Constraint where
-   IsNonZero 0 = TypeError ZeroWidth
-   IsNonZero _ = ()
 
 -- | 'WordN' has a kind
 instance (KnownNat n, IsNonZero n) => HasKind (WordN n) where

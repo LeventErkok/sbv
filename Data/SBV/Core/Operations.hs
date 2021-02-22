@@ -1360,13 +1360,14 @@ mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
 
 -- | eqOpt says the references are to the same SV, thus we can optimize. Note that
--- we explicitly disallow KFloat/KDouble here. Why? Because it's *NOT* true that
+-- we explicitly disallow KFloat/KDouble/KFloat here. Why? Because it's *NOT* true that
 -- NaN == NaN, NaN >= NaN, and so-forth. So, we have to make sure we don't optimize
 -- floats and doubles, in case the argument turns out to be NaN.
 eqOpt :: SV -> SV -> SV -> Maybe SV
 eqOpt w x y = case swKind x of
                 KFloat  -> Nothing
                 KDouble -> Nothing
+                KFP{}   -> Nothing
                 _       -> if x == y then Just w else Nothing
 
 -- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:

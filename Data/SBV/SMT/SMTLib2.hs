@@ -45,10 +45,11 @@ cvt :: SMTLibConverter [String]
 cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
-        hasFloat       = KFloat     `Set.member` kindInfo
+        hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
+                       || KFloat     `Set.member` kindInfo
+                       || KDouble    `Set.member` kindInfo
         hasString      = KString    `Set.member` kindInfo
         hasChar        = KChar      `Set.member` kindInfo
-        hasDouble      = KDouble    `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- Set.toList kindInfo])
         usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
@@ -124,7 +125,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            | hasArrayInits         = setAll "has array initializers"
            | hasOverflows          = setAll "has overflow checks"
 
-           | hasDouble || hasFloat || hasRounding
+           | hasFP || hasRounding
            = if not (null foralls)
              then ["(set-logic ALL)"]
              else if hasBVs
@@ -648,8 +649,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         bvOp     = all isBounded   arguments
         intOp    = any isUnbounded arguments
         realOp   = any isReal      arguments
-        doubleOp = any isDouble    arguments
-        floatOp  = any isFloat     arguments
+        fpOp     = any (\a -> isDouble a || isFloat a || isFP a) arguments
         boolOp   = all isBoolean   arguments
         charOp   = any isChar      arguments
         stringOp = any isString    arguments
@@ -671,17 +671,17 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         liftN o _ xs = "(" ++ o ++ " " ++ unwords xs ++ ")"
 
         -- lift a binary operation with rounding-mode added; used for floating-point arithmetic
-        lift2WM o fo | doubleOp || floatOp = lift2 (addRM fo)
-                     | True                = lift2 o
+        lift2WM o fo | fpOp = lift2 (addRM fo)
+                     | True = lift2 o
 
-        lift1FP o fo | doubleOp || floatOp = lift1 fo
-                     | True                = lift1 o
+        lift1FP o fo | fpOp = lift1 fo
+                     | True = lift1 o
 
-        liftAbs sgned args | doubleOp || floatOp = lift1 "fp.abs" sgned args
-                           | intOp               = lift1 "abs"    sgned args
-                           | bvOp, sgned         = mkAbs (head args) "bvslt" "bvneg"
-                           | bvOp                = head args
-                           | True                = mkAbs (head args) "<"     "-"
+        liftAbs sgned args | fpOp        = lift1 "fp.abs" sgned args
+                           | intOp       = lift1 "abs"    sgned args
+                           | bvOp, sgned = mkAbs (head args) "bvslt" "bvneg"
+                           | bvOp        = head args
+                           | True        = mkAbs (head args) "<"     "-"
           where mkAbs x cmp neg = "(ite " ++ ltz ++ " " ++ nx ++ " " ++ x ++ ")"
                   where ltz = "(" ++ cmp ++ " " ++ x ++ " " ++ z ++ ")"
                         nx  = "(" ++ neg ++ " " ++ x ++ ")"
@@ -699,13 +699,12 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         neqBV = liftN "distinct"
 
         equal sgn sbvs
-          | doubleOp = lift2 "fp.eq" sgn sbvs
-          | floatOp  = lift2 "fp.eq" sgn sbvs
-          | True     = lift2 "="     sgn sbvs
+          | fpOp = lift2 "fp.eq" sgn sbvs
+          | True = lift2 "="     sgn sbvs
 
         notEqual sgn sbvs
-          | doubleOp || floatOp || not hasDistinct = liftP sbvs
-          | True                                   = liftN "distinct" sgn sbvs
+          | fpOp || not hasDistinct = liftP sbvs
+          | True                    = liftN "distinct" sgn sbvs
           where liftP [_, _] = "(not " ++ equal sgn sbvs ++ ")"
                 liftP args   = "(and " ++ unwords (walk args) ++ ")"
 
@@ -715,8 +714,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         lift2S oU oS sgn = lift2 (if sgn then oS else oU) sgn
         liftNS oU oS sgn = liftN (if sgn then oS else oU) sgn
 
-        lift2Cmp o fo | doubleOp || floatOp = lift2 fo
-                      | True                = lift2 o
+        lift2Cmp o fo | fpOp = lift2 fo
+                      | True = lift2 o
 
         unintComp o [a, b]
           | KUserSort s (Just _) <- kindOf (head arguments)
@@ -776,6 +775,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
+                              KFP{}         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected arbitrary float valued index"
                               KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
                               KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
@@ -798,6 +798,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KReal         -> ("<", "<=")
                                 KFloat        -> ("fp.lt", "fp.leq")
                                 KDouble       -> ("fp.lt", "fp.geq")
+                                KFP{}         -> ("fp.lt", "fp.geq")
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
@@ -910,7 +911,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssv args)
           | realOp, Just f <- lookup op smtOpRealTable
           = f (any hasSign args) (map ssv args)
-          | floatOp || doubleOp, Just f <- lookup op smtOpFloatDoubleTable
+          | fpOp, Just f <- lookup op smtOpFloatDoubleTable
           = f (any hasSign args) (map ssv args)
           | charOp || stringOp, Just f <- lookup op smtStringTable
           = f (map ssv args)
@@ -1066,6 +1067,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk _d _nm _f KUserSort {}       = []
         walk _d _nm _f KFloat    {}       = []
         walk _d _nm _f KDouble   {}       = []
+        walk _d _nm _f KFP       {}       = []
         walk _d  nm  f KChar     {}       = [f nm]
         walk _d _nm _f KString   {}       = []
         walk  d  nm _f  (KList k)

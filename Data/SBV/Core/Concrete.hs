@@ -11,6 +11,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE Rank2Types          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -28,6 +29,7 @@ import Data.List (isPrefixOf, intercalate)
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.SizedFloats
 
 import Data.Proxy
 
@@ -69,18 +71,19 @@ instance HasKind a => HasKind (RCSet a) where
   kindOf _ = KSet (kindOf (Proxy @a))
 
 -- | A constant value
-data CVal = CAlgReal  !AlgReal              -- ^ Algebraic real
-          | CInteger  !Integer              -- ^ Bit-vector/unbounded integer
-          | CFloat    !Float                -- ^ Float
-          | CDouble   !Double               -- ^ Double
-          | CChar     !Char                 -- ^ Character
-          | CString   !String               -- ^ String
-          | CList     ![CVal]               -- ^ List
-          | CSet      !(RCSet CVal)         -- ^ Set. Can be regular or complemented.
-          | CUserSort !(Maybe Int, String)  -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CTuple    ![CVal]               -- ^ Tuple
-          | CMaybe    !(Maybe CVal)         -- ^ Maybe
-          | CEither   !(Either CVal CVal)   -- ^ Disjoint union
+data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
+          | CInteger  !Integer             -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float               -- ^ Float
+          | CDouble   !Double              -- ^ Double
+          | CFP       !FPC                 -- ^ Arbitrary float
+          | CChar     !Char                -- ^ Character
+          | CString   !String              -- ^ String
+          | CList     ![CVal]              -- ^ List
+          | CSet      !(RCSet CVal)        -- ^ Set. Can be regular or complemented.
+          | CUserSort !(Maybe Int, String) -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CTuple    ![CVal]              -- ^ Tuple
+          | CMaybe    !(Maybe CVal)        -- ^ Maybe
+          | CEither   !(Either CVal CVal)  -- ^ Disjoint union
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -88,14 +91,15 @@ cvRank CAlgReal  {} =  0
 cvRank CInteger  {} =  1
 cvRank CFloat    {} =  2
 cvRank CDouble   {} =  3
-cvRank CChar     {} =  4
-cvRank CString   {} =  5
-cvRank CList     {} =  6
-cvRank CSet      {} =  7
-cvRank CUserSort {} =  8
-cvRank CTuple    {} =  9
-cvRank CMaybe    {} = 10
-cvRank CEither   {} = 11
+cvRank CFP       {} =  4
+cvRank CChar     {} =  5
+cvRank CString   {} =  6
+cvRank CList     {} =  7
+cvRank CSet      {} =  8
+cvRank CUserSort {} =  9
+cvRank CTuple    {} = 10
+cvRank CMaybe    {} = 11
+cvRank CEither   {} = 12
 
 -- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -271,6 +275,7 @@ liftCV :: (AlgReal             -> b)
        -> (Integer             -> b)
        -> (Float               -> b)
        -> (Double              -> b)
+       -> (FPC                 -> b)
        -> (Char                -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)
@@ -281,18 +286,19 @@ liftCV :: (AlgReal             -> b)
        -> (Either CVal CVal    -> b)
        -> CV
        -> b
-liftCV f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
+liftCV f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
+liftCV _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -339,6 +345,7 @@ mapCV r i f d c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CChar     a -> CChar     (c a)
                                                     CString   a -> CString   (s a)
                                                     CUserSort a -> CUserSort (u a)
+                                                    CFP{}       -> error "Data.SBV.mapCV: Unexpected call through mapCV with CFPs!"
                                                     CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                     CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
                                                     CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
@@ -382,7 +389,7 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
+showCV shk w               = liftCV show show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
       where kw = kindOf w
 
             kInfo | shk  = " :: " ++ showBaseKind kw
@@ -439,7 +446,8 @@ mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
 mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
 mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
 mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
-mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: " ++ show (toInteger a)
+mkConstCV KFP{}           a = error $ "Unexpected call to mkConstCV (FP) with value: "     ++ show (toInteger a)
+mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
 mkConstCV k@KList{}       a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
@@ -458,6 +466,7 @@ randomCVal k =
     KReal              -> CAlgReal <$> randomIO
     KFloat             -> CFloat   <$> randomIO
     KDouble            -> CDouble  <$> randomIO
+    KFP{}              -> error "FP-TODO: KFP.randomCVal"
     -- TODO: KString/KChar currently only go for 0..255; include unicode?
     KString            -> do l <- randomRIO (0, 100)
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))

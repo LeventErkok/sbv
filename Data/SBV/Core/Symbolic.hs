@@ -1358,6 +1358,7 @@ registerKind st k
          KUserSort {}    -> return ()
          KFloat    {}    -> return ()
          KDouble   {}    -> return ()
+         KFP       {}    -> return ()
          KChar     {}    -> return ()
          KString   {}    -> return ()
          KList     ek    -> registerKind st ek

@@ -87,23 +87,25 @@ fromECon _        = Nothing
 
 -- Collect strings appearing, used in 'getOption' only
 stringsOf :: SExpr -> [String]
-stringsOf (ECon s)      = [s]
-stringsOf (ENum (i, _)) = [show i]
-stringsOf (EReal   r)   = [show r]
-stringsOf (EFloat  f)   = [show f]
-stringsOf (EDouble d)   = [show d]
-stringsOf (EApp ss)     = concatMap stringsOf ss
+stringsOf (ECon s)           = [s]
+stringsOf (ENum (i, _))      = [show i]
+stringsOf (EReal   r)        = [show r]
+stringsOf (EFloat  f)        = [show f]
+stringsOf (EFloatingPoint f) = [show f]
+stringsOf (EDouble d)        = [show d]
+stringsOf (EApp ss)          = concatMap stringsOf ss
 
 -- Sort of a light-hearted show for SExprs, for better consumption at the user level.
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
-  where go (ECon s)      = if removeQuotes then unQuote s else s
-        go (ENum (i, _)) = shNN i
-        go (EReal   r)   = shNN r
-        go (EFloat  f)   = shNN f
-        go (EDouble d)   = shNN d
-        go (EApp [x])    = go x
-        go (EApp ss)     = "(" ++ unwords (map go ss) ++ ")"
+  where go (ECon s)           = if removeQuotes then unQuote s else s
+        go (ENum (i, _))      = shNN i
+        go (EReal   r)        = shNN r
+        go (EFloat  f)        = shNN f
+        go (EDouble d)        = shNN d
+        go (EFloatingPoint f) = show f
+        go (EApp [x])         = go x
+        go (EApp ss)          = "(" ++ unwords (map go ss) ++ ")"
 
         -- be careful with negative number printing in SMT-Lib..
         shNN :: (Show a, Num a, Ord a) => a -> String

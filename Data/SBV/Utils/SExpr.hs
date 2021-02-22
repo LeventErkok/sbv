@@ -25,6 +25,7 @@ import Data.Word   (Word32, Word64)
 import Numeric    (readInt, readDec, readHex, fromRat)
 
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
@@ -32,11 +33,12 @@ import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 import Data.Numbers.CrackNum (wordToFloat, wordToDouble)
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
-data SExpr = ECon    String
-           | ENum    (Integer, Maybe Int)  -- Second argument is how wide the field was in bits, if known. Useful in FP parsing.
-           | EReal   AlgReal
-           | EFloat  Float
-           | EDouble Double
+data SExpr = ECon           String
+           | ENum           (Integer, Maybe Int)  -- Second argument is how wide the field was in bits, if known. Useful in FP parsing.
+           | EReal          AlgReal
+           | EFloat         Float
+           | EFloatingPoint FPC
+           | EDouble        Double
            | EApp    [SExpr]
            deriving Show
 
@@ -174,18 +176,30 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                                                   _           -> die $ "Cannot parse a CVC4 approximate value from: " ++ show x
 
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
-        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat  $ getTripleFloat  s e m
-        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble $ getTripleDouble s e m
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  nan
-        cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble nan
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  infinity
-        cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble infinity
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  (-infinity)
-        cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble (-infinity)
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat         $ getTripleFloat  s e m
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 11), ENum (m, Just 52)])           = return $ EDouble        $ getTripleDouble s e m
+        cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just eb), ENum (m, Just sb)])           = return $ EFloatingPoint $ fpReg s (e, eb) (m, sb)
+
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           nan
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          nan
+        cvt (EApp [ECon "_",     ECon "NaN",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpNaN eb sb
+
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat           infinity
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble          infinity
+        cvt (EApp [ECon "_",     ECon "+oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpInf False eb sb
+
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -infinity
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -infinity
+        cvt (EApp [ECon "_",     ECon "-oo",       ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpInf True eb sb
+
         cvt (EApp [ECon "_",     ECon "+zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  0
         cvt (EApp [ECon "_",     ECon "+zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble 0
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat  (-0)
-        cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble (-0)
+        cvt (EApp [ECon "_",     ECon "+zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpZero False eb sb
+
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum ( 8, _),       ENum (24,      _)])           = return $ EFloat         $ -0
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (11, _),       ENum (53,      _)])           = return $ EDouble        $ -0
+        cvt (EApp [ECon "_",     ECon "-zero",     ENum (eb, _),       ENum (sb,      _)])           = return $ EFloatingPoint $ fpZero True eb sb
+
         cvt x                                                                                        = return x
 
         getCoeff (EApp [ECon "*", ENum k, EApp [ECon "^", ECon "x", ENum p]]) = return (fst k, fst p)  -- kx^p
@@ -249,6 +263,42 @@ getTripleDouble s e m = wordToDouble w64
         mantissa  = [m `testBit` i | i <- [51, 50 .. 0]]
         positions = [i | (i, b) <- zip [63, 62 .. 0] (sign ++ expt ++ mantissa), b]
         w64       = foldr (flip setBit) (0::Word64) positions
+
+-- | Convert to an arbitrary float value
+fpReg :: Integer -> (Integer, Int) -> (Integer, Int) -> FPC
+fpReg sign (e, es) (s, sb) = FP { fpSign          = sign == 1
+                                , fpExponentSize  = es
+                                , fpExponent      = e
+                                , fpSignificandSz = sb + 1  -- Add the "hidden" bit
+                                , fpSignificand   = s
+                                }
+
+-- | Make NaN of FPC. Exponent is all 1s. Significand is 1.
+fpNaN :: Integer -> Integer -> FPC
+fpNaN eb sb = FP { fpSign           = False
+                 , fpExponentSize   = fromIntegral eb
+                 , fpExponent       = 2 ^ eb - 1
+                 , fpSignificandSz = fromIntegral sb + 1
+                 , fpSignificand   = 1
+                 }
+
+-- | Make Infinity of FPC. Exponent is all 1s. Significand is 0.
+fpInf :: Bool -> Integer -> Integer -> FPC
+fpInf sign eb sb = FP { fpSign          = sign
+                      , fpExponentSize  = fromIntegral eb
+                      , fpExponent      = 2 ^ eb - 1
+                      , fpSignificandSz = fromIntegral sb + 1
+                      , fpSignificand   = 0
+                      }
+
+-- | Make zero of FPC
+fpZero :: Bool -> Integer -> Integer -> FPC
+fpZero sign eb sb = FP { fpSign          = sign
+                       , fpExponentSize  = fromIntegral eb
+                       , fpExponent      = 0
+                       , fpSignificandSz = fromIntegral sb + 1
+                       , fpSignificand   = 0
+                      }
 
 -- | Special constants of SMTLib2 and their internal translation. Mainly
 -- rounding modes for now.
@@ -417,11 +467,12 @@ chainAssigns chain = regroup $ partitionEithers chain
         -- you ever get the error line above fire, because you must've disabled the pattern-match
         -- completion check warning! Shame on you.
         eRank :: SExpr -> Int
-        eRank ECon{}    = 0
-        eRank ENum{}    = 1
-        eRank EReal{}   = 2
-        eRank EFloat{}  = 3
-        eRank EDouble{} = 4
-        eRank EApp{}    = 5
+        eRank ECon{}           = 0
+        eRank ENum{}           = 1
+        eRank EReal{}          = 2
+        eRank EFloat{}         = 3
+        eRank EFloatingPoint{} = 4
+        eRank EDouble{}        = 5
+        eRank EApp{}           = 6
 
 {-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}

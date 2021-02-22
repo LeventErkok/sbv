@@ -28,7 +28,8 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
-import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN, IsNonZero)
+import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
+import Data.SBV.Core.Kind      (IsNonZero)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)

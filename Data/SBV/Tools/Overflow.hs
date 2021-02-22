@@ -31,6 +31,7 @@ module Data.SBV.Tools.Overflow (
     ) where
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations

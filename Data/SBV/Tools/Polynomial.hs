@@ -29,6 +29,7 @@ import Data.Maybe (fromJust, fromMaybe)
 import Data.Word  (Word8, Word16, Word32, Word64)
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Sized
 import Data.SBV.Core.Model
 

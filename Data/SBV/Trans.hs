@@ -158,6 +158,7 @@ module Data.SBV.Trans (
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Sized
