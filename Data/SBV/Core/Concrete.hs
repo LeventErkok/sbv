@@ -129,18 +129,19 @@ instance Eq CVal where
 
 -- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
 instance Ord CVal where
-  CAlgReal  a `compare` CAlgReal b  = a        `algRealStructuralCompare` b
-  CInteger  a `compare` CInteger b  = a        `compare`                  b
-  CFloat    a `compare` CFloat b    = a        `fpCompareObjectH`         b
-  CDouble   a `compare` CDouble b   = a        `fpCompareObjectH`         b
-  CChar     a `compare` CChar b     = a        `compare`                  b
-  CString   a `compare` CString b   = a        `compare`                  b
-  CList     a `compare` CList   b   = a        `compare`                  b
-  CSet      a `compare` CSet    b   = a        `compareRCSet`             b
-  CUserSort a `compare` CUserSort b = a        `compare`                  b
-  CTuple    a `compare` CTuple    b = a        `compare`                  b
-  CMaybe    a `compare` CMaybe    b = a        `compare`                  b
-  CEither   a `compare` CEither   b = a        `compare`                  b
+  CAlgReal  a `compare` CAlgReal  b = a `algRealStructuralCompare` b
+  CInteger  a `compare` CInteger  b = a `compare`                  b
+  CFloat    a `compare` CFloat    b = a `fpCompareObjectH`         b
+  CDouble   a `compare` CDouble   b = a `fpCompareObjectH`         b
+  CFP       a `compare` CFP       b = a `compare`                  b
+  CChar     a `compare` CChar     b = a `compare`                  b
+  CString   a `compare` CString   b = a `compare`                  b
+  CList     a `compare` CList     b = a `compare`                  b
+  CSet      a `compare` CSet      b = a `compareRCSet`             b
+  CUserSort a `compare` CUserSort b = a `compare`                  b
+  CTuple    a `compare` CTuple    b = a `compare`                  b
+  CMaybe    a `compare` CMaybe    b = a `compare`                  b
+  CEither   a `compare` CEither   b = a `compare`                  b
   a           `compare` b           = let ra = cvRank a
                                           rb = cvRank b
                                       in if ra == rb

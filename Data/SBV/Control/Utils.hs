@@ -1262,8 +1262,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                            interpretedEqs :: [SVal]
                                            interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpretedRegUiSVs <> F.toList interpreteds]
                                               where mkNotEq k a b
-                                                     | isDouble k || isFloat k = svNot (a `fpNotEq` b)
-                                                     | True                    = a `svNotEqual` b
+                                                     | isDouble k || isFloat k || isFP k
+                                                     = svNot (a `fpNotEq` b)
+                                                     | True
+                                                     = a `svNotEqual` b
 
                                                     fpNotEq a b = SVal KBool $ Right $ cache r
                                                         where r st = do sva <- svToSV st a

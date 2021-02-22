@@ -36,7 +36,9 @@ import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (smtType)
-import Data.SBV.Core.AlgReals (algRealToSMTLib2)
+
+import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
+import Data.SBV.Core.SizedFloats (fprToSMTLib2)
 
 import Data.SBV.Utils.Lib (stringToQFS)
 
@@ -374,6 +376,7 @@ showSMTFloat rm f
    | True                = "((_ to_fp 8 24) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational f) ++ ")"
    where as s = "(_ " ++ s ++ " 8 24)"
 
+
 -- | A version of show for doubles that generates correct SMTLib literals using the rounding mode
 showSMTDouble :: RoundingMode -> Double -> String
 showSMTDouble rm d
@@ -411,6 +414,7 @@ cvToSMTLib rm x
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
+  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2  f
   | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
