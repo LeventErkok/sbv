@@ -15,6 +15,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -33,12 +34,16 @@ import Data.Word           (Word8, Word16, Word32, Word64)
 import Data.Proxy
 
 import Data.SBV.Core.AlgReals (isExactRational)
+import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Symbolic (addSValOptGoal)
 
 import Data.SBV.Utils.Numeric
+
+import GHC.TypeLits
 
 -- For doctest use only
 --
@@ -591,4 +596,23 @@ instance Metric Double where
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Real (FP eb sb) where
+  toRational = error "FP-TODO: toRational"
+
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFrac (FP eb sb) where
+  properFraction = error "FP-TODO: properFraction"
+
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FP eb sb) where
+  floatRadix     = error "FP-TODO: floatRadix"
+  floatDigits    = error "FP-TODO: floatDigits"
+  floatRange     = error "FP-TODO: floatRange"
+  decodeFloat    = error "FP-TODO: decodeFloat"
+  encodeFloat    = error "FP-TODO: encodeFloat"
+  isNaN          = error "FP-TODO: isNaN"
+  isInfinite     = error "FP-TODO: isInfinite"
+  isDenormalized = error "FP-TODO: isDenormalized"
+  isNegativeZero = error "FP-TODO: isNegativeZero"
+  isIEEE         = error "FP-TODO: isIEEE"
+
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FP eb sb) where
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
