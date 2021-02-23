@@ -89,7 +89,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
-import Data.SBV.Core.SizedFloats (fprZero)
+import Data.SBV.Core.SizedFloats (fprZero, fprFromInteger, fprFromFloat, fprFromDouble)
 import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr)
 
@@ -774,7 +774,10 @@ recoverKindedValue k e = case k of
                                        | EDouble i   <- e      -> Just $ CV KDouble (CDouble i)
                                        | True                  -> Nothing
 
-                           KFP{}       | EFloatingPoint c <- e -> Just $ CV k (CFP c)
+                           KFP eb sb   | ENum (i, _)      <- e -> Just $ CV k $ CFP $ fprFromInteger eb sb i
+                                       | EFloat f         <- e -> Just $ CV k $ CFP $ fprFromFloat   eb sb f
+                                       | EDouble d        <- e -> Just $ CV k $ CFP $ fprFromDouble  eb sb d
+                                       | EFloatingPoint c <- e -> Just $ CV k $ CFP c
                                        | True                  -> Nothing
 
                            KChar       | ECon s      <- e      -> Just $ CV KChar $ CChar $ interpretChar s

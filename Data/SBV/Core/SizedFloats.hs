@@ -23,13 +23,22 @@
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
-          FP(..), FPRep(..), fprCompareObject, fprReg, fprNaN, fprInf, fprZero, fprToSMTLib2, fprNegate
+          FP(..), FPRep(..)
+        -- * Constructing values
+        , fprReg, fprNaN, fprInf, fprZero
+        -- * Operations
+        , fprNegate, fprFromInteger, fprFromFloat, fprFromDouble
+        -- * Internal operations
+       , fprCompareObject, fprToSMTLib2
        ) where
+
+import qualified Data.Numbers.CrackNum as CN (floatToWord, doubleToWord)
 
 import Data.Char (intToDigit)
 import Data.Proxy
 import GHC.TypeLits
 
+import Data.Bits
 import Numeric
 
 import Data.SBV.Core.Kind
@@ -202,3 +211,15 @@ fprSignum i@(FPRSES f@FPSES{fpSign, fpExponentSize, fpSignificandSize})
   | fprIsZero f = i
   | True        = fprFromInteger fpExponentSize fpSignificandSize (if fpSign then 1 else -1)
 fprSignum (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (signum v)
+
+fprFromFloat :: Int -> Int -> Float -> FPRep
+fprFromFloat  8 24 f = let fw          = CN.floatToWord f
+                           (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
+                       in FPRSES $ FPSES { fpSign = sgn, fpExponentSize = 8, fpExponent = e, fpSignificandSize = 24, fpSignificand = s }
+fprFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)
+
+fprFromDouble :: Int -> Int -> Double -> FPRep
+fprFromDouble 11 54 d = let dw          = CN.doubleToWord d
+                            (sgn, e, s) = (dw `testBit` 63, fromIntegral (dw `shiftR` 53) .&. 0x7FF, fromIntegral dw .&. 0x1FFFFFFFFFFFFF)
+                        in FPRSES $ FPSES { fpSign = sgn, fpExponentSize = 11, fpExponent = e, fpSignificandSize = 54, fpSignificand = s }
+fprFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
