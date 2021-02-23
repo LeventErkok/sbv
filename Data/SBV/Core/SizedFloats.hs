@@ -124,15 +124,21 @@ fprZero sign eb sb = FPRSES $ FPSES { fpSign            = sign
                                     , fpSignificand     = 0
                                     }
 
--- | Make from an integer value. We only represent 0 in SES format. All others in int format.
+-- | Make from an integer value. We only represent 0, 1, and -1 in SES format. All others in int format.
 fprFromInteger :: Int -> Int -> Integer -> FPRep
-fprFromInteger eb sb 0 = FPRSES $ FPSES { fpSign            = False
-                                        , fpExponentSize    = eb
-                                        , fpExponent        = 0
-                                        , fpSignificandSize = sb
-                                        , fpSignificand     = 0
-                                        }
-fprFromInteger eb sb i = FPRInt $ FPInt eb sb i
+fprFromInteger eb sb i
+  | i `elem` [-1, 0, 1]
+  = let (sign, ex) = case i of
+                        0 -> (False, 0)                 -- 0    -> sign is false, and exponent is 0
+                        _ -> (i < 0, 2^(eb-1)-1)        -- 1/-1 -> sign follows value, and exponent is the bias, i.e., 2^(eb-1)-1
+    in FPRSES $ FPSES { fpSign            = sign
+                      , fpExponentSize    = eb
+                      , fpExponent        = ex
+                      , fpSignificandSize = sb
+                      , fpSignificand     = 0
+                      }
+  | True
+  = FPRInt $ FPInt eb sb i
 
 -- | Represent the FP in SMTLib2 format
 fprToSMTLib2 :: RoundingMode -> FPRep -> String
@@ -168,16 +174,31 @@ fprCompareObject fpa fpb = case (fpa, fpb) of
 
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FP eb sb) where
-  (+)         = error "FP-TODO: +"
-  (*)         = error "FP-TODO: *"
-  abs         = error "FP-TODO: abs"
-  signum      = error "FP-TODO: signum"
-  fromInteger = FP . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
-  negate      = error "FP-TODO: negate"
+  (+)           = error "FP-TODO: +"
+  (*)           = error "FP-TODO: *"
+  abs (FP r)    = FP (fprAbs r)
+  signum (FP r) = FP (fprSignum r)
+  fromInteger   = FP . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+  negate (FP r) = FP (fprNegate r)
 
--- Negate an arbitrary sized float
+-- | Negate an arbitrary sized float
 fprNegate :: FPRep -> FPRep
 fprNegate i@(FPRSES f@FPSES{fpSign})
   | fprIsNaN f = i
   | True       = FPRSES f{fpSign = not fpSign}
 fprNegate (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (-v)
+
+-- | Compute the absolute value of an arbitrary sized float
+fprAbs :: FPRep -> FPRep
+fprAbs i@(FPRSES f)
+  | fprIsNaN f = i
+  | True       = FPRSES f{fpSign = False}
+fprAbs (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (abs v)
+
+-- | Compute the signum of an arbitrary sized float
+fprSignum :: FPRep -> FPRep
+fprSignum i@(FPRSES f@FPSES{fpSign, fpExponentSize, fpSignificandSize})
+  | fprIsNaN f  = i
+  | fprIsZero f = i
+  | True        = fprFromInteger fpExponentSize fpSignificandSize (if fpSign then 1 else -1)
+fprSignum (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (signum v)
