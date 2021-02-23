@@ -133,7 +133,7 @@ instance Ord CVal where
   CInteger  a `compare` CInteger  b = a `compare`                  b
   CFloat    a `compare` CFloat    b = a `fpCompareObjectH`         b
   CDouble   a `compare` CDouble   b = a `fpCompareObjectH`         b
-  CFP       a `compare` CFP       b = a `compare`                  b
+  CFP       a `compare` CFP       b = a `fprCompareObject`         b
   CChar     a `compare` CChar     b = a `compare`                  b
   CString   a `compare` CString   b = a `compare`                  b
   CList     a `compare` CList     b = a `compare`                  b

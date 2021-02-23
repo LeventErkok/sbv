@@ -35,7 +35,7 @@ import qualified Numeric (showHFloat)
 import Data.Numbers.CrackNum (floatToFP, doubleToFP)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType)
+import Data.SBV.Core.Kind (smtType, smtRoundingMode)
 
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2)
@@ -398,14 +398,6 @@ toSMTLibRational r
   where n = numerator r
         d = denominator r
 
--- | Convert a rounding mode to the format SMT-Lib2 understands.
-smtRoundingMode :: RoundingMode -> String
-smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
-smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
-smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
-smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
-smtRoundingMode RoundTowardZero        = "roundTowardZero"
-
 -- | Convert a CV to an SMTLib2 compliant value
 cvToSMTLib :: RoundingMode -> CV -> String
 cvToSMTLib rm x
@@ -414,7 +406,7 @@ cvToSMTLib rm x
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
-  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2  f
+  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2 rm f
   | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic

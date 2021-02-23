@@ -26,7 +26,7 @@
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, FPIsAtLeastTwo, intOfProxy
-        , showBaseKind, needsFlattening
+        , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
@@ -410,3 +410,29 @@ type family FPIsAtLeastTwo (arg :: Nat) :: Constraint where
    FPIsAtLeastTwo 0 = TypeError FPAtLeastTwo
    FPIsAtLeastTwo 1 = TypeError FPAtLeastTwo
    FPIsAtLeastTwo _ = ()
+
+-- | Rounding mode to be used for the IEEE floating-point operations.
+-- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use
+-- a different rounding mode, then the counter-examples you get may not
+-- match what you observe in Haskell.
+data RoundingMode = RoundNearestTiesToEven  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the even number.
+                                            -- (In this context, /even/ means the lowest-order bit is zero.)
+                  | RoundNearestTiesToAway  -- ^ Round to nearest representable floating point value.
+                                            -- If precisely at half-way, pick the number further away from 0.
+                                            -- (That is, for positive values, pick the greater; for negative values, pick the smaller.)
+                  | RoundTowardPositive     -- ^ Round towards positive infinity. (Also known as rounding-up or ceiling.)
+                  | RoundTowardNegative     -- ^ Round towards negative infinity. (Also known as rounding-down or floor.)
+                  | RoundTowardZero         -- ^ Round towards zero. (Also known as truncation.)
+                  deriving (Eq, Ord, Show, Read, G.Data, Bounded, Enum)
+
+-- | 'RoundingMode' kind
+instance HasKind RoundingMode
+
+-- | Convert a rounding mode to the format SMT-Lib2 understands.
+smtRoundingMode :: RoundingMode -> String
+smtRoundingMode RoundNearestTiesToEven = "roundNearestTiesToEven"
+smtRoundingMode RoundNearestTiesToAway = "roundNearestTiesToAway"
+smtRoundingMode RoundTowardPositive    = "roundTowardPositive"
+smtRoundingMode RoundTowardNegative    = "roundTowardNegative"
+smtRoundingMode RoundTowardZero        = "roundTowardZero"
