@@ -23,7 +23,7 @@
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
-          FP(..), FPRep(..), fprCompareObject, fprReg, fprNaN, fprInf, fprZero, fprToSMTLib2
+          FP(..), FPRep(..), fprCompareObject, fprReg, fprNaN, fprInf, fprZero, fprToSMTLib2, fprNegate
        ) where
 
 import Data.Char (intToDigit)
@@ -152,9 +152,9 @@ fprToSMTLib2 _ (FPRSES f@FPSES {fpSign, fpExponentSize, fpExponent, fpSignifican
        showBin = showIntAtBase 2 intToDigit
        pad l str = replicate (l - length str) '0' ++ str
 fprToSMTLib2 rm (FPRInt (FPInt fpExponentSize fpSignificandSize intVal))
-  = "((_ to_fp " ++ show fpExponentSize ++ " " ++ show fpSignificandSize ++ ") " ++ smtRoundingMode rm ++ " (to_real " ++ iv ++ "))"
-  where iv | intVal >= 0 = show intVal
-           | True        = "(- " ++ show (abs intVal) ++ ")"
+  = "((_ to_fp " ++ show fpExponentSize ++ " " ++ show fpSignificandSize ++ ") " ++ smtRoundingMode rm ++ " " ++ iv intVal ++ ")"
+  where iv x | x >= 0 = "(/ " ++ show x ++ ".0 1.0)"
+             | True   = "(- " ++ iv (abs x) ++ ")"
 
 -- | Structural comparison only, for internal map indexes
 fprCompareObject :: FPRep -> FPRep -> Ordering
@@ -174,3 +174,10 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
   signum      = error "FP-TODO: signum"
   fromInteger = FP . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
   negate      = error "FP-TODO: negate"
+
+-- Negate an arbitrary sized float
+fprNegate :: FPRep -> FPRep
+fprNegate i@(FPRSES f@FPSES{fpSign})
+  | fprIsNaN f = i
+  | True       = FPRSES f{fpSign = not fpSign}
+fprNegate (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (-v)

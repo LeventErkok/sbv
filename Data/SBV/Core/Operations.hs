@@ -60,6 +60,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.Core.Symbolic
+import Data.SBV.Core.SizedFloats
 
 import Data.Ratio
 
@@ -165,9 +166,11 @@ svMinus x y
   | isConcreteZero y = x
   | True             = liftSym2 (mkSymOp Minus) rationalCheck (-) (-) (-) (-) x y
 
--- | Unary minus.
+-- | Unary minus. We handle arbitrary-FP's specially here, just for the negated literals.
 svUNeg :: SVal -> SVal
-svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate
+svUNeg sv = case (kindOf sv, sv) of
+              (k@KFP{}, SVal _ (Left (CV _ (CFP f)))) -> SVal k (Left (CV k (CFP (fprNegate f))))
+              _                                       -> liftSym1 (mkSymOp1 UNeg) negate negate negate negate sv
 
 -- | Absolute value.
 svAbs :: SVal -> SVal
