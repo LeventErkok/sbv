@@ -39,6 +39,7 @@ import Data.Proxy
 import GHC.TypeLits
 
 import Data.Bits
+import Data.Ratio
 import Numeric
 
 import Data.SBV.Core.Kind
@@ -65,6 +66,7 @@ instance Show (FP eb sb) where
 -- Then we have two infinities, and one NaN, adding 3 more.
 data FPRep = FPRSES FPSES
            | FPRInt FPInt
+           | FPRRat FPRat
 
 -- | Sign, exponent, significand representation
 data FPSES = FPSES { fpSign            :: Bool
@@ -77,13 +79,17 @@ data FPSES = FPSES { fpSign            :: Bool
 -- | Integer conversion representation
 data FPInt = FPInt Int Int Integer  -- Exponent size, Significand size, Integer value we converted from
 
+-- | Rational conversion representation
+data FPRat = FPRat Int Int Rational -- Exponent size, Significand size, Rational value we converted from
+
 instance Show FPRep where
   show (FPRSES f@FPSES{fpSign})
     | fprIsNaN      f = "NaN"
     | fprIsInfinite f = if fpSign then "-Infinity" else "Infinity"
     | fprIsZero     f = if fpSign then "-0.0"      else "0.0"
     | True            = fprToSMTLib2 RoundNearestTiesToEven (FPRSES f)
-  show (FPRInt (FPInt es ss v)) = "fpFromInteger_" ++ show es ++ "_" ++ show ss ++ " " ++ show v
+  show (FPRInt (FPInt es ss v)) = "fpFromInteger_"  ++ show es ++ "_" ++ show ss ++ " " ++ show v
+  show (FPRRat (FPRat es ss v)) = "fpFromRational_" ++ show es ++ "_" ++ show ss ++ " " ++ show v
 
 -- | Convert to an arbitrary float value
 fprReg :: Integer -> (Integer, Int) -> (Integer, Int) -> FPRep
@@ -149,6 +155,10 @@ fprFromInteger eb sb i
   | True
   = FPRInt $ FPInt eb sb i
 
+-- Make a fractional value. We represent all of these in FPRat
+fprFromRational :: Int -> Int -> Rational -> FPRep
+fprFromRational eb sb = FPRRat . FPRat eb sb
+
 -- | Represent the FP in SMTLib2 format
 fprToSMTLib2 :: RoundingMode -> FPRep -> String
 fprToSMTLib2 _ (FPRSES f@FPSES {fpSign, fpExponentSize, fpExponent, fpSignificandSize, fpSignificand})
@@ -170,16 +180,30 @@ fprToSMTLib2 rm (FPRInt (FPInt fpExponentSize fpSignificandSize intVal))
   = "((_ to_fp " ++ show fpExponentSize ++ " " ++ show fpSignificandSize ++ ") " ++ smtRoundingMode rm ++ " " ++ iv intVal ++ ")"
   where iv x | x >= 0 = "(/ " ++ show x ++ ".0 1.0)"
              | True   = "(- " ++ iv (abs x) ++ ")"
+fprToSMTLib2 rm (FPRRat (FPRat fpExponentSize fpSignificandSize ratVal))
+  = "((_ to_fp " ++ show fpExponentSize ++ " " ++ show fpSignificandSize ++ ") " ++ smtRoundingMode rm ++ " " ++ iv ratVal ++ ")"
+  where iv x | x >= 0 = "(/ " ++ show (numerator x) ++ ".0 " ++ show (denominator x) ++ ".0)"
+             | True   = "(- " ++ iv (abs x) ++ ")"
 
 -- | Structural comparison only, for internal map indexes
 fprCompareObject :: FPRep -> FPRep -> Ordering
 fprCompareObject fpa fpb = case (fpa, fpb) of
                              (FPRSES a, FPRSES b) -> a `compareSES` b
                              (FPRSES{}, FPRInt{}) -> LT
+                             (FPRSES{}, FPRRat{}) -> LT
+
                              (FPRInt{}, FPRSES{}) -> GT
                              (FPRInt a, FPRInt b) -> a `compareInt` b
+                             (FPRInt{}, FPRRat{}) -> LT
+
+                             (FPRRat{}, FPRSES{}) -> GT
+                             (FPRRat{}, FPRInt{}) -> GT
+                             (FPRRat a, FPRRat b) -> a `compareRat` b
+
+
   where compareSES (FPSES s es ev ss sv) (FPSES s' es' ev' ss' sv') = (s, es, ev, ss, sv) `compare` (s', es', ev', ss', sv')
         compareInt (FPInt   es    ss  v) (FPInt    es'     ss'  v') = (   es,     ss,  v) `compare` (    es',      ss',  v')
+        compareRat (FPRat   es    ss  v) (FPRat    es'     ss'  v') = (   es,     ss,  v) `compare` (    es',      ss',  v')
 
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FP eb sb) where
@@ -190,12 +214,17 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
   fromInteger   = FP . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
   negate (FP r) = FP (fprNegate r)
 
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FP eb sb) where
+  fromRational = FP . fprFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+  (/)          = error "FP-TODO: /"
+
 -- | Negate an arbitrary sized float
 fprNegate :: FPRep -> FPRep
 fprNegate i@(FPRSES f@FPSES{fpSign})
   | fprIsNaN f = i
   | True       = FPRSES f{fpSign = not fpSign}
 fprNegate (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (-v)
+fprNegate (FPRRat (FPRat eb sb v)) = FPRRat $ FPRat eb sb (-v)
 
 -- | Compute the absolute value of an arbitrary sized float
 fprAbs :: FPRep -> FPRep
@@ -203,6 +232,7 @@ fprAbs i@(FPRSES f)
   | fprIsNaN f = i
   | True       = FPRSES f{fpSign = False}
 fprAbs (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (abs v)
+fprAbs (FPRRat (FPRat eb sb v)) = FPRRat $ FPRat eb sb (abs v)
 
 -- | Compute the signum of an arbitrary sized float
 fprSignum :: FPRep -> FPRep
@@ -211,6 +241,7 @@ fprSignum i@(FPRSES f@FPSES{fpSign, fpExponentSize, fpSignificandSize})
   | fprIsZero f = i
   | True        = fprFromInteger fpExponentSize fpSignificandSize (if fpSign then 1 else -1)
 fprSignum (FPRInt (FPInt eb sb v)) = FPRInt $ FPInt eb sb (signum v)
+fprSignum (FPRRat (FPRat eb sb v)) = FPRRat $ FPRat eb sb (signum v)
 
 fprFromFloat :: Int -> Int -> Float -> FPRep
 fprFromFloat  8 24 f = let fw          = CN.floatToWord f
