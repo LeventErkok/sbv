@@ -1559,7 +1559,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
           (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
 
           -- Model validation:
-          (_      , Concrete (Just (_isSat, env))) ->
+          (_      , Concrete (Just (_isSat, env))) -> do
                         let bad why conc = error $ unlines [ ""
                                                            , "*** Data.SBV: " ++ why
                                                            , "***"
@@ -1571,9 +1571,10 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                             cant   = "Validation engine is not capable of handling this case. Failed to validate."
                             report = "Please report this as a bug in SBV!"
 
-                        in if isUserSort k
-                           then bad ("Cannot validate models in the presence of user defined kinds, saw: " ++ show k) cant
-                           else do (NamedSymVar sv internalName) <- newSV st k
+                        case () of
+                          () | isUserSort k -> bad ("Cannot validate models in the presence of user defined kinds, saw: "             ++ show k) cant
+                          () | isFP k       -> bad ("Cannot validate models in the presence of arbitrary-floating point kinds, saw: " ++ show k) cant
+                          _  -> do (NamedSymVar sv internalName) <- newSV st k
 
                                    let nm = fromMaybe (T.unpack internalName) mbNm
                                        nsv = toNamedSV' sv nm
