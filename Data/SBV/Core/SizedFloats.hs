@@ -27,7 +27,7 @@ module Data.SBV.Core.SizedFloats (
         -- * Constructing values
         , fprReg, fprNaN, fprInf, fprZero
         -- * Operations
-        , fprNegate, fprFromInteger, fprFromFloat, fprFromDouble
+        , fprNegate, fprFromInteger, fprAbs, fprFromFloat, fprFromDouble
         -- * Internal operations
        , fprCompareObject, fprToSMTLib2
        ) where
@@ -217,6 +217,29 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FP eb sb) where
   fromRational = FP . fprFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
   (/)          = error "FP-TODO: /"
+
+-- An almost redundant Floating instance. This is so that we can have
+-- definitions of nan/infinity etc. work. And one day, may be we can actually
+-- do support these as things improve both in SMT-land, and arbitrary precision
+-- floats in Haskell
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FP eb sb) where
+  pi      = fromRational . toRational $ (pi :: Double)
+  exp     = error "Data.SBV.FP: exp   is currently not supported. Please request this as a feature!"
+  log     = error "Data.SBV.FP: log   is currently not supported. Please request this as a feature!"
+  sqrt    = error "Data.SBV.FP: sqrt  is currently not supported. Please request this as a feature!"
+  sin     = error "Data.SBV.FP: sin   is currently not supported. Please request this as a feature!"
+  cos     = error "Data.SBV.FP: cos   is currently not supported. Please request this as a feature!"
+  tan     = error "Data.SBV.FP: tan   is currently not supported. Please request this as a feature!"
+  asin    = error "Data.SBV.FP: asin  is currently not supported. Please request this as a feature!"
+  acos    = error "Data.SBV.FP: acos  is currently not supported. Please request this as a feature!"
+  atan    = error "Data.SBV.FP: atan  is currently not supported. Please request this as a feature!"
+  sinh    = error "Data.SBV.FP: sinh  is currently not supported. Please request this as a feature!"
+  cosh    = error "Data.SBV.FP: cosh  is currently not supported. Please request this as a feature!"
+  tanh    = error "Data.SBV.FP: tanh  is currently not supported. Please request this as a feature!"
+  asinh   = error "Data.SBV.FP: asinh is currently not supported. Please request this as a feature!"
+  acosh   = error "Data.SBV.FP: acosh is currently not supported. Please request this as a feature!"
+  atanh   = error "Data.SBV.FP: atanh is currently not supported. Please request this as a feature!"
+  (**)    = error "Data.SBV.FP: **    is currently not supported. Please request this as a feature!"
 
 -- | Negate an arbitrary sized float
 fprNegate :: FPRep -> FPRep

@@ -333,25 +333,26 @@ mapCV :: (AlgReal             -> AlgReal)
       -> (Integer             -> Integer)
       -> (Float               -> Float)
       -> (Double              -> Double)
+      -> (FPRep               -> FPRep)
       -> (Char                -> Char)
       -> (String              -> String)
       -> ((Maybe Int, String) -> (Maybe Int, String))
       -> CV
       -> CV
-mapCV r i f d c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
-                                                    CAlgReal  a -> CAlgReal  (r a)
-                                                    CInteger  a -> CInteger  (i a)
-                                                    CFloat    a -> CFloat    (f a)
-                                                    CDouble   a -> CDouble   (d a)
-                                                    CChar     a -> CChar     (c a)
-                                                    CString   a -> CString   (s a)
-                                                    CUserSort a -> CUserSort (u a)
-                                                    CFP{}       -> error "Data.SBV.mapCV: Unexpected call through mapCV with CFPs!"
-                                                    CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
-                                                    CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
-                                                    CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
-                                                    CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
-                                                    CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
+mapCV r i f d af c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
+                                                       CAlgReal  a -> CAlgReal  (r a)
+                                                       CInteger  a -> CInteger  (i a)
+                                                       CFloat    a -> CFloat    (f a)
+                                                       CDouble   a -> CDouble   (d a)
+                                                       CFP       a -> CFP       (af a)
+                                                       CChar     a -> CChar     (c a)
+                                                       CString   a -> CString   (s a)
+                                                       CUserSort a -> CUserSort (u a)
+                                                       CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
+                                                       CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
+                                                       CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
+                                                       CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
+                                                       CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
 
 -- | Map a binary function through a 'CV'.
 mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
@@ -372,11 +373,12 @@ mapCV2 r i f d c s u x y = case (cvSameType x y, cvVal x, cvVal y) of
                             (True, CChar     a, CChar     b) -> normCV $ CV (kindOf x) (CChar     (c a b))
                             (True, CString   a, CString   b) -> normCV $ CV (kindOf x) (CString   (s a b))
                             (True, CUserSort a, CUserSort b) -> normCV $ CV (kindOf x) (CUserSort (u a b))
+                            (True, CFP{},       CFP{})       -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with arbitrary precision floats!"
                             (True, CList{},     CList{})     -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with lists!"
                             (True, CTuple{},    CTuple{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with tuples!"
                             (True, CMaybe{},    CMaybe{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with maybes!"
                             (True, CEither{},   CEither{})   -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with eithers!"
-                            _                                -> error $ "SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
+                            _                                -> error $ "Data.SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Show instance for 'CV'.
 instance Show CV where
