@@ -85,11 +85,11 @@ data FP = FP { fpExponentSize    :: Int
              deriving (Ord, Eq)
 
 instance Show FP where
-  show (FP _ _ r)
+  show (FP _ sb r)
     | bfIsNaN  r = "NaN"
     | bfIsInf  r = if bfIsPos r then "Infinity" else "-Infinity"
     | bfIsZero r = if bfIsPos r then "0.0"      else "-0.0"
-    | True       = show r -- bfToString 10 (addPrefix <> showRnd NearEven) r
+    | True       = bfToString 10 (addPrefix <> showRnd NearEven <> showFreeMin (Just (fromIntegral sb))) r
 
 -- | Default options for BF options.
 defOpts :: Int -> Int -> BFOpts
