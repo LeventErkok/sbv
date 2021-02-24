@@ -43,7 +43,11 @@ import Data.SBV.Core.Symbolic (addSValOptGoal)
 
 import Data.SBV.Utils.Numeric
 
+import Data.Ratio
+
 import GHC.TypeLits
+
+import LibBF
 
 -- For doctest use only
 --
@@ -614,7 +618,18 @@ instance Metric Double where
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Real (FloatingPoint eb sb) where
-  toRational = error "FP-TODO: toRational"
+  toRational (FloatingPoint (FP _ _ r)) = case bfToRep r of
+                                            BFNaN     -> toRational (0/0 :: Double)
+                                            BFRep s n -> case n of
+                                                           Zero    -> toRational (if s == Neg then -0     else (0   :: Double))
+                                                           Inf     -> toRational (if s == Neg then -(1/0) else (1/0 :: Double))
+                                                           Num x y -> -- The value here is x * 2^y
+                                                                      let v :: Integer
+                                                                          v   = 2 ^ abs (fromIntegral y :: Integer)
+                                                                          sgn = if s == Neg then ((-1) *) else id
+                                                                      in if y > 0
+                                                                            then sgn $ x * v % 1
+                                                                            else sgn $ x % v
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFrac (FloatingPoint eb sb) where
   properFraction = error "FP-TODO: properFraction"
