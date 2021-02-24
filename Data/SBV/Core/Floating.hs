@@ -621,8 +621,8 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
   toRational (FloatingPoint (FP _ _ r)) = case bfToRep r of
                                             BFNaN     -> toRational (0/0 :: Double)
                                             BFRep s n -> case n of
-                                                           Zero    -> toRational (if s == Neg then -0     else (0   :: Double))
-                                                           Inf     -> toRational (if s == Neg then -(1/0) else (1/0 :: Double))
+                                                           Zero    -> 0 % 1
+                                                           Inf     -> (if s == Neg then -1 else 1) % 0
                                                            Num x y -> -- The value here is x * 2^y
                                                                       let v :: Integer
                                                                           v   = 2 ^ abs (fromIntegral y :: Integer)
@@ -637,14 +637,24 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FloatingPoint eb sb) where
   floatRadix     _                            = 2
   floatDigits    _                            = intOfProxy (Proxy @sb)
+  floatRange     _                            = let v :: Integer
+                                                    v = 2 ^ ((fromIntegral (intOfProxy (Proxy @eb)) :: Integer) - 1)
+                                                in (fromIntegral (-v+3), fromIntegral v)
   isNaN          (FloatingPoint (FP _  _  r)) = bfIsNaN r
   isInfinite     (FloatingPoint (FP _  _  r)) = bfIsInf r
   isDenormalized (FloatingPoint (FP eb sb r)) = bfIsSubnormal (expBits (fromIntegral eb) <> precBits (fromIntegral sb) <> rnd NearEven) r
   isNegativeZero (FloatingPoint (FP _  _  r)) = bfIsZero r && bfIsNeg r
   isIEEE         _                            = True
 
-  floatRange     = error "FP-TODO: floatRange"
-  decodeFloat    = error "FP-TODO: decodeFloat"
+  decodeFloat    i@(FloatingPoint (FP _ _ r)) = case bfToRep r of
+                                                  BFNaN     -> decodeFloat (0/0 :: Double)
+                                                  BFRep s n -> case n of
+                                                                 Zero    -> (0, 0)
+                                                                 Inf     -> let (_, m) = floatRange i
+                                                                                x = (2 :: Integer) ^ toInteger (m+1)
+                                                                            in (if s == Neg then -x else x, 0)
+                                                                 Num x y -> -- The value here is x * 2^y
+                                                                            (if s == Neg then -x else x, fromIntegral y)
   encodeFloat    = error "FP-TODO: encodeFloat"
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
