@@ -23,7 +23,7 @@
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
-          FP(..), FPRep(..)
+          FloatingPoint(..), FPRep(..)
         -- * Constructing values
         , fprReg, fprNaN, fprInf, fprZero
         -- * Operations
@@ -45,18 +45,18 @@ import Numeric
 import Data.SBV.Core.Kind
 
 -- | A floating point value, indexed by its exponent and significand sizes.
-data FP (eb :: Nat) (sb :: Nat) = FP FPRep
+data FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FPRep
 
 -- | We need an Eq/Ord instance for FP, but only to satisfy the hierarchy
 -- The definitions themselves are not supported.
-instance Eq  (FP eb sb) where
+instance Eq  (FloatingPoint eb sb) where
   a == b = error $ "Data.SBV.SizedFloat: Cannot literally check equality of " ++ show (a, b)
 
-instance Ord (FP eb sb) where
+instance Ord (FloatingPoint eb sb) where
   a `compare` b = error $ "Data.SBV.SizedFloat: Cannot literally compare " ++ show (a, b)
 
-instance Show (FP eb sb) where
-  show (FP r) = show r
+instance Show (FloatingPoint eb sb) where
+  show (FloatingPoint r) = show r
 
 -- | Internal representation of a parameterized float.
 -- If we have eb exponent bits, and sb significand bits, then
@@ -206,23 +206,23 @@ fprCompareObject fpa fpb = case (fpa, fpb) of
         compareRat (FPRat   es    ss  v) (FPRat    es'     ss'  v') = (   es,     ss,  v) `compare` (    es',      ss',  v')
 
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FP eb sb) where
-  (+)           = error "FP-TODO: +"
-  (*)           = error "FP-TODO: *"
-  abs (FP r)    = FP (fprAbs r)
-  signum (FP r) = FP (fprSignum r)
-  fromInteger   = FP . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
-  negate (FP r) = FP (fprNegate r)
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
+  (+)                      = error "FP-TODO: +"
+  (*)                      = error "FP-TODO: *"
+  abs (FloatingPoint r)    = FloatingPoint (fprAbs r)
+  signum (FloatingPoint r) = FloatingPoint (fprSignum r)
+  fromInteger              = FloatingPoint . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+  negate (FloatingPoint r) = FloatingPoint (fprNegate r)
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FP eb sb) where
-  fromRational = FP . fprFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FloatingPoint eb sb) where
+  fromRational = FloatingPoint . fprFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
   (/)          = error "FP-TODO: /"
 
 -- An almost redundant Floating instance. This is so that we can have
 -- definitions of nan/infinity etc. work. And one day, may be we can actually
 -- do support these as things improve both in SMT-land, and arbitrary precision
 -- floats in Haskell
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FP eb sb) where
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
   pi      = fromRational . toRational $ (pi :: Double)
   exp     = error "Data.SBV.FP: exp   is currently not supported. Please request this as a feature!"
   log     = error "Data.SBV.FP: log   is currently not supported. Please request this as a feature!"

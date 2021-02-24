@@ -221,15 +221,15 @@ instance SymVal a => SymVal [a] where
   fromCV (CV _ (CList a))   = fromCV . CV (kindOf (Proxy @a)) <$> a
   fromCV c                  = error $ "SymVal.fromCV: Unexpected non-list value: " ++ show c
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => HasKind (FP eb sb) where
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => HasKind (FloatingPoint eb sb) where
   kindOf _ = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SymVal (FP eb sb) where
-  mkSymVal               = genMkSymVar (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
-  literal (FP r)         = let k = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
-                           in SBV $ SVal k $ Left $ CV k (CFP r)
-  fromCV  (CV _ (CFP r)) = FP r
-  fromCV  c              = error $ "SymVal.FPR: Unexpected non-arbitrary-precision value: " ++ show c
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SymVal (FloatingPoint eb sb) where
+  mkSymVal                   = genMkSymVar (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
+  literal (FloatingPoint r)  = let k = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+                               in SBV $ SVal k $ Left $ CV k (CFP r)
+  fromCV  (CV _ (CFP r))     = FloatingPoint r
+  fromCV  c                  = error $ "SymVal.FPR: Unexpected non-arbitrary-precision value: " ++ show c
 
 toCV :: SymVal a => a -> CVal
 toCV a = case literal a of

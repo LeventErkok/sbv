@@ -147,7 +147,7 @@ type SFloat = SBV Float
 type SDouble = SBV Double
 
 -- | A symbolic arbitrary precision floating point value
-type SFloatingPoint (eb :: Nat) (sb :: Nat) = SBV (FP eb sb)
+type SFloatingPoint (eb :: Nat) (sb :: Nat) = SBV (FloatingPoint eb sb)
 
 -- | A symbolic character. Note that this is the full unicode character set.
 -- see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>

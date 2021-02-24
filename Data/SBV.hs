@@ -157,7 +157,7 @@ module Data.SBV (
   , SInteger
   -- ** Floating point numbers
   -- $floatingPoints
-  , FPIsAtLeastTwo, SFloat, SDouble, SFloatingPoint
+  , FPIsAtLeastTwo, SFloat, SDouble, SFloatingPoint, FloatingPoint
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
@@ -374,6 +374,8 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
 import Data.SBV.Core.Sized      hiding (sWord, sWord_, sWords, sInt, sInt_, sInts)
 import Data.SBV.Core.Kind
+
+import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
