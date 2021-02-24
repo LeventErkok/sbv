@@ -1573,7 +1573,7 @@ svMkSymVarGen isTracker varContext k mbNm st = do
 
                         case () of
                           () | isUserSort k -> bad ("Cannot validate models in the presence of user defined kinds, saw: "             ++ show k) cant
-                          () | isFP k       -> bad ("Cannot validate models in the presence of arbitrary-floating point kinds, saw: " ++ show k) cant
+
                           _  -> do (NamedSymVar sv internalName) <- newSV st k
 
                                    let nm = fromMaybe (T.unpack internalName) mbNm

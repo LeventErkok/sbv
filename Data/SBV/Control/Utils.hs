@@ -89,7 +89,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
-import Data.SBV.Core.SizedFloats (fprZero, fprFromInteger, fprFromFloat, fprFromDouble)
+import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
 import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
 import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr)
 
@@ -729,7 +729,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUserSort _ ui) = uninterp ui
         cvt KFloat           = Just $ CFloat 0
         cvt KDouble          = Just $ CDouble 0
-        cvt (KFP eb sb)      = Just $ CFP (fprZero False eb sb)
+        cvt (KFP eb sb)      = Just $ CFP (fpZero False eb sb)
         cvt KChar            = Just $ CChar '\NUL'                -- why not?
         cvt KString          = Just $ CString ""
         cvt (KList  _)       = Just $ CList []
@@ -774,9 +774,9 @@ recoverKindedValue k e = case k of
                                        | EDouble i   <- e      -> Just $ CV KDouble (CDouble i)
                                        | True                  -> Nothing
 
-                           KFP eb sb   | ENum (i, _)      <- e -> Just $ CV k $ CFP $ fprFromInteger eb sb i
-                                       | EFloat f         <- e -> Just $ CV k $ CFP $ fprFromFloat   eb sb f
-                                       | EDouble d        <- e -> Just $ CV k $ CFP $ fprFromDouble  eb sb d
+                           KFP eb sb   | ENum (i, _)      <- e -> Just $ CV k $ CFP $ fpFromInteger eb sb i
+                                       | EFloat f         <- e -> Just $ CV k $ CFP $ fpFromFloat   eb sb f
+                                       | EDouble d        <- e -> Just $ CV k $ CFP $ fpFromDouble  eb sb d
                                        | EFloatingPoint c <- e -> Just $ CV k $ CFP c
                                        | True                  -> Nothing
 

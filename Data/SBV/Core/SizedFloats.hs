@@ -25,10 +25,10 @@ module Data.SBV.Core.SizedFloats (
           FloatingPoint(..), FP(..), FPHalf, FPSingle, FPDouble, FPQuad
 
         -- * Constructing values
-        , fprReg, fprNaN, fprInf, fprZero
+        , fpReg, fpNaN, fpInf, fpZero
 
         -- * Operations
-        , fprFromInteger, fprFromFloat, fprFromDouble
+        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
 
         -- * Internal operations
        , fprCompareObject, fprToSMTLib2
@@ -98,34 +98,34 @@ defOpts eb sb = rnd NearEven <> expBits (fromIntegral eb) <> precBits (fromInteg
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
 -- integers fit into the ranges given, i.e., no overflow checking is done here.
-fprReg :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
-fprReg sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (defOpts eb sb) val
+fpReg :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
+fpReg sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (defOpts eb sb) val
   where es, val :: Integer
         es = (e `shiftL` (sb - 1)) .|. s
         val | sign = (1 `shiftL` (eb + sb - 1)) .|. es
             | True =                                es
 
 -- | Make NaN. Exponent is all 1s. Significand is non-zero. The sign is irrelevant.
-fprNaN :: Int -> Int -> FP
-fprNaN eb sb = FP eb sb bfNaN
+fpNaN :: Int -> Int -> FP
+fpNaN eb sb = FP eb sb bfNaN
 
 -- | Make Infinity. Exponent is all 1s. Significand is 0.
-fprInf :: Bool -> Int -> Int -> FP
-fprInf sign eb sb = FP eb sb (if sign then bfNegInf else bfPosInf)
+fpInf :: Bool -> Int -> Int -> FP
+fpInf sign eb sb = FP eb sb (if sign then bfNegInf else bfPosInf)
 
 -- | Make a signed zero.
-fprZero :: Bool -> Int -> Int -> FP
-fprZero sign eb sb = FP eb sb (if sign then bfNegZero else bfPosZero)
+fpZero :: Bool -> Int -> Int -> FP
+fpZero sign eb sb = FP eb sb (if sign then bfNegZero else bfPosZero)
 
 -- | Make from an integer value.
-fprFromInteger :: Int -> Int -> Integer -> FP
-fprFromInteger eb sb = FP eb sb . bfFromInteger
+fpFromInteger :: Int -> Int -> Integer -> FP
+fpFromInteger eb sb = FP eb sb . bfFromInteger
 
 -- Make a fractional value. We represent all of these in FPRat
-fprFromRational :: Int -> Int -> Rational -> FP
-fprFromRational eb sb r = FP eb sb $ fst $ bfDiv (defOpts eb sb) top bot
-     where FP _ _ top = fprFromInteger eb sb (numerator   r)
-           FP _ _ bot = fprFromInteger eb sb (denominator r)
+fpFromRational :: Int -> Int -> Rational -> FP
+fpFromRational eb sb r = FP eb sb $ fst $ bfDiv (defOpts eb sb) top bot
+     where FP _ _ top = fpFromInteger eb sb (numerator   r)
+           FP _ _ bot = fpFromInteger eb sb (denominator r)
 
 -- | Represent the FP in SMTLib2 format
 fprToSMTLib2 :: FP -> String
@@ -174,7 +174,7 @@ instance Num FP where
   (*)         = lift2 bfMul
   abs         = lift1 bfAbs
   signum      = lift1 bfSignum
-  fromInteger = error "FP-TODO: fromInteger"
+  fromInteger = error "FP.fromInteger: Not supported for arbitrary floats. Use fpFromInteger instead, specifying the precision"
   negate      = lift1 bfNeg
 
 -- | Fractional instance for big-floats
@@ -190,10 +190,10 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
   signum (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfSignum r
   negate (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfNeg r
 
-  fromInteger = FloatingPoint . fprFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+  fromInteger = FloatingPoint . fpFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FloatingPoint eb sb) where
-  fromRational = FloatingPoint . fprFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+  fromRational = FloatingPoint . fpFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
   FloatingPoint (FP eb sb a) / FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb (fst (bfDiv (defOpts eb sb) a b))
 
@@ -230,13 +230,13 @@ lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> F
 lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (defOpts eb sb) a b
 
 -- Convert from a IEEE float
-fprFromFloat :: Int -> Int -> Float -> FP
-fprFromFloat  8 24 f = let fw          = CN.floatToWord f
-                           (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
-                       in fprReg sgn (e, 8) (s, 24)
-fprFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)
+fpFromFloat :: Int -> Int -> Float -> FP
+fpFromFloat  8 24 f = let fw          = CN.floatToWord f
+                          (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
+                      in fpReg sgn (e, 8) (s, 24)
+fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)
 
 -- Convert from a IEEE double
-fprFromDouble :: Int -> Int -> Double -> FP
-fprFromDouble 11 54 d = FP 11 54 $ bfFromDouble d
-fprFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
+fpFromDouble :: Int -> Int -> Double -> FP
+fpFromDouble 11 54 d = FP 11 54 $ bfFromDouble d
+fpFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
