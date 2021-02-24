@@ -617,6 +617,7 @@ instance Metric Double where
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
+-- | Real instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Real (FloatingPoint eb sb) where
   toRational (FloatingPoint (FP _ _ r)) = case bfToRep r of
                                             BFNaN     -> toRational (0/0 :: Double)
@@ -631,9 +632,25 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
                                                                             then sgn $ x * v % 1
                                                                             else sgn $ x % v
 
+-- | RealFrac instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFrac (FloatingPoint eb sb) where
-  properFraction = error "FP-TODO: properFraction"
+  properFraction i@(FloatingPoint (FP eb sb r)) = case bfRoundInt ToNegInf r of
+                                                    (r', Ok) | bfSign r == bfSign r' -> (getInt r', i - FloatingPoint (FP eb sb r'))
+                                                    x                                -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
+                                              where getInt x = case bfToRep x of
+                                                                 BFNaN     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
+                                                                 BFRep s n -> case n of
+                                                                                Zero    -> 0
+                                                                                Inf     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
+                                                                                Num v y -> -- The value here is x * 2^y, and is integer if y >= 0
+                                                                                           let e :: Integer
+                                                                                               e   = 2 ^ (fromIntegral y :: Integer)
+                                                                                               sgn = if s == Neg then ((-1) *) else id
+                                                                                           in if y > 0
+                                                                                              then fromIntegral $ sgn $ v * e
+                                                                                              else fromIntegral $ sgn v
 
+-- | RealFloat instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FloatingPoint eb sb) where
   floatRadix     _                            = 2
   floatDigits    _                            = intOfProxy (Proxy @sb)
@@ -655,7 +672,14 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
                                                                             in (if s == Neg then -x else x, 0)
                                                                  Num x y -> -- The value here is x * 2^y
                                                                             (if s == Neg then -x else x, fromIntegral y)
-  encodeFloat    = error "FP-TODO: encodeFloat"
+  encodeFloat _ _ = error $ unlines [ "Data.SBV.FloatingPoint: encodeFloat is not supported, instead use the equality:"
+                                    , ""
+                                    , "    encodeFloat m n = FloatingPoint $ fpFromRational eb sb (m % (2^n)),      if n < 0"
+                                    , "    encodeFloat m n = FloatingPoint $ fpFromRational eb sb (m * (2^n) % 1),  otherwise"
+                                    , ""
+                                    , "where eb and sb are the exponent and significand width numbers."
+                                    ]
+
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
