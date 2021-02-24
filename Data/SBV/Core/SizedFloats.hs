@@ -28,7 +28,7 @@ module Data.SBV.Core.SizedFloats (
         , fpFromRawRep, fpNaN, fpInf, fpZero
 
         -- * Operations
-        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
+        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
 
         -- * Internal operations
        , fprCompareObject, fprToSMTLib2
@@ -240,3 +240,10 @@ fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb
 fpFromDouble :: Int -> Int -> Double -> FP
 fpFromDouble 11 54 d = FP 11 54 $ bfFromDouble d
 fpFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
+
+-- | Implementation of Haskell's 'encodeFloat' for FP
+fpEncodeFloat :: Int -> Int -> Integer -> Int -> FloatingPoint eb sb
+fpEncodeFloat eb sb m n | n < 0 = FloatingPoint $ fpFromRational eb sb (m      % n')
+                        | True  = FloatingPoint $ fpFromRational eb sb (m * n' % 1)
+  where n' :: Integer
+        n' = (2 :: Integer) ^ abs (fromIntegral n :: Integer)
