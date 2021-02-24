@@ -25,7 +25,7 @@ module Data.SBV.Core.SizedFloats (
           FloatingPoint(..), FP(..), FPHalf, FPSingle, FPDouble, FPQuad
 
         -- * Constructing values
-        , fpReg, fpNaN, fpInf, fpZero
+        , fpFromRawRep, fpNaN, fpInf, fpZero
 
         -- * Operations
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
@@ -98,8 +98,8 @@ defOpts eb sb = rnd NearEven <> expBits (fromIntegral eb) <> precBits (fromInteg
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
 -- integers fit into the ranges given, i.e., no overflow checking is done here.
-fpReg :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
-fpReg sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (defOpts eb sb) val
+fpFromRawRep :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
+fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (defOpts eb sb) val
   where es, val :: Integer
         es = (e `shiftL` (sb - 1)) .|. s
         val | sign = (1 `shiftL` (eb + sb - 1)) .|. es
@@ -233,7 +233,7 @@ lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (defOpts eb sb) a b
 fpFromFloat :: Int -> Int -> Float -> FP
 fpFromFloat  8 24 f = let fw          = CN.floatToWord f
                           (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
-                      in fpReg sgn (e, 8) (s, 24)
+                      in fpFromRawRep sgn (e, 8) (s, 24)
 fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)
 
 -- Convert from a IEEE double

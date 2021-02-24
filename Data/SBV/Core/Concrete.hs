@@ -470,7 +470,14 @@ randomCVal k =
     KReal              -> CAlgReal <$> randomIO
     KFloat             -> CFloat   <$> randomIO
     KDouble            -> CDouble  <$> randomIO
-    KFP{}              -> error "FP-TODO: KFP.randomCVal"
+
+    -- Rather bad, but OK
+    KFP eb sb          -> do sgn <- randomRIO (0 :: Integer, 1)
+                             let sign = sgn == 1
+                             e   <- randomRIO (0 :: Integer, 2^eb-1)
+                             s   <- randomRIO (0 :: Integer, 2^sb-1)
+                             pure $ CFP $ fpFromRawRep sign (e, eb) (s, sb)
+
     -- TODO: KString/KChar currently only go for 0..255; include unicode?
     KString            -> do l <- randomRIO (0, 100)
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))
