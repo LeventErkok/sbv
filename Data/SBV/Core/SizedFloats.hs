@@ -179,7 +179,7 @@ instance Num FP where
 
 -- | Fractional instance for big-floats
 instance Fractional FP where
-  fromRational = error "FP-TODO: fromRational"
+  fromRational = error "FP.fromRational: Not supported for arbitrary floats. Use fpFromRational instead, specifying the precision"
   (/)          = lift2 bfDiv
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
