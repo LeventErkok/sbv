@@ -36,8 +36,8 @@ common common-settings
       ghc-options  : -Wunused-packages
 
 Library
-  import           : common-settings
-  other-extensions : BangPatterns
+  import          : common-settings
+  other-extensions: BangPatterns
                     CPP
                     ConstraintKinds
                     DataKinds
@@ -77,6 +77,7 @@ Library
                   , QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, text, transformers, uniplate
+                  , libBF
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
                   , Data.SBV.Dynamic

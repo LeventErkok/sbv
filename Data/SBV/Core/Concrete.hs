@@ -75,7 +75,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CInteger  !Integer             -- ^ Bit-vector/unbounded integer
           | CFloat    !Float               -- ^ Float
           | CDouble   !Double              -- ^ Double
-          | CFP       !FPRep               -- ^ Arbitrary float
+          | CFP       !FP                  -- ^ Arbitrary float
           | CChar     !Char                -- ^ Character
           | CString   !String              -- ^ String
           | CList     ![CVal]              -- ^ List
@@ -276,7 +276,7 @@ liftCV :: (AlgReal             -> b)
        -> (Integer             -> b)
        -> (Float               -> b)
        -> (Double              -> b)
-       -> (FPRep               -> b)
+       -> (FP                  -> b)
        -> (Char                -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)
@@ -333,21 +333,21 @@ mapCV :: (AlgReal             -> AlgReal)
       -> (Integer             -> Integer)
       -> (Float               -> Float)
       -> (Double              -> Double)
-      -> (FPRep               -> FPRep)
+      -> (FP                  -> FP)
       -> (Char                -> Char)
       -> (String              -> String)
       -> ((Maybe Int, String) -> (Maybe Int, String))
       -> CV
       -> CV
 mapCV r i f d af c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
-                                                       CAlgReal  a -> CAlgReal  (r a)
-                                                       CInteger  a -> CInteger  (i a)
-                                                       CFloat    a -> CFloat    (f a)
-                                                       CDouble   a -> CDouble   (d a)
+                                                       CAlgReal  a -> CAlgReal  (r  a)
+                                                       CInteger  a -> CInteger  (i  a)
+                                                       CFloat    a -> CFloat    (f  a)
+                                                       CDouble   a -> CDouble   (d  a)
                                                        CFP       a -> CFP       (af a)
-                                                       CChar     a -> CChar     (c a)
-                                                       CString   a -> CString   (s a)
-                                                       CUserSort a -> CUserSort (u a)
+                                                       CChar     a -> CChar     (c  a)
+                                                       CString   a -> CString   (s  a)
+                                                       CUserSort a -> CUserSort (u  a)
                                                        CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
                                                        CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
                                                        CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
@@ -359,26 +359,27 @@ mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
        -> (Integer             -> Integer             -> Integer)
        -> (Float               -> Float               -> Float)
        -> (Double              -> Double              -> Double)
+       -> (FP                  -> FP                  -> FP)
        -> (Char                -> Char                -> Char)
        -> (String              -> String              -> String)
        -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String))
        -> CV
        -> CV
        -> CV
-mapCV2 r i f d c s u x y = case (cvSameType x y, cvVal x, cvVal y) of
-                            (True, CAlgReal  a, CAlgReal  b) -> normCV $ CV (kindOf x) (CAlgReal  (r a b))
-                            (True, CInteger  a, CInteger  b) -> normCV $ CV (kindOf x) (CInteger  (i a b))
-                            (True, CFloat    a, CFloat    b) -> normCV $ CV (kindOf x) (CFloat    (f a b))
-                            (True, CDouble   a, CDouble   b) -> normCV $ CV (kindOf x) (CDouble   (d a b))
-                            (True, CChar     a, CChar     b) -> normCV $ CV (kindOf x) (CChar     (c a b))
-                            (True, CString   a, CString   b) -> normCV $ CV (kindOf x) (CString   (s a b))
-                            (True, CUserSort a, CUserSort b) -> normCV $ CV (kindOf x) (CUserSort (u a b))
-                            (True, CFP{},       CFP{})       -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with arbitrary precision floats!"
-                            (True, CList{},     CList{})     -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with lists!"
-                            (True, CTuple{},    CTuple{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with tuples!"
-                            (True, CMaybe{},    CMaybe{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with maybes!"
-                            (True, CEither{},   CEither{})   -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with eithers!"
-                            _                                -> error $ "Data.SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
+mapCV2 r i f d af c s u x y = case (cvSameType x y, cvVal x, cvVal y) of
+                                (True, CAlgReal  a, CAlgReal  b) -> normCV $ CV (kindOf x) (CAlgReal  (r  a b))
+                                (True, CInteger  a, CInteger  b) -> normCV $ CV (kindOf x) (CInteger  (i  a b))
+                                (True, CFloat    a, CFloat    b) -> normCV $ CV (kindOf x) (CFloat    (f  a b))
+                                (True, CDouble   a, CDouble   b) -> normCV $ CV (kindOf x) (CDouble   (d  a b))
+                                (True, CFP       a, CFP       b) -> normCV $ CV (kindOf x) (CFP       (af a b))
+                                (True, CChar     a, CChar     b) -> normCV $ CV (kindOf x) (CChar     (c  a b))
+                                (True, CString   a, CString   b) -> normCV $ CV (kindOf x) (CString   (s  a b))
+                                (True, CUserSort a, CUserSort b) -> normCV $ CV (kindOf x) (CUserSort (u  a b))
+                                (True, CList{},     CList{})     -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with lists!"
+                                (True, CTuple{},    CTuple{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with tuples!"
+                                (True, CMaybe{},    CMaybe{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with maybes!"
+                                (True, CEither{},   CEither{})   -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with eithers!"
+                                _                                -> error $ "Data.SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Show instance for 'CV'.
 instance Show CV where

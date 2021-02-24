@@ -406,7 +406,7 @@ cvToSMTLib rm x
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
-  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2 rm f
+  | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2 f
   | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
   -- signed numbers (with 2's complement representation) is problematic
