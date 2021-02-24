@@ -635,16 +635,17 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
   properFraction = error "FP-TODO: properFraction"
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FloatingPoint eb sb) where
-  floatRadix   _ = 2
-  floatDigits  _ = intOfProxy (Proxy @sb)
+  floatRadix     _                            = 2
+  floatDigits    _                            = intOfProxy (Proxy @sb)
+  isNaN          (FloatingPoint (FP _  _  r)) = bfIsNaN r
+  isInfinite     (FloatingPoint (FP _  _  r)) = bfIsInf r
+  isDenormalized (FloatingPoint (FP eb sb r)) = bfIsSubnormal (expBits (fromIntegral eb) <> precBits (fromIntegral sb) <> rnd NearEven) r
+  isNegativeZero (FloatingPoint (FP _  _  r)) = bfIsZero r && bfIsNeg r
+  isIEEE         _                            = True
+
   floatRange     = error "FP-TODO: floatRange"
   decodeFloat    = error "FP-TODO: decodeFloat"
   encodeFloat    = error "FP-TODO: encodeFloat"
-  isNaN          = error "FP-TODO: isNaN"
-  isInfinite     = error "FP-TODO: isInfinite"
-  isDenormalized = error "FP-TODO: isDenormalized"
-  isNegativeZero = error "FP-TODO: isNegativeZero"
-  isIEEE         = error "FP-TODO: isIEEE"
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
