@@ -306,6 +306,7 @@ liftCV2 :: (AlgReal             -> AlgReal             -> b)
         -> (Integer             -> Integer             -> b)
         -> (Float               -> Float               -> b)
         -> (Double              -> Double              -> b)
+        -> (FP                  -> FP                  -> b)
         -> (Char                -> Char                -> b)
         -> (String              -> String              -> b)
         -> ([CVal]              -> [CVal]              -> b)
@@ -314,19 +315,20 @@ liftCV2 :: (AlgReal             -> AlgReal             -> b)
         -> (Either CVal CVal    -> Either CVal CVal    -> b)
         -> ((Maybe Int, String) -> (Maybe Int, String) -> b)
         -> CV                   -> CV                  -> b
-liftCV2 r i f d c s u v m e w x y = case (cvVal x, cvVal y) of
-                                      (CAlgReal   a, CAlgReal   b) -> r a b
-                                      (CInteger   a, CInteger   b) -> i a b
-                                      (CFloat     a, CFloat     b) -> f a b
-                                      (CDouble    a, CDouble    b) -> d a b
-                                      (CChar      a, CChar      b) -> c a b
-                                      (CString    a, CString    b) -> s a b
-                                      (CList      a, CList      b) -> u a b
-                                      (CTuple     a, CTuple     b) -> v a b
-                                      (CMaybe     a, CMaybe     b) -> m a b
-                                      (CEither    a, CEither    b) -> e a b
-                                      (CUserSort  a, CUserSort  b) -> w a b
-                                      _                            -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
+liftCV2 r i f d af c s u v m e w x y = case (cvVal x, cvVal y) of
+                                         (CAlgReal   a, CAlgReal   b) -> r  a b
+                                         (CInteger   a, CInteger   b) -> i  a b
+                                         (CFloat     a, CFloat     b) -> f  a b
+                                         (CDouble    a, CDouble    b) -> d  a b
+                                         (CFP        a, CFP        b) -> af a b
+                                         (CChar      a, CChar      b) -> c  a b
+                                         (CString    a, CString    b) -> s  a b
+                                         (CList      a, CList      b) -> u  a b
+                                         (CTuple     a, CTuple     b) -> v  a b
+                                         (CMaybe     a, CMaybe     b) -> m  a b
+                                         (CEither    a, CEither    b) -> e  a b
+                                         (CUserSort  a, CUserSort  b) -> w  a b
+                                         _                            -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
 
 -- | Map a unary function through a 'CV'.
 mapCV :: (AlgReal             -> AlgReal)
@@ -450,7 +452,7 @@ mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
 mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
 mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
 mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
-mkConstCV KFP{}           a = error $ "Unexpected call to mkConstCV (FP) with value: "     ++ show (toInteger a)
+mkConstCV k@KFP{}         a = normCV $ CV k          (CFP      (fromInteger (toInteger a)))
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)

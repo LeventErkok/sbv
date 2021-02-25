@@ -360,59 +360,43 @@ instance IEEEFloatConvertible AlgReal where
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
-concEval1 mbOp mbRm a
-  | isFP a
-  = Nothing
-  | True
-  = do op <- mbOp
-       v  <- unliteral a
-       case unliteral =<< mbRm of
-         Nothing                     -> (Just . literal) (op v)
-         Just RoundNearestTiesToEven -> (Just . literal) (op v)
-         _                           -> Nothing
+concEval1 mbOp mbRm a = do op <- mbOp
+                           v  <- unliteral a
+                           case unliteral =<< mbRm of
+                                   Nothing                     -> (Just . literal) (op v)
+                                   Just RoundNearestTiesToEven -> (Just . literal) (op v)
+                                   _                           -> Nothing
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval2 :: SymVal a => Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe (SBV a)
-concEval2 mbOp mbRm a b
-  | isFP a
-  = Nothing
-  | True
-  = do op <- mbOp
-       v1 <- unliteral a
-       v2 <- unliteral b
-       case unliteral =<< mbRm of
-         Nothing                     -> (Just . literal) (v1 `op` v2)
-         Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
-         _                           -> Nothing
+concEval2 mbOp mbRm a b = do op <- mbOp
+                             v1 <- unliteral a
+                             v2 <- unliteral b
+                             case unliteral =<< mbRm of
+                                     Nothing                     -> (Just . literal) (v1 `op` v2)
+                                     Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
+                                     _                           -> Nothing
 
 -- | Concretely evaluate a bool producing two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval2B :: SymVal a => Maybe (a -> a -> Bool) -> Maybe SRoundingMode -> SBV a -> SBV a -> Maybe SBool
-concEval2B mbOp mbRm a b
-  | isFP a
-  = Nothing
-  | True
-  = do op <- mbOp
-       v1 <- unliteral a
-       v2 <- unliteral b
-       case unliteral =<< mbRm of
-         Nothing                     -> (Just . literal) (v1 `op` v2)
-         Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
-         _                           -> Nothing
+concEval2B mbOp mbRm a b = do op <- mbOp
+                              v1 <- unliteral a
+                              v2 <- unliteral b
+                              case unliteral =<< mbRm of
+                                      Nothing                     -> (Just . literal) (v1 `op` v2)
+                                      Just RoundNearestTiesToEven -> (Just . literal) (v1 `op` v2)
+                                      _                           -> Nothing
 
 -- | Concretely evaluate two arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval3 :: SymVal a => Maybe (a -> a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a -> Maybe (SBV a)
-concEval3 mbOp mbRm a b c
-  | isFP a
-  = Nothing
-  | True
-  = do op <- mbOp
-       v1 <- unliteral a
-       v2 <- unliteral b
-       v3 <- unliteral c
-       case unliteral =<< mbRm of
-         Nothing                     -> (Just . literal) (op v1 v2 v3)
-         Just RoundNearestTiesToEven -> (Just . literal) (op v1 v2 v3)
-         _                           -> Nothing
+concEval3 mbOp mbRm a b c = do op <- mbOp
+                               v1 <- unliteral a
+                               v2 <- unliteral b
+                               v3 <- unliteral c
+                               case unliteral =<< mbRm of
+                                       Nothing                     -> (Just . literal) (op v1 v2 v3)
+                                       Just RoundNearestTiesToEven -> (Just . literal) (op v1 v2 v3)
+                                       _                           -> Nothing
 
 -- | Add the converted rounding mode if given as an argument
 addRM :: State -> Maybe SRoundingMode -> [SV] -> IO [SV]
@@ -435,8 +419,8 @@ lift1 w mbOp mbRm a
 -- | Lift an FP predicate
 lift1B :: SymVal a => FPOp -> (a -> Bool) -> SBV a -> SBool
 lift1B w f a
-   | not (isFP a), Just v <- unliteral a = literal $ f v
-   | True                                = SBV $ SVal KBool $ Right $ cache r
+   | Just v <- unliteral a = literal $ f v
+   | True                  = SBV $ SVal KBool $ Right $ cache r
    where r st = do sva <- sbvToSV st a
                    newExpr st KBool (SBVApp (IEEEFP w) [sva])
 
@@ -458,8 +442,7 @@ lift2 w mbOp mbRm a b
 -- SMTLib is deliberately nondeterministic in this case
 liftMM :: (SymVal a, RealFloat a) => FPOp -> Maybe (a -> a -> a) -> Maybe SRoundingMode -> SBV a -> SBV a -> SBV a
 liftMM w mbOp mbRm a b
-  | not (isFP a)
-  , Just v1 <- unliteral a
+  | Just v1 <- unliteral a
   , Just v2 <- unliteral b
   , not ((isN0 v1 && isP0 v2) || (isP0 v1 && isN0 v2))          -- If not +0/-0 or -0/+0
   , Just cv <- concEval2 mbOp mbRm a b

@@ -27,7 +27,9 @@
 
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
- , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble, SFloatingPoint, SChar, SString, SList
+ , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
+ , SFloatingPoint, SFPHalf, SFPSingle, SFPDouble, SFPQuad
+ , SChar, SString, SList
  , SEither, SMaybe
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
@@ -148,6 +150,18 @@ type SDouble = SBV Double
 
 -- | A symbolic arbitrary precision floating point value
 type SFloatingPoint (eb :: Nat) (sb :: Nat) = SBV (FloatingPoint eb sb)
+
+-- | A symbolic half-precision float
+type SFPHalf = SBV FPHalf
+
+-- | A symbolic single-precision float
+type SFPSingle = SBV FPSingle
+
+-- | A symbolic double-precision float
+type SFPDouble = SBV FPDouble
+
+-- | A symbolic quad-precision float
+type SFPQuad = SBV FPQuad
 
 -- | A symbolic character. Note that this is the full unicode character set.
 -- see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
