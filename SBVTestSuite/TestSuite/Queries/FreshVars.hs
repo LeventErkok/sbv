@@ -64,6 +64,8 @@ fv = do a <- sInteger "a"
                    vReal    :: SReal           <- freshVar_
                    vInteger :: SInteger        <- freshVar  "vInteger"
                    vBinOp   :: SBinOp          <- freshVar  "vBinOp"
+                   vQuad    :: SFPQuad         <- freshVar  "vQuad"
+                   wQuad    :: SFPQuad         <- freshVar  "wQuad"
 
                    constrain   vBool
                    constrain $ vWord8   .== 1
@@ -79,6 +81,10 @@ fv = do a <- sInteger "a"
                    constrain $ vReal    .== 11
                    constrain $ vInteger .== 12
                    constrain $ vBinOp   .== sPlus
+
+                   constrain $ vQuad .== wQuad
+                   constrain $ sNot $ vQuad `fpIsEqualObject` wQuad
+                   constrain $ fpIsPositive vQuad
 
                    vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
                    vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray" Nothing
@@ -135,6 +141,8 @@ fv = do a <- sInteger "a"
                                vList2Val   <- getValue vList2
                                vList3Val   <- getValue vList3
                                vList4Val   <- getValue vList4
+                               vQuadVal    <- getValue vQuad
+                               wQuadVal    <- getValue wQuad
 
                                mkSMTResult [ a          |-> aVal
                                            , vBool      |-> vBoolVal
@@ -160,5 +168,7 @@ fv = do a <- sInteger "a"
                                            , vList2     |-> vList2Val
                                            , vList3     |-> vList3Val
                                            , vList4     |-> vList4Val
+                                           , vQuad      |-> vQuadVal
+                                           , wQuad      |-> wQuadVal
                                            ]
                      _   -> error "didn't expect non-Sat here!"
