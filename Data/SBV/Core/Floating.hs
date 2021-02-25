@@ -10,11 +10,13 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -24,16 +26,18 @@ module Data.SBV.Core.Floating (
        , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
        , sFloatAsComparableSWord32, sDoubleAsComparableSWord64
+       , sFloatingPointAsSWord
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
-import Data.Int            (Int8,  Int16,  Int32,  Int64)
-import Data.Word           (Word8, Word16, Word32, Word64)
+import Data.Int  (Int8,  Int16,  Int32,  Int64)
+import Data.Word (Word8, Word16, Word32, Word64)
 
 import Data.Proxy
 
 import Data.SBV.Core.AlgReals (isExactRational)
+import Data.SBV.Core.Sized
 import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Core.Data
@@ -658,4 +662,25 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
   encodeFloat _ _ = error "Data.SBV.FloatingPoint: encodeFloat is not supported, instead use fpEncodeFloat."
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
+
+-- | Convert a float to the word containing the corresponding bit pattern
+sFloatingPointAsSWord :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
+sFloatingPointAsSWord fVal
+  | Just f@(FloatingPoint (FP eb sb v)) <- unliteral fVal, not (isNaN f)
+  = fromIntegral $ bfToBits (rnd NearEven <> expBits (fromIntegral eb) <> precBits (fromIntegral sb)) v
+  | True
+  = SBV (SVal kTo (Right (cache y)))
+  where ieb   = intOfProxy (Proxy @eb)
+        isb   = intOfProxy (Proxy @sb)
+        kFrom = KFP ieb isb
+        kTo   = KBounded False (ieb + isb)
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- sbvToSV st fVal
+                             newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret kFrom kTo)) [f])
+                     else do n   <- internalVariable st kTo
+                             ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
+                             internalConstraint st False [] $ unSBV $ fVal `fpIsEqualObject` SBV (SVal kFrom (Right (cache (\_ -> return ysw))))
+                             return n
+
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
