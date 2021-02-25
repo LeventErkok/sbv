@@ -187,6 +187,10 @@ module Data.SBV (
   , sReal, sReal_
   , sFloat, sFloat_
   , sDouble, sDouble_
+  , sFPHalf, sFPHalf_
+  , sFPSingle, sFPSingle_
+  , sFPDouble, sFPDouble_
+  , sFPQuad, sFPQuad_
   , sChar, sChar_
   , sString, sString_
   , sList, sList_
@@ -204,6 +208,10 @@ module Data.SBV (
   , sReals
   , sFloats
   , sDoubles
+  , sFPHalfs
+  , sFPSingles
+  , sFPDoubles
+  , sFPQuads
   , sChars
   , sStrings
   , sLists
@@ -365,6 +373,8 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         forall, forall_, exists, exists_,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
+                                        sFPHalf, sFPHalf_, sFPHalfs, sFPSingle, sFPSingle_, sFPSingles,
+                                        sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads,
                                         sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s,
                                         sInt64, sInt64_, sInt64s, sInteger, sInteger_, sIntegers,
                                         sList, sList_, sLists, sTuple, sTuple_, sTuples,

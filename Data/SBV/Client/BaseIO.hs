@@ -25,6 +25,7 @@ module Data.SBV.Client.BaseIO where
 
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat,
+                                SFPHalf, SFPSingle, SFPDouble, SFPQuad,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
@@ -625,6 +626,78 @@ sDouble_ = Trans.sDouble_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sDoubles'
 sDoubles :: [String] -> Symbolic [SDouble]
 sDoubles = Trans.sDoubles
+
+-- | Declare a named 'SFPHalf'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPHalf'
+sFPHalf :: String -> Symbolic SFPHalf
+sFPHalf = Trans.sFPHalf
+
+-- | Declare an unnamed 'SFPHalf'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPHalf_'
+sFPHalf_ :: Symbolic SFPHalf
+sFPHalf_ = Trans.sFPHalf_
+
+-- | Declare a list of 'SFPHalf's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPHalfs'
+sFPHalfs :: [String] -> Symbolic [SFPHalf]
+sFPHalfs = Trans.sFPHalfs
+
+-- | Declare a named 'SFPSingle'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPSingle'
+sFPSingle :: String -> Symbolic SFPSingle
+sFPSingle = Trans.sFPSingle
+
+-- | Declare an unnamed 'SFPSingle'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPSingle_'
+sFPSingle_ :: Symbolic SFPSingle
+sFPSingle_ = Trans.sFPSingle_
+
+-- | Declare a list of 'SFPSingle's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPSingles'
+sFPSingles :: [String] -> Symbolic [SFPSingle]
+sFPSingles = Trans.sFPSingles
+
+-- | Declare a named 'SFPDouble'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPDouble'
+sFPDouble :: String -> Symbolic SFPDouble
+sFPDouble = Trans.sFPDouble
+
+-- | Declare an unnamed 'SFPDouble'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPDouble_'
+sFPDouble_ :: Symbolic SFPDouble
+sFPDouble_ = Trans.sFPDouble_
+
+-- | Declare a list of 'SFPDouble's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPDoubles'
+sFPDoubles :: [String] -> Symbolic [SFPDouble]
+sFPDoubles = Trans.sFPDoubles
+
+-- | Declare a named 'SFPQuad'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPQuad'
+sFPQuad :: String -> Symbolic SFPQuad
+sFPQuad = Trans.sFPQuad
+
+-- | Declare an unnamed 'SFPQuad'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPQuad_'
+sFPQuad_ :: Symbolic SFPQuad
+sFPQuad_ = Trans.sFPQuad_
+
+-- | Declare a list of 'SFPQuad's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPQuads'
+sFPQuads :: [String] -> Symbolic [SFPQuad]
+sFPQuads = Trans.sFPQuads
 
 -- | Declare a named 'SChar'
 --

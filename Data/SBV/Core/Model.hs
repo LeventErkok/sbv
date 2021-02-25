@@ -31,6 +31,7 @@ module Data.SBV.Core.Model (
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
+  , sFPHalf, sFPHalf_, sFPHalfs, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , SymTuple, sTuple, sTuple_, sTuples
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
@@ -517,6 +518,54 @@ sDouble_ = free_
 -- | Generalization of 'Data.SBV.sDoubles'
 sDoubles :: MonadSymbolic m => [String] -> m [SDouble]
 sDoubles = symbolics
+
+-- | Generalization of 'Data.SBV.sFPHalf'
+sFPHalf :: String -> Symbolic SFPHalf
+sFPHalf = symbolic
+
+-- | Generalization of 'Data.SBV.sFPHalf_'
+sFPHalf_ :: Symbolic SFPHalf
+sFPHalf_ = free_
+
+-- | Generalization of 'Data.SBV.sFPHalfs'
+sFPHalfs :: [String] -> Symbolic [SFPHalf]
+sFPHalfs = symbolics
+
+-- | Generalization of 'Data.SBV.sFPSingle'
+sFPSingle :: String -> Symbolic SFPSingle
+sFPSingle = symbolic
+
+-- | Generalization of 'Data.SBV.sFPSingle_'
+sFPSingle_ :: Symbolic SFPSingle
+sFPSingle_ = free_
+
+-- | Generalization of 'Data.SBV.sFPSingles'
+sFPSingles :: [String] -> Symbolic [SFPSingle]
+sFPSingles = symbolics
+
+-- | Generalization of 'Data.SBV.sFPDouble'
+sFPDouble :: String -> Symbolic SFPDouble
+sFPDouble = symbolic
+
+-- | Generalization of 'Data.SBV.sFPDouble_'
+sFPDouble_ :: Symbolic SFPDouble
+sFPDouble_ = free_
+
+-- | Generalization of 'Data.SBV.sFPDoubles'
+sFPDoubles :: [String] -> Symbolic [SFPDouble]
+sFPDoubles = symbolics
+
+-- | Generalization of 'Data.SBV.sFPQuad'
+sFPQuad :: String -> Symbolic SFPQuad
+sFPQuad = symbolic
+
+-- | Generalization of 'Data.SBV.sFPQuad_'
+sFPQuad_ :: Symbolic SFPQuad
+sFPQuad_ = free_
+
+-- | Generalization of 'Data.SBV.sFPQuads'
+sFPQuads :: [String] -> Symbolic [SFPQuad]
+sFPQuads = symbolics
 
 -- | Generalization of 'Data.SBV.sChar'
 sChar :: MonadSymbolic m => String -> m SChar
