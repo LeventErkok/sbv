@@ -38,9 +38,11 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind (smtType, smtRoundingMode)
 
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
-import Data.SBV.Core.SizedFloats (fprToSMTLib2)
+import Data.SBV.Core.SizedFloats (fprToSMTLib2, FP(..))
 
 import Data.SBV.Utils.Lib (stringToQFS)
+
+import LibBF
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where
@@ -164,11 +166,20 @@ instance PrettyNum Integer where
   hex  = shexI False False
   bin  = sbinI False False
 
+-- | Show a big float in the base given
+bf2s :: Int -> Bool -> FP -> String
+bf2s b withPrefix (FP _ sb a) = bfToString b withP a
+  where opts = showRnd NearEven <> showFreeMin (Just (fromIntegral sb))
+        withP
+          | withPrefix = addPrefix <> opts
+          | True       = opts
+
 instance PrettyNum CV where
   hexS cv | isUserSort      cv = show cv ++ " :: " ++ show (kindOf cv)
           | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
           | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 16 True f ++ " :: " ++ show (kindOf cv)
           | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
           | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
@@ -178,6 +189,7 @@ instance PrettyNum CV where
           | isBoolean       cv = binS (cvToBool cv)  ++ " :: Bool"
           | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
           | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 2 True f ++ " :: " ++ show (kindOf cv)
           | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
           | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
@@ -187,6 +199,7 @@ instance PrettyNum CV where
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 16 True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
@@ -196,28 +209,31 @@ instance PrettyNum CV where
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 2 True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
           | True               = let CInteger i = cvVal cv in sbin  False True (hasSign cv, intSizeOf cv) i
 
-  hex cv | isUserSort      cv = show cv
-         | isBoolean       cv = hexS (cvToBool cv)
-         | isFloat         cv = let CFloat   f = cvVal cv in show f
-         | isDouble        cv = let CDouble  d = cvVal cv in show d
-         | isReal          cv = let CAlgReal r = cvVal cv in show r
-         | isString        cv = let CString  s = cvVal cv in show s
-         | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
-         | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
+  hex cv  | isUserSort      cv = show cv
+          | isBoolean       cv = hexS (cvToBool cv)
+          | isFloat         cv = let CFloat   f = cvVal cv in show f
+          | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 16 False f
+          | isReal          cv = let CAlgReal r = cvVal cv in show r
+          | isString        cv = let CString  s = cvVal cv in show s
+          | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
+          | True               = let CInteger i = cvVal cv in shex  False False (hasSign cv, intSizeOf cv) i
 
-  bin cv | isUserSort      cv = show cv
-         | isBoolean       cv = binS (cvToBool cv)
-         | isFloat         cv = let CFloat   f = cvVal cv in show f
-         | isDouble        cv = let CDouble  d = cvVal cv in show d
-         | isReal          cv = let CAlgReal r = cvVal cv in show r
-         | isString        cv = let CString  s = cvVal cv in show s
-         | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
-         | True               = let CInteger i = cvVal cv in sbin  False False (hasSign cv, intSizeOf cv) i
+  bin cv  | isUserSort      cv = show cv
+          | isBoolean       cv = binS (cvToBool cv)
+          | isFloat         cv = let CFloat   f = cvVal cv in show f
+          | isDouble        cv = let CDouble  d = cvVal cv in show d
+          | isFP            cv = let CFP      f = cvVal cv in bf2s 2 False f
+          | isReal          cv = let CAlgReal r = cvVal cv in show r
+          | isString        cv = let CString  s = cvVal cv in show s
+          | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
+          | True               = let CInteger i = cvVal cv in sbin  False False (hasSign cv, intSizeOf cv) i
 
 instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   hexS s = maybe (show s) (hexS :: a -> String) $ unliteral s
