@@ -157,7 +157,12 @@ module Data.SBV (
   , SInteger
   -- ** Floating point numbers
   -- $floatingPoints
-  , FPIsAtLeastTwo, SFloat, SDouble, SFloatingPoint, SFPHalf, SFPSingle, SFPDouble, SFPQuad, FloatingPoint
+  , FPIsAtLeastTwo, SFloat, SDouble
+  , SFloatingPoint, FloatingPoint
+  , SFPHalf, FPHalf
+  , SFPSingle, FPSingle
+  , SFPDouble, FPDouble
+  , SFPQuad, FPQuad
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
