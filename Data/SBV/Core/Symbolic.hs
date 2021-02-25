@@ -238,10 +238,11 @@ data FPOp = FP_Cast        Kind Kind SV   -- From-Kind, To-Kind, RoundingMode. T
 -- is FP_Cast; where we handle different source/origins explicitly later on.
 instance Show FPOp where
    show (FP_Cast f t r)      = "(FP_Cast: " ++ show f ++ " -> " ++ show t ++ ", using RM [" ++ show r ++ "])"
-   show (FP_Reinterpret f t) = case (f, t) of
-                                  (KBounded False 32, KFloat)  -> "(_ to_fp 8 24)"
-                                  (KBounded False 64, KDouble) -> "(_ to_fp 11 53)"
-                                  _                            -> error $ "SBV.FP_Reinterpret: Unexpected conversion: " ++ show f ++ " to " ++ show t
+   show (FP_Reinterpret f t) = case t of
+                                  KFloat    -> "(_ to_fp 8 24)"
+                                  KDouble   -> "(_ to_fp 11 53)"
+                                  KFP eb sb -> "(_ to_fp " ++ show eb ++ " " ++ show sb ++ ")"
+                                  _         -> error $ "SBV.FP_Reinterpret: Unexpected conversion: " ++ show f ++ " to " ++ show t
    show FP_Abs               = "fp.abs"
    show FP_Neg               = "fp.neg"
    show FP_Add               = "fp.add"
