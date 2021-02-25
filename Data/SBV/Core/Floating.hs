@@ -26,10 +26,13 @@ module Data.SBV.Core.Floating (
        , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
        , sFloatAsComparableSWord32, sDoubleAsComparableSWord64
-       , sFloatingPointAsSWord
+       , sFloatingPointAsSWord, sFloatingPointAsComparableSWord
+       , sWordAsSFloatingPoint
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
+
+import Data.Bits
 
 import Data.Int  (Int8,  Int16,  Int32,  Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -682,5 +685,44 @@ sFloatingPointAsSWord fVal
                              ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
                              internalConstraint st False [] $ unSBV $ fVal `fpIsEqualObject` SBV (SVal kFrom (Right (cache (\_ -> return ysw))))
                              return n
+
+-- | Convert a float to the correct size word, that can be used in lexicographic ordering. Used in optimization.
+sFloatingPointAsComparableSWord :: forall eb sb. ( KnownNat eb, FPIsAtLeastTwo eb
+                                                 , KnownNat sb, FPIsAtLeastTwo sb
+                                                 , KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
+sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
+  where posZero     = sFloatingPointAsComparableSWord (0 :: SFloatingPoint eb sb)
+        (sb : rest) = blastBE $ (sFloatingPointAsSWord f :: SWord (eb + sb))
+
+-- | Convert a word to an arbitrary float
+sWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
+                                       , KnownNat eb, FPIsAtLeastTwo eb
+                                       , KnownNat sb, FPIsAtLeastTwo sb) => Int -> Int -> SWord (eb + sb) -> SFloatingPoint eb sb
+sWordAsSFloatingPoint eb sb sw
+   | Just (f :: WordN (eb + sb)) <- unliteral sw
+   = let fi = toInteger f
+         bits = [fi `testBit` i | i <- reverse [0 .. eb+sb - 1]]
+         (s, ebits, sigbits) = (head bits, take eb (drop 1 bits), drop (1 + eb) bits)
+         eIntV = foldr (\b sofar -> 2*sofar + if b then 1 else 0) 0 (reverse ebits)
+         sIntV = foldr (\b sofar -> 2*sofar + if b then 1 else 0) 0 (reverse sigbits)
+         fp   = fpFromRawRep s (eIntV, eb) (sIntV, sb)
+     in literal $ FloatingPoint fp
+   | True
+   = SBV (SVal kTo (Right (cache y)))
+   where kTo = KFP eb sb
+         y st = do xsv <- sbvToSV st sw
+                   newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret (kindOf sw) kTo)) [xsv])
+
+instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo eb, FPIsAtLeastTwo sb, KnownNat sb) => Metric (FloatingPoint eb sb) where
+
+   type MetricSpace (FloatingPoint eb sb) = WordN (eb + sb)
+   toMetricSpace                          = sFloatingPointAsComparableSWord
+   fromMetricSpace                        = sWordAsSFloatingPoint (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+
+   msMinimize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+
+   msMaximize nm o = do constrain $ sNot $ fpIsNaN o
+                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
