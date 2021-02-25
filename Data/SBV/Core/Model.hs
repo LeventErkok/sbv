@@ -32,6 +32,7 @@ module Data.SBV.Core.Model (
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
   , sFPHalf, sFPHalf_, sFPHalfs, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
+  , sFloatingPoint, sFloatingPoint_, sFloatingPoints
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , SymTuple, sTuple, sTuple_, sTuples
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
@@ -566,6 +567,18 @@ sFPQuad_ = free_
 -- | Generalization of 'Data.SBV.sFPQuads'
 sFPQuads :: [String] -> Symbolic [SFPQuad]
 sFPQuads = symbolics
+
+-- | Generalization of 'Data.SBV.sFloatingPoint'
+sFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => String -> Symbolic (SFloatingPoint eb sb)
+sFloatingPoint = symbolic
+
+-- | Generalization of 'Data.SBV.sFloatingPoint_'
+sFloatingPoint_ :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Symbolic (SFloatingPoint eb sb)
+sFloatingPoint_ = free_
+
+-- | Generalization of 'Data.SBV.sFloatingPoints'
+sFloatingPoints :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => [String] -> Symbolic [SFloatingPoint eb sb]
+sFloatingPoints = symbolics
 
 -- | Generalization of 'Data.SBV.sChar'
 sChar :: MonadSymbolic m => String -> m SChar
