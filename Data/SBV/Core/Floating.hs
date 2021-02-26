@@ -23,12 +23,12 @@
 
 module Data.SBV.Core.Floating (
          IEEEFloating(..), IEEEFloatConvertible(..)
-       , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
-       , blastSFloat, blastSDouble
-       , sFloatAsComparableSWord32, sDoubleAsComparableSWord64
-       , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble
-       , sFloatingPointAsSWord, sFloatingPointAsComparableSWord
-       , sWordAsSFloatingPoint
+       , sFloatAsSWord32, sDoubleAsSWord64, sFloatingPointAsSWord
+       , sWord32AsSFloat, sWord64AsSDouble, sWordAsSFloatingPoint
+       , blastSFloat, blastSDouble,  blastSFloatingPoint
+       , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
+       , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordToSFloatingPoint
+       , 
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
@@ -548,6 +548,15 @@ blastSDouble :: SDouble -> (SBool, [SBool], [SBool])
 blastSDouble = extract . sDoubleAsSWord64
  where extract x = (sTestBit x 63, sExtractBits x [62, 61 .. 52], sExtractBits x [51, 50 .. 0])
 
+-- | Extract the sign\/exponent\/mantissa of an arbitrary precision float. The output will have
+-- @eb@ bits in the second argument for exponent, and @sb-1@ bits in the third for mantissa.
+blastSFloatingPoint :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb))
+                    => SFloatingPoint eb sb -> (SBool, [SBool], [SBool])
+blastSFloatingPoint = extract . sFloatingPointAsSWord
+  where ei = intOfProxy (Proxy @eb)
+        si = intOfProxy (Proxy @sb)
+        extract x = (sTestBit x (ei + si - 1), sExtractBits x [ei + si - 2, ei + si - 3 .. si - 1], sExtractBits x [si - 2, si - 3 .. 0])
+
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord32AsSFloat :: SWord32 -> SFloat
 sWord32AsSFloat fVal
@@ -716,6 +725,21 @@ sFloatingPointAsComparableSWord :: forall eb sb. ( KnownNat eb, FPIsAtLeastTwo e
 sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where posZero     = sFloatingPointAsComparableSWord (0 :: SFloatingPoint eb sb)
         (sb : rest) = blastBE $ (sFloatingPointAsSWord f :: SWord (eb + sb))
+
+-- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord d .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` x
+-- Q.E.D.
+sComparableSWordToSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
+                                                  , KnownNat eb, FPIsAtLeastTwo eb
+                                                  , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
+sComparableSWordToSFloatingPoint w = sWordAsSFloatingPoint ei si $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
+  where ei = intOfProxy (Proxy @eb)
+        si = intOfProxy (Proxy @sb)
+        allBits@(signBit : rest) = blastBE w
 
 -- | Convert a word to an arbitrary float
 sWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)

@@ -74,8 +74,16 @@ module Data.SBV.Trans (
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
   -- ** Conversion to/from floats
   , IEEEFloatConvertible(..)
+
   -- ** Bit-pattern conversions
-  , sFloatAsSWord32, sWord32AsSFloat, sDoubleAsSWord64, sWord64AsSDouble, blastSFloat, blastSDouble
+  , sFloatAsSWord32,       sWord32AsSFloat
+  , sDoubleAsSWord64,      sWord64AsSDouble
+  , sFloatingPointAsSWord, sWordAsSFloatingPoint
+
+  -- ** Extracting bit patterns from floats
+  , blastSFloat
+  , blastSDouble
+  , blastSFloatingPoint
 
   -- * Enumerations
   , mkSymbolicEnumeration
