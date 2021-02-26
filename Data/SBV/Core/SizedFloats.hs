@@ -87,7 +87,7 @@ instance Show FP where
     | bfIsNaN  r = "NaN"
     | bfIsInf  r = if bfIsPos r then "Infinity" else "-Infinity"
     | bfIsZero r = if bfIsPos r then "0.0"      else "-0.0"
-    | True       = bfToString 10 (addPrefix <> showRnd NearEven <> showFreeMin (Just (fromIntegral sb))) r
+    | True       = bfToString 10 (addPrefix <> showRnd NearEven <> showFree (Just (fromIntegral sb))) r
 
 -- | Default options for BF options.
 defOpts :: Int -> Int -> BFOpts
