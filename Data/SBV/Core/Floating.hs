@@ -693,7 +693,14 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
                                                                             in (if s == Neg then -x else x, 0)
                                                                  Num x y -> -- The value here is x * 2^y
                                                                             (if s == Neg then -x else x, fromIntegral y)
-  encodeFloat _ _ = error "Data.SBV.FloatingPoint: encodeFloat is not supported, instead use fpEncodeFloat."
+
+  encodeFloat m n | n < 0 = FloatingPoint $ fpFromRational ei si (m      % n')
+                  | True  = FloatingPoint $ fpFromRational ei si (m * n' % 1)
+    where n' :: Integer
+          n' = (2 :: Integer) ^ abs (fromIntegral n :: Integer)
+
+          ei = intOfProxy (Proxy @eb)
+          si = intOfProxy (Proxy @sb)
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
 
