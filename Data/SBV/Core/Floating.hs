@@ -33,8 +33,7 @@ module Data.SBV.Core.Floating (
 
 import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
 
-import Data.Bits
-
+import Data.Bits (testBit)
 import Data.Int  (Int8,  Int16,  Int32,  Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
 
@@ -736,27 +735,31 @@ sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE
 sComparableSWordToSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
                                                   , KnownNat eb, FPIsAtLeastTwo eb
                                                   , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
-sComparableSWordToSFloatingPoint w = sWordAsSFloatingPoint ei si $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
-  where ei = intOfProxy (Proxy @eb)
-        si = intOfProxy (Proxy @sb)
-        allBits@(signBit : rest) = blastBE w
+sComparableSWordToSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
+  where allBits@(signBit : rest) = blastBE w
 
 -- | Convert a word to an arbitrary float
 sWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
                                        , KnownNat eb, FPIsAtLeastTwo eb
-                                       , KnownNat sb, FPIsAtLeastTwo sb) => Int -> Int -> SWord (eb + sb) -> SFloatingPoint eb sb
-sWordAsSFloatingPoint eb sb sw
+                                       , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
+sWordAsSFloatingPoint sw
    | Just (f :: WordN (eb + sb)) <- unliteral sw
-   = let fi = toInteger f
-         bits = [fi `testBit` i | i <- reverse [0 .. eb+sb - 1]]
-         (s, ebits, sigbits) = (head bits, take eb (drop 1 bits), drop (1 + eb) bits)
-         eIntV = foldr (\b sofar -> 2*sofar + if b then 1 else 0) 0 (reverse ebits)
-         sIntV = foldr (\b sofar -> 2*sofar + if b then 1 else 0) 0 (reverse sigbits)
-         fp   = fpFromRawRep s (eIntV, eb) (sIntV, sb)
+   = let ext i = f `testBit` i
+         exts  = map ext
+         (s, ebits, sigbits) = (ext (ei + si - 1), exts [ei + si - 2, ei + si - 3 .. si - 1], exts [si - 2, si - 3 .. 0])
+
+         cvt :: [Bool] -> Integer
+         cvt = foldr (\b sofar -> 2 * sofar + if b then 1 else 0) 0 . reverse
+
+         eIntV = cvt ebits
+         sIntV = cvt sigbits
+         fp    = fpFromRawRep s (eIntV, ei) (sIntV, si)
      in literal $ FloatingPoint fp
    | True
    = SBV (SVal kTo (Right (cache y)))
-   where kTo = KFP eb sb
+   where ei   = intOfProxy (Proxy @eb)
+         si   = intOfProxy (Proxy @sb)
+         kTo  = KFP ei si
          y st = do xsv <- sbvToSV st sw
                    newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret (kindOf sw) kTo)) [xsv])
 
@@ -764,7 +767,7 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo
 
    type MetricSpace (FloatingPoint eb sb) = WordN (eb + sb)
    toMetricSpace                          = sFloatingPointAsComparableSWord
-   fromMetricSpace                        = sWordAsSFloatingPoint (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
+   fromMetricSpace                        = sWordAsSFloatingPoint
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
