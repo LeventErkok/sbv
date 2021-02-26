@@ -169,6 +169,7 @@ bfSignum r | bfIsNaN  r = r
 -- | Num instance for big-floats
 instance Num FP where
   (+)         = lift2 bfAdd
+  (-)         = lift2 bfSub
   (*)         = lift2 bfMul
   abs         = lift1 bfAbs
   signum      = lift1 bfSignum
