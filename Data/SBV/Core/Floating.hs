@@ -27,7 +27,7 @@ module Data.SBV.Core.Floating (
        , sWord32AsSFloat, sWord64AsSDouble, sWordAsSFloatingPoint
        , blastSFloat, blastSDouble,  blastSFloatingPoint
        , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
-       , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordToSFloatingPoint
+       , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
        , 
        ) where
 
@@ -739,10 +739,10 @@ sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE
 -- Q.E.D.
 -- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` x
 -- Q.E.D.
-sComparableSWordToSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
+sComparableSWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
                                                   , KnownNat eb, FPIsAtLeastTwo eb
                                                   , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
-sComparableSWordToSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
+sComparableSWordAsSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(signBit : rest) = blastBE w
 
 -- | Convert a word to an arbitrary float

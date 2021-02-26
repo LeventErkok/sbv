@@ -54,7 +54,7 @@ module Data.SBV.Internals (
   -- * Defining new metrics
   , addSValOptGoal
   , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
-  , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordToSFloatingPoint
+  , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
   ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -64,7 +64,7 @@ import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, l
 import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..))
 
 import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
-                                , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordToSFloatingPoint
+                                , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
                                 )
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')

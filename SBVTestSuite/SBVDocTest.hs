@@ -60,6 +60,7 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                                             , "random"
                                                             , "syb"
                                                             , "uniplate"
+                                                            , "libBF"
                                                             ]
 
                                                  pargs = concatMap (\p -> ["-package", p]) packages
