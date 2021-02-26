@@ -730,7 +730,7 @@ sFloatingPointAsComparableSWord :: forall eb sb. ( KnownNat eb, FPIsAtLeastTwo e
                                                  , KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where posZero     = sFloatingPointAsComparableSWord (0 :: SFloatingPoint eb sb)
-        (sb : rest) = blastBE $ (sFloatingPointAsSWord f :: SWord (eb + sb))
+        (sb : rest) = blastBE (sFloatingPointAsSWord f :: SWord (eb + sb))
 
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:

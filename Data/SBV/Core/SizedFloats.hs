@@ -11,11 +11,9 @@
 
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -53,8 +51,8 @@ import LibBF
 --   An IEEE SP is @FloatingPoint  8 24@
 --           DP is @FloatingPoint 11 53@
 -- etc.
-data FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP
-                                           deriving (Eq, Ord)
+newtype FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP
+                                              deriving (Eq, Ord)
 
 -- | Abbreviation for IEEE half precision float, bit width 16.
 type FPHalf = FloatingPoint 5 11
