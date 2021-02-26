@@ -26,6 +26,7 @@ module Data.SBV.Core.Floating (
        , sFloatAsSWord32, sDoubleAsSWord64, sWord32AsSFloat, sWord64AsSDouble
        , blastSFloat, blastSDouble
        , sFloatAsComparableSWord32, sDoubleAsComparableSWord64
+       , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble
        , sFloatingPointAsSWord, sFloatingPointAsComparableSWord
        , sWordAsSFloatingPoint
        ) where
@@ -571,6 +572,17 @@ sFloatAsComparableSWord32 :: SFloat -> SWord32
 sFloatAsComparableSWord32 f = ite (fpIsNegativeZero f) (sFloatAsComparableSWord32 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where (sb : rest) = blastBE $ sFloatAsSWord32 f
 
+-- | Inverse transformation to 'sFloatAsComparableSWord32'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let f = sComparableSWord32AsSFloat x in fpIsNaN f .|| fpIsNegativeZero f .|| sFloatAsComparableSWord32 f .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord32AsSFloat (sFloatAsComparableSWord32 x) `fpIsEqualObject` x
+-- Q.E.D.
+sComparableSWord32AsSFloat :: SWord32 -> SFloat
+sComparableSWord32AsSFloat w = sWord32AsSFloat $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
+  where allBits@(sb : rest) = blastBE w
+
 -- | Convert a double to a comparable 'SWord64'. The trick is to ignore the
 -- sign of -0, and if it's a negative value flip all the bits, and otherwise
 -- only flip the sign bit. This is known as the lexicographic ordering on doubles
@@ -579,13 +591,24 @@ sDoubleAsComparableSWord64 :: SDouble -> SWord64
 sDoubleAsComparableSWord64 d = ite (fpIsNegativeZero d) (sDoubleAsComparableSWord64 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where (sb : rest) = blastBE $ sDoubleAsSWord64 d
 
+-- | Inverse transformation to 'sDoubleAsComparableSWord64'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let d = sComparableSWord64AsSDouble x in fpIsNaN d .|| fpIsNegativeZero d .|| sDoubleAsComparableSWord64 d .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord64AsSDouble (sDoubleAsComparableSWord64 x) `fpIsEqualObject` x
+-- Q.E.D.
+sComparableSWord64AsSDouble :: SWord64 -> SDouble
+sComparableSWord64AsSDouble w = sWord64AsSDouble $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
+  where allBits@(sb : rest) = blastBE w
+
 -- | 'Float' instance for 'Metric' goes through the lexicographic ordering on 'Word32'.
 -- It implicitly makes sure that the value is not @NaN@.
 instance Metric Float where
 
    type MetricSpace Float = Word32
    toMetricSpace          = sFloatAsComparableSWord32
-   fromMetricSpace        = sWord32AsSFloat
+   fromMetricSpace        = sComparableSWord32AsSFloat
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
@@ -599,7 +622,7 @@ instance Metric Double where
 
    type MetricSpace Double = Word64
    toMetricSpace           = sDoubleAsComparableSWord64
-   fromMetricSpace         = sWord64AsSDouble
+   fromMetricSpace         = sComparableSWord64AsSDouble
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
