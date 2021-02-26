@@ -735,9 +735,9 @@ sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
 --
--- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord d .== x
+-- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord (d :: SFPHalf) .== x
 -- Q.E.D.
--- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` x
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` (x :: SFPHalf)
 -- Q.E.D.
 sComparableSWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
                                                   , KnownNat eb, FPIsAtLeastTwo eb
