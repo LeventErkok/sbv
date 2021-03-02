@@ -202,9 +202,13 @@ unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w +
 -- Float instance. Most methods are left unimplemented.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
   pi = fromRational . toRational $ (pi :: Double)
+
   sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ bfSqrt (mkBFOpts eb sb NearEven) a
 
-  exp   = unsupported "exp"
+  FloatingPoint (FP eb sb a) ** FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst (bfPow (mkBFOpts eb sb NearEven) a b)
+
+  exp i = fromRational (toRational (exp 1 :: Double)) ** i
+
   log   = unsupported "log"
   sin   = unsupported "sin"
   cos   = unsupported "cos"
@@ -218,7 +222,6 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Flo
   asinh = unsupported "asinh"
   acosh = unsupported "acosh"
   atanh = unsupported "atanh"
-  (**)  = unsupported "**"
 
 -- | Lift a unary operation, simple case of function with no status
 lift1 :: (BigFloat -> BigFloat) -> FP -> FP
