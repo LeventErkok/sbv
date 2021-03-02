@@ -845,15 +845,19 @@ lift3FP bfOp mkDef rm a b c
 
 -- Sized-floats have a special instance, since it can handle arbitrary rounding modes when it matters.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
-  fpAdd  = lift2FP bfAdd  (lift2 FP_Add  (Just (+)))
-  fpSub  = lift2FP bfSub  (lift2 FP_Sub  (Just (-)))
-  fpMul  = lift2FP bfMul  (lift2 FP_Mul  (Just (*)))
-  fpDiv  = lift2FP bfDiv  (lift2 FP_Div  (Just (/)))
-  fpFMA  = lift3FP bfFMA  (lift3 FP_FMA  Nothing)
-  fpSqrt = lift1FP bfSqrt (lift1 FP_Sqrt (Just sqrt))
+  fpAdd  = lift2FP bfAdd      (lift2 FP_Add  (Just (+)))
+  fpSub  = lift2FP bfSub      (lift2 FP_Sub  (Just (-)))
+  fpMul  = lift2FP bfMul      (lift2 FP_Mul  (Just (*)))
+  fpDiv  = lift2FP bfDiv      (lift2 FP_Div  (Just (/)))
+  fpFMA  = lift3FP bfFMA      (lift3 FP_FMA  Nothing)
+  fpSqrt = lift1FP bfSqrt     (lift1 FP_Sqrt (Just sqrt))
 
-  -- TODO
-  -- fpRoundToIntegral  = lift1FP  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
+  fpRoundToIntegral rm a
+    | Just (FloatingPoint (FP ei si v)) <- unliteral a
+    , Just brm <- mkBfOpt rm
+    = literal $ FloatingPoint (FP ei si (fst (bfRoundInt brm v)))
+    | True
+    = lift1 FP_RoundToIntegral (Just fpRoundToIntegralH) (Just rm) a
 
   -- All other operations are agnostic to the rounding mode, hence the defaults are sufficient:
   --
