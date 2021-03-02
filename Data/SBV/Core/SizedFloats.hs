@@ -29,7 +29,7 @@ module Data.SBV.Core.SizedFloats (
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
 
         -- * Internal operations
-       , fprCompareObject, fprToSMTLib2, mkBFOpts
+       , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (floatToWord)
@@ -44,7 +44,8 @@ import Numeric
 
 import Data.SBV.Core.Kind
 
-import LibBF
+import LibBF hiding (bfToString)
+import qualified LibBF as BF (bfToString)
 
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
@@ -83,11 +84,19 @@ data FP = FP { fpExponentSize    :: Int
              deriving (Ord, Eq)
 
 instance Show FP where
-  show (FP _ sb r)
-    | bfIsNaN  r = "NaN"
-    | bfIsInf  r = if bfIsPos r then "Infinity" else "-Infinity"
-    | bfIsZero r = if bfIsPos r then "0.0"      else "-0.0"
-    | True       = bfToString 10 (addPrefix <> showRnd NearEven <> showFree (Just (fromIntegral sb))) r
+  show = bfToString 10 False
+
+-- | Show a big float in the base given
+bfToString :: Int -> Bool -> FP -> String
+bfToString b withPrefix (FP _ sb a)
+  | bfIsNaN  a = "NaN"
+  | bfIsInf  a = if bfIsPos a then "Infinity" else "-Infinity"
+  | bfIsZero a = if bfIsPos a then "0.0"      else "-0.0"
+  | True       = BF.bfToString b withP a
+  where opts = showRnd NearEven <> showFree (Just (fromIntegral sb))
+        withP
+          | withPrefix = addPrefix <> opts
+          | True       = opts
 
 -- | Default options for BF options.
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
