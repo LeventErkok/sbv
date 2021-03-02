@@ -774,7 +774,7 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo
 
    type MetricSpace (FloatingPoint eb sb) = WordN (eb + sb)
    toMetricSpace                          = sFloatingPointAsComparableSWord
-   fromMetricSpace                        = sWordAsSFloatingPoint
+   fromMetricSpace                        = sComparableSWordAsSFloatingPoint
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
