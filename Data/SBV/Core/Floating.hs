@@ -702,8 +702,6 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
           ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
-
 -- | Convert a float to the word containing the corresponding bit pattern
 sFloatingPointAsSWord :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsSWord fVal
@@ -781,5 +779,61 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+
+-- Map SBV's rounding modes to LibBF's
+mkBfOpt :: SRoundingMode -> Maybe RoundMode
+mkBfOpt srm = cvt <$> unliteral srm
+  where cvt RoundNearestTiesToEven = NearEven
+        cvt RoundNearestTiesToAway = NearAway
+        cvt RoundTowardPositive    = ToPosInf
+        cvt RoundTowardNegative    = ToNegInf
+        cvt RoundTowardZero        = ToZero
+
+-- | Lift a 2 arg Big-float op
+lift2FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) =>
+           (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status))
+        -> SRoundingMode
+        -> (Maybe SRoundingMode -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb)
+        -> SFloatingPoint eb sb
+        -> SFloatingPoint eb sb
+        -> SFloatingPoint eb sb
+lift2FP bfOp rm mkDef a b
+  | Just (FloatingPoint (FP _ _ v1)) <- unliteral a, Just (FloatingPoint (FP _ _ v2)) <- unliteral b, Just brm <- mkBfOpt rm
+  = literal $ FloatingPoint (FP ei si (fst (bfOp (expBits (fromIntegral ei) <> precBits (fromIntegral si) <> rnd brm) v1 v2)))
+  | True
+  = mkDef (Just rm) a b
+  where ei = intOfProxy (Proxy @eb)
+        si = intOfProxy (Proxy @sb)
+
+-- Sized-floats have a special instance, since it can handle arbitrary rounding modes when it matters.
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
+  fpAdd rm = lift2FP bfAdd rm (lift2 FP_Add (Just (+)))
+  fpSub rm = lift2FP bfSub rm (lift2 FP_Sub (Just (-)))
+  fpMul rm = lift2FP bfMul rm (lift2 FP_Mul (Just (*)))
+  fpDiv rm = lift2FP bfDiv rm (lift2 FP_Div (Just (/)))
+
+  -- TODO
+  -- fpFMA              = lift3FP  FP_FMA             Nothing                   . Just
+  -- fpSqrt             = lift1FP  FP_Sqrt            (Just sqrt)               . Just
+  -- fpRoundToIntegral  = lift1FP  FP_RoundToIntegral (Just fpRoundToIntegralH) . Just
+
+  -- All other operations are agnostic to the rounding mode, hence the defaults are sufficient:
+  --
+  --       fpAbs            :: SBV a -> SBV a
+  --       fpNeg            :: SBV a -> SBV a
+  --       fpRem            :: SBV a -> SBV a -> SBV a
+  --       fpMin            :: SBV a -> SBV a -> SBV a
+  --       fpMax            :: SBV a -> SBV a -> SBV a
+  --       fpIsEqualObject  :: SBV a -> SBV a -> SBool
+  --       fpIsNormal       :: SBV a -> SBool
+  --       fpIsSubnormal    :: SBV a -> SBool
+  --       fpIsZero         :: SBV a -> SBool
+  --       fpIsInfinite     :: SBV a -> SBool
+  --       fpIsNaN          :: SBV a -> SBool
+  --       fpIsNegative     :: SBV a -> SBool
+  --       fpIsPositive     :: SBV a -> SBool
+  --       fpIsNegativeZero :: SBV a -> SBool
+  --       fpIsPositiveZero :: SBV a -> SBool
+  --       fpIsPoint        :: SBV a -> SBool
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
