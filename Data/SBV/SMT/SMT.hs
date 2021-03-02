@@ -15,6 +15,7 @@
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -50,6 +51,9 @@ import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, transpose, isInfixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
 
+import GHC.TypeLits
+import Data.Proxy
+
 import Data.IORef (readIORef, writeIORef)
 
 import Data.Time          (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, getCurrentTime)
@@ -67,7 +71,9 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..))
 import Data.SBV.Core.Concrete (showCV)
-import Data.SBV.Core.Kind     (showBaseKind)
+import Data.SBV.Core.Kind     (showBaseKind, intOfProxy)
+
+import Data.SBV.Core.SizedFloats(FloatingPoint(..))
 
 import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
 
@@ -300,6 +306,12 @@ instance SatModel Float where
 instance SatModel Double where
   parseCVs (CV KDouble (CDouble i) : r) = Just (i, r)
   parseCVs _                            = Nothing
+
+-- | A general floating-point extracted from a model
+instance (KnownNat eb, KnownNat sb) => SatModel (FloatingPoint eb sb) where
+  parseCVs (CV (KFP ei si) (CFP fp) : r)
+    | intOfProxy (Proxy @eb) == ei , intOfProxy (Proxy @sb) == si = Just (FloatingPoint fp, r)
+  parseCVs _                                                      = Nothing
 
 -- | @CV@ as extracted from a model; trivial definition
 instance SatModel CV where
