@@ -680,7 +680,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
                                                 in (fromIntegral (-v+3), fromIntegral v)
   isNaN          (FloatingPoint (FP _  _  r)) = bfIsNaN r
   isInfinite     (FloatingPoint (FP _  _  r)) = bfIsInf r
-  isDenormalized (FloatingPoint (FP eb sb r)) = bfIsSubnormal (expBits (fromIntegral eb) <> precBits (fromIntegral sb) <> rnd NearEven) r
+  isDenormalized (FloatingPoint (FP eb sb r)) = bfIsSubnormal (mkBFOpts eb sb NearEven) r
   isNegativeZero (FloatingPoint (FP _  _  r)) = bfIsZero r && bfIsNeg r
   isIEEE         _                            = True
 
@@ -706,7 +706,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
 sFloatingPointAsSWord :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsSWord fVal
   | Just f@(FloatingPoint (FP eb sb v)) <- unliteral fVal, not (isNaN f)
-  = fromIntegral $ bfToBits (rnd NearEven <> expBits (fromIntegral eb) <> precBits (fromIntegral sb)) v
+  = fromIntegral $ bfToBits (mkBFOpts eb sb NearEven) v
   | True
   = SBV (SVal kTo (Right (cache y)))
   where ieb   = intOfProxy (Proxy @eb)
@@ -799,7 +799,7 @@ lift1FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLea
 lift1FP bfOp mkDef rm a
   | Just (FloatingPoint (FP _ _ v)) <- unliteral a
   , Just brm <- mkBfOpt rm
-  = literal $ FloatingPoint (FP ei si (fst (bfOp (expBits (fromIntegral ei) <> precBits (fromIntegral si) <> rnd brm) v)))
+  = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v)))
   | True
   = mkDef (Just rm) a
   where ei = intOfProxy (Proxy @eb)
@@ -817,7 +817,7 @@ lift2FP bfOp mkDef rm a b
   | Just (FloatingPoint (FP _ _ v1)) <- unliteral a
   , Just (FloatingPoint (FP _ _ v2)) <- unliteral b
   , Just brm <- mkBfOpt rm
-  = literal $ FloatingPoint (FP ei si (fst (bfOp (expBits (fromIntegral ei) <> precBits (fromIntegral si) <> rnd brm) v1 v2)))
+  = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v1 v2)))
   | True
   = mkDef (Just rm) a b
   where ei = intOfProxy (Proxy @eb)
@@ -837,7 +837,7 @@ lift3FP bfOp mkDef rm a b c
   , Just (FloatingPoint (FP _ _ v2)) <- unliteral b
   , Just (FloatingPoint (FP _ _ v3)) <- unliteral c
   , Just brm <- mkBfOpt rm
-  = literal $ FloatingPoint (FP ei si (fst (bfOp (expBits (fromIntegral ei) <> precBits (fromIntegral si) <> rnd brm) v1 v2 v3)))
+  = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v1 v2 v3)))
   | True
   = mkDef (Just rm) a b c
   where ei = intOfProxy (Proxy @eb)

@@ -29,7 +29,7 @@ module Data.SBV.Core.SizedFloats (
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
 
         -- * Internal operations
-       , fprCompareObject, fprToSMTLib2
+       , fprCompareObject, fprToSMTLib2, mkBFOpts
        ) where
 
 import qualified Data.Numbers.CrackNum as CN (floatToWord)
@@ -90,14 +90,14 @@ instance Show FP where
     | True       = bfToString 10 (addPrefix <> showRnd NearEven <> showFree (Just (fromIntegral sb))) r
 
 -- | Default options for BF options.
-defOpts :: Int -> Int -> BFOpts
-defOpts eb sb = rnd NearEven <> expBits (fromIntegral eb) <> precBits (fromIntegral sb)
+mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
+mkBFOpts eb sb rm = allowSubnormal <> rnd rm <> expBits (fromIntegral eb) <> precBits (fromIntegral sb)
 
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
 -- integers fit into the ranges given, i.e., no overflow checking is done here.
 fpFromRawRep :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
-fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (defOpts eb sb) val
+fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (mkBFOpts eb sb NearEven) val
   where es, val :: Integer
         es = (e `shiftL` (sb - 1)) .|. s
         val | sign = (1 `shiftL` (eb + sb - 1)) .|. es
@@ -121,7 +121,7 @@ fpFromInteger eb sb = FP eb sb . bfFromInteger
 
 -- Make a fractional value. We represent all of these in FPRat
 fpFromRational :: Int -> Int -> Rational -> FP
-fpFromRational eb sb r = FP eb sb $ fst $ bfDiv (defOpts eb sb) top bot
+fpFromRational eb sb r = FP eb sb $ fst $ bfDiv (mkBFOpts eb sb NearEven) top bot
      where FP _ _ top = fpFromInteger eb sb (numerator   r)
            FP _ _ bot = fpFromInteger eb sb (denominator r)
 
@@ -135,7 +135,7 @@ fprToSMTLib2 (FP eb sb r)
  where e    = show eb
        s    = show sb
 
-       bits            = bfToBits (defOpts eb sb) r
+       bits            = bfToBits (mkBFOpts eb sb NearEven) r
        significandMask = (1 :: Integer) `shiftL` (sb - 1) - 1
        exponentMask    = (1 :: Integer) `shiftL` eb       - 1
 
@@ -182,8 +182,8 @@ instance Fractional FP where
   (/)          = lift2 bfDiv
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
-  FloatingPoint (FP eb sb a) + FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfAdd (defOpts eb sb) a b
-  FloatingPoint (FP eb sb a) * FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfMul (defOpts eb sb) a b
+  FloatingPoint (FP eb sb a) + FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfAdd (mkBFOpts eb sb NearEven) a b
+  FloatingPoint (FP eb sb a) * FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfMul (mkBFOpts eb sb NearEven) a b
 
   abs    (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfAbs r
   signum (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfSignum r
@@ -194,7 +194,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FloatingPoint eb sb) where
   fromRational = FloatingPoint . fpFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
-  FloatingPoint (FP eb sb a) / FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb (fst (bfDiv (defOpts eb sb) a b))
+  FloatingPoint (FP eb sb a) / FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb (fst (bfDiv (mkBFOpts eb sb NearEven) a b))
 
 unsupported :: String -> a
 unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w ++ ". Please request this as a feature!"
@@ -202,7 +202,7 @@ unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w +
 -- Float instance. Most methods are left unimplemented.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
   pi = fromRational . toRational $ (pi :: Double)
-  sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ bfSqrt (defOpts eb sb) a
+  sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ bfSqrt (mkBFOpts eb sb NearEven) a
 
   exp   = unsupported "exp"
   log   = unsupported "log"
@@ -226,7 +226,7 @@ lift1 f (FP eb sb a) = FP eb sb $ f a
 
 -- Lift a binary operation
 lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> FP
-lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (defOpts eb sb) a b
+lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb NearEven) a b
 
 -- Convert from a IEEE float
 fpFromFloat :: Int -> Int -> Float -> FP
