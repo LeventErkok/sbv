@@ -164,7 +164,7 @@ multInverse = prove $ do a <- sFloat "a"
 -- (which rounds towards positive infinity from zero) produces a larger result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >> -2.240786e-38 + (-1.10355e-39) :: Double
+-- >>> -2.240786e-38 + (-1.10355e-39) :: Double
 -- -2.351141e-38
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
