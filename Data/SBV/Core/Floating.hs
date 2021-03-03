@@ -295,6 +295,10 @@ class SymVal a => IEEEFloatConvertible a where
   default toSDouble :: Integral a => SRoundingMode -> SBV a -> SDouble
   toSDouble = genericToFloat (Just . fromRational . fromIntegral)
 
+  -- | Convert from an arbitrary floating point.
+  fromSFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SFloatingPoint eb sb -> SBV a
+  fromSFloatingPoint = genericFromFloat
+
 -- | A generic from-float converter. Note that this function does no constant folding since
 -- it's behavior is undefined when the input float is out-of-bounds or not a point.
 genericFromFloat :: forall a r. (IEEEFloating a, IEEEFloatConvertible r)
