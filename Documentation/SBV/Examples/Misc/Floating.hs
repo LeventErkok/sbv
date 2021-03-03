@@ -152,18 +152,13 @@ multInverse = prove $ do a <- sFloat "a"
 --   y  =        -1.10355e-39 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
--- Unfortunately we can't directly validate this result at the Haskell level, as Haskell only supports
--- 'RoundNearestTiesToEven'. We have:
+-- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
+-- 'SFloatingPoint' type does. We have:
 --
--- >>> -2.240786e-38 + (-1.10355e-39) :: Float
--- -2.3511412e-38
---
--- While we cannot directly see the result when the mode is 'RoundTowardPositive' in Haskell, we can use
--- SBV to provide us with that result thusly:
---
--- >>> sat $ \z -> z .== fpAdd sRoundTowardPositive (-2.240786e-38) (-1.10355e-39 :: SFloat)
--- Satisfiable. Model:
---   s0 = -2.351141e-38 :: Float
+-- >>> fpAdd sRoundNearestTiesToEven (-2.240786e-38) (-1.10355e-39) :: SFPSingle
+-- -2.35114116e-38 :: SFloatingPoint 8 24
+-- >>> fpAdd sRoundTowardPositive    (-2.240786e-38) (-1.10355e-39) :: SFPSingle
+-- -2.35114088e-38 :: SFloatingPoint 8 24
 --
 -- We can see why these two results are indeed different: The 'RoundTowardPositive'
 -- (which rounds towards positive infinity from zero) produces a larger result. Indeed, if we treat these numbers
