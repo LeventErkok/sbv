@@ -375,7 +375,13 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEE
     where ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
 
-  fromSFloat  = error "r2"
+  fromSFloat rm i
+    | Just f <- unliteral i, Just brm <- rmToRM rm
+    = literal $ FloatingPoint $ FP ei si $ fst (bfRoundFloat (mkBFOpts ei si brm) (bfFromDouble (fp2fp f :: Double)))
+    | True
+    = genericFromFloat rm i
+    where ei = intOfProxy (Proxy @eb)
+          si = intOfProxy (Proxy @sb)
 
   toSDouble rm i
     | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
@@ -385,7 +391,13 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEE
     where ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
 
-  fromSDouble = error "r4"
+  fromSDouble rm i
+    | Just f <- unliteral i, Just brm <- rmToRM rm
+    = literal $ FloatingPoint $ FP ei si $ fst (bfRoundFloat (mkBFOpts ei si brm) (bfFromDouble f))
+    | True
+    = genericFromFloat rm i
+    where ei = intOfProxy (Proxy @eb)
+          si = intOfProxy (Proxy @sb)
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
