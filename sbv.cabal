@@ -252,6 +252,7 @@ Test-Suite SBVTest
                   , TestSuite.Arrays.Query
                   , TestSuite.Arrays.Caching
                   , TestSuite.Basics.AllSat
+                  , TestSuite.Basics.ArbFloats
                   , TestSuite.Basics.ArithNoSolver
                   , TestSuite.Basics.ArithSolver
                   , TestSuite.Basics.Assert

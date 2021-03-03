@@ -26,6 +26,7 @@ import qualified TestSuite.Arrays.Memory
 import qualified TestSuite.Arrays.Query
 import qualified TestSuite.Arrays.Caching
 import qualified TestSuite.Basics.AllSat
+import qualified TestSuite.Basics.ArbFloats
 import qualified TestSuite.Basics.ArithNoSolver
 import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Assert
@@ -181,6 +182,7 @@ otherTests = testGroup "SBVTests" [
                , TestSuite.Arrays.Query.tests
                , TestSuite.Arrays.Caching.tests
                , TestSuite.Basics.AllSat.tests
+               , TestSuite.Basics.ArbFloats.tests
                , TestSuite.Basics.ArithNoSolver.tests
                , TestSuite.Basics.Assert.tests
                , TestSuite.Basics.BasicTests.tests
