@@ -365,6 +365,28 @@ instance IEEEFloatConvertible AlgReal where
   toSFloat  = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
   toSDouble = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
 
+-- Arbitrary floats can handle all rounding modes in concrete mode
+instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloatConvertible (FloatingPoint eb sb) where
+  toSFloat rm i
+    | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
+    = literal $ fp2fp $ fst (bfToDouble brm (fst (bfRoundFloat (mkBFOpts ei si brm) v)))
+    | True
+    = genericToFloat (const Nothing) rm i
+    where ei = intOfProxy (Proxy @eb)
+          si = intOfProxy (Proxy @sb)
+
+  fromSFloat  = error "r2"
+
+  toSDouble rm i
+    | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
+    = literal $ fst (bfToDouble brm (fst (bfRoundFloat (mkBFOpts ei si brm) v)))
+    | True
+    = genericToFloat (const Nothing) rm i
+    where ei = intOfProxy (Proxy @eb)
+          si = intOfProxy (Proxy @sb)
+
+  fromSDouble = error "r4"
+
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
 concEval1 mbOp mbRm a = do op <- mbOp
