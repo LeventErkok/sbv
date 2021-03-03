@@ -781,8 +781,8 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 -- Map SBV's rounding modes to LibBF's
-mkBfOpt :: SRoundingMode -> Maybe RoundMode
-mkBfOpt srm = cvt <$> unliteral srm
+rmToRM :: SRoundingMode -> Maybe RoundMode
+rmToRM srm = cvt <$> unliteral srm
   where cvt RoundNearestTiesToEven = NearEven
         cvt RoundNearestTiesToAway = NearAway
         cvt RoundTowardPositive    = ToPosInf
@@ -798,7 +798,7 @@ lift1FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLea
         -> SFloatingPoint eb sb
 lift1FP bfOp mkDef rm a
   | Just (FloatingPoint (FP _ _ v)) <- unliteral a
-  , Just brm <- mkBfOpt rm
+  , Just brm <- rmToRM rm
   = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v)))
   | True
   = mkDef (Just rm) a
@@ -816,7 +816,7 @@ lift2FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLea
 lift2FP bfOp mkDef rm a b
   | Just (FloatingPoint (FP _ _ v1)) <- unliteral a
   , Just (FloatingPoint (FP _ _ v2)) <- unliteral b
-  , Just brm <- mkBfOpt rm
+  , Just brm <- rmToRM rm
   = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v1 v2)))
   | True
   = mkDef (Just rm) a b
@@ -836,7 +836,7 @@ lift3FP bfOp mkDef rm a b c
   | Just (FloatingPoint (FP _ _ v1)) <- unliteral a
   , Just (FloatingPoint (FP _ _ v2)) <- unliteral b
   , Just (FloatingPoint (FP _ _ v3)) <- unliteral c
-  , Just brm <- mkBfOpt rm
+  , Just brm <- rmToRM rm
   = literal $ FloatingPoint (FP ei si (fst (bfOp (mkBFOpts ei si brm) v1 v2 v3)))
   | True
   = mkDef (Just rm) a b c
@@ -854,7 +854,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEE
 
   fpRoundToIntegral rm a
     | Just (FloatingPoint (FP ei si v)) <- unliteral a
-    , Just brm <- mkBfOpt rm
+    , Just brm <- rmToRM rm
     = literal $ FloatingPoint (FP ei si (fst (bfRoundInt brm v)))
     | True
     = lift1 FP_RoundToIntegral (Just fpRoundToIntegralH) (Just rm) a
