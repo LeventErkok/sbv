@@ -395,7 +395,7 @@ instance IEEEFloatConvertible Double where
 instance IEEEFloatConvertible AlgReal where
   toSFloat         = genericToFloat (onlyWhenRNE (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing))
   toSDouble        = genericToFloat (onlyWhenRNE (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing))
-  toSFloatingPoint = tbd "r3"
+  toSFloatingPoint = error "TBD!"
 
 -- Arbitrary floats can handle all rounding modes in concrete mode
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloatConvertible (FloatingPoint eb sb) where
@@ -433,16 +433,14 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEE
 
   toSFloatingPoint rm i
     | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
-    = literal $ fp2fp $ fst (bfToDouble brm (fst (bfRoundFloat (mkBFOpts ei si brm) v)))
+    = literal $ FloatingPoint $ FP ei si $ fst (bfRoundFloat (mkBFOpts ei si brm) v)
     | True
     = genericToFloat (\_ _ -> Nothing) rm i
     where ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
 
-  fromSFloatingPoint = tbd "r5"
-
-tbd :: String -> a
-tbd w = error $ "TBD: " ++ w
+  -- From and To are the same when the source is an arbitrary float!
+  fromSFloatingPoint = toSFloatingPoint
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
