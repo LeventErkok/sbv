@@ -391,11 +391,16 @@ instance IEEEFloatConvertible Double where
     | True
     = genericFromFloat rm d
 
+convertWhenExactRational :: Fractional a => AlgReal -> Maybe a
+convertWhenExactRational r
+  | isExactRational r = Just (fromRational (toRational r))
+  | True              = Nothing
+
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertible AlgReal where
-  toSFloat         = genericToFloat (onlyWhenRNE (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing))
-  toSDouble        = genericToFloat (onlyWhenRNE (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing))
-  toSFloatingPoint = error "TBD!"
+  toSFloat         = genericToFloat (onlyWhenRNE convertWhenExactRational)
+  toSDouble        = genericToFloat (onlyWhenRNE convertWhenExactRational)
+  toSFloatingPoint = genericToFloat (const       convertWhenExactRational)
 
 -- Arbitrary floats can handle all rounding modes in concrete mode
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloatConvertible (FloatingPoint eb sb) where
