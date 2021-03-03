@@ -1,0 +1,3 @@
+Optimal model:
+  s0 = 65504 :: FloatingPoint 5 11
+  x  = 64511 :: Word16
