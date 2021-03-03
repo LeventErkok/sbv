@@ -299,6 +299,13 @@ class SymVal a => IEEEFloatConvertible a where
   fromSFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SFloatingPoint eb sb -> SBV a
   fromSFloatingPoint = genericFromFloat
 
+  -- | Convert to an arbitrary floating point.
+  toSFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
+
+  -- -- default definition if we have an integral like
+  default toSFloatingPoint :: (Integral a, KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
+  toSFloatingPoint = genericToFloat (Just . fromRational . fromIntegral)
+
 -- | A generic from-float converter. Note that this function does no constant folding since
 -- it's behavior is undefined when the input float is out-of-bounds or not a point.
 genericFromFloat :: forall a r. (IEEEFloating a, IEEEFloatConvertible r)
@@ -344,6 +351,8 @@ instance IEEEFloatConvertible Float where
   toSFloat  _ f = f
   toSDouble     = genericToFloat (Just . fp2fp)
 
+  toSFloatingPoint rm f = toSFloatingPoint rm $ toSDouble rm f
+
   fromSFloat  _  f = f
   fromSDouble rm f
     | Just RoundNearestTiesToEven <- unliteral rm
@@ -356,6 +365,19 @@ instance IEEEFloatConvertible Double where
   toSFloat      = genericToFloat (Just . fp2fp)
   toSDouble _ d = d
 
+  toSFloatingPoint rm sd
+    | Just d <- unliteral sd, Just brm <- rmToRM rm
+    = literal $ FloatingPoint $ FP ei si $ fst (bfRoundFloat (mkBFOpts ei si brm) (bfFromDouble d))
+    | True
+    = res
+    where (k, ei, si) = case kindOf res of
+                         kr@(KFP eb sb) -> (kr, eb, sb)
+                         kr             -> error $ "Unexpected kind in toSFloatingPoint: " ++ show (kr, rm, sd)
+          res = SBV $ SVal k $ Right $ cache r
+          r st = do msv <- sbvToSV st rm
+                    xsv <- sbvToSV st sd
+                    newExpr st k (SBVApp (IEEEFP (FP_Cast KDouble k msv)) [xsv])
+
   fromSDouble _  d = d
   fromSFloat  rm d
     | Just RoundNearestTiesToEven <- unliteral rm
@@ -366,8 +388,9 @@ instance IEEEFloatConvertible Double where
 
 -- For AlgReal; be careful to only process exact rationals concretely
 instance IEEEFloatConvertible AlgReal where
-  toSFloat  = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
-  toSDouble = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
+  toSFloat         = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
+  toSDouble        = genericToFloat (\r -> if isExactRational r then Just (fromRational (toRational r)) else Nothing)
+  toSFloatingPoint = tbd "r3"
 
 -- Arbitrary floats can handle all rounding modes in concrete mode
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloatConvertible (FloatingPoint eb sb) where
@@ -402,6 +425,12 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEE
     = genericFromFloat rm i
     where ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
+
+  toSFloatingPoint   = tbd "r4"
+  fromSFloatingPoint = tbd "r5"
+
+tbd :: String -> a
+tbd w = error $ "TBD: " ++ w
 
 -- | Concretely evaluate one arg function, if rounding mode is RoundNearestTiesToEven and we have enough concrete data
 concEval1 :: SymVal a => Maybe (a -> a) -> Maybe SRoundingMode -> SBV a -> Maybe (SBV a)
