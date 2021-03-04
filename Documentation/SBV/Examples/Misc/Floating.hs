@@ -14,6 +14,7 @@
 -- the presence of @NaN@ is always something to look out for.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -182,3 +183,40 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        constrain $ fpIsPoint lhs
                        constrain $ fpIsPoint rhs
                        return $ lhs ./= rhs
+
+-- | Arbitrary precision floating-point numbers. SBV can talk about floating point numbers with arbitrary
+-- exponent and significand sizes as well. Here is a simple example demonstrating the minumum non-zero positive
+-- and maximum floating point values with exponent width 5 and significand width 4, which is actually 3
+-- bits for the significand explicitly stored, includes the hidden bit. We have:
+--
+-- >>> fp54Bounds
+-- Objective "max": Optimal model:
+--   x   = 61400 :: FloatingPoint 5 4
+--   max =   503 :: WordN 9
+--   min =   503 :: WordN 9
+-- Objective "min": Optimal model:
+--   x   = 0.00000763 :: FloatingPoint 5 4
+--   max =        257 :: WordN 9
+--   min =        257 :: WordN 9
+--
+-- The careful reader will notice that the numbers @61400@ and @0.00000763@ are quite suspicious, but the metric
+-- space equivalents are correct. The reason for this is due to the sparcity of floats. The "computed" value of
+-- the maximum in this bound is actually @61440@, however in @FloatingPoint 5 4@ representation all numbers
+-- between @57344@ and @61440@ collapse to the same bit-pattern, and the pretty-printer picks a string
+-- representation in decimal that falls within range that it considers is the "simplest." (Printing
+-- floats precisely is a thorny subject!) Likewise, the minumum value we're looking for is actually
+-- 2^-17, but any number between 2^-16 and 2^-17 will map to this number. It turns out that 0.00000763
+-- in decimal is one such value. Moral of the story is that when reading floating-point numbers in
+-- decimal notation one should be very careful about the printed representation and the numeric value; while
+-- they will match in vsalue (if there are no bugs!), they can print quite differently! (Also keep in
+-- mind the rounding modes that impact how the conversion is done.)
+fp54Bounds :: IO OptimizeResult
+fp54Bounds = optimize Independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
+
+                                       constrain $ fpIsPoint x
+                                       constrain $ x .> 0
+
+                                       maximize "max" x
+                                       minimize "min" x
+
+                                       pure sTrue
