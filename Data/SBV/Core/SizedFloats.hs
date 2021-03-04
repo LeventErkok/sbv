@@ -44,8 +44,8 @@ import Numeric
 
 import Data.SBV.Core.Kind
 
-import LibBF hiding (bfToString)
-import qualified LibBF as BF (bfToString)
+import LibBF (BigFloat, BFOpts, RoundMode, Status)
+import qualified LibBF as BF
 
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
@@ -89,24 +89,28 @@ instance Show FP where
 -- | Show a big float in the base given
 bfToString :: Int -> Bool -> FP -> String
 bfToString b withPrefix (FP _ sb a)
-  | bfIsNaN  a = "NaN"
-  | bfIsInf  a = if bfIsPos a then "Infinity" else "-Infinity"
-  | bfIsZero a = if bfIsPos a then "0.0"      else "-0.0"
-  | True       = BF.bfToString b withP a
-  where opts = showRnd NearEven <> showFree (Just (fromIntegral sb))
+  | BF.bfIsNaN  a = "NaN"
+  | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
+  | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
+  | True          = BF.bfToString b withP a
+  where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
         withP
-          | withPrefix = addPrefix <> opts
+          | withPrefix = BF.addPrefix <> opts
           | True       = opts
 
 -- | Default options for BF options.
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
-mkBFOpts eb sb rm = allowSubnormal <> rnd rm <> expBits (fromIntegral eb) <> precBits (fromIntegral sb)
+mkBFOpts eb sb rm = BF.allowSubnormal <> BF.rnd rm <> BF.expBits (fromIntegral eb) <> BF.precBits (fromIntegral sb)
+
+-- | normFP the float to make sure it's within the required range
+mkFP :: Int -> Int -> BigFloat -> FP
+mkFP eb sb r = FP eb sb $ fst $ BF.bfRoundFloat (mkBFOpts eb sb BF.NearEven) r
 
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
 -- integers fit into the ranges given, i.e., no overflow checking is done here.
 fpFromRawRep :: Bool -> (Integer, Int) -> (Integer, Int) -> FP
-fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (mkBFOpts eb sb NearEven) val
+fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ BF.bfFromBits (mkBFOpts eb sb BF.NearEven) val
   where es, val :: Integer
         es = (e `shiftL` (sb - 1)) .|. s
         val | sign = (1 `shiftL` (eb + sb - 1)) .|. es
@@ -114,37 +118,36 @@ fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ bfFromBits (mkBFOpts eb sb NearEv
 
 -- | Make NaN. Exponent is all 1s. Significand is non-zero. The sign is irrelevant.
 fpNaN :: Int -> Int -> FP
-fpNaN eb sb = FP eb sb bfNaN
+fpNaN eb sb = mkFP eb sb BF.bfNaN
 
 -- | Make Infinity. Exponent is all 1s. Significand is 0.
 fpInf :: Bool -> Int -> Int -> FP
-fpInf sign eb sb = FP eb sb (if sign then bfNegInf else bfPosInf)
+fpInf sign eb sb = mkFP eb sb $ if sign then BF.bfNegInf else BF.bfPosInf
 
 -- | Make a signed zero.
 fpZero :: Bool -> Int -> Int -> FP
-fpZero sign eb sb = FP eb sb (if sign then bfNegZero else bfPosZero)
+fpZero sign eb sb = mkFP eb sb $ if sign then BF.bfNegZero else BF.bfPosZero
 
 -- | Make from an integer value.
 fpFromInteger :: Int -> Int -> Integer -> FP
-fpFromInteger eb sb = FP eb sb . bfFromInteger
+fpFromInteger eb sb iv = mkFP eb sb $ BF.bfFromInteger iv
 
--- Make a fractional value. We represent all of these in FPRat
+-- Make a fractional value.
 fpFromRational :: Int -> Int -> Rational -> FP
-fpFromRational eb sb r = FP eb sb $ fst $ bfDiv (mkBFOpts eb sb NearEven) top bot
-     where FP _ _ top = fpFromInteger eb sb (numerator   r)
-           FP _ _ bot = fpFromInteger eb sb (denominator r)
+fpFromRational eb sb r = FP eb sb $ fst $ BF.bfDiv (mkBFOpts eb sb BF.NearEven) (BF.bfFromInteger (numerator r))
+                                                                                (BF.bfFromInteger (denominator r))
 
 -- | Represent the FP in SMTLib2 format
 fprToSMTLib2 :: FP -> String
 fprToSMTLib2 (FP eb sb r)
-  | bfIsNaN  r = as "NaN"
-  | bfIsInf  r = as $ if bfIsPos r then "+oo"   else "-oo"
-  | bfIsZero r = as $ if bfIsPos r then "+zero" else "-zero"
-  | True       = generic
- where e    = show eb
-       s    = show sb
+  | BF.bfIsNaN  r = as "NaN"
+  | BF.bfIsInf  r = as $ if BF.bfIsPos r then "+oo"   else "-oo"
+  | BF.bfIsZero r = as $ if BF.bfIsPos r then "+zero" else "-zero"
+  | True          = generic
+ where e = show eb
+       s = show sb
 
-       bits            = bfToBits (mkBFOpts eb sb NearEven) r
+       bits            = BF.bfToBits (mkBFOpts eb sb BF.NearEven) r
        significandMask = (1 :: Integer) `shiftL` (sb - 1) - 1
        exponentMask    = (1 :: Integer) `shiftL` eb       - 1
 
@@ -165,58 +168,57 @@ fprCompareObject :: FP -> FP -> Ordering
 fprCompareObject (FP eb sb a) (FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
                                                  LT -> LT
                                                  GT -> GT
-                                                 EQ -> a `bfCompare` b
+                                                 EQ -> a `BF.bfCompare` b
 
 
 -- | Compute the signum of a big float
 bfSignum :: BigFloat -> BigFloat
-bfSignum r | bfIsNaN  r = r
-           | bfIsZero r = r
-           | bfIsPos  r = bfFromInteger 1
-           | True       = bfFromInteger (-1)
+bfSignum r | BF.bfIsNaN  r = r
+           | BF.bfIsZero r = r
+           | BF.bfIsPos  r = BF.bfFromInteger 1
+           | True          = BF.bfFromInteger (-1)
 
 -- | Num instance for big-floats
 instance Num FP where
-  (+)         = lift2 bfAdd
-  (-)         = lift2 bfSub
-  (*)         = lift2 bfMul
-  abs         = lift1 bfAbs
+  (+)         = lift2 BF.bfAdd
+  (-)         = lift2 BF.bfSub
+  (*)         = lift2 BF.bfMul
+  abs         = lift1 BF.bfAbs
   signum      = lift1 bfSignum
   fromInteger = error "FP.fromInteger: Not supported for arbitrary floats. Use fpFromInteger instead, specifying the precision"
-  negate      = lift1 bfNeg
+  negate      = lift1 BF.bfNeg
 
 -- | Fractional instance for big-floats
 instance Fractional FP where
   fromRational = error "FP.fromRational: Not supported for arbitrary floats. Use fpFromRational instead, specifying the precision"
-  (/)          = lift2 bfDiv
+  (/)          = lift2 BF.bfDiv
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
-  FloatingPoint (FP eb sb a) + FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfAdd (mkBFOpts eb sb NearEven) a b
-  FloatingPoint (FP eb sb a) * FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst $ bfMul (mkBFOpts eb sb NearEven) a b
+  FloatingPoint a + FloatingPoint b = FloatingPoint $ a + b
+  FloatingPoint a * FloatingPoint b = FloatingPoint $ a * b
 
-  abs    (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfAbs r
-  signum (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfSignum r
-  negate (FloatingPoint (FP eb sb r)) = FloatingPoint $ FP eb sb $ bfNeg r
+  abs    (FloatingPoint fp) = FloatingPoint (abs    fp)
+  signum (FloatingPoint fp) = FloatingPoint (signum fp)
+  negate (FloatingPoint fp) = FloatingPoint (negate fp)
 
   fromInteger = FloatingPoint . fpFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FloatingPoint eb sb) where
   fromRational = FloatingPoint . fpFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
-  FloatingPoint (FP eb sb a) / FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb (fst (bfDiv (mkBFOpts eb sb NearEven) a b))
+  FloatingPoint a / FloatingPoint b = FloatingPoint (a / b)
 
 unsupported :: String -> a
 unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w ++ ". Please request this as a feature!"
 
 -- Float instance. Most methods are left unimplemented.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
-  pi = fromRational . toRational $ (pi :: Double)
-
-  sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ bfSqrt (mkBFOpts eb sb NearEven) a
-
-  FloatingPoint (FP eb sb a) ** FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst (bfPow (mkBFOpts eb sb NearEven) a b)
-
+  pi    = fromRational (toRational (pi    :: Double))
   exp i = fromRational (toRational (exp 1 :: Double)) ** i
+
+  sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ BF.bfSqrt (mkBFOpts eb sb BF.NearEven) a
+
+  FloatingPoint (FP eb sb a) ** FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst (BF.bfPow (mkBFOpts eb sb BF.NearEven) a b)
 
   log   = unsupported "log"
   sin   = unsupported "sin"
@@ -232,13 +234,13 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Flo
   acosh = unsupported "acosh"
   atanh = unsupported "atanh"
 
--- | Lift a unary operation, simple case of function with no status
+-- | Lift a unary operation, simple case of function with no status. Here, we call mkFP since the big-float isn't size aware.
 lift1 :: (BigFloat -> BigFloat) -> FP -> FP
-lift1 f (FP eb sb a) = FP eb sb $ f a
+lift1 f (FP eb sb a) = mkFP eb sb $ f a
 
--- Lift a binary operation
+-- Lift a binary operation. Here we don't call mkFP, because the result is correctly rounded.
 lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> FP
-lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb NearEven) a b
+lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb BF.NearEven) a b
 
 -- Convert from a IEEE float
 fpFromFloat :: Int -> Int -> Float -> FP
@@ -249,5 +251,5 @@ fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb
 
 -- Convert from a IEEE double
 fpFromDouble :: Int -> Int -> Double -> FP
-fpFromDouble 11 54 d = FP 11 54 $ bfFromDouble d
+fpFromDouble 11 54 d = FP 11 54 $ BF.bfFromDouble d
 fpFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
