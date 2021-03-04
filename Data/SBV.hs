@@ -52,7 +52,8 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values
 --
---   * 'SFloatingPoint': IEEE-754 arbitrary-precision floating point values
+--   * 'SFloatingPoint': Generalized IEEE-754 floating point values, with user specified exponent and
+--   mantissa widths.
 --
 --   * 'SChar', 'SString', 'RegExp': Characters, strings and regular expressions
 --

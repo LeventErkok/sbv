@@ -232,13 +232,13 @@ nan = 0/0
 infinity :: Floating a => a
 infinity = 1/0
 
--- | Symbolic variant of Not-A-Number. This value will inhabit both
--- 'SDouble' and 'SFloat'.
+-- | Symbolic variant of Not-A-Number. This value will inhabit
+-- 'SFloat', 'SDouble' and 'SFloatingPoint'. types.
 sNaN :: (Floating a, SymVal a) => SBV a
 sNaN = literal nan
 
 -- | Symbolic variant of infinity. This value will inhabit both
--- 'SDouble' and 'SFloat'.
+-- 'SFloat', 'SDouble' and 'SFloatingPoint'. types.
 sInfinity :: (Floating a, SymVal a) => SBV a
 sInfinity = literal infinity
 

@@ -7,9 +7,12 @@
 -- Stability : experimental
 --
 -- Several examples involving IEEE-754 floating point numbers, i.e., single
--- precision 'Float' ('SFloat') and double precision 'Double' ('SDouble') types.
+-- precision 'Float' ('SFloat'), double precision 'Double' ('SDouble'), and
+-- the generic 'SFloatingPoint' @eb@ @sb@ type where the user can specify the
+-- exponent and significand bit-widths. (Note that there is always an extra
+-- sign-bit, and the value of @sb@ includes the hidden bit.)
 --
--- Note that arithmetic with floating point is full of surprises; due to precision
+-- Arithmetic with floating point is full of surprises; due to precision
 -- issues associativity of arithmetic operations typically do not hold. Also,
 -- the presence of @NaN@ is always something to look out for.
 -----------------------------------------------------------------------------

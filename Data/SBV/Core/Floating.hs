@@ -178,9 +178,10 @@ instance IEEEFloating Double
 --
 -- Conversions to float: 'toSFloat' and 'toSDouble' simply return the
 -- nearest representable float from the given type based on the rounding
--- mode provided.
+-- mode provided. Similarly, 'toSFloatingPoint' converts to a generalized
+-- floating-point number with specified exponent and significand bith widths.
 --
--- Conversions from float: 'fromSFloat' and 'fromSDouble' functions do
+-- Conversions from float: 'fromSFloat', 'fromSDouble', 'fromSFloatingPoint' functions do
 -- the reverse conversion. However some care is needed when given values
 -- that are not representable in the integral target domain. For instance,
 -- converting an 'SFloat' to an 'SInt8' is problematic. The rules are as follows:
@@ -825,7 +826,7 @@ sComparableSWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZ
 sComparableSWordAsSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(signBit : rest) = blastBE w
 
--- | Convert a word to an arbitrary float
+-- | Convert a word to an arbitrary float, by reinterpreting the bits of the word as the corresponding bits of the float.
 sWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
                                        , KnownNat eb, FPIsAtLeastTwo eb
                                        , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
