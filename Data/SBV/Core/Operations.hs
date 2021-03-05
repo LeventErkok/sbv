@@ -322,20 +322,19 @@ svSetEqual sa sb
 -- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
 -- Otherwise equivalent to `svEqual`.
 svStrongEqual :: SVal -> SVal -> SVal
-svStrongEqual x y
-  | isFloat x, Just f1 <- getF x, Just f2 <- getF y
-  = svBool $ f1 `fpIsEqualObjectH` f2
-  | isDouble x, Just f1 <- getD x, Just f2 <- getD y
-  = svBool $ f1 `fpIsEqualObjectH` f2
-  | isFloat x || isDouble x
-  = SVal KBool $ Right $ cache r
-  | True
-  = svEqual x y
+svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isDouble x, Just f1 <- getD x,  Just f2 <- getD y  = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isFP x,     Just f1 <- getFP x, Just f2 <- getFP y = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isFloat x || isDouble x || isFP x                  = SVal KBool $ Right $ cache r
+                  | True                                               = svEqual x y
   where getF (SVal _ (Left (CV _ (CFloat f)))) = Just f
         getF _                                 = Nothing
 
         getD (SVal _ (Left (CV _ (CDouble d)))) = Just d
         getD _                                  = Nothing
+
+        getFP (SVal _ (Left (CV _ (CFP f))))    = Just f
+        getFP _                                 = Nothing
 
         r st = do sx <- svToSV st x
                   sy <- svToSV st y
