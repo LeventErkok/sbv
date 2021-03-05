@@ -738,52 +738,25 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
 
 -- | RealFrac instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFrac (FloatingPoint eb sb) where
-  properFraction i@(FloatingPoint (FP eb sb r)) = case bfRoundInt ToNegInf r of
-                                                    (r', Ok) | bfSign r == bfSign r' -> (getInt r', i - FloatingPoint (FP eb sb r'))
-                                                    x                                -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
-                                              where getInt x = case bfToRep x of
-                                                                 BFNaN     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
-                                                                 BFRep s n -> case n of
-                                                                                Zero    -> 0
-                                                                                Inf     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
-                                                                                Num v y -> -- The value here is x * 2^y, and is integer if y >= 0
-                                                                                           let e :: Integer
-                                                                                               e   = 2 ^ (fromIntegral y :: Integer)
-                                                                                               sgn = if s == Neg then ((-1) *) else id
-                                                                                           in if y > 0
-                                                                                              then fromIntegral $ sgn $ v * e
-                                                                                              else fromIntegral $ sgn v
+  properFraction (FloatingPoint f) = (a, FloatingPoint b)
+     where (a, b) = properFraction f
 
 -- | RealFloat instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FloatingPoint eb sb) where
-  floatRadix     _                            = 2
-  floatDigits    _                            = intOfProxy (Proxy @sb)
-  floatRange     _                            = let v :: Integer
-                                                    v = 2 ^ ((fromIntegral (intOfProxy (Proxy @eb)) :: Integer) - 1)
-                                                in (fromIntegral (-v+3), fromIntegral v)
-  isNaN          (FloatingPoint (FP _  _  r)) = bfIsNaN r
-  isInfinite     (FloatingPoint (FP _  _  r)) = bfIsInf r
-  isDenormalized (FloatingPoint (FP eb sb r)) = bfIsSubnormal (mkBFOpts eb sb NearEven) r
-  isNegativeZero (FloatingPoint (FP _  _  r)) = bfIsZero r && bfIsNeg r
-  isIEEE         _                            = True
+  floatRadix     (FloatingPoint f) = floatRadix     f
+  floatDigits    (FloatingPoint f) = floatDigits    f
+  floatRange     (FloatingPoint f) = floatRange     f
+  isNaN          (FloatingPoint f) = isNaN          f
+  isInfinite     (FloatingPoint f) = isInfinite     f
+  isDenormalized (FloatingPoint f) = isDenormalized f
+  isNegativeZero (FloatingPoint f) = isNegativeZero f
+  isIEEE         (FloatingPoint f) = isIEEE         f
+  decodeFloat    (FloatingPoint f) = decodeFloat    f
 
-  decodeFloat    i@(FloatingPoint (FP _ _ r)) = case bfToRep r of
-                                                  BFNaN     -> decodeFloat (0/0 :: Double)
-                                                  BFRep s n -> case n of
-                                                                 Zero    -> (0, 0)
-                                                                 Inf     -> let (_, m) = floatRange i
-                                                                                x = (2 :: Integer) ^ toInteger (m+1)
-                                                                            in (if s == Neg then -x else x, 0)
-                                                                 Num x y -> -- The value here is x * 2^y
-                                                                            (if s == Neg then -x else x, fromIntegral y)
-
-  encodeFloat m n | n < 0 = FloatingPoint $ fpFromRational ei si (m      % n')
-                  | True  = FloatingPoint $ fpFromRational ei si (m * n' % 1)
-    where n' :: Integer
-          n' = (2 :: Integer) ^ abs (fromIntegral n :: Integer)
-
-          ei = intOfProxy (Proxy @eb)
-          si = intOfProxy (Proxy @sb)
+  encodeFloat m n = res
+     where res = FloatingPoint $ fpEncodeFloat ei si m n
+           ei = intOfProxy (Proxy @eb)
+           si = intOfProxy (Proxy @sb)
 
 -- | Convert a float to the word containing the corresponding bit pattern
 sFloatingPointAsSWord :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)

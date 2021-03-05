@@ -26,7 +26,7 @@ module Data.SBV.Core.SizedFloats (
         , fpFromRawRep, fpNaN, fpInf, fpZero
 
         -- * Operations
-        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble
+        , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
 
         -- * Internal operations
        , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString
@@ -193,6 +193,94 @@ instance Fractional FP where
   fromRational = error "FP.fromRational: Not supported for arbitrary floats. Use fpFromRational instead, specifying the precision"
   (/)          = lift2 BF.bfDiv
 
+-- | Floating instance for big-floats
+instance Floating FP where
+  -- Convert from double. If the result required is more precise, just bail out. I think this is safe.
+  pi = case fromRational (toRational (pi :: Double)) of
+         res@(FP eb sb _) | eb > 11 || sb > 53 -> unsupported $ "Floating.FP.pi (not-enough-precision for " ++ show (eb, sb) ++ ")"
+                          | True               -> res
+
+  -- Exponentiation is again limited to precision of double
+  exp i = case fromRational (toRational (exp 1 :: Double)) of
+            res@(FP eb sb _) | eb > 11 || sb > 53 -> unsupported $ "Floating.FP.pi (not-enough-precision for " ++ show (eb, sb) ++ ")"
+                             | True               -> res ** i
+
+  sqrt (FP eb sb a)      = FP eb sb $ fst $ BF.bfSqrt (mkBFOpts eb sb BF.NearEven) a
+  FP eb sb a ** FP _ _ b = FP eb sb $ fst $ BF.bfPow  (mkBFOpts eb sb BF.NearEven) a b
+
+  log   = unsupported "Floating.FP.log"
+  sin   = unsupported "Floating.FP.sin"
+  cos   = unsupported "Floating.FP.cos"
+  tan   = unsupported "Floating.FP.tan"
+  asin  = unsupported "Floating.FP.asin"
+  acos  = unsupported "Floating.FP.acos"
+  atan  = unsupported "Floating.FP.atan"
+  sinh  = unsupported "Floating.FP.sinh"
+  cosh  = unsupported "Floating.FP.cosh"
+  tanh  = unsupported "Floating.FP.tanh"
+  asinh = unsupported "Floating.FP.asinh"
+  acosh = unsupported "Floating.FP.acosh"
+  atanh = unsupported "Floating.FP.atanh"
+
+-- | Real-float instance for big-floats. Beware! Some of these aren't really all that well tested.
+instance RealFloat FP where
+  floatRadix     _            = 2
+  floatDigits    (FP _  sb _) = sb
+  floatRange     (FP eb _  _) = (fromIntegral (-v+3), fromIntegral v)
+     where v :: Integer
+           v = 2 ^ ((fromIntegral eb :: Integer) - 1)
+
+  isNaN          (FP _ _   r) = BF.bfIsNaN r
+  isInfinite     (FP _ _   r) = BF.bfIsInf r
+  isDenormalized (FP eb sb r) = BF.bfIsSubnormal (mkBFOpts eb sb BF.NearEven) r
+  isNegativeZero (FP _  _  r) = BF.bfIsZero r && BF.bfIsNeg r
+  isIEEE         _            = True
+
+  decodeFloat i@(FP _ _ r) = case BF.bfToRep r of
+                               BF.BFNaN     -> decodeFloat (0/0 :: Double)
+                               BF.BFRep s n -> case n of
+                                                BF.Zero    -> (0, 0)
+                                                BF.Inf     -> let (_, m) = floatRange i
+                                                                  x = (2 :: Integer) ^ toInteger (m+1)
+                                                              in (if s == BF.Neg then -x else x, 0)
+                                                BF.Num x y -> -- The value here is x * 2^y
+                                                               (if s == BF.Neg then -x else x, fromIntegral y)
+
+  encodeFloat = error "FP.encodeFloat: Not supported for arbitrary floats. Use fpEncodeFloat instead, specifying the precision"
+
+-- | Encode from exponent/mantissa form to a float representation. Corresponds to 'encodeFloat' in Haskell.
+fpEncodeFloat :: Int -> Int -> Integer -> Int -> FP
+fpEncodeFloat eb sb m n | n < 0 = fpFromRational eb sb (m      % n')
+                        | True  = fpFromRational eb sb (m * n' % 1)
+    where n' :: Integer
+          n' = (2 :: Integer) ^ abs (fromIntegral n :: Integer)
+
+-- | Real instance for big-floats. Beware, not that well tested!
+instance Real FP where
+  toRational i
+     | n >= 0  = m * 2^n % 1
+     | True    = m % 2^(abs n)
+    where (m, n) = decodeFloat i
+
+-- | Real-frac instance for big-floats. Beware, not that well tested!
+instance RealFrac FP where
+  properFraction (FP eb sb r) = case BF.bfRoundInt BF.ToNegInf r of
+                                  (r', BF.Ok) | BF.bfSign r == BF.bfSign r' -> (getInt r', FP eb sb r - FP eb sb r')
+                                  x -> error $ "RealFrac.FP.properFraction: Failed to convert: " ++ show (r, x)
+       where getInt x = case BF.bfToRep x of
+                          BF.BFNaN     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
+                          BF.BFRep s n -> case n of
+                                           BF.Zero    -> 0
+                                           BF.Inf     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
+                                           BF.Num v y -> -- The value here is x * 2^y, and is integer if y >= 0
+                                                         let e :: Integer
+                                                             e   = 2 ^ (fromIntegral y :: Integer)
+                                                             sgn = if s == BF.Neg then ((-1) *) else id
+                                                         in if y > 0
+                                                            then fromIntegral $ sgn $ v * e
+                                                            else fromIntegral $ sgn v
+
+-- | Num instance for FloatingPoint
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
   FloatingPoint a + FloatingPoint b = FloatingPoint $ a + b
   FloatingPoint a * FloatingPoint b = FloatingPoint $ a * b
@@ -213,26 +301,26 @@ unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w +
 
 -- Float instance. Most methods are left unimplemented.
 instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
-  pi    = fromRational (toRational (pi    :: Double))
-  exp i = fromRational (toRational (exp 1 :: Double)) ** i
+  pi = FloatingPoint pi
 
-  sqrt (FloatingPoint (FP eb sb a)) = FloatingPoint $ FP eb sb $ fst $ BF.bfSqrt (mkBFOpts eb sb BF.NearEven) a
+  exp  (FloatingPoint i) = FloatingPoint (exp i)
+  sqrt (FloatingPoint i) = FloatingPoint (sqrt i)
 
-  FloatingPoint (FP eb sb a) ** FloatingPoint (FP _ _ b) = FloatingPoint $ FP eb sb $ fst (BF.bfPow (mkBFOpts eb sb BF.NearEven) a b)
+  FloatingPoint a ** FloatingPoint b = FloatingPoint $ a ** b
 
-  log   = unsupported "log"
-  sin   = unsupported "sin"
-  cos   = unsupported "cos"
-  tan   = unsupported "tan"
-  asin  = unsupported "asin"
-  acos  = unsupported "acos"
-  atan  = unsupported "atan"
-  sinh  = unsupported "sinh"
-  cosh  = unsupported "cosh"
-  tanh  = unsupported "tanh"
-  asinh = unsupported "asinh"
-  acosh = unsupported "acosh"
-  atanh = unsupported "atanh"
+  log   (FloatingPoint i) = FloatingPoint (log   i)
+  sin   (FloatingPoint i) = FloatingPoint (sin   i)
+  cos   (FloatingPoint i) = FloatingPoint (cos   i)
+  tan   (FloatingPoint i) = FloatingPoint (tan   i)
+  asin  (FloatingPoint i) = FloatingPoint (asin  i)
+  acos  (FloatingPoint i) = FloatingPoint (acos  i)
+  atan  (FloatingPoint i) = FloatingPoint (atan  i)
+  sinh  (FloatingPoint i) = FloatingPoint (sinh  i)
+  cosh  (FloatingPoint i) = FloatingPoint (cosh  i)
+  tanh  (FloatingPoint i) = FloatingPoint (tanh  i)
+  asinh (FloatingPoint i) = FloatingPoint (asinh i)
+  acosh (FloatingPoint i) = FloatingPoint (acosh i)
+  atanh (FloatingPoint i) = FloatingPoint (atanh i)
 
 -- | Lift a unary operation, simple case of function with no status. Here, we call mkFP since the big-float isn't size aware.
 lift1 :: (BigFloat -> BigFloat) -> FP -> FP
