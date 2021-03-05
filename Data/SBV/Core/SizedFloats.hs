@@ -258,8 +258,8 @@ fpEncodeFloat eb sb m n | n < 0 = fpFromRational eb sb (m      % n')
 -- | Real instance for big-floats. Beware, not that well tested!
 instance Real FP where
   toRational i
-     | n >= 0  = m * 2^n % 1
-     | True    = m % 2^(abs n)
+     | n >= 0  = m * 2 ^ n % 1
+     | True    = m % 2 ^ abs n
     where (m, n) = decodeFloat i
 
 -- | Real-frac instance for big-floats. Beware, not that well tested!
