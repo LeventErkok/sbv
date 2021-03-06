@@ -86,17 +86,26 @@ data FP = FP { fpExponentSize    :: Int
 instance Show FP where
   show = bfToString 10 False
 
--- | Show a big float in the base given
+-- | Show a big float in the base given.
+-- NB. Do not be tempted to use BF.showFreeMin below; it produces arguably correct
+-- but very confusing results. See <https://github.com/GaloisInc/cryptol/issues/1089>
+-- for a discussion of the issues.
 bfToString :: Int -> Bool -> FP -> String
 bfToString b withPrefix (FP _ sb a)
   | BF.bfIsNaN  a = "NaN"
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
-  | True          = BF.bfToString b withP a
+  | True          = trimZeros $ BF.bfToString b withP a
   where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
         withP
           | withPrefix = BF.addPrefix <> opts
           | True       = opts
+
+        trimZeros s
+          | '.' `elem` s = reverse $ case dropWhile (== '0') $ reverse s of
+                                       res@('.':_) -> '0' : res
+                                       res         -> res
+          | True         = s
 
 -- | Default options for BF options.
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
