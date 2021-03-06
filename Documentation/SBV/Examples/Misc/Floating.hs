@@ -188,7 +188,7 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
                        return $ lhs ./= rhs
 
 -- | Arbitrary precision floating-point numbers. SBV can talk about floating point numbers with arbitrary
--- exponent and significand sizes as well. Here is a simple example demonstrating the minumum non-zero positive
+-- exponent and significand sizes as well. Here is a simple example demonstrating the minimum non-zero positive
 -- and maximum floating point values with exponent width 5 and significand width 4, which is actually 3
 -- bits for the significand explicitly stored, includes the hidden bit. We have:
 --
@@ -207,7 +207,7 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
 -- the maximum in this bound is actually @61440@, however in @FloatingPoint 5 4@ representation all numbers
 -- between @57344@ and @61440@ collapse to the same bit-pattern, and the pretty-printer picks a string
 -- representation in decimal that falls within range that it considers is the "simplest." (Printing
--- floats precisely is a thorny subject!) Likewise, the minumum value we're looking for is actually
+-- floats precisely is a thorny subject!) Likewise, the minimum value we're looking for is actually
 -- 2^-17, but any number between 2^-16 and 2^-17 will map to this number. It turns out that 0.00000763
 -- in decimal is one such value. Moral of the story is that when reading floating-point numbers in
 -- decimal notation one should be very careful about the printed representation and the numeric value; while
