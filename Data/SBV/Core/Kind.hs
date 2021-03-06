@@ -427,29 +427,22 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
 #if   WORD_SIZE_IN_BITS == 64
         ':$$: 'Text "     eb `elem` [2 .. 61]"
         ':$$: 'Text "     sb `elem` [2 .. 4611686018427387902]"
-#elif WORD_SIZE_IN_BITS == 32
+#else
         ':$$: 'Text "     eb `elem` [2 .. 29]"
         ':$$: 'Text "     sb `elem` [2 .. 1073741822]"
-#else
-#error SBV requires either a 64 or a 32-bit architecture. Your machine seems to be neither! Please report.
 #endif
         ':$$: 'Text ""
         ':$$: 'Text "Given type falls outside of this range."
 
 -- | A valid float has restrictions on eb/sb values.
---
--- NB3. The max number of sb is 4611686018427387902, which equals  2^62-2, and seems to be entirely LibBF specific.
--- Likewise, the max exponent bits of 61 is 2^6-3; again LibBF specific upper bound.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
                                        , If (
 #if   WORD_SIZE_IN_BITS == 64
                                              2 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902
-#elif WORD_SIZE_IN_BITS == 32
-                                             2 <=? eb && eb <=? 29 && 2 <=? sb && sb <=? 1073741822
 #else
-#error SBV requires either a 64 or a 32-bit architecture. Your machine seems to be neither! Please report.
+                                             2 <=? eb && eb <=? 29 && 2 <=? sb && sb <=? 1073741822
 #endif
                                             )
                                             (() :: Constraint)
