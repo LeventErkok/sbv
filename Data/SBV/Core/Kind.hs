@@ -419,10 +419,9 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
 -- hold true for 64-bit architectures, they'll fail for 32-bit ones, if there're any remaining
 -- out there. (Maybe some emulations?) It would be nice to actually use the constants from LibBF
 -- for this purpose, where it exports expBitsMin, expBitsMax, precBitsMin, and precBitsMax
--- values. Perhaps one can use template Haskell to extract these values and have them
--- be configurable, but the extra complexity seems hardly worth the effort to do so.
--- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int>
--- for a possible way to do this, but it seems the answer was deleted by the author. Not sure why.
+-- values. According to <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int>
+-- this is not quite possible, as machine-dependent values such as these only start after type-checking ends. So, we seem
+-- to be out-of-luck.
 --
 -- NB2. In LibBF bindings (and libBF itself as well), minumum nymber of exponent bits is specified as 3. But this
 -- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
