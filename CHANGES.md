@@ -11,7 +11,10 @@
     and significand sizes. In particular, SBV can now reason about half-floats, which
     are used much more frequently in ML applications. Through the LibBF binding,
     you can also use these concretely, so if you have a use case for computing with
-    floats, you can use SBV as a vehicle for doing so.
+    floats, you can use SBV as a vehicle for doing so. The exponent/significand
+    sizes are limited to those supported by the LibBF bindings, though the allowed
+    range is rather large and should not be a limitation in practice. (In particular,
+    you'll most likely run out of memory before you hit precision limits!)
 
 ### Version 8.10, 2021-02-13
 
