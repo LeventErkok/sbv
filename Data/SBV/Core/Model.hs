@@ -1387,8 +1387,46 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
 -- add methods as they are supported by SMTLib. Currently, the only symbolically available function in this class is sqrt
 -- for SFloat and SDouble.
 instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
-  pi      = literal pi
+  pi      = fromRational . toRational $ (pi :: Double)
   exp     = lift1FNS "exp"     exp
+  log     = lift1FNS "log"     log
+  sqrt    = lift1F   FP_Sqrt   sqrt
+  sin     = lift1FNS "sin"     sin
+  cos     = lift1FNS "cos"     cos
+  tan     = lift1FNS "tan"     tan
+  asin    = lift1FNS "asin"    asin
+  acos    = lift1FNS "acos"    acos
+  atan    = lift1FNS "atan"    atan
+  sinh    = lift1FNS "sinh"    sinh
+  cosh    = lift1FNS "cosh"    cosh
+  tanh    = lift1FNS "tanh"    tanh
+  asinh   = lift1FNS "asinh"   asinh
+  acosh   = lift1FNS "acosh"   acosh
+  atanh   = lift1FNS "atanh"   atanh
+  (**)    = lift2FNS "**"      (**)
+  logBase = lift2FNS "logBase" logBase
+
+unsupported :: String -> a
+unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w ++ ". Please request this as a feature!"
+
+-- | We give a specific instance for SFloatingPoint, because the underlying FloatingPoint type doesn't support
+-- things of the sort fromRational directly. The overlap with the above instance is unfortunate.
+instance {-# OVERLAPPING #-} (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (SFloatingPoint eb sb) where
+  -- Try from double; if there's enough precision this'll work, otherwise will bail out.
+  pi
+   | ei > 11 || si > 53 = unsupported $ "Floating.SFloatingPoint.pi (not-enough-precision for " ++ show (ei, si) ++ ")"
+   | True               = literal $ FloatingPoint $ fpFromRational ei si (toRational (pi :: Double))
+   where ei = intOfProxy (Proxy @eb)
+         si = intOfProxy (Proxy @sb)
+
+  -- Likewise, exponentiation is again limited to precision of double
+  exp i
+   | ei > 11 || si > 53 = unsupported $ "Floating.SFloatingPoint.exp (not-enough-precision for " ++ show (ei, si) ++ ")"
+   | True               = literal e ** i
+   where ei = intOfProxy (Proxy @eb)
+         si = intOfProxy (Proxy @sb)
+         e  = FloatingPoint $ fpFromRational ei si (toRational (exp 1 :: Double))
+
   log     = lift1FNS "log"     log
   sqrt    = lift1F   FP_Sqrt   sqrt
   sin     = lift1FNS "sin"     sin
@@ -1435,7 +1473,7 @@ lift2FNS nm f sv1 sv2
 -- we do not constant fold these values (except for pi), as Haskell doesn't really have any means of computing
 -- them for arbitrary rationals.
 instance {-# OVERLAPPING #-} Floating SReal where
-  pi      = fromRational . toRational $ (pi :: Double)
+  pi      = fromRational . toRational $ (pi :: Double)  -- Perhaps not good enough?
   exp     = lift1SReal NR_Exp
   log     = lift1SReal NR_Log
   sqrt    = lift1SReal NR_Sqrt

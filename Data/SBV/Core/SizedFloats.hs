@@ -195,19 +195,11 @@ instance Fractional FP where
 
 -- | Floating instance for big-floats
 instance Floating FP where
-  -- Convert from double. If the result required is more precise, just bail out. I think this is safe.
-  pi = case fromRational (toRational (pi :: Double)) of
-         res@(FP eb sb _) | eb > 11 || sb > 53 -> unsupported $ "Floating.FP.pi (not-enough-precision for " ++ show (eb, sb) ++ ")"
-                          | True               -> res
-
-  -- Exponentiation is again limited to precision of double
-  exp i = case fromRational (toRational (exp 1 :: Double)) of
-            res@(FP eb sb _) | eb > 11 || sb > 53 -> unsupported $ "Floating.FP.pi (not-enough-precision for " ++ show (eb, sb) ++ ")"
-                             | True               -> res ** i
-
   sqrt (FP eb sb a)      = FP eb sb $ fst $ BF.bfSqrt (mkBFOpts eb sb BF.NearEven) a
   FP eb sb a ** FP _ _ b = FP eb sb $ fst $ BF.bfPow  (mkBFOpts eb sb BF.NearEven) a b
 
+  pi    = unsupported "Floating.FP.pi"
+  exp   = unsupported "Floating.FP.exp"
   log   = unsupported "Floating.FP.log"
   sin   = unsupported "Floating.FP.sin"
   cos   = unsupported "Floating.FP.cos"
