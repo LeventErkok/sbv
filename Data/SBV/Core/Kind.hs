@@ -45,6 +45,7 @@ import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
 import Data.Type.Bool
+import Data.Type.Equality
 
 import GHC.TypeLits
 
@@ -437,10 +438,19 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
         ':$$: 'Text "Given type falls outside of this range."
 
 -- | A valid float has restrictions on eb/sb values.
+-- NB. In the below encoding, I found that CPP is very finicky about substitution of the machine-dependent
+-- macros. If you try to put the conditionals in the same line, it fails to substitute for some reason. Hence the awkward spacing.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
-                                       , If (FP_MIN_EB <=? eb && eb <=? FP_MAX_EB && FP_MIN_SB <=? sb && sb <=? FP_MAX_SB)
+                                       , If (   (   eb `CmpNat` FP_MIN_EB == 'EQ
+                                                 || eb `CmpNat` FP_MIN_EB == 'GT)
+                                             && (   eb `CmpNat` FP_MAX_EB == 'EQ
+                                                 || eb `CmpNat` FP_MAX_EB == 'LT)
+                                             && (   sb `CmpNat` FP_MIN_SB == 'EQ
+                                                 || sb `CmpNat` FP_MIN_SB == 'GT)
+                                             && (   sb `CmpNat` FP_MAX_SB == 'EQ
+                                                 || sb `CmpNat` FP_MAX_SB == 'LT))
                                             (() :: Constraint)
                                             (TypeError (InvalidFloat eb sb))
                                        )
