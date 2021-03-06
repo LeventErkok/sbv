@@ -1171,8 +1171,8 @@ instance Show SVal where
 
 -- | This instance is only defined so that we can define an instance for
 -- 'Data.Bits.Bits'. '==' and '/=' simply throw an error.
--- We really don't want an 'Eq' instance for 'SBV' or 'SVal'. As it really makes no sense.
--- But since we do want the 'Bits' instance, we're forced to define equality. See
+-- We really don't want an 'Eq' instance for 'Data.SBV.Core.SBV' or 'SVal'. As it really makes no sense.
+-- But since we do want the 'Data.Bits.Bits' instance, we're forced to define equality. See
 -- <http://github.com/LeventErkok/sbv/issues/301>. We simply error out.
 instance Eq SVal where
   a == b = noEquals "==" ".==" (show a, show b)

@@ -1382,7 +1382,7 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., 'SFloat', 'SDouble', and 'SReal'.
--- (See the separate definition below for 'SFloatingPoint'.)  Note that unless you use delta-sat via 'dReal' on 'SReal', most
+-- (See the separate definition below for 'SFloatingPoint'.)  Note that unless you use delta-sat via 'Data.SBV.Provers.dReal' on 'SReal', most
 -- of the fields are "undefined" for symbolic values. We will add methods as they are supported by SMTLib. Currently, the
 -- only symbolically available function in this class is 'sqrt' for 'SFloat', 'SDouble' and 'SFloatingPoint'.
 instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
