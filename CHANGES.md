@@ -5,8 +5,13 @@
 
 ### Version 8.10.5, Not yet released
 
-  * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the
-    patch.
+  * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the patch.
+
+  * SBV now supports floating-point numbers with arbitrary (but fixed!) exponent
+    and significand sizes. In particular, SBV can now reason about half-floats, which
+    are used much more frequently in ML applications. Through the LibBF binding,
+    you can also use these concretely, so if you have a use case for computing with
+    floats, you can use SBV as a vehicle for doing so.
 
 ### Version 8.10, 2021-02-13
 
