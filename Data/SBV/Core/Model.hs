@@ -1382,10 +1382,10 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
                       k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
 
--- | Define Floating instance on SBV's; only for base types that are already floating; i.e., SFloat, SDouble, and SReal.
--- Note that unless you use delta-sat via dReal on SReal, most of the fields are "undefined" for symbolic values. We will
--- add methods as they are supported by SMTLib. Currently, the only symbolically available function in this class is sqrt
--- for SFloat and SDouble.
+-- | Define Floating instance on SBV's; only for base types that are already floating; i.e., 'SFloat', 'SDouble', and 'SReal'.
+-- (See the separate definition below for 'SFloatingPoint'.)  Note that unless you use delta-sat via 'dReal' on 'SReal', most
+-- of the fields are "undefined" for symbolic values. We will add methods as they are supported by SMTLib. Currently, the
+-- only symbolically available function in this class is 'sqrt' for 'SFloat', 'SDouble' and 'SFloatingPoint'.
 instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
   pi      = fromRational . toRational $ (pi :: Double)
   exp     = lift1FNS "exp"     exp
@@ -1409,8 +1409,8 @@ instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
 unsupported :: String -> a
 unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w ++ ". Please request this as a feature!"
 
--- | We give a specific instance for SFloatingPoint, because the underlying FloatingPoint type doesn't support
--- things of the sort fromRational directly. The overlap with the above instance is unfortunate.
+-- | We give a specific instance for 'SFloatingPoint', because the underlying floating-point type doesn't support
+-- fromRational directly. The overlap with the above instance is unfortunate.
 instance {-# OVERLAPPING #-} (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (SFloatingPoint eb sb) where
   -- Try from double; if there's enough precision this'll work, otherwise will bail out.
   pi

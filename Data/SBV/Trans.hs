@@ -31,7 +31,7 @@ module Data.SBV.Trans (
   -- ** Unbounded integers
   , SInteger
   -- ** Floating point numbers
-  , SFloat, SDouble
+  , SFloat, SDouble, SFloatingPoint
   -- ** Algebraic reals
   , SReal, AlgReal, sRealToSInteger
   -- ** Characters, Strings and Regular Expressions
