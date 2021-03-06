@@ -411,6 +411,10 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
 -- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
 -- didn't reveal anything going wrong. So, in SBV, we allow sb == 2. If this proves problematic, change the number
 -- below in definition of FP_MIN_EB to 3!
+--
+-- NB. It would be nice if we could use the LibBF constants expBitsMin, expBitsMax, precBitsMin, precBitsMax
+-- for determining the valid range. Unfortunately this doesn't seem to be possible.
+-- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion. So, we use CPP to work-around that.
 #define FP_MIN_EB 2
 #define FP_MIN_SB 2
 #if WORD_SIZE_IN_BITS == 64
@@ -422,10 +426,6 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
 #endif
 
 -- | Catch an invalid FP.
---
--- NB. It would be nice if we could use the LibBF constants expBitsMin, expBitsMax, precBitsMin, precBitsMax
--- for determining the valid range. Unfortunately this doesn't seem to be possible even using TH, since machine
--- dependent values only factor in after type-checking. See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion. So, we use CPP to work-around that.
 type InvalidFloat (eb :: Nat) (sb :: Nat)
         =     'Text "Invalid floating point type `SFloatingPoint " ':<>: 'ShowType eb ':<>: 'Text " " ':<>: 'ShowType sb ':<>: 'Text "'"
         ':$$: 'Text ""
