@@ -43,6 +43,7 @@ import Data.Kind
 import Data.List (isPrefixOf, intercalate)
 
 import Data.Typeable (Typeable)
+import Data.Type.Bool
 
 import GHC.TypeLits
 
@@ -402,13 +403,30 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
    BVIsNonZero 0 = TypeError BVZeroWidth
    BVIsNonZero _ = ()
 
--- | Catch an invalid FP
--- type InvalidFloat = 'Text "Floating point values must have exponent width in [3..61] and significand width in [2..4611686018427387902]"
+-- | Catch an invalid FP. See note below on 'ValidFloat' for hard-coded values.
+type InvalidFloat (eb :: Nat) (sb :: Nat)
+        =     'Text "Invalid floating point type `SFloatingPoint " ':<>: 'ShowType eb ':<>: 'Text " " ':<>: 'ShowType sb ':<>: 'Text "'"
+        ':$$: 'Text ""
+        ':$$: 'Text "A valid float of type 'SFloatingPoint eb sb' must satisfy:"
+        ':$$: 'Text "     eb `elem` [3 .. 61]"
+        ':$$: 'Text "     sb `elem` [2 .. 4611686018427387902]"
+        ':$$: 'Text ""
+        ':$$: 'Text "Given type falls outside of this range."
 
 -- | A valid float has restrictions on eb/sb values
+-- NB. The min/max exponent significand ranges are hard-coded below. While these numbers
+-- hold true for most systems, it would be nice to actually use the constants from LibBF
+-- for this purpose, where it exports expBitsMin, expBitsMax, precBitsMin, and precBitsMax
+-- values. Perhaps one can use template Haskell to extract these values and have them
+-- be configurable, but the extra complexity seems hardly worth the effort to do so.
+-- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int>
+-- for a possible way to do this, but it seems the answer was deleted by the author. Not sure why.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
-  ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb, 3 <= eb, eb <= 61
-                                       , KnownNat sb, 2 <= sb, sb <= 4611686018427387902
+  ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
+                                       , KnownNat sb
+                                       , If (3 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902)
+                                            (() :: Constraint)
+                                            (TypeError (InvalidFloat eb sb))
                                        )
 
 -- | Rounding mode to be used for the IEEE floating-point operations.
