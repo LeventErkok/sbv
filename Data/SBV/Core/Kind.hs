@@ -403,17 +403,23 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
    BVIsNonZero 0 = TypeError BVZeroWidth
    BVIsNonZero _ = ()
 
--- Allowed sizes for floats, imposed by LibBF:
---
---   64-bit machine:   eb `elem` [3 .. 61]
---                     sb `elem` [2 .. 4611686018427387902] (upper: 2^62-2)
---   32-bit machine:   eb `elem` [3 .. 29]
---                     sb `elem` [2 .. 1073741822] (upper: 2^30-2)
---
--- NB2. In LibBF bindings (and libBF itself as well), minimum number of exponent bits is specified as 3. But this
--- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
--- didn't reveal anything going wrong. So, in SBV, we allow sb == 2.
 #include "MachDeps.h"
+
+-- Allowed sizes for floats, imposed by LibBF.
+--
+-- NB. In LibBF bindings (and libBF itself as well), minimum number of exponent bits is specified as 3. But this
+-- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
+-- didn't reveal anything going wrong. So, in SBV, we allow sb == 2. If this proves problematic, change the number
+-- below in definition of FP_MIN_EB to 3!
+#define FP_MIN_EB 2
+#define FP_MIN_SB 2
+#if WORD_SIZE_IN_BITS == 64
+#define FP_MAX_EB 61
+#define FP_MAX_SB 4611686018427387902
+#else
+#define FP_MAX_EB 29
+#define FP_MAX_SB 1073741822
+#endif
 
 -- | Catch an invalid FP.
 --
@@ -424,13 +430,8 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
         =     'Text "Invalid floating point type `SFloatingPoint " ':<>: 'ShowType eb ':<>: 'Text " " ':<>: 'ShowType sb ':<>: 'Text "'"
         ':$$: 'Text ""
         ':$$: 'Text "A valid float of type 'SFloatingPoint eb sb' must satisfy:"
-#if   WORD_SIZE_IN_BITS == 64
-        ':$$: 'Text "     eb `elem` [2 .. 61]"
-        ':$$: 'Text "     sb `elem` [2 .. 4611686018427387902]"
-#else
-        ':$$: 'Text "     eb `elem` [2 .. 29]"
-        ':$$: 'Text "     sb `elem` [2 .. 1073741822]"
-#endif
+        ':$$: 'Text "     eb `elem` [" ':<>: 'ShowType FP_MIN_EB ':<>: 'Text " .. " ':<>: 'ShowType FP_MAX_EB ':<>: 'Text "]"
+        ':$$: 'Text "     sb `elem` [" ':<>: 'ShowType FP_MIN_SB ':<>: 'Text " .. " ':<>: 'ShowType FP_MAX_SB ':<>: 'Text "]"
         ':$$: 'Text ""
         ':$$: 'Text "Given type falls outside of this range."
 
@@ -438,13 +439,7 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
-                                       , If (
-#if   WORD_SIZE_IN_BITS == 64
-                                             2 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902
-#else
-                                             2 <=? eb && eb <=? 29 && 2 <=? sb && sb <=? 1073741822
-#endif
-                                            )
+                                       , If (FP_MIN_EB <=? eb && eb <=? FP_MAX_EB && FP_MIN_SB <=? sb && sb <=? FP_MAX_SB)
                                             (() :: Constraint)
                                             (TypeError (InvalidFloat eb sb))
                                        )
