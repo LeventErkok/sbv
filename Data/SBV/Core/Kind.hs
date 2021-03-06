@@ -21,7 +21,7 @@
 {-# LANGUAGE ViewPatterns         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -XCPP #-}
 
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
@@ -403,36 +403,55 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
    BVIsNonZero 0 = TypeError BVZeroWidth
    BVIsNonZero _ = ()
 
--- | Catch an invalid FP. See note below on 'ValidFloat' for hard-coded values.
+-- Allowed sizes for floats, imposed by LibBF:
+--
+--   64-bit machine:   eb `elem` [3 .. 61]
+--                     sb `elem` [2 .. 4611686018427387902] (upper: 2^62-2)
+--   32-bit machine:   eb `elem` [3 .. 29]
+--                     sb `elem` [2 .. 1073741822] (upper: 2^30-2)
+--
+-- NB2. In LibBF bindings (and libBF itself as well), minimum number of exponent bits is specified as 3. But this
+-- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
+-- didn't reveal anything going wrong. So, in SBV, we allow sb == 2.
+#include "MachDeps.h"
+
+-- | Catch an invalid FP.
+--
+-- NB. It would be nice if we could use the LibBF constants expBitsMin, expBitsMax, precBitsMin, precBitsMax
+-- for determining the valid range. Unfortunately this doesn't seem to be possible even using TH, since machine
+-- dependent values only factor in after type-checking. See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion. So, we use CPP to work-around that.
 type InvalidFloat (eb :: Nat) (sb :: Nat)
         =     'Text "Invalid floating point type `SFloatingPoint " ':<>: 'ShowType eb ':<>: 'Text " " ':<>: 'ShowType sb ':<>: 'Text "'"
         ':$$: 'Text ""
         ':$$: 'Text "A valid float of type 'SFloatingPoint eb sb' must satisfy:"
+#if   WORD_SIZE_IN_BITS == 64
         ':$$: 'Text "     eb `elem` [2 .. 61]"
         ':$$: 'Text "     sb `elem` [2 .. 4611686018427387902]"
+#elif WORD_SIZE_IN_BITS == 32
+        ':$$: 'Text "     eb `elem` [2 .. 29]"
+        ':$$: 'Text "     sb `elem` [2 .. 1073741822]"
+#else
+#error SBV requires either a 64 or a 32-bit architecture. Your machine seems to be neither! Please report.
+#endif
         ':$$: 'Text ""
         ':$$: 'Text "Given type falls outside of this range."
 
 -- | A valid float has restrictions on eb/sb values.
---
--- NB. The min/max exponent significand ranges are hard-coded below. While these numbers
--- hold true for 64-bit architectures, they'll fail for 32-bit ones, if there're any remaining
--- out there. (Maybe some emulations?) It would be nice to actually use the constants from LibBF
--- for this purpose, where it exports expBitsMin, expBitsMax, precBitsMin, and precBitsMax
--- values. According to <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int>
--- this is not quite possible, as machine-dependent values such as these only start after type-checking ends. So, we seem
--- to be out-of-luck.
---
--- NB2. In LibBF bindings (and libBF itself as well), minumum nymber of exponent bits is specified as 3. But this
--- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
--- didn't reveal anything going wrong. So, in SBV, we allow sb == 2.
 --
 -- NB3. The max number of sb is 4611686018427387902, which equals  2^62-2, and seems to be entirely LibBF specific.
 -- Likewise, the max exponent bits of 61 is 2^6-3; again LibBF specific upper bound.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
-                                       , If (2 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902)
+                                       , If (
+#if   WORD_SIZE_IN_BITS == 64
+                                             2 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902
+#elif WORD_SIZE_IN_BITS == 32
+                                             2 <=? eb && eb <=? 29 && 2 <=? sb && sb <=? 1073741822
+#else
+#error SBV requires either a 64 or a 32-bit architecture. Your machine seems to be neither! Please report.
+#endif
+                                            )
                                             (() :: Constraint)
                                             (TypeError (InvalidFloat eb sb))
                                        )
