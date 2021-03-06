@@ -24,6 +24,7 @@ arguments =
     , "SBVTestSuite"
     , "-i", "Use otherwise"
     , "-i", "Parse error"
+    , "--cpp-simple"
     ]
 
 main :: IO ()
