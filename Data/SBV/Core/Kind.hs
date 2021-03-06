@@ -9,6 +9,7 @@
 -- Internal data-structures for the sbv library
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
@@ -21,7 +22,7 @@
 {-# LANGUAGE ViewPatterns         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -XCPP #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
