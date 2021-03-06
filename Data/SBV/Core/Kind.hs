@@ -408,23 +408,32 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
         =     'Text "Invalid floating point type `SFloatingPoint " ':<>: 'ShowType eb ':<>: 'Text " " ':<>: 'ShowType sb ':<>: 'Text "'"
         ':$$: 'Text ""
         ':$$: 'Text "A valid float of type 'SFloatingPoint eb sb' must satisfy:"
-        ':$$: 'Text "     eb `elem` [3 .. 61]"
+        ':$$: 'Text "     eb `elem` [2 .. 61]"
         ':$$: 'Text "     sb `elem` [2 .. 4611686018427387902]"
         ':$$: 'Text ""
         ':$$: 'Text "Given type falls outside of this range."
 
--- | A valid float has restrictions on eb/sb values
+-- | A valid float has restrictions on eb/sb values.
+--
 -- NB. The min/max exponent significand ranges are hard-coded below. While these numbers
--- hold true for most systems, it would be nice to actually use the constants from LibBF
+-- hold true for 64-bit architectures, they'll fail for 32-bit ones, if there're any remaining
+-- out there. (Maybe some emulations?) It would be nice to actually use the constants from LibBF
 -- for this purpose, where it exports expBitsMin, expBitsMax, precBitsMin, and precBitsMax
 -- values. Perhaps one can use template Haskell to extract these values and have them
 -- be configurable, but the extra complexity seems hardly worth the effort to do so.
 -- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int>
 -- for a possible way to do this, but it seems the answer was deleted by the author. Not sure why.
+--
+-- NB2. In LibBF bindings (and libBF itself as well), minumum nymber of exponent bits is specified as 3. But this
+-- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
+-- didn't reveal anything going wrong. So, in SBV, we allow sb == 2.
+--
+-- NB3. The max number of sb is 4611686018427387902, which equals  2^62-2, and seems to be entirely LibBF specific.
+-- Likewise, the max exponent bits of 61 is 2^6-3; again LibBF specific upper bound.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
-                                       , If (3 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902)
+                                       , If (2 <=? eb && eb <=? 61 && 2 <=? sb && sb <=? 4611686018427387902)
                                             (() :: Constraint)
                                             (TypeError (InvalidFloat eb sb))
                                        )
