@@ -30,7 +30,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
 import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
-import Data.SBV.Core.Kind      (BVIsNonZero, FPIsAtLeastTwo)
+import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
@@ -630,19 +630,19 @@ sDoubles = Trans.sDoubles
 -- | Declare a named 'SFloatingPoint eb sb'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFloatingPoint'
-sFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => String -> Symbolic (SFloatingPoint eb sb)
+sFloatingPoint :: ValidFloat eb sb => String -> Symbolic (SFloatingPoint eb sb)
 sFloatingPoint = Trans.sFloatingPoint
 
 -- | Declare an unnamed 'SFloatingPoint' @eb@ @sb@
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFloatingPoint_'
-sFloatingPoint_ :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Symbolic (SFloatingPoint eb sb)
+sFloatingPoint_ :: ValidFloat eb sb => Symbolic (SFloatingPoint eb sb)
 sFloatingPoint_ = Trans.sFloatingPoint_
 
 -- | Declare a list of 'SFloatingPoint' @eb@ @sb@'s
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFloatingPoints'
-sFloatingPoints :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => [String] -> Symbolic [SFloatingPoint eb sb]
+sFloatingPoints :: ValidFloat eb sb => [String] -> Symbolic [SFloatingPoint eb sb]
 sFloatingPoints = Trans.sFloatingPoints
 
 -- | Declare a named 'SFPHalf'

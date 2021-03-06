@@ -297,14 +297,14 @@ class SymVal a => IEEEFloatConvertible a where
   toSDouble = genericToFloat (onlyWhenRNE (Just . fromRational . fromIntegral))
 
   -- | Convert from an arbitrary floating point.
-  fromSFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SFloatingPoint eb sb -> SBV a
+  fromSFloatingPoint :: ValidFloat eb sb => SRoundingMode -> SFloatingPoint eb sb -> SBV a
   fromSFloatingPoint = genericFromFloat
 
   -- | Convert to an arbitrary floating point.
-  toSFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
+  toSFloatingPoint :: ValidFloat eb sb => SRoundingMode -> SBV a -> SFloatingPoint eb sb
 
   -- -- default definition if we have an integral like
-  default toSFloatingPoint :: (Integral a, KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
+  default toSFloatingPoint :: (Integral a, ValidFloat eb sb) => SRoundingMode -> SBV a -> SFloatingPoint eb sb
   toSFloatingPoint = genericToFloat (const (Just . fromRational . fromIntegral))
 
 -- Run the function if the conversion is in RNE. Otherwise return Nothing.
@@ -404,7 +404,7 @@ instance IEEEFloatConvertible AlgReal where
   toSFloatingPoint = genericToFloat (const       convertWhenExactRational)
 
 -- Arbitrary floats can handle all rounding modes in concrete mode
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloatConvertible (FloatingPoint eb sb) where
+instance ValidFloat eb sb => IEEEFloatConvertible (FloatingPoint eb sb) where
   toSFloat rm i
     | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
     = literal $ fp2fp $ fst (bfToDouble brm (fst (bfRoundFloat (mkBFOpts ei si brm) v)))
@@ -632,7 +632,7 @@ blastSDouble = extract . sDoubleAsSWord64
 
 -- | Extract the sign\/exponent\/mantissa of an arbitrary precision float. The output will have
 -- @eb@ bits in the second argument for exponent, and @sb-1@ bits in the third for mantissa.
-blastSFloatingPoint :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb))
+blastSFloatingPoint :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb))
                     => SFloatingPoint eb sb -> (SBool, [SBool], [SBool])
 blastSFloatingPoint = extract . sFloatingPointAsSWord
   where ei = intOfProxy (Proxy @eb)
@@ -722,7 +722,7 @@ instance Metric Double where
                         addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
 
 -- | Real instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Real (FloatingPoint eb sb) where
+instance ValidFloat eb sb => Real (FloatingPoint eb sb) where
   toRational (FloatingPoint (FP _ _ r)) = case bfToRep r of
                                             BFNaN     -> toRational (0/0 :: Double)
                                             BFRep s n -> case n of
@@ -737,12 +737,12 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
                                                                             else sgn $ x % v
 
 -- | RealFrac instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFrac (FloatingPoint eb sb) where
+instance ValidFloat eb sb => RealFrac (FloatingPoint eb sb) where
   properFraction (FloatingPoint f) = (a, FloatingPoint b)
      where (a, b) = properFraction f
 
 -- | RealFloat instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => RealFloat (FloatingPoint eb sb) where
+instance ValidFloat eb sb => RealFloat (FloatingPoint eb sb) where
   floatRadix     (FloatingPoint f) = floatRadix     f
   floatDigits    (FloatingPoint f) = floatDigits    f
   floatRange     (FloatingPoint f) = floatRange     f
@@ -759,7 +759,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Rea
            si = intOfProxy (Proxy @sb)
 
 -- | Convert a float to the word containing the corresponding bit pattern
-sFloatingPointAsSWord :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
+sFloatingPointAsSWord :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsSWord fVal
   | Just f@(FloatingPoint (FP eb sb v)) <- unliteral fVal, not (isNaN f)
   = fromIntegral $ bfToBits (mkBFOpts eb sb NearEven) v
@@ -779,9 +779,7 @@ sFloatingPointAsSWord fVal
                              return n
 
 -- | Convert a float to the correct size word, that can be used in lexicographic ordering. Used in optimization.
-sFloatingPointAsComparableSWord :: forall eb sb. ( KnownNat eb, FPIsAtLeastTwo eb
-                                                 , KnownNat sb, FPIsAtLeastTwo sb
-                                                 , KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
+sFloatingPointAsComparableSWord :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
 sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where posZero     = sFloatingPointAsComparableSWord (0 :: SFloatingPoint eb sb)
         (sb : rest) = blastBE (sFloatingPointAsSWord f :: SWord (eb + sb))
@@ -793,16 +791,12 @@ sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE
 -- Q.E.D.
 -- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` (x :: SFPHalf)
 -- Q.E.D.
-sComparableSWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
-                                                  , KnownNat eb, FPIsAtLeastTwo eb
-                                                  , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
+sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sComparableSWordAsSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(signBit : rest) = blastBE w
 
 -- | Convert a word to an arbitrary float, by reinterpreting the bits of the word as the corresponding bits of the float.
-sWordAsSFloatingPoint :: forall eb sb. ( KnownNat (eb + sb), BVIsNonZero (eb + sb)
-                                       , KnownNat eb, FPIsAtLeastTwo eb
-                                       , KnownNat sb, FPIsAtLeastTwo sb) => SWord (eb + sb) -> SFloatingPoint eb sb
+sWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sWordAsSFloatingPoint sw
    | Just (f :: WordN (eb + sb)) <- unliteral sw
    = let ext i = f `testBit` i
@@ -824,7 +818,7 @@ sWordAsSFloatingPoint sw
          y st = do xsv <- sbvToSV st sw
                    newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret (kindOf sw) kTo)) [xsv])
 
-instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), KnownNat eb, FPIsAtLeastTwo eb, FPIsAtLeastTwo sb, KnownNat sb) => Metric (FloatingPoint eb sb) where
+instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), ValidFloat eb sb) => Metric (FloatingPoint eb sb) where
 
    type MetricSpace (FloatingPoint eb sb) = WordN (eb + sb)
    toMetricSpace                          = sFloatingPointAsComparableSWord
@@ -846,7 +840,7 @@ rmToRM srm = cvt <$> unliteral srm
         cvt RoundTowardZero        = ToZero
 
 -- | Lift a 1 arg Big-float op
-lift1FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) =>
+lift1FP :: forall eb sb. ValidFloat eb sb =>
            (BFOpts -> BigFloat -> (BigFloat, Status))
         -> (Maybe SRoundingMode -> SFloatingPoint eb sb -> SFloatingPoint eb sb)
         -> SRoundingMode
@@ -862,7 +856,7 @@ lift1FP bfOp mkDef rm a
         si = intOfProxy (Proxy @sb)
 
 -- | Lift a 2 arg Big-float op
-lift2FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) =>
+lift2FP :: forall eb sb. ValidFloat eb sb =>
            (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status))
         -> (Maybe SRoundingMode -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb)
         -> SRoundingMode
@@ -880,7 +874,7 @@ lift2FP bfOp mkDef rm a b
         si = intOfProxy (Proxy @sb)
 
 -- | Lift a 3 arg Big-float op
-lift3FP :: forall eb sb. (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) =>
+lift3FP :: forall eb sb. ValidFloat eb sb =>
            (BFOpts -> BigFloat -> BigFloat -> BigFloat -> (BigFloat, Status))
         -> (Maybe SRoundingMode -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb -> SFloatingPoint eb sb)
         -> SRoundingMode
@@ -900,7 +894,7 @@ lift3FP bfOp mkDef rm a b c
         si = intOfProxy (Proxy @sb)
 
 -- Sized-floats have a special instance, since it can handle arbitrary rounding modes when it matters.
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => IEEEFloating (FloatingPoint eb sb) where
+instance ValidFloat eb sb => IEEEFloating (FloatingPoint eb sb) where
   fpAdd  = lift2FP bfAdd      (lift2 FP_Add  (Just (+)))
   fpSub  = lift2FP bfSub      (lift2 FP_Sub  (Just (-)))
   fpMul  = lift2FP bfMul      (lift2 FP_Mul  (Just (*)))

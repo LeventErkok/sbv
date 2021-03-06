@@ -56,7 +56,6 @@ import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
-import GHC.TypeLits
 
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
@@ -223,10 +222,10 @@ instance SymVal a => SymVal [a] where
   fromCV (CV _ (CList a))   = fromCV . CV (kindOf (Proxy @a)) <$> a
   fromCV c                  = error $ "SymVal.fromCV: Unexpected non-list value: " ++ show c
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => HasKind (FloatingPoint eb sb) where
+instance ValidFloat eb sb => HasKind (FloatingPoint eb sb) where
   kindOf _ = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => SymVal (FloatingPoint eb sb) where
+instance ValidFloat eb sb => SymVal (FloatingPoint eb sb) where
   mkSymVal                   = genMkSymVar (KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
   literal (FloatingPoint r)  = let k = KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
                                in SBV $ SVal k $ Left $ CV k (CFP r)
@@ -569,15 +568,15 @@ sFPQuads :: [String] -> Symbolic [SFPQuad]
 sFPQuads = symbolics
 
 -- | Generalization of 'Data.SBV.sFloatingPoint'
-sFloatingPoint :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => String -> Symbolic (SFloatingPoint eb sb)
+sFloatingPoint :: ValidFloat eb sb => String -> Symbolic (SFloatingPoint eb sb)
 sFloatingPoint = symbolic
 
 -- | Generalization of 'Data.SBV.sFloatingPoint_'
-sFloatingPoint_ :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Symbolic (SFloatingPoint eb sb)
+sFloatingPoint_ :: ValidFloat eb sb => Symbolic (SFloatingPoint eb sb)
 sFloatingPoint_ = free_
 
 -- | Generalization of 'Data.SBV.sFloatingPoints'
-sFloatingPoints :: (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => [String] -> Symbolic [SFloatingPoint eb sb]
+sFloatingPoints :: ValidFloat eb sb => [String] -> Symbolic [SFloatingPoint eb sb]
 sFloatingPoints = symbolics
 
 -- | Generalization of 'Data.SBV.sChar'
@@ -1411,7 +1410,7 @@ unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w +
 
 -- | We give a specific instance for 'SFloatingPoint', because the underlying floating-point type doesn't support
 -- fromRational directly. The overlap with the above instance is unfortunate.
-instance {-# OVERLAPPING #-} (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (SFloatingPoint eb sb) where
+instance {-# OVERLAPPING #-} ValidFloat eb sb => Floating (SFloatingPoint eb sb) where
   -- Try from double; if there's enough precision this'll work, otherwise will bail out.
   pi
    | ei > 11 || si > 53 = unsupported $ "Floating.SFloatingPoint.pi (not-enough-precision for " ++ show (ei, si) ++ ")"

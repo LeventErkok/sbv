@@ -158,7 +158,7 @@ module Data.SBV (
   , SInteger
   -- ** Floating point numbers
   -- $floatingPoints
-  , FPIsAtLeastTwo, SFloat, SDouble
+  , ValidFloat, SFloat, SDouble
   , SFloatingPoint, FloatingPoint
   , SFPHalf, FPHalf
   , SFPSingle, FPSingle

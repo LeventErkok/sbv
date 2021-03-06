@@ -17,6 +17,7 @@
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE ViewPatterns         #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -24,7 +25,7 @@
 
 module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
-        , BVIsNonZero, FPIsAtLeastTwo, intOfProxy
+        , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
         ) where
 
@@ -401,14 +402,14 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
    BVIsNonZero 0 = TypeError BVZeroWidth
    BVIsNonZero _ = ()
 
--- Catch < 1 cases
-type FPAtLeastTwo = 'Text "Floating-point field width must be at least 2"
+-- | Catch an invalid FP
+-- type InvalidFloat = 'Text "Floating point values must have exponent width in [3..61] and significand width in [2..4611686018427387902]"
 
--- | Type family to create the appropriate non-zero constraint
-type family FPIsAtLeastTwo (arg :: Nat) :: Constraint where
-   FPIsAtLeastTwo 0 = TypeError FPAtLeastTwo
-   FPIsAtLeastTwo 1 = TypeError FPAtLeastTwo
-   FPIsAtLeastTwo _ = ()
+-- | A valid float has restrictions on eb/sb values
+type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
+  ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb, 3 <= eb, eb <= 61
+                                       , KnownNat sb, 2 <= sb, sb <= 4611686018427387902
+                                       )
 
 -- | Rounding mode to be used for the IEEE floating-point operations.
 -- Note that Haskell's default is 'RoundNearestTiesToEven'. If you use

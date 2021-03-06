@@ -282,7 +282,7 @@ instance RealFrac FP where
                                                             else fromIntegral $ sgn v
 
 -- | Num instance for FloatingPoint
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num (FloatingPoint eb sb) where
+instance ValidFloat eb sb => Num (FloatingPoint eb sb) where
   FloatingPoint a + FloatingPoint b = FloatingPoint $ a + b
   FloatingPoint a * FloatingPoint b = FloatingPoint $ a * b
 
@@ -292,7 +292,7 @@ instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Num
 
   fromInteger = FloatingPoint . fpFromInteger (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Fractional (FloatingPoint eb sb) where
+instance ValidFloat eb sb => Fractional (FloatingPoint eb sb) where
   fromRational = FloatingPoint . fpFromRational (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb))
 
   FloatingPoint a / FloatingPoint b = FloatingPoint (a / b)
@@ -301,7 +301,7 @@ unsupported :: String -> a
 unsupported w = error $ "Data.SBV.FloatingPoint: Unsupported operation: " ++ w ++ ". Please request this as a feature!"
 
 -- Float instance. Most methods are left unimplemented.
-instance (KnownNat eb, FPIsAtLeastTwo eb, KnownNat sb, FPIsAtLeastTwo sb) => Floating (FloatingPoint eb sb) where
+instance ValidFloat eb sb => Floating (FloatingPoint eb sb) where
   pi = FloatingPoint pi
 
   exp  (FloatingPoint i) = FloatingPoint (exp i)
