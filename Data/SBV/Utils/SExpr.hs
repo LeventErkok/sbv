@@ -28,9 +28,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
 
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
-
-import Data.Numbers.CrackNum (wordToFloat, wordToDouble)
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH, wordToFloat, wordToDouble)
 
 -- | ADT S-Expression format, suitable for representing get-model output of SMT-Lib
 data SExpr = ECon           String

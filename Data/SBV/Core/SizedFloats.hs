@@ -32,8 +32,6 @@ module Data.SBV.Core.SizedFloats (
        , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString
        ) where
 
-import qualified Data.Numbers.CrackNum as CN (floatToWord)
-
 import Data.Char (intToDigit)
 import Data.Proxy
 import GHC.TypeLits
@@ -43,6 +41,7 @@ import Data.Ratio
 import Numeric
 
 import Data.SBV.Core.Kind
+import Data.SBV.Utils.Numeric (floatToWord)
 
 import LibBF (BigFloat, BFOpts, RoundMode, Status)
 import qualified LibBF as BF
@@ -333,7 +332,7 @@ lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb BF.NearEven
 
 -- Convert from a IEEE float
 fpFromFloat :: Int -> Int -> Float -> FP
-fpFromFloat  8 24 f = let fw          = CN.floatToWord f
+fpFromFloat  8 24 f = let fw          = floatToWord f
                           (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
                       in fpFromRawRep sgn (e, 8) (s, 24)
 fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)

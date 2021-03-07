@@ -18,8 +18,6 @@
 
 module TestSuite.Basics.ArithNoSolver(tests) where
 
-import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
-
 import Data.SBV.Internals
 import Utils.SBVTestFramework
 

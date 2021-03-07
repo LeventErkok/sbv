@@ -29,18 +29,18 @@ import Data.Word  (Word8, Word16, Word32, Word64)
 
 import qualified Data.Set as Set
 
-import Numeric (showIntAtBase, showHex, readInt)
-import qualified Numeric (showHFloat)
-
-import Data.Numbers.CrackNum (floatToFP, doubleToFP)
+import Numeric (showIntAtBase, showHex, readInt, floatToDigits)
+import qualified Numeric as N (showHFloat)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, smtRoundingMode)
+import Data.SBV.Core.Kind (smtType, smtRoundingMode, showBaseKind)
 
 import Data.SBV.Core.AlgReals    (algRealToSMTLib2)
 import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
 
 import Data.SBV.Utils.Lib (stringToQFS)
+
+import Data.Numbers.CrackNum () -- We'll eventually use this, place holder for now.
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where

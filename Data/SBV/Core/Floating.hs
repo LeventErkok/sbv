@@ -31,8 +31,6 @@ module Data.SBV.Core.Floating (
        , 
        ) where
 
-import qualified Data.Numbers.CrackNum as CN (wordToFloat, wordToDouble, floatToWord, doubleToWord)
-
 import Data.Bits (testBit)
 import Data.Int  (Int8,  Int16,  Int32,  Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -584,7 +582,7 @@ lift3 w mbOp mbRm a b c
 sFloatAsSWord32 :: SFloat -> SWord32
 sFloatAsSWord32 fVal
   | Just f <- unliteral fVal, not (isNaN f)
-  = literal (CN.floatToWord f)
+  = literal (floatToWord f)
   | True
   = SBV (SVal w32 (Right (cache y)))
   where w32  = KBounded False 32
@@ -605,7 +603,7 @@ sFloatAsSWord32 fVal
 sDoubleAsSWord64 :: SDouble -> SWord64
 sDoubleAsSWord64 fVal
   | Just f <- unliteral fVal, not (isNaN f)
-  = literal (CN.doubleToWord f)
+  = literal (doubleToWord f)
   | True
   = SBV (SVal w64 (Right (cache y)))
   where w64  = KBounded False 64
@@ -642,7 +640,7 @@ blastSFloatingPoint = extract . sFloatingPointAsSWord
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord32AsSFloat :: SWord32 -> SFloat
 sWord32AsSFloat fVal
-  | Just f <- unliteral fVal = literal $ CN.wordToFloat f
+  | Just f <- unliteral fVal = literal $ wordToFloat f
   | True                     = SBV (SVal KFloat (Right (cache y)))
   where y st = do xsv <- sbvToSV st fVal
                   newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret (kindOf fVal) KFloat)) [xsv])
@@ -650,7 +648,7 @@ sWord32AsSFloat fVal
 -- | Reinterpret the bits in a 32-bit word as a single-precision floating point number
 sWord64AsSDouble :: SWord64 -> SDouble
 sWord64AsSDouble dVal
-  | Just d <- unliteral dVal = literal $ CN.wordToDouble d
+  | Just d <- unliteral dVal = literal $ wordToDouble d
   | True                     = SBV (SVal KDouble (Right (cache y)))
   where y st = do xsv <- sbvToSV st dVal
                   newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret (kindOf dVal) KDouble)) [xsv])

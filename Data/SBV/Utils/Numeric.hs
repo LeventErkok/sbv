@@ -9,9 +9,16 @@
 -- Various number related utilities
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.Numeric where
+
+import Data.Word
+import Data.Array.ST     (newArray, readArray, MArray, STUArray)
+import Data.Array.Unsafe (castSTUArray)
+import GHC.ST            (runST, ST)
 
 -- | The SMT-Lib (in particular Z3) implementation for min/max for floats does not agree with
 -- Haskell's; and also it does not agree with what the hardware does. Sigh.. See:
@@ -110,3 +117,36 @@ fpCompareObjectH a b
 -- and also this is not simply the negation of isDenormalized!
 fpIsNormalizedH :: RealFloat a => a -> Bool
 fpIsNormalizedH x = not (isDenormalized x || isInfinite x || isNaN x || x == 0)
+
+-------------------------------------------------------------------------
+-- Reinterpreting float/double as word32/64 and back. Here, we use the
+-- definitions from the reinterpret-cast package:
+--
+--     http://hackage.haskell.org/package/reinterpret-cast
+--
+-- The reason we steal these definitions is to make sure we keep minimal
+-- dependencies and no FFI requirements anywhere.
+-------------------------------------------------------------------------
+-- | Reinterpret-casts a `Float` to a `Word32`.
+floatToWord :: Float -> Word32
+floatToWord x = runST (cast x)
+{-# INLINEABLE floatToWord #-}
+
+-- | Reinterpret-casts a `Word32` to a `Float`.
+wordToFloat :: Word32 -> Float
+wordToFloat x = runST (cast x)
+{-# INLINEABLE wordToFloat #-}
+
+-- | Reinterpret-casts a `Double` to a `Word64`.
+doubleToWord :: Double -> Word64
+doubleToWord x = runST (cast x)
+{-# INLINEABLE doubleToWord #-}
+
+-- | Reinterpret-casts a `Word64` to a `Double`.
+wordToDouble :: Word64 -> Double
+wordToDouble x = runST (cast x)
+{-# INLINEABLE wordToDouble #-}
+
+{-# INLINE cast #-}
+cast :: (MArray (STUArray s) a (ST s), MArray (STUArray s) b (ST s)) => a -> ST s b
+cast x = newArray (0 :: Int, 0) x >>= castSTUArray >>= flip readArray 0
