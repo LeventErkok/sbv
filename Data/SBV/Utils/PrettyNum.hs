@@ -164,24 +164,27 @@ instance PrettyNum Integer where
   hex  = shexI False False
   bin  = sbinI False False
 
+shBKind :: HasKind a => a -> String
+shBKind a = " :: " ++ showBaseKind (kindOf a)
+
 instance PrettyNum CV where
-  hexS cv | isUserSort      cv = show cv ++ " :: " ++ show (kindOf cv)
-          | isBoolean       cv = hexS (cvToBool cv) ++ " :: Bool"
-          | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True f ++ " :: " ++ show (kindOf cv)
-          | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
-          | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
+  hexS cv | isUserSort      cv = shows cv                                          $  shBKind cv
+          | isBoolean       cv = hexS (cvToBool cv)                                ++ shBKind cv
+          | isFloat         cv = let CFloat   f = cvVal cv in N.showHFloat f       $  shBKind cv
+          | isDouble        cv = let CDouble  d = cvVal cv in N.showHFloat d       $  shBKind cv
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True f ++ shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in show r               ++ shBKind cv
+          | isString        cv = let CString  s = cvVal cv in show s               ++ shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
           | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cv | isUserSort      cv = show cv  ++ " :: " ++ show (kindOf cv)
-          | isBoolean       cv = binS (cvToBool cv)  ++ " :: Bool"
-          | isFloat         cv = let CFloat   f = cvVal cv in show f ++ " :: Float\n"  ++ show (floatToFP f)
-          | isDouble        cv = let CDouble  d = cvVal cv in show d ++ " :: Double\n" ++ show (doubleToFP d)
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True f ++ " :: " ++ show (kindOf cv)
-          | isReal          cv = let CAlgReal r = cvVal cv in show r ++ " :: Real"
-          | isString        cv = let CString  s = cvVal cv in show s ++ " :: String"
+  binS cv | isUserSort      cv = shows cv                                         $  shBKind cv
+          | isBoolean       cv = binS (cvToBool cv)                               ++ shBKind cv
+          | isFloat         cv = let CFloat   f = cvVal cv in showBFloat f        $  shBKind cv
+          | isDouble        cv = let CDouble  d = cvVal cv in showBFloat d        $  shBKind cv
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True f ++ shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in shows r             $  shBKind cv
+          | isString        cv = let CString  s = cvVal cv in shows s             $  shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
@@ -345,7 +348,7 @@ showCFloat f
    | isNaN f             = "((float) NAN)"
    | isInfinite f, f < 0 = "((float) (-INFINITY))"
    | isInfinite f        = "((float) INFINITY)"
-   | True                = Numeric.showHFloat f $ "F /* " ++ show f ++ "F */"
+   | True                = N.showHFloat f $ "F /* " ++ show f ++ "F */"
 
 -- | A version of show for doubles that generates correct C literals for nan/infinite. NB. Requires "math.h" to be included.
 showCDouble :: Double -> String
@@ -353,7 +356,7 @@ showCDouble d
    | isNaN d             = "((double) NAN)"
    | isInfinite d, d < 0 = "((double) (-INFINITY))"
    | isInfinite d        = "((double) INFINITY)"
-   | True                = Numeric.showHFloat d " /* " ++ show d ++ " */"
+   | True                = N.showHFloat d " /* " ++ show d ++ " */"
 
 -- | A version of show for floats that generates correct Haskell literals for nan/infinite
 showHFloat :: Float -> String
@@ -492,3 +495,25 @@ mkSkolemZero :: RoundingMode -> Kind -> String
 mkSkolemZero _ (KUserSort _ (Just (f:_))) = f
 mkSkolemZero _ (KUserSort s _)            = error $ "SBV.mkSkolemZero: Unexpected user sort: " ++ s
 mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integer))
+
+-- Like Haskell's showHFloat, but uses binary instead. Note that the exponent is always
+-- written in decimal.
+showBFloat :: RealFloat a => a -> ShowS
+showBFloat = showString . fmt
+  where
+  fmt x
+    | isNaN x                   = "NaN"
+    | isInfinite x              = (if x < 0 then "-" else "") ++ "Infinity"
+    | x < 0 || isNegativeZero x = '-' : cvt (-x)
+    | True                      = cvt x
+
+  cvt x
+    | x == 0 = "0b0p+0"
+    | True   = case floatToDigits 2 x of
+                 r@([], _) -> error $ "Impossible happened: showBFloat: " ++ show r
+                 (d:ds, e) -> "0b" ++ show d ++ frac ds ++ "p" ++ show (e-1)
+
+  -- Given binary digits, show them except if they're all 0 then drop
+  frac digits
+    | all (== 0) digits = ""
+    | True              = "." ++ concatMap show digits
