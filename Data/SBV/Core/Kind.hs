@@ -409,14 +409,21 @@ type family BVIsNonZero (arg :: Nat) :: Constraint where
 
 -- Allowed sizes for floats, imposed by LibBF.
 --
--- NB. In LibBF bindings (and libBF itself as well), minimum number of exponent bits is specified as 3. But this
+-- NB. In LibBF bindings (and libbf itself as well), minimum number of exponent bits is specified as 3. But this
 -- seems unnecessarily restrictive; that constant doesn't seem to be used anywhere, and furthermore my tests with sb = 2
--- didn't reveal anything going wrong. So, in SBV, we allow sb == 2. If this proves problematic, change the number
--- below in definition of FP_MIN_EB to 3!
+-- didn't reveal anything going wrong. I emailed the author of libbf regarding this, and he said:
+--
+--   I had no clear reason to use BF_EXP_BITS_MIN = 3. So if "2" is OK then
+--   why not. The important is that the basic operations are OK. It is likely
+--   there are tricky cases in the transcendental operations but even with
+--   large exponents libbf may have problems with them !
+--
+-- So, in SBV, we allow sb == 2. If this proves problematic, change the number below in definition of FP_MIN_EB to 3!
 --
 -- NB. It would be nice if we could use the LibBF constants expBitsMin, expBitsMax, precBitsMin, precBitsMax
 -- for determining the valid range. Unfortunately this doesn't seem to be possible.
--- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion. So, we use CPP to work-around that.
+-- See <https://stackoverflow.com/questions/51900360/making-a-type-constraint-based-on-runtime-value-of-maxbound-int> for a discussion.
+-- So, we use CPP to work-around that.
 #define FP_MIN_EB 2
 #define FP_MIN_SB 2
 #if WORD_SIZE_IN_BITS == 64
@@ -440,6 +447,7 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
 -- | A valid float has restrictions on eb/sb values.
 -- NB. In the below encoding, I found that CPP is very finicky about substitution of the machine-dependent
 -- macros. If you try to put the conditionals in the same line, it fails to substitute for some reason. Hence the awkward spacing.
+-- Filed this as a bug report for CPPHS at <https://github.com/malcolmwallace/cpphs/issues/25>.
 type family ValidFloat (eb :: Nat) (sb :: Nat) :: Constraint where
   ValidFloat (eb :: Nat) (sb :: Nat) = ( KnownNat eb
                                        , KnownNat sb
