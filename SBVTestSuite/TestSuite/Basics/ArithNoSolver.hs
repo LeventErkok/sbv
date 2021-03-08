@@ -398,11 +398,11 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
 
                  -- NB. We don't constant fold float/double conversions, so we skip these
                  --
-                 ++  [cvtTest  ("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (CN.wordToFloat  x)) | x <- w32s]
-                 ++  [cvtTest  ("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (CN.wordToDouble x)) | x <- w64s]
+                 ++  [cvtTest  ("reinterp_Word32_Float",  show x, sWord32AsSFloat  (literal x), literal (wordToFloat  x)) | x <- w32s]
+                 ++  [cvtTest  ("reinterp_Word64_Double", show x, sWord64AsSDouble (literal x), literal (wordToDouble x)) | x <- w64s]
 
-                 ++  [cvtTestI ("reinterp_Float_Word32",  show x, sFloatAsSWord32  (literal x), CN.floatToWord x)  | x <- fs, not (isNaN x)] -- Not unique for NaN
-                 ++  [cvtTestI ("reinterp_Double_Word64", show x, sDoubleAsSWord64 (literal x), CN.doubleToWord x) | x <- ds, not (isNaN x)] -- Not unique for NaN
+                 ++  [cvtTestI ("reinterp_Float_Word32",  show x, sFloatAsSWord32  (literal x), floatToWord x)  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++  [cvtTestI ("reinterp_Double_Word64", show x, sDoubleAsSWord64 (literal x), doubleToWord x) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         floatRun1   nm f g cmb = [(nm, cmb (x,    f x,   extract (g                     (literal x))))             | x <- fs]
         doubleRun1  nm f g cmb = [(nm, cmb (x,    f x,   extract (g                     (literal x))))             | x <- ds]

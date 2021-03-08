@@ -13,7 +13,10 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Utils.Numeric where
+module Data.SBV.Utils.Numeric (
+           fpMaxH, fpMinH, fp2fp, fpRemH, fpRoundToIntegralH, fpIsEqualObjectH, fpCompareObjectH, fpIsNormalizedH
+         , floatToWord, wordToFloat, doubleToWord, wordToDouble
+         ) where
 
 import Data.Word
 import Data.Array.ST     (newArray, readArray, MArray, STUArray)

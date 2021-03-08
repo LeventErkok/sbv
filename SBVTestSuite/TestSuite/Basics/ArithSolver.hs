@@ -469,11 +469,11 @@ genFPConverts = [tst1 ("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
                  ++  [("fromFP_Double_ToDouble",  show x, mkThm1  (m fromSDouble :: SDouble -> SDouble) x                              x ) | x <- ds]
                  -- Neither Z3 nor MathSAT support Double->Integer/Double->Real conversion for the time being; so we skip those. See GitHub issue: #191
 
-                 ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (RC.wordToFloat  x)) | x <- w32s]
-                 ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (RC.wordToDouble x)) | x <- w64s]
+                 ++  [("reinterp_Word32_Float",  show x, mkThmC sWord32AsSFloat  x (wordToFloat  x)) | x <- w32s]
+                 ++  [("reinterp_Word64_Double", show x, mkThmC sWord64AsSDouble x (wordToDouble x)) | x <- w64s]
 
-                 ++  [("reinterp_Float_Word32",  show x, mkThmP sFloatAsSWord32  x (RC.floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
-                 ++  [("reinterp_Double_Word64", show x, mkThmP sDoubleAsSWord64 x (RC.doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
+                 ++  [("reinterp_Float_Word32",  show x, mkThmP sFloatAsSWord32  x (floatToWord x))  | x <- fs, not (isNaN x)] -- Not unique for NaN
+                 ++  [("reinterp_Double_Word64", show x, mkThmP sDoubleAsSWord64 x (doubleToWord x)) | x <- ds, not (isNaN x)] -- Not unique for NaN
 
         m f = f sRNE
 
