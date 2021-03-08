@@ -115,6 +115,7 @@ data FloatData = FloatData { prec        :: String
                            , sb          :: Int
                            , bits        :: Integer
                            , isSubNormal :: Bool
+                           , isNaNVal    :: Bool
                            }
 
 -- | A simple means to organize different bits and pieces of float data
@@ -130,6 +131,7 @@ instance HasFloatData Float where
     , sb          = 24
     , bits        = fromIntegral (floatToWord f)
     , isSubNormal = isDenormalized f
+    , isNaNVal    = isNaN f
     }
 
 -- | Double instance
@@ -140,6 +142,7 @@ instance HasFloatData Double where
     , sb          = 53
     , bits        = fromIntegral (doubleToWord d)
     , isSubNormal = isDenormalized d
+    , isNaNVal    = isNaN d
     }
 
 -- | Find the exponent values, (exponent value, exponent as stored, bias)
@@ -160,23 +163,24 @@ getExponentData FloatData{eb, sb, bits, isSubNormal} = (expValue, expStored, bia
 -- | FP instance
 instance HasFloatData FP where
   getFloatData (FP eb sb f) = FloatData {
-      prec       = case (eb, sb) of
-                     ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
-                     ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
-                     (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
-                     (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
-                     ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
-    , eb         = eb
-    , sb         = sb
-    , bits       = bfToBits      opts f
+      prec        = case (eb, sb) of
+                      ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
+                      ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
+                      (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
+                      (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
+                      ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
+    , eb          = eb
+    , sb          = sb
+    , bits        = bfToBits      opts f
     , isSubNormal = bfIsSubnormal opts f
+    , isNaNVal    = bfIsNaN            f
     }
     where opts = mkBFOpts eb sb NearEven
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
 float f = intercalate "\n" $ ruler ++ legend : info
-   where fd@FloatData{prec, eb, sb, bits, isSubNormal} = getFloatData f
+   where fd@FloatData{prec, eb, sb, bits, isSubNormal, isNaNVal} = getFloatData f
 
          splits = [1, eb, sb]
          ruler  = map (tab ++) $ mkRuler (eb + sb) splits
@@ -193,21 +197,23 @@ float f = intercalate "\n" $ ruler ++ legend : info
 
          (exponentVal, storedExponent, bias) = getExponentData fd
 
-         info =   [     "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits allBits]
-                  ,     "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
-                  ,     "       Precision: " ++ prec
-                  ,     "            Sign: " ++ if sign then "Negative" else "Positive"
+         esInfo = "Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias
+
+         info =   [ "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits allBits]
+                  , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
+                  , "       Precision: " ++ prec
+                  , "            Sign: " ++ if sign then "Negative" else "Positive"
                   ]
-               ++ [if isSubNormal
-                   then "        Exponent: " ++ show exponentVal ++ " (Subnormal, with fixed exponent value. Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias ++ ")"
-                   else "        Exponent: " ++ show exponentVal ++ " (Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias ++ ")"
+               ++ [ "        Exponent: " ++ show exponentVal ++ " (Subnormal, with fixed exponent value. " ++ esInfo ++ ")" | isSubNormal    ]
+               ++ [ "        Exponent: " ++ show exponentVal ++ " ("                                       ++ esInfo ++ ")" | not isSubNormal]
+{-
+               ++ [ "    Binary Value: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
+                  , "     Octal Value: " ++ s ++ "0o" ++ showOct av ""
+                  , "   Decimal Value: " ++ show v
+                  , "       Hex Value: " ++ s ++ "0x" ++ showHex av ""
                   ]
-         {-
-                , "       Hex-float: " ++ hexVal
-                , "           Value: " ++ val
-                ]
-             ++ [ "            Note: Representation for NaN's is not unique." | isNaNKind kind]
-         -}
+-}
+               ++ [ "            Note: Representation for NaN's is not unique." | isNaNVal]
 
 
 -- | Build a ruler with given split points
