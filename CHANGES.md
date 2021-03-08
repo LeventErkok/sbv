@@ -16,6 +16,13 @@
     range is rather large and should not be a limitation in practice. (In particular,
     you'll most likely run out of memory before you hit precision limits!)
 
+  * We now support a separate crackNum parameter in model display. If set to True
+    (default is False), SBV will display numeric values of bounded integers, words,
+    and all floats (SDouble, SFloat, and the new SFloatingPoint) in models in detail,
+    showing how they are laid out in memory. Numbers follow the usual 2's-complement
+    notation if they are signed, bit-vectors if they are not signed, and the floats
+    follow the usual IEEE754 rules.
+
 ### Version 8.10, 2021-02-13
 
   * Add "Documentation/SBV/Examples/Misc/NestedArray.hs" to demonstrate how
