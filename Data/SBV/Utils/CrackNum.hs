@@ -69,9 +69,13 @@ split4 n
   where (d, m) = n `divMod` 4
         rest   = replicate d 4
 
+-- Convert bits to the corresponding integer.
+getVal :: [Bool] -> Integer
+getVal = foldl (\s b -> 2 * s + if b then 1 else 0) 0
+
 -- Show in hex, but pay attention to how wide a field it should be in
-mkHex :: [Int] -> String
-mkHex bin = showHex (foldl (\b s -> 2  * b + s) 0 bin) ""
+mkHex :: [Bool] -> String
+mkHex bin = showHex (getVal bin) ""
 
 -- | Show a sized word/int in detail
 int :: Bool -> Int -> Integer -> String
@@ -80,8 +84,8 @@ int signed sz v = intercalate "\n" $ ruler ++ info
 
         ruler = map (tab ++) $ mkRuler sz splits
 
-        bitRep :: [[Int]]
-        bitRep = split splits [if v `testBit` i then 1 else (0::Int) | i <- reverse [0 .. sz - 1]]
+        bitRep :: [[Bool]]
+        bitRep = split splits [v `testBit` i | i <- reverse [0 .. sz - 1]]
 
         flatHex = concatMap mkHex bitRep
         iprec
@@ -94,7 +98,7 @@ int signed sz v = intercalate "\n" $ ruler ++ info
 
         av = abs v
 
-        info = [ "   Binary layout: " ++ unwords [concatMap show  is | is <- bitRep]
+        info = [ "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- bitRep]
                , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
                , "            Type: " ++ iprec
                ]
@@ -106,10 +110,11 @@ int signed sz v = intercalate "\n" $ ruler ++ info
                ]
 
 -- | Float data for display purposes
-data FloatData = FloatData { prec :: String
-                           , eb   :: Int
-                           , sb   :: Int
-                           , bits :: Integer
+data FloatData = FloatData { prec        :: String
+                           , eb          :: Int
+                           , sb          :: Int
+                           , bits        :: Integer
+                           , isSubNormal :: Bool
                            }
 
 -- | A simple means to organize different bits and pieces of float data
@@ -120,39 +125,58 @@ class HasFloatData a where
 -- | Float instance
 instance HasFloatData Float where
   getFloatData f = FloatData {
-      prec = "Single"
-    , eb   =  8
-    , sb   = 24
-    , bits = fromIntegral (floatToWord f)
+      prec        = "Single"
+    , eb          =  8
+    , sb          = 24
+    , bits        = fromIntegral (floatToWord f)
+    , isSubNormal = isDenormalized f
     }
 
 -- | Double instance
 instance HasFloatData Double where
-  getFloatData d = FloatData {
-      prec = "Double"
-    , eb   = 11
-    , sb   = 53
-    , bits = fromIntegral (doubleToWord d)
+  getFloatData d  = FloatData {
+      prec        = "Double"
+    , eb          = 11
+    , sb          = 53
+    , bits        = fromIntegral (doubleToWord d)
+    , isSubNormal = isDenormalized d
     }
+
+-- | Find the exponent values, (exponent value, exponent as stored, bias)
+getExponentData :: FloatData -> (Integer, Integer, Integer)
+getExponentData FloatData{eb, sb, bits, isSubNormal} = (expValue, expStored, bias)
+  where -- | Bias is 2^(eb-1) - 1
+        bias :: Integer
+        bias = (2 :: Integer) ^ (((fromIntegral eb) :: Integer) - 1) - 1
+
+        -- | Exponent as stored is simply bit extraction
+        expStored = getVal [bits `testBit` i | i <- reverse [sb-1 .. sb+eb-2]]
+
+        -- | Exponent value is stored exponent - bias, unless the number is subnormal. In that case it is 1 - bias
+        expValue
+          | isSubNormal = 1 - bias
+          | True        = expStored - bias
 
 -- | FP instance
 instance HasFloatData FP where
   getFloatData (FP eb sb f) = FloatData {
-      prec = case (eb, sb) of
-               ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
-               ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
-               (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
-               (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
-               ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
-    , eb     = eb
-    , sb     = sb
-    , bits   = bfToBits (mkBFOpts eb sb NearEven) f
+      prec       = case (eb, sb) of
+                     ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
+                     ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
+                     (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
+                     (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
+                     ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
+    , eb         = eb
+    , sb         = sb
+    , bits       = bfToBits      opts f
+    , isSubNormal = bfIsSubnormal opts f
     }
+    where opts = mkBFOpts eb sb NearEven
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
 float f = intercalate "\n" $ ruler ++ legend : info
-   where FloatData{prec, eb, sb, bits} = getFloatData f
+   where fd@FloatData{prec, eb, sb, bits, isSubNormal} = getFloatData f
 
          splits = [1, eb, sb]
          ruler  = map (tab ++) $ mkRuler (eb + sb) splits
@@ -161,24 +185,29 @@ float f = intercalate "\n" $ ruler ++ legend : info
 
          mkTag t len = take len $ replicate ((len - length t) `div` 2) '-' ++ t ++ repeat '-'
 
-         allBits :: [Int]
-         allBits = [if bits `testBit` i then 1 else (0 :: Int) | i <- reverse [0 .. eb + sb - 1]]
+         allBits :: [Bool]
+         allBits = [bits `testBit` i | i <- reverse [0 .. eb + sb - 1]]
 
          flatHex = concatMap mkHex (split (split4 (eb + sb)) allBits)
          sign    = bits `testBit` (eb+sb-1)
 
-         info = [ "   Binary layout: " ++ unwords [concatMap show is | is <- split splits allBits]
-                , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
-                , "       Precision: " ++ prec
-                , "            Sign: " ++ if sign then "Negative" else "Positive"
+         (exponentVal, storedExponent, bias) = getExponentData fd
+
+         info =   [     "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits allBits]
+                  ,     "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
+                  ,     "       Precision: " ++ prec
+                  ,     "            Sign: " ++ if sign then "Negative" else "Positive"
+                  ]
+               ++ [if isSubNormal
+                   then "        Exponent: " ++ show exponentVal ++ " (Subnormal, with fixed exponent value. Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias ++ ")"
+                   else "        Exponent: " ++ show exponentVal ++ " (Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias ++ ")"
+                  ]
          {-
-                , "        Exponent: " ++ show expt ++ " (Stored: " ++ show stExpt ++ ", Bias: " ++ show bias ++ ")"
                 , "       Hex-float: " ++ hexVal
                 , "           Value: " ++ val
                 ]
              ++ [ "            Note: Representation for NaN's is not unique." | isNaNKind kind]
          -}
-          ]
 
 
 -- | Build a ruler with given split points
