@@ -20,6 +20,9 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Utils.Numeric
 
+import Data.Bits
+import Data.List
+
 import LibBF
 
 -- | A class for cracking things deeper, if we know how.
@@ -48,10 +51,51 @@ instance CrackNum CV where
                   KFP eb sb      -> Just $ let CFP (FP _ _ f) = cvVal cv in float eb sb (bfToBits (mkBFOpts eb sb NearEven) f)
                   KBounded sg sz -> Just $ let CInteger i     = cvVal cv in int   sg sz i
 
+-- How far off the screen we want displayed? Somewhat experimentally found.
+tab :: String
+tab = replicate 18 ' '
+
 -- | Show a sized word/int in detail
 int :: Bool -> Int -> Integer -> String
-int _signed _sz _v = ""
+int _signed sz v = intercalate "\n" $ ruler ++ info
+  where intSplits i sofar
+          | i == 0 = sofar
+          | i < 4  = i : sofar
+          | True   = intSplits (i-4) (4 : sofar)
+
+        splits = intSplits sz []
+
+        ruler = map (tab ++) $ mkRuler sz splits
+
+        info = ["          Binary: " ++ space splits [if v `testBit` i then '1' else '0' | i <- reverse [0 .. sz - 1]]]
 
 -- | Show a float in detail
 float :: Int -> Int -> Integer -> String
-float _eb _sz _v = ""
+float eb sb v = intercalate "\n" $ ruler ++ legend : info
+   where splits = [1, eb, sb]
+         ruler  = map (tab ++) $ mkRuler (eb + sb) splits
+
+         legend = tab ++ "S " ++ mkTag ('E' : show eb) eb ++ " " ++ mkTag ('F' : show (sb-1)) (sb-1)
+
+         mkTag t len = take len $ replicate ((len - length t) `div` 2) '-' ++ t ++ repeat '-'
+
+         info = ["          Binary: " ++ space splits [if v `testBit` i then '1' else '0' | i <- reverse [0 .. eb + sb - 1]]]
+
+
+-- | Build a ruler with given split points
+mkRuler :: Int -> [Int] -> [String]
+mkRuler n splits = map (space splits . trim Nothing) $ transpose $ map pad $ reverse [0 .. n-1]
+  where len = length (show (n-1))
+        pad i = reverse $ take len $ reverse (show i) ++ repeat ' '
+
+        trim _      "" = ""
+        trim mbPrev (c:cs)
+          | mbPrev == Just c = ' ' : trim mbPrev   cs
+          | True             =  c  : trim (Just c) cs
+
+space :: [Int] -> String -> String
+space []     xs = xs
+space _      "" = ""
+space (i:is) xs = case splitAt i xs of
+                   (pre, "")   -> pre
+                   (pre, post) -> pre ++ " " ++ space is post
