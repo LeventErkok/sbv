@@ -28,7 +28,7 @@ import Data.Char (intToDigit)
 import Data.Bits
 import Data.List
 
-import LibBF hiding(Zero)
+import LibBF hiding (Zero, bfToString)
 
 import Numeric
 
@@ -140,16 +140,15 @@ getKind fp
  | True              = Normal
 
 -- Show the value in different bases
-showAtBases :: (Show a, RealFloat a) => FPKind -> a -> Either String (String, String, String, String)
-showAtBases k v = case k of
-                    Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0.0")
-                    Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0x0.0")
-                    Infty False -> Left  "Infinity"
-                    Infty True  -> Left  "-Infinity"
-                    NaN         -> Left  "NaN"
-                    Subnormal   -> Right regular
-                    Normal      -> Right regular
-  where regular = (showFloatAtBase 2 v "", showFloatAtBase 8 v "", showFloatAtBase 10 v "", showFloatAtBase 16 v "")
+showAtBases :: FPKind -> (String, String, String, String) -> Either String (String, String, String, String)
+showAtBases k bvs = case k of
+                     Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0.0")
+                     Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0x0.0")
+                     Infty False -> Left  "Infinity"
+                     Infty True  -> Left  "-Infinity"
+                     NaN         -> Left  "NaN"
+                     Subnormal   -> Right bvs
+                     Normal      -> Right bvs
 
 -- | Float data for display purposes
 data FloatData = FloatData { prec   :: String
@@ -173,7 +172,7 @@ instance HasFloatData Float where
     , sb     = 24
     , bits   = fromIntegral (floatToWord f)
     , fpKind = k
-    , fpVals = showAtBases k f
+    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", showFloatAtBase 10 f "", showFloatAtBase 16 f "")
     }
     where k = getKind f
 
@@ -185,7 +184,7 @@ instance HasFloatData Double where
     , sb     = 53
     , bits   = fromIntegral (doubleToWord d)
     , fpKind = k
-    , fpVals = showAtBases k d
+    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", showFloatAtBase 10 d "", showFloatAtBase 16 d "")
     }
     where k = getKind d
 
@@ -206,7 +205,7 @@ getExponentData FloatData{eb, sb, bits, fpKind} = (expValue, expStored, bias)
 
 -- | FP instance
 instance HasFloatData FP where
-  getFloatData (FP eb sb f) = FloatData {
+  getFloatData v@(FP eb sb f) = FloatData {
       prec   = case (eb, sb) of
                  ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
                  ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
@@ -216,15 +215,15 @@ instance HasFloatData FP where
     , eb     = eb
     , sb     = sb
     , bits   = bfToBits (mkBFOpts eb sb NearEven) f
-    , fpKind = case () of
-                 () | bfIsZero f           -> Zero  (bfIsNeg f)
-                    | bfIsInf f            -> Infty (bfIsNeg f)
-                    | bfIsNaN f            -> NaN
-                    | bfIsSubnormal opts f -> Subnormal
-                    | True                 -> Normal
-    , fpVals = error "r"
+    , fpKind = k
+    , fpVals = showAtBases k (bfToString 2 True v, bfToString 8 True v, bfToString 10 True v, bfToString 16 True v)
     }
     where opts = mkBFOpts eb sb NearEven
+          k | bfIsZero f           = Zero  (bfIsNeg f)
+            | bfIsInf f            = Infty (bfIsNeg f)
+            | bfIsNaN f            = NaN
+            | bfIsSubnormal opts f = Subnormal
+            | True                 = Normal
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
@@ -267,7 +266,7 @@ float f = intercalate "\n" $ ruler ++ legend : info
                                                        , "   Decimal Value: " ++ dval
                                                        , "       Hex Value: " ++ hval
                                                        ])
-               ++ [ "            Note: Representation for NaN's is not unique." | fpKind == NaN]
+               ++ [ "            Note: Representation for NaN's is not unique" | fpKind == NaN]
 
 
 -- | Build a ruler with given split points
