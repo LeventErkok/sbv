@@ -16,11 +16,11 @@
 
 module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
-      , showCFloat, showCDouble, showHFloat, showHDouble
+      , showCFloat, showCDouble, showHFloat, showHDouble, showBFloat, showFloatAtBase
       , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
       ) where
 
-import Data.Char  (intToDigit, ord)
+import Data.Char  (intToDigit, ord, chr)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -494,24 +494,38 @@ mkSkolemZero _ (KUserSort _ (Just (f:_))) = f
 mkSkolemZero _ (KUserSort s _)            = error $ "SBV.mkSkolemZero: Unexpected user sort: " ++ s
 mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integer))
 
--- Like Haskell's showHFloat, but uses binary instead. Note that the exponent is always
--- written in decimal.
-showBFloat :: RealFloat a => a -> ShowS
-showBFloat = showString . fmt
-  where
-  fmt x
-    | isNaN x                   = "NaN"
-    | isInfinite x              = (if x < 0 then "-" else "") ++ "Infinity"
-    | x < 0 || isNegativeZero x = '-' : cvt (-x)
-    | True                      = cvt x
+-- | Show a float as a binary
+showBFloat :: (Show a, RealFloat a) => a -> ShowS
+showBFloat = showFloatAtBase 2
 
-  cvt x
-    | x == 0 = "0b0p+0"
-    | True   = case floatToDigits 2 x of
-                 r@([], _) -> error $ "Impossible happened: showBFloat: " ++ show r
-                 (d:ds, e) -> "0b" ++ show d ++ frac ds ++ "p" ++ show (e-1)
+-- Like Haskell's showHFloat, but uses arbitrary base instead. Note that the exponent is always written in decimal.
+showFloatAtBase :: (Show a, RealFloat a) => Int -> a -> ShowS
+showFloatAtBase base = showString . fmt
+  where fmt x
+         | isNaN x                   = "NaN"
+         | isInfinite x              = (if x < 0 then "-" else "") ++ "Infinity"
+         | x < 0 || isNegativeZero x = '-' : cvt (-x)
+         | True                      = cvt x
 
-  -- Given binary digits, show them except if they're all 0 then drop
-  frac digits
-    | all (== 0) digits = ""
-    | True              = "." ++ concatMap show digits
+        prefix = case base of
+                   2  -> "0b"
+                   8  -> "0o"
+                   10 -> ""
+                   16 -> "0x"
+                   x  -> "0<" ++ show x ++ ">"
+
+        cvt x
+         | x == 0 = prefix ++ "0p+0"
+         | True   = case floatToDigits (fromIntegral base) x of
+                      r@([], _) -> error $ "Impossible happened: showFloatAtBase: " ++ show (base, show x, r)
+                      (d:ds, e) -> prefix ++ toDigit d ++ frac ds ++ "p" ++ show (e-1)
+
+        -- Given digits, show them except if they're all 0 then drop
+        frac digits
+         | all (== 0) digits = ""
+         | True              = "." ++ concatMap toDigit digits
+
+        toDigit v
+          | v <= 15 = [intToDigit v]
+          | v <  36 = [chr (ord 'a' + v - 10)]
+          | True    = '<' : show v ++ ">"
