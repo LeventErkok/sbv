@@ -589,6 +589,8 @@ showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l |
         align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
            where left i x = take i (x ++ repeat ' ')
 
+        -- NB. We'll ignore crackNum here. Seems to be overkill while displaying an
+        -- uninterpreted function.
         scv = sh (printBase cfg)
           where sh 2  = binP
                 sh 10 = showCV False
@@ -611,11 +613,17 @@ showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l |
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> CV -> String
-shCV = sh . printBase
+shCV SMTConfig{printBase, crackNum} cv = cracked (sh printBase cv)
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS
         sh n  = \w -> show w ++ " -- Ignoring unsupported printBase " ++ show n ++ ", use 2, 10, or 16."
+
+        cracked def
+          | not crackNum = def
+          | True         = case crackNumber cv of
+                             Nothing -> def
+                             Just cs -> def ++ "\n" ++ cs
 
 -- | Helper function to spin off to an SMT solver.
 pipeProcess :: SMTConfig -> State -> String -> [String] -> String -> (State -> IO a) -> IO a

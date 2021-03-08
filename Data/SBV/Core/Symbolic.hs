@@ -1986,13 +1986,17 @@ data SolverCapabilities = SolverCapabilities {
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
 --
--- The 'printBase' field can be used to print numbers in base 2, 10, or 16. If base 2 or 16 is used, then floating-point values will
--- be printed in their internal memory-layout format as well, which can come in handy for bit-precise analysis.
+-- The 'printBase' field can be used to print numbers in base 2, 10, or 16.
+--
+-- The 'crackNum' field can be used to display numbers in detail, all its bits and how they are laid out in memory. Works with all bounded number types
+-- (i.e., SWord and SInt), but also with floats. It is particularly useful with floating-point numbers, as it shows you how they are laid out in
+-- memory following the IEEE754 rules.
 data SMTConfig = SMTConfig {
          verbose                     :: Bool           -- ^ Debug mode
        , timing                      :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
        , printBase                   :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
        , printRealPrec               :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , crackNum                    :: Bool           -- ^ For each numeric value, show it in detail in the model with its bits spliced out. Good for floats.
        , satCmd                      :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , allSatMaxModelCount         :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
        , allSatPrintAlong            :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.

@@ -15,7 +15,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.PrettyNum (
-        PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
+        PrettyNum(..), CrackNumber(..), readBin, shex, chex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble
       , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
       ) where
@@ -40,7 +40,7 @@ import Data.SBV.Core.SizedFloats (fprToSMTLib2, bfToString)
 
 import Data.SBV.Utils.Lib (stringToQFS)
 
-import Data.Numbers.CrackNum () -- We'll eventually use this, place holder for now.
+import qualified Data.Numbers.CrackNum as CN
 
 -- | PrettyNum class captures printing of numbers in hex and binary formats; also supporting negative numbers.
 class PrettyNum a where
@@ -517,3 +517,28 @@ showBFloat = showString . fmt
   frac digits
     | all (== 0) digits = ""
     | True              = "." ++ concatMap show digits
+
+-- | A class for cracking things deeper, if we know how.
+class CrackNumber a where
+  crackNumber :: a -> Maybe String
+
+instance CrackNumber CV where
+  crackNumber cv = case kindOf cv of
+                     KBool      {} -> Nothing
+                     KUnbounded {} -> Nothing
+                     KReal      {} -> Nothing
+                     KUserSort  {} -> Nothing
+                     KChar      {} -> Nothing
+                     KString    {} -> Nothing
+                     KList      {} -> Nothing
+                     KSet       {} -> Nothing
+                     KTuple     {} -> Nothing
+                     KMaybe     {} -> Nothing
+                     KEither    {} -> Nothing
+
+                     KFloat{}      -> Just $ let CFloat  f = cvVal cv in show (CN.floatToFP  f)
+                     KDouble{}     -> Just $ let CDouble d = cvVal cv in show (CN.doubleToFP d)
+
+                     -- TBD:
+                     KBounded{}    -> Nothing
+                     KFP{}         -> Nothing
