@@ -241,8 +241,7 @@ Test-Suite SBVTest
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, crackNum
-                  , sbv, directory, random, mtl, containers
+  build-depends   : filepath, sbv, directory, random, mtl, containers
                   , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
@@ -425,8 +424,7 @@ Benchmark SBVBenchmark
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, syb, crackNum, text
-                  , sbv, directory, random, mtl, containers, time
+  build-depends   : filepath, syb, text, sbv, directory, random, mtl, containers, time
                   , gauge, process, deepseq, bench-show, silently
   hs-source-dirs  : SBVBenchSuite
   main-is         : SBVBenchmark.hs
@@ -530,8 +528,7 @@ Benchmark SBVBench
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, syb, crackNum, text
-                  , sbv, directory, random, mtl, containers, time
+  build-depends   : filepath, syb, text, sbv, directory, random, mtl, containers, time
                   , gauge, process, deepseq, silently, bench-show
   hs-source-dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
