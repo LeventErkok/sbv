@@ -21,16 +21,16 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Optimization.Floats"
-    [ goldenVsStringShow "optFloat1a" $ optimizeWith z3{printBase=16} Lexicographic (floatMinMax  (minimize "min-x") True)
-    , goldenVsStringShow "optFloat1b" $ optimizeWith z3{printBase=16} Lexicographic (floatMinMax  (minimize "min-x") False)
-    , goldenVsStringShow "optFloat1c" $ optimizeWith z3{printBase=16} Lexicographic (floatMinMax  (maximize "max-x") True)
-    , goldenVsStringShow "optFloat1d" $ optimizeWith z3{printBase=16} Lexicographic (floatMinMax  (maximize "max-y") False)
-    , goldenVsStringShow "optFloat2a" $ optimizeWith z3{printBase=16} Lexicographic (doubleMinMax (minimize "min-x") True)
-    , goldenVsStringShow "optFloat2b" $ optimizeWith z3{printBase=16} Lexicographic (doubleMinMax (minimize "min-x") False)
-    , goldenVsStringShow "optFloat2c" $ optimizeWith z3{printBase=16} Lexicographic (doubleMinMax (maximize "max-x") True)
-    , goldenVsStringShow "optFloat2d" $ optimizeWith z3{printBase=16} Lexicographic (doubleMinMax (maximize "max-y") False)
-    , goldenVsStringShow "optFloat3"  $ optimizeWith z3{printBase=16} Lexicographic q
-    , goldenVsStringShow "optFloat4"  $ optimizeWith z3{printBase=16} Lexicographic r
+    [ goldenVsStringShow "optFloat1a" $ optimizeWith z3{crackNum=True} Lexicographic (floatMinMax  (minimize "min-x") True)
+    , goldenVsStringShow "optFloat1b" $ optimizeWith z3{crackNum=True} Lexicographic (floatMinMax  (minimize "min-x") False)
+    , goldenVsStringShow "optFloat1c" $ optimizeWith z3{crackNum=True} Lexicographic (floatMinMax  (maximize "max-x") True)
+    , goldenVsStringShow "optFloat1d" $ optimizeWith z3{crackNum=True} Lexicographic (floatMinMax  (maximize "max-y") False)
+    , goldenVsStringShow "optFloat2a" $ optimizeWith z3{crackNum=True} Lexicographic (doubleMinMax (minimize "min-x") True)
+    , goldenVsStringShow "optFloat2b" $ optimizeWith z3{crackNum=True} Lexicographic (doubleMinMax (minimize "min-x") False)
+    , goldenVsStringShow "optFloat2c" $ optimizeWith z3{crackNum=True} Lexicographic (doubleMinMax (maximize "max-x") True)
+    , goldenVsStringShow "optFloat2d" $ optimizeWith z3{crackNum=True} Lexicographic (doubleMinMax (maximize "max-y") False)
+    , goldenVsStringShow "optFloat3"  $ optimizeWith z3{crackNum=True} Lexicographic q
+    , goldenVsStringShow "optFloat4"  $ optimizeWith z3{crackNum=True} Lexicographic r
     ]
 
 floatMinMax :: (SFloat -> Symbolic ()) -> Bool -> Goal

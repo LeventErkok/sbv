@@ -32,4 +32,4 @@ Optimal model:
         Exponent: -126 (Stored: 0, Bias: 126)
        Hex-float: +0x1p-149
            Value: +1.0e-45 (DENORMAL)
-  metric-min-x+y = 0x80000002 :: Word32
+  metric-min-x+y = 2147483650 :: Word32

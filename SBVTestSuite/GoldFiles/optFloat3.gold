@@ -32,4 +32,4 @@ Optimal model:
         Exponent: 126 (Stored: 253, Bias: 127)
        Hex-float: +0x1.fffffep126
            Value: +1.7014117e38 (NORMAL)
-  metric-max-x+y =   0xff7fffff :: Word32
+  metric-max-x+y =   4286578687 :: Word32

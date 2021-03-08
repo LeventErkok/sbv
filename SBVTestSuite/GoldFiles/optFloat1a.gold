@@ -10,4 +10,4 @@ Optimal model:
         Exponent: 127 (Stored: 254, Bias: 127)
        Hex-float: -0x1.fffffep127
            Value: -3.4028235e38 (NORMAL)
-  min-x =    0x00800000 :: Word32
+  min-x =       8388608 :: Word32

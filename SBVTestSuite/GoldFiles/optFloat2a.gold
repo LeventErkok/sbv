@@ -10,4 +10,4 @@ Optimal model:
         Exponent: 1023 (Stored: 2046, Bias: 1023)
        Hex-float: -0x1.fffffffffffffp1023
            Value: -1.7976931348623157e308 (NORMAL)
-  min-x =      0x0010000000000000 :: Word64
+  min-x =        4503599627370496 :: Word64

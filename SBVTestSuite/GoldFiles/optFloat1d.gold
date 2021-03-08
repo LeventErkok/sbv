@@ -10,4 +10,4 @@ Optimal model:
         Exponent: 128 (Stored: 255, Bias: 127)
        Hex-float: +Infinity
            Value: +Infinity
-  max-y = 0xff800000 :: Word32
+  max-y = 4286578688 :: Word32
