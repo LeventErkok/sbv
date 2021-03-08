@@ -9,6 +9,8 @@
 -- Crack internal representation for numeric types
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE NamedFieldPuns #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.CrackNum (
@@ -50,10 +52,10 @@ instance CrackNum CV where
                   KEither    {}  -> Nothing
 
                   -- Actual crackables
-                  KFloat{}       -> Just $ let CFloat   f     = cvVal cv in float (Just "Single")  8 24 (fromIntegral (floatToWord f))
-                  KDouble{}      -> Just $ let CDouble  d     = cvVal cv in float (Just "Double") 11 53 (fromIntegral (doubleToWord d))
-                  KFP eb sb      -> Just $ let CFP (FP _ _ f) = cvVal cv in float Nothing         eb sb (bfToBits (mkBFOpts eb sb NearEven) f)
-                  KBounded sg sz -> Just $ let CInteger i     = cvVal cv in int   sg sz i
+                  KFloat{}       -> Just $ let CFloat   f = cvVal cv in float f
+                  KDouble{}      -> Just $ let CDouble  d = cvVal cv in float d
+                  KFP{}          -> Just $ let CFP      f = cvVal cv in float f
+                  KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
 
 -- How far off the screen we want displayed? Somewhat experimentally found.
 tab :: String
@@ -103,10 +105,56 @@ int signed sz v = intercalate "\n" $ ruler ++ info
                , "       Hex Value: " ++ s ++ "0x" ++ showHex av ""
                ]
 
+-- | Float data for display purposes
+data FloatData = FloatData { prec :: String
+                           , eb   :: Int
+                           , sb   :: Int
+                           , bits :: Integer
+                           }
+
+-- | A simple means to organize different bits and pieces of float data
+-- for display purposes
+class HasFloatData a where
+  getFloatData :: a -> FloatData
+
+-- | Float instance
+instance HasFloatData Float where
+  getFloatData f = FloatData {
+      prec = "Single"
+    , eb   =  8
+    , sb   = 24
+    , bits = fromIntegral (floatToWord f)
+    }
+
+-- | Double instance
+instance HasFloatData Double where
+  getFloatData d = FloatData {
+      prec = "Double"
+    , eb   = 11
+    , sb   = 53
+    , bits = fromIntegral (doubleToWord d)
+    }
+
+-- | FP instance
+instance HasFloatData FP where
+  getFloatData (FP eb sb f) = FloatData {
+      prec = case (eb, sb) of
+               ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
+               ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
+               (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
+               (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
+               ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
+    , eb     = eb
+    , sb     = sb
+    , bits   = bfToBits (mkBFOpts eb sb NearEven) f
+    }
+
 -- | Show a float in detail
-float :: Maybe String -> Int -> Int -> Integer -> String
-float mbPrec eb sb v = intercalate "\n" $ ruler ++ legend : info
-   where splits = [1, eb, sb]
+float :: HasFloatData a => a -> String
+float f = intercalate "\n" $ ruler ++ legend : info
+   where FloatData{prec, eb, sb, bits} = getFloatData f
+
+         splits = [1, eb, sb]
          ruler  = map (tab ++) $ mkRuler (eb + sb) splits
 
          legend = tab ++ "S " ++ mkTag ('E' : show eb) eb ++ " " ++ mkTag ('S' : show (sb-1)) (sb-1)
@@ -114,18 +162,10 @@ float mbPrec eb sb v = intercalate "\n" $ ruler ++ legend : info
          mkTag t len = take len $ replicate ((len - length t) `div` 2) '-' ++ t ++ repeat '-'
 
          allBits :: [Int]
-         allBits = [if v `testBit` i then 1 else (0 :: Int) | i <- reverse [0 .. eb + sb - 1]]
+         allBits = [if bits `testBit` i then 1 else (0 :: Int) | i <- reverse [0 .. eb + sb - 1]]
 
          flatHex = concatMap mkHex (split (split4 (eb + sb)) allBits)
-         sign    = v `testBit` (eb+sb-1)
-
-         prec = case (mbPrec, eb, sb) of
-                  (Just k,   _,   _) -> k
-                  (Nothing,  5,  11) -> "Half   (5 exponent bits, 10 significand bits.)"
-                  (Nothing,  8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
-                  (Nothing, 11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
-                  (Nothing, 15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
-                  (Nothing,  _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
+         sign    = bits `testBit` (eb+sb-1)
 
          info = [ "   Binary layout: " ++ unwords [concatMap show is | is <- split splits allBits]
                 , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
