@@ -73,8 +73,7 @@ Library
                     TypeSynonymInstances
                     UndecidableInstances
                     ViewPatterns
-  build-depends   : crackNum
-                  , QuickCheck, template-haskell
+  build-depends   : QuickCheck, template-haskell
                   , array, async, containers, deepseq, directory, filepath, time
                   , pretty, process, mtl, random, syb, text, transformers, uniplate
                   , libBF
@@ -216,6 +215,7 @@ Library
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
+                  , Data.SBV.Utils.CrackNum
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
                   , Data.SBV.Utils.TDiff

@@ -86,6 +86,8 @@ import qualified System.Timeout as Timeout (timeout)
 
 import Numeric
 
+import qualified Data.SBV.Utils.CrackNum as CN
+
 -- | Extract the final configuration from a result
 resultConfig :: SMTResult -> SMTConfig
 resultConfig (Unsatisfiable c _  ) = c
@@ -621,7 +623,7 @@ shCV SMTConfig{printBase, crackNum} cv = cracked (sh printBase cv)
 
         cracked def
           | not crackNum = def
-          | True         = case crackNumber cv of
+          | True         = case CN.crackNum cv of
                              Nothing -> def
                              Just cs -> def ++ "\n" ++ cs
 
