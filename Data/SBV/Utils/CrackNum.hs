@@ -27,7 +27,7 @@ import Data.Char (intToDigit)
 import Data.Bits
 import Data.List
 
-import LibBF
+import LibBF hiding(Zero)
 
 import Numeric
 
@@ -109,13 +109,41 @@ int signed sz v = intercalate "\n" $ ruler ++ info
                , "       Hex Value: " ++ s ++ "0x" ++ showHex av ""
                ]
 
+-- | What kind of Float is this?
+data FPKind = Zero       Bool  -- with sign
+            | Infty      Bool  -- with sign
+            | NaN
+            | Subnormal
+            | Normal
+            deriving Eq
+
+-- | Show instance for Kind, not for reading back!
+instance Show FPKind where
+  show (Zero  True)  = "Negative zero"
+  show (Zero  False) = "Positive zero"
+  show (Infty True)  = "Negative infinity"
+  show (Infty False) = "Positive infinity"
+  show NaN           = "NaN (not-a-number)"
+  show Subnormal     = "Subnormal"
+  show Normal        = "Normal"
+
+-- | Find out what kind this float is. We specifically ask
+-- the caller to provide if the number is zero, neg-inf, and pos-inf. Why?
+-- Because the FP type doesn't have those recognizers that also work with Float/Double.
+getKind :: RealFloat a => a -> FPKind
+getKind fp
+ | fp == 0           = Zero  (isNegativeZero fp)
+ | isInfinite fp     = Infty (fp < 0)
+ | isNaN fp          = NaN
+ | isDenormalized fp = Subnormal
+ | True              = Normal
+
 -- | Float data for display purposes
-data FloatData = FloatData { prec        :: String
-                           , eb          :: Int
-                           , sb          :: Int
-                           , bits        :: Integer
-                           , isSubNormal :: Bool
-                           , isNaNVal    :: Bool
+data FloatData = FloatData { prec   :: String
+                           , eb     :: Int
+                           , sb     :: Int
+                           , bits   :: Integer
+                           , fpKind :: FPKind
                            }
 
 -- | A simple means to organize different bits and pieces of float data
@@ -126,28 +154,26 @@ class HasFloatData a where
 -- | Float instance
 instance HasFloatData Float where
   getFloatData f = FloatData {
-      prec        = "Single"
-    , eb          =  8
-    , sb          = 24
-    , bits        = fromIntegral (floatToWord f)
-    , isSubNormal = isDenormalized f
-    , isNaNVal    = isNaN f
+      prec   = "Single"
+    , eb     =  8
+    , sb     = 24
+    , bits   = fromIntegral (floatToWord f)
+    , fpKind = getKind f
     }
 
 -- | Double instance
 instance HasFloatData Double where
   getFloatData d  = FloatData {
-      prec        = "Double"
-    , eb          = 11
-    , sb          = 53
-    , bits        = fromIntegral (doubleToWord d)
-    , isSubNormal = isDenormalized d
-    , isNaNVal    = isNaN d
+      prec   = "Double"
+    , eb     = 11
+    , sb     = 53
+    , bits   = fromIntegral (doubleToWord d)
+    , fpKind = getKind d
     }
 
 -- | Find the exponent values, (exponent value, exponent as stored, bias)
 getExponentData :: FloatData -> (Integer, Integer, Integer)
-getExponentData FloatData{eb, sb, bits, isSubNormal} = (expValue, expStored, bias)
+getExponentData FloatData{eb, sb, bits, fpKind} = (expValue, expStored, bias)
   where -- | Bias is 2^(eb-1) - 1
         bias :: Integer
         bias = (2 :: Integer) ^ (((fromIntegral eb) :: Integer) - 1) - 1
@@ -156,31 +182,35 @@ getExponentData FloatData{eb, sb, bits, isSubNormal} = (expValue, expStored, bia
         expStored = getVal [bits `testBit` i | i <- reverse [sb-1 .. sb+eb-2]]
 
         -- | Exponent value is stored exponent - bias, unless the number is subnormal. In that case it is 1 - bias
-        expValue
-          | isSubNormal = 1 - bias
-          | True        = expStored - bias
+        expValue = case fpKind of
+                     Subnormal -> 1 - bias
+                     _         -> expStored - bias
 
 -- | FP instance
 instance HasFloatData FP where
   getFloatData (FP eb sb f) = FloatData {
-      prec        = case (eb, sb) of
-                      ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
-                      ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
-                      (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
-                      (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
-                      ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
-    , eb          = eb
-    , sb          = sb
-    , bits        = bfToBits      opts f
-    , isSubNormal = bfIsSubnormal opts f
-    , isNaNVal    = bfIsNaN            f
+      prec   = case (eb, sb) of
+                 ( 5,  11) -> "Half (5 exponent bits, 10 significand bits.)"
+                 ( 8,  24) -> "Single (8 exponent bits, 23 significand bits.)"
+                 (11,  53) -> "Double (11 exponent bits, 52 significand bits.)"
+                 (15, 113) -> "Quad (15 exponent bits, 112 significand bits.)"
+                 ( _,   _) -> show eb ++ " exponent bits, " ++ show (sb-1) ++ " significand bit" ++ if sb > 2 then "s" else ""
+    , eb     = eb
+    , sb     = sb
+    , bits   = bfToBits (mkBFOpts eb sb NearEven) f
+    , fpKind = case () of
+                 () | bfIsZero f           -> Zero  (bfIsNeg f)
+                    | bfIsInf f            -> Infty (bfIsNeg f)
+                    | bfIsNaN f            -> NaN
+                    | bfIsSubnormal opts f -> Subnormal
+                    | True                 -> Normal
     }
     where opts = mkBFOpts eb sb NearEven
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
 float f = intercalate "\n" $ ruler ++ legend : info
-   where fd@FloatData{prec, eb, sb, bits, isSubNormal, isNaNVal} = getFloatData f
+   where fd@FloatData{prec, eb, sb, bits, fpKind} = getFloatData f
 
          splits = [1, eb, sb]
          ruler  = map (tab ++) $ mkRuler (eb + sb) splits
@@ -199,6 +229,10 @@ float f = intercalate "\n" $ ruler ++ legend : info
 
          esInfo = "Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias
 
+         isSubNormal = case fpKind of
+                         Subnormal -> True
+                         _         -> False
+
          info =   [ "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits allBits]
                   , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
                   , "       Precision: " ++ prec
@@ -206,6 +240,8 @@ float f = intercalate "\n" $ ruler ++ legend : info
                   ]
                ++ [ "        Exponent: " ++ show exponentVal ++ " (Subnormal, with fixed exponent value. " ++ esInfo ++ ")" | isSubNormal    ]
                ++ [ "        Exponent: " ++ show exponentVal ++ " ("                                       ++ esInfo ++ ")" | not isSubNormal]
+               ++ [ "  Classification: " ++ show fpKind
+
 {-
                ++ [ "    Binary Value: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
                   , "     Octal Value: " ++ s ++ "0o" ++ showOct av ""
@@ -213,7 +249,8 @@ float f = intercalate "\n" $ ruler ++ legend : info
                   , "       Hex Value: " ++ s ++ "0x" ++ showHex av ""
                   ]
 -}
-               ++ [ "            Note: Representation for NaN's is not unique." | isNaNVal]
+                  ]
+               ++ [ "            Note: Representation for NaN's is not unique." | fpKind == NaN]
 
 
 -- | Build a ruler with given split points
