@@ -22,6 +22,9 @@
     follow the usual IEEE754 binary layout rules. Similarly, there's now a function
     crack :: SBV a -> String that does the same for non-model printing contexts.
 
+  * Changed the isNonModelVar config param to take a String (instead of Text).
+    Simplifies programming.
+
   * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the patch.
 
 ### Version 8.10, 2021-02-13

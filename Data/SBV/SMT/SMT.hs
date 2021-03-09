@@ -550,7 +550,7 @@ showModelDictionary warnEmpty includeEverything cfg allVars
         relevantVars  = filter (not . ignore) allVars
         ignore (T.pack -> s, _)
           | includeEverything = False
-          | True              = "__internal_sbv_" `T.isPrefixOf` s || isNonModelVar cfg s
+          | True              = "__internal_sbv_" `T.isPrefixOf` s || isNonModelVar cfg (T.unpack s)
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))

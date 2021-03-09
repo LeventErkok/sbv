@@ -1114,11 +1114,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
                      let allUiFuns = [u | satTrackUFs cfg                                         -- config says consider UIFs
                                         , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (isNonModelVar cfg (T.pack nm))                     -- make sure they aren't explicitly ignored
+                                        , not (isNonModelVar cfg nm)                               -- make sure they aren't explicitly ignored
                                      ]
 
                          allUiRegs = [u | u@(nm, SBVType as) <- allUninterpreteds, length as == 1  -- non-function ones
-                                        , not (isNonModelVar cfg (T.pack nm))                      -- make sure not ignored
+                                        , not (isNonModelVar cfg nm)                               -- make sure not ignored
                                      ]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
@@ -1159,7 +1159,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          vars = let mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
                                     mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
 
-                                    ignored n = isNonModelVar cfg n || "__internal_sbv" `T.isPrefixOf` n
+                                    ignored n = isNonModelVar cfg (T.unpack n) || "__internal_sbv" `T.isPrefixOf` n
 
                                 in fmap (mkSVal . namedSymVar)
                                    . S.filter (not . ignored . getUserName . namedSymVar)

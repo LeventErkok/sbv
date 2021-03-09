@@ -39,7 +39,7 @@
 module Documentation.SBV.Examples.Puzzles.Garden where
 
 import Data.SBV
-import Data.Text(isSuffixOf)
+import Data.List(isSuffixOf)
 
 -- | Colors of the flowers
 data Color = Red | Yellow | Blue

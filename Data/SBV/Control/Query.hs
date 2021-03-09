@@ -343,12 +343,12 @@ getModelAtIndex mbi = do
 
           let name     = fst . snd
               removeSV = snd
-              prepare  = S.unstableSort . S.filter (not . isNonModelVar cfg . name)
+              prepare  = S.unstableSort . S.filter (not . isNonModelVar cfg . T.unpack . name)
               assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(T.pack -> nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(T.pack -> nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
+          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
