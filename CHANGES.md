@@ -5,8 +5,6 @@
 
 ### Version 8.10.5, Not yet released
 
-  * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the patch.
-
   * SBV now supports floating-point numbers with arbitrary exponent and
     significand sizes. In particular, SBV can now reason about half-floats, which
     are used much more frequently in ML applications. Through the LibBF binding,
@@ -22,6 +20,8 @@
     showing how they are laid out in memory. Numbers follow the usual 2's-complement
     notation if they are signed, bit-vectors if they are not signed, and the floats
     follow the usual IEEE754 binary layout rules.
+
+  * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the patch.
 
 ### Version 8.10, 2021-02-13
 
