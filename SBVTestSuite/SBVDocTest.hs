@@ -54,7 +54,6 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                                  testFiles = filter (\nm -> not (skipWindows nm || skipRemote nm || skipLocal nm)) allFiles
 
                                                  packages = [ "async"
-                                                            , "crackNum"
                                                             , "mtl"
                                                             , "QuickCheck"
                                                             , "random"
