@@ -2,12 +2,21 @@ Optimal model:
   x     =   Infinity :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
-                  S ---E8--- ----------F23----------
-          Binary: 0 11111111 00000000000000000000000
-             Hex: 7F80 0000
-       Precision: SP
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 11111111 00000000000000000000000
+      Hex layout: 7F80 0000
+       Precision: Single
             Sign: Positive
         Exponent: 128 (Stored: 255, Bias: 127)
-       Hex-float: +Infinity
-           Value: +Infinity
+  Classification: Positive infinity
+           Value: Infinity
   max-y = 4286578688 :: Word32
+                  3 2            1           0
+                  1098 7654 3210 9876 5432 1098 7654 3210
+   Binary layout: 1111 1111 1000 0000 0000 0000 0000 0000
+      Hex layout: FF80 0000
+            Type: Unsigned 32-bit word
+    Binary Value: -0b11111111100000000000000000000000
+     Octal Value: -0o37740000000
+   Decimal Value: 4286578688
+       Hex Value: -0xff800000

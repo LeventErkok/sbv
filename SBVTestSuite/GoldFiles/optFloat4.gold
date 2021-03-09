@@ -2,34 +2,52 @@ Optimal model:
   min-x+y        =    3.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
-                  S ---E8--- ----------F23----------
-          Binary: 0 00000000 00000000000000000000010
-             Hex: 0000 0002
-       Precision: SP
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000010
+      Hex layout: 0000 0002
+       Precision: Single
             Sign: Positive
-        Exponent: -126 (Stored: 0, Bias: 126)
-       Hex-float: +0x1p-148
-           Value: +3.0e-45 (DENORMAL)
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: Subnormal
+    Binary Value: 0b1p-148
+     Octal Value: 0o4p-50
+   Decimal Value: 3p-45
+       Hex Value: 0x1p-37
   x              =    1.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
-                  S ---E8--- ----------F23----------
-          Binary: 0 00000000 00000000000000000000001
-             Hex: 0000 0001
-       Precision: SP
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000001
+      Hex layout: 0000 0001
+       Precision: Single
             Sign: Positive
-        Exponent: -126 (Stored: 0, Bias: 126)
-       Hex-float: +0x1p-149
-           Value: +1.0e-45 (DENORMAL)
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: Subnormal
+    Binary Value: 0b1p-149
+     Octal Value: 0o2p-50
+   Decimal Value: 1p-45
+       Hex Value: 0x8p-38
   y              =    1.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
-                  S ---E8--- ----------F23----------
-          Binary: 0 00000000 00000000000000000000001
-             Hex: 0000 0001
-       Precision: SP
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000001
+      Hex layout: 0000 0001
+       Precision: Single
             Sign: Positive
-        Exponent: -126 (Stored: 0, Bias: 126)
-       Hex-float: +0x1p-149
-           Value: +1.0e-45 (DENORMAL)
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: Subnormal
+    Binary Value: 0b1p-149
+     Octal Value: 0o2p-50
+   Decimal Value: 1p-45
+       Hex Value: 0x8p-38
   metric-min-x+y = 2147483650 :: Word32
+                  3 2            1           0
+                  1098 7654 3210 9876 5432 1098 7654 3210
+   Binary layout: 1000 0000 0000 0000 0000 0000 0000 0010
+      Hex layout: 8000 0002
+            Type: Unsigned 32-bit word
+    Binary Value: -0b10000000000000000000000000000010
+     Octal Value: -0o20000000002
+   Decimal Value: 2147483650
+       Hex Value: -0x80000002

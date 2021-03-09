@@ -280,7 +280,7 @@ mkRuler n splits = map (trimRight . unwords . split splits . trim Nothing) $ tra
           | mbPrev == Just c = ' ' : trim mbPrev   cs
           | True             =  c  : trim (Just c) cs
 
-        trimRight = reverse . filter (not . isSpace) . reverse
+        trimRight = reverse . dropWhile isSpace . reverse
 
 split :: [Int] -> [a] -> [[a]]
 split _      [] = []

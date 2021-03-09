@@ -2,12 +2,21 @@ Optimal model:
   x     =        -Infinity :: Double
                   6    5          4         3         2         1         0
                   3 21098765432 1098765432109876543210987654321098765432109876543210
-                  S ----E11---- ------------------------F52-------------------------
-          Binary: 1 11111111111 0000000000000000000000000000000000000000000000000000
-             Hex: FFF0 0000 0000 0000
-       Precision: DP
+                  S ----E11---- ------------------------S52-------------------------
+   Binary layout: 1 11111111111 0000000000000000000000000000000000000000000000000000
+      Hex layout: FFF0 0000 0000 0000
+       Precision: Double
             Sign: Negative
         Exponent: 1024 (Stored: 2047, Bias: 1023)
-       Hex-float: -Infinity
+  Classification: Negative infinity
            Value: -Infinity
   min-x = 4503599627370495 :: Word64
+                  6    5           4            3           2            1           0
+                  3210 9876 5432 1098 7654 3210 9876 5432 1098 7654 3210 9876 5432 1098 7654 3210
+   Binary layout: 0000 0000 0000 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111
+      Hex layout: 000F FFFF FFFF FFFF
+            Type: Unsigned 64-bit word
+    Binary Value: 0b1111111111111111111111111111111111111111111111111111
+     Octal Value: 0o177777777777777777
+   Decimal Value: 4503599627370495
+       Hex Value: 0xfffffffffffff

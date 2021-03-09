@@ -2,12 +2,24 @@ Optimal model:
   x     = 3.4028235e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
-                  S ---E8--- ----------F23----------
-          Binary: 0 11111110 11111111111111111111111
-             Hex: 7F7F FFFF
-       Precision: SP
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 11111110 11111111111111111111111
+      Hex layout: 7F7F FFFF
+       Precision: Single
             Sign: Positive
         Exponent: 127 (Stored: 254, Bias: 127)
-       Hex-float: +0x1.fffffep127
-           Value: +3.4028235e38 (NORMAL)
+  Classification: Normal
+    Binary Value: 0b1.11111111111111111111111p127
+     Octal Value: 0o3.77777774p42
+   Decimal Value: 3.4028235p38
+       Hex Value: 0xF.FFFFFp31
   max-x =   4286578687 :: Word32
+                  3 2            1           0
+                  1098 7654 3210 9876 5432 1098 7654 3210
+   Binary layout: 1111 1111 0111 1111 1111 1111 1111 1111
+      Hex layout: FF7F FFFF
+            Type: Unsigned 32-bit word
+    Binary Value: -0b11111111011111111111111111111111
+     Octal Value: -0o37737777777
+   Decimal Value: 4286578687
+       Hex Value: -0xff7fffff
