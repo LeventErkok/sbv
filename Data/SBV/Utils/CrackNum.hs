@@ -36,6 +36,7 @@ import Numeric
 class CrackNum a where
   crackNum :: a -> Maybe String
 
+-- | CVs are easy to crack
 instance CrackNum CV where
   crackNum cv = case kindOf cv of
                   -- Maybe one day we'll have a use for these, currently cracking them
@@ -170,7 +171,7 @@ instance HasFloatData Float where
     , sb     = 24
     , bits   = fromIntegral (floatToWord f)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", showFloatAtBase 10 f "", showFloatAtBase 16 f "")
+    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", show f, showFloatAtBase 16 f "")
     }
     where k = getKind f
 
@@ -182,7 +183,7 @@ instance HasFloatData Double where
     , sb     = 53
     , bits   = fromIntegral (doubleToWord d)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", showFloatAtBase 10 d "", showFloatAtBase 16 d "")
+    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", show d, showFloatAtBase 16 d "")
     }
     where k = getKind d
 

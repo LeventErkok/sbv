@@ -266,6 +266,9 @@ module Data.SBV (
   , blastSDouble
   , blastSFloatingPoint
 
+  -- ** Showing values in detail
+  , crack
+
   -- * Enumerations
   -- $enumerations
   , mkSymbolicEnumeration
@@ -428,6 +431,14 @@ import Data.Word
 
 import Data.SBV.SMT.Utils (SBVException(..))
 import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
+
+import qualified Data.SBV.Utils.CrackNum as CN
+
+-- | Show a value in detailed (cracked) form, if possible.
+-- This makes most sense with numbers, and especially floating-point types.
+crack :: SBV a -> String
+crack (SBV (SVal _ (Left cv))) | Just s <- CN.crackNum cv = s
+crack (SBV sv)                                            = show sv
 
 -- Haddock section documentation
 {- $progIntro
