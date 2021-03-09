@@ -23,7 +23,7 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Utils.Numeric
 import Data.SBV.Utils.PrettyNum (showFloatAtBase)
 
-import Data.Char (intToDigit, toUpper)
+import Data.Char (intToDigit, toUpper, isSpace)
 
 import Data.Bits
 import Data.List
@@ -271,14 +271,16 @@ float f = intercalate "\n" $ ruler ++ legend : info
 
 -- | Build a ruler with given split points
 mkRuler :: Int -> [Int] -> [String]
-mkRuler n splits = map (unwords . split splits . trim Nothing) $ transpose $ map pad $ reverse [0 .. n-1]
+mkRuler n splits = map (trimRight . unwords . split splits . trim Nothing) $ transpose $ map pad $ reverse [0 .. n-1]
   where len = length (show (n-1))
-        pad i = reverse $ take len $ reverse (show i) ++ repeat ' '
+        pad i = reverse $ take len $ reverse (show i) ++ repeat '0'
 
         trim _      "" = ""
         trim mbPrev (c:cs)
           | mbPrev == Just c = ' ' : trim mbPrev   cs
           | True             =  c  : trim (Just c) cs
+
+        trimRight = reverse . filter (not . isSpace) . reverse
 
 split :: [Int] -> [a] -> [[a]]
 split _      [] = []
