@@ -17,7 +17,7 @@ module Data.SBV.Core.Operations
   (
   -- ** Basic constructors
     svTrue, svFalse, svBool
-  , svInteger, svFloat, svDouble, svReal, svEnumFromThenTo, svString, svChar
+  , svInteger, svFloat, svDouble, svFloatingPoint, svReal, svEnumFromThenTo, svString, svChar
   -- ** Basic destructors
   , svAsBool, svAsInteger, svNumerator, svDenominator
   -- ** Basic operations
@@ -89,9 +89,14 @@ svInteger k n = SVal k (Left $! mkConstCV k n)
 svFloat :: Float -> SVal
 svFloat f = SVal KFloat (Left $! CV KFloat (CFloat f))
 
--- | Convert from a Float
+-- | Convert from a Double
 svDouble :: Double -> SVal
 svDouble d = SVal KDouble (Left $! CV KDouble (CDouble d))
+
+-- | Convert from a generalized floating point
+svFloatingPoint :: FP -> SVal
+svFloatingPoint f@(FP eb sb _) = SVal k (Left $! CV k (CFP f))
+  where k  = KFP eb sb
 
 -- | Convert from a String
 svString :: String -> SVal
