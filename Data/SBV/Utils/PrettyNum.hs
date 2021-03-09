@@ -20,7 +20,7 @@ module Data.SBV.Utils.PrettyNum (
       , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
       ) where
 
-import Data.Char  (intToDigit, ord, chr)
+import Data.Char  (intToDigit, ord, chr, toUpper)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -525,7 +525,7 @@ showFloatAtBase base = showString . fmt
          | all (== 0) digits = ""
          | True              = "." ++ concatMap toDigit digits
 
-        toDigit v
-          | v <= 15 = [intToDigit v]
-          | v <  36 = [chr (ord 'a' + v - 10)]
-          | True    = '<' : show v ++ ">"
+        toDigit v = map toUpper d
+           where d | v <= 15 = [intToDigit v]
+                   | v <  36 = [chr (ord 'a' + v - 10)]
+                   | True    = '<' : show v ++ ">"
