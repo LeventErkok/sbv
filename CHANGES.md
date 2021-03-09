@@ -1,20 +1,22 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.9, 2021-02-13
+* Latest Hackage released version: 8.11, 2021-03-09
 
-### Version 8.10.5, Not yet released
+### Version 8.11, 2021-03-09
 
   * SBV now supports floating-point numbers with arbitrary exponent and
-    significand sizes. In particular, SBV can now reason about half-floats, which
-    are used much more frequently in ML applications. Through the LibBF binding,
-    you can also use these concretely, so if you have a use case for computing with
-    floats, you can use SBV as a vehicle for doing so. The exponent/significand
-    sizes are limited to those supported by the LibBF bindings, though the allowed
-    range is rather large and should not be a limitation in practice. (In particular,
-    you'll most likely run out of memory before you hit precision limits!)
+    significand sizes. The type is `SFloatingPoint eb sb`, where `eb`
+    and `sb` are type-level naturals. In particular, SBV can now reason about
+    half-floats, which are used much more frequently in ML applications. Through
+    the LibBF binding, you can also use these concretely, so if you have a use
+    case for computing with floats, you can use SBV as a vehicle for doing so.
+    The exponent/significand sizes are limited to those supported by the LibBF
+    bindings, though the allowed range is rather large and should not be a limitation
+    in practice. (In particular, you'll most likely run out of memory before you
+    hit precision limits!)
 
-  * We now support a separate crackNum parameter in model display. If set to True
+  * We now support a separate `crackNum` parameter in model display. If set to True
     (default is False), SBV will display numeric values of bounded integers, words,
     and all floats (SDouble, SFloat, and the new SFloatingPoint) in models in detail,
     showing how they are laid out in memory. Numbers follow the usual 2's-complement
