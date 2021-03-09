@@ -120,13 +120,11 @@ data FPKind = Zero       Bool  -- with sign
 
 -- | Show instance for Kind, not for reading back!
 instance Show FPKind where
-  show (Zero  True)  = "Negative zero"
-  show (Zero  False) = "Positive zero"
-  show (Infty True)  = "Negative infinity"
-  show (Infty False) = "Positive infinity"
-  show NaN           = "NaN (not-a-number)"
-  show Subnormal     = "Subnormal"
-  show Normal        = "Normal"
+  show Zero{}    = "FP_ZERO"
+  show Infty{}   = "FP_INFINITE"
+  show NaN       = "FP_NAN"
+  show Subnormal = "FP_SUBNORMAL"
+  show Normal    = "FP_NORMAL"
 
 -- | Find out what kind this float is. We specifically ask
 -- the caller to provide if the number is zero, neg-inf, and pos-inf. Why?

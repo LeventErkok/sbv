@@ -8,7 +8,7 @@ Optimal model:
        Precision: Single
             Sign: Positive
         Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
-  Classification: Subnormal
+  Classification: FP_SUBNORMAL
     Binary Value: 0b1p-148
      Octal Value: 0o4p-50
    Decimal Value: 3p-45
@@ -22,7 +22,7 @@ Optimal model:
        Precision: Single
             Sign: Positive
         Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
-  Classification: Subnormal
+  Classification: FP_SUBNORMAL
     Binary Value: 0b1p-149
      Octal Value: 0o2p-50
    Decimal Value: 1p-45
@@ -36,7 +36,7 @@ Optimal model:
        Precision: Single
             Sign: Positive
         Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
-  Classification: Subnormal
+  Classification: FP_SUBNORMAL
     Binary Value: 0b1p-149
      Octal Value: 0o2p-50
    Decimal Value: 1p-45

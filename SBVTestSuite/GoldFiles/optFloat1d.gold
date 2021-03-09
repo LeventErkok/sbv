@@ -8,7 +8,7 @@ Optimal model:
        Precision: Single
             Sign: Positive
         Exponent: 128 (Stored: 255, Bias: 127)
-  Classification: Positive infinity
+  Classification: FP_INFINITE
            Value: Infinity
   max-y = 4286578688 :: Word32
                   3 2            1           0

@@ -8,7 +8,7 @@ Optimal model:
        Precision: Single
             Sign: Negative
         Exponent: 128 (Stored: 255, Bias: 127)
-  Classification: Negative infinity
+  Classification: FP_INFINITE
            Value: -Infinity
   min-x =   8388607 :: Word32
                   3 2            1           0

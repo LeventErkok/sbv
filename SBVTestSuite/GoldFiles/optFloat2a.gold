@@ -8,7 +8,7 @@ Optimal model:
        Precision: Double
             Sign: Negative
         Exponent: 1023 (Stored: 2046, Bias: 1023)
-  Classification: Normal
+  Classification: FP_NORMAL
     Binary Value: -0b1.1111111111111111111111111111111111111111111111111111p1023
      Octal Value: -0o1.777777777777777774p341
    Decimal Value: -1.7976931348623157p308
