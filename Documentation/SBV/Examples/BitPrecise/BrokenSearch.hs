@@ -21,7 +21,7 @@ import Data.SBV.Tools.Overflow
 -- Note how we use the overflow checking variants of the arithmetic operators. We have:
 --
 -- >>> checkArithOverflow midPointBroken
--- Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs:35:28:+!: SInt32 addition overflows: Violated. Model:
+-- Documentation/SBV/Examples/BitPrecise/BrokenSearch.hs:35:32:+!: SInt32 addition overflows: Violated. Model:
 --   low  = 2147483647 :: Int32
 --   high = 2147483647 :: Int32
 --
