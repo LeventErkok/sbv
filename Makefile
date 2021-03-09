@@ -56,7 +56,7 @@ testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
 docTest:
-	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
+	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 vdocTest:
 	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
