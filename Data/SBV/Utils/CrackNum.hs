@@ -23,7 +23,7 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Utils.Numeric
 import Data.SBV.Utils.PrettyNum (showFloatAtBase)
 
-import Data.Char (intToDigit)
+import Data.Char (intToDigit, toUpper)
 
 import Data.Bits
 import Data.List
@@ -76,7 +76,7 @@ getVal = foldl (\s b -> 2 * s + if b then 1 else 0) 0
 
 -- Show in hex, but pay attention to how wide a field it should be in
 mkHex :: [Bool] -> String
-mkHex bin = showHex (getVal bin) ""
+mkHex bin = map toUpper $ showHex (getVal bin) ""
 
 -- | Show a sized word/int in detail
 int :: Bool -> Int -> Integer -> String
