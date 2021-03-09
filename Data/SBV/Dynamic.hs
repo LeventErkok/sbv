@@ -37,7 +37,7 @@ module Data.SBV.Dynamic
   -- *** Integer literals
   , svInteger, svAsInteger
   -- *** Float literals
-  , svFloat, svDouble
+  , svFloat, svDouble, svFloatingPoint
   -- *** Algebraic reals (only from rationals)
   , svReal, svNumerator, svDenominator
   -- *** Symbolic equality
