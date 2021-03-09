@@ -19,7 +19,8 @@
     and all floats (SDouble, SFloat, and the new SFloatingPoint) in models in detail,
     showing how they are laid out in memory. Numbers follow the usual 2's-complement
     notation if they are signed, bit-vectors if they are not signed, and the floats
-    follow the usual IEEE754 binary layout rules.
+    follow the usual IEEE754 binary layout rules. Similarly, there's now a function
+    crack :: SBV a -> String that does the same for non-model printing contexts.
 
   * Changes to make SBV compile with GHC9.0. Thanks to Ryan Scott for the patch.
 
