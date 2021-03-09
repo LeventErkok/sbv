@@ -193,7 +193,7 @@ getExponentData :: FloatData -> (Integer, Integer, Integer)
 getExponentData FloatData{eb, sb, bits, fpKind} = (expValue, expStored, bias)
   where -- | Bias is 2^(eb-1) - 1
         bias :: Integer
-        bias = (2 :: Integer) ^ (((fromIntegral eb) :: Integer) - 1) - 1
+        bias = (2 :: Integer) ^ ((fromIntegral eb :: Integer) - 1) - 1
 
         -- | Exponent as stored is simply bit extraction
         expStored = getVal [bits `testBit` i | i <- reverse [sb-1 .. sb+eb-2]]

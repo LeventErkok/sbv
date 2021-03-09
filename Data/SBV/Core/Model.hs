@@ -924,10 +924,7 @@ instance EqSymbolic (SBV a) where
 
                     let incr x table = ite (x `sElem` ignored) zero (1 + readArray table x)
 
-                        insert []     table = table
-                        insert (x:xs) table = insert xs (writeArray table x (incr x table))
-
-                        finalArray = insert es arr
+                        finalArray = foldl (\table x -> writeArray table x (incr x table)) arr es
 
                     sbvToSV st $ sAll (\e -> readArray finalArray e .<= 1) es
 
