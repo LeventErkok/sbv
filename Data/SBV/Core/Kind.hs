@@ -442,7 +442,7 @@ type InvalidFloat (eb :: Nat) (sb :: Nat)
         ':$$: 'Text "     eb `elem` [" ':<>: 'ShowType FP_MIN_EB ':<>: 'Text " .. " ':<>: 'ShowType FP_MAX_EB ':<>: 'Text "]"
         ':$$: 'Text "     sb `elem` [" ':<>: 'ShowType FP_MIN_SB ':<>: 'Text " .. " ':<>: 'ShowType FP_MAX_SB ':<>: 'Text "]"
         ':$$: 'Text ""
-        ':$$: 'Text "Given type falls outside of this range."
+        ':$$: 'Text "Given type falls outside of this range, or the sizes are not known naturals."
 
 -- | A valid float has restrictions on eb/sb values.
 -- NB. In the below encoding, I found that CPP is very finicky about substitution of the machine-dependent
