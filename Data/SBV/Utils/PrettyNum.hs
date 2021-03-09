@@ -498,7 +498,7 @@ mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integ
 showBFloat :: (Show a, RealFloat a) => a -> ShowS
 showBFloat = showFloatAtBase 2
 
--- Like Haskell's showHFloat, but uses arbitrary base instead. Note that the exponent is always written in decimal.
+-- | Like Haskell's showHFloat, but uses arbitrary base instead. Note that the exponent is always written in decimal.
 showFloatAtBase :: (Show a, RealFloat a) => Int -> a -> ShowS
 showFloatAtBase base = showString . fmt
   where fmt x
