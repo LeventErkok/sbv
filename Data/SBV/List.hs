@@ -99,7 +99,7 @@ tail l
  | True
  = subList l 1 (length l - 1)
 
--- | @`uncons` returns the pair of the head and tail. Unspecified if the list is empty.
+-- | @`uncons`@ returns the pair of the head and tail. Unspecified if the list is empty.
 uncons :: SymVal a => SList a -> (SBV a, SList a)
 uncons l = (head l, tail l)
 
