@@ -95,8 +95,8 @@ int signed sz v = intercalate "\n" $ ruler ++ info
           | True   = "Unsigned " ++ show sz ++ "-bit word"
 
         signBit = v `testBit` (sz-1)
-        s | signBit = "-"
-          | True    = ""
+        s | signed && signBit = "-"
+          | True              = ""
 
         av = abs v
 

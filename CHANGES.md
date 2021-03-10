@@ -5,7 +5,8 @@
 
 ### Version 8.11.5, Not yet released
 
-  * Current development version
+  * Fix a bug in crackNum for unsigned-integer values, which incorrectly
+    showed a negation sign for values with msb set to 1.
 
 ### Version 8.11, 2021-03-09
 
