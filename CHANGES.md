@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.11, 2021-03-09
 
+### Version 8.11.5, Not yet released
+
+  * Current development version
+
 ### Version 8.11, 2021-03-09
 
   * SBV now supports floating-point numbers with arbitrary exponent and
