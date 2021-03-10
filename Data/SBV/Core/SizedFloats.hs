@@ -140,7 +140,7 @@ fpZero sign eb sb = mkFP eb sb $ if sign then BF.bfNegZero else BF.bfPosZero
 fpFromInteger :: Int -> Int -> Integer -> FP
 fpFromInteger eb sb iv = mkFP eb sb $ BF.bfFromInteger iv
 
--- Make a fractional value.
+-- | Make a generalized floating-point value from a 'Rational'.
 fpFromRational :: Int -> Int -> Rational -> FP
 fpFromRational eb sb r = FP eb sb $ fst $ BF.bfDiv (mkBFOpts eb sb BF.NearEven) (BF.bfFromInteger (numerator r))
                                                                                 (BF.bfFromInteger (denominator r))
@@ -330,14 +330,14 @@ lift1 f (FP eb sb a) = mkFP eb sb $ f a
 lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> FP
 lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb BF.NearEven) a b
 
--- Convert from a IEEE float
+-- | Convert from a IEEE float.
 fpFromFloat :: Int -> Int -> Float -> FP
 fpFromFloat  8 24 f = let fw          = floatToWord f
                           (sgn, e, s) = (fw `testBit` 31, fromIntegral (fw `shiftR` 23) .&. 0xFF, fromIntegral fw .&. 0x7FFFFF)
                       in fpFromRawRep sgn (e, 8) (s, 24)
 fpFromFloat eb sb f = error $ "SBV.fprFromFloat: Unexpected input: " ++ show (eb, sb, f)
 
--- Convert from a IEEE double
+-- | Convert from a IEEE double.
 fpFromDouble :: Int -> Int -> Double -> FP
 fpFromDouble 11 54 d = FP 11 54 $ BF.bfFromDouble d
 fpFromDouble eb sb d = error $ "SBV.fprFromDouble: Unexpected input: " ++ show (eb, sb, d)
