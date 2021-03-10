@@ -11,7 +11,7 @@ Optimal model:
   Classification: FP_NORMAL
     Binary Value: -0b1.11111111111111111111111p127
      Octal Value: -0o3.77777774p42
-   Decimal Value: -3.4028235p38
+   Decimal Value: -3.4028235e38
        Hex Value: -0xF.FFFFFp31
   min-x =       8388608 :: Word32
                   3 2            1           0

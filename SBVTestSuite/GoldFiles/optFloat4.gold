@@ -11,7 +11,7 @@ Optimal model:
   Classification: FP_SUBNORMAL
     Binary Value: 0b1p-148
      Octal Value: 0o4p-50
-   Decimal Value: 3p-45
+   Decimal Value: 3.0e-45
        Hex Value: 0x1p-37
   x              =    1.0e-45 :: Float
                   3  2          1         0
@@ -25,7 +25,7 @@ Optimal model:
   Classification: FP_SUBNORMAL
     Binary Value: 0b1p-149
      Octal Value: 0o2p-50
-   Decimal Value: 1p-45
+   Decimal Value: 1.0e-45
        Hex Value: 0x8p-38
   y              =    1.0e-45 :: Float
                   3  2          1         0
@@ -39,7 +39,7 @@ Optimal model:
   Classification: FP_SUBNORMAL
     Binary Value: 0b1p-149
      Octal Value: 0o2p-50
-   Decimal Value: 1p-45
+   Decimal Value: 1.0e-45
        Hex Value: 0x8p-38
   metric-min-x+y = 2147483650 :: Word32
                   3 2            1           0
