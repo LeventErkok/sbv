@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.12, 2021-03-09
 
+### Version 8.12.5, Not released yet
+
+  * New development version
+
 ### Version 8.12, 2021-03-09
 
   * Fix a bug in crackNum for unsigned-integer values, which incorrectly
