@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.11, 2021-03-09
+* Latest Hackage released version: 8.12, 2021-03-09
 
-### Version 8.11.5, Not yet released
+### Version 8.12, 2021-03-09
 
   * Fix a bug in crackNum for unsigned-integer values, which incorrectly
     showed a negation sign for values with msb set to 1.
