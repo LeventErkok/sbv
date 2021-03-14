@@ -28,7 +28,7 @@
 module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
- , SFloatingPoint, SFPHalf, SFPSingle, SFPDouble, SFPQuad
+ , SFloatingPoint, SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad
  , SChar, SString, SList
  , SEither, SMaybe
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
@@ -153,6 +153,9 @@ type SFloatingPoint (eb :: Nat) (sb :: Nat) = SBV (FloatingPoint eb sb)
 
 -- | A symbolic half-precision float
 type SFPHalf = SBV FPHalf
+
+-- | A symbolic brain-float precision float
+type SFPBFloat = SBV FPBFloat
 
 -- | A symbolic single-precision float
 type SFPSingle = SBV FPSingle

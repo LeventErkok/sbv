@@ -25,7 +25,7 @@ module Data.SBV.Client.BaseIO where
 
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat,
-                                SFPHalf, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
+                                SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SMaybe, SSet)
@@ -662,6 +662,24 @@ sFPHalf_ = Trans.sFPHalf_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPHalfs'
 sFPHalfs :: [String] -> Symbolic [SFPHalf]
 sFPHalfs = Trans.sFPHalfs
+
+-- | Declare a named 'SFPBFloat'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.SFPBFloat'
+sFPBFloat :: String -> Symbolic SFPBFloat
+sFPBFloat = Trans.sFPBFloat
+
+-- | Declare an unnamed 'SFPBFloat'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.SFPBFloat'
+sFPBFloat_ :: Symbolic SFPBFloat
+sFPBFloat_ = Trans.sFPBFloat_
+
+-- | Declare a list of 'SFPQuad's
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sFPBFloats'
+sFPBFloats :: [String] -> Symbolic [SFPBFloat]
+sFPBFloats = Trans.sFPBFloats
 
 -- | Declare a named 'SFPSingle'
 --

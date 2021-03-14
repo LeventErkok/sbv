@@ -161,6 +161,7 @@ module Data.SBV (
   , ValidFloat, SFloat, SDouble
   , SFloatingPoint, FloatingPoint
   , SFPHalf, FPHalf
+  , SFPBFloat, FPBFloat
   , SFPSingle, FPSingle
   , SFPDouble, FPDouble
   , SFPQuad, FPQuad
@@ -195,6 +196,7 @@ module Data.SBV (
   , sDouble, sDouble_
   , sFloatingPoint, sFloatingPoint_
   , sFPHalf, sFPHalf_
+  , sFPBFloat, sFPBFloat_
   , sFPSingle, sFPSingle_
   , sFPDouble, sFPDouble_
   , sFPQuad, sFPQuad_
@@ -217,6 +219,7 @@ module Data.SBV (
   , sDoubles
   , sFloatingPoints
   , sFPHalfs
+  , sFPBFloats
   , sFPSingles
   , sFPDoubles
   , sFPQuads
@@ -393,7 +396,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
                                         sFloatingPoint, sFloatingPoint_, sFloatingPoints,
-                                        sFPHalf, sFPHalf_, sFPHalfs, sFPSingle, sFPSingle_, sFPSingles,
+                                        sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles,
                                         sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads,
                                         sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s,
                                         sInt64, sInt64_, sInt64s, sInteger, sInteger_, sIntegers,

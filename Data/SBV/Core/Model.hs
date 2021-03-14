@@ -31,7 +31,7 @@ module Data.SBV.Core.Model (
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
-  , sFPHalf, sFPHalf_, sFPHalfs, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
+  , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
   , sFloatingPoint, sFloatingPoint_, sFloatingPoints
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , SymTuple, sTuple, sTuple_, sTuples
@@ -530,6 +530,18 @@ sFPHalf_ = free_
 -- | Generalization of 'Data.SBV.sFPHalfs'
 sFPHalfs :: [String] -> Symbolic [SFPHalf]
 sFPHalfs = symbolics
+
+-- | Generalization of 'Data.SBV.sFPBFloat'
+sFPBFloat :: String -> Symbolic SFPBFloat
+sFPBFloat = symbolic
+
+-- | Generalization of 'Data.SBV.sFPBFloat_'
+sFPBFloat_ :: Symbolic SFPBFloat
+sFPBFloat_ = free_
+
+-- | Generalization of 'Data.SBV.sFPBFloats'
+sFPBFloats :: [String] -> Symbolic [SFPBFloat]
+sFPBFloats = symbolics
 
 -- | Generalization of 'Data.SBV.sFPSingle'
 sFPSingle :: String -> Symbolic SFPSingle

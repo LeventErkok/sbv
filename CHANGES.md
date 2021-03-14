@@ -5,7 +5,13 @@
 
 ### Version 8.12.5, Not released yet
 
-  * New development version
+  * Generalized floating point: Add support for brain-floats, with
+    type `SFPBFloat`, which has 8-bits of exponent and 8-bits of
+    significand. This format is affectionately called "brain-float"
+    because it's often used in modeling neural networks machine-learning
+    applications, offering a wider-range than IEEE's half-float, at the
+    exponse of reduced precision. It has 8-exponent bits and 8-significand
+    bits, including the hidden bit.
 
 ### Version 8.12, 2021-03-09
 

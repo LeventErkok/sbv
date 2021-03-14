@@ -20,7 +20,7 @@
 
 module Data.SBV.Core.SizedFloats (
         -- * Type-sized floats
-          FloatingPoint(..), FP(..), FPHalf, FPSingle, FPDouble, FPQuad
+          FloatingPoint(..), FP(..), FPHalf, FPBFloat, FPSingle, FPDouble, FPQuad
 
         -- * Constructing values
         , fpFromRawRep, fpNaN, fpInf, fpZero
@@ -54,16 +54,19 @@ import qualified LibBF as BF
 newtype FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP
                                               deriving (Eq, Ord)
 
--- | Abbreviation for IEEE half precision float, bit width 16.
+-- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11
 
--- | Abbreviation for IEEE single precision float, bit width 32.
+-- | Abbreviation for brain-float precision float, bit width 16 = 8 + 8.
+type FPBFloat = FloatingPoint 8 8
+
+-- | Abbreviation for IEEE single precision float, bit width 32 = 8 + 24.
 type FPSingle = FloatingPoint 8 24
 
--- | Abbreviation for IEEE double precision float, bit width 64.
+-- | Abbreviation for IEEE double precision float, bit width 64 = 11 + 53.
 type FPDouble = FloatingPoint 11 53
 
--- | Abbreviation for IEEE quadruble precision float, bit width 128.
+-- | Abbreviation for IEEE quadruble precision float, bit width 128 = 15 + 113.
 type FPQuad = FloatingPoint 15 113
 
 -- | Show instance for Floats. By default we print in base 10, with standard scientific notation.
