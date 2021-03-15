@@ -66,6 +66,7 @@ data Kind = KBool
           | KSet  Kind
           | KTuple [Kind]
           | KMaybe  Kind
+          | KRational
           | KEither Kind Kind
           deriving (Eq, Ord, G.Data)
 
@@ -89,6 +90,7 @@ instance Show Kind where
   show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
   show (KMaybe k)         = "SMaybe "  ++ kindParen (showBaseKind k)
   show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
+  show KRational          = "SRational"
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
@@ -104,6 +106,7 @@ showBaseKind = sh
         sh k@KFP{}            = noS (show k)
         sh k@KChar            = noS (show k)
         sh k@KString          = noS (show k)
+        sh KRational          = "Rational"
         sh (KList k)          = "[" ++ sh k ++ "]"
         sh (KSet k)           = "{" ++ sh k ++ "}"
         sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
@@ -143,6 +146,7 @@ smtType (KSet  k)       = "(Array " ++ smtType k ++ " Bool)"
 smtType (KUserSort s _) = s
 smtType (KTuple [])     = "SBVTuple0"
 smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (smtType <$> kinds) ++ ")"
+smtType KRational       = "SBVRational"
 smtType (KMaybe k)      = "(SBVMaybe " ++ smtType k ++ ")"
 smtType (KEither k1 k2) = "(SBVEither "  ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
@@ -161,6 +165,7 @@ kindHasSign = \case KBool        -> False
                     KFloat       -> True
                     KDouble      -> True
                     KFP{}        -> True
+                    KRational    -> True
                     KUserSort{}  -> False
                     KString      -> False
                     KChar        -> False
@@ -195,6 +200,7 @@ constructUKind a
         -- below.
         badPrefixes = [ "SBool",   "SWord", "SInt", "SInteger", "SReal",  "SFloat", "SDouble"
                       , "SString", "SChar", "[",    "SSet",     "STuple", "SMaybe", "SEither"
+                      , "SRatio"
                       ]
 
         dataType    = G.dataTypeOf a
@@ -215,6 +221,7 @@ class HasKind a where
   isReal      :: a -> Bool
   isFloat     :: a -> Bool
   isDouble    :: a -> Bool
+  isRational  :: a -> Bool
   isFP        :: a -> Bool
   isUnbounded :: a -> Bool
   isUserSort  :: a -> Bool
@@ -237,6 +244,7 @@ class HasKind a where
                   KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
                   KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KFP{}         -> error "SBV.HasKind.intSizeOf((S)FP)"
+                  KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
@@ -263,6 +271,9 @@ class HasKind a where
 
   isFP            (kindOf -> KFP{})        = True
   isFP            _                        = False
+
+  isRational      (kindOf -> KRational{})  = True
+  isRational      _                        = False
 
   isUnbounded     (kindOf -> KUnbounded{}) = True
   isUnbounded     _                        = False
@@ -302,20 +313,21 @@ class HasKind a where
 instance HasKind a => HasKind (Proxy a) where
   kindOf _ = kindOf (undefined :: a)
 
-instance HasKind Bool    where kindOf _ = KBool
-instance HasKind Int8    where kindOf _ = KBounded True  8
-instance HasKind Word8   where kindOf _ = KBounded False 8
-instance HasKind Int16   where kindOf _ = KBounded True  16
-instance HasKind Word16  where kindOf _ = KBounded False 16
-instance HasKind Int32   where kindOf _ = KBounded True  32
-instance HasKind Word32  where kindOf _ = KBounded False 32
-instance HasKind Int64   where kindOf _ = KBounded True  64
-instance HasKind Word64  where kindOf _ = KBounded False 64
-instance HasKind Integer where kindOf _ = KUnbounded
-instance HasKind AlgReal where kindOf _ = KReal
-instance HasKind Float   where kindOf _ = KFloat
-instance HasKind Double  where kindOf _ = KDouble
-instance HasKind Char    where kindOf _ = KChar
+instance HasKind Bool     where kindOf _ = KBool
+instance HasKind Int8     where kindOf _ = KBounded True  8
+instance HasKind Word8    where kindOf _ = KBounded False 8
+instance HasKind Int16    where kindOf _ = KBounded True  16
+instance HasKind Word16   where kindOf _ = KBounded False 16
+instance HasKind Int32    where kindOf _ = KBounded True  32
+instance HasKind Word32   where kindOf _ = KBounded False 32
+instance HasKind Int64    where kindOf _ = KBounded True  64
+instance HasKind Word64   where kindOf _ = KBounded False 64
+instance HasKind Integer  where kindOf _ = KUnbounded
+instance HasKind AlgReal  where kindOf _ = KReal
+instance HasKind Rational where kindOf _ = KRational
+instance HasKind Float    where kindOf _ = KFloat
+instance HasKind Double   where kindOf _ = KDouble
+instance HasKind Char     where kindOf _ = KChar
 
 -- | Grab the bit-size from the proxy
 intOfProxy :: KnownNat n => Proxy n -> Int
@@ -332,6 +344,7 @@ hasUninterpretedSorts (KUserSort _ Nothing)  = True   -- These are the completel
 hasUninterpretedSorts KFloat                 = False
 hasUninterpretedSorts KDouble                = False
 hasUninterpretedSorts KFP{}                  = False
+hasUninterpretedSorts KRational              = False
 hasUninterpretedSorts KChar                  = False
 hasUninterpretedSorts KString                = False
 hasUninterpretedSorts (KList k)              = hasUninterpretedSorts k
@@ -389,6 +402,7 @@ needsFlattening KUserSort{} = False
 needsFlattening KFloat      = False
 needsFlattening KDouble     = False
 needsFlattening KFP{}       = False
+needsFlattening KRational   = False
 needsFlattening KChar       = False
 needsFlattening KString     = False
 needsFlattening KList{}     = True

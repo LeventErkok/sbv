@@ -173,11 +173,11 @@ svMinus x y
 
 -- | Unary minus. We handle arbitrary-FP's specially here, just for the negated literals.
 svUNeg :: SVal -> SVal
-svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate negate
+svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate negate negate
 
 -- | Absolute value.
 svAbs :: SVal -> SVal
-svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs
+svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs abs
 
 -- | Division.
 svDivide :: SVal -> SVal -> SVal
@@ -421,7 +421,7 @@ svXOr x y
 svNot :: SVal -> SVal
 svNot = liftSym1 (mkSymOp1SC opt Not)
                  (noRealUnary "complement") complement
-                 (noFloatUnary "complement") (noDoubleUnary "complement") (noFPUnary "complement")
+                 (noFloatUnary "complement") (noDoubleUnary "complement") (noFPUnary "complement") (noRatUnary "complement")
   where opt a
           | a == falseSV = Just trueSV
           | a == trueSV  = Just falseSV
@@ -474,7 +474,7 @@ svRol x i
   = case kindOf x of
            KBounded _ sz -> liftSym1 (mkSymOp1 (Rol (i `mod` sz)))
                                      (noRealUnary "rotateL") (rot True sz i)
-                                     (noFloatUnary "rotateL") (noDoubleUnary "rotateL") (noFPUnary "rotateL") x
+                                     (noFloatUnary "rotateL") (noDoubleUnary "rotateL") (noFPUnary "rotateL") (noRatUnary "rotateL") x
            _ -> svShl x i   -- for unbounded Integers, rotateL is the same as shiftL in Haskell
 
 -- | Rotate-right, by a constant.
@@ -489,7 +489,7 @@ svRor x i
   = case kindOf x of
       KBounded _ sz -> liftSym1 (mkSymOp1 (Ror (i `mod` sz)))
                                 (noRealUnary "rotateR") (rot False sz i)
-                                (noFloatUnary "rotateR") (noDoubleUnary "rotateR") (noFPUnary "rotateR") x
+                                (noFloatUnary "rotateR") (noDoubleUnary "rotateR") (noFPUnary "rotateR") (noRatUnary "rotateR") x
       _ -> svShr x i   -- for unbounded integers, rotateR is the same as shiftR in Haskell
 
 -- | Generic rotation. Since the underlying representation is just Integers, rotations has to be
@@ -1265,9 +1265,9 @@ noCharLift2 x y = error $ "Unexpected binary operation called on chars: " ++ sho
 noStringLift2 :: String -> String -> a
 noStringLift2 x y = error $ "Unexpected binary operation called on strings: " ++ show (x, y)
 
-liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> SVal -> SVal
-liftSym1 _   opCR opCI opCF opCD opFP  (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP noCharLift noStringLift noUnint a
-liftSym1 opS _    _    _    _    _   a@(SVal k _)        = SVal k $ Right $ cache c
+liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) ->(Rational -> Rational) -> SVal -> SVal
+liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint a
+liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
                    opS st k sva
 
@@ -1331,8 +1331,8 @@ liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
          -> (Double  -> Double  -> Double)
          -> (FP      -> FP      -> FP)
          -> SVal     -> SVal    -> SVal
-liftSym2 _   okCV opCR opCI opCF opCD opFP  (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP noCharLift2 noStringLift2 noUnint2 a b
-liftSym2 opS _    _    _    _    _    _   a@(SVal k _)        b                                           = SVal k $ Right $  liftSV2 opS k a b
+liftSym2 _   okCV opCR opCI opCF opCD opFP (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP noCharLift2 noStringLift2 noUnint2 a b
+liftSym2 opS _    _    _    _    _    _    a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
 liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
           -> (CV                  -> CV                  -> Bool)
@@ -1465,9 +1465,11 @@ noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ sho
 noDoubleUnary :: String -> Double -> Double
 noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
 
-
 noFPUnary :: String -> FP -> FP
 noFPUnary o a = error $ "SBV.FPR." ++ o ++ ": Unexpected argument: " ++ show a
+
+noRatUnary :: String -> Rational -> Rational
+noRatUnary o a = error $ "SBV.Rational." ++ o ++ ": Unexpected argument: " ++ show a
 
 -- | Given a composite structure, figure out how to compare for less than
 svStructuralLessThan :: SVal -> SVal -> SVal

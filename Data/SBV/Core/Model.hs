@@ -34,6 +34,7 @@ module Data.SBV.Core.Model (
   , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
   , sFloatingPoint, sFloatingPoint_, sFloatingPoints
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
+  , sRational, sRational_, sRationals
   , SymTuple, sTuple, sTuple_, sTuples
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
   , sSet, sSet_, sSets
@@ -164,6 +165,10 @@ instance SymVal Integer where
   mkSymVal = genMkSymVar KUnbounded
   literal  = SBV . SVal KUnbounded . Left . mkConstCV KUnbounded
   fromCV   = genFromCV
+
+instance SymVal Rational where
+  mkSymVal = genMkSymVar KRational
+  literal  = SBV . SVal KRational  . Left . CV KRational . CRational
 
 instance SymVal AlgReal where
   mkSymVal                   = genMkSymVar KReal
@@ -650,6 +655,18 @@ sTuple_ = free_
 sTuples :: (SymTuple tup, SymVal tup, MonadSymbolic m) => [String] -> m [SBV tup]
 sTuples = symbolics
 
+-- | Generalization of 'Data.SBV.sRational'
+sRational :: MonadSymbolic m => String -> m SRational
+sRational = symbolic
+
+-- | Generalization of 'Data.SBV.sRational_'
+sRational_ :: MonadSymbolic m => m SRational
+sRational_ = free_
+
+-- | Generalization of 'Data.SBV.sRationals'
+sRationals :: MonadSymbolic m => [String] -> m [SRational]
+sRationals = symbolics
+
 -- | Generalization of 'Data.SBV.sEither'
 sEither :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SEither a b)
 sEither = symbolic
@@ -974,6 +991,7 @@ smtComparable op x y
       KUserSort  {} -> True
       KFloat        -> True
       KDouble       -> True
+      KRational  {} -> True
       KFP        {} -> True
       KChar         -> True
       KString       -> True
@@ -1377,6 +1395,7 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
                       KDouble            -> False
                       KFP{}              -> False
                       KReal              -> True
+                      KRational          -> True
                       -- Following cases should not happen since these types should *not* be instances of Fractional
                       k@KBounded{}  -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KUnbounded  -> error $ "Unexpected Fractional case for: " ++ show k

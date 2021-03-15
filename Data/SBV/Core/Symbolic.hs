@@ -1360,6 +1360,7 @@ registerKind st k
          KFloat    {}    -> return ()
          KDouble   {}    -> return ()
          KFP       {}    -> return ()
+         KRational {}    -> return ()
          KChar     {}    -> return ()
          KString   {}    -> return ()
          KList     ek    -> registerKind st ek

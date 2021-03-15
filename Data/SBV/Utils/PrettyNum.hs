@@ -18,6 +18,7 @@ module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble, showBFloat, showFloatAtBase
       , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
+      , showNegativeNumber
       ) where
 
 import Data.Char  (intToDigit, ord, chr, toUpper)
@@ -395,7 +396,11 @@ showSMTDouble rm d
    | True                = "((_ to_fp 11 53) " ++ smtRoundingMode rm ++ " " ++ toSMTLibRational (toRational d) ++ ")"
    where as s = "(_ " ++ s ++ " 11 53)"
 
--- | Show a rational in SMTLib format
+-- | Show an SBV rational as an SMTLib value. This is used for faithful rationals.
+showSMTRational :: Rational -> String
+showSMTRational r = "(SBV.Rational " ++ showNegativeNumber (numerator r) ++ " " ++ showNegativeNumber (denominator r) ++ ")"
+
+-- | Show a rational in SMTLib format. This is used for conversions from regular rationals.
 toSMTLibRational :: Rational -> String
 toSMTLibRational r
    | n < 0
@@ -413,6 +418,7 @@ cvToSMTLib rm x
   | isReal          x, CAlgReal  r      <- cvVal x = algRealToSMTLib2 r
   | isFloat         x, CFloat    f      <- cvVal x = showSMTFloat  rm f
   | isDouble        x, CDouble   d      <- cvVal x = showSMTDouble rm d
+  | isRational      x, CRational r      <- cvVal x = showSMTRational r
   | isFP            x, CFP       f      <- cvVal x = fprToSMTLib2 f
   | not (isBounded x), CInteger  w      <- cvVal x = if w >= 0 then show w else "(- " ++ show (abs w) ++ ")"
   | not (hasSign x)  , CInteger  w      <- cvVal x = smtLibHex (intSizeOf x) w
@@ -529,3 +535,9 @@ showFloatAtBase base = showString . fmt
            where d | v <= 15 = [intToDigit v]
                    | v <  36 = [chr (ord 'a' + v - 10)]
                    | True    = '<' : show v ++ ">"
+
+-- be careful with negative number printing in SMT-Lib..
+showNegativeNumber :: (Show a, Num a, Ord a) => a -> String
+showNegativeNumber i
+  | i < 0 = "(- " ++ show (-i) ++ ")"
+  | True  = show i

@@ -63,6 +63,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         hasTuples      = not . null $ tupleArities
         hasEither      = any isEither kindInfo
         hasMaybe       = any isMaybe  kindInfo
+        hasRational    = any isRational kindInfo
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
 
@@ -112,6 +113,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
 
            -- Things that require ALL
            | hasInteger            = setAll "has unbounded values"
+           | hasRational           = setAll "has rational values"
            | hasReal               = setAll "has algebraic reals"
            | not (null trueUSorts) = setAll "has user-defined sorts"
            | hasNonBVArrays        = setAll "has non-bitvector arrays"
@@ -178,8 +180,9 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ [ "; --- tuples ---" ]
              ++ concatMap declTuple tupleArities
              ++ [ "; --- sums ---" ]
-             ++ (if containsSum   kindInfo then declSum   else [])
-             ++ (if containsMaybe kindInfo then declMaybe else [])
+             ++ (if containsSum       kindInfo then declSum       else [])
+             ++ (if containsMaybe     kindInfo then declMaybe     else [])
+             ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
              ++ [ "; --- skolem constants ---" ]
@@ -388,6 +391,10 @@ containsSum = not . Set.null . Set.filter isEither
 containsMaybe :: Set Kind -> Bool
 containsMaybe = not . Set.null . Set.filter isMaybe
 
+-- | Is @Rational@ being used?
+containsRationals :: Set Kind -> Bool
+containsRationals = not . Set.null . Set.filter isRational
+
 declSum :: [String]
 declSum = [ "(declare-datatypes ((SBVEither 2)) ((par (T1 T2)"
           , "                                    ((left_SBVEither  (get_left_SBVEither  T1))"
@@ -399,6 +406,29 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
             , "                                    ((nothing_SBVMaybe)"
             , "                                     (just_SBVMaybe (get_just_SBVMaybe T))))))"
             ]
+
+declRationals :: [String]
+declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerator Int) (sbv.rat.denominator Int))))"
+                , ""
+                , "(define-fun sbv.rat.eq ((x SBVRational) (y SBVRational)) Bool"
+                , "   (= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
+                , "      (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.notEq ((x SBVRational) (y SBVRational)) Bool"
+                , "   (not (sbv.rat.eq x y))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.lt ((x SBVRational) (y SBVRational)) Bool"
+                , "   (<  (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
+                , "       (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.leq ((x SBVRational) (y SBVRational)) Bool"
+                , "   (<= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
+                , "       (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , ")"
+                ]
 
 -- | Convert in a query context.
 -- NB. We do not store everything in @newKs@ below, but only what we need
@@ -648,6 +678,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 
         bvOp     = all isBounded   arguments
         intOp    = any isUnbounded arguments
+        ratOp    = any isRational  arguments
         realOp   = any isReal      arguments
         fpOp     = any (\a -> isDouble a || isFloat a || isFP a) arguments
         boolOp   = all isBoolean   arguments
@@ -776,6 +807,7 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
                               KFP{}         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected arbitrary float valued index"
+                              KRational{}   -> error "SBV.SMT.SMTLib2.cvtExp: unexpected rational valued index"
                               KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected char valued index"
                               KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                               KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected list valued: " ++ show k
@@ -797,8 +829,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                 KUnbounded    -> ("<", "<=")
                                 KReal         -> ("<", "<=")
                                 KFloat        -> ("fp.lt", "fp.leq")
-                                KDouble       -> ("fp.lt", "fp.geq")
-                                KFP{}         -> ("fp.lt", "fp.geq")
+                                KDouble       -> ("fp.lt", "fp.leq")
+                                KRational     -> ("sbv.rat.lt", "sbv.rat.leq")
+                                KFP{}         -> ("fp.lt", "fp.leq")
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
@@ -911,6 +944,8 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           = f (any hasSign args) (map ssv args)
           | realOp, Just f <- lookup op smtOpRealTable
           = f (any hasSign args) (map ssv args)
+          | ratOp, Just f <- lookup op ratOpTable
+          = f (map ssv args)
           | fpOp, Just f <- lookup op smtOpFloatDoubleTable
           = f (any hasSign args) (map ssv args)
           | charOp || stringOp, Just f <- lookup op smtStringTable
@@ -983,6 +1018,23 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
 
+                ratOpTable = [ (Plus,          error "Data.SBV.SRational: TBD: Plus")
+                             , (Minus,         error "Data.SBV.SRational: TBD: Minus")
+                             , (Times,         error "Data.SBV.SRational: TBD: Times")
+                             , (UNeg,          error "Data.SBV.SRational: TBD: UNeg")
+                             , (Abs,           error "Data.SBV.SRational: TBD: Abs")
+                             , (Equal,         lift2Rat "sbv.rat.eq")
+                             , (NotEqual,      lift2Rat "sbv.rat.notEq")
+                             , (LessThan,      lift2Rat "sbv.rat.lt")
+                             , (GreaterThan,   lift2Rat "sbv.rat.lt" . swap)
+                             , (LessEq,        lift2Rat "sbv.rat.leq")
+                             , (GreaterEq,     lift2Rat "sbv.rat.leq" . swap)
+                             ]
+                        where lift2Rat o [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
+                              lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
+                              swap [x, y]       = [y, x]
+                              swap sbvs         = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
+
                 -- equality and comparisons are the only thing that works on uninterpreted sorts and pretty much everything else
                 uninterpretedTable = [ (Equal,       lift2S "="        "="        True)
                                      , (NotEqual,    liftNS "distinct" "distinct" True)
@@ -993,7 +1045,6 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                      ]
 
                 -- For strings, equality and comparisons are the only operators
-                -- TODO: The string comparison operators will most likely change with the new theory!
                 smtStringTable = [ (Equal,       lift2S "="        "="        True)
                                  , (NotEqual,    liftNS "distinct" "distinct" True)
                                  , (LessThan,    stringCmp False "str.<")
@@ -1015,6 +1066,9 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
 declareFun :: SV -> SBVType -> Maybe String -> [String]
 declareFun = declareName . show
 
+-- If we have a char, we have to make sure it's and SMTLib string of length exactly one
+-- If we have a rational, we have to make sure the denominator is > 0
+-- Otherwise, we just declare the name
 declareName :: String -> SBVType -> Maybe String -> [String]
 declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
   where decl        = "(declare-fun " ++ s ++ " " ++ cvtType t ++ ")" ++ maybe "" (" ; " ++) mbCmnt
@@ -1023,10 +1077,10 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                           [] -> error $ "SBV.declareName: Unexpected empty type for: " ++ show s
                           _  -> (init inputKS, last inputKS)
 
-        -- Does the kind KChar *not* occur in the kind anywhere?
-        charFree k = null [() | KChar <- G.universe k]
-        noChars    = charFree result
-        needsQuant = not $ null args
+        -- Does the kind KChar and KRational *not* occur in the kind anywhere?
+        charRatFree k = null $ [() | KChar <- G.universe k] ++ [() | KRational <- G.universe k]
+        noCharOrRat   = charRatFree result
+        needsQuant    = not $ null args
 
         resultVar | needsQuant = "result"
                   | True       = s
@@ -1035,51 +1089,54 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         argTList  = ["(" ++ a ++ " " ++ smtType k ++ ")" | (a, k) <- zip argList args]
         resultExp = "(" ++ s ++ " " ++ unwords argList ++ ")"
 
-        restrict | noChars    = []
-                 | needsQuant =    [               "(assert (forall (" ++ unwords argTList ++ ")"
-                                   ,               "                (let ((" ++ resultVar ++ " " ++ resultExp ++ "))"
-                                   ]
-                                ++ (case constraints of
-                                      []     ->  [ "                     true"]
-                                      [x]    ->  [ "                     " ++ x]
-                                      (x:xs) ->  ( "                     (and " ++ x)
-                                              :  [ "                          " ++ c | c <- xs]
-                                              ++ [ "                     )"])
-                                ++ [        "                )))"]
-                 | True       = case constraints of
-                                 []     -> []
-                                 [x]    -> ["(assert " ++ x ++ ")"]
-                                 (x:xs) -> ( "(assert (and " ++ x)
-                                        :  [ "             " ++ c | c <- xs]
-                                        ++ [ "        ))"]
+        restrict | noCharOrRat = []
+                 | needsQuant  =    [               "(assert (forall (" ++ unwords argTList ++ ")"
+                                    ,               "                (let ((" ++ resultVar ++ " " ++ resultExp ++ "))"
+                                    ]
+                                 ++ (case constraints of
+                                       []     ->  [ "                     true"]
+                                       [x]    ->  [ "                     " ++ x]
+                                       (x:xs) ->  ( "                     (and " ++ x)
+                                               :  [ "                          " ++ c | c <- xs]
+                                               ++ [ "                     )"])
+                                 ++ [        "                )))"]
+                 | True        = case constraints of
+                                  []     -> []
+                                  [x]    -> ["(assert " ++ x ++ ")"]
+                                  (x:xs) -> ( "(assert (and " ++ x)
+                                         :  [ "             " ++ c | c <- xs]
+                                         ++ [ "        ))"]
 
-        constraints = walk 0 resultVar (\nm -> "(= 1 (str.len " ++ nm ++ "))") result
+        constraints = walk 0 resultVar cstr result
+          where cstr KChar     nm = ["(= 1 (str.len " ++ nm ++ "))"]
+                cstr KRational nm = ["(< 0 (sbv.rat.denominator " ++ nm ++ "))"]
+                cstr _         _  = []
 
         mkAnd []  = "true"
         mkAnd [c] = c
         mkAnd cs  = "(and " ++ unwords cs ++ ")"
 
-        walk :: Int -> String -> (String -> String) -> Kind -> [String]
-        walk _d _nm _f KBool     {}       = []
-        walk _d _nm _f KBounded  {}       = []
-        walk _d _nm _f KUnbounded{}       = []
-        walk _d _nm _f KReal     {}       = []
-        walk _d _nm _f KUserSort {}       = []
-        walk _d _nm _f KFloat    {}       = []
-        walk _d _nm _f KDouble   {}       = []
-        walk _d _nm _f KFP       {}       = []
-        walk _d  nm  f KChar     {}       = [f nm]
-        walk _d _nm _f KString   {}       = []
-        walk  d  nm _f  (KList k)
-          | charFree k                    = []
+        walk :: Int -> String -> (Kind -> String -> [String]) -> Kind -> [String]
+        walk _d nm f k@KBool     {}         = f k nm
+        walk _d nm f k@KBounded  {}         = f k nm
+        walk _d nm f k@KUnbounded{}         = f k nm
+        walk _d nm f k@KReal     {}         = f k nm
+        walk _d nm f k@KUserSort {}         = f k nm
+        walk _d nm f k@KFloat    {}         = f k nm
+        walk _d nm f k@KDouble   {}         = f k nm
+        walk _d nm f k@KRational {}         = f k nm
+        walk _d nm f k@KFP       {}         = f k nm
+        walk _d nm f k@KChar     {}         = f k nm
+        walk _d nm f k@KString   {}         = f k nm
+        walk  d nm f  (KList k)
+          | charRatFree k                 = []
           | True                          = let fnm   = "seq" ++ show d
-                                                cstrs = walk (d+1) ("(seq.nth " ++ nm ++ " " ++ fnm ++ ")")
-                                                             (\snm -> "(= 1 (str.len " ++ snm ++ "))") k
+                                                cstrs = walk (d+1) ("(seq.nth " ++ nm ++ " " ++ fnm ++ ")") f k
                                             in ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) " ++ "(=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ mkAnd cstrs ++ "))"]
-        walk  d  nm  _f (KSet k)
-          | charFree k                    = []
+        walk  d  nm f (KSet k)
+          | charRatFree k                 = []
           | True                          = let fnm    = "set" ++ show d
-                                                cstrs  = walk (d+1) nm (\snm -> "(=> (select " ++ snm ++ " " ++ fnm ++ ") (= 1 (str.len " ++ fnm ++ ")))") k
+                                                cstrs  = walk (d+1) nm (\sk snm -> ["(=> (select " ++ snm ++ " " ++ fnm ++ ") " ++ c ++ ")" | c <- f sk fnm]) k
                                             in ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ mkAnd cstrs ++ ")"]
         walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
                                                 project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"

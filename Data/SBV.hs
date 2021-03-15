@@ -46,16 +46,18 @@
 --
 --   * 'SInteger': Unbounded signed integers.
 --
---   * 'SReal': Algebraic-real numbers
+--   * 'SReal': Algebraic-real numbers.
 --
---   * 'SFloat': IEEE-754 single-precision floating point values
+--   * 'SFloat': IEEE-754 single-precision floating point values.
 --
---   * 'SDouble': IEEE-754 double-precision floating point values
+--   * 'SDouble': IEEE-754 double-precision floating point values.
+--
+--   * 'SRatio': Rationals. (Ratio of two symbolic integers.)
 --
 --   * 'SFloatingPoint': Generalized IEEE-754 floating point values, with user specified exponent and
 --   mantissa widths.
 --
---   * 'SChar', 'SString', 'RegExp': Characters, strings and regular expressions
+--   * 'SChar', 'SString', 'RegExp': Characters, strings and regular expressions.
 --
 --   * 'SList': Symbolic lists (which can be nested)
 --
@@ -63,9 +65,9 @@
 --
 --   * 'SEither': Symbolic sums
 --
---   * 'SMaybe': Symbolic optional values
+--   * 'SMaybe': Symbolic optional values.
 --
---   * 'SSet': Symbolic sets
+--   * 'SSet': Symbolic sets.
 --
 --   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
 --

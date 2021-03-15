@@ -76,6 +76,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CFloat    !Float               -- ^ Float
           | CDouble   !Double              -- ^ Double
           | CFP       !FP                  -- ^ Arbitrary float
+          | CRational Rational             -- ^ Rational
           | CChar     !Char                -- ^ Character
           | CString   !String              -- ^ String
           | CList     ![CVal]              -- ^ List
@@ -92,14 +93,15 @@ cvRank CInteger  {} =  1
 cvRank CFloat    {} =  2
 cvRank CDouble   {} =  3
 cvRank CFP       {} =  4
-cvRank CChar     {} =  5
-cvRank CString   {} =  6
-cvRank CList     {} =  7
-cvRank CSet      {} =  8
-cvRank CUserSort {} =  9
-cvRank CTuple    {} = 10
-cvRank CMaybe    {} = 11
-cvRank CEither   {} = 12
+cvRank CRational {} =  5
+cvRank CChar     {} =  6
+cvRank CString   {} =  7
+cvRank CList     {} =  8
+cvRank CSet      {} =  9
+cvRank CUserSort {} = 10
+cvRank CTuple    {} = 11
+cvRank CMaybe    {} = 12
+cvRank CEither   {} = 13
 
 -- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -109,6 +111,7 @@ instance Eq CVal where
   CInteger  a == CInteger  b = a == b
   CFloat    a == CFloat    b = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
   CDouble   a == CDouble   b = a `fpIsEqualObjectH` b   -- ditto
+  CRational a == CRational b = a == b
   CChar     a == CChar     b = a == b
   CString   a == CString   b = a == b
   CList     a == CList     b = a == b
@@ -133,6 +136,7 @@ instance Ord CVal where
   CInteger  a `compare` CInteger  b = a `compare`                  b
   CFloat    a `compare` CFloat    b = a `fpCompareObjectH`         b
   CDouble   a `compare` CDouble   b = a `fpCompareObjectH`         b
+  CRational a `compare` CRational b = a `compare`                  b
   CFP       a `compare` CFP       b = a `fprCompareObject`         b
   CChar     a `compare` CChar     b = a `compare`                  b
   CString   a `compare` CString   b = a `compare`                  b
@@ -277,6 +281,7 @@ liftCV :: (AlgReal             -> b)
        -> (Float               -> b)
        -> (Double              -> b)
        -> (FP                  -> b)
+       -> (Rational            -> b)
        -> (Char                -> b)
        -> (String              -> b)
        -> ((Maybe Int, String) -> b)
@@ -287,19 +292,20 @@ liftCV :: (AlgReal             -> b)
        -> (Either CVal CVal    -> b)
        -> CV
        -> b
-liftCV f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
-liftCV _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
+liftCV f _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
+liftCV _ _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CRational v)) = f v
+liftCV _ _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -336,25 +342,27 @@ mapCV :: (AlgReal             -> AlgReal)
       -> (Float               -> Float)
       -> (Double              -> Double)
       -> (FP                  -> FP)
+      -> (Rational            -> Rational)
       -> (Char                -> Char)
       -> (String              -> String)
       -> ((Maybe Int, String) -> (Maybe Int, String))
       -> CV
       -> CV
-mapCV r i f d af c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
-                                                       CAlgReal  a -> CAlgReal  (r  a)
-                                                       CInteger  a -> CInteger  (i  a)
-                                                       CFloat    a -> CFloat    (f  a)
-                                                       CDouble   a -> CDouble   (d  a)
-                                                       CFP       a -> CFP       (af a)
-                                                       CChar     a -> CChar     (c  a)
-                                                       CString   a -> CString   (s  a)
-                                                       CUserSort a -> CUserSort (u  a)
-                                                       CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
-                                                       CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
-                                                       CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
-                                                       CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
-                                                       CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
+mapCV r i f d af ra c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
+                                                          CAlgReal  a -> CAlgReal  (r  a)
+                                                          CInteger  a -> CInteger  (i  a)
+                                                          CFloat    a -> CFloat    (f  a)
+                                                          CDouble   a -> CDouble   (d  a)
+                                                          CFP       a -> CFP       (af a)
+                                                          CRational a -> CRational (ra a)
+                                                          CChar     a -> CChar     (c  a)
+                                                          CString   a -> CString   (s  a)
+                                                          CUserSort a -> CUserSort (u  a)
+                                                          CList{}     -> error "Data.SBV.mapCV: Unexpected call through mapCV with lists!"
+                                                          CSet{}      -> error "Data.SBV.mapCV: Unexpected call through mapCV with sets!"
+                                                          CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
+                                                          CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
+                                                          CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
 
 -- | Map a binary function through a 'CV'.
 mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
@@ -395,7 +403,7 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
+showCV shk w               = liftCV show show show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
       where kw = kindOf w
 
             kInfo | shk  = " :: " ++ showBaseKind kw
@@ -446,13 +454,14 @@ showCV shk w               = liftCV show show show show show show show snd shL s
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
-mkConstCV KBool           a = normCV $ CV KBool      (CInteger (toInteger a))
-mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger (toInteger a))
-mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger (toInteger a))
-mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal (fromInteger (toInteger a)))
-mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat   (fromInteger (toInteger a)))
-mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble  (fromInteger (toInteger a)))
-mkConstCV k@KFP{}         a = normCV $ CV k          (CFP      (fromInteger (toInteger a)))
+mkConstCV KBool           a = normCV $ CV KBool      (CInteger  (toInteger a))
+mkConstCV k@KBounded{}    a = normCV $ CV k          (CInteger  (toInteger a))
+mkConstCV KUnbounded      a = normCV $ CV KUnbounded (CInteger  (toInteger a))
+mkConstCV KReal           a = normCV $ CV KReal      (CAlgReal  (fromInteger (toInteger a)))
+mkConstCV KFloat          a = normCV $ CV KFloat     (CFloat    (fromInteger (toInteger a)))
+mkConstCV KDouble         a = normCV $ CV KDouble    (CDouble   (fromInteger (toInteger a)))
+mkConstCV k@KFP{}         a = normCV $ CV k          (CFP       (fromInteger (toInteger a)))
+mkConstCV KRational       a = normCV $ CV KRational  (CRational (fromInteger (toInteger a)))
 mkConstCV KChar           a = error $ "Unexpected call to mkConstCV (Char) with value: "   ++ show (toInteger a)
 mkConstCV KString         a = error $ "Unexpected call to mkConstCV (String) with value: " ++ show (toInteger a)
 mkConstCV (KUserSort s _) a = error $ "Unexpected call to mkConstCV with user kind: " ++ s ++ " with value: " ++ show (toInteger a)
@@ -466,12 +475,13 @@ mkConstCV k@KEither{}     a = error $ "Unexpected call to mkConstCV (" ++ show k
 randomCVal :: Kind -> IO CVal
 randomCVal k =
   case k of
-    KBool              -> CInteger <$> randomRIO (0, 1)
-    KBounded s w       -> CInteger <$> randomRIO (bounds s w)
-    KUnbounded         -> CInteger <$> randomIO
-    KReal              -> CAlgReal <$> randomIO
-    KFloat             -> CFloat   <$> randomIO
-    KDouble            -> CDouble  <$> randomIO
+    KBool              -> CInteger  <$> randomRIO (0, 1)
+    KBounded s w       -> CInteger  <$> randomRIO (bounds s w)
+    KUnbounded         -> CInteger  <$> randomIO
+    KReal              -> CAlgReal  <$> randomIO
+    KFloat             -> CFloat    <$> randomIO
+    KDouble            -> CDouble   <$> randomIO
+    KRational          -> CRational <$> randomIO
 
     -- Rather bad, but OK
     KFP eb sb          -> do sgn <- randomRIO (0 :: Integer, 1)

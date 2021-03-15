@@ -201,6 +201,7 @@ specifier cfg sv = case kindOf sv of
                      KDouble       -> specF CgDouble
                      KString       -> text "%s"
                      KChar         -> text "%c"
+                     KRational     -> die   "rational sort"
                      KFP{}         -> die   "arbitrary float sort"
                      KList k       -> die $ "list sort: " ++ show k
                      KSet  k       -> die $ "set sort: " ++ show k
@@ -521,6 +522,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins (_, preConsts) tbls
                       len KBool              = 5 -- SBool
                       len (KBounded False n) = 5 + length (show n) -- SWordN
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
+                      len KRational{}        = die   "Rational."
                       len KFP{}              = die   "Arbitrary float."
                       len (KList s)          = die $ "List sort: " ++ show s
                       len (KSet  s)          = die $ "Set sort: " ++ show s
@@ -779,6 +781,7 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KFloat          -> die "array index with float value"
                                                KDouble         -> die "array index with double value"
                                                KFP{}           -> die "array index with arbitrary float value"
+                                               KRational       -> die "array index with rational value"
                                                KString         -> die "array index with string value"
                                                KChar           -> die "array index with character value"
                                                KUnbounded      -> case cgInteger cfg of

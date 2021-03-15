@@ -29,6 +29,7 @@ module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , SFloatingPoint, SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad
+ , SRational
  , SChar, SString, SList
  , SEither, SMaybe
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
@@ -176,6 +177,9 @@ type SChar = SBV Char
 -- Haskell strings. An 'SString' is a symbolic value of its own, of possibly arbitrary but finite length,
 -- and internally processed as one unit as opposed to a fixed-length list of characters.
 type SString = SBV String
+
+-- | A symbolic rational value.
+type SRational = SBV Rational
 
 -- | A symbolic list of items. Note that a symbolic list is /not/ a list of symbolic items,
 -- that is, it is not the case that @SList a = [a]@, unlike what one might expect following

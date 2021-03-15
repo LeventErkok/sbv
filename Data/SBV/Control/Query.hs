@@ -64,6 +64,8 @@ import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
+import Data.SBV.Utils.PrettyNum (showNegativeNumber)
+
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CV
 
@@ -99,19 +101,13 @@ stringsOf (EApp ss)          = concatMap stringsOf ss
 serialize :: Bool -> SExpr -> String
 serialize removeQuotes = go
   where go (ECon s)           = if removeQuotes then unQuote s else s
-        go (ENum (i, _))      = shNN i
-        go (EReal   r)        = shNN r
-        go (EFloat  f)        = shNN f
-        go (EDouble d)        = shNN d
+        go (ENum (i, _))      = showNegativeNumber i
+        go (EReal   r)        = showNegativeNumber r
+        go (EFloat  f)        = showNegativeNumber f
+        go (EDouble d)        = showNegativeNumber d
         go (EFloatingPoint f) = show f
         go (EApp [x])         = go x
         go (EApp ss)          = "(" ++ unwords (map go ss) ++ ")"
-
-        -- be careful with negative number printing in SMT-Lib..
-        shNN :: (Show a, Num a, Ord a) => a -> String
-        shNN i
-          | i < 0 = "(- " ++ show (-i) ++ ")"
-          | True  = show i
 
 -- | Generalization of 'Data.SBV.Control.getInfo'
 getInfo :: (MonadIO m, MonadQuery m) => SMTInfoFlag -> m SMTInfoResponse

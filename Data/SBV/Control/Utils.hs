@@ -66,6 +66,7 @@ import Data.Maybe (isNothing, isJust)
 import Data.IORef (readIORef, writeIORef, IORef)
 
 import Data.Time (getZonedTime)
+import Data.Ratio
 
 import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, sbvToSV, kindOf, Kind(..)
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
@@ -729,6 +730,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KUserSort _ ui) = uninterp ui
         cvt KFloat           = Just $ CFloat 0
         cvt KDouble          = Just $ CDouble 0
+        cvt KRational        = Just $ CRational 0
         cvt (KFP eb sb)      = Just $ CFP (fpZero False eb sb)
         cvt KChar            = Just $ CChar '\NUL'                -- why not?
         cvt KString          = Just $ CString ""
@@ -786,6 +788,8 @@ recoverKindedValue k e = case k of
                            KString     | ECon s      <- e      -> Just $ CV KString $ CString $ interpretString s
                                        | True                  -> Nothing
 
+                           KRational                           -> Just $ CV k $ CRational $ interpretRational e
+
                            KList ek                            -> Just $ CV k $ CList $ interpretList ek e
 
                            KSet ek                             -> Just $ CV k $ CSet $ interpretSet ek e
@@ -811,6 +815,12 @@ recoverKindedValue k e = case k of
         interpretChar xs = case interpretString xs of
                              [c] -> c
                              _   -> error $ "Expected a singleton char constant, received: <" ++ xs ++ ">"
+
+        interpretRational (EApp [ECon "SBV.Rational", v1, v2])
+           | Just (CV _ (CInteger n)) <- recoverKindedValue KUnbounded v1
+           , Just (CV _ (CInteger d)) <- recoverKindedValue KUnbounded v2
+           = n % d
+        interpretRational xs = error $ "Expected a rational constant, received: <" ++ show xs ++ ">"
 
         interpretList ek topExpr = walk topExpr
           where walk (EApp [ECon "as", ECon "seq.empty", _]) = []

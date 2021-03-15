@@ -28,7 +28,7 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SMaybe, SSet)
+                                SWord64, SEither, SRational, SMaybe, SSet)
 import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
@@ -824,6 +824,24 @@ sEither_ = Trans.sEither_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sEithers'
 sEithers :: (SymVal a, SymVal b) => [String] -> Symbolic [SEither a b]
 sEithers = Trans.sEithers
+
+-- | Declare a named 'Data.SBV.SRational'.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sRational'
+sRational :: String -> Symbolic SRational
+sRational = Trans.sRational
+
+-- | Declare an unnamed 'Data.SBV.SRational'.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sRational_'
+sRational_ :: Symbolic SRational
+sRational_ = Trans.sRational_
+
+-- | Declare a list of 'Data.SBV.SRational' values.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sRationals'
+sRationals :: [String] -> Symbolic [SRational]
+sRationals = Trans.sRationals
 
 -- | Declare a named 'Data.SBV.SMaybe'.
 --
