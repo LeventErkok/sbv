@@ -13,6 +13,13 @@
     exponse of reduced precision. It has 8-exponent bits and 8-significand
     bits, including the hidden bit.
 
+  * Add support for SRational type, rational values built out of the ratio
+    of two integers. Use the module "Data.SBV.Rational", which exports the
+    constructor .% to build rationals. Note that you cannot take numerator
+    and denominator of rationals apart, since SMTLib has no way of storing
+    the rational in a canonical way. Otherwise, symbolic rationals follow
+    the same rules as Haskell's Rational type.
+
 ### Version 8.12, 2021-03-09
 
   * Fix a bug in crackNum for unsigned-integer values, which incorrectly
