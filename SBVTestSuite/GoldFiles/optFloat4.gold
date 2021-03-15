@@ -47,7 +47,7 @@ Optimal model:
    Binary layout: 1000 0000 0000 0000 0000 0000 0000 0010
       Hex layout: 8000 0002
             Type: Unsigned 32-bit word
-    Binary Value: -0b10000000000000000000000000000010
-     Octal Value: -0o20000000002
+    Binary Value: 0b10000000000000000000000000000010
+     Octal Value: 0o20000000002
    Decimal Value: 2147483650
-       Hex Value: -0x80000002
+       Hex Value: 0x80000002
