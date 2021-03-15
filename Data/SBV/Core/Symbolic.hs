@@ -203,6 +203,7 @@ data Op = Plus
         | EitherConstructor Kind Kind Bool      -- Construct a sum; False: left, True: right
         | EitherIs Kind Kind Bool               -- Either branch tester; False: left, True: right
         | EitherAccess Bool                     -- Either branch access; False: left, True: right
+        | RationalConstructor                   -- Construct a rational. Note that there's no access to numerator or denumerator, since we cannot store rationals in canonical form
         | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
@@ -531,6 +532,7 @@ instance Show Op where
   show (EitherIs          k1 k2  True ) = "(_ is (right_SBVEither (" ++ show k2 ++ ") " ++ show (KEither k1 k2) ++ "))"
   show (EitherAccess             False) = "get_left_SBVEither"
   show (EitherAccess             True ) = "get_right_SBVEither"
+  show RationalConstructor              = "SBV.Rational"
   show (MaybeConstructor k False)       = "(_ nothing_SBVMaybe " ++ show (KMaybe k) ++ ")"
   show (MaybeConstructor k True)        = "(_ just_SBVMaybe "    ++ show (KMaybe k) ++ ")"
   show (MaybeIs          k False)       = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
@@ -987,7 +989,6 @@ withNewIncState st cont = do
         r  <- cont st
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
-
 
 -- | User defined, with proper quantifiers
 type UserInputs = S.Seq (Quantifier, NamedSymVar)

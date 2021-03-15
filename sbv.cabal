@@ -85,10 +85,11 @@ Library
                   , Data.SBV.Internals
                   , Data.SBV.List
                   , Data.SBV.Maybe
+                  , Data.SBV.Rational
                   , Data.SBV.Set
+                  , Data.SBV.Char
                   , Data.SBV.String
                   , Data.SBV.Tuple
-                  , Data.SBV.Char
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.BMC
                   , Data.SBV.Tools.BoundedList

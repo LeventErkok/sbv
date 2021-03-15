@@ -167,8 +167,10 @@ instance SymVal Integer where
   fromCV   = genFromCV
 
 instance SymVal Rational where
-  mkSymVal = genMkSymVar KRational
-  literal  = SBV . SVal KRational  . Left . CV KRational . CRational
+  mkSymVal                    = genMkSymVar KRational
+  literal                     = SBV . SVal KRational  . Left . CV KRational . CRational
+  fromCV (CV _ (CRational r)) = r
+  fromCV c                    = error $ "SymVal.Rational: Unexpected non-rational value: " ++ show c
 
 instance SymVal AlgReal where
   mkSymVal                   = genMkSymVar KReal
