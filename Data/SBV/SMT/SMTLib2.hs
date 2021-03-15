@@ -407,6 +407,8 @@ declMaybe = [ "(declare-datatypes ((SBVMaybe 1)) ((par (T)"
             , "                                     (just_SBVMaybe (get_just_SBVMaybe T))))))"
             ]
 
+-- Internally, we do *not* keep the rationals in reduced form! So, the boolean operators explicitly do the math
+-- to make sure equivalent values are treated correctly.
 declRationals :: [String]
 declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerator Int) (sbv.rat.denominator Int))))"
                 , ""
@@ -427,6 +429,31 @@ declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerat
                 , "(define-fun sbv.rat.leq ((x SBVRational) (y SBVRational)) Bool"
                 , "   (<= (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
                 , "       (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.plus ((x SBVRational) (y SBVRational)) SBVRational"
+                , "   (SBV.Rational (+ (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
+                , "                    (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , "                 (* (sbv.rat.denominator x) (sbv.rat.denominator y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.minus ((x SBVRational) (y SBVRational)) SBVRational"
+                , "   (SBV.Rational (- (* (sbv.rat.numerator   x) (sbv.rat.denominator y))"
+                , "                    (* (sbv.rat.denominator x) (sbv.rat.numerator   y)))"
+                , "                 (* (sbv.rat.denominator x) (sbv.rat.denominator y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.times ((x SBVRational) (y SBVRational)) SBVRational"
+                , "   (SBV.Rational (* (sbv.rat.numerator   x) (sbv.rat.numerator y))"
+                , "                 (* (sbv.rat.denominator x) (sbv.rat.denominator y)))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.uneg ((x SBVRational)) SBVRational"
+                , "   (SBV.Rational (* (- 1) (sbv.rat.numerator x)) (sbv.rat.denominator x))"
+                , ")"
+                , ""
+                , "(define-fun sbv.rat.abs ((x SBVRational)) SBVRational"
+                , "   (SBV.Rational (abs (sbv.rat.numerator x)) (sbv.rat.denominator x))"
                 , ")"
                 ]
 
@@ -1018,20 +1045,22 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
                                     , (GreaterEq,     lift2Cmp  ">=" "fp.geq")
                                     ]
 
-                ratOpTable = [ (Plus,          error "Data.SBV.SRational: TBD: Plus")
-                             , (Minus,         error "Data.SBV.SRational: TBD: Minus")
-                             , (Times,         error "Data.SBV.SRational: TBD: Times")
-                             , (UNeg,          error "Data.SBV.SRational: TBD: UNeg")
-                             , (Abs,           error "Data.SBV.SRational: TBD: Abs")
-                             , (Equal,         lift2Rat "sbv.rat.eq")
-                             , (NotEqual,      lift2Rat "sbv.rat.notEq")
-                             , (LessThan,      lift2Rat "sbv.rat.lt")
-                             , (GreaterThan,   lift2Rat "sbv.rat.lt" . swap)
-                             , (LessEq,        lift2Rat "sbv.rat.leq")
-                             , (GreaterEq,     lift2Rat "sbv.rat.leq" . swap)
+                ratOpTable = [ (Plus,        lift2Rat "sbv.rat.plus")
+                             , (Minus,       lift2Rat "sbv.rat.minus")
+                             , (Times,       lift2Rat "sbv.rat.times")
+                             , (UNeg,        liftRat  "sbv.rat.uneg")
+                             , (Abs,         liftRat  "sbv.rat.abs")
+                             , (Equal,       lift2Rat "sbv.rat.eq")
+                             , (NotEqual,    lift2Rat "sbv.rat.notEq")
+                             , (LessThan,    lift2Rat "sbv.rat.lt")
+                             , (GreaterThan, lift2Rat "sbv.rat.lt" . swap)
+                             , (LessEq,      lift2Rat "sbv.rat.leq")
+                             , (GreaterEq,   lift2Rat "sbv.rat.leq" . swap)
                              ]
                         where lift2Rat o [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
                               lift2Rat o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
+                              liftRat  o [x]    = "(" ++ o ++ " " ++ x ++ ")"
+                              liftRat  o sbvs   = error $ "SBV.SMTLib2.sh.lift2Rat: Unexpected arguments: "   ++ show (o, sbvs)
                               swap [x, y]       = [y, x]
                               swap sbvs         = error $ "SBV.SMTLib2.sh.swap: Unexpected arguments: "   ++ show sbvs
 

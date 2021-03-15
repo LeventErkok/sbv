@@ -154,7 +154,7 @@ svPlus :: SVal -> SVal -> SVal
 svPlus x y
   | isConcreteZero x = y
   | isConcreteZero y = x
-  | True             = liftSym2 (mkSymOp Plus) [rationalCheck] (+) (+) (+) (+) (+) x y
+  | True             = liftSym2 (mkSymOp Plus) [rationalCheck] (+) (+) (+) (+) (+) (+) x y
 
 -- | Multiplication.
 svTimes :: SVal -> SVal -> SVal
@@ -163,13 +163,13 @@ svTimes x y
   | isConcreteZero y = y
   | isConcreteOne x  = y
   | isConcreteOne y  = x
-  | True             = liftSym2 (mkSymOp Times) [rationalCheck] (*) (*) (*) (*) (*) x y
+  | True             = liftSym2 (mkSymOp Times) [rationalCheck] (*) (*) (*) (*) (*) (*) x y
 
 -- | Subtraction.
 svMinus :: SVal -> SVal -> SVal
 svMinus x y
   | isConcreteZero y = x
-  | True             = liftSym2 (mkSymOp Minus) [rationalCheck] (-) (-) (-) (-) (-) x y
+  | True             = liftSym2 (mkSymOp Minus) [rationalCheck] (-) (-) (-) (-) (-) (-) x y
 
 -- | Unary minus. We handle arbitrary-FP's specially here, just for the negated literals.
 svUNeg :: SVal -> SVal
@@ -181,7 +181,7 @@ svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs abs
 
 -- | Division.
 svDivide :: SVal -> SVal -> SVal
-svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/)
+svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
    where idiv x 0 = x
          idiv x y = x `div` y
 
@@ -253,7 +253,7 @@ svQuot x y
   | isConcreteZero y = svInteger (kindOf x) 0
   | isConcreteOne  y = x
   | True             = liftSym2 (mkSymOp Quot) [nonzeroCheck]
-                                (noReal "quot") quot' (noFloat "quot") (noDouble "quot") (noFP "quot") x y
+                                (noReal "quot") quot' (noFloat "quot") (noDouble "quot") (noFP "quot") (noRat "quot") x y
   where
     quot' a b | kindOf x == KUnbounded = div a (abs b) * signum b
               | otherwise              = quot a b
@@ -270,7 +270,7 @@ svRem x y
   | isConcreteZero y = x
   | isConcreteOne  y = svInteger (kindOf x) 0
   | True             = liftSym2 (mkSymOp Rem) [nonzeroCheck]
-                                (noReal "rem") rem' (noFloat "rem") (noDouble "rem") (noFP "rem") x y
+                                (noReal "rem") rem' (noFloat "rem") (noDouble "rem") (noFP "rem") (noRat "rem") x y
   where
     rem' a b | kindOf x == KUnbounded = mod a (abs b)
              | otherwise              = rem a b
@@ -380,7 +380,7 @@ svAnd x y
   | isConcreteOnes x = y
   | isConcreteZero y = y
   | isConcreteOnes y = x
-  | True             = liftSym2 (mkSymOpSC opt And) [] (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") (noFP ".&.") x y
+  | True             = liftSym2 (mkSymOpSC opt And) [] (noReal ".&.") (.&.) (noFloat ".&.") (noDouble ".&.") (noFP ".&.") (noRat ".&") x y
   where opt a b
           | a == falseSV || b == falseSV = Just falseSV
           | a == trueSV                  = Just b
@@ -395,7 +395,7 @@ svOr x y
   | isConcreteZero y = x
   | isConcreteOnes y = y
   | True             = liftSym2 (mkSymOpSC opt Or) []
-                       (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") (noFP ".|.") x y
+                       (noReal ".|.") (.|.) (noFloat ".|.") (noDouble ".|.") (noFP ".|.") (noRat ".|.") x y
   where opt a b
           | a == trueSV || b == trueSV = Just trueSV
           | a == falseSV               = Just b
@@ -410,7 +410,7 @@ svXOr x y
   | isConcreteZero y = x
   | isConcreteOnes y = svNot x
   | True             = liftSym2 (mkSymOpSC opt XOr) []
-                       (noReal "xor") xor (noFloat "xor") (noDouble "xor") (noFP "xor") x y
+                       (noReal "xor") xor (noFloat "xor") (noDouble "xor") (noFP "xor") (noRat "xor") x y
   where opt a b
           | a == b && swKind a == KBool = Just falseSV
           | a == falseSV                = Just b
@@ -1324,15 +1324,16 @@ liftSV2 opS k a b = cache c
                   opS st k sw1 sw2
 
 liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
-         -> [CV      -> CV      -> Bool]
-         -> (AlgReal -> AlgReal -> AlgReal)
-         -> (Integer -> Integer -> Integer)
-         -> (Float   -> Float   -> Float)
-         -> (Double  -> Double  -> Double)
-         -> (FP      -> FP      -> FP)
-         -> SVal     -> SVal    -> SVal
-liftSym2 _   okCV opCR opCI opCF opCD opFP (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP noCharLift2 noStringLift2 noUnint2 a b
-liftSym2 opS _    _    _    _    _    _    a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
+         -> [CV       -> CV      -> Bool]
+         -> (AlgReal  -> AlgReal -> AlgReal)
+         -> (Integer  -> Integer -> Integer)
+         -> (Float    -> Float   -> Float)
+         -> (Double   -> Double  -> Double)
+         -> (FP       -> FP      -> FP)
+         -> (Rational -> Rational-> Rational)
+         -> SVal      -> SVal    -> SVal
+liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA noCharLift2 noStringLift2 noUnint2 a b
+liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
 liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
           -> (CV                  -> CV                  -> Bool)
@@ -1455,6 +1456,9 @@ noDouble o a b = error $ "SBV.Double." ++ o ++ ": Unexpected arguments: " ++ sho
 
 noFP :: String -> FP -> FP -> FP
 noFP o a b = error $ "SBV.FPR." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
+
+noRat:: String -> Rational -> Rational -> Rational
+noRat o a b = error $ "SBV.Rational." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
 noRealUnary :: String -> AlgReal -> AlgReal
 noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ show a
