@@ -103,10 +103,15 @@ bfToString b withPrefix (FP _ sb a)
           | withPrefix = BF.addPrefix <> opts
           | True       = opts
 
+        -- In base 10, exponent starts with 'e'. Otherwise (2, 8, 16) it starts with 'p'
+        expChar = if b == 10 then 'e' else 'p'
+
         trimZeros s
-          | '.' `elem` s = reverse $ case dropWhile (== '0') $ reverse s of
-                                       res@('.':_) -> '0' : res
-                                       res         -> res
+          | '.' `elem` s = case span (/= expChar) s of
+                            (pre, post) -> let pre' = reverse $ case dropWhile (== '0') $ reverse pre of
+                                                                  res@('.':_) -> '0' : res
+                                                                  res         -> res
+                                           in pre' ++ post
           | True         = s
 
 -- | Default options for BF options.
