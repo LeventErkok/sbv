@@ -1221,8 +1221,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing -> pure ()
                              Just m  -> io $ putStrLn m
 
-         fastAllSat qinps vars cfg = go (1::Int)
-           where go :: Int -> AllSatResult -> m AllSatResult
+         fastAllSat :: S.Seq (Quantifier, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
+         fastAllSat qinps vars cfg = go (1::Int) 
+           where -- allTerms :: [SV]
+                 -- allTerms = map (getSV . snd) (F.toList vars)
+                 go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt !sofar
                   | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                   = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
@@ -1260,11 +1263,12 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                         then Just <$> mapM grab qinps
                                                         else return Nothing
 
-                                      let model = SMTModel { modelObjectives = []
-                                                           , modelBindings   = F.toList <$> bindings
-                                                           , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
-                                                           , modelUIFuns     = []
-                                                           }
+                                      let lassocs = F.toList assocs
+                                          model   = SMTModel { modelObjectives = []
+                                                             , modelBindings   = F.toList <$> bindings
+                                                             , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
+                                                             , modelUIFuns     = []
+                                                             }
                                           m = Satisfiable cfg model
 
                                           -- For each interpreted variable, figure out the model equivalence
@@ -1276,11 +1280,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                    mkNotEq k a b
                                                     | isDouble k || isFloat k || isFP k
-                                                    = svNot (a `fpNotEq` b)
+                                                    = svNot (a `fpEq` b)
                                                     | True
                                                     = a `svNotEqual` b
 
-                                                   fpNotEq a b = SVal KBool $ Right $ cache r
+                                                   fpEq a b = SVal KBool $ Right $ cache r
                                                        where r st = do sva <- svToSV st a
                                                                        svb <- svToSV st b
                                                                        newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
@@ -1295,18 +1299,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                       let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
 
-                                          -- This is clunky, but let's not generate a rejector unless we really need it
-                                          needMoreIterations
-                                                | Just maxModels <- allSatMaxModelCount cfg, (cnt+1) > maxModels = False
-                                                | True                                                           = True
-
-                                      -- Send function disequalities, if any:
-                                      if not needMoreIterations
-                                         then go (cnt+1) resultsSoFar
-                                         else do case disallow of
-                                                    Nothing -> pure resultsSoFar
-                                                    Just d  -> do constrain d
-                                                                  go (cnt+1) resultsSoFar
+                                      case disallow of
+                                        Nothing -> pure resultsSoFar
+                                        Just d  -> do constrain d
+                                                      go (cnt+1) resultsSoFar
 
 
          loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
@@ -1386,11 +1382,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                            interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- interpretedRegUiSVs <> F.toList interpreteds]
                                               where mkNotEq k a b
                                                      | isDouble k || isFloat k || isFP k
-                                                     = svNot (a `fpNotEq` b)
+                                                     = svNot (a `fpEq` b)
                                                      | True
                                                      = a `svNotEqual` b
 
-                                                    fpNotEq a b = SVal KBool $ Right $ cache r
+                                                    fpEq a b = SVal KBool $ Right $ cache r
                                                         where r st = do sva <- svToSV st a
                                                                         svb <- svToSV st b
                                                                         newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
