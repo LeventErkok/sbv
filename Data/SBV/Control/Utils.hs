@@ -1124,7 +1124,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
                      let allUiFuns = [u | satTrackUFs cfg                                         -- config says consider UIFs
                                         , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (isNonModelVar cfg nm)                               -- make sure they aren't explicitly ignored
+                                        , not (isNonModelVar cfg nm)                              -- make sure they aren't explicitly ignored
                                      ]
 
                          allUiRegs = [u | u@(nm, SBVType as) <- allUninterpreteds, length as == 1  -- non-function ones
@@ -1178,40 +1178,150 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          -- If we have any universals, then the solutions are unique upto prefix existentials.
                          w = ALL `elem` F.toList (quantifier <$> qinps)
 
-                     res <- loop grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg AllSatResult { allSatMaxModelCountReached  = False
-                                                                                                                    , allSatHasPrefixExistentials = w
-                                                                                                                    , allSatSolverReturnedUnknown = False
-                                                                                                                    , allSatSolverReturnedDSat    = False
-                                                                                                                    , allSatResults               = []
-                                                                                                                    }
+
+                     -- We can go fast using the disjoint model trick if things are simple enough
+                     --     - No quantifiers
+                     --     - Nothing uninterpreted
+                     --     - No observables
+                     --     - No uninterpreted sorts
+                     isSimple <- do noObservables <- if grabObservables then do State{rObservables} <- queryState
+                                                                                rObs <- liftIO $ readIORef rObservables
+                                                                                pure $ null rObs
+                                                                        else pure True
+
+                                    let noUninterpreteds    = null allUninterpreteds
+                                        allExistential      = all (\(e, _) -> e == EX) qinps
+                                        allInterpretedSorts = null usorts
+
+                                    pure $ noObservables && noUninterpreteds && allExistential && allInterpretedSorts
+
+                     let start = AllSatResult { allSatMaxModelCountReached  = False
+                                              , allSatHasPrefixExistentials = w
+                                              , allSatSolverReturnedUnknown = False
+                                              , allSatSolverReturnedDSat    = False
+                                              , allSatResults               = []
+                                              }
+
+                     res <- if isSimple
+                               then fastAllSat                                                        qinps vars cfg start
+                               else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg start
                      -- results come out in reverse order, so reverse them:
                      pure $ res { allSatResults = reverse (allSatResults res) }
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
 
+         finalize cnt cfg sofar extra
+                = when (allSatPrintAlong cfg && not (null (allSatResults sofar))) $ do
+                           let msg 0 = "No solutions found."
+                               msg 1 = "This is the only solution."
+                               msg n = "Found " ++ show n ++ " different solutions."
+                           io . putStrLn $ msg (cnt - 1)
+                           case extra of
+                             Nothing -> pure ()
+                             Just m  -> io $ putStrLn m
+
+         fastAllSat qinps vars cfg = go (1::Int)
+           where go :: Int -> AllSatResult -> m AllSatResult
+                 go !cnt !sofar
+                  | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
+                  = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+                       when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
+                       return $! sofar { allSatMaxModelCountReached = True }
+                  | True
+                  = do queryDebug ["Fast allSat, Looking for solution " ++ show cnt]
+
+                       cs <- checkSat
+                       let endMsg = finalize cnt cfg sofar
+
+                       case cs of
+                         Unsat -> do endMsg Nothing
+                                     return sofar
+
+                         Unk    -> do let m = "Solver returned unknown, terminating query."
+                                      queryDebug ["*** " ++ m]
+                                      endMsg $ Just $ "[" ++ m ++ "]"
+                                      return sofar{ allSatSolverReturnedUnknown = True }
+
+                         DSat _ -> do let m = "Solver returned delta-sat, terminating query."
+                                      queryDebug ["*** " ++ m]
+                                      endMsg $ Just $ "[" ++ m ++ "]"
+                                      return sofar{ allSatSolverReturnedDSat = True }
+
+                         Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
+                                                                                      return (sv, (n, (sval, cv)))) vars
+
+                                      bindings <- let grab i@(ALL, _)          = return (i, Nothing)
+                                                      grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
+                                                                                   Just (_, (_, (_, cv))) -> return (i, Just cv)
+                                                                                   Nothing                -> do !cv <- getValueCV Nothing sv
+                                                                                                                return (i, Just cv)
+                                                  in if validationRequested cfg
+                                                        then Just <$> mapM grab qinps
+                                                        else return Nothing
+
+                                      let model = SMTModel { modelObjectives = []
+                                                           , modelBindings   = F.toList <$> bindings
+                                                           , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- F.toList assocs]
+                                                           , modelUIFuns     = []
+                                                           }
+                                          m = Satisfiable cfg model
+
+                                          -- For each interpreted variable, figure out the model equivalence
+                                          -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
+                                          -- and equality don't get along!
+                                          interpretedEqs :: [SVal]
+                                          interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- F.toList interpreteds]
+                                             where interpreteds = fmap (snd . snd) assocs
+
+                                                   mkNotEq k a b
+                                                    | isDouble k || isFloat k || isFP k
+                                                    = svNot (a `fpNotEq` b)
+                                                    | True
+                                                    = a `svNotEqual` b
+
+                                                   fpNotEq a b = SVal KBool $ Right $ cache r
+                                                       where r st = do sva <- svToSV st a
+                                                                       svb <- svToSV st b
+                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
+
+                                          disallow = case interpretedEqs of
+                                                       [] -> Nothing
+                                                       _  -> Just $ SBV $ foldr1 svOr interpretedEqs
+
+                                      when (allSatPrintAlong cfg) $ do
+                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
+                                        io $ putStrLn $ showModel cfg model
+
+                                      let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
+
+                                          -- This is clunky, but let's not generate a rejector unless we really need it
+                                          needMoreIterations
+                                                | Just maxModels <- allSatMaxModelCount cfg, (cnt+1) > maxModels = False
+                                                | True                                                           = True
+
+                                      -- Send function disequalities, if any:
+                                      if not needMoreIterations
+                                         then go (cnt+1) resultsSoFar
+                                         else do case disallow of
+                                                    Nothing -> pure resultsSoFar
+                                                    Just d  -> do constrain d
+                                                                  go (cnt+1) resultsSoFar
+
+
          loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt !sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
                    = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
-
                         when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
-
                         return $! sofar { allSatMaxModelCountReached = True }
                    | True
                    = do queryDebug ["Looking for solution " ++ show cnt]
 
-                        let endMsg extra = when (allSatPrintAlong cfg && not (null (allSatResults sofar))) $ do
-                                              let msg 0 = "No solutions found."
-                                                  msg 1 = "This is the only solution."
-                                                  msg n = "Found " ++ show n ++ " different solutions."
-                                              io . putStrLn $ msg (cnt - 1)
-                                              case extra of
-                                                Nothing -> pure ()
-                                                Just m  -> io $ putStrLn m
-
                         cs <- checkSat
+
+                        let endMsg = finalize cnt cfg sofar
 
                         case cs of
                           Unsat  -> do endMsg Nothing
