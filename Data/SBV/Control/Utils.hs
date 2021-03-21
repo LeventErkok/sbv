@@ -1184,6 +1184,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      --     - Nothing uninterpreted
                      --     - No observables
                      --     - No uninterpreted sorts
+                     --     - Must have at least one variable. (It goes through splitting the space through variables. Corner case: Must have a variable!)
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      isSimple <- do noObservables <- if grabObservables then do State{rObservables} <- queryState
                                                                                 rObs <- liftIO $ readIORef rObservables
@@ -1193,8 +1194,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                     let noUninterpreteds    = null allUninterpreteds
                                         allExistential      = all (\(e, _) -> e == EX) qinps
                                         allInterpretedSorts = null usorts
+                                        hasAVariable        = not (null vars)
 
-                                    pure $ noObservables && noUninterpreteds && allExistential && allInterpretedSorts
+                                    pure $ noObservables && noUninterpreteds && allExistential && allInterpretedSorts && hasAVariable
 
                      let start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
