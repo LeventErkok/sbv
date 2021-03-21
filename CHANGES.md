@@ -21,7 +21,7 @@
     the same rules as Haskell's Rational type.
 
   * SBV now implements a faster allSat algorithm, which applies in most common
-    use cases. (Essentially, when there are no uninterpreted sorts present.)
+    use cases. (Essentially, when there are no uninterpreted values or sorts present.)
     The new algorithm has been measured to be at least an order of magnitude
     faster or more in common cases as it splits the search space into disjoint
     models, reducing the burden of accummulated lemmas over multiple calls. (See
