@@ -1182,21 +1182,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- We can go fast using the disjoint model trick if things are simple enough
                      --     - No quantifiers
                      --     - Nothing uninterpreted
-                     --     - No observables
                      --     - No uninterpreted sorts
                      --     - Must have at least one variable. (It goes through splitting the space through variables. Corner case: Must have a variable!)
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
-                     isSimple <- do noObservables <- if grabObservables then do State{rObservables} <- queryState
-                                                                                rObs <- liftIO $ readIORef rObservables
-                                                                                pure $ null rObs
-                                                                        else pure True
-
-                                    let noUninterpreteds    = null allUninterpreteds
+                     isSimple <- do let noUninterpreteds    = null allUninterpreteds
                                         allExistential      = all (\(e, _) -> e == EX) qinps
                                         allInterpretedSorts = null usorts
                                         hasAVariable        = not (null vars)
 
-                                    pure $ noObservables && noUninterpreteds && allExistential && allInterpretedSorts && hasAVariable
+                                    pure $ noUninterpreteds && allExistential && allInterpretedSorts && hasAVariable
 
                      let start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
@@ -1206,7 +1200,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                               }
 
                      if isSimple
-                        then fastAllSat                                                        qinps vars cfg start
+                        then fastAllSat grabObservables                                        qinps vars cfg start
                         else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg start
 
    where isFree (KUserSort _ Nothing) = True
@@ -1222,12 +1216,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing -> pure ()
                              Just m  -> io $ putStrLn m
 
-         fastAllSat :: S.Seq (Quantifier, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
-         fastAllSat qinps vars cfg start = do result <- io $ newIORef (0, start, False, Nothing)
-                                              go result vars
-                                              (found, sofar, _, extra) <- io $ readIORef result
-                                              finalize (found+1) cfg sofar extra
-                                              pure sofar
+         fastAllSat :: Bool -> S.Seq (Quantifier, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
+         fastAllSat grabObservables qinps vars cfg start = do
+                result <- io $ newIORef (0, start, False, Nothing)
+                go result vars
+                (found, sofar, _, extra) <- io $ readIORef result
+                finalize (found+1) cfg sofar extra
+                pure sofar
 
            where haveEnough have = case allSatMaxModelCount cfg of
                                      Just maxModels -> have >= maxModels
@@ -1285,10 +1280,17 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                   then Just <$> mapM grab qinps
                                                                   else return Nothing
 
+                                                   -- Add on observables if we're asked to do so:
+                                                   obsvs <- if grabObservables
+                                                               then getObservables
+                                                               else do queryDebug ["*** In a quantified context, observables will not be printed."]
+                                                                       return mempty
+
                                                    let lassocs = F.toList assocs
                                                        model   = SMTModel { modelObjectives = []
                                                                           , modelBindings   = F.toList <$> bindings
-                                                                          , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
+                                                                          , modelAssocs     =    (first T.unpack <$> sortOn fst obsvs)
+                                                                                              <> [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
                                                                           , modelUIFuns     = []
                                                                           }
                                                        currentResult = Satisfiable cfg model
