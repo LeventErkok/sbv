@@ -47,7 +47,7 @@ classify = uninterpret "classify"
 --
 -- >>> allSat genLs
 -- Solution #1:
---   l  = L!val!0 :: L
+--   l  = L!val!2 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
@@ -67,7 +67,7 @@ classify = uninterpret "classify"
 --   classify L!val!1 = 1
 --   classify _       = 0
 -- Solution #3:
---   l  = L!val!2 :: L
+--   l  = L!val!0 :: L
 --   l0 = L!val!0 :: L
 --   l1 = L!val!1 :: L
 --   l2 = L!val!2 :: L
