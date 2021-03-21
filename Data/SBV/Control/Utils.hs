@@ -1180,17 +1180,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
 
                      -- We can go fast using the disjoint model trick if things are simple enough
-                     --     - No quantifiers
                      --     - Nothing uninterpreted
                      --     - No uninterpreted sorts
                      --     - Must have at least one variable. (It goes through splitting the space through variables. Corner case: Must have a variable!)
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      isSimple <- do let noUninterpreteds    = null allUninterpreteds
-                                        allExistential      = all (\(e, _) -> e == EX) qinps
                                         allInterpretedSorts = null usorts
                                         hasAVariable        = not (null vars)
 
-                                    pure $ noUninterpreteds && allExistential && allInterpretedSorts && hasAVariable
+                                    pure $ noUninterpreteds && allInterpretedSorts && hasAVariable
 
                      let start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
@@ -1342,6 +1340,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                         when sc $ do let (pre, rest@(cur S.:<| _)) = S.splitAt i terms
                                                                      scope cur pre $ walk rest
 
+         -- All sat loop. This is slower, as it implements the reject-the-previous model and loop around logic. But
+         -- it can handle uninterpreted sorts; so we keep it here as a fall-back.
          loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt !sofar
