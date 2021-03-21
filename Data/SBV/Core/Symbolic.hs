@@ -612,7 +612,7 @@ type Name = T.Text
 
 -- | 'NamedSymVar' pairs symbolic values and user given/automatically generated names
 data NamedSymVar = NamedSymVar !SV !Name
-                 deriving (Show,Generic)
+                 deriving (Show, Generic)
 
 -- | For comparison purposes, we simply use the SV and ignore the name
 instance Eq NamedSymVar where
