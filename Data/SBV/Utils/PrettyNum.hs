@@ -536,7 +536,7 @@ showFloatAtBase base = showString . fmt
                    | v <  36 = [chr (ord 'a' + v - 10)]
                    | True    = '<' : show v ++ ">"
 
--- be careful with negative number printing in SMT-Lib..
+-- | When we show a negative number in SMTLib, we must properly parenthesize.
 showNegativeNumber :: (Show a, Num a, Ord a) => a -> String
 showNegativeNumber i
   | i < 0 = "(- " ++ show (-i) ++ ")"
