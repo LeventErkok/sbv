@@ -200,7 +200,7 @@ constructUKind a
         -- below.
         badPrefixes = [ "SBool",   "SWord", "SInt", "SInteger", "SReal",  "SFloat", "SDouble"
                       , "SString", "SChar", "[",    "SSet",     "STuple", "SMaybe", "SEither"
-                      , "SRatio"
+                      , "SRational"
                       ]
 
         dataType    = G.dataTypeOf a
