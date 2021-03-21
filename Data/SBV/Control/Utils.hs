@@ -1308,8 +1308,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                mkEq k a b
                                                                 | isDouble k || isFloat k || isFP k
                                                                 = if shouldReject
-                                                                     then        a `fpEq` b
-                                                                     else svNot (a `fpEq` b)
+                                                                     then svNot  (a `fpEq` b)
+                                                                     else         a `fpEq` b
                                                                 | True
                                                                 = if shouldReject
                                                                      then a `svNotEqual` b
