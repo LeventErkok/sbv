@@ -52,7 +52,7 @@
 --
 --   * 'SDouble': IEEE-754 double-precision floating point values.
 --
---   * 'SRatio': Rationals. (Ratio of two symbolic integers.)
+--   * 'SRational': Rationals. (Ratio of two symbolic integers.)
 --
 --   * 'SFloatingPoint': Generalized IEEE-754 floating point values, with user specified exponent and
 --   mantissa widths.
@@ -167,6 +167,8 @@ module Data.SBV (
   , SFPSingle, FPSingle
   , SFPDouble, FPDouble
   , SFPQuad, FPQuad
+  -- ** Rationals
+  , SRational
   -- ** Algebraic reals
   -- $algReals
   , SReal, AlgReal(..), sRealToSInteger, algRealToRational, RealPoint(..), realPoint, RationalCV(..)
@@ -194,6 +196,7 @@ module Data.SBV (
   , sInt8,  sInt8_,  sInt16,  sInt16_,  sInt32,  sInt32_,  sInt64,  sInt64_, sInt, sInt_
   , sInteger, sInteger_
   , sReal, sReal_
+  , sRational, sRational_
   , sFloat, sFloat_
   , sDouble, sDouble_
   , sFloatingPoint, sFloatingPoint_
@@ -217,6 +220,7 @@ module Data.SBV (
   , sInt8s,  sInt16s,  sInt32s,  sInt64s, sInts
   , sIntegers
   , sReals
+  , sRationals
   , sFloats
   , sDoubles
   , sFloatingPoints
@@ -404,6 +408,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sInt64, sInt64_, sInt64s, sInteger, sInteger_, sIntegers,
                                         sList, sList_, sLists, sTuple, sTuple_, sTuples,
                                         sReal, sReal_, sReals, sString, sString_, sStrings,
+                                        sRational, sRational_, sRationals,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
