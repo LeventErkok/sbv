@@ -68,17 +68,17 @@ declareSymbolic isEnum typeName = do
                        else ensureEmptyData   typeName
 
     deriveEqOrds <- if isEnum
-                       then [d| deriving instance Eq       $(typeCon)
-                                deriving instance Ord      $(typeCon)
+                       then [d| deriving instance Eq       $typeCon
+                                deriving instance Ord      $typeCon
                             |]
                        else pure []
 
-    derives <- [d| deriving instance Show     $(typeCon)
-                   deriving instance Read     $(typeCon)
-                   deriving instance Data     $(typeCon)
-                   deriving instance SymVal   $(typeCon)
-                   deriving instance HasKind  $(typeCon)
-                   deriving instance SatModel $(typeCon)
+    derives <- [d| deriving instance Show     $typeCon
+                   deriving instance Read     $typeCon
+                   deriving instance Data     $typeCon
+                   deriving instance SymVal   $typeCon
+                   deriving instance HasKind  $typeCon
+                   deriving instance SatModel $typeCon
                |]
 
 
