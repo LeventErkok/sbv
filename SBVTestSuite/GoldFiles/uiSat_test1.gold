@@ -89,16 +89,16 @@ Looking for solution 5
 
 RESULT: Solution #1:
   q1 :: Bool -> Bool
-  q1 _ = False
+  q1 True = True 
+  q1 _    = False
 Solution #2:
-  q1 :: Bool -> Bool
-  q1 _ = True
-Solution #3:
   q1 :: Bool -> Bool
   q1 True = False
   q1 _    = True 
+Solution #3:
+  q1 :: Bool -> Bool
+  q1 _ = True
 Solution #4:
   q1 :: Bool -> Bool
-  q1 True = True 
-  q1 _    = False
+  q1 _ = False
 Found 4 different solutions.
