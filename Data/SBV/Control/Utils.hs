@@ -1183,12 +1183,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      --     - Nothing uninterpreted
                      --     - No uninterpreted sorts
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
-                     isSimple <- do let noUninterpreteds    = null allUninterpreteds
-                                        allInterpretedSorts = null usorts
+                     let isSimple = null allUninterpreteds && null usorts
 
-                                    pure $ noUninterpreteds && allInterpretedSorts
-
-                     let start = AllSatResult { allSatMaxModelCountReached  = False
+                         start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
                                               , allSatSolverReturnedUnknown = False
                                               , allSatSolverReturnedDSat    = False
