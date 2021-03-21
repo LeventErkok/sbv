@@ -1182,13 +1182,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- We can go fast using the disjoint model trick if things are simple enough
                      --     - Nothing uninterpreted
                      --     - No uninterpreted sorts
-                     --     - Must have at least one variable. (It goes through splitting the space through variables. Corner case: Must have a variable!)
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      isSimple <- do let noUninterpreteds    = null allUninterpreteds
                                         allInterpretedSorts = null usorts
-                                        hasAVariable        = not (null vars)
 
-                                    pure $ noUninterpreteds && allInterpretedSorts && hasAVariable
+                                    pure $ noUninterpreteds && allInterpretedSorts
 
                      let start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
@@ -1227,13 +1225,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                      _              -> False
 
                  go :: IORef (Int, AllSatResult, Bool, Maybe String) -> S.Seq (SVal, NamedSymVar) -> m ()
-                 go finalResult = walk
+                 go finalResult = walk True
                    where shouldContinue = do (have, _, exitLoop, _) <- io $ readIORef finalResult
                                              pure $ not (exitLoop || haveEnough have)
 
-                         walk :: S.Seq (SVal, NamedSymVar) -> m ()
-                         walk terms
-                           | S.null terms
+                         walk :: Bool -> S.Seq (SVal, NamedSymVar) -> m ()
+                         walk firstRun terms
+                           | not firstRun && S.null terms
                            = pure ()
                            | True
                            = do mbCont <- do (have, sofar, exitLoop, _) <- io $ readIORef finalResult
@@ -1338,7 +1336,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                    forM_ [0 .. length terms - 1] $ \i -> do
                                                         sc <- shouldContinue
                                                         when sc $ do let (pre, rest@(cur S.:<| _)) = S.splitAt i terms
-                                                                     scope cur pre $ walk rest
+                                                                     scope cur pre $ walk False rest
 
          -- All sat loop. This is slower, as it implements the reject-the-previous model and loop around logic. But
          -- it can handle uninterpreted sorts; so we keep it here as a fall-back.
