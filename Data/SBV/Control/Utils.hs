@@ -56,14 +56,14 @@ import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
 import qualified Data.Text          as T
 
-import Control.Monad            (join, unless, zipWithM, when, replicateM)
+import Control.Monad            (join, unless, zipWithM, when, replicateM, forM_)
 import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
 import Data.Maybe (isNothing, isJust)
 
-import Data.IORef (readIORef, writeIORef, IORef)
+import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 
 import Data.Time (getZonedTime)
 import Data.Ratio
@@ -92,7 +92,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
 import Data.SBV.Core.SizedFloats (fpZero, fpFromInteger, fpFromFloat, fpFromDouble)
 import Data.SBV.Core.Kind        (smtType, hasUninterpretedSorts)
-import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr)
+import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
@@ -1184,6 +1184,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      --     - Nothing uninterpreted
                      --     - No observables
                      --     - No uninterpreted sorts
+                     -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      isSimple <- do noObservables <- if grabObservables then do State{rObservables} <- queryState
                                                                                 rObs <- liftIO $ readIORef rObservables
                                                                                 pure $ null rObs
@@ -1202,11 +1203,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                               , allSatResults               = []
                                               }
 
-                     res <- if isSimple
-                               then fastAllSat                                                        qinps vars cfg start
-                               else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg start
-                     -- results come out in reverse order, so reverse them:
-                     pure $ res { allSatResults = reverse (allSatResults res) }
+                     if isSimple
+                        then fastAllSat                                                        qinps vars cfg start
+                        else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg start
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
@@ -1222,88 +1221,122 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Just m  -> io $ putStrLn m
 
          fastAllSat :: S.Seq (Quantifier, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
-         fastAllSat qinps vars cfg = go (1::Int) 
-           where -- allTerms :: [SV]
-                 -- allTerms = map (getSV . snd) (F.toList vars)
-                 go :: Int -> AllSatResult -> m AllSatResult
-                 go !cnt !sofar
-                  | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
-                  = do queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
-                       when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
-                       return $! sofar { allSatMaxModelCountReached = True }
-                  | True
-                  = do queryDebug ["Fast allSat, Looking for solution " ++ show cnt]
+         fastAllSat qinps vars cfg start = do result <- io $ newIORef (0, start, False, Nothing)
+                                              go result vars
+                                              (found, sofar, _, extra) <- io $ readIORef result
+                                              finalize (found+1) cfg sofar extra
+                                              pure sofar
 
-                       cs <- checkSat
-                       let endMsg = finalize cnt cfg sofar
+           where haveEnough have = case allSatMaxModelCount cfg of
+                                     Just maxModels -> have >= maxModels
+                                     _              -> False
 
-                       case cs of
-                         Unsat -> do endMsg Nothing
-                                     return sofar
+                 go :: IORef (Int, AllSatResult, Bool, Maybe String) -> S.Seq (SVal, NamedSymVar) -> m ()
+                 go finalResult = walk
+                   where shouldContinue = do (have, _, exitLoop, _) <- io $ readIORef finalResult
+                                             pure $ not (exitLoop || haveEnough have)
 
-                         Unk    -> do let m = "Solver returned unknown, terminating query."
-                                      queryDebug ["*** " ++ m]
-                                      endMsg $ Just $ "[" ++ m ++ "]"
-                                      return sofar{ allSatSolverReturnedUnknown = True }
+                         walk :: S.Seq (SVal, NamedSymVar) -> m ()
+                         walk terms
+                           | S.null terms
+                           = pure ()
+                           | True
+                           = do mbCont <- do (have, sofar, exitLoop, _) <- io $ readIORef finalResult
+                                             if exitLoop
+                                                then pure Nothing
+                                                else case allSatMaxModelCount cfg of
+                                                       Just maxModels
+                                                         | have >= maxModels -> do unless (allSatMaxModelCountReached sofar) $ do
+                                                                                      queryDebug ["*** Maximum model count request of " ++ show maxModels ++ " reached, stopping the search."]
+                                                                                      when (allSatPrintAlong cfg) $ io $ putStrLn "Search stopped since model count request was reached."
+                                                                                      io $ modifyIORef' finalResult $ \(h, s, _, m) -> (h, s{ allSatMaxModelCountReached = True }, True, m)
+                                                                                   pure Nothing
+                                                       _                     -> pure $ Just $ have+1
 
-                         DSat _ -> do let m = "Solver returned delta-sat, terminating query."
-                                      queryDebug ["*** " ++ m]
-                                      endMsg $ Just $ "[" ++ m ++ "]"
-                                      return sofar{ allSatSolverReturnedDSat = True }
+                                case mbCont of
+                                  Nothing  -> pure ()
+                                  Just cnt -> do
+                                    queryDebug ["Fast allSat, Looking for solution " ++ show cnt]
 
-                         Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
-                                                                                      return (sv, (n, (sval, cv)))) vars
+                                    cs <- checkSat
 
-                                      bindings <- let grab i@(ALL, _)          = return (i, Nothing)
-                                                      grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
-                                                                                   Just (_, (_, (_, cv))) -> return (i, Just cv)
-                                                                                   Nothing                -> do !cv <- getValueCV Nothing sv
-                                                                                                                return (i, Just cv)
-                                                  in if validationRequested cfg
-                                                        then Just <$> mapM grab qinps
-                                                        else return Nothing
+                                    case cs of
+                                      Unsat  -> pure ()
 
-                                      let lassocs = F.toList assocs
-                                          model   = SMTModel { modelObjectives = []
-                                                             , modelBindings   = F.toList <$> bindings
-                                                             , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
-                                                             , modelUIFuns     = []
-                                                             }
-                                          m = Satisfiable cfg model
+                                      Unk    -> do let m = "Solver returned unknown, terminating query."
+                                                   queryDebug ["*** " ++ m]
+                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedUnknown = True}, True, Just ("[" ++ m ++ "]"))
 
-                                          -- For each interpreted variable, figure out the model equivalence
-                                          -- NB. When the kind is floating, we *have* to be careful, since +/- zero, and NaN's
-                                          -- and equality don't get along!
-                                          interpretedEqs :: [SVal]
-                                          interpretedEqs = [mkNotEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) | (sv, cv) <- F.toList interpreteds]
-                                             where interpreteds = fmap (snd . snd) assocs
+                                      DSat _ -> do let m = "Solver returned delta-sat, terminating query."
+                                                   queryDebug ["*** " ++ m]
+                                                   io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedDSat = True}, True, Just ("[" ++ m ++ "]"))
 
-                                                   mkNotEq k a b
-                                                    | isDouble k || isFloat k || isFP k
-                                                    = svNot (a `fpEq` b)
-                                                    | True
-                                                    = a `svNotEqual` b
+                                      Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
+                                                                                                   return (sv, (n, (sval, cv)))) vars
 
-                                                   fpEq a b = SVal KBool $ Right $ cache r
-                                                       where r st = do sva <- svToSV st a
-                                                                       svb <- svToSV st b
-                                                                       newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
+                                                   bindings <- let grab i@(ALL, _)          = return (i, Nothing)
+                                                                   grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
+                                                                                                Just (_, (_, (_, cv))) -> return (i, Just cv)
+                                                                                                Nothing                -> do !cv <- getValueCV Nothing sv
+                                                                                                                             return (i, Just cv)
+                                                               in if validationRequested cfg
+                                                                  then Just <$> mapM grab qinps
+                                                                  else return Nothing
 
-                                          disallow = case interpretedEqs of
-                                                       [] -> Nothing
-                                                       _  -> Just $ SBV $ foldr1 svOr interpretedEqs
+                                                   let lassocs = F.toList assocs
+                                                       model   = SMTModel { modelObjectives = []
+                                                                          , modelBindings   = F.toList <$> bindings
+                                                                          , modelAssocs     = [(T.unpack n, cv) | (_, (n, (_, cv))) <- lassocs]
+                                                                          , modelUIFuns     = []
+                                                                          }
+                                                       currentResult = Satisfiable cfg model
 
-                                      when (allSatPrintAlong cfg) $ do
-                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
-                                        io $ putStrLn $ showModel cfg model
+                                                   io $ modifyIORef' finalResult $ \(h, s, e, m) -> let h' = h+1 in h' `seq` (h', s{allSatResults = currentResult : allSatResults s}, e, m)
 
-                                      let resultsSoFar = sofar { allSatResults = m : allSatResults sofar }
+                                                   when (allSatPrintAlong cfg) $ do
+                                                        io $ putStrLn $ "Solution #" ++ show cnt ++ ":"
+                                                        io $ putStrLn $ showModel cfg model
 
-                                      case disallow of
-                                        Nothing -> pure resultsSoFar
-                                        Just d  -> do constrain d
-                                                      go (cnt+1) resultsSoFar
+                                                   let findVal :: (SVal, NamedSymVar) -> (SVal, CV)
+                                                       findVal (_, NamedSymVar sv nm) = case F.toList (S.filter (\(sv', _) -> sv == sv') assocs) of
+                                                                                           [(_, (_, scv))] -> scv
+                                                                                           _               -> error $ "Data.SBV: Cannot uniquely determine " ++ show nm ++ " in " ++ show assocs
 
+                                                       cstr :: Bool -> (SVal, CV) -> m ()
+                                                       cstr shouldReject (sv, cv) = constrain $ SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv))
+                                                         where mkEq :: Kind -> SVal -> SVal -> SVal
+                                                               mkEq k a b
+                                                                | isDouble k || isFloat k || isFP k
+                                                                = if shouldReject
+                                                                     then        a `fpEq` b
+                                                                     else svNot (a `fpEq` b)
+                                                                | True
+                                                                = if shouldReject
+                                                                     then a `svNotEqual` b
+                                                                     else a `svEqual`    b
+
+                                                               fpEq a b = SVal KBool $ Right $ cache r
+                                                                   where r st = do sva <- svToSV st a
+                                                                                   svb <- svToSV st b
+                                                                                   newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sva, svb])
+
+                                                       reject, accept :: (SVal, NamedSymVar) -> m ()
+                                                       reject = cstr True  . findVal
+                                                       accept = cstr False . findVal
+
+                                                       scope :: (SVal, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> m () -> m ()
+                                                       scope cur pres c = do
+                                                                send True "(push 1)"
+                                                                reject cur
+                                                                sequence_ $ accept <$> pres
+                                                                r <- c
+                                                                send True "(pop 1)"
+                                                                pure r
+
+                                                   forM_ [0 .. length terms - 1] $ \i -> do
+                                                        sc <- shouldContinue
+                                                        when sc $ do let (pre, rest@(cur S.:<| _)) = S.splitAt i terms
+                                                                     scope cur pre $ walk rest
 
          loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
