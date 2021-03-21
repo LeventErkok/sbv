@@ -20,6 +20,7 @@ module TestSuite.Basics.AllSat(tests) where
 
 import Utils.SBVTestFramework
 
+import Control.Monad(void)
 import Data.List (sortOn)
 
 data Q
@@ -34,6 +35,7 @@ tests =
     , goldenVsStringShow "allSat4" $            allSat $ \x -> x .<  (0::SWord8)
     , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y .&& y .< (4::SWord8)
     , goldenVsStringShow "allSat6" $            allSat $ exists "x" >>= \x -> exists "y" >>= \y -> forall "z" >>= \z -> return (x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8))
+    , goldenCapturedIO   "allSat7" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t3)
     ]
 
 srt :: AllSatResult -> AllSatResult
@@ -49,3 +51,16 @@ t2 = allSat $ do x <- free "x"
                  y <- free "y"
                  z <- free "z"
                  return $ x .== (y :: SQ) .&& z .== (z :: SQ)
+
+t3 :: Goal
+t3 = do x <- sInteger "x"
+        y <- sInteger "y"
+        z <- sInteger "z"
+
+        let range = (1, 15)
+
+        constrain $ x `inRange` range
+        constrain $ y `inRange` range
+        constrain $ z `inRange` range
+
+        constrain $ distinct [x, y, z]
