@@ -3,7 +3,11 @@
 
 * Latest Hackage released version: 8.13, 2021-03-21
 
-### Version 8.13
+### Version 8.13.5, Not yet released
+
+  * Current development version
+
+### Version 8.13, 2021-03-21
 
   * Generalized floating point: Add support for brain-floats, with
     type `SFPBFloat`, which has 8-bits of exponent and 8-bits of
