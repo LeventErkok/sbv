@@ -1180,10 +1180,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
 
                      -- We can go fast using the disjoint model trick if things are simple enough
-                     --     - Nothing uninterpreted
+                     --     - No uninterpreted functions (uninterpreted values are OK)
                      --     - No uninterpreted sorts
                      -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
-                     let isSimple = null allUninterpreteds && null usorts
+                     let isSimple = null allUiFuns && null usorts
 
                          start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
@@ -1192,9 +1192,17 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                               , allSatResults               = []
                                               }
 
+                     uiVars <- do let mkVar :: (String, SBVType) -> IO (SVal, NamedSymVar)
+                                      mkVar (nm, SBVType [k]) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
+                                                                   let sval = SVal k $ Right $ cache $ \_ -> pure sv
+                                                                       nsv  = NamedSymVar sv (T.pack nm)
+                                                                   pure (sval, nsv)
+                                      mkVar nmt               = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected type: " ++ show nmt
+                                  io $ S.fromList <$> mapM mkVar allUiRegs
+
                      if isSimple
-                        then fastAllSat grabObservables                                        qinps vars cfg start
-                        else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps vars cfg start
+                        then fastAllSat grabObservables                                        qinps (uiVars S.>< vars) cfg start
+                        else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps              vars  cfg start
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
