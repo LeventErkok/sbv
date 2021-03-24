@@ -1107,8 +1107,7 @@ getUIs = do State{rUIMap, rIncState} <- queryState
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
             return $ nub $ sort $ Map.toList prior ++ Map.toList new
 
--- | Repeatedly issue check-sat, after refuting the previous model.
--- For the meaning of the booleans, see the comment on 'AllSatResult'
+-- | Return all satisfying models.
 getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m AllSatResult
 getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
@@ -1186,10 +1185,19 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          w = ALL `elem` F.toList (quantifier <$> qinps)
 
 
-                     -- We can go fast using the disjoint model trick if things are simple enough
+                     -- We can go fast using the disjoint model trick if things are simple enough:
                      --     - No uninterpreted functions (uninterpreted values are OK)
                      --     - No uninterpreted sorts
-                     -- The idea is originally due to z3 folks, see: <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
+                     --
+                     -- Why can't we support the above?
+                     --     - Uninterpreted functions: There is no (standard) way to define a function as a literal in SMTLib.
+                     --     Some solvers support lambda, but this isn't common/reliable yet.
+                     --     - Uninterpreted sort: There's no way to access the value the solver assigns to an uninterpreted sort.
+                     --
+                     -- So, if these two things are present, we go the "slow" route, by repeatedly rejecting the
+                     -- previous model and asking for a new one. If they don't exist (which is the common case anyhow)
+                     -- we use an idea due to z3 folks <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
+                     -- which splits the search space into disjoint models and can produce results much more quickly.
                      let isSimple = null allUiFuns && null usorts
 
                          start = AllSatResult { allSatMaxModelCountReached  = False
@@ -1199,17 +1207,16 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                               , allSatResults               = []
                                               }
 
-                     uiVars <- do let mkVar :: (String, SBVType) -> IO (SVal, NamedSymVar)
-                                      mkVar (nm, SBVType [k]) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
-                                                                   let sval = SVal k $ Right $ cache $ \_ -> pure sv
-                                                                       nsv  = NamedSymVar sv (T.pack nm)
-                                                                   pure (sval, nsv)
-                                      mkVar nmt               = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected type: " ++ show nmt
-                                  io $ S.fromList <$> mapM mkVar allUiRegs
-
                      if isSimple
-                        then fastAllSat grabObservables                                        qinps (uiVars S.>< vars) cfg start
-                        else loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps              vars  cfg start
+                        then do let mkVar :: (String, SBVType) -> IO (SVal, NamedSymVar)
+                                    mkVar (nm, SBVType [k]) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
+                                                                 let sval = SVal k $ Right $ cache $ \_ -> pure sv
+                                                                     nsv  = NamedSymVar sv (T.pack nm)
+                                                                 pure (sval, nsv)
+                                    mkVar nmt = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected: " ++ show nmt
+                                uiVars <- io $ S.fromList <$> mapM mkVar allUiRegs
+                                fastAllSat grabObservables                                        qinps (uiVars S.>< vars) cfg start
+                        else    loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps              vars  cfg start
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
