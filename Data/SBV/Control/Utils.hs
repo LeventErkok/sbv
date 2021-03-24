@@ -1113,6 +1113,13 @@ getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m All
 getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      cfg <- getConfig
+                     unless (supportsCustomQueries (capabilities (solver cfg))) $
+                        error $ unlines [ ""
+                                        , "*** Data.SBV: Backend solver " ++ show (name (solver cfg)) ++ " does not support custom queries."
+                                        , "***"
+                                        , "*** Custom query support is needed for allSat functionality."
+                                        , "*** Please use a solver that supports this feature."
+                                        ]
 
                      topState@State{rUsedKinds} <- queryState
 
