@@ -73,7 +73,7 @@ class SymVal a => BitLayout a where
                          _         -> error $ "Input has a non-hexadecimal digit: " ++ show c
               where pad p = replicate (4 - length p) False ++ p
 
-            isSkippable c = c `elem` "_" || isSpace c
+            isSkippable c = c `elem` "_-" || isSpace c
 
 -- | Unsigned words as values that can be laid out.
 instance (KnownNat n, BVIsNonZero n) => BitLayout (WordN n) where
