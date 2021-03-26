@@ -7,9 +7,6 @@
 
   * Improve the all-fast-sat algorithm to also support uninterpreted values.
 
-  * New module "Data.SBV.Tools.CrackNum" which enables easy display of
-    various values as they are laid out in memory. See the `encode` and
-    `decode` methods exposed.
 
 ### Version 8.13, 2021-03-21
 

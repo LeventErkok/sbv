@@ -95,7 +95,6 @@ Library
                   , Data.SBV.Tools.BoundedList
                   , Data.SBV.Tools.Induction
                   , Data.SBV.Tools.BoundedFix
-                  , Data.SBV.Tools.CrackNum
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.Overflow
