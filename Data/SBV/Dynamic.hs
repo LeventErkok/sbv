@@ -41,7 +41,7 @@ module Data.SBV.Dynamic
   -- *** Algebraic reals (only from rationals)
   , svReal, svNumerator, svDenominator
   -- *** Symbolic equality
-  , svEqual, svNotEqual
+  , svEqual, svNotEqual, svStrongEqual
   -- *** Constructing concrete lists
   , svEnumFromThenTo
   -- *** Symbolic ordering
