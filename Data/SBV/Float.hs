@@ -16,7 +16,7 @@ module Data.SBV.Float (
         FP(..)
 
         -- * Constructing values
-        , fpFromRawRep, fpNaN, fpInf, fpZero
+        , fpFromRawRep, fpFromBigFloat, fpNaN, fpInf, fpZero
 
         -- * Operations
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat

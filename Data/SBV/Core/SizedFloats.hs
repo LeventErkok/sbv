@@ -23,7 +23,7 @@ module Data.SBV.Core.SizedFloats (
           FloatingPoint(..), FP(..), FPHalf, FPBFloat, FPSingle, FPDouble, FPQuad
 
         -- * Constructing values
-        , fpFromRawRep, fpNaN, fpInf, fpZero
+        , fpFromRawRep, fpFromBigFloat, fpNaN, fpInf, fpZero
 
         -- * Operations
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
@@ -118,9 +118,9 @@ bfToString b withPrefix (FP _ sb a)
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
 mkBFOpts eb sb rm = BF.allowSubnormal <> BF.rnd rm <> BF.expBits (fromIntegral eb) <> BF.precBits (fromIntegral sb)
 
--- | normFP the float to make sure it's within the required range
-mkFP :: Int -> Int -> BigFloat -> FP
-mkFP eb sb r = FP eb sb $ fst $ BF.bfRoundFloat (mkBFOpts eb sb BF.NearEven) r
+-- | Construct a float, by appropriately rounding
+fpFromBigFloat :: Int -> Int -> BigFloat -> FP
+fpFromBigFloat eb sb r = FP eb sb $ fst $ BF.bfRoundFloat (mkBFOpts eb sb BF.NearEven) r
 
 -- | Convert from an sign/exponent/mantissa representation to a float. The values are the integers
 -- representing the bit-patterns of these values, i.e., the raw representation. We assume that these
@@ -134,19 +134,19 @@ fpFromRawRep sign (e, eb) (s, sb) = FP eb sb $ BF.bfFromBits (mkBFOpts eb sb BF.
 
 -- | Make NaN. Exponent is all 1s. Significand is non-zero. The sign is irrelevant.
 fpNaN :: Int -> Int -> FP
-fpNaN eb sb = mkFP eb sb BF.bfNaN
+fpNaN eb sb = fpFromBigFloat eb sb BF.bfNaN
 
 -- | Make Infinity. Exponent is all 1s. Significand is 0.
 fpInf :: Bool -> Int -> Int -> FP
-fpInf sign eb sb = mkFP eb sb $ if sign then BF.bfNegInf else BF.bfPosInf
+fpInf sign eb sb = fpFromBigFloat eb sb $ if sign then BF.bfNegInf else BF.bfPosInf
 
 -- | Make a signed zero.
 fpZero :: Bool -> Int -> Int -> FP
-fpZero sign eb sb = mkFP eb sb $ if sign then BF.bfNegZero else BF.bfPosZero
+fpZero sign eb sb = fpFromBigFloat eb sb $ if sign then BF.bfNegZero else BF.bfPosZero
 
 -- | Make from an integer value.
 fpFromInteger :: Int -> Int -> Integer -> FP
-fpFromInteger eb sb iv = mkFP eb sb $ BF.bfFromInteger iv
+fpFromInteger eb sb iv = fpFromBigFloat eb sb $ BF.bfFromInteger iv
 
 -- | Make a generalized floating-point value from a 'Rational'.
 fpFromRational :: Int -> Int -> Rational -> FP
@@ -330,11 +330,11 @@ instance ValidFloat eb sb => Floating (FloatingPoint eb sb) where
   acosh (FloatingPoint i) = FloatingPoint (acosh i)
   atanh (FloatingPoint i) = FloatingPoint (atanh i)
 
--- | Lift a unary operation, simple case of function with no status. Here, we call mkFP since the big-float isn't size aware.
+-- | Lift a unary operation, simple case of function with no status. Here, we call fpFromBigFloat since the big-float isn't size aware.
 lift1 :: (BigFloat -> BigFloat) -> FP -> FP
-lift1 f (FP eb sb a) = mkFP eb sb $ f a
+lift1 f (FP eb sb a) = fpFromBigFloat eb sb $ f a
 
--- Lift a binary operation. Here we don't call mkFP, because the result is correctly rounded.
+-- Lift a binary operation. Here we don't call fpFromBigFloat, because the result is correctly rounded.
 lift2 :: (BFOpts -> BigFloat -> BigFloat -> (BigFloat, Status)) -> FP -> FP -> FP
 lift2 f (FP eb sb a) (FP _ _ b) = FP eb sb $ fst $ f (mkBFOpts eb sb BF.NearEven) a b
 
