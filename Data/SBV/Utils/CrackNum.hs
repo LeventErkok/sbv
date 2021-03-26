@@ -106,10 +106,10 @@ int signed sz v = intercalate "\n" $ ruler ++ info
                , "            Type: " ++ iprec
                ]
             ++ [ "            Sign: " ++ if signBit then "Negative" else "Positive" | signed]
-            ++ [ "    Binary Value: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
-               , "     Octal Value: " ++ s ++ "0o" ++ showOct av ""
-               , "   Decimal Value: " ++ show v
-               , "       Hex Value: " ++ s ++ "0x" ++ showHex av ""
+            ++ [ "         Base  2: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
+               , "         Base  8: " ++ s ++ "0o" ++ showOct av ""
+               , "         Base 10: " ++ show v
+               , "         Base 16: " ++ s ++ "0x" ++ showHex av ""
                ]
 
 -- | What kind of Float is this?
@@ -261,10 +261,10 @@ float f = intercalate "\n" $ ruler ++ legend : info
                ++ [ "  Classification: " ++ show fpKind]
                ++ (case fpVals of
                      Left val                       -> [ "           Value: " ++ val]
-                     Right (bval, oval, dval, hval) -> [ "    Binary Value: " ++ bval
-                                                       , "     Octal Value: " ++ oval
-                                                       , "   Decimal Value: " ++ dval
-                                                       , "       Hex Value: " ++ hval
+                     Right (bval, oval, dval, hval) -> [ "         Base  2: " ++ bval
+                                                       , "         Base  8: " ++ oval
+                                                       , "         Base 10: " ++ dval
+                                                       , "         Base 16: " ++ hval
                                                        ])
                ++ [ "            Note: Representation for NaN's is not unique" | fpKind == NaN]
 

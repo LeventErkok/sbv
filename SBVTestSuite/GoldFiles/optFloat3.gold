@@ -9,10 +9,10 @@ Optimal model:
             Sign: Positive
         Exponent: 127 (Stored: 254, Bias: 127)
   Classification: FP_NORMAL
-    Binary Value: 0b1.11111111111111111111111p127
-     Octal Value: 0o3.77777774p42
-   Decimal Value: 3.4028235e38
-       Hex Value: 0xF.FFFFFp31
+         Base  2: 0b1.11111111111111111111111p127
+         Base  8: 0o3.77777774p42
+         Base 10: 3.4028235e38
+         Base 16: 0xF.FFFFFp31
   x              = 1.7014117e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
@@ -23,10 +23,10 @@ Optimal model:
             Sign: Positive
         Exponent: 126 (Stored: 253, Bias: 127)
   Classification: FP_NORMAL
-    Binary Value: 0b1.11111111111111111111111p126
-     Octal Value: 0o1.77777776p42
-   Decimal Value: 1.7014117e38
-       Hex Value: 0x7.FFFFF8p31
+         Base  2: 0b1.11111111111111111111111p126
+         Base  8: 0o1.77777776p42
+         Base 10: 1.7014117e38
+         Base 16: 0x7.FFFFF8p31
   y              = 1.7014117e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
@@ -37,17 +37,17 @@ Optimal model:
             Sign: Positive
         Exponent: 126 (Stored: 253, Bias: 127)
   Classification: FP_NORMAL
-    Binary Value: 0b1.11111111111111111111111p126
-     Octal Value: 0o1.77777776p42
-   Decimal Value: 1.7014117e38
-       Hex Value: 0x7.FFFFF8p31
+         Base  2: 0b1.11111111111111111111111p126
+         Base  8: 0o1.77777776p42
+         Base 10: 1.7014117e38
+         Base 16: 0x7.FFFFF8p31
   metric-max-x+y =   4286578687 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 1111 1111 0111 1111 1111 1111 1111 1111
       Hex layout: FF7F FFFF
             Type: Unsigned 32-bit word
-    Binary Value: 0b11111111011111111111111111111111
-     Octal Value: 0o37737777777
-   Decimal Value: 4286578687
-       Hex Value: 0xff7fffff
+         Base  2: 0b11111111011111111111111111111111
+         Base  8: 0o37737777777
+         Base 10: 4286578687
+         Base 16: 0xff7fffff
