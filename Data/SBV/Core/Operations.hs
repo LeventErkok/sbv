@@ -41,6 +41,7 @@ module Data.SBV.Core.Operations
   , svBarrelRotateLeft, svBarrelRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
+  , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord 
   -- ** Basic array operations
   , SArr(..),     readSArr,     writeSArr,     mergeSArr,     newSArr,     eqSArr
   , SFunArr(..),  readSFunArr,  writeSFunArr,  mergeSFunArr,  newSFunArr
@@ -64,7 +65,9 @@ import Data.SBV.Core.SizedFloats
 
 import Data.Ratio
 
-import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
+import Data.SBV.Utils.Numeric (fpIsEqualObjectH, floatToWord, doubleToWord)
+
+import LibBF
 
 --------------------------------------------------------------------------------
 -- Basic constructors
@@ -204,7 +207,7 @@ svExp b e
   where prod = foldr svTimes one
         one  = svInteger (kindOf b) 1
 
--- | Bit-blast: Little-endian. Assumes the input is a bit-vector.
+-- | Bit-blast: Little-endian. Assumes the input is a bit-vector or a floating point type.
 svBlastLE :: SVal -> [SVal]
 svBlastLE x = map (svTestBit x) [0 .. intSizeOf x - 1]
 
@@ -212,7 +215,7 @@ svBlastLE x = map (svTestBit x) [0 .. intSizeOf x - 1]
 svSetBit :: SVal -> Int -> SVal
 svSetBit x i = x `svOr` svInteger (kindOf x) (bit i :: Integer)
 
--- | Bit-blast: Big-endian. Assumes the input is a bit-vector.
+-- | Bit-blast: Big-endian. Assumes the input is a bit-vector or a floating point type.
 svBlastBE :: SVal -> [SVal]
 svBlastBE = reverse . svBlastLE
 
@@ -514,7 +517,10 @@ svExtract i j x@(SVal (KBounded s _) _)
   where k = KBounded s (i - j + 1)
         y st = do sv <- svToSV st x
                   newExpr st k (SBVApp (Extract i j) [sv])
-svExtract _ _ _ = error "extract: non-bitvector type"
+svExtract i j v@(SVal KFloat _)  = svExtract i j (svFloatAsSWord32  v)
+svExtract i j v@(SVal KDouble _) = svExtract i j (svDoubleAsSWord64 v)
+svExtract i j v@(SVal KFP{} _)   = svExtract i j (svFloatingPointAsSWord v)
+svExtract _ _ _ = error "extract: non-bitvector/float type"
 
 -- | Join two words, by concatenating
 svJoin :: SVal -> SVal -> SVal
@@ -1560,6 +1566,77 @@ eitherLT x y = sEitherCase (\lx -> sEitherCase (lx `svStructuralLessThan`) (cons
                             --  Which branch are we in? Return the appropriate value:
                             onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
                             newExpr st KBool $ SBVApp Ite [onLeft, br1, br2]
+
+-- | Convert an 'SFloat' to an 'SWord32', preserving the bit-correspondence. Note that since the
+-- representation for @NaN@s are not unique, this function will return a symbolic value when given a
+-- concrete @NaN@.
+--
+-- Implementation note: Since there's no corresponding function in SMTLib for conversion to
+-- bit-representation due to partiality, we use a translation trick by allocating a new word variable,
+-- converting it to float, and requiring it to be equivalent to the input. In code-generation mode, we simply map
+-- it to a simple conversion.
+svFloatAsSWord32 :: SVal -> SVal
+svFloatAsSWord32 (SVal KFloat (Left (CV KFloat (CFloat f))))
+   | not (isNaN f)
+   = let w32 = KBounded False 32
+     in SVal w32 $ Left $ CV w32 $ CInteger (fromIntegral (floatToWord f))
+svFloatAsSWord32 fVal@(SVal KFloat _)
+  = SVal w32 (Right (cache y))
+  where w32  = KBounded False 32
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- svToSV st fVal
+                             newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
+                     else do n   <- internalVariable st w32
+                             ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KFloat (Right (cache (\_ -> return ysw)))
+                             return n
+svFloatAsSWord32 (SVal k _) = error $ "svFloatAsSWord32: non-float type: " ++ show k
+
+-- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
+-- representation for @NaN@s are not unique, this function will return a symbolic value when given a
+-- concrete @NaN@.
+--
+-- Implementation note: Since there's no corresponding function in SMTLib for conversion to
+-- bit-representation due to partiality, we use a translation trick by allocating a new word variable,
+-- converting it to float, and requiring it to be equivalent to the input. In code-generation mode, we simply map
+-- it to a simple conversion.
+svDoubleAsSWord64 :: SVal -> SVal
+svDoubleAsSWord64 (SVal KDouble (Left (CV KDouble (CDouble f))))
+   | not (isNaN f)
+   = let w64 = KBounded False 64
+     in SVal w64 $ Left $ CV w64 $ CInteger (fromIntegral (doubleToWord f))
+svDoubleAsSWord64 fVal@(SVal KDouble _)
+  = SVal w64 (Right (cache y))
+  where w64  = KBounded False 64
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- svToSV st fVal
+                             newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
+                     else do n   <- internalVariable st w64
+                             ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal KDouble (Right (cache (\_ -> return ysw)))
+                             return n
+svDoubleAsSWord64 (SVal k _) = error $ "svDoubleAsSWord64: non-float type: " ++ show k
+
+-- | Convert a float to the word containing the corresponding bit pattern
+svFloatingPointAsSWord :: SVal -> SVal
+svFloatingPointAsSWord (SVal (KFP eb sb) (Left (CV _ (CFP f@(FP _ _ fpV)))))
+  | not (isNaN f)
+  = let wN = KBounded False (eb + sb)
+    in SVal wN $ Left $ CV wN $ CInteger $ bfToBits (mkBFOpts eb sb NearEven) fpV
+svFloatingPointAsSWord fVal@(SVal kFrom@(KFP eb sb) _)
+  = SVal kTo (Right (cache y))
+  where kTo   = KBounded False (eb + sb)
+        y st = do cg <- isCodeGenMode st
+                  if cg
+                     then do f <- svToSV st fVal
+                             newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret kFrom kTo)) [f])
+                     else do n   <- internalVariable st kTo
+                             ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
+                             internalConstraint st False [] $ fVal `svStrongEqual` SVal kFrom (Right (cache (\_ -> return ysw)))
+                             return n
+svFloatingPointAsSWord (SVal k _) = error $ "svFloatingPointAsSWord: non-float type: " ++ show k
 
 {-# ANN svIte     ("HLint: ignore Eta reduce" :: String)         #-}
 {-# ANN svLazyIte ("HLint: ignore Eta reduce" :: String)         #-}

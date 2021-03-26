@@ -7,6 +7,8 @@
 
   * Improve the all-fast-sat algorithm to also support uninterpreted values.
 
+  * Generalize svTestBit to work on floats, returning the respecting bit in the
+    representation of the float.
 
 ### Version 8.13, 2021-03-21
 

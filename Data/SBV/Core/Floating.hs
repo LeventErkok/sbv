@@ -28,7 +28,6 @@ module Data.SBV.Core.Floating (
        , blastSFloat, blastSDouble,  blastSFloatingPoint
        , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
        , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
-       , 
        ) where
 
 import Data.Bits (testBit)
@@ -53,6 +52,8 @@ import Data.Ratio
 import GHC.TypeLits
 
 import LibBF
+
+import Data.SBV.Core.Operations
 
 -- For doctest use only
 --
@@ -580,20 +581,7 @@ lift3 w mbOp mbRm a b c
 -- converting it to float, and requiring it to be equivalent to the input. In code-generation mode, we simply map
 -- it to a simple conversion.
 sFloatAsSWord32 :: SFloat -> SWord32
-sFloatAsSWord32 fVal
-  | Just f <- unliteral fVal, not (isNaN f)
-  = literal (floatToWord f)
-  | True
-  = SBV (SVal w32 (Right (cache y)))
-  where w32  = KBounded False 32
-        y st = do cg <- isCodeGenMode st
-                  if cg
-                     then do f <- sbvToSV st fVal
-                             newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
-                     else do n   <- internalVariable st w32
-                             ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
-                             internalConstraint st False [] $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KFloat (Right (cache (\_ -> return ysw))))
-                             return n
+sFloatAsSWord32 (SBV v) = SBV $ svFloatAsSWord32 v
 
 -- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a
@@ -601,20 +589,7 @@ sFloatAsSWord32 fVal
 --
 -- See the implementation note for 'sFloatAsSWord32', as it applies here as well.
 sDoubleAsSWord64 :: SDouble -> SWord64
-sDoubleAsSWord64 fVal
-  | Just f <- unliteral fVal, not (isNaN f)
-  = literal (doubleToWord f)
-  | True
-  = SBV (SVal w64 (Right (cache y)))
-  where w64  = KBounded False 64
-        y st = do cg <- isCodeGenMode st
-                  if cg
-                     then do f <- sbvToSV st fVal
-                             newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
-                     else do n   <- internalVariable st w64
-                             ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
-                             internalConstraint st False [] $ unSBV $ fVal `fpIsEqualObject` SBV (SVal KDouble (Right (cache (\_ -> return ysw))))
-                             return n
+sDoubleAsSWord64 (SBV v) = SBV $ svDoubleAsSWord64 v
 
 -- | Extract the sign\/exponent\/mantissa of a single-precision float. The output will have
 -- 8 bits in the second argument for exponent, and 23 in the third for the mantissa.
@@ -758,23 +733,7 @@ instance ValidFloat eb sb => RealFloat (FloatingPoint eb sb) where
 
 -- | Convert a float to the word containing the corresponding bit pattern
 sFloatingPointAsSWord :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)
-sFloatingPointAsSWord fVal
-  | Just f@(FloatingPoint (FP eb sb v)) <- unliteral fVal, not (isNaN f)
-  = fromIntegral $ bfToBits (mkBFOpts eb sb NearEven) v
-  | True
-  = SBV (SVal kTo (Right (cache y)))
-  where ieb   = intOfProxy (Proxy @eb)
-        isb   = intOfProxy (Proxy @sb)
-        kFrom = KFP ieb isb
-        kTo   = KBounded False (ieb + isb)
-        y st = do cg <- isCodeGenMode st
-                  if cg
-                     then do f <- sbvToSV st fVal
-                             newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret kFrom kTo)) [f])
-                     else do n   <- internalVariable st kTo
-                             ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
-                             internalConstraint st False [] $ unSBV $ fVal `fpIsEqualObject` SBV (SVal kFrom (Right (cache (\_ -> return ysw))))
-                             return n
+sFloatingPointAsSWord (SBV v) = SBV (svFloatingPointAsSWord v)
 
 -- | Convert a float to the correct size word, that can be used in lexicographic ordering. Used in optimization.
 sFloatingPointAsComparableSWord :: forall eb sb. (ValidFloat eb sb, KnownNat (eb + sb), BVIsNonZero (eb + sb)) => SFloatingPoint eb sb -> SWord (eb + sb)

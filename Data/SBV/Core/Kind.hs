@@ -241,9 +241,9 @@ class HasKind a where
                   KBounded _ s  -> s
                   KUnbounded    -> error "SBV.HasKind.intSizeOf((S)Integer)"
                   KReal         -> error "SBV.HasKind.intSizeOf((S)Real)"
-                  KFloat        -> error "SBV.HasKind.intSizeOf((S)Float)"
-                  KDouble       -> error "SBV.HasKind.intSizeOf((S)Double)"
-                  KFP{}         -> error "SBV.HasKind.intSizeOf((S)FP)"
+                  KFloat        -> 32
+                  KDouble       -> 64
+                  KFP i j       -> i + j
                   KRational     -> error "SBV.HasKind.intSizeOf((S)Rational)"
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
