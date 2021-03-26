@@ -29,7 +29,7 @@ module Data.SBV.Dynamic
   -- ** Creating a symbolic variable
   , Symbolic
   , Quantifier(..)
-  , svMkSymVar
+  , svMkSymVar, svNewVar_, svNewVar
   , sWordN, sWordN_, sIntN, sIntN_
   -- ** Operations on symbolic values
   -- *** Boolean literals
@@ -127,6 +127,8 @@ module Data.SBV.Dynamic
   -- ** Compilation to SMTLib
   , generateSMTBenchmark
   ) where
+
+import Control.Monad.Trans (liftIO)
 
 import Data.Map.Strict (Map)
 
@@ -249,3 +251,11 @@ getModelAssignment = SBV.getModelAssignment
 -- their respective values as returned by the SMT solver. Also see `Data.SBV.SMT.getModelDictionaries`.
 getModelDictionary :: SMTResult -> Map String CV
 getModelDictionary = SBV.getModelDictionary
+
+-- | Create a named fresh existential variable in the current context
+svNewVar :: MonadSymbolic m => Kind -> String -> m SVal
+svNewVar k n = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar (Just EX)) k (Just n)
+
+-- | Create an unnamed fresh existential variable in the current context
+svNewVar_ :: MonadSymbolic m => Kind -> m SVal
+svNewVar_ k = symbolicEnv >>= liftIO . svMkSymVar (NonQueryVar (Just EX)) k Nothing
