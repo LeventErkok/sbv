@@ -140,10 +140,10 @@ getKind fp
  | True              = Normal
 
 -- Show the value in different bases
-showAtBases :: FPKind -> (String, String, String, String) -> Either String (String, String, String, String)
+showAtBases :: FPKind -> (String, String, String, String, String) -> Either String (String, String, String, String, String)
 showAtBases k bvs = case k of
-                     Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0.0")
-                     Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0x0.0")
+                     Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0.0",  "0x0p+0")
+                     Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0x0.0", "-0x0p+0")
                      Infty False -> Left  "Infinity"
                      Infty True  -> Left  "-Infinity"
                      NaN         -> Left  "NaN"
@@ -156,7 +156,7 @@ data FloatData = FloatData { prec   :: String
                            , sb     :: Int
                            , bits   :: Integer
                            , fpKind :: FPKind
-                           , fpVals :: Either String (String, String, String, String)
+                           , fpVals :: Either String (String, String, String, String, String)
                            }
 
 -- | A simple means to organize different bits and pieces of float data
@@ -172,7 +172,7 @@ instance HasFloatData Float where
     , sb     = 24
     , bits   = fromIntegral (floatToWord f)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", show f, showFloatAtBase 16 f "")
+    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", show f, showFloatAtBase 16 f "", showHFloat f "")
     }
     where k = getKind f
 
@@ -184,7 +184,7 @@ instance HasFloatData Double where
     , sb     = 53
     , bits   = fromIntegral (doubleToWord d)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", show d, showFloatAtBase 16 d "")
+    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", show d, showFloatAtBase 16 d "", showHFloat d "")
     }
     where k = getKind d
 
@@ -216,7 +216,7 @@ instance HasFloatData FP where
     , sb     = sb
     , bits   = bfToBits (mkBFOpts eb sb NearEven) f
     , fpKind = k
-    , fpVals = showAtBases k (bfToString 2 True v, bfToString 8 True v, bfToString 10 True v, bfToString 16 True v)
+    , fpVals = showAtBases k (bfToString 2 True v, bfToString 8 True v, bfToString 10 True v, hf, hf)
     }
     where opts = mkBFOpts eb sb NearEven
           k | bfIsZero f           = Zero  (bfIsNeg f)
@@ -224,6 +224,7 @@ instance HasFloatData FP where
             | bfIsNaN f            = NaN
             | bfIsSubnormal opts f = Subnormal
             | True                 = Normal
+          hf = bfToString 16 True v
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
@@ -260,12 +261,13 @@ float f = intercalate "\n" $ ruler ++ legend : info
                ++ [ "        Exponent: " ++ show exponentVal ++ " ("                                       ++ esInfo ++ ")" | not isSubNormal]
                ++ [ "  Classification: " ++ show fpKind]
                ++ (case fpVals of
-                     Left val                       -> [ "           Value: " ++ val]
-                     Right (bval, oval, dval, hval) -> [ "         Base  2: " ++ bval
-                                                       , "         Base  8: " ++ oval
-                                                       , "         Base 10: " ++ dval
-                                                       , "         Base 16: " ++ hval
-                                                       ])
+                     Left val                             -> [ "           Value: " ++ val]
+                     Right (bval, oval, dval, hval, hexf) -> [ "         Base  2: " ++ bval
+                                                             , "         Base  8: " ++ oval
+                                                             , "         Base 10: " ++ dval
+                                                             , "         Base 16: " ++ hval
+                                                             , "       Hex Float: " ++ hexf
+                                                             ])
                ++ [ "            Note: Representation for NaN's is not unique" | fpKind == NaN]
 
 
