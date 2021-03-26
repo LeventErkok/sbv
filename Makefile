@@ -21,6 +21,21 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
+ifdef TGT
+    TESTTARGET =-p ${TGT}
+    TESTHIDE   =
+else
+    TESTTARGET =
+    TESTHIDE   = --hide-successes
+endif
+
+ifdef ACCEPT
+    TESTACCEPT=--accept
+    TESTHIDE  =
+else
+    TESTACCEPT=--no-create
+endif
+
 .PHONY: install docs testsuite release tags clean veryclean timeRelease
 
 all: quick
@@ -59,22 +74,8 @@ testInterfaces:
 docTest:
 	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
-vdocTest:
-	@$(TIME) doctest --verbose --fast --no-magic $(DOCTESTSOURCES)
-
 test:
-ifndef TGT
-	@$(TIME) cabal new-run SBVTest -- --hide-successes -j $(NO_OF_CORES)
-else
-	@$(TIME) cabal new-run SBVTest -- 	           -j $(NO_OF_CORES) -p ${TGT}
-endif
-
-testAccept:
-ifndef TGT
-	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) --accept
-else
-	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) -p ${TGT} --accept
-endif
+	$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
 
 checkLinks:
 	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
@@ -91,11 +92,6 @@ fullRelease: veryclean install docs testsuite testInterfaces mkDistro checkLinks
 
 release:
 	$(TIME) make fullRelease
-
-# use this as follows:
-#         make docTestPattern TGT=./Documentation/SBV/Examples/Puzzles/HexPuzzle.hs
-docTestPattern:
-	$(TIME) doctest --fast --no-magic --verbose ${TGT}
 
 tags:
 	@fast-tags -R --nomerge .
