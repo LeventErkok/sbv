@@ -86,22 +86,24 @@ data FP = FP { fpExponentSize    :: Int
              deriving (Ord, Eq)
 
 instance Show FP where
-  show = bfToString 10 False
+  show = bfToString 10 False True
 
 -- | Show a big float in the base given.
 -- NB. Do not be tempted to use BF.showFreeMin below; it produces arguably correct
 -- but very confusing results. See <https://github.com/GaloisInc/cryptol/issues/1089>
 -- for a discussion of the issues.
-bfToString :: Int -> Bool -> FP -> String
-bfToString b withPrefix (FP _ sb a)
+bfToString :: Int -> Bool -> Bool -> FP -> String
+bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsNaN  a = "NaN"
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
-  | True          = trimZeros $ BF.bfToString b withP a
+  | True          = trimZeros $ BF.bfToString b opts' a
   where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
-        withP
-          | withPrefix = BF.addPrefix <> opts
-          | True       = opts
+        opts' = case (withPrefix, forceExponent) of
+                  (False, False) ->                                 opts
+                  (False, True ) ->                 BF.forceExp  <> opts
+                  (True,  False) -> BF.addPrefix                 <> opts
+                  (True,  True ) -> BF.addPrefix <> BF.forceExp  <> opts
 
         -- In base 10, exponent starts with 'e'. Otherwise (2, 8, 16) it starts with 'p'
         expChar = if b == 10 then 'e' else 'p'

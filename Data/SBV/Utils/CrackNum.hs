@@ -106,10 +106,10 @@ int signed sz v = intercalate "\n" $ ruler ++ info
                , "            Type: " ++ iprec
                ]
             ++ [ "            Sign: " ++ if signBit then "Negative" else "Positive" | signed]
-            ++ [ "         Base  2: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
-               , "         Base  8: " ++ s ++ "0o" ++ showOct av ""
-               , "         Base 10: " ++ show v
-               , "         Base 16: " ++ s ++ "0x" ++ showHex av ""
+            ++ [ "          Binary: " ++ s ++ "0b" ++ showIntAtBase 2 intToDigit av ""
+               , "           Octal: " ++ s ++ "0o" ++ showOct av ""
+               , "         Decimal: " ++ show v
+               , "             Hex: " ++ s ++ "0x" ++ showHex av ""
                ]
 
 -- | What kind of Float is this?
@@ -140,15 +140,25 @@ getKind fp
  | True              = Normal
 
 -- Show the value in different bases
-showAtBases :: FPKind -> (String, String, String, String, String) -> Either String (String, String, String, String, String)
+showAtBases :: FPKind -> (String, String, String, String) -> Either String (String, String, String, String)
 showAtBases k bvs = case k of
-                     Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0.0",  "0x0p+0")
-                     Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0x0.0", "-0x0p+0")
+                     Zero False  -> Right ("0b0.0",  "0o0.0",  "0.0",  "0x0")
+                     Zero True   -> Right ("-0b0.0", "-0o0.0", "-0.0", "-0o0")
                      Infty False -> Left  "Infinity"
                      Infty True  -> Left  "-Infinity"
                      NaN         -> Left  "NaN"
-                     Subnormal   -> Right bvs
-                     Normal      -> Right bvs
+                     Subnormal   -> Right (dropSuffixes bvs)
+                     Normal      -> Right (dropSuffixes bvs)
+  where dropSuffixes (a, b, c, d) = (dropSuffix a, dropSuffix b, dropSuffix c, dropSuffix d)
+        dropSuffix v = walk useless
+          where walk []              = v
+                walk (s:ss)
+                  | s `isSuffixOf` v = reverse . drop (length s) . reverse $ v
+                  | True             = walk ss
+
+        -- these suffixes are useless, drop them
+        useless = [c : s ++ "0" | c <- "pe@", s <- ["+", "-", ""]]
+
 
 -- | Float data for display purposes
 data FloatData = FloatData { prec   :: String
@@ -156,7 +166,7 @@ data FloatData = FloatData { prec   :: String
                            , sb     :: Int
                            , bits   :: Integer
                            , fpKind :: FPKind
-                           , fpVals :: Either String (String, String, String, String, String)
+                           , fpVals :: Either String (String, String, String, String)
                            }
 
 -- | A simple means to organize different bits and pieces of float data
@@ -172,7 +182,7 @@ instance HasFloatData Float where
     , sb     = 24
     , bits   = fromIntegral (floatToWord f)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", show f, showFloatAtBase 16 f "", showHFloat f "")
+    , fpVals = showAtBases k (showFloatAtBase 2 f "", showFloatAtBase 8 f "", show f, showFloatAtBase 16 f "")
     }
     where k = getKind f
 
@@ -184,7 +194,7 @@ instance HasFloatData Double where
     , sb     = 53
     , bits   = fromIntegral (doubleToWord d)
     , fpKind = k
-    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", show d, showFloatAtBase 16 d "", showHFloat d "")
+    , fpVals = showAtBases k (showFloatAtBase 2 d "", showFloatAtBase 8 d "", show d, showFloatAtBase 16 d "")
     }
     where k = getKind d
 
@@ -216,7 +226,7 @@ instance HasFloatData FP where
     , sb     = sb
     , bits   = bfToBits (mkBFOpts eb sb NearEven) f
     , fpKind = k
-    , fpVals = showAtBases k (bfToString 2 True v, bfToString 8 True v, bfToString 10 True v, hf, hf)
+    , fpVals = showAtBases k (bfToString 2 True True v, bfToString 8 True True v, bfToString 10 True True v, bfToString 16 True True v)
     }
     where opts = mkBFOpts eb sb NearEven
           k | bfIsZero f           = Zero  (bfIsNeg f)
@@ -224,7 +234,6 @@ instance HasFloatData FP where
             | bfIsNaN f            = NaN
             | bfIsSubnormal opts f = Subnormal
             | True                 = Normal
-          hf = bfToString 16 True v
 
 -- | Show a float in detail
 float :: HasFloatData a => a -> String
@@ -261,13 +270,12 @@ float f = intercalate "\n" $ ruler ++ legend : info
                ++ [ "        Exponent: " ++ show exponentVal ++ " ("                                       ++ esInfo ++ ")" | not isSubNormal]
                ++ [ "  Classification: " ++ show fpKind]
                ++ (case fpVals of
-                     Left val                             -> [ "           Value: " ++ val]
-                     Right (bval, oval, dval, hval, hexf) -> [ "         Base  2: " ++ bval
-                                                             , "         Base  8: " ++ oval
-                                                             , "         Base 10: " ++ dval
-                                                             , "         Base 16: " ++ hval
-                                                             , "       Hex Float: " ++ hexf
-                                                             ])
+                     Left val                       -> [ "           Value: " ++ val]
+                     Right (bval, oval, dval, hval) -> [ "          Binary: " ++ bval
+                                                       , "           Octal: " ++ oval
+                                                       , "         Decimal: " ++ dval
+                                                       , "             Hex: " ++ hval
+                                                       ])
                ++ [ "            Note: Representation for NaN's is not unique" | fpKind == NaN]
 
 

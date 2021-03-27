@@ -21,6 +21,7 @@ module Data.SBV.Utils.PrettyNum (
       , showNegativeNumber
       ) where
 
+import Data.Bits  ((.&.), countTrailingZeros)
 import Data.Char  (intToDigit, ord, chr, toUpper)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
@@ -167,23 +168,23 @@ shBKind :: HasKind a => a -> String
 shBKind a = " :: " ++ showBaseKind (kindOf a)
 
 instance PrettyNum CV where
-  hexS cv | isUserSort      cv = shows cv                                          $  shBKind cv
-          | isBoolean       cv = hexS (cvToBool cv)                                ++ shBKind cv
-          | isFloat         cv = let CFloat   f = cvVal cv in N.showHFloat f       $  shBKind cv
-          | isDouble        cv = let CDouble  d = cvVal cv in N.showHFloat d       $  shBKind cv
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True f ++ shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in show r               ++ shBKind cv
-          | isString        cv = let CString  s = cvVal cv in show s               ++ shBKind cv
+  hexS cv | isUserSort      cv = shows cv                                               $  shBKind cv
+          | isBoolean       cv = hexS (cvToBool cv)                                     ++ shBKind cv
+          | isFloat         cv = let CFloat   f = cvVal cv in N.showHFloat f            $  shBKind cv
+          | isDouble        cv = let CDouble  d = cvVal cv in N.showHFloat d            $  shBKind cv
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True True f ++ shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in show r                    ++ shBKind cv
+          | isString        cv = let CString  s = cvVal cv in show s                    ++ shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI True True i
           | True               = let CInteger i = cvVal cv in shex  True True (hasSign cv, intSizeOf cv) i
 
-  binS cv | isUserSort      cv = shows cv                                         $  shBKind cv
-          | isBoolean       cv = binS (cvToBool cv)                               ++ shBKind cv
-          | isFloat         cv = let CFloat   f = cvVal cv in showBFloat f        $  shBKind cv
-          | isDouble        cv = let CDouble  d = cvVal cv in showBFloat d        $  shBKind cv
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True f ++ shBKind cv
-          | isReal          cv = let CAlgReal r = cvVal cv in shows r             $  shBKind cv
-          | isString        cv = let CString  s = cvVal cv in shows s             $  shBKind cv
+  binS cv | isUserSort      cv = shows cv                                              $  shBKind cv
+          | isBoolean       cv = binS (cvToBool cv)                                    ++ shBKind cv
+          | isFloat         cv = let CFloat   f = cvVal cv in showBFloat f             $  shBKind cv
+          | isDouble        cv = let CDouble  d = cvVal cv in showBFloat d             $  shBKind cv
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True True f ++ shBKind cv
+          | isReal          cv = let CAlgReal r = cvVal cv in shows r                  $  shBKind cv
+          | isString        cv = let CString  s = cvVal cv in shows s                  $  shBKind cv
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI True True i
           | True               = let CInteger i = cvVal cv in sbin  True True (hasSign cv, intSizeOf cv) i
 
@@ -191,7 +192,7 @@ instance PrettyNum CV where
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True f
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 True True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False True i
@@ -201,7 +202,7 @@ instance PrettyNum CV where
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True f
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 True True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False True i
@@ -211,7 +212,7 @@ instance PrettyNum CV where
           | isBoolean       cv = hexS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 False f
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 16 False True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in shexI False False i
@@ -221,7 +222,7 @@ instance PrettyNum CV where
           | isBoolean       cv = binS (cvToBool cv)
           | isFloat         cv = let CFloat   f = cvVal cv in show f
           | isDouble        cv = let CDouble  d = cvVal cv in show d
-          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 False f
+          | isFP            cv = let CFP      f = cvVal cv in bfToString 2 False True f
           | isReal          cv = let CAlgReal r = cvVal cv in show r
           | isString        cv = let CString  s = cvVal cv in show s
           | not (isBounded cv) = let CInteger i = cvVal cv in sbinI False False i
@@ -504,14 +505,23 @@ mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integ
 showBFloat :: (Show a, RealFloat a) => a -> ShowS
 showBFloat = showFloatAtBase 2
 
--- | Like Haskell's showHFloat, but uses arbitrary base instead. Note that the exponent is always written in decimal.
+-- | Like Haskell's showHFloat, but uses arbitrary base instead.
+-- Note that the exponent is always written in decimal. Let the exponent value be d:
+--    If base=10, then we use 'e' to denote the exponent; meaning 10^d
+--    If base is a power of 2, then we use 'p' to denote the exponent; meaning 2^d
+--    Otherwise, we use @ to denote the exponent, and it means base^d
 showFloatAtBase :: (Show a, RealFloat a) => Int -> a -> ShowS
-showFloatAtBase base = showString . fmt
+showFloatAtBase base input
+  | base < 2 = error $ "showFloatAtBase: Received invalid base (must be >= 2): " ++ show base
+  | True     = showString $ fmt input
   where fmt x
          | isNaN x                   = "NaN"
          | isInfinite x              = (if x < 0 then "-" else "") ++ "Infinity"
          | x < 0 || isNegativeZero x = '-' : cvt (-x)
          | True                      = cvt x
+
+        basePow2 = base .&. (base-1) == 0
+        lg2Base  = countTrailingZeros base  -- only used when basePow2 is true
 
         prefix = case base of
                    2  -> "0b"
@@ -520,11 +530,28 @@ showFloatAtBase base = showString . fmt
                    16 -> "0x"
                    x  -> "0<" ++ show x ++ ">"
 
+        powChar
+          | base == 10 = 'e'
+          | basePow2   = 'p'
+          | True       = '@'
+
+        -- why r-1? Because we're shifting the fraction by 1 digit; does reducing the exponent by 1
+        f2d x = case floatToDigits (fromIntegral base) x of
+                  ([],   e) -> (0, [], e - 1)
+                  (d:ds, e) -> (d, ds, e - 1)
+
         cvt x
-         | x == 0 = prefix ++ "0p+0"
-         | True   = case floatToDigits (fromIntegral base) x of
-                      r@([], _) -> error $ "Impossible happened: showFloatAtBase: " ++ show (base, show x, r)
-                      (d:ds, e) -> prefix ++ toDigit d ++ frac ds ++ "p" ++ show (e-1)
+         | x == 0 = prefix ++ '0' : powChar : "+0"
+         | True   = prefix ++ toDigit d ++ frac ds ++ pow
+         where (d, ds, e)  = f2d x
+               pow
+                | base == 10 = powChar : shSigned e
+                | basePow2   = powChar : shSigned (e * lg2Base)
+                | True       = powChar : shSigned e
+
+               shSigned v
+                | v < 0      =       show v
+                | True       = '+' : show v
 
         -- Given digits, show them except if they're all 0 then drop
         frac digits

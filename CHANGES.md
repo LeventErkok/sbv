@@ -10,6 +10,8 @@
   * Generalize svTestBit to work on floats, returning the respecting bit in the
     representation of the float.
 
+  * Fixes to crack-num facility of how we display floats in detail.
+
 ### Version 8.13, 2021-03-21
 
   * Generalized floating point: Add support for brain-floats, with
