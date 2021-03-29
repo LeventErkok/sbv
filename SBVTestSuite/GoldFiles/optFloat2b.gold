@@ -16,7 +16,7 @@ Optimal model:
    Binary layout: 0000 0000 0000 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111
       Hex layout: 000F FFFF FFFF FFFF
             Type: Unsigned 64-bit word
-         Base  2: 0b1111111111111111111111111111111111111111111111111111
-         Base  8: 0o177777777777777777
-         Base 10: 4503599627370495
-         Base 16: 0xfffffffffffff
+          Binary: 0b1111111111111111111111111111111111111111111111111111
+           Octal: 0o177777777777777777
+         Decimal: 4503599627370495
+             Hex: 0xfffffffffffff

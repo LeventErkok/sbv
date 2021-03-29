@@ -9,17 +9,17 @@ Optimal model:
             Sign: Negative
         Exponent: 127 (Stored: 254, Bias: 127)
   Classification: FP_NORMAL
-         Base  2: -0b1.11111111111111111111111p127
-         Base  8: -0o3.77777774p42
-         Base 10: -3.4028235e38
-         Base 16: -0xF.FFFFFp31
+          Binary: -0b1.11111111111111111111111p+127
+           Octal: -0o3.77777774p+126
+         Decimal: -3.4028235e38
+             Hex: -0xF.FFFFFp+124
   min-x =       8388608 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 0000 0000 1000 0000 0000 0000 0000 0000
       Hex layout: 0080 0000
             Type: Unsigned 32-bit word
-         Base  2: 0b100000000000000000000000
-         Base  8: 0o40000000
-         Base 10: 8388608
-         Base 16: 0x800000
+          Binary: 0b100000000000000000000000
+           Octal: 0o40000000
+         Decimal: 8388608
+             Hex: 0x800000
