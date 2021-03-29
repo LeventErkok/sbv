@@ -217,7 +217,7 @@ instance HasFloatData FP where
     , sb     = sb
     , bits   = bfToBits (mkBFOpts eb sb NearEven) f
     , fpKind = k
-    , fpVals = showAtBases k (bfToString 2 True True v, bfToString 8 True True v, bfToString 10 True True v, bfToString 16 True True v)
+    , fpVals = showAtBases k (bfToString 2 True True v, bfToString 8 True True v, bfToString 10 True False v, bfToString 16 True True v)
     }
     where opts = mkBFOpts eb sb NearEven
           k | bfIsZero f           = Zero  (bfIsNeg f)

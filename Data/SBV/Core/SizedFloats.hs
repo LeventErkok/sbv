@@ -87,7 +87,7 @@ data FP = FP { fpExponentSize    :: Int
              deriving (Ord, Eq)
 
 instance Show FP where
-  show = bfRemoveRedundantExp . bfToString 10 False True
+  show = bfRemoveRedundantExp . bfToString 10 False False
 
 -- | Remove redundant p+0 etc.
 bfRemoveRedundantExp :: String -> String
