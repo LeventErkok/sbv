@@ -1567,7 +1567,7 @@ eitherLT x y = sEitherCase (\lx -> sEitherCase (lx `svStructuralLessThan`) (cons
                             onLeft <- newExpr st KBool $ SBVApp (EitherIs ka kb False) [abv]
                             newExpr st KBool $ SBVApp Ite [onLeft, br1, br2]
 
--- | Convert an 'SFloat' to an 'SWord32', preserving the bit-correspondence. Note that since the
+-- | Convert an 'Data.SBV.SFloat' to an 'Data.SBV.SWord32', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a
 -- concrete @NaN@.
 --
@@ -1593,7 +1593,7 @@ svFloatAsSWord32 fVal@(SVal KFloat _)
                              return n
 svFloatAsSWord32 (SVal k _) = error $ "svFloatAsSWord32: non-float type: " ++ show k
 
--- | Convert an 'SDouble' to an 'SWord64', preserving the bit-correspondence. Note that since the
+-- | Convert an 'Data.SBV.SDouble' to an 'Data.SBV.SWord64', preserving the bit-correspondence. Note that since the
 -- representation for @NaN@s are not unique, this function will return a symbolic value when given a
 -- concrete @NaN@.
 --

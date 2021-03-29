@@ -507,8 +507,8 @@ showBFloat = showFloatAtBase 2
 
 -- | Like Haskell's showHFloat, but uses arbitrary base instead.
 -- Note that the exponent is always written in decimal. Let the exponent value be d:
---    If base=10, then we use 'e' to denote the exponent; meaning 10^d
---    If base is a power of 2, then we use 'p' to denote the exponent; meaning 2^d
+--    If base=10, then we use @e@ to denote the exponent; meaning 10^d
+--    If base is a power of 2, then we use @p@ to denote the exponent; meaning 2^d
 --    Otherwise, we use @ to denote the exponent, and it means base^d
 showFloatAtBase :: (Show a, RealFloat a) => Int -> a -> ShowS
 showFloatAtBase base input
