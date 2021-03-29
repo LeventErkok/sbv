@@ -29,10 +29,11 @@ module Data.SBV.Core.SizedFloats (
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
 
         -- * Internal operations
-       , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString
+       , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
        ) where
 
 import Data.Char (intToDigit)
+import Data.List (isSuffixOf)
 import Data.Proxy
 import GHC.TypeLits
 
@@ -86,7 +87,18 @@ data FP = FP { fpExponentSize    :: Int
              deriving (Ord, Eq)
 
 instance Show FP where
-  show = bfToString 10 False True
+  show = bfRemoveRedundantExp . bfToString 10 False True
+
+-- | Remove redundant p+0 etc.
+bfRemoveRedundantExp :: String -> String
+bfRemoveRedundantExp v = walk useless
+  where walk []              = v
+        walk (s:ss)
+         | s `isSuffixOf` v = reverse . drop (length s) . reverse $ v
+         | True             = walk ss
+
+        -- these suffixes are useless, drop them
+        useless = [c : s ++ "0" | c <- "pe@", s <- ["+", "-", ""]]
 
 -- | Show a big float in the base given.
 -- NB. Do not be tempted to use BF.showFreeMin below; it produces arguably correct

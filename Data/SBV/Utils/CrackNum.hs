@@ -149,16 +149,7 @@ showAtBases k bvs = case k of
                      NaN         -> Left  "NaN"
                      Subnormal   -> Right (dropSuffixes bvs)
                      Normal      -> Right (dropSuffixes bvs)
-  where dropSuffixes (a, b, c, d) = (dropSuffix a, dropSuffix b, dropSuffix c, dropSuffix d)
-        dropSuffix v = walk useless
-          where walk []              = v
-                walk (s:ss)
-                  | s `isSuffixOf` v = reverse . drop (length s) . reverse $ v
-                  | True             = walk ss
-
-        -- these suffixes are useless, drop them
-        useless = [c : s ++ "0" | c <- "pe@", s <- ["+", "-", ""]]
-
+  where dropSuffixes (a, b, c, d) = (bfRemoveRedundantExp a, bfRemoveRedundantExp b, bfRemoveRedundantExp c, bfRemoveRedundantExp d)
 
 -- | Float data for display purposes
 data FloatData = FloatData { prec   :: String
