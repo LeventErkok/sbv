@@ -1,11 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.com/sbv/>
 
-* Latest Hackage released version: 8.13, 2021-03-21
+* Latest Hackage released version: 8.14, 2021-03-29
 
-### Version 8.13.5, Not yet released
+### Version 8.14, 2021-03-29
 
-  * Improve the all-fast-sat algorithm to also support uninterpreted values.
+  * Improve the fast all-sat algorithm to also support uninterpreted values.
 
   * Generalize svTestBit to work on floats, returning the respecting bit in the
     representation of the float.
