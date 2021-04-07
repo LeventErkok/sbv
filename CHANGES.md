@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 8.14, 2021-03-29
 
+### Version 8.14.5, Not yet released
+
+  * Fix a bug in SFunArray write operations, thanks to frenchfrog42
+    on github for reporting.
+
 ### Version 8.14, 2021-03-29
 
   * Improve the fast all-sat algorithm to also support uninterpreted values.
