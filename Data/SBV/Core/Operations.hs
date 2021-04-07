@@ -1091,7 +1091,9 @@ writeSFunArr (SFunArr (ak, bk) f) address b
 
                   let consts = Map.fromList [(i, cv) | (cv, SV _ (NodeId i)) <- Map.toList constMap]
 
-                  case unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
+                  -- Forcing of b is important here to make sure we force all dependencies on it.
+                  bsv <- svToSV st b
+                  case bsv `seq` unFArrayIndex fArrayIndex `IMap.lookup` fArrMap of
                     Nothing          -> error $ "Data.SBV.writeSFunArr: Impossible happened while trying to access SFunArray, can't find index: " ++ show fArrayIndex
 
                     Just (aUi, rCache) -> do
