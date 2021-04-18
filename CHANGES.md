@@ -1,5 +1,5 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
-* GitHub:  <http://leventerkok.github.com/sbv/>
+* GitHub:  <http://leventerkok.github.io/sbv/>
 
 * Latest Hackage released version: 8.14, 2021-03-29
 
@@ -2082,7 +2082,7 @@ uninterpreted.
     to the chosen solver as determined by the imported module. (The latter is
     useful for modifying options to the SMT solver in an solver-agnostic way.)
   * Various improvements to Z3 model parsing routines.
-  * New web page for SBV: http://leventerkok.github.com/sbv/ is now online.
+  * New web page for SBV: http://leventerkok.github.io/sbv/ is now online.
 
 ### Version 2.8, 2012-11-29
 

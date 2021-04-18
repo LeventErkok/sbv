@@ -7,14 +7,14 @@ Synopsis    : SMT Based Verification: Symbolic Haskell theorem prover using SMT 
 Description : Express properties about Haskell programs and automatically prove them using SMT
                (Satisfiability Modulo Theories) solvers.
                .
-               For details, please see: <http://leventerkok.github.com/sbv/>
+               For details, please see: <http://leventerkok.github.io/sbv/>
 
 Copyright          : Levent Erkok, 2010-2021
 License            : BSD-3-Clause
 License-file       : LICENSE
 Stability          : Experimental
 Author             : Levent Erkok
-Homepage           : http://leventerkok.github.com/sbv/
+Homepage           : http://leventerkok.github.io/sbv/
 Bug-reports        : http://github.com/LeventErkok/sbv/issues
 Maintainer         : Levent Erkok (erkokl@gmail.com)
 Build-Type         : Simple
