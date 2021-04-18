@@ -44,7 +44,7 @@ module Data.SBV.Core.Data
  , SVal(..)
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SFunArray(..), SArray(..)
+ , ArrayContext(..), ArrayInfo, SymArray(..), SArray(..)
  , sbvToSV, sbvToSymSV, forceSVArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
@@ -79,8 +79,8 @@ import Data.Typeable          (Typeable)
 
 import qualified Data.Generics as G    (Data(..))
 
-import qualified Data.IORef         as R    (readIORef, newIORef)
-import qualified Data.IntMap.Strict as IMap (size, insert, empty)
+import qualified Data.IORef         as R    (readIORef)
+import qualified Data.IntMap.Strict as IMap (size, insert)
 
 import System.Random
 
@@ -591,49 +591,18 @@ instance (Random a, SymVal a) => Random (SBV a) where
 -- * Symbolic Arrays
 ---------------------------------------------------------------------------------
 
--- | Flat arrays of symbolic values
+-- | Arrays of symbolic values
 -- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@.
 --
 -- If a default value is supplied, then all the array elements will be initialized to this value.
 -- Otherwise, they will be left unspecified, i.e., a read from an unwritten location will produce
 -- an uninterpreted constant.
 --
--- While it's certainly possible for user to create instances of 'SymArray', the
--- 'SArray' and 'SFunArray' instances already provided should cover most use cases
--- in practice. Note that there are a few differences between these two models in
--- terms of use models:
---
---    * 'SArray' produces SMTLib arrays, and requires a solver that understands the
---      array theory. 'SFunArray' is internally handled, and thus can be used with
---      any solver. (Note that all solvers except 'Data.SBV.abc' support arrays, so this isn't
---      a big decision factor.)
---
---    * For both arrays, if a default value is supplied, then reading from uninitialized
---      cell will return that value. If the default is not given, then reading from
---      uninitialized cells is still OK for both arrays, and will produce an uninterpreted
---      constant in both cases.
---
---    * Only 'SArray' supports checking equality of arrays. (That is, checking if an entire
---      array is equivalent to another.) 'SFunArray's cannot be checked for equality. In general,
---      checking wholesale equality of arrays is a difficult decision problem and should be
---      avoided if possible.
---
---    * Only 'SFunArray' supports compilation to C. Programs using 'SArray' will not be
---      accepted by the C-code generator.
---
---    * You cannot use quickcheck on programs that contain these arrays. (Neither 'SArray'
---      nor 'SFunArray'.)
---
---    * With 'SArray', SBV transfers all array-processing to the SMT-solver. So, it can generate
---      programs more quickly, but they might end up being too hard for the solver to handle. With
---      'SFunArray', SBV only generates code for individual elements and the array itself never
---      shows up in the resulting SMTLib program. This puts more onus on the SBV side and might
---      have some performance impacts, but it might generate problems that are easier for the SMT
---      solvers to handle.
---
--- As a rule of thumb, try 'SArray' first. These should generate compact code. However, if
--- the backend solver has hard time solving the generated problems, switch to
--- 'SFunArray'. If you still have issues, please report so we can see what the problem might be!
+-- The reason for this class is rather historic. In the past, SBV provided two different kinds of
+-- arrays: an `SArray` abstraction that mapped directly to SMTLib arrays  (which is still available
+-- today), and a functional notion of arrays that used internal caching, called @SFunArray@. The latter
+-- has been removed as the code turned out to be rather tricky and hard to maintain; so we only
+-- have one instance of this class. But end users can add their own instances, if needed.
 --
 -- NB. 'sListArray' insists on a concrete initializer, because not having one would break
 -- referential transparency. See https://github.com/LeventErkok/sbv/issues/553 for details.
@@ -675,8 +644,6 @@ class SymArray array where
 --   * Cannot be used in code-generation (i.e., compilation to C)
 --
 --   * Cannot quick-check theorems using @SArray@ values
---
---   * Typically slower as it heavily relies on SMT-solving for the array theory
 newtype SArray a b = SArray { unSArray :: SArr }
 
 instance (HasKind a, HasKind b) => Show (SArray a b) where
@@ -710,53 +677,3 @@ instance SymArray SArray where
            mkNm (Just nm) _ = nm
            aknd = kindOf (Proxy @a)
            bknd = kindOf (Proxy @b)
-
--- | Arrays implemented internally, without translating to SMT-Lib functions:
---
---   * Internally handled by the library and not mapped to SMT-Lib, hence can
---     be used with solvers that don't support arrays. (Such as abc.)
---
---   * Reading from an unintialized value is OK. If the default value is given in 'newArray', it will
---     be the result. Otherwise, the read yields an uninterpreted constant.
---
---   * Cannot check for equality of arrays.
---
---   * Can be used in code-generation (i.e., compilation to C).
---
---   * Can not quick-check theorems using @SFunArray@ values
---
---   * Typically faster as it gets compiled away during translation.
-newtype SFunArray a b = SFunArray { unSFunArray :: SFunArr }
-
-instance (HasKind a, HasKind b) => Show (SFunArray a b) where
-  show SFunArray{} = "SFunArray<" ++ showType (Proxy @a) ++ ":" ++ showType (Proxy @b) ++ ">"
-
-instance SymArray SFunArray where
-  readArray   (SFunArray arr) (SBV a)             = SBV (readSFunArr arr a)
-  writeArray  (SFunArray arr) (SBV a) (SBV b)     = SFunArray (writeSFunArr arr a b)
-  mergeArrays (SBV t) (SFunArray a) (SFunArray b) = SFunArray (mergeSFunArr t a b)
-
-  sListArray :: forall a b. (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> SFunArray a b
-  sListArray initializer = foldl (uncurry . writeArray) arr
-    where arr = SFunArray $ SFunArr ks $ cache r
-           where ks = (kindOf (Proxy @a), kindOf (Proxy @b))
-
-                 r st = do amap <- R.readIORef (rFArrayMap st)
-
-                           memoTable <- R.newIORef IMap.empty
-
-                           let k               = FArrayIndex $ IMap.size amap
-                               iVal            = literal initializer
-                               mkUninitialized = const (unSBV iVal)
-                               upd             = IMap.insert (unFArrayIndex k) (mkUninitialized, memoTable)
-
-                           k `seq` modifyState st rFArrayMap upd (return ())
-                           return k
-
-  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SFunArray a b)
-  newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]
-                                     SFunArray <$> newSFunArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
-    where mkNm Nothing t   = "funArray_" ++ show t
-          mkNm (Just nm) _ = nm
-          aknd = kindOf (Proxy @a)
-          bknd = kindOf (Proxy @b)

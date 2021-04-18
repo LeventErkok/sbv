@@ -2095,7 +2095,7 @@ instance (Ix a, Mergeable b) => Mergeable (Array a b) where
     | ba == bb = listArray ba (zipWith (symbolicMerge f t) (elems a) (elems b))
     | True     = cannotMerge "'Array' values"
                              ("Branches produce different ranges: " ++ show (k ba, k bb))
-                             "Consider using SBV's native arrays 'SArray' and 'SFunArray' instead."
+                             "Consider using SBV's native 'SArray' abstraction."
     where [ba, bb] = map bounds [a, b]
           k = rangeSize
 
@@ -2252,11 +2252,6 @@ instance EqSymbolic (SArray a b) where
 -- When merging arrays; we'll ignore the force argument. This is arguably
 -- the right thing to do as we've too many things and likely we want to keep it efficient.
 instance SymVal b => Mergeable (SArray a b) where
-  symbolicMerge _ = mergeArrays
-
--- When merging arrays; we'll ignore the force argument. This is arguably
--- the right thing to do as we've too many things and likely we want to keep it efficient.
-instance SymVal b => Mergeable (SFunArray a b) where
   symbolicMerge _ = mergeArrays
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is

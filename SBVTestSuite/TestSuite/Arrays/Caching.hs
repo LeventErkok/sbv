@@ -28,7 +28,7 @@ tests = testGroup "Arrays.Caching" [
 
 test :: Bool -> Symbolic SBool
 test swap = do
-    arr :: SFunArray Integer Integer <- newArray "items" (Just 0)
+    arr :: SArray Integer Integer <- newArray "items" (Just 0)
     x   <- sInteger "x"
 
     let ys = writeArray arr 0 2

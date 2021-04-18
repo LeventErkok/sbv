@@ -69,7 +69,7 @@
 --
 --   * 'SSet': Symbolic sets.
 --
---   * 'SArray', 'SFunArray': Flat arrays of symbolic values.
+--   * 'SArray': Arrays of symbolic values.
 --
 --   * Symbolic polynomials over GF(2^n), polynomial arithmetic, and CRCs.
 --
@@ -186,7 +186,7 @@ module Data.SBV (
   -- ** Sets
   , RCSet(..), SSet
   -- * Arrays of symbolic values
-  , SymArray(readArray, writeArray, mergeArrays, sListArray), newArray_, newArray, SArray, SFunArray
+  , SymArray(readArray, writeArray, mergeArrays, sListArray), newArray_, newArray, SArray
 
   -- * Creating symbolic values
   -- ** Single value

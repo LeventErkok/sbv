@@ -59,16 +59,10 @@ tests :: TestTree
 tests =
   testGroup "Arrays.InitVals"
     [ testCase "readDef_SArray"              $ assertIsThm (readDef (undefined :: SArray    Integer Integer))
-    , testCase "readDef_SFunArray"           $ assertIsThm (readDef (undefined :: SFunArray Integer Integer))
-
     , testCase "readDef2_SArray2"            $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
-    , testCase "readDef2_SFunArray"          $ assertIsSat (readNoDef (undefined :: SFunArray Integer Integer))
-
     , goldenCapturedIO "constArr_SArray"     $ t  (undefined :: SArray    Integer Integer)
-    , goldenCapturedIO "constArr_SFunArray"  $ t  (undefined :: SFunArray Integer Integer)
 
     , goldenCapturedIO "constArr2_SArray"    $ t2 (undefined :: SArray    Integer Integer)
-    , goldenCapturedIO "constArr2_SFunArray" $ t2 (undefined :: SFunArray Integer Integer)
     ]
     where t p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr p)
                             appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")

@@ -41,7 +41,7 @@ instance IsString SQLExpr where
 
 -- | Evaluation monad. The state argument is the environment to store
 -- variables as we evaluate.
-type M = StateT (SFunArray String String) (WriterT [SString] Symbolic)
+type M = StateT (SArray String String) (WriterT [SString] Symbolic)
 
 -- | Given an expression, symbolically evaluate it
 eval :: SQLExpr -> M SString
@@ -137,7 +137,7 @@ findInjection expr = runSMT $ do
 
     -- Create an initial environment that returns the symbolic
     -- value my_topicid only, and unspecified for all other variables
-    emptyEnv :: SFunArray String String <- newArray "emptyEnv" Nothing
+    emptyEnv :: SArray String String <- newArray "emptyEnv" Nothing
 
     let env = writeArray emptyEnv "my_topicid" badTopic
 

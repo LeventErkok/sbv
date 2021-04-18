@@ -5,8 +5,11 @@
 
 ### Version 8.14.5, Not yet released
 
-  * Fix a bug in SFunArray write operations, thanks to frenchfrog42
-    on github for reporting.
+  * Remove support for SFunArray abstraction. Turns out that the caching
+    mechanisms SBV used for SFunArray weren't entirely safe, and the code
+    has become unmaintainable over-time. Instead you should simply use
+    SArray, which has the exact same API. Thanks to frenchFrog42 on
+    github for reporting some of the problems.
 
 ### Version 8.14, 2021-03-29
 

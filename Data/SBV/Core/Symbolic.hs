@@ -45,7 +45,7 @@ module Data.SBV.Core.Symbolic
   , svToSV, svToSymSV, forceSVArg
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
-  , ArrayIndex(..), FArrayIndex(..), uncacheAI, uncacheFAI
+  , ArrayIndex(..), uncacheAI
   , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId, getUniversals
   , prefixExistentials, prefixUniversals, onUserInputs, onInternInputs, onAllInputs
   , addInternInput, addUserInput, getInputs, inputsFromListWith, userInputsToList
@@ -1129,7 +1129,6 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rAsserts     :: IORef [(String, Maybe CallStack, SV)]
                     , rSVCache     :: IORef (Cache SV)
                     , rAICache     :: IORef (Cache ArrayIndex)
-                    , rFAICache    :: IORef (Cache FArrayIndex)
                     , rQueryState  :: IORef (Maybe QueryState)
                     }
 
@@ -1669,7 +1668,6 @@ runSymbolic currentRunMode (SymbolicT c) = do
      axioms    <- newIORef []
      swCache   <- newIORef IMap.empty
      aiCache   <- newIORef IMap.empty
-     faiCache  <- newIORef IMap.empty
      usedKinds <- newIORef Set.empty
      usedLbls  <- newIORef Set.empty
      cstrs     <- newIORef S.empty
@@ -1700,7 +1698,6 @@ runSymbolic currentRunMode (SymbolicT c) = do
                   , raxioms      = axioms
                   , rSVCache     = swCache
                   , rAICache     = aiCache
-                  , rFAICache    = faiCache
                   , rConstraints = cstrs
                   , rSMTOptions  = smtOpts
                   , rOptGoals    = optGoals
@@ -1854,20 +1851,9 @@ newtype ArrayIndex = ArrayIndex { unArrayIndex :: Int } deriving (Eq, Ord, G.Dat
 instance Show ArrayIndex where
   show (ArrayIndex i) = show i
 
--- | A functional array index is simply an int value
-newtype FArrayIndex = FArrayIndex { unFArrayIndex :: Int } deriving (Eq, Ord)
-
--- | We simply show indexes as the underlying integer
-instance Show FArrayIndex where
-  show (FArrayIndex i) = show i
-
 -- | Uncache, retrieving SMT array indexes
 uncacheAI :: Cached ArrayIndex -> State -> IO ArrayIndex
 uncacheAI = uncacheGen rAICache
-
--- | Uncache, retrieving Functional array indexes
-uncacheFAI :: Cached FArrayIndex -> State -> IO FArrayIndex
-uncacheFAI = uncacheGen rFAICache
 
 -- | Generic uncaching. Note that this is entirely safe, since we do it in the IO monad.
 uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a

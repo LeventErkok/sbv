@@ -87,19 +87,14 @@ fv = do a <- sInteger "a"
                    constrain $ fpIsPositive vQuad
 
                    vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
-                   vFArray  :: SFunArray Bool    Char    <- freshArray "vFArray" Nothing
                    vi1                                   <- freshVar "i1"
                    vi2                                   <- freshVar "i2"
                    constrain $ readArray vSArray vi1 .== 2
-                   constrain $ readArray vFArray vi2 .== literal 'a'
 
                    viSArray  :: SArray    Integer Integer <- freshArray "viSArray" (Just (literal 42))
-                   viFArray  :: SFunArray Bool    Char    <- freshArray "viFArray" (Just (literal 'X'))
                    mustBe42                               <- freshVar "mustBe42"
-                   mustBeX                                <- freshVar "mustBeX"
 
                    constrain $ readArray viSArray 96     .== mustBe42
-                   constrain $ readArray viFArray sFalse .== mustBeX
                    constrain $ vi1 .== 1
                    constrain $ sNot vi2
 
@@ -135,7 +130,6 @@ fv = do a <- sInteger "a"
                                vi1Val      <- getValue vi1
                                vi2Val      <- getValue vi2
                                mustBe42Val <- getValue mustBe42
-                               mustBeXVal  <- getValue mustBeX
                                vStringVal  <- getValue vString
                                vList1Val   <- getValue vList1
                                vList2Val   <- getValue vList2
@@ -162,7 +156,6 @@ fv = do a <- sInteger "a"
                                            , vi1        |-> vi1Val
                                            , vi2        |-> vi2Val
                                            , mustBe42   |-> mustBe42Val
-                                           , mustBeX    |-> mustBeXVal
                                            , vString    |-> vStringVal
                                            , vList1     |-> vList1Val
                                            , vList2     |-> vList2Val
