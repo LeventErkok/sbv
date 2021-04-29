@@ -199,21 +199,17 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ concatMap declUI uis
              ++ [ "; --- user given axioms ---" ]
              ++ map declAx axs
-             ++ [ "; --- formula ---" ]
 
+             ++ [ "; --- formula ---" ]
+             ++ concat arrayDelayeds
+             ++ concat arraySetups
              ++ concatMap (declDef cfg skolemMap tableMap) preQuantifierAssigns
              ++ ["(assert (forall (" ++ intercalate "\n                 "
                                         ["(" ++ show s ++ " " ++ svType s ++ ")" | s <- foralls] ++ ")"
                 | not (null foralls)
                 ]
              ++ concatMap mkAssign postQuantifierAssigns
-
-             ++ concat arrayDelayeds
-
-             ++ concat arraySetups
-
              ++ delayedAsserts delayedEqualities
-
              ++ finalAssert
 
         -- identify the assignments that can come before the first quantifier
