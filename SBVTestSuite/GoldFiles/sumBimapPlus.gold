@@ -24,7 +24,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
 [GOOD] (define-fun s3 () Int (+ s1 s2))
 [GOOD] (define-fun s4 () (SBVEither Int Int) ((as left_SBVEither (SBVEither Int Int)) s3))
@@ -40,6 +40,12 @@
 [GOOD] (define-fun s14 () Int (ite s8 s1 s5))
 [GOOD] (define-fun s15 () Int (+ s2 s14))
 [GOOD] (define-fun s16 () Bool (= s13 s15))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s16)
 [SEND] (check-sat)
 [RECV] sat

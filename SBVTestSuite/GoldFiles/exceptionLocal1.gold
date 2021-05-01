@@ -17,7 +17,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () (_ BitVec 1) ((_ extract 0 0) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
 [GOOD] (define-fun s4 () Bool (not s3))

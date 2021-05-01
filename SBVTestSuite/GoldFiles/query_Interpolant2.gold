@@ -22,7 +22,7 @@
 [GOOD] (declare-fun f (Int) Int)
 [GOOD] (declare-fun g (Int) Int)
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s4 () Int (f s0))
 [GOOD] (define-fun s5 () Bool (= s2 s4))
 [GOOD] (define-fun s6 () Int (f s1))
@@ -33,6 +33,12 @@
 [GOOD] (define-fun s11 () Int (g s3))
 [GOOD] (define-fun s12 () Bool (distinct s10 s11))
 [GOOD] (define-fun s13 () Bool (and s9 s12))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert (! s8 :interpolation-group |c1|))
 [GOOD] (assert (! s13 :interpolation-group |c2|))
 [SEND] (check-sat)

@@ -17,8 +17,14 @@
 [GOOD] (declare-fun array_0 () (Array Int Int))
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
 [GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (define-fun s0 () Int 0)
 [GOOD] (define-fun s1 () Int 1)
 [GOOD] (define-fun s3 () Int 2)

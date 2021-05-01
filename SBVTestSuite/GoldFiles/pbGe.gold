@@ -37,7 +37,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s10 () Bool ((_ pbge 7 1 2 3 4 5 6 7 8 9 10) s0 s1 s2 s3 s4 s5 s6 s7 s8 s9))
 [GOOD] (define-fun s13 () Int (ite s0 s11 s12))
 [GOOD] (define-fun s15 () Int (ite s1 s14 s12))
@@ -61,6 +61,12 @@
 [GOOD] (define-fun s41 () Bool (>= s40 s29))
 [GOOD] (define-fun s42 () Bool (= s10 s41))
 [GOOD] (define-fun s43 () Bool (not s42))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s43)
 [SEND] (check-sat)
 [RECV] unsat

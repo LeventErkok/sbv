@@ -20,7 +20,13 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
+[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (declare-fun AND (B B) B)
 [GOOD] (declare-fun NOT (B) B)
 [GOOD] (declare-fun OR (B B) B)

@@ -30,7 +30,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () (SBVTuple2 Int (Seq (SBVTuple2 Int String))) (seq.nth s0 s1))
 [GOOD] (define-fun s3 () Int (proj_1_SBVTuple2 s2))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
@@ -48,6 +48,12 @@
 [GOOD] (define-fun s21 () Int (seq.len s20))
 [GOOD] (define-fun s22 () Bool (= s1 s21))
 [GOOD] (define-fun s24 () Bool (= s0 s23))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s5)
 [GOOD] (assert s12)
 [GOOD] (assert s15)

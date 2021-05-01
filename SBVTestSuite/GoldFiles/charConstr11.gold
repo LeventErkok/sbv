@@ -31,10 +31,16 @@
                             (forall ((seq0 Int)) (=> (and (>= seq0 0) (< seq0 (seq.len result))) (and (= 1 (str.len (proj_1_SBVTuple2 (proj_1_SBVTuple2 (seq.nth result seq0))))) (= 1 (str.len (proj_2_SBVTuple2 (proj_1_SBVTuple2 (seq.nth result seq0))))))))
                        )))
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () (Seq (SBVTuple2 (SBVTuple2 String String) (Seq Int))) (cf4 s0 s1))
 [GOOD] (define-fun s3 () Int (seq.len s2))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat

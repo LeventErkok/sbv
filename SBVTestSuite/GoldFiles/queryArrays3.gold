@@ -17,7 +17,13 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
+[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (define-fun s1 () (_ BitVec 8) #x00)
 [GOOD] (declare-fun table0 ((_ BitVec 8)) (_ BitVec 8))
 [GOOD] (define-fun s2 () (_ BitVec 8) (table0 s0))

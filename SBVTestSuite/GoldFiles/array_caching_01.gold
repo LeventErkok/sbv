@@ -25,7 +25,7 @@
 [GOOD] (declare-fun array_3 () (Array Int Int))
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] (define-fun s5 () Int (+ s1 s4))
 [GOOD] (define-fun s6 () Int (select array_1 s5))
@@ -33,8 +33,10 @@
 [GOOD] (define-fun s8 () Int (select array_3 s0))
 [GOOD] (define-fun s9 () Int (ite s2 s7 s8))
 [GOOD] (define-fun s10 () Bool (= s4 s9))
+[GOOD] ; --- arrayDelayeds ---
 [GOOD] (define-fun array_2_initializer_0 () Bool (= array_2 (store array_1 s0 s6)))
 [GOOD] (define-fun array_3_initializer_0 () Bool (= array_3 (store array_1 s5 s4)))
+[GOOD] ; --- arraySetups ---
 [GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
 [GOOD] (define-fun array_1_initializer () Bool array_1_initializer_0)
 [GOOD] (assert array_1_initializer)
@@ -42,6 +44,10 @@
 [GOOD] (assert array_2_initializer)
 [GOOD] (define-fun array_3_initializer () Bool array_3_initializer_0)
 [GOOD] (assert array_3_initializer)
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s10)
 [SEND] (check-sat)
 [RECV] sat

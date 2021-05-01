@@ -22,7 +22,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s4 () String (str.++ s3 s1))
 [GOOD] (define-fun s5 () String (str.++ s0 s4))
 [GOOD] (define-fun s7 () String (str.++ s6 s2))
@@ -34,6 +34,12 @@
 [GOOD] (define-fun s14 () String (str.++ s12 s0))
 [GOOD] (define-fun s15 () Bool (= s13 s14))
 [GOOD] (define-fun s16 () Bool (not s15))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s9)
 [GOOD] (assert s11)
 [GOOD] (assert s16)

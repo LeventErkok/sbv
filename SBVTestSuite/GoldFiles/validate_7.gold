@@ -17,8 +17,12 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
+[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] (assert (forall ((s1 (_ FloatingPoint  8 24)))
+       ; --- postQuantifier assignments ---
                    (let ((s2 (fp.isNaN s1)))
                    (let ((s3 (fp.isInfinite s1)))
                    (let ((s4 (or s2 s3)))
@@ -26,6 +30,8 @@
                    (let ((s6 (not s5)))
                    (let ((s7 (fp.leq s0 s1)))
                    (let ((s8 (or s6 s7)))
+       ; --- delayedEqualities ---
+       ; -- finalAssert ---
                    s8)))))))))
 [SEND] (check-sat)
 [RECV] sat

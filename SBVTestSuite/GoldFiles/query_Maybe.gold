@@ -24,11 +24,17 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () Int (get_just_SBVMaybe s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
 [GOOD] (define-fun s4 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s0))
 [GOOD] (define-fun s5 () Bool (ite s4 false s3))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat

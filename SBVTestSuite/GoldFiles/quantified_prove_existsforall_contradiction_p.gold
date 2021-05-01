@@ -17,11 +17,17 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
+[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] (assert (forall ((s0 (_ BitVec 8)))
+       ; --- postQuantifier assignments ---
                    (let ((s2 (= s0 (s1 s0))))
                    (let ((s3 (distinct s0 (s1 s0))))
                    (let ((s4 (and s2 s3)))
+       ; --- delayedEqualities ---
+       ; -- finalAssert ---
                    (not s4))))))
 [SEND] (check-sat)
 [RECV] sat

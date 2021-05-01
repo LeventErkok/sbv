@@ -33,9 +33,15 @@
                             )
                        )))
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () (SBVTuple3 String String String) (cf3 s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s3)
 [SEND] (check-sat)
 [RECV] sat

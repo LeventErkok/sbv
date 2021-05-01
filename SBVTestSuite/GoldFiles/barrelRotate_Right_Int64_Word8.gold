@@ -21,7 +21,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s3 () (_ BitVec 8) (bvurem s1 s2))
 [GOOD] (define-fun s4 () (_ BitVec 1) ((_ extract 5 5) s3))
 [GOOD] (define-fun s6 () Bool (distinct s4 s5))
@@ -111,6 +111,11 @@
 [GOOD] (define-fun s90 () (_ BitVec 64) ((_ rotate_right 63) s0))
 [GOOD] (define-fun s92 () (_ BitVec 64) (ite (bvule #x40 s3) s91 (table0 s3)))
 [GOOD] (define-fun s93 () Bool (= s28 s92))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
 [GOOD] (assert (= (table0 #x00) s0))
 [GOOD] (assert (= (table0 #x01) s17))
 [GOOD] (assert (= (table0 #x02) s29))
@@ -175,6 +180,7 @@
 [GOOD] (assert (= (table0 #x3d) s88))
 [GOOD] (assert (= (table0 #x3e) s89))
 [GOOD] (assert (= (table0 #x3f) s90))
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert (not s93))
 [SEND] (check-sat)
 [RECV] unsat

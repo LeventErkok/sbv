@@ -19,9 +19,15 @@
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
 [ISSUE] ; --- user given axioms ---
-[ISSUE] ; --- formula ---
+[ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s3 () Bool (bvsgt s0 s2))
 [ISSUE] (define-fun s4 () Bool (bvsgt s1 s2))
+[ISSUE] ; --- arrayDelayeds ---
+[ISSUE] ; --- arraySetups ---
+[ISSUE] ; --- formula ---
+[ISSUE] ; --- postQuantifier assignments ---
+[ISSUE] ; --- delayedEqualities ---
+[ISSUE] ; -- finalAssert ---
 [ISSUE] (assert s3)
 [ISSUE] (assert s4)
 [FIRE] (define-fun s5 () (_ BitVec 32) #x00000002)

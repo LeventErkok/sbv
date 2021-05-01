@@ -25,7 +25,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s3 () Bool (<= s0 s1))
 [GOOD] (define-fun s4 () Bool (<= s1 s2))
 [GOOD] (define-fun s5 () Bool (and s3 s4))
@@ -162,6 +162,12 @@
 [GOOD] (define-fun s139 () (Seq Int) (seq.++ s9 s138))
 [GOOD] (define-fun s140 () Bool (= s105 s139))
 [GOOD] (define-fun s141 () Bool (or s137 s140))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s107)
 [GOOD] (assert s115)
 [GOOD] (assert s122)

@@ -21,9 +21,15 @@
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
 [ISSUE] ; --- user given axioms ---
-[ISSUE] ; --- formula ---
+[ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s4 () Bool (> s0 s3))
 [ISSUE] (define-fun s6 () Bool (<= s0 s5))
+[ISSUE] ; --- arrayDelayeds ---
+[ISSUE] ; --- arraySetups ---
+[ISSUE] ; --- formula ---
+[ISSUE] ; --- postQuantifier assignments ---
+[ISSUE] ; --- delayedEqualities ---
+[ISSUE] ; -- finalAssert ---
 [ISSUE] (assert s4)
 [ISSUE] (assert s6)
 [FIRE] (declare-fun s7 () Real)

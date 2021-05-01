@@ -17,10 +17,16 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun q1 (Bool) Bool)
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s0 () Bool (q1 false))
 [GOOD] (define-fun s1 () Bool (= false s0))
 [GOOD] (define-fun s2 () Bool (q1 true))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s1)
 [GOOD] (assert s2)
 [SEND] (check-sat)

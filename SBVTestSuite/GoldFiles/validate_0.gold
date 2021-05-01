@@ -18,8 +18,14 @@
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
 [ISSUE] ; --- user given axioms ---
-[ISSUE] ; --- formula ---
+[ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s2 () Bool (bvult s0 s1))
+[ISSUE] ; --- arrayDelayeds ---
+[ISSUE] ; --- arraySetups ---
+[ISSUE] ; --- formula ---
+[ISSUE] ; --- postQuantifier assignments ---
+[ISSUE] ; --- delayedEqualities ---
+[ISSUE] ; -- finalAssert ---
 [ISSUE] (assert s2)
 [SEND] (check-sat)
 [RECV] sat

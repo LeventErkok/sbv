@@ -19,10 +19,16 @@
 [GOOD] (declare-fun c () Q)
 [GOOD] (declare-fun d () Q)
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s0 () Q c)
 [GOOD] (define-fun s1 () Q d)
 [GOOD] (define-fun s2 () Bool (distinct s0 s1))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s2)
 *** Checking Satisfiability, all solutions..
 *** SBV.allSat: Uninterpreted function: c :: Q

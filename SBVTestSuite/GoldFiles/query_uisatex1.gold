@@ -57,7 +57,7 @@
 [GOOD] (declare-fun q4 (String String) (_ FloatingPoint  8 24))
 [GOOD] (declare-fun q5 ((Seq Int) (Seq (_ FloatingPoint  8 24))) Int)
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Int (q1 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
 [GOOD] (define-fun s6 () Int (q1 s5))
@@ -94,6 +94,12 @@
 [GOOD] (define-fun s63 () Bool (= s61 s62))
 [GOOD] (define-fun s66 () Int (q5 s64 s65))
 [GOOD] (define-fun s68 () Bool (= s66 s67))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 [GOOD] (assert s4)
 [GOOD] (assert s8)
 [GOOD] (assert s12)

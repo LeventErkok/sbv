@@ -18,9 +18,15 @@
 [GOOD] (declare-fun q1 (Bool) Bool)
 [GOOD] (declare-fun q2 (Bool Bool) Bool)
 [GOOD] ; --- user given axioms ---
-[GOOD] ; --- formula ---
+[GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s0 () Bool (q1 false))
 [GOOD] (define-fun s1 () Bool (q2 false false))
+[GOOD] ; --- arrayDelayeds ---
+[GOOD] ; --- arraySetups ---
+[GOOD] ; --- formula ---
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
 *** Checking Satisfiability, all solutions..
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)

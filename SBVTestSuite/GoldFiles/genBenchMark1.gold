@@ -14,8 +14,14 @@
 ; --- arrays ---
 ; --- uninterpreted constants ---
 ; --- user given axioms ---
-; --- formula ---
+; --- preQuantifier assignments ---
 (define-fun s2 () (_ BitVec 8) (bvadd s0 s1))
 (define-fun s3 () Bool (= s0 s2))
+; --- arrayDelayeds ---
+; --- arraySetups ---
+; --- formula ---
+; --- postQuantifier assignments ---
+; --- delayedEqualities ---
+; -- finalAssert ---
 (assert (not s3))
 (check-sat)
