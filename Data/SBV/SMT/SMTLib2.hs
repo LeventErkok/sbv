@@ -199,23 +199,28 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ concatMap declUI uis
              ++ [ "; --- user given axioms ---" ]
              ++ map declAx axs
-
-             ++ [ "; --- formula ---" ]
-             ++ concat arrayDelayeds
-             ++ concat arraySetups
+             ++ [ "; --- preQuantifier assignments ---" ]
              ++ concatMap (declDef cfg skolemMap tableMap) preQuantifierAssigns
+             ++ [ "; --- arrayDelayeds ---" ]
+             ++ concat arrayDelayeds
+             ++ [ "; --- arraySetups ---" ]
+             ++ concat arraySetups
+             ++ [ "; --- formula ---" ]
              ++ ["(assert (forall (" ++ intercalate "\n                 "
                                         ["(" ++ show s ++ " " ++ svType s ++ ")" | s <- foralls] ++ ")"
                 | not (null foralls)
                 ]
+             ++ [ "; --- postQuantifier assignments ---" ]
              ++ concatMap mkAssign postQuantifierAssigns
+             ++ [ "; --- delayedEqualities ---" ]
              ++ delayedAsserts delayedEqualities
+             ++ [ "; -- finalAssert ---" ]
              ++ finalAssert
 
         -- identify the assignments that can come before the first quantifier
         (preQuantifierAssigns, postQuantifierAssigns)
            | null foralls
-           = ([], asgns)  -- the apparent "switch" here is OK; rest of the code works correctly if there are no foralls.
+           = (asgns, [])
            | True
            = span pre asgns
            where first      = nodeId (minimum foralls)
