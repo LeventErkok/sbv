@@ -1169,7 +1169,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      let allModelInputs  = prefixExistentials qinps
                          -- Add on observables only if we're not in a quantified context:
-                         grabObservables = S.length allModelInputs == S.length qinps -- i.e., we didn't drop anything
+                         hasQuantifiers  = S.length allModelInputs /= S.length qinps -- i.e., we dropped something
+                         grabObservables = not hasQuantifiers
 
                          vars :: S.Seq (SVal, NamedSymVar)
                          vars = let mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
@@ -1186,6 +1187,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
 
                      -- We can go fast using the disjoint model trick if things are simple enough:
+                     --     - No quantifiers
                      --     - No uninterpreted functions (uninterpreted values are OK)
                      --     - No uninterpreted sorts
                      --
@@ -1198,7 +1200,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- previous model and asking for a new one. If they don't exist (which is the common case anyhow)
                      -- we use an idea due to z3 folks <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      -- which splits the search space into disjoint models and can produce results much more quickly.
-                     let isSimple = null allUiFuns && null usorts
+                     let isSimple = null allUiFuns && null usorts && not hasQuantifiers
 
                          start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatHasPrefixExistentials = w
