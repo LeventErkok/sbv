@@ -24,7 +24,7 @@
 [GOOD] (define-fun s2 () Bool (distinct s0 s1))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
+[GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---

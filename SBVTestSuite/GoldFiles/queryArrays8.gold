@@ -24,7 +24,7 @@
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
 [GOOD] (declare-fun array_0 () (Array Int Int))
-[GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
+[GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
 [GOOD] (define-fun s0 () Int 0)
 [GOOD] (define-fun s1 () Int 1)
 [GOOD] (define-fun s3 () Int 2)
