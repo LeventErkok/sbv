@@ -75,7 +75,7 @@ data RunnerI = RunnerI { runI        :: (U.SMTConfig -> Problem -> IO BenchResul
                        , problem     :: Problem
                        }
 
--- | GADT to allow arbritrary nesting of runners. This copies criterion's design
+-- | GADT to allow arbitrary nesting of runners. This copies criterion's design
 -- so that we don't have to separate out runners that run a single benchmark
 -- from runners that need to run several benchmarks
 data Runner where

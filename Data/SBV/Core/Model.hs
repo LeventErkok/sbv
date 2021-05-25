@@ -865,7 +865,7 @@ class (Mergeable a, EqSymbolic a) => OrdSymbolic a where
   smin  :: a -> a -> a
   -- | Symbolic maximum.
   smax  :: a -> a -> a
-  -- | Is the value withing the allowed /inclusive/ range?
+  -- | Is the value within the allowed /inclusive/ range?
   inRange    :: a -> (a, a) -> SBool
 
   {-# MINIMAL (.<) #-}

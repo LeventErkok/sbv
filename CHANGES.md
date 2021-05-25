@@ -275,7 +275,7 @@
     class which provided similar operations but only on
     predefined types. There is a new class called ByteConverter
     to convert to-and-from bytes for suitable bit-vector
-    sizes upto 512.
+    sizes up to 512.
 
   * Tuple construction functions are given new types to strengthen
     type checking. Previously the tuple argument was ignored,
@@ -768,7 +768,7 @@
 
   * Rework 'SFunArray' implementation, addressing performance issues. We now
     carefully memoize elements as we do the look-ups. This addresses several
-    perfomance issues that came up; hopefully providing some relief. The
+    performance issues that came up; hopefully providing some relief. The
     function 'mkSFunArray' is also removed, which used to lift Haskell
     functions to such arrays, often used to implement initial values. Now,
     if a read is done on an unwritten element of 'SFunArray' we get an
@@ -1667,7 +1667,7 @@
   * Add SWord32/SWord64 to/from SFloat/SDouble conversions, as bit-pattern reinterpretation; using the
     IEEE754 interchange format. The functions are: sWord32AsSFloat, sWord64AsSDouble, sFloatAsSWord32,
     sDoubleAsSWord64. Note that the sWord32AsSFloat and sWord64ToSDouble are regular functions, but
-    sFloatToSWord32 and sDoubleToSWord64 are "relations", since NaN values are not uniquely convertable.
+    sFloatToSWord32 and sDoubleToSWord64 are "relations", since NaN values are not uniquely convertible.
 
   * Add 'sExtractBits', which takes a list of indices to extract bits from, essentially
     equivalent to 'map sTestBit'.
@@ -2288,7 +2288,7 @@ uninterpreted.
     a symbolic value under the given constraints. Useful for statistical
     analysis and probability computations.
   * When saturating provable values, use forAll_ for proofs and forSome_
-    for sat/allSat. (Previously we were allways using forAll_, which is
+    for sat/allSat. (Previously we were always using forAll_, which is
     not incorrect but less intuitive.)
   * add function:
       extractModels :: SatModel a => AllSatResult -> [a]

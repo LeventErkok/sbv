@@ -774,7 +774,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
 -- Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
   -- If there's nothing interesting going on, just print the constant. Note that the
-  -- definiton of interesting here is rather subjective; but essentially if we reduced
+  -- definition of interesting here is rather subjective; but essentially if we reduced
   -- the result to a single constant already, without any reference to anything.
   show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
@@ -902,7 +902,7 @@ data IStage = ISetup        -- Before we initiate contact.
             | ISafe         -- In the context of a safe/safeWith call
             | IRun          -- After the contact is started
 
--- | Are we cecking safety
+-- | Are we checking safety
 isSafetyCheckingIStage :: IStage -> Bool
 isSafetyCheckingIStage s = case s of
                              ISetup -> False

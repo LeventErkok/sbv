@@ -636,7 +636,7 @@ class SymArray array where
 --
 --   * Maps directly to SMT-lib arrays
 --
---   * Reading from an unintialized value is OK. If the default value is given in 'newArray', it will
+--   * Reading from an uninitialized value is OK. If the default value is given in 'newArray', it will
 --     be the result. Otherwise, the read yields an uninterpreted constant.
 --
 --   * Can check for equality of these arrays

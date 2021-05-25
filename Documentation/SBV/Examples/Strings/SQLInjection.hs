@@ -69,7 +69,7 @@ exampleProgram = Query $ foldr1 Concat [ "SELECT msg FROM msgs WHERE topicid='"
 nameRe :: R.RegExp
 nameRe = R.Loop 1 7 (R.Range 'a' 'z')
 
--- | Strings: Again, at most of lenght 5, surrounded by quotes.
+-- | Strings: Again, at most of length 5, surrounded by quotes.
 strRe :: R.RegExp
 strRe = "'" * R.Loop 1 5 (R.Range 'a' 'z' + " ") * "'"
 

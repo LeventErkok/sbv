@@ -569,7 +569,7 @@ constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ s
         lis  = length is
 
         setup
-          | lis == 0       = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed"
+          | lis == 0       = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initialization needed"
                              ]
           | lis == 1       = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
                              , "(assert " ++ initializer ++ ")"
@@ -654,7 +654,7 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         lAll          = lpre + length post
 
         setup
-          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initializiation needed" | not quantified]
+          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initialization needed" | not quantified]
           | lAll == 1      = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
                              , "(assert " ++ initializer ++ ")"
                              ]

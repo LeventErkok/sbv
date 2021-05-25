@@ -744,7 +744,7 @@ by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 -}
 
 {- $strings
-Support for characters, strings, and regular expressions (intial version contributed by Joel Burget)
+Support for characters, strings, and regular expressions (initial version contributed by Joel Burget)
 adds support for QF_S logic, described here: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
 and here: <http://rise4fun.com/z3/tutorialcontent/sequences>. Note
 that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
@@ -754,7 +754,7 @@ See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for related functions.
 -}
 
 {- $lists
-Support for symbolic lists (intial version contributed by Joel Burget)
+Support for symbolic lists (initial version contributed by Joel Burget)
 adds support for sequence support, described here: <http://rise4fun.com/z3/tutorialcontent/sequences>. Note
 that this logic is still not part of official SMTLib (as of March 2018), so it should be considered
 experimental.

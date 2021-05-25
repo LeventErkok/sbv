@@ -175,7 +175,7 @@ instance Show AllSatResult where
                        (False, False) -> ""
                        (False, True)  -> " (Search stopped since solver has returned unknown.)"
                        (True,  False) -> " (Unique up to prefix existentials.)"
-                       (True,  True)  -> " (Search stopped becase solver has returned unknown, only prefix existentials were considered.)"
+                       (True,  True)  -> " (Search stopped because solver has returned unknown, only prefix existentials were considered.)"
 
           go c (s:ss) = let c'      = c+1
                             (ok, o) = sh c' s
@@ -661,7 +661,7 @@ standardEngine envName envOptName cfg ctx pgm continuation = do
 
 -- | A standard solver interface. If the solver is SMT-Lib compliant, then this function should suffice in
 -- communicating with it.
-standardSolver :: SMTConfig       -- ^ The currrent configuration
+standardSolver :: SMTConfig       -- ^ The current configuration
                -> State           -- ^ Context in which we are running
                -> String          -- ^ The program
                -> (State -> IO a) -- ^ The continuation

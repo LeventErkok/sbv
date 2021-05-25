@@ -143,7 +143,7 @@ _1 = field (Get @"_1")
 _2 :: HasField "_2" b a => SBV a -> SBV b
 _2 = field (Get @"_2")
 
--- | Access the 3nd element of an @STupleN@, @3 <= N <= 8@. Also see '^.'.
+-- | Access the 3rd element of an @STupleN@, @3 <= N <= 8@. Also see '^.'.
 _3 :: HasField "_3" b a => SBV a -> SBV b
 _3 = field (Get @"_3")
 

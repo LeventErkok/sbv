@@ -132,7 +132,7 @@ eval tree = case tree of
                                 , (Factorial, 24)  -- argument is restricted to 4, so the value is 24
                                 ]
 
--- | In the query mode, find a filling of a given tree shape /t/, such that it evalutes to the
+-- | In the query mode, find a filling of a given tree shape /t/, such that it evaluates to the
 -- requested number /i/. Note that we return back a concrete tree.
 generate :: Integer -> T () () -> IO (Maybe (T BinOp UnOp))
 generate i t = runSMT $ do symT <- fill t

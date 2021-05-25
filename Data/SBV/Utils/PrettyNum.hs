@@ -239,7 +239,7 @@ instance (SymVal a, PrettyNum a) => PrettyNum (SBV a) where
   bin  s = maybe (show s) (bin  :: a -> String) $ unliteral s
 
 -- | Show as a hexadecimal value. First bool controls whether type info is printed
--- while the second boolean controls wether 0x prefix is printed. The tuple is
+-- while the second boolean controls whether 0x prefix is printed. The tuple is
 -- the signedness and the bit-length of the input. The length of the string
 -- will /not/ depend on the value, but rather the bit-length.
 shex :: (Show a, Integral a) => Bool -> Bool -> (Bool, Int) -> a -> String
