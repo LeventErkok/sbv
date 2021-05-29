@@ -24,7 +24,7 @@ boolector = SMTSolver {
            name         = Boolector
          , executable   = "boolector"
          , preprocess   = id
-         , options      = const ["--smt2", "--smt2-model", "--no-exit-codes", "--incremental"]
+         , options      = const ["--smt2", "-m", "--output-format=smt2", "--no-exit-codes", "--incremental"]
          , engine       = standardEngine "SBV_BOOLECTOR" "SBV_BOOLECTOR_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False

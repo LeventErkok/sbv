@@ -7,7 +7,7 @@ report any issues you might see with newer releases.
       * Version as downloaded from the above site on Jul 6, 2019
   * Boolector:
       * http://github.com/Boolector/boolector
-      * Version 3.2.0
+      * Version 3.2.2
   * CVC4:
       * https://github.com/CVC4/CVC4
       * Version installed via `brew tap cvc4/cvc4; brew rm cvc4; brew install cvc4/cvc4/cvc4 --HEAD`
