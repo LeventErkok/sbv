@@ -11,6 +11,9 @@
     SArray, which has the exact same API. Thanks to frenchFrog42 on
     github for reporting some of the problems.
 
+  * Fix the cmd line params for invocations of Boolector. You need
+    Boolector 3.2.2 to work with this version of SBV.
+
 ### Version 8.14, 2021-03-29
 
   * Improve the fast all-sat algorithm to also support uninterpreted values.
