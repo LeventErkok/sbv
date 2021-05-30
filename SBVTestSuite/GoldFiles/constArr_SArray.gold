@@ -49,7 +49,7 @@
 [GOOD] (define-fun s20 () Bool (= s18 s19))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] (define-fun array_0_initializer () Bool true) ; no initializiation needed
+[GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
 [GOOD] (define-fun array_1_initializer () Bool array_1_initializer_0)
 [GOOD] (assert array_1_initializer)
 [GOOD] (define-fun array_2_initializer () Bool array_2_initializer_0)
