@@ -47,8 +47,8 @@ optExtField3 :: Goal
 optExtField3 = do x <- sReal "x"
                   y <- sReal "y"
 
-                  constrain $ x .< 4
-                  constrain $ y .< 5
+                  constrain $ x .<= 4
+                  constrain $ y .<= 5
 
                   maximize "x_plus_y" $ x + y
 
