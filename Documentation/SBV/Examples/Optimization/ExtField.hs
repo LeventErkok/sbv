@@ -23,17 +23,17 @@ import Data.SBV
 --
 -- >>> optimize Independent problem
 -- Objective "one-x": Optimal in an extension field:
---   one-x =                    oo :: Integer
---   min_y = 7.0 + (3.0 * epsilon) :: Real
---   min_z = 5.0 + (2.0 * epsilon) :: Real
+--   one-x =  oo :: Integer
+--   min_y = 7.0 :: Real
+--   min_z = 5.0 :: Real
 -- Objective "min_y": Optimal in an extension field:
---   one-x =                    oo :: Integer
---   min_y = 7.0 + (3.0 * epsilon) :: Real
---   min_z = 5.0 + (2.0 * epsilon) :: Real
+--   one-x =  oo :: Integer
+--   min_y = 7.0 :: Real
+--   min_z = 5.0 :: Real
 -- Objective "min_z": Optimal in an extension field:
---   one-x =                    oo :: Integer
---   min_y = 7.0 + (3.0 * epsilon) :: Real
---   min_z = 5.0 + (2.0 * epsilon) :: Real
+--   one-x =  oo :: Integer
+--   min_y = 7.0 :: Real
+--   min_z = 5.0 :: Real
 problem :: Goal
 problem = do x <- sInteger "x"
              y <- sReal "y"
@@ -41,7 +41,7 @@ problem = do x <- sInteger "x"
 
              maximize "one-x" $ 1 - x
 
-             constrain $ y .> 0 .&& z .> 5
+             constrain $ y .>= 0 .&& z .>= 5
              minimize "min_y" $ 2+y+z
 
              minimize "min_z" z

@@ -61,7 +61,15 @@ instance Show a => Show (Range a) where
 -- | Given a single predicate over a single variable, find the contiguous ranges over which the predicate
 -- is satisfied. SBV will make one call to the optimizer, and then as many calls to the solver as there are
 -- disjoint ranges that the predicate is satisfied over. (Linear in the number of ranges.) Note that the
--- number of ranges is large, this can take a long time! Some examples:
+-- number of ranges is large, this can take a long time!
+--
+-- Beware that, as of June 2021, z3 no longer supports optimization with 'SReal' in the presence of
+-- strict inequalities. See <https://github.com/Z3Prover/z3/issues/5314> for details. So, if you
+-- have 'SReal' variables, it is important that you do /not/ use a strict inequality, i.e., '.>', '.<' etc.
+-- Inequalities of the form '.<=', '.>=', and './=' should be OK. Please report if you see any fishy
+-- behavior due to this change in z3's behavior.
+--
+-- Some examples:
 --
 -- >>> ranges (\(_ :: SInteger) -> sFalse)
 -- []
@@ -73,20 +81,18 @@ instance Show a => Show (Range a) where
 -- [[5,6),(6,67),(67,75]]
 -- >>> ranges (\(x :: SInteger) -> sAnd [x .<= 75, x ./= 3, x ./= 67])
 -- [(-oo,3),(3,67),(67,75]]
--- >>> ranges (\(x :: SReal) -> sAnd [x .> 3.2, x .<  12.7])
--- [(3.2,12.7)]
--- >>> ranges (\(x :: SReal) -> sAnd [x .> 3.2, x .<= 12.7])
--- [(3.2,12.7]]
+-- >>> ranges (\(x :: SReal) -> sAnd [x .>= 3.2, x .<= 12.7])
+-- [[3.2,12.7]]
 -- >>> ranges (\(x :: SReal) -> sAnd [x .<= 12.7, x ./= 8])
 -- [(-oo,8.0),(8.0,12.7]]
 -- >>> ranges (\(x :: SReal) -> sAnd [x .>= 12.7, x ./= 15])
 -- [[12.7,15.0),(15.0,oo)]
 -- >>> ranges (\(x :: SInt8) -> sAnd [x .<= 7, x ./= 6])
 -- [[-128,6),(6,7]]
--- >>> ranges $ \x -> x .> (0::SReal)
--- [(0.0,oo)]
--- >>> ranges $ \x -> x .< (0::SReal)
--- [(-oo,0.0)]
+-- >>> ranges $ \x -> x .>= (0::SReal)
+-- [[0.0,oo)]
+-- >>> ranges $ \x -> x .<= (0::SReal)
+-- [(-oo,0.0]]
 -- >>> ranges $ \(x :: SWord8) -> 2*x .== 4
 -- [[2,3),(129,130]]
 ranges :: forall a. (Ord a, Num a, SymVal a,  SatModel a, Metric a, SymVal (MetricSpace a), SatModel (MetricSpace a)) => (SBV a -> SBool) -> IO [Range a]

@@ -14,6 +14,16 @@
   * Fix the cmd line params for invocations of Boolector. You need
     Boolector 3.2.2 to work with this version of SBV.
 
+  * NB. Recent releases of z3 no longer support optimization of real-valued
+    goals in the presence of strict inequalities, i.e., .> and .< operators.
+    So, you might get a bogus result if you are using optimization with
+    SReal parameters that have strict inequalities. See https://github.com/Z3Prover/z3/issues/5314
+    for details. There is not much SBV can do to prevent these, unfortunately,
+    as z3 optimization engine goals seem to have changed. Note that use of
+    non-strict inequalities (i.e., .>=, .<=, ./=) should be fine. Also, this
+    only impacts the optimize calls: regular sat/prove invocations are not
+    impacted.
+
 ### Version 8.14, 2021-03-29
 
   * Improve the fast all-sat algorithm to also support uninterpreted values.
