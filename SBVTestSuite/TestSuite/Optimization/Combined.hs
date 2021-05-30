@@ -24,7 +24,6 @@ tests =
     , goldenVsStringShow "pareto1"   (optimize (Pareto Nothing)   pareto1)
     , goldenVsStringShow "pareto2"   (optimize (Pareto (Just 30)) pareto2)
     , goldenVsStringShow "pareto3"   (optimize (Pareto Nothing)   pareto3)
-    , goldenVsStringShow "boxed1"    (optimize Independent        boxed1)
     ]
 
 combined1 :: Goal
@@ -84,19 +83,5 @@ pareto3 = do x <- sInteger "x"
 
              minimize "min_x"            x
              maximize "max_x_plus_x"   $ x + x
-
-boxed1 :: Goal
-boxed1 = do x <- sReal "x"
-            y <- sReal "y"
-
-            constrain $ 5 .>= x-y
-            constrain $ x .>= 0
-            constrain $ 4 .>= y
-            constrain $ y .> 0
-
-            minimize "min_x"        x
-            maximize "max_x_plus_y" (x + y)
-            minimize "min_y"        y
-            maximize "max_y"        y
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
