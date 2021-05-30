@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 8.14, 2021-03-29
+* Latest Hackage released version: 8.15, 2021-05-30
 
-### Version 8.14.5, Not yet released
+### Version 8.15, 2021-05-30
 
   * Remove support for SFunArray abstraction. Turns out that the caching
     mechanisms SBV used for SFunArray weren't entirely safe, and the code
