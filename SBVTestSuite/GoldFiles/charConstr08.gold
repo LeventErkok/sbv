@@ -38,19 +38,7 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store (store (store ((as const (Array String Bool)) true)
-                                                 "EF"
-                                                 false)
-                                          "CD"
-                                          false)
-                                   "GH"
-                                   false)
-                            "B"
-                            false)
-                     ""
-                     false)
-              "A"
-              true)))
+[RECV] ((s0 (store (store ((as const (Array String Bool)) true) "B" false) "A" true)))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",U - {'B'} :: {Char})], modelUIFuns = []}
 DONE.*** Solver   : Z3
