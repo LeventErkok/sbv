@@ -329,9 +329,25 @@ instance HasKind Float    where kindOf _ = KFloat
 instance HasKind Double   where kindOf _ = KDouble
 instance HasKind Char     where kindOf _ = KChar
 
--- | Grab the bit-size from the proxy
+-- | Grab the bit-size from the proxy. If the nat is too large to fit in an int,
+-- we throw an error. (This would mean too big of a bit-size, that we can't
+-- really deal with in any practical realm.) In fact, even the range allowed
+-- by this conversion (i.e., the entire range of a 64-bit int) is just impractical,
+-- but it's hard to come up with a better bound.
 intOfProxy :: KnownNat n => Proxy n -> Int
-intOfProxy = fromEnum . natVal
+intOfProxy p
+  | iv == fromIntegral r = r
+  | True                 = error $ unlines [ "Data.SBV: Too large bit-vector size: " ++ show iv
+                                           , ""
+                                           , "No reasonable proof can be performed with such large bit vectors involved,"
+                                           , "So, cowardly refusing to proceed any further! Please file this as a"
+                                           , "feature request."
+                                           ]
+  where iv :: Integer
+        iv = natVal p
+
+        r :: Int
+        r  = fromEnum iv
 
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool
