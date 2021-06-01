@@ -3,6 +3,8 @@
 
 * Latest Hackage released version: 8.15, 2021-05-30
 
+### Version 8.15.5, Development version
+
 ### Version 8.15, 2021-05-30
 
   * Remove support for SFunArray abstraction. Turns out that the caching
