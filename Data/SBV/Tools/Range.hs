@@ -65,8 +65,8 @@ instance Show a => Show (Range a) where
 --
 -- Beware that, as of June 2021, z3 no longer supports optimization with 'SReal' in the presence of
 -- strict inequalities. See <https://github.com/Z3Prover/z3/issues/5314> for details. So, if you
--- have 'SReal' variables, it is important that you do /not/ use a strict inequality, i.e., '.>', '.<' etc.
--- Inequalities of the form '.<=', '.>=', and './=' should be OK. Please report if you see any fishy
+-- have 'SReal' variables, it is important that you do /not/ use a strict inequality, i.e., '.>', '.<', './=' etc.
+-- Inequalities of the form '.<=', '.>=' should be OK. Please report if you see any fishy
 -- behavior due to this change in z3's behavior.
 --
 -- Some examples:
