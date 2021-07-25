@@ -2,17 +2,13 @@ build: off
 
 before_build:
 - choco install -y cabal
-- choco install -y ghc --version 8.10.1
+- choco install -y ghc --version 9.0.1
 - refreshenv
-- set PATH=C:\projects\sbv\z3_downloaded;%PATH%
 - ghc --version
 
 skip_tags: true
 
 build_script:
-- cabal update
-- cabal install alex
-- cabal install happy
 - cabal new-update
 - cabal new-build --only-dependencies --enable-tests -f skipHLintTester
 - cabal new-install all --lib
