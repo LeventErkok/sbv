@@ -8,7 +8,7 @@
 #
 # For more information, see https://github.com/haskell-CI/haskell-ci
 #
-# version: 0.10.3
+# version: 0.12.1
 #
 version: ~> 1.0
 language: c
@@ -34,14 +34,17 @@ before_cache:
   - rm -rfv $CABALHOME/packages/head.hackage
 jobs:
   include:
+    - compiler: ghc-9.0.1
+      addons: {"apt":{"packages":["ghc-9.0.1","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
+      os: linux
     - compiler: ghc-8.10.2
-      addons: {"apt":{"sources":[{"sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main","key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286"}],"packages":["ghc-8.10.2","cabal-install-3.2"]}}
+      addons: {"apt":{"packages":["ghc-8.10.2","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
       os: linux
     - compiler: ghc-8.8.4
-      addons: {"apt":{"sources":[{"sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main","key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286"}],"packages":["ghc-8.8.4","cabal-install-3.2"]}}
+      addons: {"apt":{"packages":["ghc-8.8.4","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
       os: linux
     - compiler: ghc-8.10.2
-      addons: {"apt":{"sources":[{"sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main","key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286"}],"packages":["ghc-8.10.2","cabal-install-3.2"]}}
+      addons: {"apt":{"packages":["ghc-8.10.2","cabal-install-3.4"],"sources":[{"key_url":"https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x063dab2bdc0b3f9fcebc378bff3aeacef6f88286","sourceline":"deb http://ppa.launchpad.net/hvr/ghc/ubuntu xenial main"}]}}
       os: osx
 before_install:
   - HC=$(echo "/opt/$CC/bin/ghc" | sed 's/-/\//')
@@ -69,7 +72,7 @@ before_install:
   - |
     echo "verbose: normal +nowrap +markoutput"          >> $CABALHOME/config
     echo "remote-build-reporting: anonymous"            >> $CABALHOME/config
-    echo "write-ghc-environment-files: always"          >> $CABALHOME/config
+    echo "write-ghc-environment-files: never"           >> $CABALHOME/config
     echo "remote-repo-cache: $CABALHOME/packages"       >> $CABALHOME/config
     echo "logs-dir:          $CABALHOME/logs"           >> $CABALHOME/config
     echo "world-file:        $CABALHOME/world"          >> $CABALHOME/config
@@ -134,7 +137,7 @@ script:
   - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all
   # Building with tests and benchmarks...
   # build & run tests, build benchmarks
-  - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} all
+  - ${CABAL} v2-build $WITHCOMPILER ${TEST} ${BENCH} all --write-ghc-environment-files=always
   # cabal check...
   - (cd ${PKGDIR_sbv} && ${CABAL} -vnormal check)
   # haddock...
@@ -143,5 +146,5 @@ script:
   - rm -f cabal.project.local
   - ${CABAL} v2-build $WITHCOMPILER --disable-tests --disable-benchmarks all
 
-# REGENDATA ("0.10.3",["sbv.cabal","--osx","8.10.2","--no-tests","--no-benchmarks","--no-doctest","--no-hlint","--email-notifications"])
+# REGENDATA ("0.12.1",["sbv.cabal","--osx","8.10.2","--no-tests","--no-benchmarks","--no-doctest","--no-hlint","--email-notifications"])
 # EOF
