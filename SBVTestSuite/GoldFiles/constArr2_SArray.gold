@@ -35,7 +35,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () Bool (distinct s0 s1))
+[GOOD] (define-fun s2 () Bool (< s0 s1))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s0 s5))
 [GOOD] (define-fun s8 () Bool (= s0 s7))
