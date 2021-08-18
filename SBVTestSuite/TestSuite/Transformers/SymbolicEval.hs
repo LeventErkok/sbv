@@ -30,28 +30,28 @@ isSat _                           = error "isSat: Unexpected result!"
 -- Test suite
 tests :: TestTree
 tests = testGroup "Transformers.SymbolicEval"
-    [ testCase "alloc success" $ assert $
+    [ testCase "tse_alloc_success" $ assert $
           (== Right True) . fmap isSat <$>
             runExceptT (sat $ (.< 5) <$> runAlloc (alloc "x") :: ExceptT String IO SatResult)
 
-    , testCase "alloc failure" $ assert $
+    , testCase "tse_alloc_failure" $ assert $
           (== Left "tried to allocate unnamed value") <$>
               runExceptT (runSMT (runAlloc (alloc "")))
 
-    , testCase "query success" $ assert $
+    , testCase "tse_query_success" $ assert $
           (== Right (Just True)) . fmap unliteral <$>
               runExceptT (runSMT (query (runQ (pure $ (5 :: SInt8) .< 6))))
 
-    , testCase "query failure" $ assert $
+    , testCase "tse_query_failure" $ assert $
           isLeft <$>
               runExceptT (runSMT (query (runQ $ throwError "oops")))
 
-    , testCase "combined success" $ assert $
-          (== Right (Counterexample 0 9)) <$>
+    , testCase "tse_combined_success" $ assert $
+          (== Right (Counterexample 9 0)) <$>
               check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
                     (Property $ Var "result" `LessThan` Lit 10)
 
-    , testCase "combined failure" $ assert $
+    , testCase "tse_combined_failure" $ assert $
           (== Left "unknown variable") <$>
               check (Program  $ Var "notAValidVar")
                     (Property $ Var "result" `LessThan` Lit 10)
