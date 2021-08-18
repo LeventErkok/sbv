@@ -32,8 +32,8 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #xff))
+[RECV] ((s0 #x50))
 [SEND] (get-value (s1))
-[RECV] ((s1 #xff))
+[RECV] ((s1 #x0f))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
