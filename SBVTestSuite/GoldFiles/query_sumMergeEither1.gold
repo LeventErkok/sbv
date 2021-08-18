@@ -41,11 +41,11 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 (left_SBVEither 2)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (left_SBVEither 2)))
+[RECV] ((s1 (left_SBVEither 0)))
 [SEND] (get-value (s2))
-[RECV] ((s2 false))
+[RECV] ((s2 true))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(Left 2,Left 2,False)
+(Left 2,Left 0,True)
