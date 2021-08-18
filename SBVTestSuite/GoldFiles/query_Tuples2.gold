@@ -40,9 +40,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 0 (mkSBVTuple2 "c" mkSBVTuple0))))
+[RECV] ((s0 (mkSBVTuple2 2 (mkSBVTuple2 "c" mkSBVTuple0))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-(0,('c',()))
+(2,('c',()))
