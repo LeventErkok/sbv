@@ -1,9 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 8.15, 2021-05-30
+* Latest Hackage released version: 8.16, 2021-08-18
 
-### Version 8.15.5, Development version
+### Version 8.16, 2021-08-18
+
   * Put extra annotations on data-type constructors, which makes
     SBV generate problems that z3 can parse more easily. Thanks to
     Greg Sullivan for reporting the issue in the first place.
