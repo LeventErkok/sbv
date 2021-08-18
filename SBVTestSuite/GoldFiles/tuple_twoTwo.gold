@@ -43,11 +43,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (mkSBVTuple2 1 "")))
+[RECV] ((s0 (mkSBVTuple2 1 "c")))
 [SEND] (get-value (s1))
 [RECV] ((s1 (mkSBVTuple2 "c" #x00)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
- FINAL: ((1,""),('c',0))
+ FINAL: ((1,"c"),('c',0))
 DONE!
