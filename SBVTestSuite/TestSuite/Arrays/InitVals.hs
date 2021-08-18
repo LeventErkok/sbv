@@ -61,7 +61,6 @@ tests =
     [ testCase "readDef_SArray"              $ assertIsThm (readDef (undefined :: SArray    Integer Integer))
     , testCase "readDef2_SArray2"            $ assertIsSat (readNoDef (undefined :: SArray    Integer Integer))
     , goldenCapturedIO "constArr_SArray"     $ t  (undefined :: SArray    Integer Integer)
-
     , goldenCapturedIO "constArr2_SArray"    $ t2 (undefined :: SArray    Integer Integer)
     ]
     where t p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr p)
