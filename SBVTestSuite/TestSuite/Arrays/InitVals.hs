@@ -41,7 +41,7 @@ constArr :: forall m. SymArray m => m Integer Integer -> Predicate
 constArr proxy = do i <- sInteger "i"
                     j <- sInteger "j"
 
-                    constrain $ i ./= j
+                    constrain $ i .> j
                     constrain $ i `sElem` [1, 2, 3, 75]
                     pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
   where myArray = sListArray 7 [(1, 12), (2, 5) , (3, 6), (75, 5)]
@@ -50,7 +50,7 @@ constArr2 :: forall m. SymArray m => m Integer Integer -> Predicate
 constArr2 proxy = do i <- sInteger "i"
                      j <- sInteger "j"
 
-                     constrain $ i ./= j
+                     constrain $ i .> j
                      constrain $ i `sElem` [1, 2, 3, 75]
                      pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
   where myArray = sListArray 2 [(1, 12), (2, 5) , (3, 6), (75, 5)]
