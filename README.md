@@ -7,7 +7,7 @@ Please see: http://leventerkok.github.io/sbv/
 ### Build Status
 
  - Travis (Linux/Mac):
-     - [![Build Status](https://app.travis-ci.com/LeventErkok/sbv.svg?branch=master)](https://travis-ci.com/LeventErkok/sbv)
+     - [![Build Status](https://app.travis-ci.com/LeventErkok/sbv.svg?branch=master)](https://app.travis-ci.com/github/LeventErkok/sbv)
                         
 
  - Appveyor (Windows):
