@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.16, 2021-08-18
 
+### Version 8.16.5, New development version
+
+  * Fix #591. Thanks to Jaro Reinders for reporting.
+
 ### Version 8.16, 2021-08-18
 
   * Put extra annotations on data-type constructors, which makes
