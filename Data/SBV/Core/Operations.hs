@@ -296,7 +296,7 @@ svEqual a b
   | isSet a && isSet b
   = svSetEqual a b
   | True
-  = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
+  = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
@@ -304,7 +304,7 @@ svNotEqual a b
   | isSet a && isSet b
   = svNot $ svEqual a b
   | True
-  = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) a b
+  = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) a b
 
 -- | Set equality. Note that we only do constant folding if we get both a regular or both a
 -- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
@@ -351,28 +351,28 @@ svLessThan :: SVal -> SVal -> SVal
 svLessThan x y
   | isConcreteMax x = svFalse
   | isConcreteMin y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) LessThan) rationalCheck (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (uiLift "<" (<)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) LessThan) rationalCheck (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (uiLift "<" (<)) x y
 
 -- | Greater than.
 svGreaterThan :: SVal -> SVal -> SVal
 svGreaterThan x y
   | isConcreteMin x = svFalse
   | isConcreteMax y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) GreaterThan) rationalCheck (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (uiLift ">"  (>)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) GreaterThan) rationalCheck (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (uiLift ">"  (>)) x y
 
 -- | Less than or equal to.
 svLessEq :: SVal -> SVal -> SVal
 svLessEq x y
   | isConcreteMin x = svTrue
   | isConcreteMax y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) LessEq) rationalCheck (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) LessEq) rationalCheck (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
 
 -- | Greater than or equal to.
 svGreaterEq :: SVal -> SVal -> SVal
 svGreaterEq x y
   | isConcreteMax x = svTrue
   | isConcreteMin y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
 
 -- | Bitwise and.
 svAnd :: SVal -> SVal -> SVal
@@ -1100,6 +1100,7 @@ liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
           -> (Float               -> Float               -> Bool)
           -> (Double              -> Double              -> Bool)
           -> (FP                  -> FP                  -> Bool)
+          -> (Rational            -> Rational            -> Bool)
           -> (Char                -> Char                -> Bool)
           -> (String              -> String              -> Bool)
           -> ([CVal]              -> [CVal]              -> Bool)
@@ -1108,8 +1109,8 @@ liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
           -> (Either CVal CVal    -> Either CVal CVal    -> Bool)
           -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool)
           -> SVal                 -> SVal                -> SVal
-liftSym2B _   okCV opCR opCI opCF opCD opAF opCC opCS opCSeq opCTup opCMaybe opCEither opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opAF opCC opCS opCSeq opCTup opCMaybe opCEither opUI a b)
-liftSym2B opS _    _    _    _    _    _    _    _    _      _      _        _         _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
+liftSym2B _   okCV opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI a b)
+liftSym2B opS _    _    _    _    _    _    _    _    _    _      _      _        _         _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
 
 -- | Create a symbolic two argument operation; with shortcut optimizations
 mkSymOpSC :: (SV -> SV -> Maybe SV) -> Op -> State -> Kind -> SV -> SV -> IO SV
