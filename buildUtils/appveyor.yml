@@ -1,3 +1,5 @@
+## Giving up on appveyor for the time being
+
 build: off
 
 before_build:
