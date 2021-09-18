@@ -118,7 +118,6 @@ qfsToString = go
         go ('\\':'u':'{':      d2:d1:d0:'}' : rest) | [(v, "")] <- readHex [        d2, d1, d0] = chr v : go rest
         go ('\\':'u':'{':         d1:d0:'}' : rest) | [(v, "")] <- readHex [            d1, d0] = chr v : go rest
         go ('\\':'u':'{':            d0:'}' : rest) | [(v, "")] <- readHex [                d0] = chr v : go rest
-        go ('\\':'x':             d1:d0     : rest) | [(v, "")] <- readHex [            d1, d0] = chr v : go rest
 
         -- Otherwise, just proceed; hopefully we covered everything above
         go (c : rest) = c : go rest
