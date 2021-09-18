@@ -122,8 +122,8 @@ qfsToString = go
         -- Otherwise, just proceed; hopefully we covered everything above
         go (c : rest) = c : go rest
 
--- | Given a Haskell string, convert it to SMTLib. if ord is 0x00020 to 0x0007E, then we print it
--- will completely be different!
+-- | Given a Haskell string, convert it to SMTLib. if ord is 0x00020 to 0x0007E, then we print it as is
+-- to cover the printable ASCII range.
 stringToQFS :: String -> String
 stringToQFS = concatMap cvt
   where cvt c
