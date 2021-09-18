@@ -762,10 +762,10 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | True = lift2 "="     sgn sbvs
 
         notEqual sgn sbvs
-          | fpOp || not hasDistinct = liftP sbvs
-          | True                    = liftN "distinct" sgn sbvs
-          where liftP [_, _] = "(not " ++ equal sgn sbvs ++ ")"
-                liftP args   = "(and " ++ unwords (walk args) ++ ")"
+          | not hasDistinct = liftP sbvs
+          | True            = liftN "distinct" sgn sbvs
+          where liftP xs@[_, _] = "(not " ++ equal sgn xs ++ ")"
+                liftP args      = "(and " ++ unwords (walk args) ++ ")"
 
                 walk []     = []
                 walk (e:es) = map (\e' -> liftP [e, e']) es ++ walk es

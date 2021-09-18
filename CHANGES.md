@@ -5,7 +5,10 @@
 
 ### Version 8.16.5, New development version
 
-  * Fix #591. Thanks to Jaro Reinders for reporting.
+  * Fixed handling of CRational values in constant folding, which was missing a case.
+    Thanks to Jaro Reinders for reporting.
+
+  * Fixed calls to distinct for floating-point values, causing SBV to throw an exception.
 
 ### Version 8.16, 2021-08-18
 
