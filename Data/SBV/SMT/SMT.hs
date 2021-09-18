@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE OverloadedStrings          #-}
@@ -17,7 +18,6 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE ViewPatterns               #-}
-{-# LANGUAGE FlexibleInstances		#-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -327,12 +327,12 @@ instance SatModel RoundingMode
 -- | 'String' as extracted from a model
 instance {-# OVERLAPS #-} SatModel [Char] where
   parseCVs (CV _ (CString c):r) = Just (c, r)
-  parseCVs _ = Nothing
+  parseCVs _                    = Nothing
 
 -- | 'Char' as extracted from a model
 instance SatModel Char where
   parseCVs (CV _ (CChar c):r) = Just (c, r)
-  parseCVs _ = Nothing
+  parseCVs _                  = Nothing
 
 -- | A list of values as extracted from a model. When reading a list, we
 -- go as long as we can (maximal-munch). Note that this never fails, as
