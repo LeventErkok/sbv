@@ -17,6 +17,7 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE FlexibleInstances		#-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -323,10 +324,20 @@ instance SatModel CV where
 -- | A rounding mode, extracted from a model. (Default definition suffices)
 instance SatModel RoundingMode
 
+-- | 'String' as extracted from a model
+instance {-# OVERLAPS #-} SatModel [Char] where
+  parseCVs (CV _ (CString c):r) = Just (c, r)
+  parseCVs _ = Nothing
+
+-- | 'Char' as extracted from a model
+instance SatModel Char where
+  parseCVs (CV _ (CChar c):r) = Just (c, r)
+  parseCVs _ = Nothing
+
 -- | A list of values as extracted from a model. When reading a list, we
 -- go as long as we can (maximal-munch). Note that this never fails, as
 -- we can always return the empty list!
-instance SatModel a => SatModel [a] where
+instance {-# OVERLAPPABLE #-} SatModel a => SatModel [a] where
   parseCVs [] = Just ([], [])
   parseCVs xs = case parseCVs xs of
                   Just (a, ys) -> case parseCVs ys of
