@@ -21,7 +21,7 @@ Build-Type         : Simple
 Data-Files         : SBVTestSuite/GoldFiles/*.gold
 Extra-Source-Files : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
-Tested-With        : GHC==9.0.1, GHC==8.10.2, GHC==8.8.4
+Tested-With        : GHC==9.0.1
 
 source-repository head
     type:       git
