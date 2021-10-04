@@ -127,28 +127,30 @@ they allow direct control of the solver. Here's a simple example:
                     -- Query the solver: Are the constraints satisfiable?
                     cs <- checkSat
                     case cs of
-                      Unk   -> error "Solver said unknown!"
-                      Unsat -> return Nothing -- no solution!
-                      Sat   -> -- Query the values:
-                               do xv <- getValue x
-                                  yv <- getValue y
+                      Unk    -> error "Solver said unknown!"
+                      DSat{} -> error "Solver said DSat!"
+                      Unsat  -> return Nothing -- no solution!
+                      Sat    -> -- Query the values:
+                                do xv <- getValue x
+                                   yv <- getValue y
 
-                                  io $ putStrLn $ "Solver returned: " ++ show (xv, yv)
+                                   io $ putStrLn $ "Solver returned: " ++ show (xv, yv)
 
-                                  -- We can now add new constraints,
-                                  -- Or perform arbitrary computations and tell
-                                  -- the solver anything we want!
-                                  constrain $ x .> literal xv + literal yv
+                                   -- We can now add new constraints,
+                                   -- Or perform arbitrary computations and tell
+                                   -- the solver anything we want!
+                                   constrain $ x .> literal xv + literal yv
 
-                                  -- call checkSat again
-                                  csNew <- checkSat
-                                  case csNew of
-                                    Unk   -> error "Solver said unknown!"
-                                    Unsat -> return Nothing
-                                    Sat   -> do xv2 <- getValue x
-                                                yv2 <- getValue y
+                                   -- call checkSat again
+                                   csNew <- checkSat
+                                   case csNew of
+                                     Unk    -> error "Solver said unknown!"
+                                     DSat{} -> error "Solver said DSat!"
+                                     Unsat  -> return Nothing
+                                     Sat    -> do xv2 <- getValue x
+                                                  yv2 <- getValue y
 
-                                                return $ Just (xv2, yv2)
+                                                  return $ Just (xv2, yv2)
 @
 
 Note the type of @test@: it returns an optional pair of integers in the 'Symbolic' monad. We turn
