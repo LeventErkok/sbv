@@ -10,11 +10,12 @@
 -- Symbolic option type, symbolic version of Haskell's 'Maybe' type.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Maybe (
   -- * Constructing optional values
@@ -212,3 +213,12 @@ maybe brNothing brJust ma
                     -- Do we have a value?
                     noVal <- newExpr st KBool $ SBVApp (MaybeIs ka False) [mav]
                     newExpr st kb $ SBVApp Ite [noVal, br1, br2]
+
+-- | Custom 'Num' instance over 'SMaybe'
+instance {-# OVERLAPPING #-} (Ord a, SymVal a, Num a) => Num (SBV (Maybe a)) where
+  (+)         = map2 (+)
+  (-)         = map2 (-)
+  (*)         = map2 (*)
+  abs         = map  abs
+  signum      = map  signum
+  fromInteger = sJust . fromInteger
