@@ -22,7 +22,7 @@ module Data.SBV.Maybe (
   -- * Destructing optionals
   , maybe
   -- * Mapping functions
-  , map
+  , map, map2
   -- * Scrutinizing the branches of an option
   , isNothing, isJust, fromMaybe, fromJust
   ) where
@@ -33,7 +33,7 @@ import qualified Prelude
 import Data.Proxy (Proxy(Proxy))
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model () -- instances only
+import Data.SBV.Core.Model (ite)
 
 -- For doctest use only
 --
@@ -41,7 +41,7 @@ import Data.SBV.Core.Model () -- instances only
 -- >>> import Data.SBV.Core.Model
 -- >>> import Data.SBV.Provers.Prover
 
--- | The symbolic 'Nothing'
+-- | The symbolic 'Nothing'.
 --
 -- >>> sNothing :: SMaybe Integer
 -- Nothing :: SMaybe Integer
@@ -58,7 +58,7 @@ sNothing = SBV $ SVal k $ Left $ CV k $ CMaybe Nothing
 isNothing :: SymVal a => SMaybe a -> SBool
 isNothing = maybe sTrue (const sFalse)
 
--- | Construct an @SMaybe a@ from an @SBV a@
+-- | Construct an @SMaybe a@ from an @SBV a@.
 --
 -- >>> sJust 3
 -- Just 3 :: SMaybe Integer
@@ -143,7 +143,7 @@ fromJust ma
                     -- We're good to go:
                     return e
 
--- | Construct an @SMaybe a@ from a @Maybe (SBV a)@
+-- | Construct an @SMaybe a@ from a @Maybe (SBV a)@.
 --
 -- >>> liftMaybe (Just (3 :: SInteger))
 -- Just 3 :: SMaybe Integer
@@ -152,7 +152,7 @@ fromJust ma
 liftMaybe :: SymVal a => Maybe (SBV a) -> SMaybe a
 liftMaybe = Prelude.maybe (literal Nothing) sJust
 
--- | Map over the 'Just' side of a 'Maybe'
+-- | Map over the 'Just' side of a 'Maybe'.
 --
 -- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+1
 -- Q.E.D.
@@ -165,7 +165,13 @@ map :: forall a b.  (SymVal a, SymVal b)
     => (SBV a -> SBV b)
     -> SMaybe a
     -> SMaybe b
-map f = maybe (literal Nothing) (sJust . f)
+map f = maybe sNothing (sJust . f)
+
+-- | Map over two maybe values.
+map2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SMaybe a -> SMaybe b -> SMaybe c
+map2 op mx my = ite (isJust mx .&& isJust my)
+                    (sJust (fromJust mx `op` fromJust my))
+                    sNothing
 
 -- | Case analysis for symbolic 'Maybe's. If the value 'isNothing', return the
 -- default value; if it 'isJust', apply the function.
