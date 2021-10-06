@@ -100,6 +100,9 @@ hlint:
 	@echo "Running HLint.."
 	@hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error"
 
+ci:
+	haskell-ci github sbv.cabal --no-tests --no-benchmarks
+
 clean:
 	@rm -rf dist dist-newstyle cabal.project.local*
 
