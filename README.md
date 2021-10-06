@@ -1,6 +1,6 @@
 ## SBV: SMT Based Verification in Haskell
 
-[![Build Status](https://app.travis-ci.com/LeventErkok/sbv.svg?branch=master)](https://app.travis-ci.com/github/LeventErkok/sbv)
+[![Build Status](https://github.com/LeventErkok/sbv/actions/workflows/haskell-ci.yml/badge.svg)](https://github.com/LeventErkok/sbv/actions/workflows/haskell-ci.yml)
 
 On Hackage: http://hackage.haskell.org/package/sbv
 
