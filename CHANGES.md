@@ -13,6 +13,8 @@
   * Add missing instances of SatModel for Char and String. Thanks to eax- on github
     for the contribution.
 
+  * Export svToSV from Data.SBV.Dynamic. Thanks to Matt Parker for the PR.
+
 ### Version 8.16, 2021-08-18
 
   * Put extra annotations on data-type constructors, which makes
