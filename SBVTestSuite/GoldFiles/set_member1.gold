@@ -41,10 +41,10 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 "e"))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
-                            "l"
+[RECV] ((s1 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
+                            "o"
                             true)
-                     "h"
+                     "l"
                      true)
               "e"
               true)))
