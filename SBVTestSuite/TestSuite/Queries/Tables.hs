@@ -11,8 +11,10 @@
 
 {-# LANGUAGE DeriveAnyClass                #-}
 {-# LANGUAGE DeriveGeneric                 #-}
+{-# LANGUAGE FlexibleContexts              #-}
 {-# LANGUAGE Rank2Types                    #-}
 {-# LANGUAGE QuantifiedConstraints         #-}
+
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans #-}
 
 module TestSuite.Queries.Tables (tests)  where
