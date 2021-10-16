@@ -38,12 +38,12 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array String Bool)) false) "a" true)))
+[RECV] ((s0 (lambda ((x!1 String)) (= x!1 "a"))))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store ((as const (Array String Bool)) false) "a" true)))
+[RECV] ((s1 (lambda ((x!1 String)) (= x!1 "a"))))
 [GOOD] (define-fun s5 () (Array String Bool) (union s0 s1))
 [SEND] (get-value (s5))
-[RECV] ((s5 (store ((as const (Array String Bool)) false) "a" true)))
+[RECV] ((s5 (lambda ((x!1 String)) (= x!1 "a"))))
 [GOOD] (define-fun s6 () (Array String Bool) (complement s1))
 [GOOD] (define-fun s7 () (Array String Bool) (union s0 s6))
 [SEND] (get-value (s7))
@@ -54,7 +54,7 @@
 [RECV] ((s9 ((as const (Array String Bool)) true)))
 [GOOD] (define-fun s10 () (Array String Bool) (union s8 s6))
 [SEND] (get-value (s10))
-[RECV] ((s10 (store ((as const (Array String Bool)) true) "a" false)))
+[RECV] ((s10 (lambda ((x!1 String)) (not (= x!1 "a")))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
