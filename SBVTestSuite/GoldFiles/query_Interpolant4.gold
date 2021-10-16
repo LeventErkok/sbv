@@ -40,12 +40,9 @@
 [GOOD] (define-fun s12 () Bool (distinct s10 s11))
 [GOOD] (define-fun s13 () Bool (and s9 s12))
 [SEND] (get-interpolant s8 s13)
-[RECV] (or (and (= s1 s2) (= s1 s3))
-           (<= (+ (* (- 1) s1) s0) (- 1))
-           (<= (+ s1 (* (- 1) s0)) (- 1))
-           (= s2 s3))
+[RECV] (or (<= (+ (* (- 1) s1) s0) (- 1)) (<= (+ s1 (* (- 1) s0)) (- 1)) (= s2 s3))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL OUTPUT:
-"(or (and (= s1 s2) (= s1 s3)) (<= (+ (* (- 1) s1) s0) (- 1)) (<= (+ s1 (* (- 1) s0)) (- 1)) (= s2 s3))"
+"(or (<= (+ (* (- 1) s1) s0) (- 1)) (<= (+ s1 (* (- 1) s0)) (- 1)) (= s2 s3))"
