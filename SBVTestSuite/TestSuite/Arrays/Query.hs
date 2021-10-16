@@ -80,6 +80,7 @@ q4 = do i <- sWord8 "i"
                    _ <- checkSat
                    iv <- getValue i
                    constrain $ j .== select [0 .. 255] 0 j
+                   constrain $ i .== literal iv
                    constrain $ j .== i+1
                    _ <- checkSat
                    jv <- getValue j
