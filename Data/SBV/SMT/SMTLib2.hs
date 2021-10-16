@@ -761,9 +761,11 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
           | fpOp = lift2 "fp.eq" sgn sbvs
           | True = lift2 "="     sgn sbvs
 
+        -- Do not use distinct on floats; because +0/-0, and NaNs mess
+        -- up the meaning. Just go with reqular equals.
         notEqual sgn sbvs
-          | not hasDistinct = liftP sbvs
-          | True            = liftN "distinct" sgn sbvs
+          | fpOp || not hasDistinct = liftP sbvs
+          | True                    = liftN "distinct" sgn sbvs
           where liftP xs@[_, _] = "(not " ++ equal sgn xs ++ ")"
                 liftP args      = "(and " ++ unwords (walk args) ++ ")"
 
