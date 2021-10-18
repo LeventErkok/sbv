@@ -41,29 +41,37 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 "e"))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
-                            "l"
+[RECV] ((s1 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
+                            "e"
                             true)
-                     "h"
+                     "l"
                      true)
-              "e"
+              "o"
               true)))
 [GOOD] (define-fun s6 () (Array String Bool) (store s1 s0 true))
 [SEND] (get-value (s6))
-[RECV] ((s6 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
+[RECV] ((s6 (store (store (store (store (store ((as const (Array String Bool)) false)
+                                          "h"
+                                          true)
+                                   "e"
+                                   true)
                             "l"
                             true)
-                     "h"
+                     "o"
                      true)
               "e"
               true)))
 [GOOD] (define-fun s7 () (Array String Bool) (complement s1))
 [GOOD] (define-fun s8 () (Array String Bool) (store s7 s0 true))
 [SEND] (get-value (s8))
-[RECV] ((s8 (store (store (store (store ((as const (Array String Bool)) true) "o" false)
+[RECV] ((s8 (store (store (store (store (store ((as const (Array String Bool)) true)
+                                          "h"
+                                          false)
+                                   "e"
+                                   false)
                             "l"
                             false)
-                     "h"
+                     "o"
                      false)
               "e"
               true)))
