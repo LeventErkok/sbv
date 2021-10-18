@@ -34,28 +34,23 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
-                            "l"
+[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
+                            "o"
                             true)
-                     "h"
+                     "l"
                      true)
               "e"
               true)))
 [GOOD] (define-fun s3 () (Array String Bool) (complement s0))
 [SEND] (get-value (s3))
-[RECV] ((s3 (store (store (store (store ((as const (Array String Bool)) true) "o" false)
-                            "l"
-                            false)
-                     "h"
-                     false)
-              "e"
-              false)))
+[RECV] ((s3 (lambda ((x!1 String))
+         (not (or (= x!1 "e") (= x!1 "l") (= x!1 "o") (= x!1 "h"))))))
 [GOOD] (define-fun s4 () (Array String Bool) (complement s3))
 [SEND] (get-value (s4))
-[RECV] ((s4 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
-                            "l"
+[RECV] ((s4 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
+                            "o"
                             true)
-                     "h"
+                     "l"
                      true)
               "e"
               true)))
@@ -64,7 +59,12 @@
 [RECV] ((s5 ((as const (Array String Bool)) false)))
 [GOOD] (define-fun s6 () (Array String Bool) (union s3 s0))
 [SEND] (get-value (s6))
-[RECV] ((s6 ((as const (Array String Bool)) true)))
+[RECV] ((s6 (lambda ((x!1 String))
+         (or (not (or (= x!1 "e") (= x!1 "l") (= x!1 "o") (= x!1 "h")))
+             (= x!1 "e")
+             (= x!1 "l")
+             (= x!1 "o")
+             (= x!1 "h")))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
