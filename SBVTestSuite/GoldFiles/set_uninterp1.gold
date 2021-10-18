@@ -46,7 +46,7 @@ Fast allSat, Looking for solution 2
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (lambda ((x!1 E)) (= x!1 A))))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) A true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s4 () (Array E Bool) (store ((as const (Array E Bool)) false) A true))
 [GOOD] (define-fun s5 () Bool (= s0 s4))
@@ -66,7 +66,7 @@ Fast allSat, Looking for solution 4
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (lambda ((x!1 E)) (= x!1 B))))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) B true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s10 () (Array E Bool) (store ((as const (Array E Bool)) false) B true))
 [GOOD] (define-fun s11 () Bool (= s0 s10))
@@ -76,7 +76,7 @@ Fast allSat, Looking for solution 5
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (lambda ((x!1 E)) (= x!1 C))))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) C true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s13 () (Array E Bool) (store ((as const (Array E Bool)) false) C true))
 [GOOD] (define-fun s14 () Bool (= s0 s13))
@@ -86,7 +86,7 @@ Fast allSat, Looking for solution 6
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) B true)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) false) B true) C true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s16 () (Array E Bool) (store (store ((as const (Array E Bool)) false) C true) B true))
 [GOOD] (define-fun s17 () Bool (= s0 s16))
@@ -106,7 +106,7 @@ Fast allSat, Looking for solution 8
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store ((as const (Array E Bool)) false) C true) B true) A true)))
+[RECV] ((s0 (store (store (store ((as const (Array E Bool)) false) B true) C true) A true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s22 () (Array E Bool) (store (store (store ((as const (Array E Bool)) false) C true) B true) A true))
 [GOOD] (define-fun s23 () Bool (= s0 s22))
