@@ -18,9 +18,11 @@ module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunc
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
 import Data.Either (partitionEithers)
-import Data.List   (isPrefixOf)
+import Data.List   (isPrefixOf, nubBy)
 import Data.Maybe  (fromMaybe, listToMaybe)
 import Data.Word   (Word32, Word64)
+
+import Control.Monad (foldM)
 
 import Numeric    (readInt, readDec, readHex, fromRat)
 
@@ -37,7 +39,7 @@ data SExpr = ECon           String
            | EFloat         Float
            | EFloatingPoint FP
            | EDouble        Double
-           | EApp    [SExpr]
+           | EApp           [SExpr]
            deriving Show
 
 -- | Extremely simple minded tokenizer, good for our use model.
@@ -278,8 +280,83 @@ constantMap n = fromMaybe n (listToMaybe [to | (from, to) <- special, n `elem` f
 parseSExprFunction :: SExpr -> Maybe (Either String ([([SExpr], SExpr)], SExpr))
 parseSExprFunction e
   | Just r <- parseLambdaExpression  e = Just (Right r)
+  | Just r <- parseSetLambda         e = Just (Right r)
   | Just r <- parseStoreAssociations e = Just r
   | True                               = Nothing         -- out-of luck. NB. This is where we would add support for other solvers!
+
+-- | Parse a set-lambda expression, which is literally a lambda function, that might look like this:
+--        (lambda ((x!1 String))
+--          (or (not (or (= x!1 "o") (= x!1 "l") (= x!1 "e") (= x!1 "h")))
+--              (= x!1 "o")
+--              (= x!1 "l")
+--              (= x!1 "e")
+--              (= x!1 "h")))
+--   For this, we do a little bit of an interpretative dance to see if we can "construct" the necesary expression.
+--
+--   In parsed form:
+--      EApp [ECon "lambda",EApp [EApp [ECon "x!1",ECon "String"]],EApp [ECon "not",EApp [ECon "or",EApp [ECon "=",ECon "x!1",ECon "\"e\""],EApp [ECon "=",ECon "x!1",ECon "\"l\""]]]]
+--
+--   This is by no means comprehensive, and is quite crude, but hopefully covers the cases we see in practice.
+parseSetLambda :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
+parseSetLambda funExpr = case funExpr of
+                               EApp [l@(ECon "lambda"), bv@(EApp [EApp [ECon _, _]]), body] -> go (\bd -> EApp [l, bv, bd]) body
+                               _                                                            -> Nothing
+  where go mkLambda = build
+         where build (EApp [ECon "not",  rest      ]) =         neg =<<      build rest
+               build (EApp (ECon "or"  : rest@(_:_))) = foldM1 disj =<< mapM build rest
+               build (EApp (ECon "and" : rest@(_:_))) = foldM1 conj =<< mapM build rest
+               build other                            = parseLambdaExpression (mkLambda other)
+
+        -- We're guaranteed by above construction that foldM1 will never take an empty list (due to rest@(_:_) pattern match.)
+        foldM1 _ []     = error "Data.SBV.parseSetLambda: Impossible happened; empty arg to foldM1"
+        foldM1 f (x:xs) = foldM f x xs
+
+        checkBool (ENum (1, Nothing)) = True
+        checkBool (ENum (0, Nothing)) = True
+        checkBool _                   = False
+
+        negBool (ENum (1, Nothing)) = ENum (0, Nothing)
+        negBool _                   = ENum (1, Nothing)
+
+        orBool t@(ENum (1, Nothing)) _                      = t
+        orBool _                     t@(ENum (1, Nothing))  = t
+        orBool _ _                                          = ENum (0, Nothing)
+
+        andBool f@(ENum (0, Nothing)) _                     = f
+        andBool _                     f@(ENum (0, Nothing)) = f
+        andBool _ _                                         = ENum (1, Nothing)
+
+        neg :: ([([SExpr], SExpr)], SExpr) -> Maybe ([([SExpr], SExpr)], SExpr)
+        neg (rows, dflt)
+         | all checkBool (dflt : map snd rows) = Just ([(e, negBool r) | (e, r) <- rows], negBool dflt)
+         | True                                = Nothing
+
+        disj, conj :: ([([SExpr], SExpr)], SExpr) -> ([([SExpr], SExpr)], SExpr) -> Maybe ([([SExpr], SExpr)], SExpr)
+        disj = bin orBool
+        conj = bin andBool
+
+        bin f rd1@(rows1, dflt1) rd2@(rows2, dflt2)
+          | all checkBool (dflt1 : dflt2 : map snd rows1 ++ map snd rows2) = Just (combine f rd1 rd2)
+          | True                                                           = Nothing
+
+        -- Since we don't have equality over SExprs (can of worms!), we use "show" equality here. The ice is thin, but it works!
+        combine f (rows1, dflt1) (rows2, dflt2) = (rows, f dflt1 dflt2)
+          where rows = map calc $ nubBy (\x y -> show x == show y) (map fst rows1 ++ map fst rows2)
+
+                calc :: [SExpr] -> ([SExpr], SExpr)
+                calc args = (args, f (find rows1 dflt1 args) (find rows2 dflt2 args))
+
+                find rs d a = case [r | (v, r) <- rs, show v == show a] of
+                               []  -> d
+                               [x] -> x
+                               x   -> error $ unlines [ "Data.SBV.parseSetLambda: Impossible happened while combining rows."
+                                                      , "   First row  :"   ++ show rows1
+                                                      , "   First dflt :"  ++ show dflt1
+                                                      , "   Second row :"  ++ show rows2
+                                                      , "   Second dflt:" ++ show dflt2
+                                                      , "   Looking for: " ++ show a
+                                                      , "Multiple matches found: " ++ show x
+                                                      ]
 
 -- | Parse a lambda expression, most likely z3 specific. There's some guess work
 -- involved here regarding how z3 produces lambda-expressions; while we try to
