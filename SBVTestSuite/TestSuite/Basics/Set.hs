@@ -34,26 +34,17 @@ mkSymbolicEnumeration ''E
 __unused :: SE
 __unused = error "stop GHC from complaining unused names" sA sB sC
 
-type SC = SSet  Char
-type RC = RCSet Char
+type SC = SSet  Integer
+type RC = RCSet Integer
 
 cSetAL :: SC
-cSetAL = fromList "hello"
--- cSetBL :: SC
--- cSetBL = fromList "there"
+cSetAL = fromList [1,2,3,3,4]
 
-cCharA :: SChar
-cCharA = literal 'e'
+cIntA :: SInteger
+cIntA = literal 2
 
--- The goal is to get rid of the following test vectors, and
--- use the more interesting ones above. Unfortunately,
--- there's a z3 bug in set-model generation that spits
--- out models that we cannot parse. So, we're sticking
--- to really simple examples in some cases here.
 cSetA :: SC
-cSetA = singleton $ literal 'a'
--- cSetB :: SC
--- cSetB = singleton $ literal 'b'
+cSetA = singleton $ literal 0
 
 -- Test suite
 tests :: TestTree
@@ -69,10 +60,10 @@ tests = testGroup "Basics.Set" [
         , goldenCapturedIO "set_subset1"    $ tq $ templateBB  cSetA  cSetA  isSubsetOf
         , goldenCapturedIO "set_psubset1"   $ tq $ templateBB  cSetA  cSetA  isProperSubsetOf
         , goldenCapturedIO "set_disj1"      $ tq $ templateBB  cSetA  cSetA  disjoint
-        , goldenCapturedIO "set_insert1"    $ tq $ templateBE  cCharA cSetAL insert
-        , goldenCapturedIO "set_delete1"    $ tq $ templateBE  cCharA cSetAL delete
-        , goldenCapturedIO "set_member1"    $ tq $ templateBEB cCharA cSetAL member
-        , goldenCapturedIO "set_notMember1" $ tq $ templateBEB cCharA cSetAL notMember
+        , goldenCapturedIO "set_insert1"    $ tq $ templateBE  cIntA  cSetAL insert
+        , goldenCapturedIO "set_delete1"    $ tq $ templateBE  cIntA  cSetAL delete
+        , goldenCapturedIO "set_member1"    $ tq $ templateBEB cIntA  cSetAL member
+        , goldenCapturedIO "set_notMember1" $ tq $ templateBEB cIntA  cSetAL notMember
         , goldenCapturedIO "set_tupleSet"   $ ta setOfTuples
         ]
     where ta tc goldFile    = record goldFile =<< tc defaultSMTCfg{verbose=True, redirectVerbose=Just goldFile}
@@ -145,9 +136,9 @@ templateBB is1 is2 f = do a <- sSet "a"
                           query $ do ensureSat
                                      (,,,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2 <*> getValue o3 <*> getValue o4
 
-templateBE :: SChar -> SC -> (SChar -> SC -> SC) -> Symbolic (Char, RC, RC, RC)
-templateBE ic is f = do a <- sChar "a"
-                        b <- sSet  "b"
+templateBE :: SInteger -> SC -> (SInteger -> SC -> SC) -> Symbolic (Integer, RC, RC, RC)
+templateBE ic is f = do a <- sInteger "a"
+                        b <- sSet     "b"
 
                         constrain $ a .== ic
                         constrain $ b .== is
@@ -158,9 +149,9 @@ templateBE ic is f = do a <- sChar "a"
                         query $ do ensureSat
                                    (,,,) <$> getValue a <*> getValue b <*> getValue o1 <*> getValue o2
 
-templateBEB :: SChar -> SC -> (SChar -> SC -> SBool) -> Symbolic (Char, RC, Bool, Bool)
-templateBEB ic is f = do a <- sChar "a"
-                         b <- sSet  "b"
+templateBEB :: SInteger -> SC -> (SInteger -> SC -> SBool) -> Symbolic (Integer, RC, Bool, Bool)
+templateBEB ic is f = do a <- sInteger "a"
+                         b <- sSet     "b"
 
                          constrain $ a .== ic
                          constrain $ b .== is

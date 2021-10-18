@@ -8,15 +8,14 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has sets, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Array String Bool) (store (store (store (store ((as const (Array String Bool)) false) (_ char #x6f) true) (_ char #x6c) true) (_ char #x68) true) (_ char #x65) true))
+[GOOD] (define-fun s1 () (Array Int Bool) (store (store (store (store ((as const (Array Int Bool)) false) 4 true) 3 true) 2 true) 1 true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
-[GOOD] (assert (forall ((set0 String)) (=> (select s0 set0) (= 1 (str.len set0)))))
+[GOOD] (declare-fun s0 () (Array Int Bool)) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -34,18 +33,16 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
-                            "e"
-                            true)
-                     "l"
+[RECV] ((s0 (store (store (store (store ((as const (Array Int Bool)) false) 1 true) 3 true)
+                     4
                      true)
-              "o"
+              2
               true)))
-[GOOD] (define-fun s3 () (Array String Bool) ((as const (Array String Bool)) true))
+[GOOD] (define-fun s3 () (Array Int Bool) ((as const (Array Int Bool)) true))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [SEND] (get-value (s4))
 [RECV] ((s4 false))
-[GOOD] (define-fun s5 () (Array String Bool) (complement s0))
+[GOOD] (define-fun s5 () (Array Int Bool) (complement s0))
 [GOOD] (define-fun s6 () Bool (= s5 s3))
 [SEND] (get-value (s6))
 [RECV] ((s6 false))
@@ -53,5 +50,5 @@
 *** Exit code: ExitSuccess
 
 FINAL:
-({'e','h','l','o'},False,False)
+({1,2,3,4},False,False)
 DONE!

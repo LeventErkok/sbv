@@ -8,17 +8,15 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has sets, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () (Array String Bool) (store ((as const (Array String Bool)) false) (_ char #x61) true))
+[GOOD] (define-fun s2 () (Array Int Bool) (store ((as const (Array Int Bool)) false) 0 true))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (Array String Bool)) ; tracks user variable "a"
-[GOOD] (assert (forall ((set0 String)) (=> (select s0 set0) (= 1 (str.len set0)))))
-[GOOD] (declare-fun s1 () (Array String Bool)) ; tracks user variable "b"
-[GOOD] (assert (forall ((set0 String)) (=> (select s1 set0) (= 1 (str.len set0)))))
+[GOOD] (declare-fun s0 () (Array Int Bool)) ; tracks user variable "a"
+[GOOD] (declare-fun s1 () (Array Int Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -38,17 +36,17 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store ((as const (Array String Bool)) false) "a" true)))
+[RECV] ((s0 (store ((as const (Array Int Bool)) false) 0 true)))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store ((as const (Array String Bool)) false) "a" true)))
+[RECV] ((s1 (store ((as const (Array Int Bool)) false) 0 true)))
 [GOOD] (define-fun s5 () Bool (subset s0 s1))
 [SEND] (get-value (s5))
 [RECV] ((s5 true))
-[GOOD] (define-fun s6 () (Array String Bool) (complement s1))
+[GOOD] (define-fun s6 () (Array Int Bool) (complement s1))
 [GOOD] (define-fun s7 () Bool (subset s0 s6))
 [SEND] (get-value (s7))
 [RECV] ((s7 false))
-[GOOD] (define-fun s8 () (Array String Bool) (complement s0))
+[GOOD] (define-fun s8 () (Array Int Bool) (complement s0))
 [GOOD] (define-fun s9 () Bool (subset s8 s1))
 [SEND] (get-value (s9))
 [RECV] ((s9 false))
@@ -59,5 +57,5 @@
 *** Exit code: ExitSuccess
 
 FINAL:
-({'a'},{'a'},True,False,False,True)
+({0},{0},True,False,False,True)
 DONE!
