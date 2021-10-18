@@ -34,12 +34,12 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "o" true)
-                            "l"
+[RECV] ((s0 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
+                            "e"
                             true)
-                     "h"
+                     "l"
                      true)
-              "e"
+              "o"
               true)))
 [GOOD] (define-fun s3 () (Array String Bool) ((as const (Array String Bool)) false))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
