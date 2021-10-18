@@ -42,11 +42,11 @@
 [RECV] ((s0 "e"))
 [SEND] (get-value (s1))
 [RECV] ((s1 (store (store (store (store ((as const (Array String Bool)) false) "h" true)
-                            "o"
+                            "e"
                             true)
                      "l"
                      true)
-              "e"
+              "o"
               true)))
 [GOOD] (define-fun s6 () Bool (select s1 s0))
 [GOOD] (define-fun s7 () Bool (not s6))
