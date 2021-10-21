@@ -63,8 +63,7 @@ fp2fp x
 
 -- | Compute the "floating-point" remainder function, the float/double value that
 -- remains from the division of @x@ and @y@. There are strict rules around 0's, Infinities,
--- and NaN's as coded below, See <http://smt-lib.org/papers/BTRW14.pdf>, towards the
--- end of section 4.c.
+-- and NaN's as coded below.
 fpRemH :: RealFloat a => a -> a -> a
 fpRemH x y
   | isInfinite x || isNaN x = 0 / 0
