@@ -213,6 +213,7 @@ Library
                   , Data.SBV.Provers.ABC
                   , Data.SBV.Provers.Boolector
                   , Data.SBV.Provers.CVC4
+                  , Data.SBV.Provers.CVC5
                   , Data.SBV.Provers.DReal
                   , Data.SBV.Provers.MathSAT
                   , Data.SBV.Provers.Yices

@@ -113,7 +113,7 @@
 --
 --   * ABC from University of Berkeley: <http://www.eecs.berkeley.edu/~alanmi/abc/>
 --
---   * CVC4 from Stanford: <https://cvc4.github.io/>
+--   * CVC4, and CVC5 from Stanford University and the University of Iowa. <https://cvc4.github.io/> and <https://cvc5.github.io>
 --
 --   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
 --
@@ -368,7 +368,7 @@ module Data.SBV (
   -- $verbosity
 
   -- ** Solvers
-  , boolector, cvc4, yices, dReal, z3, mathSAT, abc
+  , boolector, cvc4, cvc5, yices, dReal, z3, mathSAT, abc
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut

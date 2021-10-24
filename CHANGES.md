@@ -5,6 +5,9 @@
 
 ### Version 8.16.5, New development version
 
+  * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5
+    for details.
+    
   * Fixed handling of CRational values in constant folding, which was missing a case.
     Thanks to Jaro Reinders for reporting.
 

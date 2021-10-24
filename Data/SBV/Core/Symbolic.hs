@@ -2057,6 +2057,7 @@ type SMTEngine =  forall res.
 data Solver = ABC
             | Boolector
             | CVC4
+            | CVC5
             | DReal
             | MathSAT
             | Yices

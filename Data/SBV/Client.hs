@@ -50,6 +50,7 @@ defaultSolverConfig :: Solver -> SMTConfig
 defaultSolverConfig ABC       = abc
 defaultSolverConfig Boolector = boolector
 defaultSolverConfig CVC4      = cvc4
+defaultSolverConfig CVC5      = cvc5
 defaultSolverConfig DReal     = dReal
 defaultSolverConfig MathSAT   = mathSAT
 defaultSolverConfig Yices     = yices
