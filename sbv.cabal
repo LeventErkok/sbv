@@ -212,6 +212,7 @@ Library
                   , Data.SBV.Provers.Prover
                   , Data.SBV.Provers.ABC
                   , Data.SBV.Provers.Boolector
+                  , Data.SBV.Provers.Bitwuzla
                   , Data.SBV.Provers.CVC4
                   , Data.SBV.Provers.CVC5
                   , Data.SBV.Provers.DReal

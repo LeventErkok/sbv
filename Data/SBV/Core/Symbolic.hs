@@ -2056,6 +2056,7 @@ type SMTEngine =  forall res.
 -- | Solvers that SBV is aware of
 data Solver = ABC
             | Boolector
+            | Bitwuzla
             | CVC4
             | CVC5
             | DReal

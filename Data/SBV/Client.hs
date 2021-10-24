@@ -49,6 +49,7 @@ sbvCheckSolverInstallation cfg = check `C.catch` (\(_ :: C.SomeException) -> ret
 defaultSolverConfig :: Solver -> SMTConfig
 defaultSolverConfig ABC       = abc
 defaultSolverConfig Boolector = boolector
+defaultSolverConfig Bitwuzla  = bitwuzla
 defaultSolverConfig CVC4      = cvc4
 defaultSolverConfig CVC5      = cvc5
 defaultSolverConfig DReal     = dReal

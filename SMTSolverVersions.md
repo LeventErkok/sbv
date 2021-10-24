@@ -8,6 +8,9 @@ report any issues you might see with newer releases.
   * Boolector:
       * http://github.com/Boolector/boolector
       * Version 3.2.2
+  * Bitwuzla:
+      * https://github.com/bitwuzla/bitwuzla
+      * Version 1.0-prerelease
   * CVC4:
       * https://github.com/CVC4/CVC4
       * Version installed via `brew tap cvc4/cvc4; brew rm cvc4; brew install cvc4/cvc4/cvc4 --HEAD`

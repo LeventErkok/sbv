@@ -4,7 +4,7 @@ like this:
      cabal install sbv
 
 SBV relies on an external SMT solver to be installed. We currently support
-ABC, Boolector, CVC4, MathSAT, Yices, and Z3. We recommend installing the
+ABC, Boolector, Bitwuzla, CVC4, CVC5, MathSAT, Yices, and Z3. We recommend installing the
 freely available z3 SMT solver from Microsoft, the default solver used
 by SBV. You can get it from <http://github.com/Z3Prover/z3>.
 

@@ -115,7 +115,8 @@
 --
 --   * CVC4, and CVC5 from Stanford University and the University of Iowa. <https://cvc4.github.io/> and <https://cvc5.github.io>
 --
---   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/>
+--   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/> and its successor Bitwuzla from Stanford
+--     university: <https://github.com/bitwuzla/bitwuzla>
 --
 --   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
 --
@@ -368,7 +369,7 @@ module Data.SBV (
   -- $verbosity
 
   -- ** Solvers
-  , boolector, cvc4, cvc5, yices, dReal, z3, mathSAT, abc
+  , boolector, bitwuzla, cvc4, cvc5, yices, dReal, z3, mathSAT, abc
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut

@@ -31,7 +31,7 @@ module Data.SBV.Provers.Prover (
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
-       , abc, boolector, cvc4, cvc5, dReal, mathSAT, yices, z3, defaultSMTCfg, defaultDeltaSMTCfg
+       , abc, boolector, bitwuzla, cvc4, cvc5, dReal, mathSAT, yices, z3, defaultSMTCfg, defaultDeltaSMTCfg
        ) where
 
 
@@ -71,6 +71,7 @@ import GHC.Stack
 
 import qualified Data.SBV.Provers.ABC       as ABC
 import qualified Data.SBV.Provers.Boolector as Boolector
+import qualified Data.SBV.Provers.Bitwuzla  as Bitwuzla
 import qualified Data.SBV.Provers.CVC4      as CVC4
 import qualified Data.SBV.Provers.CVC5      as CVC5
 import qualified Data.SBV.Provers.DReal     as DReal
@@ -115,6 +116,10 @@ abc = mkConfig ABC.abc SMTLib2 [allOnStdOut]
 -- | Default configuration for the Boolector SMT solver
 boolector :: SMTConfig
 boolector = mkConfig Boolector.boolector SMTLib2 []
+
+-- | Default configuration for the Bitwuzla SMT solver
+bitwuzla :: SMTConfig
+bitwuzla = mkConfig Bitwuzla.bitwuzla SMTLib2 []
 
 -- | Default configuration for the CVC4 SMT Solver.
 cvc4 :: SMTConfig
