@@ -26,6 +26,7 @@ tests :: TestTree
 tests =
   testGroup "Basics.QueryIndividual"
     [ goldenCapturedIO "query_boolector" $ \rf -> runSMTWith boolector{verbose=True, redirectVerbose=Just rf} q
+    , goldenCapturedIO "query_bitwuzla"  $ \rf -> runSMTWith bitwuzla {verbose=True, redirectVerbose=Just rf} q
     ]
 
 q :: Symbolic ()
