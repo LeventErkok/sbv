@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 8.16, 2021-08-18
+* Latest Hackage released version: 8.17, 2021-10-25
 
-### Version 8.16.5, New development version
+### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5
     for details.
