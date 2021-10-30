@@ -12,7 +12,7 @@
 {-# LANGUAGE CPP           #-}
 {-# LANGUAGE PatternGuards #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Compilers.C(compileToC, compileToCLib, compileToC', compileToCLib') where
 

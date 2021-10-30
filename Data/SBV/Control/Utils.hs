@@ -1356,8 +1356,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                    forM_ [0 .. length terms - 1] $ \i -> do
                                                         sc <- shouldContinue
-                                                        when sc $ do let (pre, rest@(cur S.:<| _)) = S.splitAt i terms
-                                                                     scope cur pre $ walk False rest
+                                                        when sc $ do case S.splitAt i terms of
+                                                                       (pre, rest@(cur S.:<| _)) -> scope cur pre $ walk False rest
+                                                                       _                         -> error "Data.SBV.allSat: Impossible happened, ran out of terms!"
 
          -- All sat loop. This is slower, as it implements the reject-the-previous model and loop around logic. But
          -- it can handle uninterpreted sorts; so we keep it here as a fall-back.

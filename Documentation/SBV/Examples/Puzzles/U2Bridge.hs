@@ -16,7 +16,7 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module Documentation.SBV.Examples.Puzzles.U2Bridge where
 

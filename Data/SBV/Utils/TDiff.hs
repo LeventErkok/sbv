@@ -46,7 +46,9 @@ showTDiff diff
          picoFactor :: Integer
          picoFactor = (10 :: Integer) ^ (12 :: Integer)
 
-         [s2p, m2s, h2m, d2h] = drop 1 $ scanl (*) 1 [picoFactor, 60, 60, 24]
+         (s2p, m2s, h2m, d2h) = case drop 1 $ scanl (*) 1 [picoFactor, 60, 60, 24] of
+                                  (s2pv : m2sv : h2mv : d2hv : _) -> (s2pv, m2sv, h2mv, d2hv)
+                                  _                               -> (0, 0, 0, 0)  -- won't ever happen
 
          (days,    days')    = total    `divMod` d2h
          (hours,   hours')   = days'    `divMod` h2m

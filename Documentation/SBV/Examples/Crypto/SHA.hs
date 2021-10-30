@@ -21,6 +21,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+
 module Documentation.SBV.Examples.Crypto.SHA where
 
 import Data.SBV

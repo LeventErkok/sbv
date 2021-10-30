@@ -788,16 +788,16 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         stringOrChar _       = False
         stringCmp swap o [a, b]
           | stringOrChar (kindOf (head arguments))
-          = let [a1, a2] | swap = [b, a]
-                         | True = [a, b]
+          = let (a1, a2) | swap = (b, a)
+                         | True = (a, b)
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
         stringCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.stringCmp: Unexpected arguments: " ++ show (o, sbvs)
 
         -- NB. Likewise for sequences
         seqCmp swap o [a, b]
           | KList{} <- kindOf (head arguments)
-          = let [a1, a2] | swap = [b, a]
-                         | True = [a, b]
+          = let (a1, a2) | swap = (b, a)
+                         | True = (a, b)
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
         seqCmp _ o sbvs = error $ "SBV.SMT.SMTLib2.sh.seqCmp: Unexpected arguments: " ++ show (o, sbvs)
 

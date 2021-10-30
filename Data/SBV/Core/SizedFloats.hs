@@ -189,8 +189,7 @@ fprToSMTLib2 (FP eb sb r)
 
        as x = "(_ " ++ x ++ " " ++ e ++ " " ++ s ++ ")"
 
-       mkB sz val = "#b" ++ pad sz (showBin val "")
-       showBin = showIntAtBase 2 intToDigit
+       mkB sz val = "#b" ++ pad sz (showIntAtBase 2 intToDigit val "")
        pad l str = replicate (l - length str) '0' ++ str
 
 -- | Structural comparison only, for internal map indexes

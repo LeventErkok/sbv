@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 8.17, 2021-10-25
 
+### Version 8.17.5, Development version
+
+  * Changes required to compile cleanly with GHC 9.2.1
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5

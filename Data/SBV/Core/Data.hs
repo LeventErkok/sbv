@@ -508,8 +508,11 @@ class (HasKind a, Typeable a) => SymVal a where
           k = constructUKind (undefined :: a)
 
   default literal :: Show a => a -> SBV a
-  literal x = let k@(KUserSort  _ conts) = kindOf x
-                  sx                     = show x
+  literal x = let k  = kindOf x
+                  sx = show x
+                  conts = case k of
+                           KUserSort _ cts -> cts
+                           _               -> Nothing
                   mbIdx = case conts of
                             Just xs -> sx `elemIndex` xs
                             Nothing -> Nothing

@@ -36,7 +36,7 @@
 -- NB. Thanks to Amit Goel for suggesting the formalization strategy used in here.
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module Documentation.SBV.Examples.Puzzles.Birthday where
 

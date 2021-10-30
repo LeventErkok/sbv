@@ -44,7 +44,7 @@ quick: tags
 	@$(TIME) cabal new-install --lib
 	
 install: tags
-	@$(TIME) cabal new-configure --enable-tests --ghc-options=$(CONFIGOPTS)
+	@$(TIME) cabal new-configure --enable-tests --allow-newer --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal new-install --lib
 
 docs:
@@ -70,9 +70,8 @@ lintTest:
 testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
-# Doctests are broken with GHC 9.0.1
 docTest:
-	# @$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
+	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
 
 test:
 	$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}

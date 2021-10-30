@@ -9,7 +9,7 @@
 -- Test the pseudo-boolean functions
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module TestSuite.Basics.PseudoBoolean(tests)  where
 

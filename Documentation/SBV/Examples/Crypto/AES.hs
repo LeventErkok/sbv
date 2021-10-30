@@ -28,7 +28,7 @@
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE TypeApplications #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module Documentation.SBV.Examples.Crypto.AES where
 

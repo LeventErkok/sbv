@@ -38,7 +38,7 @@ import Data.Kind              (Type)
 
 import Data.SBV.Dynamic   (SVal)
 import Data.SBV.Internals (SBV(SBV), unSBV)
-import Data.SBV.Trans
+import Data.SBV.Trans hiding(And)
 import Data.SBV.Trans.Control
 
 -- * Allocation of symbolic variables, so we can extract a model later.
