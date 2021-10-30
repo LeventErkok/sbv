@@ -7,7 +7,6 @@
 -- Stability : experimental
 --
 -- Test the sequence/list functions.
--- Most of these tests are adopted from <http://rise4fun.com/z3/tutorialcontent/sequences>
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedLists     #-}

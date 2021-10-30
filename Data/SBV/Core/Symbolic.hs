@@ -411,8 +411,7 @@ regExpToString _  (Union [])        = "re.nostr"
 regExpToString fs (Union [x])       = regExpToString fs x
 regExpToString fs (Union xs)        = "(re.union " ++ unwords (map (regExpToString fs) xs) ++ ")"
 
--- | Show instance for @StrOp@. Note that the mapping here is
--- important to match the SMTLib equivalents, see here: <http://rise4fun.com/z3/tutorialcontent/sequences>
+-- | Show instance for @StrOp@. Note that the mapping here is important to match the SMTLib equivalents.
 instance Show StrOp where
   show StrConcat   = "str.++"
   show StrLen      = "str.len"
