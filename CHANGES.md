@@ -9,14 +9,14 @@
 
   * In future versions, GHC will make `forall` a reserved word, which will create a conflict with SBV's use of the same. To accommodate for these changes and to be consistent, following identifiers were renamed:
 
-       - 'forall'   --> 'sbvForall'
-       - 'forall_'  --> 'sbvForall_'
-       - 'exists'   --> 'sbvExists'
-       - 'exists_'  --> 'sbvExists_'
-       - 'forAll'   --> 'universal'
-       - 'forAll_'  --> 'universal_'
-       - 'forSome'  --> 'existential'
-       - 'forSome_' --> 'existential_'
+       - `forall`   --> `sbvForall`
+       - `forall_`  --> `sbvForall_`
+       - `exists`   --> `sbvExists`
+       - `exists_`  --> `sbvExists_`
+       - `forAll`   --> `universal`
+       - `forAll_`  --> `universal_`
+       - `forSome`  --> `existential`
+       - `forSome_` --> `existential_`
 
 ### Version 8.17, 2021-10-25
 
