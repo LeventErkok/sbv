@@ -9,6 +9,7 @@
 -- Cross-cutting toplevel client functions
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE PackageImports      #-}
 {-# LANGUAGE QuasiQuotes         #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -30,7 +31,8 @@ import Data.Generics
 
 import qualified Control.Exception as C
 
-import qualified "template-haskell" Language.Haskell.TH as TH
+import qualified "template-haskell" Language.Haskell.TH        as TH
+import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
@@ -86,16 +88,32 @@ declareSymbolic isEnum typeName = do
 
     sType <- TH.conT ''SBV `TH.appT` typeCon
 
-    let declConstructor c = [sig, def]
-          where nm   = TH.mkName $ 's' : TH.nameBase c
+    let declConstructor c = ((nm, bnm), [sig, def])
+          where bnm  = TH.nameBase c
+                nm   = TH.mkName $ 's' : bnm
                 def  = TH.FunD nm [TH.Clause [] (TH.NormalB body) []]
                 body = TH.AppE (TH.VarE 'literal) (TH.ConE c)
                 sig  = TH.SigD nm sType
 
-        cdecl = concatMap declConstructor cstrs
+        (constrNames, cdecls) = unzip (map declConstructor cstrs)
 
-    let tdecl = TH.TySynD (TH.mkName ('S' : TH.nameBase typeName)) [] sType
-    pure $ deriveEqOrds ++ derives ++ [tdecl] ++ cdecl
+    let btname = TH.nameBase typeName
+        tname  = TH.mkName ('S' : btname)
+        tdecl  = TH.TySynD tname [] sType
+
+    addDocs (tname, btname) constrNames
+
+    pure $ deriveEqOrds ++ derives ++ [tdecl] ++ concat cdecls
+
+ where addDocs :: (TH.Name, String) -> [(TH.Name, String)] -> TH.Q ()
+#if MIN_VERSION_template_haskell(2,18,0)
+       addDocs (tnm, ts) cnms = do addDoc True (tnm, ts)
+                                   mapM_  (addDoc False) cnms
+          where addDoc True  (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the type '"        ++ cs ++ "'."
+                addDoc False (cnm, cs) = TH.addModFinalizer $ TH.putDoc (TH.DeclDoc cnm) $ "Symbolic version of the constructor '" ++ cs ++ "'."
+#else
+       addDocs _ _ = pure ()
+#endif
 
 -- | Make an enumeration a symbolic type.
 mkSymbolicEnumeration :: TH.Name -> TH.Q [TH.Dec]
