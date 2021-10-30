@@ -32,7 +32,9 @@ import Data.Generics
 import qualified Control.Exception as C
 
 import qualified "template-haskell" Language.Haskell.TH        as TH
+#if MIN_VERSION_template_haskell(2,18,0)
 import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
+#endif
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model
