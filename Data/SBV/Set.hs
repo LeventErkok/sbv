@@ -312,7 +312,10 @@ isUniversal :: HasKind a => SSet a -> SBool
 isUniversal = isFull
 
 -- | Does the set have the given size? It implicitly asserts that the set
--- it is operating on is finite. Also see 'Data.SBV.Set.card'.
+-- it is operating on is finite. NB. Only z3 supported this call, and as
+-- discussed in http://github.com/Z3Prover/z3/issues/3854, recent versions
+-- of z3 doesn't support size calls either. So, you can only use this if you have
+-- a sufficiently old version of z3.
 --
 -- >>> prove $ \i -> hasSize (empty :: SSet Integer) i .== (i .== 0)
 -- Q.E.D.
@@ -320,14 +323,16 @@ isUniversal = isFull
 -- >>> sat $ \i -> hasSize (full :: SSet Integer) i
 -- Unsatisfiable
 --
--- ->>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `union` b) k .=> k .>= i `smax` j
--- Q.E.D.
+-- The following tests are commented out since z3 no longer supports size:
 --
--- ->>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `intersection` b) k .=> k .<= i `smin` j
--- Q.E.D.
+-- > >>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `union` b) k .=> k .>= i `smax` j
+-- > Q.E.D.
 --
--- ->>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
--- Q.E.D.
+-- > >>> prove $ \a b i j k -> hasSize (a :: SSet Integer) i .&& hasSize (b :: SSet Integer) j .&& hasSize (a `intersection` b) k .=> k .<= i `smin` j
+-- > Q.E.D.
+--
+-- > >>> prove $ \a k -> hasSize (a :: SSet Integer) k .=> k .>= 0
+-- > Q.E.D.
 hasSize :: (Ord a, SymVal a) => SSet a -> SInteger -> SBool
 hasSize sa si
   -- Case 1: Constant regular set, see if the size matches
