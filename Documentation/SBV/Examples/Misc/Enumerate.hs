@@ -64,8 +64,8 @@ four = sat $ \a b c (d::SE) -> distinct [a, b, c, d]
 -- Satisfiable. Model:
 --   maxE = C :: E
 maxE :: IO SatResult
-maxE = sat $ do mx <- exists "maxE"
-                e  <- forall "e"
+maxE = sat $ do mx <- sbvExists "maxE"
+                e  <- sbvForall "e"
                 return $ mx .>= (e::SE)
 
 -- | Similarly, we get the minimum element. We have:
@@ -74,6 +74,6 @@ maxE = sat $ do mx <- exists "maxE"
 -- Satisfiable. Model:
 --   minE = A :: E
 minE :: IO SatResult
-minE = sat $ do mx <- exists "minE"
-                e  <- forall "e"
+minE = sat $ do mx <- sbvExists "minE"
+                e  <- sbvForall "e"
                 return $ mx .<= (e::SE)

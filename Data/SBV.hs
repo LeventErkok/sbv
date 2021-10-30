@@ -292,7 +292,7 @@ module Data.SBV (
   -- $noteOnNestedQuantifiers
   -- $multiIntro
   , Predicate, Goal
-  , Provable, forAll_, forAll, forSome_, forSome
+  , Provable, universal_, universal, existential_, existential
   , prove, proveWith
   , dprove, dproveWith
   , sat, satWith
@@ -378,7 +378,7 @@ module Data.SBV (
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..)
-  , SymVal, forall, forall_, mkForallVars, exists, exists_, mkExistVars, free
+  , SymVal, sbvForall, sbvForall_, mkForallVars, sbvExists, sbvExists_, mkExistVars, free
   , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCV
   , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
@@ -393,13 +393,13 @@ module Data.SBV (
   ) where
 
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.Data       hiding (forall, forall_,
-                                        mkForallVars, exists, exists_,
+import Data.SBV.Core.Data       hiding (sbvForall, sbvForall_,
+                                        mkForallVars, sbvExists, sbvExists_,
                                         mkExistVars, free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
                                         newArray, newArray_)
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
-                                        forall, forall_, exists, exists_,
+                                        sbvForall, sbvForall_, sbvExists, sbvExists_,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
                                         sFloatingPoint, sFloatingPoint_, sFloatingPoints,
@@ -421,7 +421,7 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
-import Data.SBV.Provers.Prover hiding (forAll_, forAll, forSome_, forSome,
+import Data.SBV.Provers.Prover hiding (universal_, universal, existential_, existential,
                                        prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
                                        allSatWith, optimize, optimizeWith,
@@ -772,8 +772,8 @@ A constraint is a means for restricting the input domain of a formula. Here's a 
 example:
 
 @
-   do x <- 'exists' \"x\"
-      y <- 'exists' \"y\"
+   do x <- 'sbvExists' \"x\"
+      y <- 'sbvExists' \"y\"
       'constrain' $ x .> y
       'constrain' $ x + y .>= 12
       'constrain' $ y .>= 3
@@ -811,7 +811,7 @@ depends on the context:
 
 {- $generalConstraints
 A good use case (in fact the motivating use case) for 'constrain' is attaching a
-constraint to a 'forall' or 'exists' variable at the time of its creation.
+constraint to a universally or existentially quantified variable at the time of its creation.
 Also, the conjunctive semantics for 'sat' and the implicative
 semantics for 'prove' simplify programming by choosing the correct interpretation
 automatically. However, one should be aware of the semantic difference. For instance, in
@@ -819,7 +819,7 @@ the presence of constraints, formulas that are /provable/ are not necessarily
 /satisfiable/. To wit, consider:
 
  @
-    do x <- 'exists' \"x\"
+    do x <- 'sbvExists' \"x\"
        'constrain' $ x .< x
        return $ x .< (x :: 'SWord8')
  @

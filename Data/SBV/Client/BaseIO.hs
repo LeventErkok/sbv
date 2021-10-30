@@ -57,41 +57,40 @@ import qualified Data.SBV.Provers.Prover as Trans
 -- In this case the sbv library will use names of the form @s1, s2@, etc. to name these variables
 -- Example:
 --
--- >  forAll_ $ \(x::SWord8) y -> x `shiftL` 2 .== y
+-- >  universal_ $ \(x::SWord8) y -> x `shiftL` 2 .== y
 --
 -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
 -- @x@ will be named @s0@ and @y@ will be named @s1@.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forAll_'
-forAll_ :: Provable a => a -> Symbolic SBool
-forAll_ = Trans.forAll_
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.universal_'
+universal_ :: Provable a => a -> Symbolic SBool
+universal_ = Trans.universal_
 
 -- | Turns a value into a predicate, allowing users to provide names for the inputs.
 -- If the user does not provide enough number of names for the variables, the remaining ones
 -- will be internally generated. Note that the names are only used for printing models and has no
 -- other significance; in particular, we do not check that they are unique. Example:
 --
--- >  forAll ["x", "y"] $ \(x::SWord8) y -> x `shiftL` 2 .== y
+-- >  universal ["x", "y"] $ \(x::SWord8) y -> x `shiftL` 2 .== y
 --
 -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
 -- simplifying the counter-examples when they are printed.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forAll'
-forAll :: Provable a => [String] -> a -> Symbolic SBool
-forAll = Trans.forAll
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.universal'
+universal :: Provable a => [String] -> a -> Symbolic SBool
+universal = Trans.universal
 
--- | Turns a value into an existentially quantified predicate. (Indeed, 'exists' would have been
--- a better choice here for the name, but alas it's already taken.)
+-- | Turns a value into an existentially quantified predicate.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forSome_'
-forSome_ :: Provable a => a -> Symbolic SBool
-forSome_ = Trans.forSome_
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.existential_'
+existential_ :: Provable a => a -> Symbolic SBool
+existential_ = Trans.existential_
 
--- | Version of 'forSome' that allows user defined names.
+-- | Version of 'existential_' that allows user defined names.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forSome'
-forSome :: Provable a => [String] -> a -> Symbolic SBool
-forSome = Trans.forSome
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.existential'
+existential :: Provable a => [String] -> a -> Symbolic SBool
+existential = Trans.existential
 
 -- | Prove a predicate, using the default solver.
 --
@@ -267,15 +266,15 @@ output = Trans.output
 
 -- | Create a user named input (universal)
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forall'
-forall :: SymVal a => String -> Symbolic (SBV a)
-forall = Trans.forall
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvForall'
+sbvForall :: SymVal a => String -> Symbolic (SBV a)
+sbvForall = Trans.sbvForall
 
 -- | Create an automatically named input
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.forall_'
-forall_ :: SymVal a => Symbolic (SBV a)
-forall_ = Trans.forall_
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvForall_'
+sbvForall_ :: SymVal a => Symbolic (SBV a)
+sbvForall_ = Trans.sbvForall_
 
 -- | Get a bunch of new words
 --
@@ -285,15 +284,15 @@ mkForallVars = Trans.mkForallVars
 
 -- | Create an existential variable
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.exists'
-exists :: SymVal a => String -> Symbolic (SBV a)
-exists = Trans.exists
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvExists'
+sbvExists :: SymVal a => String -> Symbolic (SBV a)
+sbvExists = Trans.sbvExists
 
 -- | Create an automatically named existential variable
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.exists_'
-exists_ :: SymVal a => Symbolic (SBV a)
-exists_ = Trans.exists_
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sbvExists_'
+sbvExists_ :: SymVal a => Symbolic (SBV a)
+sbvExists_ = Trans.sbvExists_
 
 -- | Create a bunch of existentials
 --

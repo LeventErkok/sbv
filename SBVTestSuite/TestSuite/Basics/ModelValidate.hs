@@ -25,7 +25,7 @@ testsABC :: TestTree
 testsABC = testGroup "Basics.ModelValidate.ABC" [
              goldenCapturedIO "validate_0" badABC
            ]
-    where badABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ forSome ["x"] $ \x -> x .< (10::SWord8)
+    where badABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ existential ["x"] $ \x -> x .< (10::SWord8)
                                appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 tests :: TestTree
@@ -46,8 +46,8 @@ tests = testGroup "Basics.ModelValidate" [
                                `C.catch` (\(e::C.SomeException) -> appendFile goldFile ("\nEXCEPTION RAISED:\n" ++ pick (show e) ++ "\n"))
               where pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
-          t1 = forSome ["x"] $ \x -> fpAdd sRTZ x x   .== (x::SFloat)
-          t2 = forSome ["x"] $ \x -> fpFMA sRNE x x x .== (x::SFloat)
+          t1 = existential ["x"] $ \x -> fpAdd sRTZ x x   .== (x::SFloat)
+          t2 = existential ["x"] $ \x -> fpFMA sRNE x x x .== (x::SFloat)
 
           t3 = do x <- sInteger "x"
                   constrain $ x .> x
@@ -58,6 +58,6 @@ tests = testGroup "Basics.ModelValidate" [
                   constrain $ x .> 12
                   return $ x .== y+3
 
-          t5 = do x <- exists "x"
-                  y <- forall "y"
+          t5 = do x <- sbvExists "x"
+                  y <- sbvForall "y"
                   return $ fpIsPoint y .=> x .<= (y::SFloat)

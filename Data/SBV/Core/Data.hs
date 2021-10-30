@@ -526,29 +526,29 @@ class (HasKind a, Typeable a) => SymVal a where
     | Just i <- unliteral s = p i
     | True                  = False
 
-  -- | Generalization of 'Data.SBV.forall'
-  forall :: MonadSymbolic m => String -> m (SBV a)
-  forall = mkSymVal (NonQueryVar (Just ALL)) . Just
+  -- | Generalization of 'Data.SBV.sbvForall'
+  sbvForall :: MonadSymbolic m => String -> m (SBV a)
+  sbvForall = mkSymVal (NonQueryVar (Just ALL)) . Just
 
-  -- | Generalization of 'Data.SBV.forall_'
-  forall_ :: MonadSymbolic m => m (SBV a)
-  forall_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
+  -- | Generalization of 'Data.SBV.sbvForall_'
+  sbvForall_ :: MonadSymbolic m => m (SBV a)
+  sbvForall_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
 
   -- | Generalization of 'Data.SBV.mkForallVars'
   mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
-  mkForallVars n = mapM (const forall_) [1 .. n]
+  mkForallVars n = mapM (const sbvForall_) [1 .. n]
 
-  -- | Generalization of 'Data.SBV.exists'
-  exists :: MonadSymbolic m => String -> m (SBV a)
-  exists = mkSymVal (NonQueryVar (Just EX)) . Just
+  -- | Generalization of 'Data.SBV.sbvExists'
+  sbvExists :: MonadSymbolic m => String -> m (SBV a)
+  sbvExists = mkSymVal (NonQueryVar (Just EX)) . Just
 
-  -- | Generalization of 'Data.SBV.exists_'
-  exists_ :: MonadSymbolic m => m (SBV a)
-  exists_ = mkSymVal (NonQueryVar (Just EX)) Nothing
+  -- | Generalization of 'Data.SBV.sbvExists_'
+  sbvExists_ :: MonadSymbolic m => m (SBV a)
+  sbvExists_ = mkSymVal (NonQueryVar (Just EX)) Nothing
 
   -- | Generalization of 'Data.SBV.mkExistVars'
   mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
-  mkExistVars n = mapM (const exists_) [1 .. n]
+  mkExistVars n = mapM (const sbvExists_) [1 .. n]
 
   -- | Generalization of 'Data.SBV.free'
   free :: MonadSymbolic m => String -> m (SBV a)

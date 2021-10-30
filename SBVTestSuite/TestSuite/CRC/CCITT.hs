@@ -27,7 +27,7 @@ tests = testGroup "CRC.CCITT"
   [ goldenVsStringShow "ccitt" crcPgm
   , testCase "ccit_good" (assertIsThm crcGood)
   ]
-  where crcPgm = runSAT $ forAll_ crcGood >>= output
+  where crcPgm = runSAT $ universal_ crcGood >>= output
 
 extendData :: SWord 48 -> SWord 64
 extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse

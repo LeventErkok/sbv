@@ -14,7 +14,7 @@
 
 module Documentation.SBV.Examples.Uninterpreted.Shannon where
 
-import Data.SBV
+import Data.SBV hiding (universal, existential)
 
 -----------------------------------------------------------------------------
 -- * Boolean functions

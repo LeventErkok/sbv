@@ -74,15 +74,15 @@ puzzle = do n <- sInteger "N"
             -- Declare three existential flowers. We declare these with
             -- _modelIgnore suffix, because we don't care different assignments
             -- to them to be a different model. See 'isNonModelVar' below.
-            ef1 <- exists "ef1_modelIgnore"
-            ef2 <- exists "ef2_modelIgnore"
-            ef3 <- exists "ef3_modelIgnore"
+            ef1 <- sbvExists "ef1_modelIgnore"
+            ef2 <- sbvExists "ef2_modelIgnore"
+            ef3 <- sbvExists "ef3_modelIgnore"
 
             -- Declare three universal flowers to aid in encoding the
             -- statements made by students.
-            af1 <- forall "af1"
-            af2 <- forall "af2"
-            af3 <- forall "af3"
+            af1 <- sbvForall "af1"
+            af2 <- sbvForall "af2"
+            af3 <- sbvForall "af3"
 
             -- Each color is represented:
             constrain $ valid ef1 ef2 ef3

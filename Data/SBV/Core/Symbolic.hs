@@ -551,8 +551,7 @@ instance Show Op where
                  , (Join, "#")
                  ]
 
--- | Quantifiers: forall or exists. Note that we allow
--- arbitrary nestings.
+-- | Quantifiers: forall or exists. Note that we allow arbitrary nestings.
 data Quantifier = ALL | EX deriving Eq
 
 -- | Show instance for 'Quantifier'

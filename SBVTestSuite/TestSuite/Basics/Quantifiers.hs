@@ -28,7 +28,7 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} p
                           ]
 
-         qs   = [(exists, "exists"), (forall, "forall")]
+         qs   = [(sbvExists, "exists"), (sbvForall, "forall")]
 
          acts = [ (\x y -> x + (y - x) .== y  , "thm")
                 , (\x y -> x .== y .&& x ./= y, "contradiction")

@@ -38,7 +38,7 @@ tests =
 q1 :: Goal
 q1 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        x <- forall "x" :: Symbolic SInteger
+        x <- sbvForall "x" :: Symbolic SInteger
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
@@ -47,7 +47,7 @@ q1 = do a <- sInteger "a"
 q2 :: Goal
 q2 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        x <- forall "x" :: Symbolic SInteger
+        x <- sbvForall "x" :: Symbolic SInteger
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
@@ -57,7 +57,7 @@ q3 :: Goal
 q3 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" a
-        x <- forall "x" :: Symbolic SInteger
+        x <- sbvForall "x" :: Symbolic SInteger
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
@@ -66,15 +66,15 @@ q4 :: Goal
 q4 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" $ 2*a
-        x <- forall "x" :: Symbolic SInteger
+        x <- sbvForall "x" :: Symbolic SInteger
         constrain $ 2 * (a * x + b1) .== 2
         constrain $ 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
 q5 :: Goal
 q5 = do a <- sInteger "a"
-        x <- forall "x" :: Symbolic SInteger
-        y <- forall "y" :: Symbolic SInteger
+        x <- sbvForall "x" :: Symbolic SInteger
+        y <- sbvForall "y" :: Symbolic SInteger
         b <- sInteger "b"
         constrain $ a .>= 0
         constrain $ b .>= 0

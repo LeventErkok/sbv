@@ -34,7 +34,7 @@ tests =
     , goldenVsStringShow "allSat3" $            allSat $ \x -> x .== (0::SFloat)
     , goldenVsStringShow "allSat4" $            allSat $ \x -> x .<  (0::SWord8)
     , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y .&& y .< (4::SWord8)
-    , goldenVsStringShow "allSat6" $            allSat $ exists "x" >>= \x -> exists "y" >>= \y -> forall "z" >>= \z -> return (x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8))
+    , goldenVsStringShow "allSat6" $            allSat $ sbvExists "x" >>= \x -> sbvExists "y" >>= \y -> sbvForall "z" >>= \z -> return (x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8))
     , goldenCapturedIO   "allSat7" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t3)
     ]
 

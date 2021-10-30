@@ -1680,8 +1680,8 @@ executeQuery queryContext (QueryT userQuery) = do
      -- If we're doing an external query, then we cannot allow quantifiers to be present. Why?
      -- Consider:
      --
-     --      issue = do x :: SBool <- forall_
-     --                 y :: SBool <- exists_
+     --      issue = do x :: SBool <- sbvForall_
+     --                 y :: SBool <- sbvExists_
      --                 constrain y
      --                 query $ do checkSat
      --                         (,) <$> getValue x <*> getValue y

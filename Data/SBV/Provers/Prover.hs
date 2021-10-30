@@ -174,17 +174,17 @@ type Goal = Symbolic ()
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
 class ExtractIO m => MProvable m a where
-  -- | Generalization of 'Data.SBV.forAll_'
-  forAll_ :: a -> SymbolicT m SBool
+  -- | Generalization of 'Data.SBV.universal_'
+  universal_ :: a -> SymbolicT m SBool
 
-  -- | Generalization of 'Data.SBV.forAll'
-  forAll  :: [String] -> a -> SymbolicT m SBool
+  -- | Generalization of 'Data.SBV.universal'
+  universal  :: [String] -> a -> SymbolicT m SBool
 
-  -- | Generalization of 'Data.SBV.forSome_'
-  forSome_ :: a -> SymbolicT m SBool
+  -- | Generalization of 'Data.SBV.existential_'
+  existential_ :: a -> SymbolicT m SBool
 
-  -- | Generalization of 'Data.SBV.forSome'
-  forSome :: [String] -> a -> SymbolicT m SBool
+  -- | Generalization of 'Data.SBV.existential'
+  existential :: [String] -> a -> SymbolicT m SBool
 
   -- | Generalization of 'Data.SBV.prove'
   prove :: a -> m ThmResult
@@ -364,7 +364,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic (SMTMode QueryInternal ISetup True cfg) (forSome_ a >> Control.executeQuery QueryInternal check)
+       fst <$> runSymbolic (SMTMode QueryInternal ISetup True cfg) (existential_ a >> Control.executeQuery QueryInternal check)
      where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
@@ -449,7 +449,7 @@ class ExtractIO m => MProvable m a where
                                 notify   "    We will assume that they are essentially zero for the purposes of validation."
                                 notify   "    Note that this is a gross simplification of the model validation with universals!"
 
-                         result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then forSome_ p else forAll_ p) >>= output)
+                         result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then existential_ p else universal_ p) >>= output)
 
                          let explain  = [ ""
                                         , "Assignment:"  ++ if null env then " <none>" else ""
@@ -625,7 +625,7 @@ generateSMTBenchmark isSat a = do
       let comments = ["Automatically created by SBV on " ++ show t]
           cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then forSome_ else forAll_) a >>= output
+      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then existential_ else universal_) a >>= output
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
@@ -644,24 +644,24 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 -- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
 -- This is useful since min/max calls and constraints will provide the context
 instance ExtractIO m => MProvable m (SymbolicT m ()) where
-  forAll_    a = forAll_    ((a >> return sTrue) :: SymbolicT m SBool)
-  forAll ns  a = forAll ns  ((a >> return sTrue) :: SymbolicT m SBool)
-  forSome_   a = forSome_   ((a >> return sTrue) :: SymbolicT m SBool)
-  forSome ns a = forSome ns ((a >> return sTrue) :: SymbolicT m SBool)
+  universal_     a = universal_     ((a >> return sTrue) :: SymbolicT m SBool)
+  universal ns   a = universal ns   ((a >> return sTrue) :: SymbolicT m SBool)
+  existential_   a = existential_   ((a >> return sTrue) :: SymbolicT m SBool)
+  existential ns a = existential ns ((a >> return sTrue) :: SymbolicT m SBool)
 
 instance ExtractIO m => MProvable m (SymbolicT m SBool) where
-  forAll_    = id
-  forAll []  = id
-  forAll xs  = error $ "SBV.forAll: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
-  forSome_   = id
-  forSome [] = id
-  forSome xs = error $ "SBV.forSome: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
+  universal_     = id
+  universal []   = id
+  universal xs   = error $ "SBV.universal: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
+  existential_   = id
+  existential [] = id
+  existential xs = error $ "SBV.existential: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
 instance ExtractIO m => MProvable m SBool where
-  forAll_   = return
-  forAll _  = return
-  forSome_  = return
-  forSome _ = return
+  universal_    = return
+  universal _   = return
+  existential_  = return
+  existential _ = return
 
 {-
 -- The following works, but it lets us write properties that
@@ -669,83 +669,83 @@ instance ExtractIO m => MProvable m SBool where
 -- Running that will throw an exception since Haskell's equality
 -- is not be supported by symbolic things. (Needs .==).
 instance Provable Bool where
-  forAll_  x  = forAll_   (if x then true else false :: SBool)
-  forAll s x  = forAll s  (if x then true else false :: SBool)
-  forSome_  x = forSome_  (if x then true else false :: SBool)
-  forSome s x = forSome s (if x then true else false :: SBool)
+  universal_  x  = universal_     (if x then true else false :: SBool)
+  universal s x  = universal s    (if x then true else false :: SBool)
+  existential_  x = existential_  (if x then true else false :: SBool)
+  existential s x = existential s (if x then true else false :: SBool)
 -}
 
 -- Functions
 instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
-  forAll_        k = forall_   >>= \a -> forAll_   $ k a
-  forAll (s:ss)  k = forall s  >>= \a -> forAll ss $ k a
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ k a
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ k a
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ k a
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ k a
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ k a
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ k a
+  existential []     k = existential_ k
 
 -- Arrays
 instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
-  forAll_        k = newArray_  Nothing >>= \a -> forAll_   $ k a
-  forAll  (s:ss) k = newArray s Nothing >>= \a -> forAll ss $ k a
-  forAll  []     k = forAll_ k
-  forSome_       k = newArray_  Nothing >>= \a -> forSome_   $ k a
-  forSome (s:ss) k = newArray s Nothing >>= \a -> forSome ss $ k a
-  forSome []     k = forSome_ k
+  universal_         k = newArray_  Nothing >>= \a -> universal_   $ k a
+  universal  (s:ss)  k = newArray s Nothing >>= \a -> universal ss $ k a
+  universal  []      k = universal_ k
+  existential_       k = newArray_  Nothing >>= \a -> existential_   $ k a
+  existential (s:ss) k = newArray s Nothing >>= \a -> existential ss $ k a
+  existential []     k = existential_ k
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
-  forAll_        k = forall_  >>= \a -> forAll_   $ \b -> k (a, b)
-  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b -> k (a, b)
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b -> k (a, b)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b -> k (a, b)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b -> k (a, b)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b -> k (a, b)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b -> k (a, b)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b -> k (a, b)
+  existential []     k = existential_ k
 
 -- 3 Tuple
 instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
-  forAll_       k  = forall_  >>= \a -> forAll_   $ \b c -> k (a, b, c)
-  forAll (s:ss) k  = forall s >>= \a -> forAll ss $ \b c -> k (a, b, c)
-  forAll []     k  = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b c -> k (a, b, c)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c -> k (a, b, c)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c -> k (a, b, c)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c -> k (a, b, c)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c -> k (a, b, c)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c -> k (a, b, c)
+  existential []     k = existential_ k
 
 -- 4 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d -> k (a, b, c, d)
-  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d -> k (a, b, c, d)
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d -> k (a, b, c, d)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d -> k (a, b, c, d)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d -> k (a, b, c, d)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d -> k (a, b, c, d)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d -> k (a, b, c, d)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d -> k (a, b, c, d)
+  existential []     k = existential_ k
 
 -- 5 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e -> k (a, b, c, d, e)
-  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e -> k (a, b, c, d, e)
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e -> k (a, b, c, d, e)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e -> k (a, b, c, d, e)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e -> k (a, b, c, d, e)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e -> k (a, b, c, d, e)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e -> k (a, b, c, d, e)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e -> k (a, b, c, d, e)
+  existential []     k = existential_ k
 
 -- 6 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f -> k (a, b, c, d, e, f)
-  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f -> k (a, b, c, d, e, f)
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e f -> k (a, b, c, d, e, f)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f -> k (a, b, c, d, e, f)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e f -> k (a, b, c, d, e, f)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e f -> k (a, b, c, d, e, f)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e f -> k (a, b, c, d, e, f)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e f -> k (a, b, c, d, e, f)
+  existential []     k = existential_ k
 
 -- 7 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  forAll_        k = forall_  >>= \a -> forAll_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forAll (s:ss)  k = forall s >>= \a -> forAll ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forAll []      k = forAll_ k
-  forSome_       k = exists_  >>= \a -> forSome_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forSome (s:ss) k = exists s >>= \a -> forSome ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  forSome []     k = forSome_ k
+  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  universal []       k = universal_ k
+  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  existential []     k = existential_ k
 
 -- | Generalization of 'Data.SBV.runSMT'
 runSMT :: MonadIO m => SymbolicT m a -> m a
@@ -758,7 +758,7 @@ runSMTWith cfg a = fst <$> runSymbolic (SMTMode QueryExternal ISetup True cfg) a
 -- | Runs with a query.
 runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode QueryInternal ISetup isSAT cfg) comp
-  where comp =  do _ <- (if isSAT then forSome_ else forAll_) a >>= output
+  where comp =  do _ <- (if isSAT then existential_ else universal_) a >>= output
                    Control.executeQuery QueryInternal q
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
@@ -918,44 +918,44 @@ instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal 
 
 -- Functions
 instance (SymVal a, SExecutable m p) => SExecutable m (SBV a -> p) where
-   sName_        k = exists_   >>= \a -> sName_   $ k a
-   sName (s:ss)  k = exists s  >>= \a -> sName ss $ k a
+   sName_        k = sbvExists_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = sbvExists s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
 instance (SymVal a, SymVal b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
-  sName_        k = exists_  >>= \a -> sName_   $ \b -> k (a, b)
-  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b -> k (a, b)
+  sName_        k = sbvExists_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
-  sName_       k  = exists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
-  sName (s:ss) k  = exists s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName_       k  = sbvExists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = sbvExists s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  sName_        k = exists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
-  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  sName_        k = exists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
-  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
-  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  sName_        k = exists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName (s:ss)  k = exists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

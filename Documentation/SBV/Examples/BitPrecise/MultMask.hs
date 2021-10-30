@@ -48,8 +48,8 @@ import Data.SBV
 -- multiplier as the result: 0x8202040810204081. That value works just fine as well!
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
-  where find = do mask <- exists "mask"
-                  mult <- exists "mult"
-                  inp  <- forall "inp"
+  where find = do mask <- sbvExists "mask"
+                  mult <- sbvExists "mult"
+                  inp  <- sbvForall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)
                   solve [inp `sExtractBits` [7, 15 .. 63] .== res `sExtractBits` [56 .. 63]]

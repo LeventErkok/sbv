@@ -78,8 +78,8 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 --
 -- and rest assured that we have a correctly synthesized circuit!
 synthMul22 :: Goal
-synthMul22 = do a :: SWord8 <- forall "a"
-                b :: SWord8 <- forall "b"
+synthMul22 = do a :: SWord8 <- sbvForall "a"
+                b :: SWord8 <- sbvForall "b"
 
                 let lsb2 x = let [x1, x0] = reverse $ take 2 $ blastLE x
                              in (x1, x0)

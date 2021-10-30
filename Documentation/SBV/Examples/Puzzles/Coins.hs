@@ -42,7 +42,7 @@ type Coin = SWord16
 -- | Create a coin. The argument Int argument just used for naming the coin. Note that
 -- we constrain the value to be one of the valid U.S. coin values as we create it.
 mkCoin :: Int -> Symbolic Coin
-mkCoin i = do c <- exists $ 'c' : show i
+mkCoin i = do c <- sbvExists $ 'c' : show i
               constrain $ sAny (.== c) [1, 5, 10, 25, 50, 100]
               return c
 

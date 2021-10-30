@@ -24,7 +24,7 @@ tests =
   testGroup "Puzzles.Temperature"
     [ goldenVsStringShow "temperature" result
     ]
-    where result = (sort . concatMap M.toList . getModelDictionaries) `fmap` allSat (revOf `fmap` exists_)
+    where result = (sort . concatMap M.toList . getModelDictionaries) `fmap` allSat (revOf `fmap` sbvExists_)
 
 type Temp = SInteger
 

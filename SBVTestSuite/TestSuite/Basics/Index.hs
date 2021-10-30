@@ -32,9 +32,9 @@ mkTest tst i =
 test1 :: Int -> IO Bool
 test1 n = isTheorem $ do
             elts <- mkForallVars n
-            err  <- forall_
-            ind  <- forall_
-            ind2 <- forall_
+            err  <- sbvForall_
+            ind  <- sbvForall_
+            ind2 <- sbvForall_
             let r1 = (select :: [SWord8] -> SWord8 -> SInt8 -> SWord8) elts err ind
                 r2 = (select :: [SWord8] -> SWord8 -> SWord8 -> SWord8) elts err ind2
                 r3 = slowSearch elts err ind
@@ -49,11 +49,11 @@ test2 n = isTheorem $ do
             elts1 <- mkForallVars n
             elts2 <- mkForallVars n
             let elts = zip elts1 elts2
-            err1  <- forall_
-            err2  <- forall_
+            err1  <- sbvForall_
+            err2  <- sbvForall_
             let err = (err1, err2)
-            ind  <- forall_
-            ind2 <- forall_
+            ind  <- sbvForall_
+            ind2 <- sbvForall_
             let r1 = (select :: [(SWord8, SWord8)] -> (SWord8, SWord8) -> SInt8 -> (SWord8, SWord8)) elts err ind
                 r2 = (select :: [(SWord8, SWord8)] -> (SWord8, SWord8) -> SWord8 -> (SWord8, SWord8)) elts err ind2
                 r3 = slowSearch elts err ind
@@ -67,9 +67,9 @@ test3 :: Int -> IO Bool
 test3 n = isTheorem $ do
             eltsI <- mkForallVars n
             let elts = map Left eltsI
-            errI  <- forall_
+            errI  <- sbvForall_
             let err = Left errI
-            ind  <- forall_
+            ind  <- sbvForall_
             let r1 = (select :: [Either SWord8 SWord8] -> Either SWord8 SWord8 -> SInt8 -> Either SWord8 SWord8) elts err ind
                 r2 = slowSearch elts err ind
             return $ r1 .== r2

@@ -38,4 +38,4 @@ tests =
     , testCase "iteTest6" (assertIsThm (chk3 iteLazy))
     ]
  where rs :: (SWord8 -> SBool) -> IO Result
-       rs f = runSAT $ forAll ["x"] f
+       rs f = runSAT $ universal ["x"] f

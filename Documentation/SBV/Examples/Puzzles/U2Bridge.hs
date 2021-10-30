@@ -209,9 +209,9 @@ isValid as = time end .<= 17 .&& sAll check as .&& zigZag (cycle [sThere, sHere]
 -- | See if there is a solution that has precisely @n@ steps
 solveN :: Int -> IO Bool
 solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ plu n ++ "."
-              let genAct = do b  <- exists_
-                              p1 <- exists_
-                              p2 <- exists_
+              let genAct = do b  <- sbvExists_
+                              p1 <- sbvExists_
+                              p2 <- sbvExists_
                               return (b, p1, p2)
               res <- allSat $ isValid `fmap` mapM (const genAct) [1..n]
               cnt <- displayModels (sortOn show) disp res
