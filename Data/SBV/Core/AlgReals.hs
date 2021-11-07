@@ -278,8 +278,7 @@ showRat exact r = p $ case f25 (denominator r) [] of
         -- appropriately and shown as a string
         f25 :: Integer -> [Integer] -> Maybe (Int, String)
         f25 1 sofar = let (ts, fs)   = partition (== 2) sofar
-                          [lts, lfs] = map length [ts, fs]
-                          noOfZeros  = lts `max` lfs
+                          noOfZeros  = (max `on` length) ts fs
                       in Just (noOfZeros, show (abs (numerator r)  * factor ts fs))
         f25 v sofar = let (q2, r2) = v `quotRem` 2
                           (q5, r5) = v `quotRem` 5
