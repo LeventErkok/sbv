@@ -9,7 +9,7 @@
 -- Doctest interface for SBV testsuite
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-overlapping-patterns #-}
 
 module Main (main) where
 
