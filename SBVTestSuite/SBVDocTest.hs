@@ -63,7 +63,11 @@ main = do (testEnv, testPercentage) <- getTestEnvironment
                                                             ]
 
                                                  pargs = concatMap (\p -> ["-package", p]) packages
-                                                 args  = ["--fast", "--no-magic"]
+                                                 args  = ["--fast"
+                                                         , "--no-magic"
+                                                         , "-package-env /Users/leventerkok/.ghc/x86_64-darwin-9.2.1/environments/default"
+                                                         , "-XHaskell2010"
+                                                         ]
 
                                              tfs <- pickPercentage tp testFiles
 
