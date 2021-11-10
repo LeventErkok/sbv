@@ -21,6 +21,10 @@ module Documentation.SBV.Examples.Uninterpreted.UISortAllSat where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | A "list-like" data type, but one we plan to uninterpret at the SMT level.
 -- The actual shape is really immaterial for us.
 data L

@@ -55,9 +55,8 @@ import LibBF
 
 import Data.SBV.Core.Operations
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> :set -XTypeApplications
 -- >>> :set -XRankNTypes
 -- >>> :set -XScopedTypeVariables

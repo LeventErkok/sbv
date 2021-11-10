@@ -45,8 +45,8 @@ import Data.Int
 import Data.Word
 import Data.Proxy
 
--- Doctest only
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Provers.Prover (prove, allSat)
 
 -- | Detecting underflow/overflow conditions. For each function,

@@ -47,9 +47,8 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
 import Data.Proxy
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> :set -XOverloadedStrings
 

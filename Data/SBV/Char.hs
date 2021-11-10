@@ -53,9 +53,8 @@ import qualified Data.Char as C
 
 import Data.SBV.String (isInfixOf, singleton)
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> :set -XOverloadedStrings
 

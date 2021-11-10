@@ -19,8 +19,8 @@ module Data.SBV.Tools.BoundedFix (
 
 import Data.SBV
 
--- Doctest only:
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> bfac = bfix 10 "fac" fact where fact f n = ite (n .== 0) 1 ((n :: SInteger) * f (n-1))
 
 -- | Bounded fixed-point operation. The call @bfix bnd nm f@ unrolls the recursion in @f@ at most

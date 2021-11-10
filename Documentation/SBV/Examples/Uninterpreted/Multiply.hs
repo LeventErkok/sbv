@@ -18,6 +18,10 @@ module Documentation.SBV.Examples.Uninterpreted.Multiply where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | The uninterpreted implementation of our 2x2 multiplier. We simply
 -- receive two 2-bit values, and return the high and the low bit of the
 -- resulting multiplication via two uninterpreted functions that we
@@ -44,12 +48,12 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- >>> sat synthMul22
 -- Satisfiable. Model:
 --   mul22_hi :: Bool -> Bool -> Bool -> Bool -> Bool
---   mul22_hi False True  True  False = True
---   mul22_hi False True  True  True  = True
 --   mul22_hi True  False False True  = True
---   mul22_hi True  False True  True  = True
 --   mul22_hi True  True  False True  = True
+--   mul22_hi False True  True  True  = True
+--   mul22_hi False True  True  False = True
 --   mul22_hi True  True  True  False = True
+--   mul22_hi True  False True  True  = True
 --   mul22_hi _     _     _     _     = False
 -- <BLANKLINE>
 --   mul22_lo :: Bool -> Bool -> Bool
@@ -61,14 +65,15 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- and if you work out the truth-table presented, you'll see that it is exactly that. Of course,
 -- you can use SBV to prove this. First, define the model we were given to make it symbolic:
 --
---- mul22_hi :: SBool -> SBool -> SBool -> SBool -> SBool
--- mul22_hi a1 a0 b1 b0 = ite ([a1, a0, b1, b0] .== [sFalse, sTrue , sTrue , sFalse]) sTrue
+-- >>> :{
+-- mul22_hi :: SBool -> SBool -> SBool -> SBool -> SBool
+-- mul22_hi a1 a0 b1 b0 = ite ([a1, a0, b1, b0] .== [sTrue,  sFalse, sFalse, sTrue ]) sTrue
+--                      $ ite ([a1, a0, b1, b0] .== [sTrue,  sTrue , sFalse, sTrue ]) sTrue
 --                      $ ite ([a1, a0, b1, b0] .== [sFalse, sTrue , sTrue , sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue , sFalse, sFalse, sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue , sFalse, sTrue , sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue , sTrue , sFalse, sTrue ]) sTrue
+--                      $ ite ([a1, a0, b1, b0] .== [sFalse, sTrue , sTrue , sFalse]) sTrue
 --                      $ ite ([a1, a0, b1, b0] .== [sTrue , sTrue , sTrue , sFalse]) sTrue
---                        sFalse- >>> :{
+--                      $ ite ([a1, a0, b1, b0] .== [sTrue , sFalse, sTrue , sTrue ]) sTrue
+--                        sFalse
 -- :}
 --
 -- Now we can say:

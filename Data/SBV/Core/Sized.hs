@@ -45,8 +45,8 @@ import Data.SBV.Core.Symbolic
 
 import Data.SBV.SMT.SMT
 
--- Doctest only
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> :set -XTypeApplications
 -- >>> :set -XDataKinds
 -- >>> import Data.SBV.Provers.Prover (prove)

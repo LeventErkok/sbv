@@ -60,9 +60,8 @@ import Data.SBV.Core.Symbolic (SetOp(..))
 
 import qualified Data.Generics.Uniplate.Data as G
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Core.Model
 -- >>> import Data.SBV.Provers.Prover
 -- >>> :set -XScopedTypeVariables

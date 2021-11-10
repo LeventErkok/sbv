@@ -36,9 +36,8 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model (ite)
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Core.Model
 -- >>> import Data.SBV.Provers.Prover
 

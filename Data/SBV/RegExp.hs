@@ -63,9 +63,8 @@ import Data.Proxy
 -- For testing only
 import Data.SBV.Char
 
--- For doctest use only
---
 -- $setup
+-- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> import Data.SBV.Provers.Prover (prove, sat)
 -- >>> import Data.SBV.Core.Model
