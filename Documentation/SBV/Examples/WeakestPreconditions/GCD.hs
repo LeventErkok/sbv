@@ -37,6 +37,12 @@ import GHC.Generics (Generic)
 import Prelude hiding (gcd)
 import qualified Prelude as P (gcd)
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+-- >>> import Data.SBV.Control
+-- >>> import Data.SBV.Tools.WeakestPreconditions
+
 -- * Program state
 
 -- | The state for the sum program, parameterized over a base type @a@.

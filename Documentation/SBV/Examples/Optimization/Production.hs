@@ -15,6 +15,10 @@ module Documentation.SBV.Examples.Optimization.Production where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | Taken from <http://people.brunel.ac.uk/~mastjjb/jeb/or/morelp.html>
 --
 -- A company makes two products (X and Y) using two machines (A and B).

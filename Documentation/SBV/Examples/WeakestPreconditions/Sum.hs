@@ -30,6 +30,10 @@ import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- * Program state
 
 -- | The state for the sum program, parameterized over a base type @a@.
@@ -181,17 +185,17 @@ Following proof obligation failed:
 ==================================
   Postcondition fails:
     Start: SumS {n = 0, i = 0, s = 0}
-    End  : SumS {n = 0, i = 0, s = 1}
+    End  : SumS {n = 0, i = 0, s = -1}
 
 In this case, we are told that the end state does not establish the
-post-condition. Indeed when @n=0@, we would expect @s=0@, not @s=1@.
+post-condition. Indeed when @n=0@, we would expect @s=0@, not @s=-1@.
 
 The natural question to ask is how did SBV come up with this unexpected
 state at the end of the program run? If you think about the program execution, indeed this
 state is unreachable: We know that @s@ represents the sum of all numbers up to @i@,
 so if @i=0@, we would expect @s@ to be @0@. Our invariant is clearly an overapproximation
 of the reachable space, and SBV is telling us that we need to constrain and outlaw
-the state @{n = 0, i = 0, s = 1}@. Clearly, the invariant has to state something
+the state @{n = 0, i = 0, s = -1}@. Clearly, the invariant has to state something
 about the relationship between @i@ and @s@, which we are missing in this case.
 
 == Failing to maintain the invariant
@@ -221,8 +225,8 @@ The termination measure must always be non-negative:
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 3, i = 2, s = 3}
-    Measure: -2
+    State  : SumS {n = 2, i = 1, s = 1}
+    Measure: -1
 
 The failure is pretty obvious in this case: Measure produces a negative value.
 

@@ -21,6 +21,11 @@ module Documentation.SBV.Examples.Queries.Interpolants where
 import Data.SBV
 import Data.SBV.Control
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+-- >>> import Data.SBV.Control
+
 -- | MathSAT example. Compute the interpolant for the following sets of formulas:
 --
 --     @{x - 3y >= -1, x + y >= 0}@

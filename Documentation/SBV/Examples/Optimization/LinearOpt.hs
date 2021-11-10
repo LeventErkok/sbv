@@ -15,6 +15,10 @@ module Documentation.SBV.Examples.Optimization.LinearOpt where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | Taken from <http://people.brunel.ac.uk/~mastjjb/jeb/or/morelp.html>
 --
 --    *  maximize 5x1 + 6x2

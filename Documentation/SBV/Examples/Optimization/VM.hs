@@ -15,6 +15,10 @@ module Documentation.SBV.Examples.Optimization.VM where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | Computer allocation problem:
 --
 --   - We have three virtual machines (VMs) which require 100, 50 and 15 GB hard disk respectively.

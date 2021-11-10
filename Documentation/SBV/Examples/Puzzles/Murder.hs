@@ -85,10 +85,10 @@ getPerson Person{nm, age, location, sex, role} = Person nm <$> (Const <$> getVal
 -- | Solve the puzzle. We have:
 --
 -- >>> killer
--- Alice     47  Bar    Female  Bystander
--- Husband   46  Beach  Male    Killer
--- Brother   47  Beach  Male    Victim
--- Daughter  20  Alone  Female  Bystander
+-- Alice     48  Bar    Female  Bystander
+-- Husband   47  Beach  Male    Killer
+-- Brother   48  Beach  Male    Victim
+-- Daughter  21  Alone  Female  Bystander
 -- Son       20  Bar    Male    Bystander
 --
 -- That is, Alice's brother was the victim and Alice's husband was the killer.

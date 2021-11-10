@@ -30,6 +30,12 @@ import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+-- >>> import Data.SBV.Control
+-- >>> import Data.SBV.Tools.WeakestPreconditions
+
 -- * Program state
 
 -- | The state for the swap program, parameterized over a base type @a@.

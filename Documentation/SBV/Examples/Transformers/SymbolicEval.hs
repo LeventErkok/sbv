@@ -187,11 +187,11 @@ check program prop = runExceptT $ runSMTWith z3 $ do
 
 -- * Some examples
 
--- | Check that @x+y+1@ generates a counter-example for the property that the
+-- | Check that @x+1+y@ generates a counter-example for the property that the
 -- result is less than @10@ when @x+y@ is at least @9@. We have:
 --
 -- >>> ex1
--- Right (Counterexample 0 9)
+-- Right (Counterexample 9 0)
 ex1 :: IO (Either String CheckResult)
 ex1 = check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
             (Property $ Var "result" `LessThan` Lit 10)
