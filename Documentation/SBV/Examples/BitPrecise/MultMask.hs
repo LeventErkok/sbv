@@ -35,7 +35,7 @@ import Data.SBV
 
 -- | Find the multiplier and the mask as described. We have:
 --
--- >>> maskAndMult
+-- ->> maskAndMult
 -- Satisfiable. Model:
 --   mask = 0x8080808080808080 :: Word64
 --   mult = 0x0002040810204081 :: Word64
