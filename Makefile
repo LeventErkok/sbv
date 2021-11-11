@@ -8,9 +8,7 @@ SHELL := /usr/bin/env bash
 
 CONFIGOPTS = "-Wall -fhide-source-paths"
 
-export SBV_TEST_ENVIRONMENT := local
-
-DOCTESTSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation/SBV -name "*.hs")
+ALLSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation/SBV -name "*.hs")
 
 ifeq ($(OS), Darwin)
 # OSX tends to sleep for long jobs; so run through caffeinate
@@ -56,6 +54,12 @@ ghci:
 ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
 
+ghci_SBVDocTest:
+	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
+
+ghci_HLint:
+	cabal new-repl --repl-options=-Wno-unused-packages SBVHLint
+
 ghcid:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
 
@@ -71,13 +75,13 @@ testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
 docTest:
-	@$(TIME) cabal new-run SBVDocTest -- --fast --no-magic
+	@$(TIME) cabal new-run SBVDocTest
 
 test:
-	$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
+	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
 
 checkLinks:
-	@brok --no-cache --only-failures $(DOCTESTSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
+	@brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
 
 mkDistro:
 	$(TIME) cabal new-sdist
