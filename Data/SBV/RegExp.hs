@@ -67,6 +67,8 @@ import Data.SBV.Char
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Char
+-- >>> import Data.SBV.String
+-- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
 
