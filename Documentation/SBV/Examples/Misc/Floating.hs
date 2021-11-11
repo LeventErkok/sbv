@@ -26,6 +26,10 @@ module Documentation.SBV.Examples.Misc.Floating where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -----------------------------------------------------------------------------
 -- * FP addition is not associative
 -----------------------------------------------------------------------------

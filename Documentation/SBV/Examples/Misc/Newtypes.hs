@@ -21,6 +21,10 @@ import Prelude hiding (ceiling)
 import Data.SBV
 import qualified Data.SBV.Internals as SI
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | A 'Metres' is a newtype wrapper around 'Integer'.
 newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord)
 
@@ -78,7 +82,7 @@ ceilingHighEnoughForHuman ceiling humanHeight = humanHeight' .< ceiling'
 -- >>> sat problem
 -- Satisfiable. Model:
 --   floorToCeiling =   3 :: Integer
---   humanheight    = 255 :: Word16
+--   humanheight    = 253 :: Word16
 problem :: Predicate
 problem = do
     ceiling     :: SMetres          <- free "floorToCeiling"

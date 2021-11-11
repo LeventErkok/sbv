@@ -45,9 +45,8 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Provers.Prover (prove, sat)
--- >>> import Data.Int
--- >>> import Data.Word
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem)
+-- >>> import Data.SBV
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
 

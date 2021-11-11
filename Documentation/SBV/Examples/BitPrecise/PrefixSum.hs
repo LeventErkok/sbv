@@ -21,6 +21,10 @@ module Documentation.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 ----------------------------------------------------------------------
 -- * Formalizing power-lists
 ----------------------------------------------------------------------

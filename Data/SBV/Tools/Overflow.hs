@@ -47,7 +47,7 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Provers.Prover (prove, allSat)
+-- >>> import Data.SBV
 
 -- | Detecting underflow/overflow conditions. For each function,
 -- the first result is the condition under which the computation

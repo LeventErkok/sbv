@@ -55,7 +55,9 @@ import Data.SBV.String (isInfixOf, singleton)
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Provers.Prover (prove, sat)
+-- >>> import Data.SBV
+-- >>> import Data.SBV.String (isInfixOf, singleton)
+-- >>> import Prelude hiding(elem, notElem)
 -- >>> :set -XOverloadedStrings
 
 -- | Is the character in the string?

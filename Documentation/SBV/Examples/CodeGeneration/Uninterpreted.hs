@@ -22,6 +22,10 @@ import Data.Maybe (fromMaybe)
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | A definition of shiftLeft that can deal with variable length shifts.
 -- (Note that the ``shiftL`` method from the 'Bits' class requires an 'Int' shift
 -- amount.) Unfortunately, this'll generate rather clumsy C code due to the

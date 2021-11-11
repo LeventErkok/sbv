@@ -20,6 +20,11 @@ module Documentation.SBV.Examples.CodeGeneration.GCD where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+-- >>> import Data.SBV.Tools.CodeGen
+
 -----------------------------------------------------------------------------
 -- * Computing GCD
 -----------------------------------------------------------------------------

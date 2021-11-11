@@ -43,6 +43,10 @@ import Data.Maybe (fromJust)
 
 import Numeric (showHex)
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -----------------------------------------------------------------------------
 -- * Formalizing GF(2^8)
 -----------------------------------------------------------------------------

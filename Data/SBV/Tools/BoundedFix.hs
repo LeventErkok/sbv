@@ -20,6 +20,7 @@ module Data.SBV.Tools.BoundedFix (
 import Data.SBV
 
 -- $setup
+-- >>> import Data.SBV
 -- >>> -- For doctest purposes only:
 -- >>> bfac = bfix 10 "fac" fact where fact f n = ite (n .== 0) 1 ((n :: SInteger) * f (n-1))
 

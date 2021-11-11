@@ -23,7 +23,7 @@ import Data.SBV.Control
 -- another integer to integer array in each index. We have:
 --
 -- >>> nestedArray
--- (0,10)
+-- (2,10)
 nestedArray :: IO (Integer, Integer)
 nestedArray = runSMT $ do
   idx <- sInteger "idx"

@@ -38,8 +38,8 @@ import Data.SBV.Core.Model (ite)
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Core.Model
--- >>> import Data.SBV.Provers.Prover
+-- >>> import Prelude hiding (maybe, map)
+-- >>> import Data.SBV
 
 -- | The symbolic 'Nothing'.
 --
@@ -60,7 +60,7 @@ isNothing = maybe sTrue (const sFalse)
 
 -- | Construct an @SMaybe a@ from an @SBV a@.
 --
--- >>> sJust 3
+-- >>> sJust (3 :: SInteger)
 -- Just 3 :: SMaybe Integer
 sJust :: forall a. SymVal a => SBV a -> SMaybe a
 sJust sa
@@ -154,7 +154,7 @@ liftMaybe = Prelude.maybe (literal Nothing) sJust
 
 -- | Map over the 'Just' side of a 'Maybe'.
 --
--- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+1
+-- >>> prove $ \x -> fromJust (map (+1) (sJust x)) .== x+(1::SInteger)
 -- Q.E.D.
 -- >>> let f = uninterpret "f" :: SInteger -> SBool
 -- >>> prove $ \x -> map f (sJust x) .== sJust (f x)

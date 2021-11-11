@@ -17,6 +17,10 @@ module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -----------------------------------------------------------------------------
 -- * Reference: Slow but /obviously/ correct
 -----------------------------------------------------------------------------

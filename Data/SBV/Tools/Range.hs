@@ -31,6 +31,7 @@ import Data.SBV.Internals hiding (Range, free_)
 
 -- $setup
 -- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
 -- >>> :set -XScopedTypeVariables
 
 -- | A boundary value

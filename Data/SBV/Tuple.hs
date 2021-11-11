@@ -37,8 +37,7 @@ import Data.SBV.Core.Model
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> :set -XTypeApplications
--- >>> import Data.SBV.Provers.Prover (prove)
--- >>> import Data.SBV.Core.Model
+-- >>> import Data.SBV
 
 -- | Field access, inspired by the lens library. This is merely reverse
 -- application, but allows us to write things like @(1, 2)^._1@ which is

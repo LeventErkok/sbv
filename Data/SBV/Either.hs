@@ -37,8 +37,8 @@ import Data.SBV.Core.Model () -- instances only
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Core.Model
--- >>> import Data.SBV.Provers.Prover
+-- >>> import Prelude hiding(either)
+-- >>> import Data.SBV
 
 -- | Construct an @SEither a b@ from an @SBV a@
 --
