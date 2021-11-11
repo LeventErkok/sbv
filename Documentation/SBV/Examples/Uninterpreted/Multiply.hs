@@ -63,22 +63,23 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- It is easy to see that the low bit is simply the logical-and of the low bits. It takes a moment of
 -- staring, but you can see that the high bit is correct as well: The logical formula is @a1b xor a0b1@,
 -- and if you work out the truth-table presented, you'll see that it is exactly that. Of course,
--- you can use SBV to prove this. First, define the model we were given to make it symbolic:
+-- you can use SBV to prove this. First, let's define the function we have synthesized  into a symbolic
+-- function:
 --
 -- >>> :{
--- mul22_hi :: SBool -> SBool -> SBool -> SBool -> SBool
--- mul22_hi a1 a0 b1 b0 = ite ([a1, a0, b1, b0] .== [sTrue,  sFalse, sFalse, sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue,  sTrue , sFalse, sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sFalse, sTrue , sTrue , sTrue ]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sFalse, sTrue , sTrue , sFalse]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue , sTrue , sTrue , sFalse]) sTrue
---                      $ ite ([a1, a0, b1, b0] .== [sTrue , sFalse, sTrue , sTrue ]) sTrue
---                        sFalse
+-- mul22_hi :: (SBool, SBool, SBool, SBool) -> SBool
+-- mul22_hi params = params `sElem` [ (sTrue,  sFalse, sFalse, sTrue )
+--                                  , (sTrue,  sTrue , sFalse, sTrue )
+--                                  , (sFalse, sTrue , sTrue , sTrue )
+--                                  , (sFalse, sTrue , sTrue , sFalse)
+--                                  , (sTrue , sTrue , sTrue , sFalse)
+--                                  , (sTrue , sFalse, sTrue , sTrue )
+--                                  ]
 -- :}
 --
 -- Now we can say:
 --
--- >>> prove $ \a1 a0 b1 b0 -> mul22_hi a1 a0 b1 b0 .== (a1 .&& b0) .<+> (a0 .&& b1)
+-- >>> prove $ \a1 a0 b1 b0 -> mul22_hi (a1, a0, b1, b0) .== (a1 .&& b0) .<+> (a0 .&& b1)
 -- Q.E.D.
 --
 -- and rest assured that we have a correctly synthesized circuit!
