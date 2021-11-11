@@ -22,9 +22,7 @@ module Utils.SBVTestFramework (
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
-        , CIOS(..), TestEnvironment(..), getTestEnvironment
         , qc1, qc2
-        , pickTests
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -38,7 +36,6 @@ import Control.Monad.Trans (liftIO)
 import qualified Data.ByteString.Lazy.Char8 as LBC
 
 import System.Directory   (removeFile)
-import System.Environment (lookupEnv)
 
 import Test.Tasty            (testGroup, TestTree, TestName)
 import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable)
@@ -49,50 +46,15 @@ import qualified Test.Tasty.QuickCheck   as QC
 import qualified Test.QuickCheck.Monadic as QC
 
 import Test.Tasty.Runners hiding (Result)
-import System.Random (randomRIO)
 
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Char  (isDigit)
-import Data.Maybe (fromMaybe, catMaybes)
+import Data.Maybe (fromMaybe)
 
 import System.FilePath ((</>), (<.>))
 
 import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..))
-
----------------------------------------------------------------------------------------
--- Test environment; continuous integration
-data CIOS = CILinux
-          | CIOSX
-          | CIWindows
-          deriving (Show, Eq)
-
-data TestEnvironment = TestEnvLocal
-                     | TestEnvCI CIOS
-                     | TestEnvUnknown
-                     deriving Show
-
-getTestEnvironment :: IO (TestEnvironment, Int)
-getTestEnvironment = do mbTestEnv  <- lookupEnv "SBV_TEST_ENVIRONMENT"
-                        mbTestPerc <- lookupEnv "SBV_HEAVYTEST_PERCENTAGE"
-
-                        env <- case mbTestEnv of
-                                 Just "local" -> return   TestEnvLocal
-                                 Just "linux" -> return $ TestEnvCI CILinux
-                                 Just "osx"   -> return $ TestEnvCI CIOSX
-                                 Just "win"   -> return $ TestEnvCI CIWindows
-                                 Just other   -> do putStrLn $ "Ignoring unexpected test env value: " ++ show other
-                                                    return TestEnvUnknown
-                                 Nothing      -> return TestEnvUnknown
-
-                        perc <- case mbTestPerc of
-                                 Just n | all isDigit n -> return (read n)
-                                 Just n                 -> do putStrLn $ "Ignoring unexpected test percentage value: " ++ show n
-                                                              return 100
-                                 Nothing                -> return 100
-
-                        return (env, perc)
 
 -- | Generic assertion. This is less safe than usual, but will do.
 assert :: AssertionPredicable t => t -> Assertion
@@ -266,20 +228,5 @@ qc2 nm opC opS = [cf, sm]
                         case result of
                            Right a -> QC.assert $ expected == a
                            _       -> QC.assert False
-
--- | Picking a certain percent of tests.
-pickTests :: Int -> TestTree -> IO TestTree
-pickTests d origTests = fromMaybe noTestsSelected <$> walk origTests
-   where noTestsSelected = TestGroup "pickTests.NoTestsSelected" []
-
-         walk t@SingleTest{}    = do c <- randomRIO (0, 99)
-                                     if c < d
-                                        then return $ Just t
-                                        else return Nothing
-         walk (TestGroup tn ts) = do cs <- catMaybes <$> mapM walk ts
-                                     case cs of
-                                       [] -> return Nothing
-                                       _  -> return $ Just $ TestGroup tn cs
-         walk _                 = error "pickTests: Unexpected test group!"
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

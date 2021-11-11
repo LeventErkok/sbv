@@ -365,8 +365,8 @@ Test-Suite SBVConnections
 
 Test-Suite SBVDocTest
     import          : common-settings
-    build-depends   : base, directory, filepath, random
-                    , doctest, Glob, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, random, sbv
+    build-depends   : base, sbv, process, QuickCheck, filepath, mtl, bytestring, directory
+                    , tasty, tasty-quickcheck, tasty-golden, tasty-hunit
     other-extensions: DataKinds
                       DeriveAnyClass
                       DeriveDataTypeable
