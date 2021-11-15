@@ -38,7 +38,6 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
   where mul22_hi = uninterpret "mul22_hi" a1 a0 b1 b0
         mul22_lo = uninterpret "mul22_lo"    a0    b0
 
-
 -- | Synthesize a 2x2 multiplier. We use 8-bit inputs merely because that is
 -- the lowest bit-size SBV supports but that is more or less irrelevant. (Larger
 -- sizes would work too.) We simply assert this for all input values, extract
