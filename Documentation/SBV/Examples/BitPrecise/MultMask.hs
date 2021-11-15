@@ -32,10 +32,11 @@
 module Documentation.SBV.Examples.BitPrecise.MultMask where
 
 import Data.SBV
+import Data.SBV.Control
 
 -- | Find the multiplier and the mask as described. We have:
 --
--- ->> maskAndMult
+-- >>> maskAndMult
 -- Satisfiable. Model:
 --   mask = 0x8080808080808080 :: Word64
 --   mult = 0x0002040810204081 :: Word64
@@ -46,9 +47,17 @@ import Data.SBV
 --
 -- NB. Depending on your z3 version, you might also get the following
 -- multiplier as the result: 0x8202040810204081. That value works just fine as well!
+--
+-- NB. Note the custom call to z3 with a specific tactic. A simple call to z3 unfortunately
+-- does not terminate quickly.
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
-  where find = do mask <- sbvExists "mask"
+  where find = do -- Magic incantation to make the test go fast. See <http://github.com/Z3Prover/z3/issues/5660> for details.
+                  setOption $ OptionKeyword ":tactic.default_tactic" ["sat"]
+                  setOption $ OptionKeyword ":sat.euf"               ["true"]
+                  setOption $ OptionKeyword ":smt.ematching"         ["false"]
+
+                  mask <- sbvExists "mask"
                   mult <- sbvExists "mult"
                   inp  <- sbvForall "inp"
                   let res = (mask .&. inp) * (mult :: SWord64)
