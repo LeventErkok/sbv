@@ -88,8 +88,8 @@ getPerson Person{nm, age, location, sex, role} = Person nm <$> (Const <$> getVal
 -- Alice     48  Bar    Female  Bystander
 -- Husband   47  Beach  Male    Killer
 -- Brother   48  Beach  Male    Victim
--- Daughter  21  Alone  Female  Bystander
--- Son       20  Bar    Male    Bystander
+-- Daughter  20  Alone  Female  Bystander
+-- Son       21  Bar    Male    Bystander
 --
 -- That is, Alice's brother was the victim and Alice's husband was the killer.
 killer :: IO ()
