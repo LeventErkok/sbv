@@ -366,10 +366,12 @@ parseLambdaExpression :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
 parseLambdaExpression funExpr = case funExpr of
                                   EApp [ECon "lambda", EApp params, body] -> mapM getParam params >>= flip lambda body >>= chainAssigns
                                   _                                       -> Nothing
-  where getParam (EApp [ECon v, _]) = Just v
-        getParam _                  = Nothing
+  where getParam (EApp [ECon v, ECon ty]) = Just (v, ty == "Bool")
+        getParam (EApp [ECon v, _      ]) = Just (v, False)
+        getParam _                        = Nothing
 
-        lambda :: [String] -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
+        lambda :: [(String, Bool)]  -- Bool is True if this is a boolean variable. Otherwise we don't keep track of the type
+               -> SExpr -> Maybe [Either ([SExpr], SExpr) SExpr]
         lambda params body = reverse <$> go [] body
           where true  = ENum (1, Nothing)
                 false = ENum (0, Nothing)
@@ -422,23 +424,27 @@ parseLambdaExpression funExpr = case funExpr of
                 -- select takes the condition of an ite, and returns precisely what match is done to the parameters
                 select :: SExpr -> Maybe [SExpr]
                 select e
-                   | Just dict <- build e [] = mapM (`lookup` dict) params
+                   | Just dict <- build e [] = mapM (`lookup` dict) paramNames
                    | True                    = Nothing
-                  where -- build a dictionary of assignments from the scrutinee
+                  where paramNames = map fst params
+
+                        -- build a dictionary of assignments from the scrutinee
                         build :: SExpr -> [(String, SExpr)] -> Maybe [(String, SExpr)]
                         build (EApp (ECon "and" : rest)) sofar = let next _ Nothing  = Nothing
                                                                      next c (Just x) = build c x
                                                                  in foldr next (Just sofar) rest
 
-                        build expr sofar | Just (v, r) <- grok expr, v `elem` params = Just $ (v, r) : sofar
-                                         | True                                      = Nothing
+                        build expr sofar | Just (v, r) <- grok expr, v `elem` paramNames = Just $ (v, r) : sofar
+                                         | True                                          = Nothing
 
                         -- See if we can figure out what z3 is telling us; hopefully this
                         -- mapping covers everything we can see:
                         grok (EApp [ECon "=", ECon v, r]) = Just (v, r)
                         grok (EApp [ECon "=", r, ECon v]) = Just (v, r)
                         grok (EApp [ECon "not", ECon v])  = Just (v, false) -- boolean negation, require it to be false
-                        grok (ECon v)                     = Just (v, true)  -- boolean identity, require it to be true
+                        grok (ECon v)                     = case v `lookup` params of
+                                                               Just True -> Just (v, true)  -- boolean identity, require it to be true
+                                                               _         -> Nothing
 
                         -- Tough luck, we couldn't understand:
                         grok _ = Nothing
