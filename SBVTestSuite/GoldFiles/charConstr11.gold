@@ -45,15 +45,15 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 2))
+[RECV] ((s0 3))
 [SEND] (get-value (s1))
 [RECV] ((s1 "A"))
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (cf4))
-[RECV] ((cf4 ((as const Array) (seq.unit (mkSBVTuple2 (mkSBVTuple2 "A" "A") (seq.unit 0))))))
+[RECV] ((cf4 ((as const Array) (seq.unit (mkSBVTuple2 (mkSBVTuple2 "A" "A") (seq.unit 2))))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",2 :: Integer),("c",'A' :: Char)], modelUIFuns = [("cf4",(SInteger -> SChar -> [((SChar, SChar), [SInteger])],([],[(('A','A'),[0])] :: [((Char, Char), [Integer])])))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",3 :: Integer),("c",'A' :: Char)], modelUIFuns = [("cf4",(SInteger -> SChar -> [((SChar, SChar), [SInteger])],([],[(('A','A'),[2])] :: [((Char, Char), [Integer])])))]}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess

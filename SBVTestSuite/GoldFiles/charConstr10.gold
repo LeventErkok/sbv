@@ -45,8 +45,8 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (seq.unit (mkSBVTuple2 (mkSBVTuple2 "B" "B") (seq.unit 0)))))
+[RECV] ((s0 (seq.unit (mkSBVTuple2 (mkSBVTuple2 "B" "B") (seq.unit 2)))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",[(('B','B'),[0])] :: [((Char, Char), [Integer])])], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",[(('B','B'),[2])] :: [((Char, Char), [Integer])])], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess
