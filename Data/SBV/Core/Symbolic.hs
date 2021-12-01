@@ -431,16 +431,17 @@ instance Show StrOp where
   show (StrInRe s) = "str.in.re " ++ regExpToSMTString s
 
 -- | Sequence operations.
-data SeqOp = SeqConcat    -- ^ See StrConcat
-           | SeqLen       -- ^ See StrLen
-           | SeqUnit      -- ^ See StrUnit
-           | SeqNth       -- ^ See StrNth
-           | SeqSubseq    -- ^ See StrSubseq
-           | SeqIndexOf   -- ^ See StrIndexOf
-           | SeqContains  -- ^ See StrContains
-           | SeqPrefixOf  -- ^ See StrPrefixOf
-           | SeqSuffixOf  -- ^ See StrSuffixOf
-           | SeqReplace   -- ^ See StrReplace
+data SeqOp = SeqConcat        -- ^ See StrConcat
+           | SeqLen           -- ^ See StrLen
+           | SeqUnit          -- ^ See StrUnit
+           | SeqNth           -- ^ See StrNth
+           | SeqSubseq        -- ^ See StrSubseq
+           | SeqIndexOf       -- ^ See StrIndexOf
+           | SeqContains      -- ^ See StrContains
+           | SeqPrefixOf      -- ^ See StrPrefixOf
+           | SeqSuffixOf      -- ^ See StrSuffixOf
+           | SeqReplace       -- ^ See StrReplace
+           | SBVReverse Kind  -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
   deriving (Eq, Ord, G.Data)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -455,6 +456,8 @@ instance Show SeqOp where
   show SeqPrefixOf = "seq.prefixof"
   show SeqSuffixOf = "seq.suffixof"
   show SeqReplace  = "seq.replace"
+  -- Note: This isn't part of SMTLib, we explicitly handle it
+  show (SBVReverse k) = "sbv.reverse[" ++ show k ++ "]"
 
 -- | Set operations.
 data SetOp = SetEqual

@@ -30,9 +30,11 @@ module Data.SBV.List (
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
         , take, drop, subList, replace, indexOf, offsetIndexOf
+        -- * Reverse
+        , reverse
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -342,6 +344,21 @@ offsetIndexOf s sub offset
       _     -> -1
   | True
   = lift3 SeqIndexOf Nothing s sub offset
+
+-- | @`reverse` s@ reverses the sequence.
+-- >>> sat $ \(l :: SList Integer) -> reverse l .== literal [3, 2, 1]
+-- What's this
+-- >>> sat $ \(l :: SList Word32) -> reverse l .== [] .<=> null l
+-- What's this
+reverse :: SymVal a => SList a -> SList a
+reverse l
+  | Just l' <- unliteral l
+  = literal (P.reverse l')
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where k = kindOf l
+        r st = do sva <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b

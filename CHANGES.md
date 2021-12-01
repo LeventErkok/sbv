@@ -18,6 +18,11 @@
        - `forSome`  --> `existential`
        - `forSome_` --> `existential_`
 
+   * Add support for `reverse` on symbolic lists and strings. Note that this definition uses a recursive function
+     declaration in SMTLib, so any proof involving inductive reasoning will likely not-terminate. However, it
+     should be usable at ground-level and for simpler non-inductive properties. Of course, as SMT-solvers mature
+     this can change in the future.
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5

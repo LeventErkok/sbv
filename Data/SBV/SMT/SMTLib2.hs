@@ -197,10 +197,12 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap declUI uis
+             ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
+             ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
              ++ [ "; --- user given axioms ---" ]
              ++ map declAx axs
              ++ [ "; --- preQuantifier assignments ---" ]
-             ++ concatMap (declDef cfg skolemMap tableMap) preQuantifierAssigns
+             ++ concatMap (declDef cfg skolemMap tableMap funcMap) preQuantifierAssigns
              ++ [ "; --- arrayDelayeds ---" ]
              ++ concat arrayDelayeds
              ++ [ "; --- arraySetups ---" ]
@@ -320,19 +322,39 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
           where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
                 mkSkTable    (((t, _, _), _), _) = (t, "table" ++ show t ++ forallArgs)
+
+        -- SBV only functions.
+        funcMap = M.fromList reverses
+          where reverses = zip (nub [op | op@(SeqOp (SBVReverse{})) <- G.universeBi asgnsSeq])
+                               ["sbv.reverse_" ++ show i | i <- [(0::Int)..]]
+
         asgns = F.toList asgnsSeq
 
         mkAssign a
-          | null foralls = declDef cfg skolemMap tableMap a
+          | null foralls = declDef cfg skolemMap tableMap funcMap a
           | True         = [letShift (mkLet a)]
 
-        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSV                skolemMap          e ++ ")) ; " ++ m
-        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap e ++ "))"
+        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSV                skolemMap                  e ++ ")) ; " ++ m
+        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap funcMap e ++ "))"
 
         userNameMap = M.fromList $ map ((\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) . snd) inputs
         userName s = case M.lookup s userNameMap of
                         Just u  | show s /= u -> Just $ "tracks user variable " ++ show u
                         _ -> Nothing
+
+-- Declare "known" SBV functions here
+declSBVFunc :: Op -> String -> [String]
+declSBVFunc op nm = case op of
+                      SeqOp (SBVReverse k) -> mkReverse k
+                      _                    -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
+  where mkReverse k = let t = smtType k
+                      in [ "(define-funs-rec ((" ++ nm ++ " ((x!1 " ++ t ++ ")) " ++ t ++ "))"
+                         , "                  ((let ((a!1 ((_ " ++ nm ++ " 0)"
+                         , "                                 (seq.extract x!1 1 (- (seq.len x!1) 1)))))"
+                         , "                        (ite (= (seq.len x!1) 0)"
+                         , "                             x!1"
+                         , "                             (seq.++ a!1 (seq.unit (seq.nth x!1 0)))))))"
+                         ]
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -485,7 +507,7 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef cfg skolemMap tableMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef cfg skolemMap tableMap funcMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- table setups
@@ -497,6 +519,10 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
   where -- NB. The below setting of skolemMap to empty is OK, since we do
         -- not support queries in the context of skolemized variables
         skolemMap = M.empty
+
+        -- The following is not really kosher; if it happens that a "new" variant of a function is used only incrementally.
+        -- But we'll punt on this for now, as it should be rare and can be "worked-around" if necessary.
+        funcMap = M.empty
 
         rm = roundingMode cfg
 
@@ -520,11 +546,11 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: SMTConfig -> SkolemMap -> TableMap -> (SV, SBVExpr) -> [String]
-declDef cfg skolemMap tableMap (s, expr) =
+declDef :: SMTConfig -> SkolemMap -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
+declDef cfg skolemMap tableMap funcMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV          skolemMap          e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp caps rm skolemMap tableMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV          skolemMap                  e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp caps rm skolemMap tableMap funcMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -673,8 +699,9 @@ cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an emp
 cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
   where (body, ret) = (init xs, last xs)
 
-type SkolemMap = M.Map SV [SV]
-type TableMap  = IM.IntMap String
+type SkolemMap   = M.Map SV [SV]
+type TableMap    = IM.IntMap String
+type FunctionMap = M.Map Op String
 
 -- Present an SV; inline true/false as needed
 cvtSV :: SkolemMap -> SV -> String
@@ -696,8 +723,8 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> SBVExpr -> String
-cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> FunctionMap -> SBVExpr -> String
+cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh expr
   where ssv = cvtSV skolemMap
 
         hasPB       = supportsPseudoBooleans caps
@@ -934,6 +961,12 @@ cvtExp caps rm skolemMap tableMap expr@(SBVApp _ arguments) = sh expr
         -- StrUnit is no-op, since a character in SMTLib is the same as a string
         sh (SBVApp (StrOp StrUnit)     [a])  = ssv a
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+
+        -- Reverse is special, since we need to generate call to the internally generated function
+        sh inp@(SBVApp op@(SeqOp (SBVReverse{})) args) = "(" ++ ops ++ " " ++ unwords (map ssv args) ++ ")"
+          where ops = case op `M.lookup` functionMap of
+                        Just s  -> s
+                        Nothing -> error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 

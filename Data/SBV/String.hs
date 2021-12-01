@@ -31,14 +31,17 @@ module Data.SBV.String (
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
         , take, drop, subStr, replace, indexOf, offsetIndexOf
+        -- * Reverse
+        , reverse
         -- * Conversion to\/from naturals
         , strToNat, natToStr
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (SeqOp(..))
+import Data.SBV.Core.Data (SeqOp(SBVReverse))
 import Data.SBV.Core.Model
 
 import qualified Data.Char as C
@@ -339,6 +342,20 @@ offsetIndexOf s sub offset
       _     -> -1
   | True
   = lift3 StrIndexOf Nothing s sub offset
+
+-- | @`reverse` s@ reverses the string.
+-- >>> sat $ \s -> reverse s .== "abc"
+-- What's this
+-- >>> sat $ \s -> reverse s .== "" .<=> null s
+-- What's this
+reverse :: SString -> SString
+reverse s
+  | Just s' <- unliteral s
+  = literal (P.reverse s')
+  | True
+  = SBV $ SVal KString $ Right $ cache r
+  where r st = do sva <- sbvToSV st s
+                  newExpr st KString (SBVApp (SeqOp (SBVReverse KString)) [sva])
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
