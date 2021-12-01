@@ -26,7 +26,8 @@ import Data.String
 import Data.SBV
 import Data.SBV.Control
 
-import Data.SBV.String ((.++))
+import Prelude hiding ((++))
+import Data.SBV.String ((++))
 import qualified Data.SBV.RegExp as R
 
 -- | Simple expression language
@@ -49,7 +50,7 @@ eval (Query q)         = do q' <- eval q
                             tell [q']
                             lift $ lift sbvExists_
 eval (Const str)       = return $ literal str
-eval (Concat e1 e2)    = (.++) <$> eval e1 <*> eval e2
+eval (Concat e1 e2)    = (++) <$> eval e1 <*> eval e2
 eval (ReadVar nm)      = do n   <- eval nm
                             arr <- get
                             return $ readArray arr n

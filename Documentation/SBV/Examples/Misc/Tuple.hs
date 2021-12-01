@@ -24,7 +24,8 @@ import Data.SBV
 import Data.SBV.Tuple
 import Data.SBV.Control
 
-import Data.SBV.List   ((.!!))
+import Prelude hiding ((!!))
+import Data.SBV.List   ((!!))
 import Data.SBV.RegExp
 
 import qualified Data.SBV.String as S
@@ -65,13 +66,13 @@ example = runSMT $ do dict :: Dict String Integer <- free "dict"
                                             r = asciiLower * KStar (asciiLetter + digit + "_" + "'")
                                       in l .== fromIntegral i+3 .&& s `match` r
 
-                          restrict i = case untuple (dict .!! fromIntegral i) of
+                          restrict i = case untuple (dict !! fromIntegral i) of
                                          (k, v) -> constrain $ goodKey i k .&& v .== S.length k
 
                       mapM_ restrict range
 
                       -- require distinct keys:
-                      let keys = [(dict .!! fromIntegral i)^._1 | i <- range]
+                      let keys = [(dict !! fromIntegral i)^._1 | i <- range]
                       constrain $ distinct keys
 
                       query $ do ensureSat

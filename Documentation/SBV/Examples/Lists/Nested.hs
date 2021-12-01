@@ -19,7 +19,8 @@ module Documentation.SBV.Examples.Lists.Nested where
 import Data.SBV
 import Data.SBV.Control
 
-import Data.SBV.List ((.!!))
+import Prelude hiding ((!!))
+import Data.SBV.List ((!!))
 import qualified Data.SBV.List as L
 
 -- | Simple example demonstrating the use of nested lists. We have:
@@ -30,8 +31,8 @@ import qualified Data.SBV.List as L
 nestedExample :: IO ()
 nestedExample = runSMT $ do a :: SList [Integer] <- free "a"
 
-                            constrain $ a .!! 0 .== [1, 2, 3]
-                            constrain $ a .!! 1 .== [4, 5, 6, 7]
+                            constrain $ a !! 0 .== [1, 2, 3]
+                            constrain $ a !! 1 .== [4, 5, 6, 7]
                             constrain $ L.tail (L.tail a) .== [[8, 9, 10], [11, 12, 13]]
                             constrain $ L.length a .== 4
 

@@ -108,7 +108,7 @@ instance RegExpMatchable SString where
            go (KStar r)      k s      = k s || go r (smaller (P.length s) (go (KStar r) k)) s
            go (KPlus r)      k s      = go (Conc [r, KStar r]) k s
            go (Opt r)        k s      = k s || go r k s
-           go (Loop i j r)   k s      = go (Conc (replicate i r ++ replicate (j - i) (Opt r))) k s
+           go (Loop i j r)   k s      = go (Conc (replicate i r P.++ replicate (j - i) (Opt r))) k s
            go (Union [])     _ _      = False
            go (Union [x])    k s      = go x k s
            go (Union (x:xs)) k s      = go x k s || go (Union xs) k s

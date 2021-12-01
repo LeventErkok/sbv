@@ -25,7 +25,7 @@ module Data.SBV.List (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, listToListAt, elemAt, (.!!), implode, concat, (.:), snoc, nil, (.++)
+        , head, tail, uncons, init, singleton, listToListAt, elemAt, (!!), implode, concat, (.:), snoc, nil, (++)
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
@@ -34,7 +34,7 @@ module Data.SBV.List (
         , reverse
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -59,7 +59,7 @@ import Data.Proxy
 --   s0 = [0,0] :: [Word16]
 -- >>> sat $ \(l :: SList Word16) -> length l .< 0
 -- Unsatisfiable
--- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 .++ l2)
+-- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 ++ l2)
 -- Q.E.D.
 length :: SymVal a => SList a -> SInteger
 length = lift1 SeqLen (Just (fromIntegral . P.length))
@@ -86,11 +86,11 @@ head = (`elemAt` 0)
 
 -- | @`tail`@ returns the tail of a list. Unspecified if the list is empty.
 --
--- >>> prove $ \(h :: SInteger) t -> tail (singleton h .++ t) .== t
+-- >>> prove $ \(h :: SInteger) t -> tail (singleton h ++ t) .== t
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Integer) -> length l .> 0 .=> length (tail l) .== length l - 1
 -- Q.E.D.
--- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) .++ tail l .== l
+-- >>> prove $ \(l :: SList Integer) -> sNot (null l) .=> singleton (head l) ++ tail l .== l
 -- Q.E.D.
 tail :: SymVal a => SList a -> SList a
 tail l
@@ -105,7 +105,7 @@ uncons l = (head l, tail l)
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the list is empty.
 --
--- >>> prove $ \(h :: SInteger) t -> init (t .++ singleton h) .== t
+-- >>> prove $ \(h :: SInteger) t -> init (t ++ singleton h) .== t
 -- Q.E.D.
 init :: SymVal a => SList a -> SList a
 init l
@@ -126,7 +126,7 @@ singleton = lift1 SeqUnit (Just (: []))
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.
 --
--- >>> prove $ \(l1 :: SList Integer) l2 -> listToListAt (l1 .++ l2) (length l1) .== listToListAt l2 0
+-- >>> prove $ \(l1 :: SList Integer) l2 -> listToListAt (l1 ++ l2) (length l1) .== listToListAt l2 0
 -- Q.E.D.
 -- >>> sat $ \(l :: SList Word16) -> length l .>= 2 .&& listToListAt l 0 ./= listToListAt l (length l - 1)
 -- Satisfiable. Model:
@@ -150,8 +150,8 @@ elemAt l i
   = lift2 SeqNth Nothing l i
 
 -- | Short cut for 'elemAt'
-(.!!) :: SymVal a => SList a -> SInteger -> SBV a
-(.!!) = elemAt
+(!!) :: SymVal a => SList a -> SInteger -> SBV a
+(!!) = elemAt
 
 -- | @`implode` es@ is the list of length @|es|@ containing precisely those
 -- elements. Note that there is no corresponding function @explode@, since
@@ -162,22 +162,22 @@ elemAt l i
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (elemAt (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
-implode = foldr ((.++) . singleton) (literal [])
+implode = foldr ((++) . singleton) (literal [])
 
--- | Concatenate two lists. See also `.++`.
+-- | Concatenate two lists. See also `++`.
 concat :: SymVal a => SList a -> SList a -> SList a
 concat x y | isConcretelyEmpty x = y
            | isConcretelyEmpty y = x
-           | True                = lift2 SeqConcat (Just (++)) x y
+           | True                = lift2 SeqConcat (Just (P.++)) x y
 
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
 (.:) :: SymVal a => SBV a -> SList a -> SList a
-a .: as = singleton a .++ as
+a .: as = singleton a ++ as
 
 -- | Append an element
 snoc :: SymVal a => SList a -> SBV a -> SList a
-as `snoc` a = as .++ singleton a
+as `snoc` a = as ++ singleton a
 
 -- | Empty list. This value has the property that it's the only list with length 0:
 --
@@ -188,14 +188,14 @@ nil = []
 
 -- | Short cut for `concat`.
 --
--- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x .++ y .++ z .== [1 .. 12]
+-- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [1 .. 12]
 -- Satisfiable. Model:
 --   s0 =      [1,2,3,4,5] :: [Integer]
 --   s1 =              [6] :: [Integer]
 --   s2 = [7,8,9,10,11,12] :: [Integer]
-infixr 5 .++
-(.++) :: SymVal a => SList a -> SList a -> SList a
-(.++) = concat
+infixr 5 ++
+(++) :: SymVal a => SList a -> SList a -> SList a
+(++) = concat
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
@@ -207,7 +207,7 @@ e `notElem` l = sNot (e `elem` l)
 
 -- | @`isInfixOf` sub l@. Does @l@ contain the subsequence @sub@?
 --
--- >>> prove $ \(l1 :: SList Integer) l2 l3 -> l2 `isInfixOf` (l1 .++ l2 .++ l3)
+-- >>> prove $ \(l1 :: SList Integer) l2 l3 -> l2 `isInfixOf` (l1 ++ l2 ++ l3)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isInfixOf` l2 .&& l2 `isInfixOf` l1 .<=> l1 .== l2
 -- Q.E.D.
@@ -220,7 +220,7 @@ sub `isInfixOf` l
 
 -- | @`isPrefixOf` pre l@. Is @pre@ a prefix of @l@?
 --
--- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` (l1 .++ l2)
+-- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` (l1 ++ l2)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 -> l1 `isPrefixOf` l2 .=> subList l2 0 (length l1) .== l1
 -- Q.E.D.
@@ -233,7 +233,7 @@ pre `isPrefixOf` l
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
--- >>> prove $ \(l1 :: SList Word16) l2 -> l2 `isSuffixOf` (l1 .++ l2)
+-- >>> prove $ \(l1 :: SList Word16) l2 -> l2 `isSuffixOf` (l1 ++ l2)
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Word16) l2 -> l1 `isSuffixOf` l2 .=> subList l2 (length l2 - length l1) (length l1) .== l1
 -- Q.E.D.
@@ -257,7 +257,7 @@ take i l = ite (i .<= 0)        (literal [])
 --
 -- >>> prove $ \(l :: SList Word16) i -> length (drop i l) .<= length l
 -- Q.E.D.
--- >>> prove $ \(l :: SList Word16) i -> take i l .++ drop i l .== l
+-- >>> prove $ \(l :: SList Word16) i -> take i l ++ drop i l .== l
 -- Q.E.D.
 drop :: SymVal a => SInteger -> SList a -> SList a
 drop i s = ite (i .>= ls) (literal [])
@@ -269,7 +269,7 @@ drop i s = ite (i .>= ls) (literal [])
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
 -- is negative or @offset+len@ exceeds the length of @s@.
 --
--- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .&& i .< length l .=> subList l 0 i .++ subList l i (length l - i) .== l
+-- >>> prove $ \(l :: SList Integer) i -> i .>= 0 .&& i .< length l .=> subList l 0 i ++ subList l i (length l - i) .== l
 -- Q.E.D.
 -- >>> sat  $ \i j -> subList [1..5] i j .== ([2..4] :: SList Integer)
 -- Satisfiable. Model:
@@ -300,7 +300,7 @@ subList l offset len
 replace :: (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
 replace l src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
-  = dst .++ l
+  = dst ++ l
   | Just a <- unliteral l
   , Just b <- unliteral src
   , Just c <- unliteral dst
@@ -310,7 +310,7 @@ replace l src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
-                  | needle `L.isPrefixOf` i = newNeedle ++ genericDrop (genericLength needle :: Integer) i
+                  | needle `L.isPrefixOf` i = newNeedle P.++ genericDrop (genericLength needle :: Integer) i
                   | True                    = c : go cs
 
 -- | @`indexOf` l sub@. Retrieves first position of @sub@ in @l@, @-1@ if there are no occurrences.

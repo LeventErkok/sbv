@@ -25,7 +25,10 @@ module Documentation.SBV.Examples.WeakestPreconditions.Append where
 import Data.SBV
 import Data.SBV.Control
 
-import           Data.SBV.List ((.++))
+import Prelude hiding ((++))
+import qualified Prelude as P
+
+import           Data.SBV.List ((++))
 import qualified Data.SBV.List as L
 
 import Data.SBV.Tools.WeakestPreconditions
@@ -49,14 +52,14 @@ data AppC a = AppC [a] [a] [a] [a]
 -- | Show instance for 'AppS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (AppS a) where
-  show (AppS xs ys ts zs) = "{xs = " ++ sh xs ++ ", ys = " ++ sh ys ++ ", ts = " ++ sh ts ++ ", zs = " ++ sh zs ++ "}"
+  show (AppS xs ys ts zs) = "{xs = " P.++ sh xs P.++ ", ys = " P.++ sh ys P.++ ", ts = " P.++ sh ts P.++ ", zs = " P.++ sh zs P.++ "}"
     where sh v = case unliteral v of
                    Nothing -> "<symbolic>"
                    Just i  -> show i
 
 -- | Show instance, a bit more prettier than what would be derived:
 instance Show a => Show (AppC a) where
-  show (AppC xs ys ts zs) = "{xs = " ++ show xs ++ ", ys = " ++ show ys ++ ", ts = " ++ show ts ++ ", zs = " ++ show zs ++ "}"
+  show (AppC xs ys ts zs) = "{xs = " P.++ show xs P.++ ", ys = " P.++ show ys P.++ ", ts = " P.++ show ts P.++ ", zs = " P.++ show zs P.++ "}"
 
 -- | 'Queriable' instance for the program state
 instance Queriable IO (AppS Integer) (AppC Integer) where
@@ -85,11 +88,11 @@ type A = AppS Integer
 algorithm :: Stmt A
 algorithm = Seq [ Assign $ \st          -> st{zs = []}
                 , Assign $ \st@AppS{xs} -> st{ts = xs}
-                , loop "xs" (\AppS{xs, zs, ts} -> xs .== zs .++ ts)
+                , loop "xs" (\AppS{xs, zs, ts} -> xs .== zs ++ ts)
                 , Assign $ \st@AppS{ys} -> st{ts = ys}
-                , loop "ys" (\AppS{xs, ys, zs, ts} -> xs .++ ys .== zs .++ ts)
+                , loop "ys" (\AppS{xs, ys, zs, ts} -> xs ++ ys .== zs ++ ts)
                 ]
-  where loop w inv = While ("walk over " ++ w)
+  where loop w inv = While ("walk over " P.++ w)
                            inv
                            (Just (\AppS{ts} -> [L.length ts]))
                            (\AppS{ts} -> sNot (L.null ts))
@@ -107,7 +110,7 @@ imperativeAppend = Program { setup         = return ()
                            }
   where -- We must append properly!
         postcondition :: A -> SBool
-        postcondition AppS{xs, ys, zs} = zs .== xs .++ ys
+        postcondition AppS{xs, ys, zs} = zs .== xs ++ ys
 
         -- Program should never change values of @xs@ and @ys@
         noChange = [stable "xs" xs, stable "ys" ys]

@@ -26,7 +26,7 @@ module Data.SBV.String (
         -- * Length, emptiness
           length, null
         -- * Deconstructing/Reconstructing
-        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (.!!), implode, concat, (.:), snoc, nil, (.++)
+        , head, tail, uncons, init, singleton, strToStrAt, strToCharAt, (!!), implode, concat, (.:), snoc, nil, (++)
         -- * Containment
         , isInfixOf, isSuffixOf, isPrefixOf
         -- * Substrings
@@ -37,7 +37,7 @@ module Data.SBV.String (
         , strToNat, natToStr
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse, (++), (!!))
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (SeqOp(..))
@@ -63,7 +63,7 @@ import Data.Proxy
 --   s0 = "AB" :: String
 -- >>> sat $ \s -> length s .< 0
 -- Unsatisfiable
--- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 .++ s2)
+-- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 ++ s2)
 -- Q.E.D.
 length :: SString -> SInteger
 length = lift1 StrLen (Just (fromIntegral . P.length))
@@ -90,11 +90,11 @@ head = (`strToCharAt` 0)
 
 -- | @`tail`@ returns the tail of a string. Unspecified if the string is empty.
 --
--- >>> prove $ \h s -> tail (singleton h .++ s) .== s
+-- >>> prove $ \h s -> tail (singleton h ++ s) .== s
 -- Q.E.D.
 -- >>> prove $ \s -> length s .> 0 .=> length (tail s) .== length s - 1
 -- Q.E.D.
--- >>> prove $ \s -> sNot (null s) .=> singleton (head s) .++ tail s .== s
+-- >>> prove $ \s -> sNot (null s) .=> singleton (head s) ++ tail s .== s
 -- Q.E.D.
 tail :: SString -> SString
 tail s
@@ -109,7 +109,7 @@ uncons l = (head l, tail l)
 
 -- | @`init`@ returns all but the last element of the list. Unspecified if the string is empty.
 --
--- >>> prove $ \c t -> init (t .++ singleton c) .== t
+-- >>> prove $ \c t -> init (t ++ singleton c) .== t
 -- Q.E.D.
 init :: SString -> SString
 init s
@@ -132,7 +132,7 @@ singleton = lift1 StrUnit (Just wrap)
 -- | @`strToStrAt` s offset@. Substring of length 1 at @offset@ in @s@. Unspecified if
 -- offset is out of bounds.
 --
--- >>> prove $ \s1 s2 -> strToStrAt (s1 .++ s2) (length s1) .== strToStrAt s2 0
+-- >>> prove $ \s1 s2 -> strToStrAt (s1 ++ s2) (length s1) .== strToStrAt s2 0
 -- Q.E.D.
 -- >>> sat $ \s -> length s .>= 2 .&& strToStrAt s 0 ./= strToStrAt s (length s - 1)
 -- Satisfiable. Model:
@@ -156,8 +156,8 @@ strToCharAt s i
   = lift2 StrNth Nothing s i
 
 -- | Short cut for 'strToCharAt'
-(.!!) :: SString -> SInteger -> SChar
-(.!!) = strToCharAt
+(!!) :: SString -> SInteger -> SChar
+(!!) = strToCharAt
 
 -- | @`implode` cs@ is the string of length @|cs|@ containing precisely those
 -- characters. Note that there is no corresponding function @explode@, since
@@ -168,16 +168,16 @@ strToCharAt s i
 -- >>> prove $ \c1 c2 c3 -> map (strToCharAt (implode [c1, c2, c3])) (map literal [0 .. 2]) .== [c1, c2, c3]
 -- Q.E.D.
 implode :: [SChar] -> SString
-implode = foldr ((.++) . singleton) ""
+implode = foldr ((++) . singleton) ""
 
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
 (.:) :: SChar -> SString -> SString
-c .: cs = singleton c .++ cs
+c .: cs = singleton c ++ cs
 
 -- | Append an element
 snoc :: SString -> SChar -> SString
-s `snoc` c = s .++ singleton c
+s `snoc` c = s ++ singleton c
 
 -- | Empty string. This value has the property that it's the only string with length 0:
 --
@@ -186,26 +186,26 @@ s `snoc` c = s .++ singleton c
 nil :: SString
 nil = ""
 
--- | Concatenate two strings. See also `.++`.
+-- | Concatenate two strings. See also `++`.
 concat :: SString -> SString -> SString
 concat x y | isConcretelyEmpty x = y
            | isConcretelyEmpty y = x
-           | True                = lift2 StrConcat (Just (++)) x y
+           | True                = lift2 StrConcat (Just (P.++)) x y
 
 -- | Short cut for `concat`.
 --
--- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x .++ y .++ z .== "Hello world!"
+-- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== "Hello world!"
 -- Satisfiable. Model:
 --   s0 =  "Hello" :: String
 --   s1 =      " " :: String
 --   s2 = "world!" :: String
-infixr 5 .++
-(.++) :: SString -> SString -> SString
-(.++) = concat
+infixr 5 ++
+(++) :: SString -> SString -> SString
+(++) = concat
 
 -- | @`isInfixOf` sub s@. Does @s@ contain the substring @sub@?
 --
--- >>> prove $ \s1 s2 s3 -> s2 `isInfixOf` (s1 .++ s2 .++ s3)
+-- >>> prove $ \s1 s2 s3 -> s2 `isInfixOf` (s1 ++ s2 ++ s3)
 -- Q.E.D.
 -- >>> prove $ \s1 s2 -> s1 `isInfixOf` s2 .&& s2 `isInfixOf` s1 .<=> s1 .== s2
 -- Q.E.D.
@@ -218,7 +218,7 @@ sub `isInfixOf` s
 
 -- | @`isPrefixOf` pre s@. Is @pre@ a prefix of @s@?
 --
--- >>> prove $ \s1 s2 -> s1 `isPrefixOf` (s1 .++ s2)
+-- >>> prove $ \s1 s2 -> s1 `isPrefixOf` (s1 ++ s2)
 -- Q.E.D.
 -- >>> prove $ \s1 s2 -> s1 `isPrefixOf` s2 .=> subStr s2 0 (length s1) .== s1
 -- Q.E.D.
@@ -231,7 +231,7 @@ pre `isPrefixOf` s
 
 -- | @`isSuffixOf` suf s@. Is @suf@ a suffix of @s@?
 --
--- >>> prove $ \s1 s2 -> s2 `isSuffixOf` (s1 .++ s2)
+-- >>> prove $ \s1 s2 -> s2 `isSuffixOf` (s1 ++ s2)
 -- Q.E.D.
 -- >>> prove $ \s1 s2 -> s1 `isSuffixOf` s2 .=> subStr s2 (length s2 - length s1) (length s1) .== s1
 -- Q.E.D.
@@ -255,7 +255,7 @@ take i s = ite (i .<= 0)        (literal "")
 --
 -- >>> prove $ \s i -> length (drop i s) .<= length s
 -- Q.E.D.
--- >>> prove $ \s i -> take i s .++ drop i s .== s
+-- >>> prove $ \s i -> take i s ++ drop i s .== s
 -- Q.E.D.
 drop :: SInteger -> SString -> SString
 drop i s = ite (i .>= ls) (literal "")
@@ -267,7 +267,7 @@ drop i s = ite (i .>= ls) (literal "")
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
 -- is negative or @offset+len@ exceeds the length of @s@.
 --
--- >>> prove $ \s i -> i .>= 0 .&& i .< length s .=> subStr s 0 i .++ subStr s i (length s - i) .== s
+-- >>> prove $ \s i -> i .>= 0 .&& i .< length s .=> subStr s 0 i ++ subStr s i (length s - i) .== s
 -- Q.E.D.
 -- >>> sat  $ \i j -> subStr "hello" i j .== "ell"
 -- Satisfiable. Model:
@@ -298,7 +298,7 @@ subStr s offset len
 replace :: SString -> SString -> SString -> SString
 replace s src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
-  = dst .++ s
+  = dst ++ s
   | Just a <- unliteral s
   , Just b <- unliteral src
   , Just c <- unliteral dst
@@ -308,7 +308,7 @@ replace s src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
-                  | needle `L.isPrefixOf` i = newNeedle ++ genericDrop (genericLength needle :: Integer) i
+                  | needle `L.isPrefixOf` i = newNeedle P.++ genericDrop (genericLength needle :: Integer) i
                   | True                    = c : go cs
 
 -- | @`indexOf` s sub@. Retrieves first position of @sub@ in @s@, @-1@ if there are no occurrences.

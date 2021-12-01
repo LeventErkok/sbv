@@ -32,8 +32,10 @@ module Data.SBV.Tools.BoundedList (
    )
    where
 
+import Prelude hiding ((++))
+
 import Data.SBV
-import Data.SBV.List ((.:), (.++))
+import Data.SBV.List ((.:), (++))
 import qualified Data.SBV.List as L
 
 -- | Case analysis on a symbolic list. (Not exported.)
@@ -127,7 +129,7 @@ belem i e = bany i (e .==)
 
 -- | Bounded reverse
 breverse :: SymVal a => Int -> SList a -> SList a
-breverse cnt = bfoldr cnt (\a b -> b .++ L.singleton a) []
+breverse cnt = bfoldr cnt (\a b -> b ++ L.singleton a) []
 
 -- | Bounded paramorphism (not exported).
 bpara :: (SymVal a, SymVal b) => Int -> (SBV a -> SBV [a] -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b

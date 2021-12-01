@@ -23,6 +23,9 @@
      should be usable at ground-level and for simpler non-inductive properties. Of course, as SMT-solvers mature
      this can change in the future.
 
+   * Changed the String/List versions of `.++/.!!` to directly use the names `++/!!`. Since these modules
+     are intended to be used qualified only, there's no reason to add the dots.
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5

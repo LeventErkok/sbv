@@ -24,7 +24,8 @@ module Documentation.SBV.Examples.Lists.BoundedMutex where
 import Data.SBV
 import Data.SBV.Control
 
-import Data.SBV.List ((.!!))
+import Prelude hiding ((!!))
+import Data.SBV.List ((!!))
 import qualified Data.SBV.List              as L
 import qualified Data.SBV.Tools.BoundedList as L
 
@@ -142,7 +143,7 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
                         constrain $ validTurns    b turns p1 p2
 
                         -- Ensure that the second process becomes ready in the second cycle:
-                        constrain $ p2 .!! 1 .== sReady
+                        constrain $ p2 !! 1 .== sReady
 
                         -- Find a trace where p2 never goes critical
                         -- counter example, we would've found a violation!
