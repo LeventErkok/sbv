@@ -53,7 +53,7 @@ import Data.Proxy
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse)
 -- >>> :set -XOverloadedStrings
 
 -- | Length of a string.
@@ -345,9 +345,10 @@ offsetIndexOf s sub offset
 
 -- | @`reverse` s@ reverses the string.
 -- >>> sat $ \s -> reverse s .== "abc"
--- What's this
--- >>> sat $ \s -> reverse s .== "" .<=> null s
--- What's this
+-- Satisfiable. Model:
+--   s0 = "cba" :: String
+-- >>> prove $ \s -> reverse s .== "" .<=> null s
+-- Q.E.D.
 reverse :: SString -> SString
 reverse s
   | Just s' <- unliteral s

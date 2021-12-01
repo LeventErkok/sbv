@@ -47,7 +47,7 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse)
 -- >>> import Data.SBV
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
@@ -347,9 +347,10 @@ offsetIndexOf s sub offset
 
 -- | @`reverse` s@ reverses the sequence.
 -- >>> sat $ \(l :: SList Integer) -> reverse l .== literal [3, 2, 1]
--- What's this
--- >>> sat $ \(l :: SList Word32) -> reverse l .== [] .<=> null l
--- What's this
+-- Satisfiable. Model:
+--   s0 = [1,2,3] :: [Integer]
+-- >>> prove $ \(l :: SList Word32) -> reverse l .== [] .<=> null l
+-- Q.E.D.
 reverse :: SymVal a => SList a -> SList a
 reverse l
   | Just l' <- unliteral l
