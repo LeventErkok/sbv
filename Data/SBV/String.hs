@@ -53,7 +53,7 @@ import Data.Proxy
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse, (++), (!!))
 -- >>> :set -XOverloadedStrings
 
 -- | Length of a string.

@@ -47,7 +47,7 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
 -- >>> import Data.SBV
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
