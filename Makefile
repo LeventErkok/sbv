@@ -54,6 +54,8 @@ ghci:
 ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
 
+# To check just one module, use:
+#     cabal-docspec --verbose --trace-process --timeout=100 --module Documentation.SBV.Examples.Lists.CountOutAndTransfer
 ghci_SBVDocTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
 
