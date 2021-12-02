@@ -46,10 +46,10 @@ type Deck = SList Integer
 -- factor, @k@, must be greater than half the size of the deck size.
 --
 -- Note that the proof time increases significantly with @n@.
--- Here's a proof for deck size of 8, for all @k@ >= @4@.
+-- Here's a proof for deck size of 6, for all @k@ >= @3@.
 --
--- >>> coatCheck 8
--- WHAT
+-- >>> coatCheck 6
+-- Q.E.D.
 --
 -- It's interesting to note that one can also express this theorem
 -- by making @n@ symbolic as well. However, doing so definitely requires
