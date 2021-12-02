@@ -349,7 +349,7 @@ declSBVFunc op nm = case op of
                       _                    -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
   where mkReverse k = let t = smtType k
                       in [ "(define-funs-rec ((" ++ nm ++ " ((x!1 " ++ t ++ ")) " ++ t ++ "))"
-                         , "                  ((let ((a!1 ((_ " ++ nm ++ " 0)"
+                         , "                  ((let ((a!1 (" ++ nm
                          , "                                 (seq.extract x!1 1 (- (seq.len x!1) 1)))))"
                          , "                        (ite (= (seq.len x!1) 0)"
                          , "                             x!1"
