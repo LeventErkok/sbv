@@ -18,7 +18,10 @@ module TestSuite.Basics.String(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Data.SBV.String ((.!!), (.++))
+import Prelude hiding ((!!), (++))
+import qualified Prelude as P ((++))
+
+import Data.SBV.String ((!!), (++))
 import qualified Data.SBV.String as S
 import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.RegExp as R
@@ -62,14 +65,14 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
                      case cs of
                        Unsat  -> error "Failed! Expected Sat, got UNSAT"
                        DSat{} -> error "Failed! Expected Sat, got delta-sat"
-                       Sat    -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                       Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+                       Sat    -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" P.++ show (SatResult (Satisfiable cfg r))
+                       Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" P.++ show r
 
 strConcatSat :: Symbolic ()
-strConcatSat = constrain $ "abc" .++ "def" .== "abcdef"
+strConcatSat = constrain $ "abc" ++ "def" .== "abcdef"
 
 strConcatUnsat :: Symbolic ()
-strConcatUnsat = constrain $ "abc" .++ "def" .== "abcdefg"
+strConcatUnsat = constrain $ "abc" ++ "def" .== "abcdefg"
 
 strIndexOfSat :: Symbolic ()
 strIndexOfSat = constrain $ S.indexOf "abcabc" "a" .== 0
@@ -80,40 +83,40 @@ strIndexOfUnsat = constrain $ S.indexOf "abcabc" "a" ./= 0
 -- Basic string operations
 strExamples1 :: Symbolic ()
 strExamples1 = constrain $ sAnd
-  [ S.singleton ("abc" .!! 1) .++ S.singleton ("abc" .!! 0) .== "ba"
-  , "abcabc" `S.indexOf` "a"                                .== 0
-  , S.offsetIndexOf "abcabc" "a" 1                          .== 3
-  , S.subStr "xxabcyy" 2 3                                  .== "abc"
+  [ S.singleton ("abc" !! 1) ++ S.singleton ("abc" !! 0) .== "ba"
+  , "abcabc" `S.indexOf` "a"                              .== 0
+  , S.offsetIndexOf "abcabc" "a" 1                        .== 3
+  , S.subStr "xxabcyy" 2 3                                .== "abc"
   ]
 
 -- A string cannot overlap with two different characters.
 strExamples2 :: Symbolic ()
 strExamples2 = do
   a <- sString "a"
-  constrain $ a .++ "b" .== "a" .++ a
+  constrain $ a ++ "b" .== "a" ++ a
 
 -- Strings a, b, c can have a non-trivial overlap.
 strExamples3 :: Symbolic ()
 strExamples3 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ a .++ b .== "abcd"
-  constrain $ b .++ c .== "cdef"
+  constrain $ a ++ b .== "abcd"
+  constrain $ b ++ c .== "cdef"
   constrain $ sNot $ b .== ""
 
 -- There is a solution to a of length at most 2.
 strExamples4 :: Symbolic ()
 strExamples4 = do
   [a, b] <- sStrings ["a", "b"]
-  constrain $ "abc" .++ a .== b .++ "cef"
+  constrain $ "abc" ++ a .== b ++ "cef"
   constrain $ S.length a .<= 2
 
 -- There is a solution to a that is not a sequence of "a"'s.
 strExamples5 :: Symbolic ()
 strExamples5 = do
   [a, b, c] <- sStrings ["a", "b", "c"]
-  constrain $ a .++ "ab" .++ b .== b .++ "ba" .++ c
-  constrain $ c .== a .++ b
-  constrain $ sNot $ a.++ "a" .== "a" .++ a
+  constrain $ a ++ "ab" ++ b .== b ++ "ba" ++ c
+  constrain $ c .== a ++ b
+  constrain $ sNot $ a ++ "a" .== "a" ++ a
 
 -- Contains is transitive.
 strExamples6 :: Symbolic ()
@@ -139,7 +142,7 @@ strExamples8 = do
   constrain $ b `S.isPrefixOf` a
   constrain $ c `S.isSuffixOf` a
   constrain $ S.length a .== S.length b + S.length c
-  constrain $ sNot $ a .== b .++ c
+  constrain $ sNot $ a .== b ++ c
 
 -- The maximal length is 6 for a string of length 2 repeated at most 3 times
 strExamples9 :: Symbolic ()

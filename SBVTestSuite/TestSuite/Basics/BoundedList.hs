@@ -20,7 +20,8 @@ module TestSuite.Basics.BoundedList(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Data.SBV.List ((.:), (.!!))
+import Prelude hiding ((!!))
+import Data.SBV.List ((.:), (!!))
 import qualified Data.SBV.List as L
 import qualified Data.SBV.Tools.BoundedList as BL
 
@@ -172,7 +173,7 @@ mapWithFailure :: Symbolic ()
 mapWithFailure = do
   lst <- sList "ints"
   let (lst', failure) = runEval $ boundedIncr lst
-  constrain $ lst' .!! 2 .> 11 .=> failure .== Failure sTrue
+  constrain $ lst' !! 2 .> 11 .=> failure .== Failure sTrue
 
 -- mapping over these values of a, b, and c cannot fail (this is unsat)
 mapNoFailure :: Symbolic ()

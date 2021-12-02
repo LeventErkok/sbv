@@ -19,7 +19,10 @@ module TestSuite.Basics.List(tests)  where
 import Data.SBV.Control
 import Utils.SBVTestFramework
 
-import Data.SBV.List ((.!!), (.++))
+import           Prelude hiding ((++), (!!))
+import qualified Prelude as P   ((++))
+
+import Data.SBV.List ((!!), (++))
 import qualified Data.SBV.List as L
 
 import Control.Monad (unless)
@@ -53,14 +56,14 @@ checkWith cfg props csExpected = runSMTWith cfg{verbose=True} $ do
                      case cs of
                        Unsat  -> error "Failed! Expected Sat, got UNSAT"
                        DSat{} -> error "Failed! Expected Sat, got delta-sat"
-                       Sat    -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" ++ show (SatResult (Satisfiable cfg r))
-                       Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" ++ show r
+                       Sat    -> getModel         >>= \r -> error $ "Failed! Expected Unsat, got SAT:\n" P.++ show (SatResult (Satisfiable cfg r))
+                       Unk    -> getUnknownReason >>= \r -> error $ "Failed! Expected Unsat, got UNK:\n" P.++ show r
 
 seqConcatSat :: Symbolic ()
-seqConcatSat = constrain $ [1..3] .++ [4..6] .== ([1..6] :: SList Integer)
+seqConcatSat = constrain $ [1..3] ++ [4..6] .== ([1..6] :: SList Integer)
 
 seqConcatUnsat :: Symbolic ()
-seqConcatUnsat = constrain $ [1..3] .++ [4..6] .== ([1..7] :: SList Integer)
+seqConcatUnsat = constrain $ [1..3] ++ [4..6] .== ([1..7] :: SList Integer)
 
 seqIndexOfSat :: Symbolic ()
 seqIndexOfSat = constrain $ L.indexOf ([1,2,3,1,2,3] :: SList Integer) [1] .== 0
@@ -71,40 +74,40 @@ seqIndexOfUnsat = constrain $ L.indexOf ([1,2,3,1,2,3] :: SList Integer) [1] ./=
 -- Basic sequence operations
 seqExamples1 :: Symbolic ()
 seqExamples1 = constrain $ sAnd
-  [ L.singleton (([1,2,3] :: SList Integer) .!! 1) .++ L.singleton (([1,2,3] :: SList Integer) .!! 0) .== [2,1]
-  , ([1,2,3,1,2,3] :: SList Integer) `L.indexOf` [1]                                                  .== 0
-  , L.offsetIndexOf ([1,2,3,1,2,3] :: SList Integer) [1] 1                                            .== 3
-  , L.subList ([4,4,1,2,3,5,5] :: SList Integer)     2 3                                              .== [1,2,3]
+  [ L.singleton (([1,2,3] :: SList Integer) !! 1) ++ L.singleton (([1,2,3] :: SList Integer) !! 0) .== [2,1]
+  , ([1,2,3,1,2,3] :: SList Integer) `L.indexOf` [1]                                               .== 0
+  , L.offsetIndexOf ([1,2,3,1,2,3] :: SList Integer) [1] 1                                         .== 3
+  , L.subList ([4,4,1,2,3,5,5] :: SList Integer)     2 3                                           .== [1,2,3]
   ]
 
 -- A list cannot overlap with two different elements
 seqExamples2 :: Symbolic ()
 seqExamples2 = do
   a :: SList Integer <- sList "a"
-  constrain $ a .++ [2] .== [1] .++ a
+  constrain $ a ++ [2] .== [1] ++ a
 
 -- Strings a, b, c can have a non-trivial overlap.
 seqExamples3 :: Symbolic ()
 seqExamples3 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
-  constrain $ a .++ b .== [1..4]
-  constrain $ b .++ c .== [3..6]
+  constrain $ a ++ b .== [1..4]
+  constrain $ b ++ c .== [3..6]
   constrain $ sNot $ b .== []
 
 -- There is a solution to a of length at most 2.
 seqExamples4 :: Symbolic ()
 seqExamples4 = do
   [a, b :: SList Integer] <- sLists ["a", "b"]
-  constrain $ [1..3] .++ a .== b .++ [3..5]
+  constrain $ [1..3] ++ a .== b ++ [3..5]
   constrain $ L.length a .<= 2
 
 -- There is a solution to a that is not a sequence of 1's.
 seqExamples5 :: Symbolic ()
 seqExamples5 = do
   [a, b, c :: SList Integer] <- sLists ["a", "b", "c"]
-  constrain $ a .++ [1,2] .++ b .== b .++ [2,1] .++ c
-  constrain $ c .== a .++ b
-  constrain $ sNot $ a.++ [1] .== [1] .++ a
+  constrain $ a ++ [1,2] ++ b .== b ++ [2,1] ++ c
+  constrain $ c .== a ++ b
+  constrain $ sNot $ a ++ [1] .== [1] ++ a
 
 -- Contains is transitive.
 seqExamples6 :: Symbolic ()
@@ -130,7 +133,7 @@ seqExamples8 = do
   constrain $ b `L.isPrefixOf` a
   constrain $ c `L.isSuffixOf` a
   constrain $ L.length a .== L.length b + L.length c
-  constrain $ sNot $ a .== b .++ c
+  constrain $ sNot $ a .== b ++ c
 
 -- Generate all length one sequences, to enumerate all and making sure we can parse correctly
 seqExamples9 :: IO Bool

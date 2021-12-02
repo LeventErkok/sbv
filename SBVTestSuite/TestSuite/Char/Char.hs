@@ -98,7 +98,7 @@ t09 = do x :: SList ((Char, Char), [Integer]) <- free "x"
 t10 :: Symbolic ()
 t10 = do x :: SList ((Char, Char), [Integer]) <- free "x"
          constrain $ L.length x .== 1
-         constrain $ (x L..!! 0)^._1^._1 .== literal 'B'
+         constrain $ (x L.!! 0)^._1^._1 .== literal 'B'
 
 cf4 :: SInteger -> SChar -> SList ((Char, Char), [Integer])
 cf4 = uninterpret "cf4"

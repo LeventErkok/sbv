@@ -21,8 +21,10 @@
 
 module TestSuite.Basics.Tuple (tests)  where
 
+import Prelude hiding ((!!))
+
 import Data.SBV.Control
-import Data.SBV.List ((.!!), (.:))
+import Data.SBV.List ((!!), (.:))
 import Data.SBV.Tuple
 
 import qualified Data.SBV.List as L
@@ -85,11 +87,11 @@ list :: Symbolic [(Integer, [(Integer, String)])]
 list = do
   lst <- sList @(Integer, [(Integer, String)]) "lst"
 
-  constrain $ (lst .!! 0)^._1 .== 2
-  constrain $ (((lst .!! 1)^._2) .!! 0)^._2 .== literal "foo"
+  constrain $ (lst !! 0)^._1 .== 2
+  constrain $ (((lst !! 1)^._2) !! 0)^._2 .== literal "foo"
   constrain $ L.length lst .== 4
-  constrain $ L.length ((lst .!! 1)^._2) .== 5
-  constrain $ L.length ((lst .!! 2)^._2) .== 0
+  constrain $ L.length ((lst !! 1)^._2) .== 5
+  constrain $ L.length ((lst !! 2)^._2) .== 0
 
   constrain $ lst .== literal [(2,[]), (1,[(3,"foo"), (0,"bar"), (-1,"baz"), (-2,"quux"), (-3,"enough")]), (-4,[]), (-5,[])]
 
@@ -101,13 +103,13 @@ enum = do
    vTup1 :: SList (E, [Bool]) <- sList "v1"
    q <- sBool "q"
    constrain $ sNot q
-   constrain $ (vTup1 .!! 1)^._2 .== sTrue .: q .: L.nil
+   constrain $ (vTup1 !! 1)^._2 .== sTrue .: q .: L.nil
    constrain $ L.length vTup1 .== 3
 
-   case untuple (vTup1 .!! 2)  of
+   case untuple (vTup1 !! 2)  of
      (e, b) -> do constrain $ e .== sC
                   constrain $ L.length b .== 6
-                  constrain $ b .!! 4 .== sTrue
+                  constrain $ b !! 4 .== sTrue
 
    query $ do
      vTup2 :: STuple Word8 (E, Char, Float) <- freshVar "v2"
