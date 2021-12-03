@@ -15,7 +15,7 @@
 -- considering them explicitly in model construction.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
