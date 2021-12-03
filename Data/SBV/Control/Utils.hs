@@ -1105,12 +1105,17 @@ getObservables = do State{rObservables} <- queryState
                     walk (F.toList rObs) []
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
--- | Generalization of 'Data.SBV.Control.getUIs'.
+-- Generalization of 'Data.SBV.Control.getUIs'. Note that if we have an defined axiom, then it
+-- is not really a UI, so we drop those.
 getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
-getUIs = do State{rUIMap, rIncState} <- queryState
+getUIs = do State{rUIMap, raxioms, rIncState} <- queryState
+            -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
+            defines <- do allAxs <- io $ readIORef raxioms
+                          pure [nm | (True, nm, _) <- allAxs]
+
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
-            return $ nub $ sort $ Map.toList prior ++ Map.toList new
+            return $ nub $ sort [p | p@(n, _) <- Map.toList prior ++ Map.toList new, n `notElem` defines]
 
 -- | Return all satisfying models.
 getAllSatResult :: forall m. (MonadIO m, MonadQuery m, SolverContext m) => m AllSatResult

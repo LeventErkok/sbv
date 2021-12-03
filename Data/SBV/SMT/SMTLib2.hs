@@ -576,8 +576,10 @@ declUI :: (String, SBVType) -> [String]
 declUI (i, t) = declareName i t Nothing
 
 -- NB. We perform no check to as to whether the axiom is meaningful in any way.
-declAx :: (String, [String]) -> String
-declAx (nm, ls) = (";; -- user given axiom: " ++ nm ++ "\n") ++ intercalate "\n" ls
+declAx :: (Bool, String, [String]) -> String
+declAx (hasDefinition, nm, ls) = (";; -- user given " ++ what ++ ": " ++ nm ++ "\n") ++ intercalate "\n" ls
+  where what | hasDefinition = "definition"
+             | True          = "axiom"
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
 constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)

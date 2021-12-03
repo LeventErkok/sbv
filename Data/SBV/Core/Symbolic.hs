@@ -765,7 +765,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
-                     , resAxioms      :: [(String, [String])]                         -- ^ axioms
+                     , resAxioms      :: [(Bool, String, [String])]                   -- ^ axioms/definitions
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
@@ -840,7 +840,9 @@ instance Show Result where
 
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
 
-          shax (nm, ss) = "  -- user defined axiom: " ++ nm ++ "\n  " ++ intercalate "\n  " ss
+          shax (hasDefinition, nm, ss) = "  -- user defined " ++ what ++ ": " ++ nm ++ "\n  " ++ intercalate "\n  " ss
+             where what | hasDefinition = "value"
+                        | True          = "axiom"
 
           shCstr (isSoft, [], c)               = soft isSoft ++ show c
           shCstr (isSoft, [(":named", nm)], c) = soft isSoft ++ nm ++ ": " ++ show c
@@ -1124,7 +1126,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rFArrayMap   :: IORef FArrayMap
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
-                    , raxioms      :: IORef [(String, [String])]
+                    , raxioms      :: IORef [(Bool, String, [String])]
                     , rSMTOptions  :: IORef [SMTOption]
                     , rOptGoals    :: IORef [Objective (SV, SV)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SV)]
@@ -1737,8 +1739,11 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
-   unint <- Map.toList <$> readIORef uis
    axs   <- reverse <$> readIORef axioms
+   unint <- do unints <- Map.toList <$> readIORef uis
+               -- drop those that has an axiom associated with it
+               let defineds = [nm | (True, nm, _) <- axs]
+               pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
 

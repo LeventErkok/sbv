@@ -29,6 +29,9 @@
    * Added `Documentation.SBV.Examples.Lists.CountOutAndTransfer` example, proving that the so-called
      coating card trick works correctly.
 
+   * Added function `addSMTDefinition`, which allows users to give direct definitions of SMTLib functions. This
+     is useful for defining recursive functions that are not symbolically terminating.
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5

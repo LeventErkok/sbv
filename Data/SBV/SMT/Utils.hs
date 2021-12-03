@@ -51,7 +51,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> [((Int, Kind, Kind), [SV])]                   -- ^ auto-generated tables
                        -> [(Int, ArrayInfo)]                            -- ^ user specified arrays
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
-                       -> [(String, [String])]                          -- ^ user given axioms
+                       -> [(Bool, String, [String])]                    -- ^ user given axioms/definitions
                        -> SBVPgm                                        -- ^ assignments
                        -> S.Seq (Bool, [(String, String)], SV)          -- ^ extra constraints
                        -> SV                                            -- ^ output variable

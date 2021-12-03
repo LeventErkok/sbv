@@ -429,7 +429,8 @@ class SolverContext m where
    -- A separate formalization of SMT-Lib would be very useful here.
    addAxiom :: String -> [String] -> m ()
    -- | Add a user-defined SMTLib function. You should define the name given here as an uninterpreted
-   -- value as well. Just like in 'addAxiom', we perform no checks on the SMTLib string.
+   -- value as well. SBV performs no checks on the SMTLib definition you give, so if it doesn't match
+   -- the required type, or is malformed in any way, the call will fail at run-time.
    addSMTDefinition :: String -> [String] -> m ()
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
