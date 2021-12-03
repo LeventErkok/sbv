@@ -55,7 +55,6 @@ ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
 
 # To check just one module, use:
-#     cabal-docspec --verbose --trace-process --timeout=100 --module Documentation.SBV.Examples.Lists.CountOutAndTransfer
 ghci_SBVDocTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
 
@@ -78,6 +77,11 @@ testInterfaces:
 
 docTest:
 	@$(TIME) cabal new-run SBVDocTest
+
+# Check a single module using doctest:
+#   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer
+docTestModule:
+	cabal-docspec --verbose --trace-process --timeout=100 --module $(basename $(subst /,.,${TGT}))
 
 test:
 	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
