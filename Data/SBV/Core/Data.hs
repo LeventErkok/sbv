@@ -428,6 +428,9 @@ class SolverContext m where
    -- itself, to see whether it's actually well-formed or is sensible by any means.
    -- A separate formalization of SMT-Lib would be very useful here.
    addAxiom :: String -> [String] -> m ()
+   -- | Add a user-defined SMTLib function. You should define the name given here as an uninterpreted
+   -- value as well. Just like in 'addAxiom', we perform no checks on the SMTLib string.
+   addSMTDefinition :: String -> [String] -> m ()
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
@@ -437,7 +440,7 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, contextState #-}
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, addSMTDefinition, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]

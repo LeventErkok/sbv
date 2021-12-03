@@ -127,6 +127,11 @@ instance MonadIO m => SolverContext (QueryT m) where
                                              ]
      | True                = send True $ setSMTOption o
 
+   addSMTDefinition nm _ = error $ unlines [ ""
+                                           , "*** Data.SBV: '" ++ show nm ++ "' must be defined in regular (non-query) mode."
+                                           , "*** Hint: Define all functions before starting the query."
+                                           ]
+
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
 addQueryConstraint :: (MonadIO m, MonadQuery m) => Bool -> [(String, String)] -> SBool -> m ()
