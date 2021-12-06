@@ -345,14 +345,23 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
 -- Declare "known" SBV functions here
 declSBVFunc :: Op -> String -> [String]
 declSBVFunc op nm = case op of
-                      SeqOp (SBVReverse k) -> mkReverse k
-                      _                    -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
-  where mkReverse k = let t = smtType k
-                      in [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
-                         , "                (ite (= (seq.len lst) 0)"
-                         , "                     lst"
-                         , "                     (seq.++ (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))"
-                         ]
+                      SeqOp (SBVReverse KString)   -> mkStringRev
+                      SeqOp (SBVReverse (KList k)) -> mkSeqRev (KList k)
+                      _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
+  where mkStringRev = [ "(define-fun-rec " ++ nm ++ " ((str String)) String"
+                      , "                (ite (= str \"\")"
+                      , "                     \"\""
+                      , "                     (str.++ (" ++ nm ++ " (str.substr str 1 (- (str.len str) 1)))"
+                      , "                             (str.substr str 0 1))))"
+                      ]
+
+
+        mkSeqRev k = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
+                     , "                (ite (= lst (as seq.empty " ++ t ++ "))"
+                     , "                     (as seq.empty " ++ t ++ ")"
+                     , "                     (seq.++ (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))"
+                     ]
+          where t = smtType k
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
