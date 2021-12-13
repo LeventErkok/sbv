@@ -7,7 +7,8 @@
 
   * Changes required to compile cleanly with GHC 9.2.1
 
-  * In future versions, GHC will make `forall` a reserved word, which will create a conflict with SBV's use of the same. To accommodate for these changes and to be consistent, following identifiers were renamed:
+  * In future versions, GHC will make `forall` a reserved word, which will create a conflict with SBV's use of the same.
+    To accommodate for these changes and to be consistent, following identifiers were renamed:
 
        - `forall`   --> `sbvForall`
        - `forall_`  --> `sbvForall_`
