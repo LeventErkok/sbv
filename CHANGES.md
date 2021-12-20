@@ -27,11 +27,13 @@
    * Changed the String/List versions of `.++/.!!` to directly use the names `++/!!`. Since these modules
      are intended to be used qualified only, there's no reason to add the dots.
 
+   * Added function `addSMTDefinition`, which allows users to give direct definitions of SMTLib functions. This
+     is useful for defining recursive functions that are not symbolically terminating.
+
    * Added `Documentation.SBV.Examples.Lists.CountOutAndTransfer` example, proving that the so-called
      coating card trick works correctly.
 
-   * Added function `addSMTDefinition`, which allows users to give direct definitions of SMTLib functions. This
-     is useful for defining recursive functions that are not symbolically terminating.
+   * Added `Documentation.SBV.Examples.Puzzles.Jugs` example, solving the water-jug transfer puzzle.
 
 ### Version 8.17, 2021-10-25
 
