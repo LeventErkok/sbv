@@ -2035,11 +2035,6 @@ instance SymVal a => Mergeable (SBV a) where
                                   -- NB. No need to worry here that the index might be < 0; as the SMTLib translation takes care of that automatically
                                   newExpr st kElt (SBVApp (LkUp (idx, kInd, kElt, len) swi swe) [])
 
--- Unit
-instance Mergeable () where
-   symbolicMerge _ _ _ _ = ()
-   select _ _ _ = ()
-
 -- | Construct a useful error message if we hit an unmergeable case.
 cannotMerge :: String -> String -> String -> a
 cannotMerge typ why hint = error $ unlines [ ""
@@ -2050,6 +2045,14 @@ cannotMerge typ why hint = error $ unlines [ ""
                                            , "*** "
                                            , "*** Hint: " ++ hint
                                            ]
+
+-- | Merge concrete values that can be checked for equality
+concreteMerge :: (Eq a, Show a) => String -> String -> a -> a -> a
+concreteMerge t st x y
+  | x == y = x
+  | True   = cannotMerge t
+                         ("Concrete values can only be merged when equal. Got: " ++ show x ++ " vs. " ++ show y)
+                         ("Use an " ++ st ++ " field if the values can differ.")
 
 -- Mergeable instances for List/Maybe/Either/Array are useful, but can
 -- throw exceptions if there is no structural matching of the results
@@ -2205,6 +2208,22 @@ instance (Mergeable a, Mergeable b, Mergeable c, Mergeable d, Mergeable e, Merge
                                                              , select gs err7 ind
                                                              )
     where (as, bs, cs, ds, es, fs, gs) = unzip7 xs
+
+-- Base types are mergeable so long as they are equal
+instance Mergeable ()      where symbolicMerge _ _ = concreteMerge "()"      "()"
+instance Mergeable Integer where symbolicMerge _ _ = concreteMerge "Integer" "SInteger"
+instance Mergeable Bool    where symbolicMerge _ _ = concreteMerge "Bool"    "SBool"
+instance Mergeable Char    where symbolicMerge _ _ = concreteMerge "Char"    "SChar"
+instance Mergeable Float   where symbolicMerge _ _ = concreteMerge "Float"   "SFloat"
+instance Mergeable Double  where symbolicMerge _ _ = concreteMerge "Double"  "SDouble"
+instance Mergeable Word8   where symbolicMerge _ _ = concreteMerge "Word8"   "SWord8"
+instance Mergeable Word16  where symbolicMerge _ _ = concreteMerge "Word16"  "SWord16"
+instance Mergeable Word32  where symbolicMerge _ _ = concreteMerge "Word32"  "SWord32"
+instance Mergeable Word64  where symbolicMerge _ _ = concreteMerge "Word64"  "SWord64"
+instance Mergeable Int8    where symbolicMerge _ _ = concreteMerge "Int8"    "SInt8"
+instance Mergeable Int16   where symbolicMerge _ _ = concreteMerge "Int16"   "SInt16"
+instance Mergeable Int32   where symbolicMerge _ _ = concreteMerge "Int32"   "SInt32"
+instance Mergeable Int64   where symbolicMerge _ _ = concreteMerge "Int64"   "SInt64"
 
 -- Arbitrary product types, using GHC.Generics
 --

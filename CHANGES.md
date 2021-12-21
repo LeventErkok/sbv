@@ -36,6 +36,8 @@
    * Added `Documentation.SBV.Examples.Puzzles.Jugs` example, solving the water-jug transfer puzzle.
 
    * Added complement and difference operators for regular expressions.
+   
+   * Added concrete type instances of Mergeable class.
 
 ### Version 8.17, 2021-10-25
 

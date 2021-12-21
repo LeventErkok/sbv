@@ -13,6 +13,9 @@
 -- moves should we execute in order to do so?
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Puzzles.Jugs where
@@ -20,17 +23,13 @@ module Documentation.SBV.Examples.Puzzles.Jugs where
 import Data.SBV
 import Data.SBV.Control
 
+import GHC.Generics(Generic)
+
 -- | A Jug has a capacity (i.e., maximum amount of water it can hold), and content, showing how much
 -- it currently has. The invariant is that content is always non-negative and is at most the capacity.
 data Jug = Jug { capacity :: Integer
                , content  :: SInteger
-               }
-
--- | Symbolic instance for Jug; allows jug values to be returned in ite results
-instance Mergeable Jug where
-  symbolicMerge b1 b2 Jug{capacity = cap0, content = c0} Jug{capacity = cap1, content = c1}
-    | cap0 == cap1 = Jug {capacity = cap0, content = symbolicMerge b1 b2 c0 c1}
-    | True         = error $ "Cannot merge jugs with differing capacity " ++ show (cap0, cap1)
+               } deriving (Generic, Mergeable)
 
 -- | Transfer from one jug to another. By definition,
 -- we transfer to fill the second jug, which may end up
