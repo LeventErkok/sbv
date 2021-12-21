@@ -351,6 +351,8 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | KStar RegExp         -- ^ Kleene Star: Zero or more
             | KPlus RegExp         -- ^ Kleene Plus: One or more
             | Opt   RegExp         -- ^ Zero or one
+            | Comp  RegExp         -- ^ Complement of regular expression
+            | Diff  RegExp RegExp  -- ^ Difference of reguular expressions
             | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
             | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
@@ -360,8 +362,10 @@ data RegExp = Literal String       -- ^ Precisely match the given string
 instance IsString RegExp where
   fromString = Literal
 
--- | Regular expressions as a 'Num' instance. Note that
--- only `+` (union) and `*` (concatenation) make sense.
+-- | Regular expressions as a 'Num' instance. Note that only some operations make sense and
+-- not in the most obvious way. For instance, we would typically expect @a - b@ to be the
+-- same as @a + negate b@, but that equality does not hold in general. So, use the @Num@
+-- instance only as constructing syntax, not doing algebraic manipulations.
 instance Num RegExp where
   -- flatten the concats to make them simpler
   Conc xs * y = Conc (xs ++ [y])
@@ -373,6 +377,8 @@ instance Num RegExp where
   x + Union ys = Union (x  : ys)
   x + y        = Union [x, y]
 
+  x - y = Diff x y
+
   abs         = error "Num.RegExp: no abs method"
   signum      = error "Num.RegExp: no signum method"
 
@@ -381,7 +387,7 @@ instance Num RegExp where
     | x == 1    = Literal ""   -- Unit for concatenation is the empty string
     | True      = error $ "Num.RegExp: Only 0 and 1 makes sense as a reg-exp, no meaning for: " ++ show x
 
-  negate      = error "Num.RegExp: no negate method"
+  negate = Comp
 
 -- | Convert a reg-exp to a Haskell-like string
 instance Show RegExp where
@@ -403,6 +409,8 @@ regExpToString fs (Conc xs)         = "(re.++ " ++ unwords (map (regExpToString 
 regExpToString fs (KStar r)         = "(re.* " ++ regExpToString fs r ++ ")"
 regExpToString fs (KPlus r)         = "(re.+ " ++ regExpToString fs r ++ ")"
 regExpToString fs (Opt   r)         = "(re.opt " ++ regExpToString fs r ++ ")"
+regExpToString fs (Comp  r)         = "(re.comp " ++ regExpToString fs r ++ ")"
+regExpToString fs (Diff  r1 r2)     = "(re.diff " ++ regExpToString fs r1 ++ " " ++ regExpToString fs r2 ++ ")"
 regExpToString fs (Loop  lo hi r)
    | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ regExpToString fs r ++ ")"
    | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)

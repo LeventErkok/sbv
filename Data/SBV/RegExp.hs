@@ -108,6 +108,8 @@ instance RegExpMatchable SString where
            go (KStar r)      k s      = k s || go r (smaller (P.length s) (go (KStar r) k)) s
            go (KPlus r)      k s      = go (Conc [r, KStar r]) k s
            go (Opt r)        k s      = k s || go r k s
+           go (Comp r)       k s      = not $ go r k s
+           go (Diff r1 r2)   k s      = go r1 k s && not (go r2 k s)
            go (Loop i j r)   k s      = go (Conc (replicate i r P.++ replicate (j - i) (Opt r))) k s
            go (Union [])     _ _      = False
            go (Union [x])    k s      = go x k s
@@ -212,6 +214,8 @@ asciiUpper = Range 'A' 'Z'
 -- >>> digit
 -- (re.range "0" "9")
 -- >>> prove $ \c -> c `match` digit .<=> let v = digitToInt c in 0 .<= v .&& v .< 10
+-- Q.E.D.
+-- >>> prove $ \c -> sNot ((c::SChar) `match` (digit - digit))
 -- Q.E.D.
 digit :: RegExp
 digit = Range '0' '9'

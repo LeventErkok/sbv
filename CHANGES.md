@@ -35,6 +35,8 @@
 
    * Added `Documentation.SBV.Examples.Puzzles.Jugs` example, solving the water-jug transfer puzzle.
 
+   * Added complement and difference operators for regular expressions.
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5
