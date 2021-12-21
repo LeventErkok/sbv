@@ -69,7 +69,6 @@ moves = foldl move initJugs
 -- | Solve the puzzle. We have:
 --
 -- >>> puzzle
--- *Test> puzzle
 -- # of moves: 0
 -- # of moves: 1
 -- # of moves: 2
