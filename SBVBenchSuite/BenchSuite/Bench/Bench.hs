@@ -28,7 +28,6 @@ module BenchSuite.Bench.Bench
   , runIO
   , runPure
   , rGroup
-  , runOverheadBenchmark
   , runBenchmark
   , onConfig
   , onDesc
@@ -39,13 +38,8 @@ module BenchSuite.Bench.Bench
   ) where
 
 import           Control.DeepSeq         (NFData (..), rwhnf)
-import           System.Directory        (getCurrentDirectory)
-import           System.IO
-import           System.IO.Silently      (silence)
 
-import qualified Gauge.Main              as G
-
-import qualified System.Process          as P
+import qualified Test.Tasty.Bench        as B
 import qualified Utils.SBVBenchFramework as U
 
 -- | The type of the problem to benchmark. This allows us to operate on Runners
@@ -54,10 +48,6 @@ data Problem = forall a . U.Provable a => Problem a
 
 -- | Similarly to Problem, BenchResult is boilerplate for a nice api
 data BenchResult = forall a . (Show a, NFData a) => BenchResult a
-
--- | A bench unit is a solver and a problem that represents an input problem
--- for the solver to solve
-type BenchUnit = (U.SMTConfig, FilePath)
 
 -- | A runner is anything that allows the solver to solve, such as:
 -- 'Data.SBV.proveWith' or 'Data.SBV.satWith'. We utilize existential types to
@@ -79,9 +69,9 @@ data RunnerI = RunnerI { runI        :: (U.SMTConfig -> Problem -> IO BenchResul
 -- so that we don't have to separate out runners that run a single benchmark
 -- from runners that need to run several benchmarks
 data Runner where
-  RBenchmark  :: G.Benchmark -> Runner    -- ^ a wrapper around gauge benchmarks
-  Runner      :: RunnerI   -> Runner      -- ^ a single run
-  RunnerGroup :: [Runner]  -> Runner      -- ^ a group of runs
+  RBenchmark  :: B.Benchmark -> Runner   -- ^ a wrapper around tasty-bench benchmarks
+  Runner      :: RunnerI     -> Runner   -- ^ a single run
+  RunnerGroup :: [Runner]    -> Runner   -- ^ a group of runs
 
 -- | Convenience boilerplate functions, simply avoiding a lens dependency
 using :: Runner -> (Runner -> Runner) -> Runner
@@ -125,88 +115,18 @@ onProblem f r@RunnerI{..} = r{problem = (helper problem)}
     helper (Problem p) = Problem $ f p
 {-# INLINE onProblem #-}
 
-
--- | Filepath to /dev/null
-devNull :: FilePath
-#ifdef mingw32_HOST_OS
-devNull = "NUL"
-#else
-devNull = "/dev/null"
-#endif
-
--- | to bench a solver without interfacing through SBV we call transcript to
--- have SBV generate the input file for the solver and then create a process to
--- initiate execution on the solver. Note that we redirect stdout to /dev/devNull
--- or NUL on windows
-runStandaloneSolver :: BenchUnit -> IO ()
-runStandaloneSolver (slvr, fname) =
-  withFile devNull WriteMode $
-  (\h -> do (_,_,_,ph) <- P.createProcess (P.shell command){P.std_out = P.UseHandle h}
-            _ <- P.waitForProcess ph
-            return ())
-  where command = U.mkExecString slvr fname
-{-# INLINE runStandaloneSolver #-}
-
-
--- | Given a file name, a solver config, and a problem to solve, create an
--- environment for the gauge benchmark by generating a transcript file
-standaloneEnv :: RunnerI -> IO FilePath -> IO BenchUnit
-standaloneEnv RunnerI{..} f = f >>= go problem
-  where
-    -- generate a transcript for the unit
-    go p file = do pwd <- getCurrentDirectory
-                   let fPath = mconcat [pwd,"/",file]
-                   _ <- runI config{U.transcript = Just fPath} p >> return ()
-                   return (config,fPath)
-{-# INLINE standaloneEnv #-}
-
--- | Cleanup the environment created by gauge by removing the transcript file
--- used to run the standalone solver
-standaloneCleanup :: BenchUnit -> IO ()
-standaloneCleanup (_,fPath) =  P.callCommand $ "rm " ++ fPath
-{-# INLINE standaloneCleanup #-}
-
--- | To construct a benchmark to test SBV's overhead we setup an environment
--- with gauge where a symbolic computation is emitted to a transcript file.
--- To test the solver without respect to SBV (standalone) we pass the transcript
--- file to the solver using the same primitives SBV does. Not that mkFileName
--- generates a random filename that is removed at the end of the benchmark. This
--- function exposes the solver and the solve interface in case the user would
--- like to benchmark with something other than 'Data.SBV.z3' and so that we can
--- benchmark all solving variants, e.g., 'Data.SBV.proveWith',
--- 'Data.SBV.satWith', 'Data.SBV.allProveWith' etc.
-mkOverheadBenchMark' :: RunnerI -> G.Benchmark
-mkOverheadBenchMark' r@RunnerI{..} =
-  G.envWithCleanup
-  (standaloneEnv r U.mkFileName)
-  standaloneCleanup $
-  \ ~unit ->
-    G.bgroup description [ G.bench "standalone" $! G.nfIO $ runStandaloneSolver unit
-                         -- notice for sbv benchmark; we pull the solver out of unit and
-                         -- use the input problem not the transcript in the unit
-                         , G.bench "sbv"        $! G.nfIO $ runI (fst unit) problem
-                         ]
-{-# INLINE mkOverheadBenchMark' #-}
-
-runOverheadBenchmark :: Runner -> G.Benchmark
-runOverheadBenchmark (Runner r@RunnerI{}) = mkOverheadBenchMark' r
-runOverheadBenchmark (RunnerGroup rs)     = G.bgroup "" $ -- leave the description close to the benchmark/problem definition
-                                            runOverheadBenchmark <$> rs
-runOverheadBenchmark (RBenchmark b)       = b
-{-# INLINE runOverheadBenchmark #-}
-
 -- | make a normal benchmark without the overhead comparison. Notice this is
 -- just unpacking the Runner record
-mkBenchmark :: RunnerI -> G.Benchmark
-mkBenchmark RunnerI{..} = G.bench description . G.nfIO $! runI config problem
+mkBenchmark :: RunnerI -> B.Benchmark
+mkBenchmark RunnerI{..} = B.bench description . B.nfIO $! runI config problem
 {-# INLINE  mkBenchmark #-}
 
 -- | Convert a Runner or a group of Runners to Benchmarks, this is an api level
 -- function to convert the runners defined in each file to benchmarks which can
 -- be run by gauge
-runBenchmark :: Runner -> G.Benchmark
+runBenchmark :: Runner -> B.Benchmark
 runBenchmark (Runner r@RunnerI{}) = mkBenchmark r
-runBenchmark (RunnerGroup rs)     = G.bgroup "" $ runBenchmark <$> rs
+runBenchmark (RunnerGroup rs)     = B.bgroup "" $ runBenchmark <$> rs
 runBenchmark (RBenchmark b)       = b
 {-# INLINE runBenchmark #-}
 
@@ -235,20 +155,20 @@ run d p = runWith U.z3 d p `using` runner U.satWith
 {-# INLINE run #-}
 
 -- | Entry point for problems that return IO or to benchmark IO results
-runIOWith :: NFData a => (a -> G.Benchmarkable) -> String -> a -> Runner
-runIOWith f d = RBenchmark . G.bench d . f
+runIOWith :: NFData a => (a -> B.Benchmarkable) -> String -> a -> Runner
+runIOWith f d = RBenchmark . B.bench d . f
 {-# INLINE runIOWith #-}
 
 -- | Benchmark an IO result of sbv, this could be codegen, return models, etc..
 -- See @runIOWith@ for a version which allows the consumer to select the
 -- Benchmarkable injection function
 runIO :: NFData a => String -> IO a -> Runner
-runIO d = RBenchmark . G.bench d . G.nfIO . silence
+runIO d = RBenchmark . B.bench d . B.nfIO -- . silence
 {-# INLINE runIO #-}
 
 -- | Benchmark an pure result
 runPure :: NFData a => String -> (a -> b) -> a -> Runner
-runPure d = (RBenchmark . G.bench d) .: G.whnf
+runPure d = (RBenchmark . B.bench d) .: B.whnf
   where (.:) = (.).(.)
 {-# INLINE runPure  #-}
 

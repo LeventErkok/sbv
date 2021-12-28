@@ -10,29 +10,19 @@
 -- Various goodies for benchmarking SBV
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Utils.SBVBenchFramework
   ( mkExecString
   , mkFileName
-  , Benchmark
-  , bgroup
   , module Data.SBV
   , timeStamp
   , getDate
   , dateStamp
   , benchResultsFile
-  , compareBenchmarks
-  , compareBenchmarks'
-  , compareBenchmarksOvHd
-  , compareBenchmarksWith
-  , compareBenchmarksWith'
   , classifier
   , overheadClassifier
   , filterOverhead
-  , regressionConf
-  , overheadConf
   ) where
 
 import qualified Data.List      as L
@@ -40,15 +30,8 @@ import           System.Process (showCommandForUser)
 import           System.Random
 import           Data.Char (isSpace)
 import           System.FilePath ((</>), (<.>))
-import           System.FilePath.Posix (takeBaseName)
-import           System.IO (appendFile, readFile)
-import           System.Process (callCommand)
-import           Data.Ord (comparing)
 import           Data.Time.Clock
 import           Data.Time.Calendar
-
-import           Gauge.Main (Benchmark, bgroup)
-import qualified BenchShow as BS hiding (verbose)
 
 import           Data.SBV
 
@@ -91,60 +74,6 @@ spaceTo c x | isSpace x = c
 -- whatever you want to name the benchmark
 benchResultsFile :: FilePath -> FilePath
 benchResultsFile nm = "SBVBenchSuite" </> "BenchResults" </> nm <.> "csv"
-
--- | Run bench-show comparisons given an old-file, a newfile, and a config.
--- Bench show expects comparisons to be in a single file so we construct a file
--- by appending the input files and then remove it after the comparison.
--- bench-show differentiates the runs by a header generated from either @gauge@
--- or @criterion@. See <http://hackage.haskell.org/package/bench-show-0.3.1 bench-show>
--- for more details.
-compareBenchmarksWith :: BS.Config -> FilePath -> FilePath -> IO ()
-compareBenchmarksWith conf old new = do
-  -- make the file name
-  let fname = benchResultsFile $ takeBaseName old ++ "_vs_" ++ takeBaseName new
-  -- this is lazy IO !!!
-  readFile old >>= appendFile fname
-  readFile new >>= appendFile fname
-  -- run the report
-  BS.report fname Nothing conf
-  -- remove the file, this will likely fail on Windows
-  callCommand $ "rm " ++ fname
-
--- | A simple wrapper for a single file case
-compareBenchmarksWith' :: BS.Config -> FilePath -> IO ()
-compareBenchmarksWith' c fp = BS.report fp Nothing c
-
-compareBenchmarks' :: FilePath -> IO ()
-compareBenchmarks' = compareBenchmarksWith' regressionConf
-
-compareBenchmarks :: FilePath -> FilePath -> IO ()
-compareBenchmarks = compareBenchmarksWith regressionConf
-
-
-compareBenchmarksOvHd :: FilePath -> FilePath -> IO ()
-compareBenchmarksOvHd = compareBenchmarksWith overheadConf
-
-
-regressionConf :: BS.Config
-regressionConf = BS.defaultConfig { BS.presentation = BS.Groups BS.PercentDiff -- report percent difference
-                                  , BS.selectBenchmarks = \f ->                -- sort from Improvement - Degradation
-                                                            map fst
-                                                            $ L.sortBy (comparing snd)
-                                                            $ either error id
-                                                            $ f (BS.ColumnIndex 1) Nothing
-                                  }
-
-
-overheadConf :: BS.Config
-overheadConf = BS.defaultConfig { BS.classifyBenchmark = overheadClassifier '/'  -- separate groups assuming overhead results
-                                , BS.presentation = BS.Groups BS.PercentDiff
-                                , BS.selectBenchmarks = \f ->
-                                                          map fst
-                                                          $ L.sortBy (comparing snd)
-                                                          $ either error id
-                                                          $ f (BS.ColumnIndex 1) Nothing
-                                }
-
 
 -- | The classifier takes a line of text and chunks it into (group-name,
 -- benchmark-name), for example:

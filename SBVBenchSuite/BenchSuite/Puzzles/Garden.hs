@@ -15,7 +15,7 @@
 
 module BenchSuite.Puzzles.Garden(benchmarks) where
 
-import Data.Text (isSuffixOf)
+import Data.List (isSuffixOf)
 
 import Documentation.SBV.Examples.Puzzles.Garden
 
