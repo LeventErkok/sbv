@@ -39,6 +39,8 @@
    
    * Added concrete type instances of Mergeable class.
 
+   * Fixed a bug in the implementation of the concrete-path for sPopCount
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5

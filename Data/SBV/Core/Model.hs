@@ -1180,8 +1180,8 @@ class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
     -- seems a total overkill for most use cases. If such is required, users are encouraged
     -- to define their own variants, which is rather easy.
     sPopCount x
-      | isConcrete x  = go 0 x
-      | True          = sum [ite b 1 0 | b <- blastLE x]
+      | Just v <- unliteral x = go 0 v
+      | True                  = sum [ite b 1 0 | b <- blastLE x]
       where -- concrete case
             go !c 0 = c
             go !c w = go (c+1) (w .&. (w-1))
