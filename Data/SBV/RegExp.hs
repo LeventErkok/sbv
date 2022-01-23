@@ -24,6 +24,7 @@
 
 module Data.SBV.RegExp (
         -- * Regular expressions
+        -- $regexpeq
         RegExp(..)
         -- * Matching
         -- $matching
@@ -336,4 +337,21 @@ Q.E.D.
 Q.E.D.
 >>> prove $ \c -> (c :: SChar) `match` oneOf "abcd" .=> ord c .>= ord (literal 'a') .&& ord c .<= ord (literal 'd')
 Q.E.D.
+-}
+
+{- $regexpeq
+Regular expressions can be symbolically compared for equality. Note that the regular 'Eq' instance and the symbolic
+version differ in semantics: 'Eq' instance checks for "structural" equality, i.e., that the two regular expressions
+are constructed in precisely the same way. The symbolic equality, however, checks for language equality, i.e., that
+the regular expressions correspond to the same set of strings. This is a bit unfortunate, but hopefully should not
+cause much trouble in practice. Note that the only reason we support symbolic equality is to take advantage of
+the internal decision procedures z3 provides for this case: A similar goal can be achieved by showing there is
+no string accepted by one but not the other. However, this encoding doesn't perform well in z3.
+
+>>> prove $ ("a" * KStar ("b" * "a")) .== (KStar ("a" * "b") * "a")
+Q.E.D.check
+>>> prove $ ("a" * KStar ("b" * "a")) .== (KStar ("a" * "b") * "c")
+Falsifiable.check
+>>> prove $ ("a" * KStar ("b" * "a")) ./= (KStar ("a" * "b") * "c")
+Q.E.D.check
 -}

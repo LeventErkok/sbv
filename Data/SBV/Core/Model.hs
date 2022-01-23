@@ -1090,6 +1090,17 @@ instance (OrdSymbolic a, OrdSymbolic b, OrdSymbolic c, OrdSymbolic d, OrdSymboli
   (a0, b0, c0, d0, e0, f0, g0) .< (a1, b1, c1, d1, e1, f1, g1) =    (a0, b0, c0, d0, e0, f0) .<  (a1, b1, c1, d1, e1, f1)
                                                                .|| ((a0, b0, c0, d0, e0, f0) .== (a1, b1, c1, d1, e1, f1) .&& g0 .< g1)
 
+-- | Regular expressions can be compared for equality. Note that we diverge here from the equality
+-- in the concrete sense; i.e., the Eq instance does not match the symbolic case. This is a bit unfortunate,
+-- but unavoidable with the current design of how we "distinguish" operators. Hopefully shouldn't be a big deal,
+-- though one should be careful.
+instance EqSymbolic RegExp where
+  r1 .== r2 = SBV $ SVal KBool $ Right $ cache r
+    where r st = newExpr st KBool $ SBVApp (RegExOp (RegExEq r1 r2))  []
+
+  r1 ./= r2 = SBV $ SVal KBool $ Right $ cache r
+    where r st = newExpr st KBool $ SBVApp (RegExOp (RegExNEq r1 r2)) []
+
 -- | Symbolic Numbers. This is a simple class that simply incorporates all number like
 -- base types together, simplifying writing polymorphic type-signatures that work for all
 -- symbolic numbers, such as 'SWord8', 'SInt8' etc. For instance, we can write a generic

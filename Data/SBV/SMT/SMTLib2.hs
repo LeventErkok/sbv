@@ -48,7 +48,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
                        || KFloat     `Set.member` kindInfo
                        || KDouble    `Set.member` kindInfo
-        hasString      = KString    `Set.member` kindInfo
+        hasString      = KString     `Set.member` kindInfo
+        hasRegExp      = (not . null) [() | (_ :: RegExOp) <- G.universeBi asgnsSeq]
         hasChar        = KChar      `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- Set.toList kindInfo])
@@ -124,6 +125,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            | hasList               = setAll "has lists"
            | hasChar               = setAll "has chars"
            | hasString             = setAll "has strings"
+           | hasRegExp             = setAll "has regular expressions"
            | hasArrayInits         = setAll "has array initializers"
            | hasOverflows          = setAll "has overflow checks"
 
@@ -970,6 +972,9 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
         -- StrUnit is no-op, since a character in SMTLib is the same as a string
         sh (SBVApp (StrOp StrUnit)     [a])  = ssv a
         sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+
+        sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
+        sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse is special, since we need to generate call to the internally generated function
         sh inp@(SBVApp op@(SeqOp (SBVReverse{})) args) = "(" ++ ops ++ " " ++ unwords (map ssv args) ++ ")"

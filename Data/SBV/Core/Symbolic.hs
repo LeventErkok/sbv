@@ -34,7 +34,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), SeqOp(..), SetOp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..)
   , RegExp(..), regExpToSMTString
   , Quantifier(..), needsExistentials, VarContext(..)
   , RoundingMode(..)
@@ -196,6 +196,7 @@ data Op = Plus
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
         | StrOp StrOp                           -- String ops, categorized separately
+        | RegExOp RegExOp                       -- RegEx operations, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | SetOp SetOp                           -- Set operations, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
@@ -336,6 +337,11 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrInRe RegExp  -- ^ Check if string is in the regular expression
            deriving (Eq, Ord, G.Data)
 
+-- | Regular-expression operators. The only thing we can do is to compare for equality/disequality.
+data RegExOp = RegExEq  RegExp RegExp
+             | RegExNEq RegExp RegExp
+             deriving (Eq, Ord, G.Data)
+
 -- | Regular expressions. Note that regular expressions themselves are
 -- concrete, but the 'Data.SBV.RegExp.match' function from the 'Data.SBV.RegExp.RegExpMatchable' class
 -- can check membership against a symbolic string/character. Also, we
@@ -438,6 +444,11 @@ instance Show StrOp where
   -- Note the breakage here with respect to argument order. We fix this explicitly later.
   show (StrInRe s) = "str.in.re " ++ regExpToSMTString s
 
+-- | Show instance for @RegExOp@.
+instance Show RegExOp where
+  show (RegExEq  r1 r2) = "(= "        ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
+  show (RegExNEq r1 r2) = "(distinct " ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
+
 -- | Sequence operations.
 data SeqOp = SeqConcat        -- ^ See StrConcat
            | SeqLen           -- ^ See StrLen
@@ -526,6 +537,7 @@ instance Show Op where
   show (OverflowOp o)       = show o
 
   show (StrOp s)            = show s
+  show (RegExOp s)          = show s
   show (SeqOp s)            = show s
   show (SetOp s)            = show s
 
