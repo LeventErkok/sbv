@@ -93,6 +93,10 @@ import Data.SBV.SMT.SMT        (ThmResult, showModel)
 import Data.SBV.Utils.Lib     (isKString)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named

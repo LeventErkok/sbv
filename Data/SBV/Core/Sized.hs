@@ -47,9 +47,9 @@ import Data.SBV.SMT.SMT
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> :set -XTypeApplications
 -- >>> :set -XDataKinds
--- >>> import Data.SBV.Provers.Prover (prove)
+-- >>> import Data.Proxy
+-- >>> import Data.SBV
 
 -- | An unsigned bit-vector carrying its size info
 newtype WordN (n :: Nat) = WordN Integer deriving (Eq, Ord)
@@ -363,7 +363,7 @@ signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
 --
 -- >>> prove $ \x -> bvDrop (Proxy @0) (x :: SWord 43) .== x
 -- Q.E.D.
--- >>> prove $ \x -> bvDrop (Proxy @20) (x :: SWord 21) .== ite (lsb x) 1 0
+-- >>> prove $ \x -> bvDrop (Proxy @20) (x :: SWord 21) .== ite (lsb x) 1 (0 :: SWord 1)
 -- Q.E.D.
 bvDrop :: forall i n m bv proxy. ( KnownNat n, BVIsNonZero n
                                  , KnownNat i
