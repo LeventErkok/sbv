@@ -60,7 +60,7 @@ import Data.SBV.Core.Operations
 -- >>> :set -XTypeApplications
 -- >>> :set -XRankNTypes
 -- >>> :set -XScopedTypeVariables
--- >>> import Data.SBV.Provers.Prover (prove)
+-- >>> import Data.SBV
 
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
@@ -237,15 +237,15 @@ class SymVal a => IEEEFloatConvertible a where
   -- Q.E.D.
   -- >>> prove $ roundTrip @Int32
   -- Falsifiable. Counter-example:
-  --   s0 = RoundTowardNegative :: RoundingMode
-  --   s1 =           826336134 :: Int32
+  --   s0 = RoundNearestTiesToEven :: RoundingMode
+  --   s1 =             -156765620 :: Int32
   --
   -- Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
   --
-  -- >>> toRational (826336134 :: Float)
-  -- 826336128 % 1
+  -- >>> toRational (-156765620 :: Float)
+  -- (-156765616) % 1
   --
-  -- Note how the numerator is different, it is off by 6. This is hardly surprising, since floats become sparser as
+  -- Note how the numerator is different, it is off by 4. This is hardly surprising, since floats become sparser as
   -- the magnitude increases to be able to cover all the integer values representable.
   toSFloat :: SRoundingMode -> SBV a -> SFloat
 
@@ -278,16 +278,16 @@ class SymVal a => IEEEFloatConvertible a where
   -- Q.E.D.
   -- >>> prove $ roundTrip @Int64
   -- Falsifiable. Counter-example:
-  --   s0 = RoundNearestTiesToEven :: RoundingMode
-  --   s1 =   -2305879001039372796 :: Int64
+  --   s0 = RoundTowardNegative :: RoundingMode
+  --   s1 =    9007199254740995 :: Int64
   --
   -- Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
   -- integer value for all possible values:
   --
-  -- >>>  toRational (-2305879001039372796 :: Double)
-  -- (-2305879001039372800) % 1
+  -- >>>  toRational (9007199254740995 :: Double)
+  -- 9007199254740996 % 1
   --
-  -- In this case the numerator is off by 4.
+  -- In this case the numerator is off by 1.
   toSDouble :: SRoundingMode -> SBV a -> SDouble
 
   -- default definition if we have an integral like

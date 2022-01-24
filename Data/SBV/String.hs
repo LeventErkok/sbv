@@ -60,7 +60,7 @@ import Data.Proxy
 --
 -- >>> sat $ \s -> length s .== 2
 -- Satisfiable. Model:
---   s0 = "AB" :: String
+--   s0 = "BA" :: String
 -- >>> sat $ \s -> length s .< 0
 -- Unsatisfiable
 -- >>> prove $ \s1 s2 -> length s1 + length s2 .== length (s1 ++ s2)
