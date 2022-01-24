@@ -69,7 +69,6 @@ import Data.SBV.Char
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Char
 -- >>> import Data.SBV.String
--- >>> import Data.SBV.Core.Model (EqSymbolic(..))
 -- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
