@@ -977,6 +977,7 @@ type family FromSized (t :: Type) :: Type where
    FromSized (SInt  32) = SInt32
    FromSized (SInt  64) = SInt64
 
+-- | Capture the correspondence, in terms of a constraint
 type family FromSizedCstr (t :: Type) :: Constraint where
    FromSizedCstr (WordN  8) = ()
    FromSizedCstr (WordN 16) = ()
@@ -1042,6 +1043,7 @@ type family ToSized (t :: Type) :: Type where
    ToSized SInt32  = SInt  32
    ToSized SInt64  = SInt  64
 
+-- | Capture the correspondence in terms of a constraint
 type family ToSizedCstr (t :: Type) :: Constraint where
    ToSizedCstr Word8   = ()
    ToSizedCstr Word16  = ()

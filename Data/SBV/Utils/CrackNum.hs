@@ -34,6 +34,7 @@ import Numeric
 
 -- | A class for cracking things deeper, if we know how.
 class CrackNum a where
+  -- | Convert an item to possibly bit-level description, if possible.
   crackNum :: a -> Maybe String
 
 -- | CVs are easy to crack
