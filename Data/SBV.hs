@@ -415,7 +415,11 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sRational, sRational_, sRationals,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
-                                        sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets)
+                                        sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets,
+                                        sBarrelRotateLeft, sBarrelRotateRight)
+
+import qualified Data.SBV.Core.Model as M (sBarrelRotateLeft, sBarrelRotateRight)
+
 import Data.SBV.Core.Sized      hiding (sWord, sWord_, sWords, sInt, sInt_, sInts)
 import Data.SBV.Core.Kind
 
@@ -1043,5 +1047,25 @@ The 'observeIf' variant allows the user to specify a boolean condition when the 
 you have lots of "debugging" points, but not all are of interest. Use the 'sObserve' variant when you are at the 'Symbolic'
 monad, which also supports quick-check applications.
 -}
+
+-- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
+-- arguments are finite bitvectors, and furthermore when the second argument is unsigned.
+-- The first condition is enforced by the type, but the second is dynamically checked.
+-- We provide this implementation as an alternative to `sRotateLeft` since SMTLib logic
+-- does not support variable argument rotates (as opposed to shifts), and thus this
+-- implementation can produce better code for verification compared to `sRotateLeft`.
+--
+-- >>> prove $ \x y -> (x `sBarrelRotateLeft`  y) `sBarrelRotateRight` (y :: SWord32) .== (x :: SWord64)
+-- Q.E.D.
+sBarrelRotateLeft :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
+sBarrelRotateLeft = M.sBarrelRotateLeft
+
+-- | An implementation of rotate-right, using a barrel shifter like design. See comments
+-- for `sBarrelRotateLeft` for details.
+--
+-- >>> prove $ \x y -> (x `sBarrelRotateRight` y) `sBarrelRotateLeft`  (y :: SWord32) .== (x :: SWord64)
+-- Q.E.D.
+sBarrelRotateRight :: (SFiniteBits a, SFiniteBits b) => SBV a -> SBV b -> SBV a
+sBarrelRotateRight = M.sBarrelRotateRight
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
