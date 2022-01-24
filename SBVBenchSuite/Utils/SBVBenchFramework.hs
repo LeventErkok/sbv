@@ -77,9 +77,6 @@ benchResultsFile nm = "SBVBenchSuite" </> "BenchResults" </> nm <.> "csv"
 
 -- | The classifier takes a line of text and chunks it into (group-name,
 -- benchmark-name), for example:
--- >>> classifier '/' "Puzzles//Coins"
--- Just ("Puzzles/","Coins")
---
 classifier :: Char -> String -> Maybe (String, String)
 classifier e nm = Just $ last $ fmap (\(a,b) -> (a, tail b)) chunks
   where
@@ -93,9 +90,6 @@ classifier e nm = Just $ last $ fmap (\(a,b) -> (a, tail b)) chunks
 -- these labels will be appended to the description string. This is counter to
 -- the assumptions of the bench-show package, thus we define a specialty
 -- classifier to handle the overhead case
--- >>> overheadClassifier '/' "Puzzles//DogCatMouse/standalone"
--- Just ("standalone","Puzzles//DogCatMouse")
---
 overheadClassifier :: Char -> String -> Maybe (String, String)
 overheadClassifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
   where
