@@ -88,8 +88,8 @@ tests = testGroup "Basics.BarrelRotate" [
         , goldenCapturedIO "barrelRotate_Right_Word64_Word32" $ check $ checkRight  @Word64 @Word32
         , goldenCapturedIO "barrelRotate_Right_Word64_Word64" $ check $ checkRight  @Word64 @Word64
         ]
-    where -- NB. We use CVC4 for these tests as Z3 is rather slow!
-          check f gf = do r <- proveWith cvc4{verbose = True, redirectVerbose = Just gf} f
+    where -- NB. We use CVC5 for these tests as Z3 is rather slow!
+          check f gf = do r <- proveWith cvc5{verbose = True, redirectVerbose = Just gf} f
                           appendFile gf ("\nFINAL:\n" ++ show r ++ "\nDONE!\n")
 
           checkLeft :: forall a b. (SFiniteBits a, SFiniteBits b, SIntegral a, SIntegral b) => SBV a -> SBV b -> SBool
