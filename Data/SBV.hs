@@ -273,6 +273,7 @@ module Data.SBV (
   -- ** Rounding modes
   , sRoundNearestTiesToEven, sRoundNearestTiesToAway, sRoundTowardPositive, sRoundTowardNegative, sRoundTowardZero, sRNE, sRNA, sRTP, sRTN, sRTZ
   -- ** Conversion to/from floats
+  -- $conversionNote
   , IEEEFloatConvertible(..)
 
   -- ** Bit-pattern conversions
@@ -1083,6 +1084,110 @@ Q.E.D.
 Q.E.D.
 >>> prove $ \a b c d -> distinctExcept [a, b, c, d] [] .== distinct [a, b, c, (d::SInteger)]
 Q.E.D.
+-}
+
+{- $conversionNote
+Capture convertability from/to FloatingPoint representations.
+
+Conversions to float: 'toSFloat' and 'toSDouble' simply return the
+nearest representable float from the given type based on the rounding
+mode provided. Similarly, 'toSFloatingPoint' converts to a generalized
+floating-point number with specified exponent and significand bith widths.
+
+Conversions from float: 'fromSFloat', 'fromSDouble', 'fromSFloatingPoint' functions do
+the reverse conversion. However some care is needed when given values
+that are not representable in the integral target domain. For instance,
+converting an 'SFloat' to an 'SInt8' is problematic. The rules are as follows:
+
+If the input value is a finite point and when rounded in the given rounding mode to an
+integral value lies within the target bounds, then that result is returned.
+(This is the regular interpretation of rounding in IEEE754.)
+
+Otherwise (i.e., if the integral value in the float or double domain) doesn't
+fit into the target type, then the result is unspecified. Note that if the input
+is @+oo@, @-oo@, or @NaN@, then the result is unspecified.
+
+Due to the unspecified nature of conversions, SBV will never constant fold
+conversions from floats to integral values. That is, you will always get a
+symbolic value as output. (Conversions from floats to other floats will be
+constant folded. Conversions from integral values to floats will also be
+constant folded.)
+
+Note that unspecified really means unspecified: In particular, SBV makes
+no guarantees about matching the behavior between what you might get in
+Haskell, via SMT-Lib, or the C-translation. If the input value is out-of-bounds
+as defined above, or is @NaN@ or @oo@ or @-oo@, then all bets are off. In particular
+C and SMTLib are decidedly undefine this case, though that doesn't mean they do the
+same thing! Same goes for Haskell, which seems to convert via Int64, but we do
+not model that behavior in SBV as it doesn't seem to be intentional nor well documented.
+
+You can check for @NaN@, @oo@ and @-oo@, using the predicates 'fpIsNaN', 'fpIsInfinite',
+and 'fpIsPositive', 'fpIsNegative' predicates, respectively; and do the proper conversion
+based on your needs. (0 is a good choice, as are min/max bounds of the target type.)
+
+Currently, SBV provides no predicates to check if a value would lie within range for a
+particular conversion task, as this depends on the rounding mode and the types involved
+and can be rather tricky to determine. (See <http://github.com/LeventErkok/sbv/issues/456>
+for a discussion of the issues involved.) In a future release, we hope to be able to
+provide underflow and overflow predicates for these conversions as well.
+
+Some examples to illustrate the behavior follows:
+
+>>> :{
+roundTrip :: forall a. (Eq a, IEEEFloatConvertible a) => SRoundingMode -> SBV a -> SBool
+roundTrip m x = fromSFloat m (toSFloat m x) .== x
+:}
+
+>>> prove $ roundTrip @Int8
+Q.E.D.
+>>> prove $ roundTrip @Word8
+Q.E.D.
+>>> prove $ roundTrip @Int16
+Q.E.D.
+>>> prove $ roundTrip @Word16
+Q.E.D.
+>>> prove $ roundTrip @Int32
+Falsifiable. Counter-example:
+  s0 = RoundNearestTiesToEven :: RoundingMode
+  s1 =             -156765620 :: Int32
+
+Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
+
+>>> toRational (-156765620 :: Float)
+(-156765616) % 1
+
+Note how the numerator is different, it is off by 4. This is hardly surprising, since floats become sparser as
+the magnitude increases to be able to cover all the integer values representable.
+
+>>> :{
+roundTrip :: forall a. (Eq a, IEEEFloatConvertible a) => SRoundingMode -> SBV a -> SBool
+roundTrip m x = fromSDouble m (toSDouble m x) .== x
+:}
+
+>>> prove $ roundTrip @Int8
+Q.E.D.
+>>> prove $ roundTrip @Word8
+Q.E.D.
+>>> prove $ roundTrip @Int16
+Q.E.D.
+>>> prove $ roundTrip @Word16
+Q.E.D.
+>>> prove $ roundTrip @Int32
+Q.E.D.
+>>> prove $ roundTrip @Word32
+Q.E.D.
+>>> prove $ roundTrip @Int64
+Falsifiable. Counter-example:
+  s0 = RoundTowardNegative :: RoundingMode
+  s1 =    9007199254740995 :: Int64
+
+Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
+integer value for all possible values:
+
+>>>  toRational (9007199254740995 :: Double)
+9007199254740996 % 1
+
+In this case the numerator is off by 1.
 -}
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
