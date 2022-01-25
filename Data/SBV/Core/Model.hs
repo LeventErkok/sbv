@@ -93,10 +93,6 @@ import Data.SBV.SMT.SMT        (ThmResult, showModel)
 import Data.SBV.Utils.Lib     (isKString)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
--- $setup
--- >>> -- For doctest purposes only:
--- >>> import Data.SBV
-
 -- Symbolic-Word class instances
 
 -- | Generate a finite symbolic bitvector, named
@@ -808,13 +804,6 @@ class EqSymbolic a where
   -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
   -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
   -- distinct regardless of repetition.
-  --
-  -- >>> prove $ \a -> distinctExcept [a, a] [0::SInteger] .<=> a .== 0
-  -- Q.E.D.
-  -- >>> prove $ \a b -> distinctExcept [a, b] [0::SWord8] .<=> (a .== b .=> a .== 0)
-  -- Q.E.D.
-  -- >>> prove $ \a b c d -> distinctExcept [a, b, c, d] [] .== distinct [a, b, c, (d::SInteger)]
-  -- Q.E.D.
   distinctExcept :: [a] -> [a] -> SBool
 
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.

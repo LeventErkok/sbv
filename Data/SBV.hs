@@ -247,6 +247,7 @@ module Data.SBV (
   , sSets
 
   -- * Symbolic Equality and Comparisons
+  -- $distinctNote
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)
   -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
@@ -1066,6 +1067,22 @@ Falsifiable. Counter-example:
 The 'observeIf' variant allows the user to specify a boolean condition when the value is interesting to observe. Useful when
 you have lots of "debugging" points, but not all are of interest. Use the 'sObserve' variant when you are at the 'Symbolic'
 monad, which also supports quick-check applications.
+-}
+
+{- $distinctNote
+Symbolic equality provides the notion of what it means to be equal, similar to Haskell's 'Eq' class, except allowing comparison of
+symbolic values. The methods are '.==' and './=', returning 'SBool' results. We also provide a notion of strong equality ('.===' and './=='),
+which is useful for floating-point value comparisons as it deals more uniformly with @NaN@ and positive/negative zeros. Additionally, we
+provide 'distinct' that can be used to assert all elements of a list are different from each other, and 'distinctExcept' which is similar
+to 'distinct' but allows for certain values to be considered different. These latter two functions are useful in modeling a variety of
+puzzles and cardinality constraints:
+
+>>> prove $ \a -> distinctExcept [a, a] [0::SInteger] .<=> a .== 0
+Q.E.D.
+>>> prove $ \a b -> distinctExcept [a, b] [0::SWord8] .<=> (a .== b .=> a .== 0)
+Q.E.D.
+>>> prove $ \a b c d -> distinctExcept [a, b, c, d] [] .== distinct [a, b, c, (d::SInteger)]
+Q.E.D.
 -}
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
