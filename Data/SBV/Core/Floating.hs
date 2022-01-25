@@ -55,13 +55,6 @@ import LibBF
 
 import Data.SBV.Core.Operations
 
--- $setup
--- >>> -- For doctest purposes only:
--- >>> :set -XTypeApplications
--- >>> :set -XRankNTypes
--- >>> :set -XScopedTypeVariables
--- >>> import Data.SBV
-
 -- | A class of floating-point (IEEE754) operations, some of
 -- which behave differently based on rounding modes. Note that unless
 -- the rounding mode is concretely RoundNearestTiesToEven, we will
@@ -537,13 +530,7 @@ sFloatAsComparableSWord32 :: SFloat -> SWord32
 sFloatAsComparableSWord32 f = ite (fpIsNegativeZero f) (sFloatAsComparableSWord32 0) (fromBitsBE $ sNot sb : ite sb (map sNot rest) rest)
   where (sb : rest) = blastBE $ sFloatAsSWord32 f
 
--- | Inverse transformation to 'sFloatAsComparableSWord32'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
--- Otherwise, it's faithful:
---
--- >>> prove  $ \x -> let f = sComparableSWord32AsSFloat x in fpIsNaN f .|| fpIsNegativeZero f .|| sFloatAsComparableSWord32 f .== x
--- Q.E.D.
--- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord32AsSFloat (sFloatAsComparableSWord32 x) `fpIsEqualObject` x
--- Q.E.D.
+-- | Inverse transformation to 'sFloatAsComparableSWord32'.
 sComparableSWord32AsSFloat :: SWord32 -> SFloat
 sComparableSWord32AsSFloat w = sWord32AsSFloat $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(sb : rest) = blastBE w
@@ -558,11 +545,6 @@ sDoubleAsComparableSWord64 d = ite (fpIsNegativeZero d) (sDoubleAsComparableSWor
 
 -- | Inverse transformation to 'sDoubleAsComparableSWord64'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
---
--- >>> prove  $ \x -> let d = sComparableSWord64AsSDouble x in fpIsNaN d .|| fpIsNegativeZero d .|| sDoubleAsComparableSWord64 d .== x
--- Q.E.D.
--- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord64AsSDouble (sDoubleAsComparableSWord64 x) `fpIsEqualObject` x
--- Q.E.D.
 sComparableSWord64AsSDouble :: SWord64 -> SDouble
 sComparableSWord64AsSDouble w = sWord64AsSDouble $ ite sb (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(sb : rest) = blastBE w
@@ -644,11 +626,6 @@ sFloatingPointAsComparableSWord f = ite (fpIsNegativeZero f) posZero (fromBitsBE
 
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
---
--- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord (d :: SFPHalf) .== x
--- Q.E.D.
--- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` (x :: SFPHalf)
--- Q.E.D.
 sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sComparableSWordAsSFloatingPoint w = sWordAsSFloatingPoint $ ite signBit (fromBitsBE $ sFalse : rest) (fromBitsBE $ map sNot allBits)
   where allBits@(signBit : rest) = blastBE w

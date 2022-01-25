@@ -17,6 +17,10 @@
 -- is a very good but also a very difficult question to answer!)
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE Rank2Types       #-}
+{-# LANGUAGE TypeOperators    #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Internals (
@@ -60,12 +64,14 @@ module Data.SBV.Internals (
 import Control.Monad.IO.Class (MonadIO)
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
+import Data.SBV.Core.Sized      (SWord)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV)
 
-import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
-                                , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
-                                )
+import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord)
+
+import qualified Data.SBV.Core.Floating as CF (sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint)
 
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
@@ -77,7 +83,13 @@ import Data.SBV.Utils.Numeric
 import Data.SBV.Utils.TDiff
 import Data.SBV.Utils.PrettyNum
 
+import GHC.TypeLits
+
 import qualified Data.SBV.Control.Utils as Query
+
+--- $setup
+--- >>> -- For doctest purposes only:
+--- >>> import Data.SBV
 
 -- | Send an arbitrary string to the solver in a query.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary
@@ -106,5 +118,35 @@ needing 'Data.SBV.Control.Utils.send' and 'Data.SBV.Control.Utils.ask' directly,
 Similarly, the function 'retrieveResponseFromSolver' might occasionally be necessary to clean-up the communication
 buffer. We would like to hear if you do need these functions regularly so we can provide better support.
 -}
+
+-- | Inverse transformation to 'sFloatAsComparableSWord32'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let f = sComparableSWord32AsSFloat x in fpIsNaN f .|| fpIsNegativeZero f .|| sFloatAsComparableSWord32 f .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord32AsSFloat (sFloatAsComparableSWord32 x) `fpIsEqualObject` x
+-- Q.E.D.
+sComparableSWord32AsSFloat :: SWord32 -> SFloat
+sComparableSWord32AsSFloat = CF.sComparableSWord32AsSFloat 
+
+-- | Inverse transformation to 'sDoubleAsComparableSWord64'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let d = sComparableSWord64AsSDouble x in fpIsNaN d .|| fpIsNegativeZero d .|| sDoubleAsComparableSWord64 d .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord64AsSDouble (sDoubleAsComparableSWord64 x) `fpIsEqualObject` x
+-- Q.E.D.
+sComparableSWord64AsSDouble :: SWord64 -> SDouble
+sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble 
+
+-- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
+-- Otherwise, it's faithful:
+--
+-- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord (d :: SFPHalf) .== x
+-- Q.E.D.
+-- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` (x :: SFPHalf)
+-- Q.E.D.
+sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
+sComparableSWordAsSFloatingPoint = CF.sComparableSWordAsSFloatingPoint
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
