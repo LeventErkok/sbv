@@ -136,7 +136,7 @@ eql a b = write a . oneIf =<< (.==) <$> read a <*> read b
 -- | Run a given program, returning the final state. We simply start with the initial
 -- environment mapping all registers to zero, as specified in the problem specification.
 run :: ALU () -> Symbolic State
-run pgm = ST.execStateT (pgm >> read z) initState
+run pgm = ST.execStateT pgm initState
  where initState = State { env    = M.fromList [(register r, 0) | r <- [w, x, y, z]]
                          , inputs = []
                          }
