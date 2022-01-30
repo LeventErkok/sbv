@@ -20,7 +20,8 @@
 -- should provide a template for other similar programs.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE NamedFieldPuns   #-}
+{-# LANGUAGE NegativeLiterals #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -183,10 +184,7 @@ puzzle shouldMaximize = print =<< optimizeWith z3{isNonModelVar = (/= finalVar)}
                      constrain $ modelNumV .== modelNum
 
 -- | The program we need to crack. Note that different users get different programs on the Advent-Of-Code site, so this is simply one example.
--- You can simply cut-and-paste your version below.
---
--- NB. There's one caveat! At the Advent-of-code site, they put the negative numbers without parenthesis, as in @add x -8@. You'll need
--- to modify this to read @add x (-8)@.
+-- You can simply cut-and-paste your version instead. (Don't forget the pragma @NegativeLiterals@ to GHC so @add x -1@ parses correctly as @add x (-1)@.)
 monad :: ALU ()
 monad = do inp w
            mul x 0
@@ -283,7 +281,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-1)
+           add x -1
            eql x w
            eql x 0
            mul y 0
@@ -319,7 +317,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-8)
+           add x -8
            eql x w
            eql x 0
            mul y 0
@@ -337,7 +335,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-7)
+           add x -7
            eql x w
            eql x 0
            mul y 0
@@ -355,7 +353,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-8)
+           add x -8
            eql x w
            eql x 0
            mul y 0
@@ -391,7 +389,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-2)
+           add x -2
            eql x w
            eql x 0
            mul y 0
@@ -409,7 +407,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-2)
+           add x -2
            eql x w
            eql x 0
            mul y 0
@@ -427,7 +425,7 @@ monad = do inp w
            add x z
            mod x 26
            div z 26
-           add x (-13)
+           add x -13
            eql x w
            eql x 0
            mul y 0
