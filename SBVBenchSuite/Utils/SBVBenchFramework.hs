@@ -78,12 +78,12 @@ benchResultsFile nm = "SBVBenchSuite" </> "BenchResults" </> nm <.> "csv"
 -- | The classifier takes a line of text and chunks it into (group-name,
 -- benchmark-name), for example:
 classifier :: Char -> String -> Maybe (String, String)
-classifier e nm = Just $ last $ fmap (\(a,b) -> (a, tail b)) chunks
+classifier e nm = Just $ last chunks
   where
     is :: [Int]
     is = L.elemIndices e nm
 
-    chunks = fmap (flip L.splitAt nm) is
+    chunks = [(a, tail b) | (a, b) <- fmap (`L.splitAt` nm) is]
 
 -- | We live with some code duplication due to the way overhead benchmarks apply
 -- the "standalone" and "sbv" labels. By abstracting for overhead benchmarks
@@ -96,7 +96,7 @@ overheadClassifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
     is :: [Int]
     is = L.elemIndices e nm
 
-    chunks = fmap (flip L.splitAt nm) is
+    chunks = fmap (`L.splitAt` nm) is
 
 -- | a helper function to remove benchmarks where the over head benchmark
 -- doesn't work or failed for some reason. This will write a filtered version
@@ -109,6 +109,6 @@ filterOverhead e fp = do (header:file) <- L.lines <$> readFile fp
                          -- overhead by '/' an overhead run will have >3 splits,
                          -- but a normal benchmark will only have two from '//'
                          let filteredContent   = filter ((>=3) . length . L.elemIndices e) file
-                             filteredFilePath  = (fp ++ "_filtered")
+                             filteredFilePath  = fp ++ "_filtered"
                          writeFile  filteredFilePath (concat $ header:filteredContent)
                          return filteredFilePath

@@ -24,5 +24,5 @@ import Data.SBV
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-             [ run "ExtField.problem" problem `using` runner (flip optimizeWith Lexicographic)
+             [ run "ExtField.problem" problem `using` runner (`optimizeWith` Lexicographic)
              ]

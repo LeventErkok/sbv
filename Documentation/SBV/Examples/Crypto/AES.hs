@@ -26,7 +26,6 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
-{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 

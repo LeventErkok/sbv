@@ -15,7 +15,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -57,9 +56,7 @@ data GCDS a = GCDS { x :: a    -- ^ First value
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (GCDS (SBV a)) where
    show (GCDS x y i j) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ ", i = " ++ sh i ++ ", j = " ++ sh j ++ "}"
-     where sh v = case unliteral v of
-                    Nothing -> "<symbolic>"
-                    Just l  -> show l
+     where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | 'Fresh' instance for the program state
 instance SymVal a => Fresh IO (GCDS (SBV a)) where

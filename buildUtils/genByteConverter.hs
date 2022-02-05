@@ -7,7 +7,7 @@ gen n = unlines $ to ++ from
           | i < 0 = []
           | True  = ("bvExtract (Proxy " ++ sh i ++ ") (Proxy " ++ sh (i-7) ++ ") a") : exts (i-8)
         l = 1 + length (show n)
-        sh i = reverse $ take l $ (reverse ("@" ++ show i) ++ repeat ' ')
+        sh i = reverse $ take l (reverse ("@" ++ show i) ++ repeat ' ')
 
         n2 = show $ n `div` 2
         req = n `div` 8

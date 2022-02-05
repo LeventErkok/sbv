@@ -18,7 +18,6 @@
 -- What if @y@ starts at @11@?
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

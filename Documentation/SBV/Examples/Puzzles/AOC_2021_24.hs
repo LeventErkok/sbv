@@ -438,3 +438,5 @@ monad = do inp w
            add y 6
            mul y x
            add z y
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

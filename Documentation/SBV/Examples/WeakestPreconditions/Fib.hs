@@ -13,7 +13,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -51,9 +50,7 @@ data FibS a = FibS { n :: a    -- ^ The input value
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (FibS (SBV a)) where
    show (FibS n i k m) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", k = " ++ sh k ++ ", m = " ++ sh m ++ "}"
-     where sh v = case unliteral v of
-                    Nothing -> "<symbolic>"
-                    Just l  -> show l
+     where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | 'Fresh' instance for the program state
 instance SymVal a => Fresh IO (FibS (SBV a)) where

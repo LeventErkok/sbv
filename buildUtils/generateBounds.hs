@@ -73,7 +73,7 @@ main = do l1 <- async . getAllModes $ Proxy @Word8
           l6 <- async . getAllModes $ Proxy @Int16
           l7 <- async . getAllModes $ Proxy @Int32
           l8 <- async . getAllModes $ Proxy @Int64
-          ls <- fmap concat $ traverse wait [l1, l2, l3, l4, l5, l6, l7, l8]
+          ls <- concat <$> traverse wait [l1, l2, l3, l4, l5, l6, l7, l8]
 
           let out =  unlines [ "-----------------------------------------------------------------------------"
                              , "-- |"
@@ -101,7 +101,7 @@ main = do l1 <- async . getAllModes $ Proxy @Word8
                              , "-- Each pair on the right hand side shows the inclusive lower and upper bounds that are safely convertible in the"
                              , "-- given rounding mode to the corresponding type, using 'Data.SBV.fromSFloat' and 'Data.SBV.fromSDouble', respectively."
                              , "conversionBounds :: [((Kind, RoundingMode), ((Float, Float), (Double, Double)))]"
-                             , "conversionBounds = [\n    " ++ intercalate ("\n  , ") ls ++ "\n  ]"
+                             , "conversionBounds = [\n    " ++ intercalate "\n  , " ls ++ "\n  ]"
                              ]
 
           putStr out

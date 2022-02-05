@@ -12,7 +12,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -48,9 +47,7 @@ data IncS a = IncS { x :: a    -- ^ Input value
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (IncS (SBV a)) where
    show (IncS x y) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ "}"
-     where sh v = case unliteral v of
-                    Nothing -> "<symbolic>"
-                    Just l  -> show l
+     where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | 'Fresh' instance for the program state
 instance SymVal a => Fresh IO (IncS (SBV a)) where

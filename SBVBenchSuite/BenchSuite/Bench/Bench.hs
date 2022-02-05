@@ -59,7 +59,7 @@ data BenchResult = forall a . (Show a, NFData a) => BenchResult a
 -- useful because problems that require 'Data.SBV.allSatWith' can lead to a lot
 -- of variance in the benchmarking data. Single benchmark runners like
 -- 'Data.SBV.satWith' and 'Data.SBV.proveWith' work best.
-data RunnerI = RunnerI { runI        :: (U.SMTConfig -> Problem -> IO BenchResult)
+data RunnerI = RunnerI { runI        :: U.SMTConfig -> Problem -> IO BenchResult
                        , config      :: U.SMTConfig
                        , description :: String
                        , problem     :: Problem
@@ -107,7 +107,7 @@ onDesc f r@RunnerI{..} = r{description = f description}
 {-# INLINE onDesc #-}
 
 onProblem :: (forall a. a -> a) -> RunnerI -> RunnerI
-onProblem f r@RunnerI{..} = r{problem = (helper problem)}
+onProblem f r@RunnerI{..} = r{problem = helper problem}
   where
     -- helper function to avoid profunctor dependency, this is simply fmap, or
     -- rmap for profunctor land

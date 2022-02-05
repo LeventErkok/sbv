@@ -50,9 +50,9 @@ shared v = do
 -- for demonstration purposes
 queryOne :: MVar (SInteger, SInteger) -> Query (Maybe Integer)
 queryOne v = do
-  io $ putStrLn $ "[One]: Waiting"
+  io $ putStrLn "[One]: Waiting"
   liftIO $ threadDelay 5000000
-  io $ putStrLn $ "[One]: Done"
+  io $ putStrLn "[One]: Done"
   (x,y) <- liftIO $ takeMVar v
   constrain $ x .< y
 
@@ -92,11 +92,11 @@ queryTwo v = do
 demo :: IO ()
 demo = do
   v <- newEmptyMVar
-  putStrLn $ "[Main]: Hello from main, kicking off children: "
+  putStrLn "[Main]: Hello from main, kicking off children: "
   results <- satConcurrentWithAll z3 [queryOne v, queryTwo v] (shared v)
-  putStrLn $ "[Main]: Children spawned, waiting for results"
-  putStrLn $ "[Main]: Here they are: "
-  putStrLn $ show results
+  putStrLn "[Main]: Children spawned, waiting for results"
+  putStrLn "[Main]: Here they are: "
+  print results
 
 -- | Example computation.
 sharedDependent :: MVar (SInteger, SInteger) -> Symbolic ()
@@ -117,7 +117,7 @@ sharedDependent v = do -- constrain positive and sum:
 firstQuery :: MVar (SInteger, SInteger) -> MVar (SInteger , SInteger) -> Query (Maybe Integer)
 firstQuery v1 v2 = do
   (x,y) <- liftIO $ takeMVar v1
-  io $ putStrLn $ "[One]: got vars...working..."
+  io $ putStrLn "[One]: got vars...working..."
   constrain $ x .< y
 
   cs <- checkSat
@@ -130,7 +130,7 @@ firstQuery v1 v2 = do
     Sat    -> do xv <- getValue x
                  yv <- getValue y
                  io $ putStrLn $ "[One]: Current solution is: " ++ show (xv, yv)
-                 io $ putStrLn $ "[One]: Place vars for [Two]"
+                 io $ putStrLn   "[One]: Place vars for [Two]"
                  liftIO $ putMVar v2 (literal (xv + yv), literal (xv * yv))
                  return $ Just (xv + yv)
 

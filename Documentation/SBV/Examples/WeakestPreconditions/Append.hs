@@ -53,9 +53,7 @@ data AppC a = AppC [a] [a] [a] [a]
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (AppS a) where
   show (AppS xs ys ts zs) = "{xs = " P.++ sh xs P.++ ", ys = " P.++ sh ys P.++ ", ts = " P.++ sh ts P.++ ", zs = " P.++ sh zs P.++ "}"
-    where sh v = case unliteral v of
-                   Nothing -> "<symbolic>"
-                   Just i  -> show i
+    where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | Show instance, a bit more prettier than what would be derived:
 instance Show a => Show (AppC a) where

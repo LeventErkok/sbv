@@ -99,7 +99,7 @@ killer = do
        cwidths  = map ((+2) . maximum . map length) (transpose wps)
        align xs = concat $ zipWith (\i f -> take i (f ++ repeat ' ')) cwidths xs
        trim     = reverse . dropWhile isSpace . reverse
-   mapM_ putStrLn $ map (trim . align) wps
+   mapM_ (putStrLn . trim . align) wps
 
 -- | Constraints of the puzzle, coded following the English description.
 puzzle :: IO [Person Const]

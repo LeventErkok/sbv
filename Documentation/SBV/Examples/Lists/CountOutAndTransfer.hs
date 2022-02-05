@@ -14,7 +14,6 @@
 -- We show that if you COAT 4 times where @k@ is at least @n/2@ for a deck of size @n@, then the deck remains in the same order.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}

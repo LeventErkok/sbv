@@ -21,7 +21,7 @@ import BenchSuite.Bench.Bench
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-             [ runIO "puzzle1" $ puzzle1
-             , runIO "puzzle2" $ puzzle2
-             , runIO "puzzle3" $ puzzle3
+             [ runIO "puzzle1" puzzle1
+             , runIO "puzzle2" puzzle2
+             , runIO "puzzle3" puzzle3
              ]

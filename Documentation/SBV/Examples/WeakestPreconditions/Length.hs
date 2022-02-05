@@ -50,9 +50,7 @@ data LenC a = LenC [a] [a] Integer
 -- | Show instance: A simplified version of what would otherwise be generated.
 instance (SymVal a, Show a) => Show (LenS a) where
   show (LenS xs ys l) = "{xs = " ++ sh xs ++ ", ys = " ++ sh ys ++ ", l = " ++ sh l ++ "}"
-    where sh v = case unliteral v of
-                   Nothing -> "<symbolic>"
-                   Just i  -> show i
+    where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | Show instance: Similarly, we want to be a bit more concise here.
 instance Show a => Show (LenC a) where

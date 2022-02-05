@@ -11,7 +11,6 @@
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
-{-# LANGUAGE NamedFieldPuns #-}
 
 module BenchSuite.WeakestPreconditions.IntDiv(benchmarks) where
 

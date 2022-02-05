@@ -23,4 +23,4 @@ import Data.SBV
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = run "Production.production" production `using` runner (flip optimizeWith Lexicographic)
+benchmarks = run "Production.production" production `using` runner (`optimizeWith` Lexicographic)

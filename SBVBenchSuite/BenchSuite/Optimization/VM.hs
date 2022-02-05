@@ -23,4 +23,4 @@ import Data.SBV
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = run "VM.allocate" allocate `using` runner (flip optimizeWith Lexicographic)
+benchmarks = run "VM.allocate" allocate `using` runner (`optimizeWith` Lexicographic)

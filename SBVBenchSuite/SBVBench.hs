@@ -149,21 +149,20 @@ main = do
 
   -- run the benchmarks
   defaultMain
-    $ fmap setOptions
-    $ [ puzzles
-      , bitPrecise
-      , queries
-      , weakestPreconditions
-      , optimizations
-      , uninterpreted
-      , proofTools
-      -- , codeGeneration :NOTE code generation takes too much time and memory
-      -- crypto :NOTE crypto also is too expensive
-      , misc
-      , lists
-      , strings
-      , transformers
-      ]
+    $ setOptions <$> [ puzzles
+                     , bitPrecise
+                     , queries
+                     , weakestPreconditions
+                     , optimizations
+                     , uninterpreted
+                     , proofTools
+                     -- , codeGeneration :NOTE code generation takes too much time and memory
+                     -- crypto :NOTE crypto also is too expensive
+                     , misc
+                     , lists
+                     , strings
+                     , transformers
+                     ]
 
 -- | Benchmarks for 'Documentation.SBV.Examples.Puzzles'. Each benchmark file
 -- defines a 'benchmarks' function which returns a

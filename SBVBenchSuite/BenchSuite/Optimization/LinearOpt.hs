@@ -23,4 +23,4 @@ import Data.SBV
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks = run "LinearOpt.problem" problem `using` runner (flip optimizeWith Lexicographic)
+benchmarks = run "LinearOpt.problem" problem `using` runner (`optimizeWith` Lexicographic)

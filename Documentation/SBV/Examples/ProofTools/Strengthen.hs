@@ -29,7 +29,6 @@
 -- in Bradley's paper quite closely.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}

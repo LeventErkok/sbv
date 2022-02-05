@@ -12,7 +12,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveFoldable        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
@@ -44,9 +43,7 @@ data DivS a = DivS { x :: a   -- ^ The dividend
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (DivS (SBV a)) where
    show (DivS x y q r) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ ", q = " ++ sh q ++ ", r = " ++ sh r ++ "}"
-     where sh v = case unliteral v of
-                    Nothing -> "<symbolic>"
-                    Just l  -> show l
+     where sh v = maybe "<symbolic>" show (unliteral v)
 
 -- | 'Fresh' instance for the program state
 instance SymVal a => Fresh IO (DivS (SBV a)) where
