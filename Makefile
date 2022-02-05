@@ -54,12 +54,14 @@ ghci:
 ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
 
-# To check just one module, use:
 ghci_SBVDocTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
 
 ghci_HLint:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVHLint
+
+ghci_Bench:
+	cabal new-repl --repl-options=-Wno-unused-packages SBVBench
 
 ghcid:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
