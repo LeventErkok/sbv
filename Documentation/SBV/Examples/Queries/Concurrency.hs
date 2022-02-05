@@ -172,3 +172,5 @@ demoDependent = do
   v2 <- newEmptyMVar
   results <- satConcurrentWithAll z3 [firstQuery v1 v2, secondQuery v2] (sharedDependent v1)
   print results
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

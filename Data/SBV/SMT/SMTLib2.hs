@@ -327,7 +327,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
 
         -- SBV only functions.
         funcMap = M.fromList reverses
-          where reverses = zip (nub [op | op@(SeqOp (SBVReverse{})) <- G.universeBi asgnsSeq])
+          where reverses = zip (nub [op | op@(SeqOp SBVReverse{}) <- G.universeBi asgnsSeq])
                                ["sbv.reverse_" ++ show i | i <- [(0::Int)..]]
 
         asgns = F.toList asgnsSeq
@@ -977,7 +977,7 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse is special, since we need to generate call to the internally generated function
-        sh inp@(SBVApp op@(SeqOp (SBVReverse{})) args) = "(" ++ ops ++ " " ++ unwords (map ssv args) ++ ")"
+        sh inp@(SBVApp op@(SeqOp SBVReverse{}) args) = "(" ++ ops ++ " " ++ unwords (map ssv args) ++ ")"
           where ops = case op `M.lookup` functionMap of
                         Just s  -> s
                         Nothing -> error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp

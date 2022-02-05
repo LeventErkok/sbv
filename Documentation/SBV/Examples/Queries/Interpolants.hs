@@ -125,3 +125,5 @@ evenOdd = do
        z <- sInteger "z"
 
        query $ getInterpolantZ3 [y .== 2*x, y .== 2*z+1]
+
+{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
