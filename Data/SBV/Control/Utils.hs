@@ -1792,7 +1792,7 @@ executeQuery queryContext (QueryT userQuery) = do
         --                              return (a', av)
         --
         --        liftIO $ putStrLn $ "Got: " ++ show av
-        --        -- constrain $ a .> literal av + 1      -- Cant' do this since we're "out" of query. Sigh.
+        --        -- constrain $ a .> literal av + 1      -- Can't do this since we're "out" of query. Sigh.
         --
         --        bv <- query $ do constrain $ a .> literal av + 1
         --                         _ <- checkSat
