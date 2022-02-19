@@ -179,8 +179,7 @@ newtype Block a = Block [a]
 
 -- | Prepare the message by turning it into blocks. We also check for the message
 -- size requirement here. Note that this won't actually happen in practice as the input
--- length would be > 2^64 (or 2^128), and you'd run out of memory first! Such a check
-
+-- length would be > 2^64 (or 2^128), and you'd run out of memory first!
 prepareMessage :: forall w. (Num w, ByteConverter w) => SHA w -> String -> [Block w]
 prepareMessage SHA{wordSize, blockSize} s
   | msgLen >= maxLen
@@ -189,7 +188,7 @@ prepareMessage SHA{wordSize, blockSize} s
   = parse $ chunkBy (wordSize `div` 8) fromBytes padded
   where -- Maximum message size supported by the algorithm
         maxLen :: Integer
-        maxLen = 2^(2* fromIntegral wordSize :: Integer)
+        maxLen = 2^(2 * fromIntegral wordSize :: Integer)
 
         -- Size of the input in bits
         msgLen :: Integer
