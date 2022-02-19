@@ -139,7 +139,7 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
                                                   return $ Just ex
 
         strengthen []             cont = cont
-        strengthen ((nm, st):sts) cont = try ("Proving strengthening initation  : " ++ nm)
+        strengthen ((nm, st):sts) cont = try ("Proving strengthening initiation  : " ++ nm)
                                              (\s -> initial s .=> st s)
                                              (Failed (Initiation (Just nm)))
                                              $ try ("Proving strengthening consecution: " ++ nm)

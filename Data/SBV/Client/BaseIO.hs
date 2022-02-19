@@ -416,7 +416,7 @@ sWord16s = Trans.sWord16s
 sWord32 :: String -> Symbolic SWord32
 sWord32 = Trans.sWord32
 
--- | Declare an unamed 'SWord32'
+-- | Declare an unnamed 'SWord32'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sWord32_'
 sWord32_ :: Symbolic SWord32
