@@ -161,6 +161,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.Coins
                   , Documentation.SBV.Examples.Puzzles.Counts
                   , Documentation.SBV.Examples.Puzzles.DogCatMouse
+                  , Documentation.SBV.Examples.Puzzles.Drinker
                   , Documentation.SBV.Examples.Puzzles.Euler185
                   , Documentation.SBV.Examples.Puzzles.Fish
                   , Documentation.SBV.Examples.Puzzles.Garden

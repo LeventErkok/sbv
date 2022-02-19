@@ -38,6 +38,9 @@
    * Added `Documentation.SBV.Examples.Puzzles.AOC_2021_24` example, showing how to model an EDSL in SBV,
      solving the advent-of-code, 2021, day 24 problem.
 
+   * Added `Documentation.SBV.Examples.Puzzles.Drinker` example, proving the famous Drinker paradox of
+     Raymond Smullyan.
+
    * Added complement and difference operators for regular expressions.
    
    * Added concrete type instances of Mergeable class.
