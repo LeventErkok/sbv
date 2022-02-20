@@ -78,7 +78,7 @@ algorithm before after = Seq [ before
 pre :: I -> SBool
 pre IncS{x} = x .>= 0
 
--- | Postcondition for our program: @y@ must @x+1@.
+-- | Postcondition for our program: @y@ must equal @x+1@.
 post :: I -> SBool
 post IncS{x, y} = y .== x+1
 
