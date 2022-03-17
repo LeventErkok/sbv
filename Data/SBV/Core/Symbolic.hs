@@ -361,6 +361,7 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | Comp  RegExp         -- ^ Complement of regular expression
             | Diff  RegExp RegExp  -- ^ Difference of regular expressions
             | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
+            | Power Int     RegExp -- ^ Exactly @n@ repetitions, i.e., nth power
             | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
             deriving (Eq, Ord, G.Data)
@@ -422,6 +423,9 @@ regExpToString fs (Diff  r1 r2)     = "(re.diff " ++ regExpToString fs r1 ++ " "
 regExpToString fs (Loop  lo hi r)
    | lo >= 0, hi >= lo = "((_ re.loop " ++ show lo ++ " " ++ show hi ++ ") " ++ regExpToString fs r ++ ")"
    | True              = error $ "Invalid regular-expression Loop with arguments: " ++ show (lo, hi)
+regExpToString fs (Power n r)
+   | n >= 0            = regExpToString fs (Loop n n r)
+   | True              = error $ "Invalid regular-expression Power with arguments: " ++ show n
 regExpToString fs (Inter r1 r2)     = "(re.inter " ++ regExpToString fs r1 ++ " " ++ regExpToString fs r2 ++ ")"
 regExpToString _  (Union [])        = "re.nostr"
 regExpToString fs (Union [x])       = regExpToString fs x

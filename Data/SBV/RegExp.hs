@@ -30,6 +30,8 @@ module Data.SBV.RegExp (
         -- $matching
         , RegExpMatchable(..)
         -- * Constructing regular expressions
+        -- ** Basics
+        , everything, nothing, anyChar
         -- ** Literals
         , exactly
         -- ** A class of characters
@@ -113,6 +115,7 @@ instance RegExpMatchable SString where
            go (Comp r)       k s      = not $ go r k s
            go (Diff r1 r2)   k s      = go r1 k s && not (go r2 k s)
            go (Loop i j r)   k s      = go (Conc (replicate i r P.++ replicate (j - i) (Opt r))) k s
+           go (Power n r)    k s      = go (Loop n n r) k s
            go (Union [])     _ _      = False
            go (Union [x])    k s      = go x k s
            go (Union (x:xs)) k s      = go x k s || go (Union xs) k s
@@ -121,6 +124,27 @@ instance RegExpMatchable SString where
            -- In the KStar case, make sure the continuation is called with something
            -- smaller to avoid infinite recursion!
            smaller orig k inp = P.length inp < orig && k inp
+
+-- | Match everything, universal acceptor.
+--
+-- >>> prove $ \(s :: SString) -> s `match` everything
+-- Q.E.D.
+everything :: RegExp
+everything = All
+
+-- | Match nothing, universal rejector.
+--
+-- >>> prove $ \(s :: SString) -> sNot (s `match` nothing)
+-- Q.E.D.
+nothing :: RegExp
+nothing = None
+
+-- | Match any character, i.e., strings of length 1
+--
+-- >>> prove $ \(s :: SString) -> s `match` anyChar .<=> length s .== 1
+-- Q.E.D.
+anyChar :: RegExp
+anyChar = AllChar
 
 -- | A literal regular-expression, matching the given string exactly. Note that
 -- with @OverloadedStrings@ extension, you can simply use a Haskell
@@ -328,6 +352,10 @@ Q.E.D.
 >>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .>= 6
 Q.E.D.
 >>> prove $ \s -> s `match` Loop 2 5 "xyz" .=> length s .<= 15
+Q.E.D.
+>>> prove $ \s -> s `match` Power 3 "xyz" .=> length s .== 9
+Q.E.D.
+>>> prove $ \s -> s `match`  (exactly "xyz" ^ 3) .=> length s .== 9
 Q.E.D.
 >>> prove $ \s -> match s (Loop 2 5 "xyz") .=> length s .>= 7
 Falsifiable. Counter-example:
