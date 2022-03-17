@@ -351,6 +351,7 @@ data RegExOp = RegExEq  RegExp RegExp
 -- would like a parser for this type as it might be easier to use.
 data RegExp = Literal String       -- ^ Precisely match the given string
             | All                  -- ^ Accept every string
+            | AllChar              -- ^ Accept every single character
             | None                 -- ^ Accept no strings
             | Range Char Char      -- ^ Accept range of characters
             | Conc  [RegExp]       -- ^ Concatenation
@@ -358,7 +359,7 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | KPlus RegExp         -- ^ Kleene Plus: One or more
             | Opt   RegExp         -- ^ Zero or one
             | Comp  RegExp         -- ^ Complement of regular expression
-            | Diff  RegExp RegExp  -- ^ Difference of reguular expressions
+            | Diff  RegExp RegExp  -- ^ Difference of regular expressions
             | Loop  Int Int RegExp -- ^ From @n@ repetitions to @m@ repetitions
             | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
@@ -406,7 +407,8 @@ regExpToSMTString = regExpToString (\s -> '"' : stringToQFS s ++ "\"")
 -- | Convert a RegExp to a string, parameterized by how strings are converted
 regExpToString :: (String -> String) -> RegExp -> String
 regExpToString fs (Literal s)       = "(str.to.re " ++ fs s ++ ")"
-regExpToString _  All               = "re.allchar"
+regExpToString _  All               = "re.all"
+regExpToString _  Allchar           = "re.allchar"
 regExpToString _  None              = "re.nostr"
 regExpToString fs (Range ch1 ch2)   = "(re.range " ++ fs [ch1] ++ " " ++ fs [ch2] ++ ")"
 regExpToString _  (Conc [])         = show (1 :: Integer)

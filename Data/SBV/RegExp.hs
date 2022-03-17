@@ -101,6 +101,7 @@ instance RegExpMatchable SString where
            go :: RegExp -> (String -> Bool) -> String -> Bool
            go (Literal l)    k s      = l `L.isPrefixOf` s && k (P.drop (P.length l) s)
            go All            _ _      = True
+           go AllChar        k s      = length s >= 1 && k (P.drop 1 s)
            go None           _ _      = False
            go (Range _ _)    _ []     = False
            go (Range a b)    k (c:cs) = a <= c && c <= b && k cs
