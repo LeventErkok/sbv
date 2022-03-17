@@ -408,7 +408,7 @@ regExpToSMTString = regExpToString (\s -> '"' : stringToQFS s ++ "\"")
 regExpToString :: (String -> String) -> RegExp -> String
 regExpToString fs (Literal s)       = "(str.to.re " ++ fs s ++ ")"
 regExpToString _  All               = "re.all"
-regExpToString _  Allchar           = "re.allchar"
+regExpToString _  AllChar           = "re.allchar"
 regExpToString _  None              = "re.nostr"
 regExpToString fs (Range ch1 ch2)   = "(re.range " ++ fs [ch1] ++ " " ++ fs [ch2] ++ ")"
 regExpToString _  (Conc [])         = show (1 :: Integer)
