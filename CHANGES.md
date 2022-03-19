@@ -5,7 +5,7 @@
 
 ### Version 8.17.5, Development version
 
-  * Changes required to compile cleanly with GHC 9.2.1
+  * Changes required to compile cleanly with GHC 9.2 series.
 
   * In future versions, GHC will make `forall` a reserved word, which will create a conflict with SBV's use of the same.
     To accommodate for these changes and to be consistent, following identifiers were renamed:
@@ -41,11 +41,16 @@
    * Added `Documentation.SBV.Examples.Puzzles.Drinker` example, proving the famous Drinker paradox of
      Raymond Smullyan.
 
-   * Added complement and difference operators for regular expressions.
-   
    * Added concrete type instances of Mergeable class.
 
    * Fixed a bug in the implementation of the concrete-path for sPopCount
+   
+   * Added complement, power, and difference operators for regular expressions. Also added `everything`, `nothing`,
+     `anyChar` as new recognizers.
+
+   * Fixed the semantics of `All` regular expressions to recognize all-strings, and added `AllChar` as a
+     new regular-expression constructor to match any single regular expression. Thanks to Matt Torrence for
+     the patch.
 
 ### Version 8.17, 2021-10-25
 
