@@ -127,7 +127,7 @@ cvc4 = mkConfig CVC4.cvc4 SMTLib2 [allOnStdOut]
 
 -- | Default configuration for the CVC5 SMT Solver.
 cvc5 :: SMTConfig
-cvc5 = mkConfig CVC5.cvc5 SMTLib2 [allOnStdOut]
+cvc5 = mkConfig CVC5.cvc5 SMTLib2 []
 
 -- | Default configuration for the Yices SMT Solver.
 dReal :: SMTConfig
