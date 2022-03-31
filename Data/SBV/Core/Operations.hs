@@ -536,7 +536,7 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded s' j) b)
            in foldl' (\acc (idx, set) -> if set then setBit acc idx else acc) 0 rbits
          | True -- unsigned, go fast
          = m `shiftL` j .|. n
-    in SVal k (Left $! CV k (CInteger val))
+    in SVal k (Left $! normCV (CV k (CInteger val)))
   | True
   = SVal k (Right (cache z))
   where
