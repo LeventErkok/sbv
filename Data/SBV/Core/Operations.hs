@@ -50,7 +50,7 @@ module Data.SBV.Core.Operations
   where
 
 import Data.Bits (Bits(..))
-import Data.List (genericIndex, genericLength, genericTake)
+import Data.List (genericIndex, genericLength, genericTake, foldl')
 
 import qualified Data.IORef         as R    (readIORef)
 import qualified Data.IntMap.Strict as IMap (size, insert)
@@ -522,11 +522,21 @@ svExtract _ _ _ = error "extract: non-bitvector/float type"
 
 -- | Join two words, by concatenating
 svJoin :: SVal -> SVal -> SVal
-svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded _ j) b)
+svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded s' j) b)
+  | s /= s'
+  = error $ "svJoin: received differently signed values: " ++ show (x, y)
   | i == 0 = y
   | j == 0 = x
   | Left (CV _ (CInteger m)) <- a, Left (CV _ (CInteger n)) <- b
-  = SVal k (Left $! CV k (CInteger (m `shiftL` j .|. n)))
+  = let val
+         | s -- signed, arithmetic doesn't work; blast and come back
+         = let xbits = [m `testBit` xi | xi <- [0 .. i-1]]
+               ybits = [n `testBit` yi | yi <- [0 .. j-1]]
+               rbits = zip [0..] (ybits ++ xbits)
+           in foldl' (\acc (idx, set) -> if set then setBit acc idx else acc) 0 rbits
+         | True -- unsigned, go fast
+         = m `shiftL` j .|. n
+    in SVal k (Left $! CV k (CInteger val))
   | True
   = SVal k (Right (cache z))
   where
