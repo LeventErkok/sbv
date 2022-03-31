@@ -87,7 +87,7 @@ instance (KnownNat n, BVIsNonZero n) => SymVal (IntN n) where
 lift1 :: (KnownNat n, BVIsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal) -> bv n -> bv n
 lift1 nm op x = uc $ op (c x)
   where k = kindOf x
-        c = SVal k . Left . CV k . CInteger . toInteger
+        c = SVal k . Left . normCV . CV k . CInteger . toInteger
         uc (SVal _ (Left (CV _ (CInteger v)))) = fromInteger v
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, r)
 
@@ -95,7 +95,7 @@ lift1 nm op x = uc $ op (c x)
 lift2 :: (KnownNat n, BVIsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> SVal -> SVal) -> bv n -> bv n -> bv n
 lift2 nm op x y = uc $ c x `op` c y
   where k = kindOf x
-        c = SVal k . Left . CV k . CInteger . toInteger
+        c = SVal k . Left . normCV . CV k . CInteger . toInteger
         uc (SVal _ (Left (CV _ (CInteger v)))) = fromInteger v
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, y, r)
 
@@ -103,7 +103,7 @@ lift2 nm op x y = uc $ c x `op` c y
 lift2I :: (KnownNat n, BVIsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> bv n
 lift2I nm op x i = uc $ c x `op` i
   where k = kindOf x
-        c = SVal k . Left . CV k . CInteger . toInteger
+        c = SVal k . Left . normCV . CV k . CInteger . toInteger
         uc (SVal _ (Left (CV _ (CInteger v)))) = fromInteger v
         uc r                                   = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, i, r)
 
@@ -111,7 +111,7 @@ lift2I nm op x i = uc $ c x `op` i
 lift2IB :: (KnownNat n, BVIsNonZero n, HasKind (bv n), Integral (bv n), Show (bv n)) => String -> (SVal -> Int -> SVal) -> bv n -> Int -> Bool
 lift2IB nm op x i = uc $ c x `op` i
   where k = kindOf x
-        c = SVal k . Left . CV k . CInteger . toInteger
+        c = SVal k . Left . normCV . CV k . CInteger . toInteger
         uc (SVal _ (Left v)) = cvToBool v
         uc r                 = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, i, r)
 
