@@ -52,6 +52,9 @@
      new regular-expression constructor to match any single regular expression. Thanks to Matt Torrence for
      the patch.
 
+   * Fixed a bug in the concrete implementation of bit-vector join, which didn't handle signed quantities
+     correctly. Thanks to Sirui Lu for the report and test cases.
+
 ### Version 8.17, 2021-10-25
 
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5
