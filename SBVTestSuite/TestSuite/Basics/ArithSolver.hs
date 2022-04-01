@@ -14,6 +14,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE DataKinds           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -33,7 +34,9 @@ import qualified Data.SBV.List   as SL
 tests :: TestTree
 tests =
   testGroup "Basics.ArithSolver"
-   (    genReals
+   (    genExtends
+     ++ genConcats
+     ++ genReals
      ++ genFloats
      ++ genDoubles
      ++ genFPConverts
@@ -75,6 +78,35 @@ tests =
      ++ genStrings
      ++ genLists
      )
+
+genExtends :: [TestTree]
+genExtends = map mkTest $  [("signExtend-word", show x, mkThm signExtend x (signExtend (literal x) :: SWord 16)) | x <- wn8s]
+                        ++ [("signExtend-int",  show x, mkThm signExtend x (signExtend (literal x) :: SInt 16))  | x <- in8s]
+                        ++ [("zeroExtend-word", show x, mkThm zeroExtend x (zeroExtend (literal x) :: SWord 16)) | x <- wn8s]
+                        ++ [("zeroExtend-int",  show x, mkThm zeroExtend x (zeroExtend (literal x) :: SInt 16))  | x <- in8s]
+  where
+    mkTest (nm, x, t) = testCase ("genExtends-" ++ nm ++ "." ++ x) (assert t)
+    mkThm op x sr
+      | Just r <- unliteral sr
+      = isTheorem $ do a <- free "x"
+                       constrain $ a .== literal x
+                       return $ literal r .== op a
+      | True
+      = return False
+
+genConcats :: [TestTree]
+genConcats = map mkTest $  [("word", show x, show y, mkThm2 (#) x y (literal x # literal y)) | x <- wn8s, y <- wn8s]
+                        ++ [("int",  show x, show y, mkThm2 (#) x y (literal x # literal y)) | x <- in8s, y <- in8s]
+  where
+    mkTest (nm, x, y, t) = testCase ("genConcats-" ++ nm ++ "." ++ x ++ "_" ++ y) (assert t)
+    mkThm2 op x y sr
+      | Just r <- unliteral sr
+      = isTheorem $ do [a, b] <- mapM free ["a", "b"]
+                       constrain $ a .== literal x
+                       constrain $ b .== literal y
+                       return $ literal r .== a `op` b
+      | True
+      = return False
 
 genBinTest :: Bool -> String -> (forall a. (Num a, Bits a) => a -> a -> a) -> [TestTree]
 genBinTest unboundedOK nm op = map mkTest $  [(show x, show y, mkThm2 x y (x `op` y)) | x <- w8s,  y <- w8s ]
@@ -780,6 +812,12 @@ i32s = xsSigned
 
 i64s :: [Int64]
 i64s = xsSigned
+
+wn8s :: [WordN 8]
+wn8s = xsUnsigned
+
+in8s :: [IntN 8]
+in8s = xsSigned
 
 iUBs :: [Integer]
 iUBs = [-1000000] ++ [-1 .. 1] ++ [1000000]
