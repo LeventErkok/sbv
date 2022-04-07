@@ -1000,7 +1000,7 @@ the way predicates are written can be misleading at times, since symbolic inputs
 with other code. The rule is simple, however: All inputs are assumed at the top, in the order declared, regardless of their quantifiers.
 SBV will apply skolemization to get rid of existentials before sending predicates to backend solvers. However, if you do want nested
 quantification, you will manually have to first convert to prenex-normal form (which produces an equisatisfiable but not necessarily
-equivalent formula), and code that explicitly in SBV. See <http://github.com/LeventErkok/sbv/issues/256> for a detailed discussion
+equivalent formula), and code that explicitly in SBV. See [Issue 256](http://github.com/LeventErkok/sbv/issues/256) and [Issue 623](https://github.com/LeventErkok/sbv/issues/623) for a detailed discussion
 of this issue.
 -}
 
