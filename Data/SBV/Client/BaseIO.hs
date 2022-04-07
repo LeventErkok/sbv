@@ -62,6 +62,11 @@ import qualified Data.SBV.Provers.Prover as Trans
 -- is a predicate with two arguments, captured using an ordinary Haskell function. Internally,
 -- @x@ will be named @s0@ and @y@ will be named @s1@.
 --
+-- Remember that SBV assumes that the input is in prenex-normal form.
+-- That is, all quantifiers are at the beginning of the predicate. See
+-- [note on reasoning in the presence of
+-- quantifiers]("Data.SBV#noteOnNested") for more information.
+--
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.universal_'
 universal_ :: Provable a => a -> Symbolic SBool
 universal_ = Trans.universal_
@@ -76,17 +81,32 @@ universal_ = Trans.universal_
 -- This is the same as above, except the variables will be named @x@ and @y@ respectively,
 -- simplifying the counter-examples when they are printed.
 --
+-- Remember that SBV assumes that the input is in prenex-normal form.
+-- That is, all quantifiers are at the beginning of the predicate. See
+-- [note on reasoning in the presence of
+-- quantifiers]("Data.SBV#noteOnNested") for more information.
+--
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.universal'
 universal :: Provable a => [String] -> a -> Symbolic SBool
 universal = Trans.universal
 
 -- | Turns a value into an existentially quantified predicate.
 --
+-- Remember that SBV assumes that the input is in prenex-normal form.
+-- That is, all quantifiers are at the beginning of the predicate. See
+-- [note on reasoning in the presence of
+-- quantifiers]("Data.SBV#noteOnNested") for more information.
+--
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.existential_'
 existential_ :: Provable a => a -> Symbolic SBool
 existential_ = Trans.existential_
 
 -- | Version of 'existential_' that allows user defined names.
+--
+-- Remember that SBV assumes that the input is in prenex-normal form.
+-- That is, all quantifiers are at the beginning of the predicate. See
+-- [note on reasoning in the presence of
+-- quantifiers]("Data.SBV#noteOnNested") for more information.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.existential'
 existential :: Provable a => [String] -> a -> Symbolic SBool
