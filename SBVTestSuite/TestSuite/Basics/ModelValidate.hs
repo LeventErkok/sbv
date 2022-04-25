@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Make sure the ABC bug is there, and a few other validate tests.
+-- Few validate tests
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -23,10 +23,10 @@ import Utils.SBVTestFramework
 -- Test suite, this needs ABC
 testsABC :: TestTree
 testsABC = testGroup "Basics.ModelValidate.ABC" [
-             goldenCapturedIO "validate_0" badABC
+             goldenCapturedIO "validate_0" testABC
            ]
-    where badABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ existential ["x"] $ \x -> x .< (10::SWord8)
-                               appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+    where testABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ existential ["x"] $ \x -> x .< (10::SWord8)
+                                appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 tests :: TestTree
 tests = testGroup "Basics.ModelValidate" [

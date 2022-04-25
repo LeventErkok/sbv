@@ -30,25 +30,16 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #xff))
+[RECV] ((s0 #x0))
 *** Solver   : ABC
 *** Exit code: ExitSuccess
+*** Std-err  : Cmd warning: redefining '%graft'
 [VALIDATE] Validating the model. Assignment:
-[VALIDATE]       x = 255 :: Word8
+[VALIDATE]       x = 0 :: Word8
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
+[VALIDATE] All outputs are satisfied. Validation complete.
 
 FINAL OUTPUT:
-*** Data.SBV: Model validation failure: Final output evaluated to False.
-*** 
-*** Assignment:
-*** 
-***       x = 255 :: Word8
-*** 
-*** Backend solver returned a model that does not satisfy the constraints.
-*** This could indicate a bug in the backend solver, or SBV itself. Please report.
-***
-*** Alleged model:
-***
-*** Satisfiable. Model:
-***   x = 255 :: Word8
+Satisfiable. Model:
+  x = 0 :: Word8
