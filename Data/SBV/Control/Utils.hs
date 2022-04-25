@@ -1359,7 +1359,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        scope cur pres c = do
                                                                 send True "(push 1)"
                                                                 reject cur
-                                                                sequence_ $ accept <$> pres
+                                                                mapM_ accept pres
                                                                 r <- c
                                                                 send True "(pop 1)"
                                                                 pure r

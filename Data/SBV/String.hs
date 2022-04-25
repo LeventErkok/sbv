@@ -438,3 +438,5 @@ concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unl
 isConcretelyEmpty :: SString -> Bool
 isConcretelyEmpty ss | Just s <- unliteral ss = P.null s
                      | True                   = False
+
+{-# ANN implode ("HLint: ignore Use concatMap" :: String) #-}
