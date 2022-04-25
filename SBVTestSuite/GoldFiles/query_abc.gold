@@ -52,3 +52,4 @@
 [RECV] ((s1 #x1))
 *** Solver   : ABC
 *** Exit code: ExitSuccess
+*** Std-err  : Cmd warning: redefining '%graft'
