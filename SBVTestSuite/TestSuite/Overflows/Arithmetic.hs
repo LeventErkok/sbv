@@ -213,7 +213,6 @@ underflow op cond = do x  <- free "x"
                            extResult :: SLarge
                            extResult = toLarge x `op` toLarge y
 
-
                        return $ underflowHappens `exactlyWhen` (extResult `svLessThan` toLarge (minBound :: SBV a))
 
 overflow :: forall a. (Integral a, Bounded a, SymVal a) => (SLarge -> SLarge -> SLarge) -> (SBV a -> SBV a -> (SBool, SBool)) -> Predicate
