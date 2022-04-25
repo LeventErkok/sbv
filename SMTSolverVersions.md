@@ -4,7 +4,7 @@ report any issues you might see with newer releases.
 
   * ABC:
       * http://github.com/berkeley-abc/abc
-      * Version as downloaded from the above site on Jul 6, 2019
+      * Version as downloaded from the above site on Apr 25, 2022
   * Boolector:
       * http://github.com/Boolector/boolector
       * Version 3.2.2
