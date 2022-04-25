@@ -399,7 +399,7 @@ Test-Suite SBVHLint
     import          : common-settings
     default-language: Haskell2010
 
-    build-depends   : base, directory, filepath, random
+    build-depends   : base, directory, filepath
                     , hlint, bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, sbv
     other-extensions: DataKinds
                       DeriveAnyClass
