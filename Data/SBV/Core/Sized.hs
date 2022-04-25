@@ -314,7 +314,7 @@ infixr 5 #
 zeroExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , KnownNat m, BVIsNonZero m, SymVal (bv m)
                              , n + 1 <= m
-                             , SIntegral (bv (m - n))
+                             , SIntegral   (bv (m - n))
                              , BVIsNonZero (m - n)
                              ) => SBV (bv n)    -- ^ Input, of size @n@
                                -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
@@ -328,7 +328,7 @@ signExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , n + 1 <= m
                              , SFiniteBits (bv n)
                              , SIntegral   (bv (m - n))
-                             , BVIsNonZero   (m - n)
+                             , BVIsNonZero (m - n)
                              ) => SBV (bv n)  -- ^ Input, of size @n@
                                -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
 signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
