@@ -561,7 +561,7 @@ svExtend isZeroExtend extender i x@(SVal (KBounded s sz) a)
   | i == 0
   = x
   | Left (CV _ (CInteger cv)) <- a
-  = SVal k' (Left (normCV (CV k' (CInteger (replBit (if isZeroExtend then False else cv `testBit` (sz-1)) cv)))))
+  = SVal k' (Left (normCV (CV k' (CInteger (replBit (not isZeroExtend && (cv `testBit` (sz-1))) cv)))))
   | True
   = SVal k' (Right (cache z))
   where k' = KBounded s (sz+i)
@@ -569,7 +569,7 @@ svExtend isZeroExtend extender i x@(SVal (KBounded s sz) a)
                   newExpr st k' (SBVApp (extender i) [xsw])
 
         replBit :: Bool -> Integer -> Integer
-        replBit b inp = go sz inp
+        replBit b = go sz
           where stop = sz + i
                 go k v | k == stop = v
                        | b         = go (k+1) (v `setBit`   k)
