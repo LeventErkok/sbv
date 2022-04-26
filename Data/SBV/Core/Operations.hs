@@ -546,28 +546,36 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded s' j) b)
               newExpr st k (SBVApp Join [xsw, ysw])
 svJoin _ _ = error "svJoin: non-bitvector type"
 
--- | Zero-extend by given number of bits
+-- | Zero-extend by given number of bits.
 svZeroExtend :: Int -> SVal -> SVal
-svZeroExtend = svExtend ZeroExtend
+svZeroExtend = svExtend True ZeroExtend
 
--- | Sign-extend by given number of bits
+-- | Sign-extend by given number of bits.
 svSignExtend :: Int -> SVal -> SVal
-svSignExtend = svExtend SignExtend
+svSignExtend = svExtend False SignExtend
 
-svExtend :: (Int -> Op) -> Int -> SVal -> SVal
-svExtend extender i x@(SVal (KBounded s sz) a)
+svExtend :: Bool -> (Int -> Op) -> Int -> SVal -> SVal
+svExtend isZeroExtend extender i x@(SVal (KBounded s sz) a)
   | i < 0
   = error $ "svExtend: Received negative extension amount: " ++ show i
   | i == 0
   = x
-  | Left (CV _ iv@(CInteger _)) <- a
-  = SVal k' (Left (normCV (CV k' iv)))
+  | Left (CV _ (CInteger cv)) <- a
+  = SVal k' (Left (normCV (CV k' (CInteger (replBit (if isZeroExtend then False else cv `testBit` (sz-1)) cv)))))
   | True
   = SVal k' (Right (cache z))
   where k' = KBounded s (sz+i)
         z st = do xsw <- svToSV st x
                   newExpr st k' (SBVApp (extender i) [xsw])
-svExtend _ _ _ = error "svExtend: non-bitvector type"
+
+        replBit :: Bool -> Integer -> Integer
+        replBit b inp = go sz inp
+          where stop = sz + i
+                go k v | k == stop = v
+                       | b         = go (k+1) (v `setBit`   k)
+                       | True      = go (k+1) (v `clearBit` k)
+
+svExtend _ _ _ _ = error "svExtend: non-bitvector type"
 
 -- | If-then-else. This one will force branches.
 svIte :: SVal -> SVal -> SVal -> SVal
