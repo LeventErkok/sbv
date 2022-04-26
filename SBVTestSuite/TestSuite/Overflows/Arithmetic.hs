@@ -136,19 +136,10 @@ exactlyWhen (SBV a) b = SBV $ (a `svAnd` b) `svOr` (svNot a `svAnd` svNot b)
 toLarge :: HasKind a => SBV a -> SLarge
 toLarge v
   | extra < 0 = error $ "toLarge: Unexpected size: " ++ show (n, large)
-  | signed    = p `svJoin` dv
-  | True      = z `svJoin` dv
+  | hasSign v = svSignExtend extra (unSBV v)
+  | True      = svZeroExtend extra (unSBV v)
   where n     = intSizeOf v
         extra = large - n
-
-        signed = hasSign v
-
-        dv     = unSBV v
-        mk     = svInteger (KBounded signed extra)
-        z      = mk 0
-        o      = mk (-1)
-        pos    = (dv `svTestBit` (n-1)) `svEqual` svFalse
-        p      = svIte pos z o
 
 -- Multiplication checks are expensive. For these, we simply check that the SBV encodings and the z3 versions are equivalent
 mulChkO :: forall a. SymVal a => (SBV a -> SBV a -> (SBool, SBool)) -> (SBV a -> SBV a -> (SBool, SBool)) -> Predicate

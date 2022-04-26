@@ -51,7 +51,7 @@ module Data.SBV.Dynamic
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
   -- *** Splitting, joining, and extending
-  , svExtract, svJoin
+  , svExtract, svJoin, svZeroExtend, svSignExtend
   -- *** Sign-casting
   , svSign, svUnsign
   -- *** Numeric conversions

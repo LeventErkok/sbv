@@ -939,6 +939,14 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
            | bvOp  = shft ssv "bvlshr" "bvashr" a i
            | True  = bad
 
+        sh (SBVApp (ZeroExtend i) [a])
+          | bvOp = "((_ zero_extend " ++ show i ++ ") " ++ ssv a ++ ")"
+          | True = bad
+
+        sh (SBVApp (SignExtend i) [a])
+          | bvOp = "((_ sign_extend " ++ show i ++ ") " ++ ssv a ++ ")"
+          | True = bad
+
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBVOrBool
           = f (any hasSign args) (map ssv args)

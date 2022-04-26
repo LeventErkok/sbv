@@ -185,6 +185,8 @@ data Op = Plus
         | Ror Int
         | Extract Int Int                       -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
         | Join                                  -- Concat two words to form a bigger one, in the order given
+        | ZeroExtend Int
+        | SignExtend Int
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | ArrEq   ArrayIndex ArrayIndex         -- Array equality
         | ArrRead ArrayIndex

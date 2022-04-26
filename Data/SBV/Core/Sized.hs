@@ -318,9 +318,10 @@ zeroExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , BVIsNonZero (m - n)
                              ) => SBV (bv n)    -- ^ Input, of size @n@
                                -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
-zeroExtend n = SBV $ svJoin (unSBV zero) (unSBV n)
-  where zero :: SBV (bv (m - n))
-        zero = literal 0
+zeroExtend n = SBV $ svZeroExtend i (unSBV n)
+  where nv = intOfProxy (Proxy @n)
+        mv = intOfProxy (Proxy @m)
+        i  = fromIntegral (mv - nv)
 
 -- | Sign extend a bit-vector.
 signExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
@@ -331,11 +332,10 @@ signExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , BVIsNonZero (m - n)
                              ) => SBV (bv n)  -- ^ Input, of size @n@
                                -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
-signExtend n = SBV $ svJoin (unSBV ext) (unSBV n)
-  where zero, ones, ext :: SBV (bv (m - n))
-        zero = literal 0
-        ones = complement zero
-        ext  = ite (msb n) ones zero
+signExtend n = SBV $ svSignExtend i (unSBV n)
+  where nv = intOfProxy (Proxy @n)
+        mv = intOfProxy (Proxy @m)
+        i  = fromIntegral (mv - nv)
 
 -- | Drop bits from the top of a bit-vector.
 bvDrop :: forall i n m bv proxy. ( KnownNat n, BVIsNonZero n

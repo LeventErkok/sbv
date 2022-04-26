@@ -27,7 +27,7 @@ module Data.SBV.Core.Operations
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
-  , svExtract, svJoin
+  , svExtract, svJoin, svZeroExtend, svSignExtend
   , svIte, svLazyIte, svSymbolicMerge
   , svSelect
   , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
@@ -545,6 +545,29 @@ svJoin x@(SVal (KBounded s i) a) y@(SVal (KBounded s' j) b)
               ysw <- svToSV st y
               newExpr st k (SBVApp Join [xsw, ysw])
 svJoin _ _ = error "svJoin: non-bitvector type"
+
+-- | Zero-extend by given number of bits
+svZeroExtend :: Int -> SVal -> SVal
+svZeroExtend = svExtend ZeroExtend
+
+-- | Sign-extend by given number of bits
+svSignExtend :: Int -> SVal -> SVal
+svSignExtend = svExtend SignExtend
+
+svExtend :: (Int -> Op) -> Int -> SVal -> SVal
+svExtend extender i x@(SVal (KBounded s sz) a)
+  | i < 0
+  = error $ "svExtend: Received negative extension amount: " ++ show i
+  | i == 0
+  = x
+  | Left (CV _ iv@(CInteger _)) <- a
+  = SVal k' (Left (normCV (CV k' iv)))
+  | True
+  = SVal k' (Right (cache z))
+  where k' = KBounded s (sz+i)
+        z st = do xsw <- svToSV st x
+                  newExpr st k' (SBVApp (extender i) [xsw])
+svExtend _ _ _ = error "svExtend: non-bitvector type"
 
 -- | If-then-else. This one will force branches.
 svIte :: SVal -> SVal -> SVal -> SVal
