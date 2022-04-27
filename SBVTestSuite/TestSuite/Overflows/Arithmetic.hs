@@ -132,14 +132,16 @@ svNeg0 v = z `svMinus` v
 exactlyWhen :: SBool -> SVal -> SBool
 exactlyWhen (SBV a) b = SBV $ (a `svAnd` b) `svOr` (svNot a `svAnd` svNot b)
 
--- Properly extend to a dynamic large vector
+-- Properly extend to a dynamic signed large vector. This works because we grow to 256 bits, which is high enough.
 toLarge :: HasKind a => SBV a -> SLarge
 toLarge v
   | extra < 0 = error $ "toLarge: Unexpected size: " ++ show (n, large)
-  | hasSign v = svSignExtend extra (unSBV v)
-  | True      = svZeroExtend extra (unSBV v)
+  | hasSign v =            svSignExtend extra (unSBV v)
+  | True      = mkSigned $ svZeroExtend extra (unSBV v)
   where n     = intSizeOf v
         extra = large - n
+
+        mkSigned = svFromIntegral (KBounded True large)
 
 -- Multiplication checks are expensive. For these, we simply check that the SBV encodings and the z3 versions are equivalent
 mulChkO :: forall a. SymVal a => (SBV a -> SBV a -> (SBool, SBool)) -> (SBV a -> SBV a -> (SBool, SBool)) -> Predicate
