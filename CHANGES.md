@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 8.17, 2021-10-25
+* Latest Hackage released version: 9.0, 2022-04-27
 
-### Version 8.17.5, Development version
+### Version 9.0
 
   * Changes required to compile cleanly with GHC 9.2 series.
 
