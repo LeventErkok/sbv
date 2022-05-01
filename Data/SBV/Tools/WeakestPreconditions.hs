@@ -460,7 +460,7 @@ traceExecution Program{precondition, program, postcondition, stability} start = 
                    | currentInvariant st
                    = while 1 st Nothing (Good st)
                    | True
-                   = stop loc  (InvariantPre loopName st) $ tag "invariant fails to hold prior to loop entry"
+                   = stop loc (InvariantPre loopName st) $ tag "invariant fails to hold prior to loop entry"
                    where tag s = "Loop " ++ show loopName ++ ": " ++ s
 
                          hasMeasure = isJust mbMeasure
