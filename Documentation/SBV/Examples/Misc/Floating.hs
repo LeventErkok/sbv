@@ -66,19 +66,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -3.0359216e35 :: Float
---   y =   5.058223e30 :: Float
---   z =   8.307169e34 :: Float
+--   x = 8.8218663e-13 :: Float
+--   y = 3.0860748e-14 :: Float
+--   z = -5.421011e-20 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x = -3.0359216e35 :: Float
--- >>> let y =   5.058223e30 :: Float
--- >>> let z =   8.307169e34 :: Float
+-- >>> let x = 8.8218663e-13 :: Float
+-- >>> let y = 3.0860748e-14 :: Float
+-- >>> let z = -5.421011e-20 :: Float
 -- >>> x + (y + z)
--- -2.205154e35
+-- 9.130473e-13
 -- >>> (x + y) + z
--- -2.2051543e35
+-- 9.130474e-13
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
@@ -129,13 +129,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 1.2760589e38 :: Float
+--   a = 1.8839308e38 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 1.2760589e38 :: Float
+-- >>> let a = 1.8839308e38 :: Float
 -- >>> a * (1/a)
--- 0.99999994
+-- 0.9999999
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
