@@ -277,6 +277,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.IteTest
                   , TestSuite.Basics.List
                   , TestSuite.Basics.ModelValidate
+                  , TestSuite.Basics.Nonlinear
                   , TestSuite.Basics.ProofTests
                   , TestSuite.Basics.PseudoBoolean
                   , TestSuite.Basics.QRem

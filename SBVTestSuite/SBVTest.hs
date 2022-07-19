@@ -37,6 +37,7 @@ import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
 import qualified TestSuite.Basics.List
 import qualified TestSuite.Basics.ModelValidate
+import qualified TestSuite.Basics.Nonlinear
 import qualified TestSuite.Basics.ProofTests
 import qualified TestSuite.Basics.PseudoBoolean
 import qualified TestSuite.Basics.QRem
@@ -147,6 +148,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Basics.List.tests
                       , TestSuite.Basics.ModelValidate.tests
                       , TestSuite.Basics.ModelValidate.testsABC
+                      , TestSuite.Basics.Nonlinear.tests
                       , TestSuite.Basics.ProofTests.tests
                       , TestSuite.Basics.PseudoBoolean.tests
                       , TestSuite.Basics.QRem.tests
