@@ -3,7 +3,11 @@
 
 * Latest Hackage released version: 9.0, 2022-04-27
 
-### Version 9.0
+### Version 9.0.5
+
+  * CVC5: Add support for algebraic reals in CVC5 models
+
+### Version 9.0, 2022-04-27
 
   * Changes required to compile cleanly with GHC 9.2 series.
 

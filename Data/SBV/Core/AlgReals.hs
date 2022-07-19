@@ -39,6 +39,8 @@ import Test.QuickCheck (Arbitrary(..))
 
 import Numeric (readSigned, readFloat)
 
+import Text.Read(readMaybe)
+
 -- | Is the endpoint included in the interval?
 data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
                  | ClosedPoint a -- ^ closed: i.e., includes the point
@@ -74,12 +76,16 @@ mkPolyReal (Left (exact, str))
       ("", _)                                -> AlgRational exact 0
       (_, (x, '.':y)) | all isDigit (x ++ y) -> AlgRational exact (read (x++y) % (10 ^ length y))
       (_, (x, ""))    | all isDigit x        -> AlgRational exact (read x % 1)
-      _                                      -> error $ unlines [ "*** Data.SBV.mkPolyReal: Unable to read a number from:"
-                                                                , "***"
-                                                                , "*** " ++ str
-                                                                , "***"
-                                                                , "*** Please report this as a bug."
-                                                                ]
+      _                                      ->
+        -- CVC5 prints in division-rational form:
+        case readMaybe (filter (/= ',') (map (\c -> if c == '/' then '%' else c) str)) :: Maybe Rational of
+          Just r  -> AlgRational exact r
+          Nothing -> error $ unlines [ "*** Data.SBV.mkPolyReal: Unable to read a number from:"
+                                     , "***"
+                                     , "*** " ++ str
+                                     , "***"
+                                     , "*** Please report this as a bug."
+                                     ]
 mkPolyReal (Right (k, coeffs))
  = AlgPolyRoot (k, AlgRealPoly (normalize coeffs)) Nothing
  where normalize :: [(Integer, Integer)] -> [(Integer, Integer)]

@@ -24,7 +24,7 @@ import Data.Word   (Word32, Word64)
 
 import Control.Monad (foldM)
 
-import Numeric    (readInt, readDec, readHex, fromRat)
+import Numeric    (readInt, readSigned, readDec, readHex, fromRat)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.SizedFloats
@@ -126,7 +126,7 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
         pTok ('#':'b':r)                                 = mkNum (Just (length r))     $ readInt 2 (`elem` "01") (\c -> ord c - ord '0') r
         pTok ('#':'x':r)                                 = mkNum (Just (4 * length r)) $ readHex r
 
-        pTok n | possiblyNum n = if all intChar n then mkNum Nothing $ readDec n else getReal n
+        pTok n | possiblyNum n = if all intChar n then mkNum Nothing $ readSigned readDec n else getReal n
         pTok n                 = return $ ECon (constantMap n)
 
         -- crude, but effective!
@@ -174,6 +174,23 @@ parseSExpr inp = do (sexp, extras) <- parse inpToks
                                                                    AlgRational _ r -> return $ EReal $ AlgRational False r
                                                                    _               -> return $ EReal aval
                                                   _           -> die $ "Cannot parse a CVC4 approximate value from: " ++ show x
+
+        -- Deal with CVC5's algebraic reals. This is very crude!
+        cvt x@(EApp (ECon "_" : ECon "real_algebraic_number" : rest)) =
+            let isComma (ECon ",") = True
+                isComma _          = False
+
+                get (ENum    (n, _))               = return $ fromIntegral n
+                get (EReal   (AlgRational True r)) = return r
+                get (EFloat  f)                    = return $ toRational f
+                get (EDouble d)                    = return $ toRational d
+                get t                              = die $ "Cannot get a CVC5 real-algebraic bound from: " ++ show t
+
+            in case drop 1 (dropWhile (not . isComma) rest) of
+                [EApp [n1, n2], _] -> do low  <- get n1
+                                         high <- get n2
+                                         return $ EReal $ AlgInterval (OpenPoint low) (OpenPoint high)
+                _                  -> die $ "Cannot parse a CVC5 real-algebraic number from: " ++ show x
 
         -- NB. Note the lengths on the mantissa for the following two are 23/52; not 24/53!
         cvt (EApp [ECon "fp",    ENum (s, Just 1), ENum ( e, Just 8),  ENum (m, Just 23)])           = return $ EFloat         $ getTripleFloat  s e m
