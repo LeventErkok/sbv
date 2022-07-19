@@ -9,11 +9,6 @@
 -- Some nonlinear tests, z3 and CVC5
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts    #-}
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
-
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Basics.Nonlinear (tests)  where
