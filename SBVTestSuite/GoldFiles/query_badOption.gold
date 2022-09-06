@@ -19,6 +19,7 @@
 ***                  dump_models (bool) (default: false)
 ***                  encoding (string) (default: unicode)
 ***                  memory_high_watermark (unsigned int) (default: 0)
+***                  memory_high_watermark_mb (unsigned int) (default: 0)
 ***                  memory_max_alloc_count (unsigned int) (default: 0)
 ***                  memory_max_size (unsigned int) (default: 0)
 ***                  model (bool) (default: true)
