@@ -6,9 +6,6 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- A solution to the hexagon solver puzzle: <http://www5.cadence.com/2018ClubVQuiz_LP.html>
--- In case the above URL goes dead, here's an ASCII rendering of the problem.
---
 -- We're given a board, with 19 hexagon cells. The cells are arranged as follows:
 --
 -- @
