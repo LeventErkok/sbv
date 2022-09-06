@@ -9,9 +9,9 @@
 -- Test suite for Examples.CRC.USB5
 -----------------------------------------------------------------------------
 
-module TestSuite.CRC.USB5(tests) where
-
 {-# OPTIONS_GHC -Wall -Werror #-}
+
+module TestSuite.CRC.USB5(tests) where
 
 import Data.SBV.Tools.Polynomial
 import Utils.SBVTestFramework
