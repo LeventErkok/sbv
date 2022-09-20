@@ -59,6 +59,8 @@ import Data.IORef (readIORef, writeIORef)
 
 import Data.Time          (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, getCurrentTime)
 
+import Data.Either(rights)
+
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
@@ -507,7 +509,7 @@ parseModelOut m = case parseCVs [c | (_, c) <- modelAssocs m] of
 -- The arrange argument can sort the results in any way you like, if necessary.
 displayModels :: SatModel a => ([(Bool, a)] -> [(Bool, a)]) -> (Int -> (Bool, a) -> IO ()) -> AllSatResult -> IO Int
 displayModels arrange disp AllSatResult{allSatResults = ms} = do
-    let models = [a | Right a <- map (getModelAssignment . SatResult) ms]
+    let models = rights (map (getModelAssignment . SatResult) ms)
     inds <- zipWithM display (arrange models) [(1::Int)..]
     return $ last (0:inds)
   where display r i = disp i r >> return i

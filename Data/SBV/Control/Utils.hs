@@ -1501,7 +1501,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                              chain (vals, fallThru) = walk vals
                                                                where walk []               = ["   " ++ scv fallThru ++ replicate (length vals) ')']
-                                                                     walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r ++ "") :  walk rest
+                                                                     walk ((as, r) : rest) = ("   (ite " ++ cond as ++ " " ++ scv r) :  walk rest
 
                                                                      cond as = "(and " ++ unwords (zipWith eq params as) ++ ")"
                                                                      eq p a  = "(= " ++ p ++ " " ++ scv a ++ ")"

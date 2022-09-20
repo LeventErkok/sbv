@@ -49,8 +49,8 @@ main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, bitwuz
           unless (null skipped)     $ putStrLn $ "*** NB: The following solvers are skipped: "      ++ intercalate ", " skipped
 
 test :: SMTConfig -> IO ()
-test s = do check  s "t0" t0 (== False)
-            check  s "t1" t1 (== True)
+test s = do check  s "t0" t0 not
+            check  s "t1" t1 id
             models "t2" t2 (== ([2,62,66,126,130,190,194,254]::[Word8]))
             models "t3" t3 (== ([]::[Word8]))
             models "t4" t4 (== [4::Word8])
@@ -63,8 +63,8 @@ test s = do check  s "t0" t0 (== False)
 
 -- integer only test, for dReal mostly
 testI :: SMTConfig -> IO ()
-testI s = do check s "t0" t0 (== True)
-             check s "t1" t1 (== False)
+testI s = do check s "t0" t0 id
+             check s "t1" t1 not
   where t0 x = x .== (x :: SReal)
         t1 x = x .== (2 :: SReal) .&& (x .== 3)
 

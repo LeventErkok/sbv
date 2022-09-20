@@ -11,6 +11,7 @@
 
 {-# LANGUAGE CPP           #-}
 {-# LANGUAGE PatternGuards #-}
+{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
@@ -494,7 +495,7 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins (_, preConsts) tbls
              $$ nest 2 (   vcat (concatMap (genIO True . (\v -> (isAlive v, v))) inVars)
                         $$ vcat (merge (map genTbl tbls) (map genAsgn assignments) (map genAssert asserts))
                         $$ sepIf (not (null assignments) || not (null tbls))
-                        $$ vcat (concatMap (genIO False) (zip (repeat True) outVars))
+                        $$ vcat (concatMap (genIO False . (True,)) outVars)
                         $$ maybe empty mkRet mbRet
                        )
              $$ text "}"

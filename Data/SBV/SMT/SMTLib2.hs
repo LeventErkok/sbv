@@ -37,6 +37,8 @@ import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
 
 import qualified Data.Generics.Uniplate.Data as G
 
+import Data.Either(lefts)
+
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
@@ -236,7 +238,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
           | null foralls = 0
           | True         = length postQuantifierAssigns + 2 + (if null delayedEqualities then 0 else 1)
 
-        foralls    = [s | Left s <- skolemInps]
+        foralls    = lefts skolemInps
         forallArgs = concatMap ((" " ++) . show) foralls
 
         (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
