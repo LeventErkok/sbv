@@ -66,19 +66,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x = -3.0359216e35 :: Float
---   y =   5.058223e30 :: Float
---   z =   8.307169e34 :: Float
+--   x = 2.1160868e-22 :: Float
+--   y = 2.1417963e-25 :: Float
+--   z = -6.462981e-26 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x = -3.0359216e35 :: Float
--- >>> let y =   5.058223e30 :: Float
--- >>> let z =   8.307169e34 :: Float
+-- >>> let x = 2.1160868e-22 :: Float
+-- >>> let y = 2.1417963e-25 :: Float
+-- >>> let z = -6.462981e-26 :: Float
 -- >>> x + (y + z)
--- -2.205154e35
+-- 2.1175824e-22
 -- >>> (x + y) + z
--- -2.2051543e35
+-- 2.1175822e-22
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
