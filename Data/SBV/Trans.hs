@@ -145,7 +145,7 @@ module Data.SBV.Trans (
   -- ** Controlling verbosity
 
   -- ** Solvers
-  , boolector, cvc4, yices, z3, mathSAT, abc
+  , boolector, bitwuzla, cvc4, cvc5, dReal, yices, z3, mathSAT, abc
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
