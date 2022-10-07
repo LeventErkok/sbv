@@ -7,6 +7,8 @@
 
   * CVC5: Add support for algebraic reals in CVC5 models
 
+  * Export more solvers from Trans/Dynamic interfaces. Thanks to Ryan Scott for the patch.
+
 ### Version 9.0, 2022-04-27
 
   * Changes required to compile cleanly with GHC 9.2 series.
