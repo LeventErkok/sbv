@@ -186,7 +186,7 @@
   * SBV now tracks constants more closely in query mode, providing more support
     for constant arrays in a seamless way. (See #574 for details.)
 
-  * Pop-calls are now support for Yices and Boolector. (#577)
+  * Pop-calls are now supported for Yices and Boolector. (#577)
 
   * Changes required to make SBV work with latest version of z3 regarding
     String and Characters, which now allow for unicode characters. This required
