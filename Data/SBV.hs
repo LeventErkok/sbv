@@ -940,7 +940,7 @@ the 'Data.SBV.Core.Model.Uninterpreted' class.
 
 {- $enumerations
 If the uninterpreted sort definition takes the form of an enumeration (i.e., a simple data type with all nullary constructors), then 
-tou can use the 'mkSymbolicEnumeration' functio to turn it into an enumeration in SMTLib.
+tou can use the 'mkSymbolicEnumeration' function to turn it into an enumeration in SMTLib.
 A simple example is:
 
 @
