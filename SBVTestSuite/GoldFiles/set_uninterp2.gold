@@ -37,12 +37,12 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 ((as const (Array E Bool)) true)))
+[RECV] ((s0 (store ((as const (Array E Bool)) false) A true)))
 [SEND] (get-value (s1))
 [RECV] ((s1 ((as const (Array E Bool)) false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 FINAL:
-(U,{})
+({A},{})
 DONE!
