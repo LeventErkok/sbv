@@ -191,7 +191,7 @@ check program prop = runExceptT $ runSMTWith z3 $ do
 -- result is less than @10@ when @x+y@ is at least @9@. We have:
 --
 -- >>> ex1
--- Right (Counterexample 9 0)
+-- Right (Counterexample 0 9)
 ex1 :: IO (Either String CheckResult)
 ex1 = check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
             (Property $ Var "result" `LessThan` Lit 10)

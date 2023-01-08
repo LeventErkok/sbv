@@ -1147,13 +1147,13 @@ Q.E.D.
 Q.E.D.
 >>> prove $ roundTrip @Int32
 Falsifiable. Counter-example:
-  s0 = RoundNearestTiesToEven :: RoundingMode
-  s1 =             -156765620 :: Int32
+  s0 = RoundTowardPositive :: RoundingMode
+  s1 =          1073741810 :: Int32
 
 Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
 
->>> toRational (-156765620 :: Float)
-(-156765616) % 1
+>>> toRational (1073741810 :: Float)
+1073741824 % 1
 
 Note how the numerator is different, it is off by 4. This is hardly surprising, since floats become sparser as
 the magnitude increases to be able to cover all the integer values representable.
@@ -1177,16 +1177,16 @@ Q.E.D.
 Q.E.D.
 >>> prove $ roundTrip @Int64
 Falsifiable. Counter-example:
-  s0 =  RoundTowardNegative :: RoundingMode
-  s1 = -6938271199680316545 :: Int64
+  s0 = RoundNearestTiesToEven :: RoundingMode
+  s1 =      55662890612200361 :: Int64
 
 Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
 integer value for all possible values:
 
->>>  toRational (fromIntegral  (-6938271199680316545 :: Int64) :: Double)
-(-6938271199680316416) % 1
+>>> toRational (fromIntegral (55662890612200361 :: Int64) :: Double)
+55662890612200360 % 1
 
-In this case the numerator is off by 129.
+In this case the numerator is off by 1.
 -}
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both

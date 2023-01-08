@@ -74,15 +74,15 @@ basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} 
 -- We have:
 --
 -- >>> test
--- NonHomogeneous [[0,2,0],[1,0,0]] [[1,0,2],[0,1,1]]
+-- NonHomogeneous [[0,2,0],[1,0,0]] [[0,1,1],[1,0,2]]
 --
 -- which means that the solutions are of the form:
 --
---    @(0, 2, 0) + k (1, 0, 2) + k' (0, 1, 1) = (k, 2+k', 2k+k')@
+--    @(0, 2, 0) + k (0, 1, 1) + k' (1, 0, 2) = (k', 2+k, k+2k')@
 --
 -- OR
 --
---    @(1, 0, 0) + k (1, 0, 2) + k' (0, 1, 1) = (1+k, k', 2k+k')@
+--    @(1, 0, 0) + k (0, 1, 1) + k' (1, 0, 2) = (1+k', k, k+2k')@
 --
 -- for arbitrary @k@, @k'@. It's easy to see that these are really solutions
 -- to the equation given. It's harder to see that they cover all possibilities,
