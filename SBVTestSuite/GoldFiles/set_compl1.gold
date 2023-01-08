@@ -33,24 +33,24 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store (store (store ((as const (Array Int Bool)) false) 1 true) 3 true)
-                     4
+[RECV] ((s0 (store (store (store (store ((as const (Array Int Bool)) false) 4 true) 3 true)
+                     2
                      true)
-              2
+              1
               true)))
 [GOOD] (define-fun s3 () (Array Int Bool) (complement s0))
 [SEND] (get-value (s3))
-[RECV] ((s3 (store (store (store (store ((as const (Array Int Bool)) true) 1 false) 3 false)
-                     4
+[RECV] ((s3 (store (store (store (store ((as const (Array Int Bool)) true) 4 false) 3 false)
+                     2
                      false)
-              2
+              1
               false)))
 [GOOD] (define-fun s4 () (Array Int Bool) (complement s3))
 [SEND] (get-value (s4))
-[RECV] ((s4 (store (store (store (store ((as const (Array Int Bool)) false) 1 true) 3 true)
-                     4
+[RECV] ((s4 (store (store (store (store ((as const (Array Int Bool)) false) 4 true) 3 true)
+                     2
                      true)
-              2
+              1
               true)))
 [GOOD] (define-fun s5 () (Array Int Bool) (intersection s3 s0))
 [SEND] (get-value (s5))
