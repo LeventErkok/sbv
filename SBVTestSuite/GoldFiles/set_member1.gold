@@ -39,10 +39,10 @@
 [SEND] (get-value (s0))
 [RECV] ((s0 2))
 [SEND] (get-value (s1))
-[RECV] ((s1 (store (store (store (store ((as const (Array Int Bool)) false) 1 true) 3 true)
-                     4
+[RECV] ((s1 (store (store (store (store ((as const (Array Int Bool)) false) 4 true) 3 true)
+                     2
                      true)
-              2
+              1
               true)))
 [GOOD] (define-fun s6 () Bool (select s1 s0))
 [SEND] (get-value (s6))
