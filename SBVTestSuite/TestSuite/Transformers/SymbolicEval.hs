@@ -47,7 +47,7 @@ tests = testGroup "Transformers.SymbolicEval"
               runExceptT (runSMT (query (runQ $ throwError "oops")))
 
     , testCase "tse_combined_success" $ assert $
-          (== Right (Counterexample 9 0)) <$>
+          (== Right (Counterexample 0 9)) <$>
               check (Program  $ Var "x" `Plus` Lit 1 `Plus` Var "y")
                     (Property $ Var "result" `LessThan` Lit 10)
 
