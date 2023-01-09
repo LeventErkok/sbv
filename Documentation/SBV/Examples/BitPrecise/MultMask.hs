@@ -53,9 +53,7 @@ import Data.SBV.Control
 maskAndMult :: IO ()
 maskAndMult = print =<< satWith z3{printBase=16} find
   where find = do -- Magic incantation to make the test go fast. See <http://github.com/Z3Prover/z3/issues/5660> for details.
-                  setOption $ OptionKeyword ":tactic.default_tactic" ["sat"]
-                  setOption $ OptionKeyword ":sat.euf"               ["true"]
-                  setOption $ OptionKeyword ":smt.ematching"         ["false"]
+                  setOption $ OptionKeyword ":smt.ematching" ["false"]
 
                   mask <- sbvExists "mask"
                   mult <- sbvExists "mult"

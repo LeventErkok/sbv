@@ -66,19 +66,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =  -5.6305525e14 :: Float
---   y =   1.4480048e11 :: Float
---   z = -1.29654325e11 :: Float
+--   x =  1.5652655e23 :: Float
+--   y = -1.3279453e22 :: Float
+--   z =  1.8019954e20 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x =  -5.6305525e14 :: Float
--- >>> let y =   1.4480048e11 :: Float
--- >>> let z = -1.29654325e11 :: Float
+-- >>> let x =  1.5652655e23 :: Float
+-- >>> let y = -1.3279453e22 :: Float
+-- >>> let z =  1.8019954e20 :: Float
 -- >>> x + (y + z)
--- -5.630401e14
+-- 1.434273e23
 -- >>> (x + y) + z
--- -5.6304015e14
+-- 1.4342729e23
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
@@ -129,13 +129,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 3.3856712e38 :: Float
+--   a = -13539.329 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 3.3856712e38 :: Float
+-- >>> let a = -13539.329 :: Float
 -- >>> a * (1/a)
--- 1.0000002
+-- 0.99999994
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
@@ -155,28 +155,28 @@ multInverse = prove $ do a <- sFloat "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardNegative :: RoundingMode
---   x  =          -1.0000001 :: Float
---   y  =         9.368906e-2 :: Float
+--   rm = RoundTowardZero :: RoundingMode
+--   x  =    4.0564797e31 :: Float
+--   y  =     2.055174e25 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
 -- 'SFloatingPoint' type does. We have:
 --
--- >>> fpAdd sRoundNearestTiesToEven (-1.0000001) 9.368906e-2 :: SFPSingle
--- -0.906311035 :: SFloatingPoint 8 24
--- >>> fpAdd sRoundTowardNegative (-1.0000001) 9.368906e-2 :: SFPSingle
--- -0.906311095 :: SFloatingPoint 8 24
+-- >>> fpAdd sRoundNearestTiesToEven 4.0564797e31 2.055174e25 :: SFPSingle
+-- 4.05648192e31 :: SFloatingPoint 8 24
+-- >>> fpAdd sRoundTowardZero 4.0564797e31 2.055174e25 :: SFPSingle
+-- 4.05648168e31 :: SFloatingPoint 8 24
 --
--- We can see why these two results are indeed different: The 'RoundTowardNegative'
--- (which rounds towards negative infinity from zero) produces a smaller result. Indeed, if we treat these numbers
+-- We can see why these two results are indeed different: The 'RoundTowardZero'
+-- (which rounds towards zero) produces a smaller result. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >>> 3.2806003e-21 + (-5.749071e-20) :: Double
--- -5.42101097e-20
+-- >>> 4.0564797e31 + 2.055174e25 :: Double
+-- 4.056481755174e31
 --
 -- we see that the "more precise" result is smaller than what the 'Float' value is, justifying the
--- smaller value with 'RoundTowardNegative'. A more detailed study is beyond our current scope, so we'll
+-- smaller value with 'RoundTowardZero'. A more detailed study is beyond our current scope, so we'll
 -- merely note that floating point representation and semantics is indeed a thorny
 -- subject, and point to <http://ece.uwaterloo.ca/~dwharder/NumericalAnalysis/02Numerics/Double/paper.pdf> as
 -- an excellent guide.
