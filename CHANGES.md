@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 9.1, 2023-01-09
 
+### Version 9.1.5, Not yet released
+
+  * Handle uninterpreted sorts better, avoiding kind-registration issue.
+    See #634 for details. Thanks to Nick Lewchenko for the report.
+
 ### Version 9.1, Released, 2023-01-09
 
   * CVC5: Add support for algebraic reals in CVC5 models
