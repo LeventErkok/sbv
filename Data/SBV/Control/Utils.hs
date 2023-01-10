@@ -749,7 +749,7 @@ defaultKindedValue k = CV k <$> cvt k
         uninterp _ (Just (c:_)) = Just $ CUserSort (Just 1, c)
         uninterp _ (Just [])    = Nothing                       -- I don't think this can actually happen, but just in case
 
-        -- A completely uninterpreted sort, i.e., no elements. Return the "unique" element for it.
+        -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
         uninterp s Nothing      = Just $ CUserSort (Nothing, s ++ "_witness")
 
 -- | Go from an SExpr directly to a value
