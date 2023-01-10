@@ -732,7 +732,7 @@ defaultKindedValue k = CV k <$> cvt k
         cvt KBounded{}       = Just $ CInteger 0
         cvt KUnbounded       = Just $ CInteger 0
         cvt KReal            = Just $ CAlgReal 0
-        cvt (KUserSort _ ui) = uninterp ui
+        cvt (KUserSort s ui) = uninterp s ui
         cvt KFloat           = Just $ CFloat 0
         cvt KDouble          = Just $ CDouble 0
         cvt KRational        = Just $ CRational 0
@@ -746,9 +746,11 @@ defaultKindedValue k = CV k <$> cvt k
         cvt (KEither k1 _)   = CEither . Left <$> cvt k1          -- why not?
 
         -- Tricky case of uninterpreted
-        uninterp (Just (c:_)) = Just $ CUserSort (Just 1, c)
-        uninterp (Just [])    = Nothing                       -- I don't think this can actually happen, but just in case
-        uninterp Nothing      = Nothing                       -- Out of luck, truly uninterpreted; we don't even know if it's inhabited.
+        uninterp _ (Just (c:_)) = Just $ CUserSort (Just 1, c)
+        uninterp _ (Just [])    = Nothing                       -- I don't think this can actually happen, but just in case
+
+        -- A completely uninterpreted sort, i.e., no elements. Return the "unique" element for it.
+        uninterp s Nothing      = Just $ CUserSort (Nothing, s ++ "_witness")
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
