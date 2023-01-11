@@ -376,7 +376,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 
   -- Given the function, figure out a default "return value"
   smtFunDefault _
-    | Just v <- defaultKindedValue (kindOf (Proxy @r)), Just (res, []) <- parseCVs [v]
+    | let v = defaultKindedValue (kindOf (Proxy @r)), Just (res, []) <- parseCVs [v]
     = Just res
     | True
     = Nothing
@@ -510,13 +510,7 @@ pointWiseExtract nm typ
 -- is safe here since we only use in smtFunSaturate calls, which looks at the
 -- kind stored inside only.
 mkArg :: forall a. Kind -> SBV a
-mkArg k = case defaultKindedValue k of
-            Nothing -> error $ unlines [ ""
-                                       , "*** Data.SBV.smtFunSaturate: Impossible happened!"
-                                       , "*** Unable to create a valid parameter for kind: " ++ show k
-                                       , "*** Please report this as an SBV bug!"
-                                       ]
-            Just c -> SBV $ SVal k (Left c)
+mkArg k = SBV $ SVal k (Left (defaultKindedValue k))
 
 -- | Functions of arity 1
 instance ( SymVal a, HasKind a
@@ -725,32 +719,32 @@ getValueCVHelper mbi s
   = extractValue mbi (show s) (kindOf s)
 
 -- | "Make up" a CV for this type. Like zero, but smarter.
-defaultKindedValue :: Kind -> Maybe CV
-defaultKindedValue k = CV k <$> cvt k
-  where cvt :: Kind -> Maybe CVal
-        cvt KBool            = Just $ CInteger 0
-        cvt KBounded{}       = Just $ CInteger 0
-        cvt KUnbounded       = Just $ CInteger 0
-        cvt KReal            = Just $ CAlgReal 0
+defaultKindedValue :: Kind -> CV
+defaultKindedValue k = CV k $ cvt k
+  where cvt :: Kind -> CVal
+        cvt KBool            = CInteger 0
+        cvt KBounded{}       = CInteger 0
+        cvt KUnbounded       = CInteger 0
+        cvt KReal            = CAlgReal 0
         cvt (KUserSort s ui) = uninterp s ui
-        cvt KFloat           = Just $ CFloat 0
-        cvt KDouble          = Just $ CDouble 0
-        cvt KRational        = Just $ CRational 0
-        cvt (KFP eb sb)      = Just $ CFP (fpZero False eb sb)
-        cvt KChar            = Just $ CChar '\NUL'                -- why not?
-        cvt KString          = Just $ CString ""
-        cvt (KList  _)       = Just $ CList []
-        cvt (KSet  _)        = Just $ CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
-        cvt (KTuple ks)      = CTuple <$> mapM cvt ks
-        cvt (KMaybe _)       = Just $ CMaybe Nothing
-        cvt (KEither k1 _)   = CEither . Left <$> cvt k1          -- why not?
+        cvt KFloat           = CFloat 0
+        cvt KDouble          = CDouble 0
+        cvt KRational        = CRational 0
+        cvt (KFP eb sb)      = CFP (fpZero False eb sb)
+        cvt KChar            = CChar '\NUL'                -- why not?
+        cvt KString          = CString ""
+        cvt (KList  _)       = CList []
+        cvt (KSet  _)        = CSet $ RegularSet Set.empty -- why not? Arguably, could be the universal set
+        cvt (KTuple ks)      = CTuple $ map cvt ks
+        cvt (KMaybe _)       = CMaybe Nothing
+        cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
 
         -- Tricky case of uninterpreted
-        uninterp _ (Just (c:_)) = Just $ CUserSort (Just 1, c)
-        uninterp _ (Just [])    = Nothing                       -- I don't think this can actually happen, but just in case
+        uninterp _ (Just (c:_)) = CUserSort (Just 1, c)
+        uninterp _ (Just [])    = error "defaultKindedValue: enumerated kind with no constructors!"
 
         -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
-        uninterp s Nothing      = Just $ CUserSort (Nothing, s ++ "_witness")
+        uninterp s Nothing      = CUserSort (Nothing, s ++ "_witness")
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
@@ -1047,7 +1041,7 @@ getUIFunCVAssoc mbi (nm, typ) = do
                                                                 Just (Right assocs) | Just res <- convert assocs                   -> return res
                                                                                     | True                                         -> tryPointWise bailOut
 
-                                                                Just (Left nm')     | nm == nm', Just res <- defaultKindedValue rt -> return ([], res)
+                                                                Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> return ([], res)
                                                                                     | True                                         -> bad r Nothing
 
                                                                 Nothing                                                            -> tryPointWise bailOut
