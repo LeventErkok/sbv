@@ -8,6 +8,7 @@
 [GOOD] (set-logic ALL) ; has user-defined sorts, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] (declare-sort Q 0)  ; N.B. Uninterpreted sort.
+[GOOD] (declare-fun Q_witness () Q)
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
