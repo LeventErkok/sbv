@@ -23,15 +23,18 @@ import Utils.SBVTestFramework
 import Data.SBV.Control
 
 data Bitstring
-mkUninterpretedSort ''Bitstring
-
 data B
+data Thing
+
+mkUninterpretedSort ''Bitstring
 mkUninterpretedSort ''B
+mkUninterpretedSort ''Thing
 
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.Axioms"
     [ testCase         "unint-axioms"       (assertIsThm p0)
+    , testCase         "unint-axioms-empty" (assertIsThm p1)
     , goldenCapturedIO "unint-axioms-query" testQuery
     ]
 
@@ -54,6 +57,28 @@ p0 = do
     constrain $ a p
     constrain $ a k
     return $ a (e k p)
+
+axThings :: [String]
+axThings = [ -- thingCompare is reflexive
+             "(assert (forall ((k1 Thing))"
+           , "  (thingCompare k1 k1)))"
+           -- thingMerge produces a new, distinct thing
+           , "(assert (forall ((k1 Thing) (k2 Thing))"
+           , "  (distinct k1 (thingMerge k1 k2))))"
+           ]
+
+thingCompare :: SThing -> SThing -> SBV Bool
+thingCompare = uninterpret "thingCompare"
+
+thingMerge :: SThing -> SThing -> SThing
+thingMerge = uninterpret "thingMerge"
+
+p1 :: Symbolic SBool
+p1 = do addAxiom "things" axThings
+        registerUISMTFunction thingMerge
+        k1 <- sbvForall_
+        k2 <- sbvForall_
+        return $ k1 .== k2 .=> thingCompare k1 k2
 
 testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t
