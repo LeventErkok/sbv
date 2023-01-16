@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 9.1, 2023-01-09
+* Latest Hackage released version: 9.2, 2023-01-16
 
-### Version 9.1.5, Not yet released
+### Version 9.2, 2023-1-16
 
   * Handle uninterpreted sorts better, avoiding kind-registration issue.
     See #634 for details. Thanks to Nick Lewchenko for the report.
