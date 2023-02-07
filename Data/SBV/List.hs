@@ -346,6 +346,7 @@ offsetIndexOf s sub offset
   = lift3 SeqIndexOf Nothing s sub offset
 
 -- | @`reverse` s@ reverses the sequence.
+--
 -- >>> sat $ \(l :: SList Integer) -> reverse l .== literal [3, 2, 1]
 -- Satisfiable. Model:
 --   s0 = [1,2,3] :: [Integer]
