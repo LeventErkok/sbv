@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 9.2, 2023-01-16
 
+### Version 9.2.5, Not yet released
+
+  * Add missing Arbitrary instances for WordN and IntN types, enabling
+    quickcheck on these types.
+
 ### Version 9.2, 2023-1-16
 
   * Handle uninterpreted sorts better, avoiding kind-registration issue.

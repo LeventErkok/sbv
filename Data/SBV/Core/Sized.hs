@@ -43,6 +43,8 @@ import Data.SBV.Core.Symbolic
 
 import Data.SBV.SMT.SMT
 
+import Test.QuickCheck(Arbitrary(..))
+
 -- | An unsigned bit-vector carrying its size info
 newtype WordN (n :: Nat) = WordN Integer deriving (Eq, Ord)
 
@@ -361,3 +363,22 @@ bvTake i = SBV . svExtract start end . unSBV
   where nv    = intOfProxy (Proxy @n)
         start = nv - 1
         end   = start - fromIntegral (natVal i) + 1
+
+-- | Quickcheck instance for WordN
+instance KnownNat n => Arbitrary (WordN n) where
+  arbitrary = (WordN . norm . abs) `fmap` arbitrary
+    where sz = intOfProxy (Proxy @n)
+
+          norm v | sz == 0 = 0
+                 | True    = v .&. (((1 :: Integer) `shiftL` sz) - 1)
+
+-- | Quickcheck instance for IntN
+instance KnownNat n => Arbitrary (IntN n) where
+  arbitrary = (IntN . norm) `fmap` arbitrary
+    where sz = intOfProxy (Proxy @n)
+
+          norm v | sz == 0 = 0
+                 | True  = let rg = 2 ^ (sz - 1)
+                           in case divMod v rg of
+                                     (a, b) | even a -> b
+                                     (_, b)          -> b - rg
