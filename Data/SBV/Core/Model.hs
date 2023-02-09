@@ -841,6 +841,31 @@ class EqSymbolic a where
   x `sElem`    xs = sAny (.== x) xs
   x `sNotElem` xs = sNot (x `sElem` xs)
 
+  -- Default implementation for 'symbolicMerge' if the type is 'Generic'
+  default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
+  (.==) = symbolicEqDefault
+
+-- | Default implementation of symbolic equality, when the underlying type is generic
+-- Not exported, used with automatic deriving.
+symbolicEqDefault :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
+symbolicEqDefault x y = symbolicEq (G.from x) (G.from y)
+
+-- | Not exported, used for implementing generic equality.
+class GEqSymbolic f where
+  symbolicEq :: f a -> f a -> SBool
+
+instance GEqSymbolic U1 where
+  symbolicEq _ _ = sTrue
+
+instance (EqSymbolic c) => GEqSymbolic (K1 i c) where
+  symbolicEq (K1 x) (K1 y) = x .== y
+
+instance (GEqSymbolic f) => GEqSymbolic (M1 i c f) where
+  symbolicEq (M1 x) (M1 y) = symbolicEq x y
+
+instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :*: g) where
+  symbolicEq (x1 :*: y1) (x2 :*: y2) = symbolicEq x1 x2 .&& symbolicEq y1 y2
+
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
 -- Furthermore, 'OrdSymbolic' requires 'Mergeable' to implement if-then-else, for the
