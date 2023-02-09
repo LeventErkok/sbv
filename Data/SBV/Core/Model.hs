@@ -53,7 +53,7 @@ import Control.Monad          (when, unless, mplus)
 import Control.Monad.Trans    (liftIO)
 import Control.Monad.IO.Class (MonadIO)
 
-import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
+import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
@@ -865,6 +865,12 @@ instance (GEqSymbolic f) => GEqSymbolic (M1 i c f) where
 
 instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :*: g) where
   symbolicEq (x1 :*: y1) (x2 :*: y2) = symbolicEq x1 x2 .&& symbolicEq y1 y2
+
+instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
+  symbolicEq (L1 l) (L1 r) = symbolicEq l r
+  symbolicEq (R1 l) (R1 r) = symbolicEq l r
+  symbolicEq (L1 _) (R1 _) = sFalse
+  symbolicEq (R1 _) (L1 _) = sFalse
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
@@ -2280,6 +2286,24 @@ instance (GMergeable f) => GMergeable (M1 i c f) where
 
 instance (GMergeable f, GMergeable g) => GMergeable (f :*: g) where
   symbolicMerge' force t (x1 :*: y1) (x2 :*: y2) = symbolicMerge' force t x1 x2 :*: symbolicMerge' force t y1 y2
+
+{- A mergeable instance for sum-types isn't possible. Why? It would something like:
+
+instance (GMergeable f, GMergeable g) => GMergeable (f :+: g) where
+  symbolicMerge' force t (L1 x) (L1 y) = L1 $ symbolicMerge' force t x y
+  symbolicMerge' force t (R1 x) (R1 y) = R1 $ symbolicMerge' force t x y
+  symbolicMerge' force t l r
+    | Just tv <- unliteral t = if tv then l else r
+    | True                   = ????
+
+There's really no good code to put in ????. We have no way to ask the SMT solver to merge composite values that
+have different constructors. Calling "error" here would pass the type-checker, but that simply postpones the problem
+to run-time. If you need mergeable on sum-types, you better write one yourself, possibly using the SEither type yourself.
+As we have it, you'll get a type-error; which can be hard to read, but is preferable.
+
+NB. This isn't a problem with the generic version of symbolic equality; since we can simply return sFalse if we
+see different constructors. Such isn't the case when merging.
+-}
 
 -- Bounded instances
 instance (SymVal a, Bounded a) => Bounded (SBV a) where
