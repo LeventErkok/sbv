@@ -81,7 +81,7 @@ docTest:
 	@$(TIME) cabal new-run SBVDocTest
 
 # Check a single module using doctest:
-#   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer
+#   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer.hs
 docTestModule:
 	cabal-docspec --verbose --trace-process --timeout=100 --module $(basename $(subst /,.,${TGT}))
 
