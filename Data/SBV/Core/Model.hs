@@ -779,6 +779,8 @@ sObserve m x
 
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
+--
+-- Minimal complete definition: None, if the type is instance of @Generic@. Otherwise '(.==)'.
 infix 4 .==, ./=, .===, ./==
 class EqSymbolic a where
   -- | Symbolic equality.
@@ -815,8 +817,6 @@ class EqSymbolic a where
   -- | Symbolic negated membership test.
   sNotElem :: a -> [a] -> SBool
 
-  {-# MINIMAL (.==) #-}
-
   x ./=  y = sNot (x .==  y)
   x .=== y = x .== y
   x ./== y = sNot (x .=== y)
@@ -824,12 +824,12 @@ class EqSymbolic a where
   allEqual []     = sTrue
   allEqual (x:xs) = sAll (x .==) xs
 
-  -- Default implementation of distinct. Note that we override
+  -- Default implementation of 'distinct'. Note that we override
   -- this method for the base types to generate better code.
   distinct []     = sTrue
   distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
 
-  -- Default implementation of distinctExcept. Note that we override
+  -- Default implementation of 'distinctExcept'. Note that we override
   -- this method for the base types to generate better code.
   distinctExcept es ignored = go es
     where isIgnored = (`sElem` ignored)
@@ -841,7 +841,7 @@ class EqSymbolic a where
   x `sElem`    xs = sAny (.== x) xs
   x `sNotElem` xs = sNot (x `sElem` xs)
 
-  -- Default implementation for 'symbolicMerge' if the type is 'Generic'
+  -- Default implementation for '(.==)' if the type is 'Generic'
   default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
   (.==) = symbolicEqDefault
 
