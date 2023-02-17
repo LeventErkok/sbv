@@ -31,6 +31,7 @@ import qualified TestSuite.Basics.BarrelRotate
 import qualified TestSuite.Basics.BoundedList
 import qualified TestSuite.Basics.DynSign
 import qualified TestSuite.Basics.Exceptions
+import qualified TestSuite.Basics.EqSym
 import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
@@ -139,6 +140,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Basics.BasicTests.tests
                       , TestSuite.Basics.BoundedList.tests
                       , TestSuite.Basics.DynSign.tests
+                      , TestSuite.Basics.EqSym.tests
                       , TestSuite.Basics.Exceptions.testsLocal
                       , TestSuite.Basics.Exceptions.testsRemote
                       , TestSuite.Basics.GenBenchmark.tests

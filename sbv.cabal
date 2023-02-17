@@ -271,6 +271,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.BasicTests
                   , TestSuite.Basics.BoundedList
                   , TestSuite.Basics.DynSign
+                  , TestSuite.Basics.EqSym
                   , TestSuite.Basics.Exceptions
                   , TestSuite.Basics.GenBenchmark
                   , TestSuite.Basics.Higher
