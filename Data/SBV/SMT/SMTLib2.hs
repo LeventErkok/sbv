@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), OvOp(..), CnstMap, getUserName', getSV, regExpToSMTString)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString)
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types

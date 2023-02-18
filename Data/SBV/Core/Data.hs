@@ -48,7 +48,7 @@ module Data.SBV.Core.Data
  , sbvToSV, sbvToSymSV, forceSVArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
- , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), getTableIndex
+ , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
  , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
  , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
