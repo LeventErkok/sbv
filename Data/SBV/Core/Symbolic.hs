@@ -197,6 +197,7 @@ data Op = Plus
         | NonLinear NROp                        -- Non-linear ops (mostly trigonometric), categorized separately
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
+        | FoldLeft      String                  -- fold operation. String is the folding operation, which SBV does no checking on.
         | StrOp StrOp                           -- String ops, categorized separately
         | RegExOp RegExOp                       -- RegEx operations, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
@@ -548,6 +549,8 @@ instance Show Op where
   show (RegExOp s)          = show s
   show (SeqOp s)            = show s
   show (SetOp s)            = show s
+
+  show (FoldLeft s)         = "seq.foldl " ++ s
 
   show (TupleConstructor   0) = "mkSBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n

@@ -32,6 +32,8 @@ module Data.SBV.List (
         , take, drop, subList, replace, indexOf, offsetIndexOf
         -- * Reverse
         , reverse
+        -- * Folding
+        , sfoldl
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
@@ -361,6 +363,23 @@ reverse l
   where k = kindOf l
         r st = do sva <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
+
+-- | @`sfoldl` op base s@ folds sequence, using the operation. Note that SBV never constant folds this operation.
+-- op is a simple string, which can either be a SMTLib lambda, or a function you add via `addSMTDefinition`.
+-- Note that SBV does no checking that the string is valid, nor it makes sense for the arguments. So, user beware!
+--
+-- >>> sat $ \x -> x .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" (0 :: SInteger) ([1,2,3 :: Integer])
+-- Satisfiable. Model:
+--   s0 = 6 :: Integer
+-- >>> sat $ \l -> 8 .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" 0 (l :: SList Integer) .&& length l .>= 3
+-- Satisfiable. Model:
+--   s0 = [449,7916,-8357] :: [Integer]
+sfoldl :: (SymVal a, SymVal b) => String -> SBV a -> SList b -> SBV a
+sfoldl op base l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf base
+        r st = do svb <- sbvToSV st base
+                  sva <- sbvToSV st l
+                  newExpr st k (SBVApp (FoldLeft op) [svb, sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b

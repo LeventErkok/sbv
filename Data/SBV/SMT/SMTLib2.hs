@@ -996,6 +996,8 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
 
+        sh (SBVApp op@FoldLeft{} args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+
         sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map ssv args) ++ ")"
         sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ ssv s ++ " " ++ ssv e ++ ")"
         sh (SBVApp (SetOp SetInsert)     [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " true)"
