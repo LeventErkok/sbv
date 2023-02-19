@@ -222,7 +222,7 @@ The termination measure must always be non-negative:
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 2, i = 1, s = 1}
+    State  : SumS {n = 3, i = 1, s = 1}
     Measure: -1
 
 The failure is pretty obvious in this case: Measure produces a negative value.

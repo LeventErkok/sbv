@@ -1147,15 +1147,15 @@ Q.E.D.
 Q.E.D.
 >>> prove $ roundTrip @Int32
 Falsifiable. Counter-example:
-  s0 = RoundTowardPositive :: RoundingMode
-  s1 =          1073741810 :: Int32
+  s0 = RoundNearestTiesToEven :: RoundingMode
+  s1 =             -234882191 :: Int32
 
 Note how we get a failure on `Int32`. The counter-example value is not representable exactly as a single precision float:
 
->>> toRational (1073741810 :: Float)
-1073741824 % 1
+>>> toRational (-234882191 :: Float)
+(-234882192) % 1
 
-Note how the numerator is different, it is off by 4. This is hardly surprising, since floats become sparser as
+Note how the numerator is different, it is off by 1. This is hardly surprising, since floats become sparser as
 the magnitude increases to be able to cover all the integer values representable.
 
 >>> :{
