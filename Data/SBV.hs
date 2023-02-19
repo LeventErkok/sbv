@@ -1178,15 +1178,15 @@ Q.E.D.
 >>> prove $ roundTrip @Int64
 Falsifiable. Counter-example:
   s0 = RoundNearestTiesToEven :: RoundingMode
-  s1 =      55662890612200361 :: Int64
+  s1 =    -290134516084341049 :: Int64
 
 Just like in the `SFloat` case, once we reach 64-bits, we no longer can exactly represent the
 integer value for all possible values:
 
->>> toRational (fromIntegral (55662890612200361 :: Int64) :: Double)
-55662890612200360 % 1
+>>> toRational (fromIntegral (-290134516084341049 :: Int64) :: Double)
+(-290134516084341056) % 1
 
-In this case the numerator is off by 1.
+In this case the numerator is off by 7.
 -}
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both

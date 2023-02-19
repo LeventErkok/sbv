@@ -155,9 +155,9 @@ multInverse = prove $ do a <- sFloat "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---  rm = RoundTowardPositive :: RoundingMode
---  x  =      -2.3508738e-38 :: Float
---  y  =       -1.175441e-38 :: Float
+--   rm = RoundTowardPositive :: RoundingMode
+--   x  =      -2.3508738e-38 :: Float
+--   y  =       -1.175441e-38 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
