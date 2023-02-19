@@ -31,11 +31,11 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (fp #b1 #x00 #b00000000000010001000111)))
+[RECV] ((s0 (_ +zero 8 24)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model. Assignment:
-[VALIDATE]       x = -1.534e-42 :: Float
+[VALIDATE]       x = 0.0 :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
 
@@ -44,7 +44,7 @@ FINAL OUTPUT:
 *** 
 *** Assignment:
 *** 
-***       x = -1.534e-42 :: Float
+***       x = 0.0 :: Float
 *** 
 *** Floating point FMA operation is not supported concretely.
 *** 
@@ -54,4 +54,4 @@ FINAL OUTPUT:
 *** Alleged model:
 ***
 *** Satisfiable. Model:
-***   x = -1.534e-42 :: Float
+***   x = 0.0 :: Float
