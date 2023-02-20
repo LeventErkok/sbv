@@ -197,9 +197,8 @@ data Op = Plus
         | NonLinear NROp                        -- Non-linear ops (mostly trigonometric), categorized separately
         | OverflowOp    OvOp                    -- Overflow-ops, categorized separately
         | PseudoBoolean PBOp                    -- Pseudo-boolean ops, categorized separately
-        | FoldLeft      String                  -- fold operation. String is the folding operation, which SBV does no checking on.
-        | StrOp StrOp                           -- String ops, categorized separately
         | RegExOp RegExOp                       -- RegEx operations, categorized separately
+        | StrOp StrOp                           -- String ops, categorized separately
         | SeqOp SeqOp                           -- Sequence ops, categorized separately
         | SetOp SetOp                           -- Set operations, categorized separately
         | TupleConstructor Int                  -- Construct an n-tuple
@@ -459,31 +458,40 @@ instance Show RegExOp where
   show (RegExNEq r1 r2) = "(distinct " ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
 
 -- | Sequence operations.
-data SeqOp = SeqConcat        -- ^ See StrConcat
-           | SeqLen           -- ^ See StrLen
-           | SeqUnit          -- ^ See StrUnit
-           | SeqNth           -- ^ See StrNth
-           | SeqSubseq        -- ^ See StrSubseq
-           | SeqIndexOf       -- ^ See StrIndexOf
-           | SeqContains      -- ^ See StrContains
-           | SeqPrefixOf      -- ^ See StrPrefixOf
-           | SeqSuffixOf      -- ^ See StrSuffixOf
-           | SeqReplace       -- ^ See StrReplace
-           | SBVReverse Kind  -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
+data SeqOp = SeqConcat            -- ^ See StrConcat
+           | SeqLen               -- ^ See StrLen
+           | SeqUnit              -- ^ See StrUnit
+           | SeqNth               -- ^ See StrNth
+           | SeqSubseq            -- ^ See StrSubseq
+           | SeqIndexOf           -- ^ See StrIndexOf
+           | SeqContains          -- ^ See StrContains
+           | SeqPrefixOf          -- ^ See StrPrefixOf
+           | SeqSuffixOf          -- ^ See StrSuffixOf
+           | SeqReplace           -- ^ See StrReplace
+           | SeqMap       String  -- ^ Mapping over sequences
+           | SeqMapI      String  -- ^ Mapping over sequences with offset
+           | SeqFoldLeft  String  -- ^ Folding of sequences
+           | SeqFoldLeftI String  -- ^ Folding of sequences with offset
+           | SBVReverse Kind      -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
   deriving (Eq, Ord, G.Data)
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
-  show SeqConcat   = "seq.++"
-  show SeqLen      = "seq.len"
-  show SeqUnit     = "seq.unit"
-  show SeqNth      = "seq.nth"
-  show SeqSubseq   = "seq.extract"
-  show SeqIndexOf  = "seq.indexof"
-  show SeqContains = "seq.contains"
-  show SeqPrefixOf = "seq.prefixof"
-  show SeqSuffixOf = "seq.suffixof"
-  show SeqReplace  = "seq.replace"
+  show SeqConcat        = "seq.++"
+  show SeqLen           = "seq.len"
+  show SeqUnit          = "seq.unit"
+  show SeqNth           = "seq.nth"
+  show SeqSubseq        = "seq.extract"
+  show SeqIndexOf       = "seq.indexof"
+  show SeqContains      = "seq.contains"
+  show SeqPrefixOf      = "seq.prefixof"
+  show SeqSuffixOf      = "seq.suffixof"
+  show SeqReplace       = "seq.replace"
+  show (SeqMap       s) = "seq.map "    ++ s
+  show (SeqMapI      s) = "seq.mapi "   ++ s
+  show (SeqFoldLeft  s) = "seq.foldl "  ++ s
+  show (SeqFoldLeftI s) = "seq.foldli " ++ s
+
   -- Note: This isn't part of SMTLib, we explicitly handle it
   show (SBVReverse k) = "sbv.reverse[" ++ show k ++ "]"
 
@@ -549,8 +557,6 @@ instance Show Op where
   show (RegExOp s)          = show s
   show (SeqOp s)            = show s
   show (SetOp s)            = show s
-
-  show (FoldLeft s)         = "seq.foldl " ++ s
 
   show (TupleConstructor   0) = "mkSBVTuple0"
   show (TupleConstructor   n) = "mkSBVTuple" ++ show n

@@ -32,8 +32,10 @@ module Data.SBV.List (
         , take, drop, subList, replace, indexOf, offsetIndexOf
         -- * Reverse
         , reverse
+        -- * Mapping
+        , smap, smapi
         -- * Folding
-        , sfoldl
+        , sfoldl, sfoldli
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
@@ -364,9 +366,48 @@ reverse l
         r st = do sva <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
 
--- | @`sfoldl` op base s@ folds sequence, using the operation. Note that SBV never constant folds this operation.
--- op is a simple string, which can either be a SMTLib lambda, or a function you add via `addSMTDefinition`.
+-- | @`smap` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
+-- op is a simple string, which can either be an SMTLib lambda, or a function you add via 'addSMTDefinition'.
 -- Note that SBV does no checking that the string is valid, nor it makes sense for the arguments. So, user beware!
+--
+-- The full type of this function should really be:
+--
+-- @
+--
+--      (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
+-- @
+smap :: (SymVal a, SymVal b) => String -> SList a -> SList b
+smap op l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf l
+        r st = do sva <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SeqMap op)) [sva])
+
+-- | @`smapi` op s@ maps the operation on to sequence, taking an additional offset as the argument. The easiest
+-- way to think about is that your funciton is given an extra argument for each element, incremented by 1, starting
+-- from the offset you've given. Same comments apply as in 'smap' regarding the 'op' argument.
+--
+-- The full type of this function should really be:
+--
+-- @
+--
+--      (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
+-- @
+smapi :: (SymVal a, SymVal b) => String -> SInteger -> SList a -> SList b
+smapi op i l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf l
+        r st = do sva <- sbvToSV st l
+                  svi <- sbvToSV st i
+                  newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, sva])
+
+-- | @`sfoldl` op base s@ folds sequence, using the operation. Note that SBV never constant folds this operation.
+-- op is a simple string, which can either be an SMTLib lambda, or a function you add via 'addSMTDefinition'.
+-- Note that SBV does no checking that the string is valid, nor it makes sense for the arguments. So, user beware!
+--
+-- The full type of this function should really be:
+--
+-- @
+--      (SymVal a, SymVal b) => (SBV b -> a -> SBV b) -> b -> SList a -> b
+-- @
 --
 -- >>> sat $ \x -> x .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" (0 :: SInteger) ([1,2,3 :: Integer])
 -- Satisfiable. Model:
@@ -374,12 +415,27 @@ reverse l
 -- >>> sat $ \l -> 8 .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" 0 (l :: SList Integer) .&& length l .>= 3
 -- Satisfiable. Model:
 --   s0 = [449,7916,-8357] :: [Integer]
-sfoldl :: (SymVal a, SymVal b) => String -> SBV a -> SList b -> SBV a
+sfoldl :: (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
 sfoldl op base l = SBV $ SVal k $ Right $ cache r
   where k = kindOf base
         r st = do svb <- sbvToSV st base
                   sva <- sbvToSV st l
-                  newExpr st k (SBVApp (FoldLeft op) [svb, sva])
+                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft op)) [svb, sva])
+
+-- | @`sfoldli` op base s@ folds sequence, using the operation. Similar to 'sfoldl', except the function also takes
+-- an integer as the first argument that corresponds to the index of the element, starting at the offset you've provided
+-- as the second argument. The caveat about the op argument applies as in 'sfoldl'. The full type of this function should really be:
+--
+-- @
+--      (SymVal a, SymVal b) => (SInteger -> SBV b -> a -> SBV b) -> SInteger -> b -> SList a -> b
+-- @
+sfoldli :: (SymVal a, SymVal b) => String -> SInteger -> SBV b -> SList a -> SBV b
+sfoldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf baseE
+        r st = do svi <- sbvToSV st baseI
+                  sve <- sbvToSV st baseE
+                  sva <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SeqFoldLeftI op)) [svi, sve, sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
