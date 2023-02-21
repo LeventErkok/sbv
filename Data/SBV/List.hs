@@ -33,21 +33,18 @@ module Data.SBV.List (
         -- * Reverse
         , reverse
         -- * Mapping
-        , smap, smapi
+        , map, mapi, mapUntyped, mapiUntyped
         -- * Folding
-        , sfoldl, sfoldli
-        -- * Experiment
-        , smap2, Expr(..)
+        , foldl, foldli, foldlUntyped, foldliUntyped
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
 
-import Data.SBV.Core.Kind       (smtType)
-import Data.SBV.Utils.PrettyNum (cvToSMTLib)
+import Data.SBV.Lambda
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
@@ -56,8 +53,10 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
+-- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
+-- >>> :set -XDataKinds
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
 
@@ -168,7 +167,7 @@ elemAt l i
 --
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> length (implode [e1, e2, e3]) .== 3
 -- Q.E.D.
--- >>> prove $ \(e1 :: SInteger) e2 e3 -> map (elemAt (implode [e1, e2, e3])) (map literal [0 .. 2]) .== [e1, e2, e3]
+-- >>> prove $ \(e1 :: SInteger) e2 e3 -> P.map (elemAt (implode [e1, e2, e3])) (P.map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
 implode = foldr ((++) . singleton) (literal [])
@@ -371,71 +370,70 @@ reverse l
         r st = do sva <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
 
--- | @`smap` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
--- op is a simple string, which can either be an SMTLib lambda, or a function you add via 'addSMTDefinition'.
--- Note that SBV does no checking that the string is valid, nor it makes sense for the arguments. So, user beware!
+-- | @`map` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
 --
--- The full type of this function should really be:
+-- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [2,3,4,5,6] :: [Integer]
+-- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: WordN 8]
+-- Satisfiable. Model:
+--   s0 = [2,3,4,5,6] :: [Word8]
+map :: forall a b. (SymVal a, SymVal b) => (Expr a -> Expr b) -> SList a -> SList b
+map = mapUntyped . lambda1 "x"
+
+-- | @`mapUntyped` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
+-- Compare this to 'Data.SBV.List.map', instead we take a string representation of the SMTLib lambda. Use this
+-- function only in cases where the internal means of writing a lambda isn't sufficient.
 --
--- @
---
---      (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
--- @
-smap :: (SymVal a, SymVal b) => String -> SList a -> SList b
-smap op l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf l
+-- >>> sat $ \l -> l .== (mapUntyped "(lambda ((x Int)) (seq.unit x))" [1,2,3::Integer] :: SList [Integer])
+-- Satisfiable. Model:
+--   s0 = [[1],[2],[3]] :: [[Integer]]
+mapUntyped :: forall a b. (SymVal a, SymVal b) => String -> SList a -> SList b
+mapUntyped op l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SeqMap op)) [sva])
 
--- | @`smapi` op s@ maps the operation on to sequence, taking an additional offset as the argument. The easiest
--- way to think about is that your funciton is given an extra argument for each element, incremented by 1, starting
--- from the offset you've given. Same comments apply as in 'smap' regarding the 'op' argument.
---
--- The full type of this function should really be:
---
--- @
---
---      (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
--- @
-smapi :: (SymVal a, SymVal b) => String -> SInteger -> SList a -> SList b
-smapi op i l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf l
-        r st = do sva <- sbvToSV st l
-                  svi <- sbvToSV st i
-                  newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, sva])
+-- | @`mapi` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
+-- at the given value. Note that SBV never constant folds this operation.
+mapi :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr a -> Expr b) -> SInteger -> SList a -> SList b
+mapi = mapiUntyped . lambda2 "i" "a"
 
--- | @`sfoldl` op base s@ folds sequence, using the operation. Note that SBV never constant folds this operation.
--- op is a simple string, which can either be an SMTLib lambda, or a function you add via 'addSMTDefinition'.
--- Note that SBV does no checking that the string is valid, nor it makes sense for the arguments. So, user beware!
---
--- The full type of this function should really be:
---
--- @
---      (SymVal a, SymVal b) => (SBV b -> a -> SBV b) -> b -> SList a -> b
--- @
---
--- >>> sat $ \x -> x .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" (0 :: SInteger) ([1,2,3 :: Integer])
--- Satisfiable. Model:
---   s0 = 6 :: Integer
--- >>> sat $ \l -> 8 .== sfoldl "(lambda ((x Int) (y Int)) (+ x y))" 0 (l :: SList Integer) .&& length l .>= 3
--- Satisfiable. Model:
---   s0 = [449,7916,-8357] :: [Integer]
-sfoldl :: (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
-sfoldl op base l = SBV $ SVal k $ Right $ cache r
+-- | @`mapiUntyped` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
+-- at the given value. Note that SBV never constant folds this operation.
+-- Compare this to 'Data.SBV.List.map', instead we take a string representation of the SMTLib lambda. Use this
+-- function only in cases where the internal means of writing a lambda isn't sufficient.
+mapiUntyped :: forall a b. (SymVal a, SymVal b) => String -> SInteger -> SList a -> SList b
+mapiUntyped op i l = SBV $ SVal k $ Right $ cache r
+  where k = kindOf (Proxy @(SList b))
+        r st = do svi <- sbvToSV st i
+                  svl <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, svl])
+
+-- | @`fold` op base s@ folds the sequence. Note that SBV never constant folds this operation.
+foldl :: forall a b. (SymVal a, SymVal b) => (Expr b -> Expr a -> Expr b) -> SBV b -> SList a -> SBV b
+foldl = foldlUntyped . lambda2 "b" "a"
+
+-- | @`foldlUntyped` op s@ folds the sequence. Note that SBV never constant folds this operation.
+-- Compare this to 'Data.SBV.List.fold', instead we take a string representation of the SMTLib lambda. Use this
+-- function only in cases where the internal means of writing a lambda isn't sufficient.
+foldlUntyped :: forall a b. (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
+foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
   where k = kindOf base
         r st = do svb <- sbvToSV st base
-                  sva <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft op)) [svb, sva])
+                  svl <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft op)) [svb, svl])
 
--- | @`sfoldli` op base s@ folds sequence, using the operation. Similar to 'sfoldl', except the function also takes
--- an integer as the first argument that corresponds to the index of the element, starting at the offset you've provided
--- as the second argument. The caveat about the op argument applies as in 'sfoldl'. The full type of this function should really be:
---
--- @
---      (SymVal a, SymVal b) => (SInteger -> SBV b -> a -> SBV b) -> SInteger -> b -> SList a -> b
--- @
-sfoldli :: (SymVal a, SymVal b) => String -> SInteger -> SBV b -> SList a -> SBV b
-sfoldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
+-- | @`foldi` op base s@ folds the sequence, with the optional counter given at each element, starting
+-- at the given value. Note that SBV never constant folds this operation.
+foldli :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr b -> Expr a -> Expr b) -> SInteger -> SBV b -> SList a -> SBV b
+foldli = foldliUntyped . lambda3 "i" "b" "a"
+
+-- | @`foldliUntyped` op s@ folds the operation on to sequence. Note that SBV never constant folds this operation.
+-- Compare this to 'Data.SBV.List.foldli', instead we take a string representation of the SMTLib lambda. Use this
+-- function only in cases where the internal means of writing a lambda isn't sufficient.
+foldliUntyped :: forall a b. (SymVal a, SymVal b) => String -> SInteger -> SBV b -> SList a -> SBV b
+foldliUntyped op baseI baseE l = SBV $ SVal k $ Right $ cache r
   where k = kindOf baseE
         r st = do svi <- sbvToSV st baseI
                   sve <- sbvToSV st baseE
@@ -494,54 +492,3 @@ concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unl
 isConcretelyEmpty :: SymVal a => SList a -> Bool
 isConcretelyEmpty sl | Just l <- unliteral sl = P.null l
                      | True                   = False
-
-
-newtype LVar a = LVar String
-newtype Expr a = Expr String
-
-mkVar :: String -> (Expr a -> b) -> (LVar a, b)
-mkVar n f = (LVar n, f (Expr n))
-
-instance (SymVal a, Ord a, Num a) => Num (Expr a) where
-  fromInteger i   = Expr $ cvToSMTLib RoundNearestTiesToEven (mkConstCV (kindOf (Proxy @a)) i)
-  Expr a + Expr b = case kindOf (Proxy @a) of
-                      KUnbounded -> Expr $ "(+ "     P.++ a P.++ " " P.++ b P.++ ")"
-                      KBounded{} -> Expr $ "(bvadd " P.++ a P.++ " " P.++ b P.++ ")"
-                      _ -> error "tbd"
-  Expr a - Expr b = Expr $ "(- " P.++ a P.++ " " P.++ b P.++ ")"
-  Expr a * Expr b = Expr $ "(* " P.++ a P.++ " " P.++ b P.++ ")"
-  abs    _        = error "no abs"
-  signum _        = error "no signum"
-
-lambda :: forall a b. HasKind a => LVar a -> Expr b -> String
-lambda (LVar s) (Expr body) = unlines
-      [ "(lambda ("
-      , "   (" P.++ s P.++ " " P.++ smtType (kindOf (Proxy @a)) P.++ ")"
-      , "   )"
-      , "   " P.++ body
-      , ")"
-      ]
-
-smap2 :: (SymVal a, SymVal b) => (Expr a -> Expr b) -> SList a -> SList b
-smap2 f l = SBV $ SVal k $ Right $ cache r
-  where (a, e) = mkVar "x" f
-        op = lambda a e
-
-        k = kindOf l
-        r st = do sva <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqMap op)) [sva])
-
-{-
-import Data.SBV.List
-import Prelude ((+))
-:set -XOverloadedLists
-:set -XDataKinds
-sat $ \l -> l .== smap2 (+1) [1,2,3::Integer]
-sat $ \l -> l .== smap2 (+1) [1,2,3::WordN 8]
--- Can't type-check this. Why? Because:
---   SList (SList a) /= SList [[a]]
---   SList (SList a) *IS*  SBV [SBV [a]]
---                   *NOT* SBV [[a]]
--- I don't see how to make this work then.
-sat $ \l -> l .== (smap2 (const (Expr "(seq.unit x)") :: Expr Integer -> Expr (SList Integer)) [1,2,3::Integer] :: SList [[Integer]])
--}
