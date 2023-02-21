@@ -33,9 +33,9 @@ module Data.SBV.List (
         -- * Reverse
         , reverse
         -- * Mapping
-        , map, mapi, mapUntyped, mapiUntyped
+        , map, mapUntyped, mapi, mapiUntyped
         -- * Folding
-        , foldl, foldli, foldlUntyped, foldliUntyped
+        , foldl, foldlUntyped, foldli, foldliUntyped
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
@@ -410,12 +410,12 @@ mapiUntyped op i l = SBV $ SVal k $ Right $ cache r
                   svl <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, svl])
 
--- | @`fold` op base s@ folds the sequence. Note that SBV never constant folds this operation.
+-- | @`foldl` op base s@ folds the sequence. Note that SBV never constant folds this operation.
 foldl :: forall a b. (SymVal a, SymVal b) => (Expr b -> Expr a -> Expr b) -> SBV b -> SList a -> SBV b
 foldl = foldlUntyped . lambda2 "b" "a"
 
 -- | @`foldlUntyped` op s@ folds the sequence. Note that SBV never constant folds this operation.
--- Compare this to 'Data.SBV.List.fold', instead we take a string representation of the SMTLib lambda. Use this
+-- Compare this to 'Data.SBV.List.foldl', instead we take a string representation of the SMTLib lambda. Use this
 -- function only in cases where the internal means of writing a lambda isn't sufficient.
 foldlUntyped :: forall a b. (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
 foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
@@ -424,7 +424,7 @@ foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
                   svl <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeft op)) [svb, svl])
 
--- | @`foldi` op base s@ folds the sequence, with the optional counter given at each element, starting
+-- | @`foldli` op base s@ folds the sequence, with the optional counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
 foldli :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr b -> Expr a -> Expr b) -> SInteger -> SBV b -> SList a -> SBV b
 foldli = foldliUntyped . lambda3 "i" "b" "a"
