@@ -36,6 +36,8 @@ module Data.SBV.List (
         , smap, smapi
         -- * Folding
         , sfoldl, sfoldli
+        -- * Experiment
+        , smap2, Expr(..)
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!))
@@ -43,6 +45,9 @@ import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
+
+import Data.SBV.Core.Kind       (smtType)
+import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
@@ -489,3 +494,54 @@ concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unl
 isConcretelyEmpty :: SymVal a => SList a -> Bool
 isConcretelyEmpty sl | Just l <- unliteral sl = P.null l
                      | True                   = False
+
+
+newtype LVar a = LVar String
+newtype Expr a = Expr String
+
+mkVar :: String -> (Expr a -> b) -> (LVar a, b)
+mkVar n f = (LVar n, f (Expr n))
+
+instance (SymVal a, Ord a, Num a) => Num (Expr a) where
+  fromInteger i   = Expr $ cvToSMTLib RoundNearestTiesToEven (mkConstCV (kindOf (Proxy @a)) i)
+  Expr a + Expr b = case kindOf (Proxy @a) of
+                      KUnbounded -> Expr $ "(+ "     P.++ a P.++ " " P.++ b P.++ ")"
+                      KBounded{} -> Expr $ "(bvadd " P.++ a P.++ " " P.++ b P.++ ")"
+                      _ -> error "tbd"
+  Expr a - Expr b = Expr $ "(- " P.++ a P.++ " " P.++ b P.++ ")"
+  Expr a * Expr b = Expr $ "(* " P.++ a P.++ " " P.++ b P.++ ")"
+  abs    _        = error "no abs"
+  signum _        = error "no signum"
+
+lambda :: forall a b. HasKind a => LVar a -> Expr b -> String
+lambda (LVar s) (Expr body) = unlines
+      [ "(lambda ("
+      , "   (" P.++ s P.++ " " P.++ smtType (kindOf (Proxy @a)) P.++ ")"
+      , "   )"
+      , "   " P.++ body
+      , ")"
+      ]
+
+smap2 :: (SymVal a, SymVal b) => (Expr a -> Expr b) -> SList a -> SList b
+smap2 f l = SBV $ SVal k $ Right $ cache r
+  where (a, e) = mkVar "x" f
+        op = lambda a e
+
+        k = kindOf l
+        r st = do sva <- sbvToSV st l
+                  newExpr st k (SBVApp (SeqOp (SeqMap op)) [sva])
+
+{-
+import Data.SBV.List
+import Prelude ((+))
+:set -XOverloadedLists
+:set -XDataKinds
+sat $ \l -> l .== smap2 (+1) [1,2,3::Integer]
+sat $ \l -> l .== smap2 (+1) [1,2,3::WordN 8]
+-- Can't type-check this. Why? Because:
+--   SList (SList a) /= SList [[a]]
+--   SList (SList a) *IS*  SBV [SBV [a]]
+--                   *NOT* SBV [[a]]
+-- I don't see how to make this work then.
+sat $ \l -> l .== (smap2 (const (Expr "(seq.unit x)") :: Expr Integer -> Expr (SList Integer)) [1,2,3::Integer] :: SList [[Integer]])
+-}
