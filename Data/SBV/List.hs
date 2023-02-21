@@ -388,6 +388,12 @@ map = mapUntyped . lambda1 "x"
 -- >>> sat $ \l -> l .== (mapUntyped "(lambda ((x Int)) (seq.unit x))" [1,2,3::Integer] :: SList [Integer])
 -- Satisfiable. Model:
 --   s0 = [[1],[2],[3]] :: [[Integer]]
+-- >>> import GHC.Exts
+-- >>> import Data.SBV.Tuple
+-- >>> let func = "(lambda ((t (SBVTuple2 Int Int))) (+ (proj_1_SBVTuple2 t) (proj_2_SBVTuple2 t)))"
+-- >>> sat $ \(l :: SList Integer) -> l .== mapUntyped func (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
+-- Satisfiable. Model:
+--   s0 = [5,6,7,6,7,8,7,8,9] :: [Integer]
 mapUntyped :: forall a b. (SymVal a, SymVal b) => String -> SList a -> SList b
 mapUntyped op l = SBV $ SVal k $ Right $ cache r
   where k = kindOf (Proxy @(SList b))
