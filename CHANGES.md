@@ -5,8 +5,10 @@
 
 ### Version 9.2.5, Not yet released
 
-  * Add missing Arbitrary instances for WordN and IntN types, enabling
-    quickcheck on these types.
+  * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
+
+  * Cure a performance bug in the SHA implementation, which particularly impacted codegeneration
+    at 384 and 512 bit sizes.
 
 ### Version 9.2, 2023-1-16
 
