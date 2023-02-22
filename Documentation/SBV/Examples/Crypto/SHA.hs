@@ -29,7 +29,7 @@ import Data.SBV
 import Data.SBV.Tools.CodeGen
 
 import Data.Char (ord, toLower)
-import Data.List (genericLength)
+import Data.List (genericLength, foldl')
 import Numeric   (showHex)
 
 import Data.Proxy (Proxy(..))
@@ -241,14 +241,14 @@ hashBlock p@SHA{shaLoopCount, shaConstants} hPrev (Block m) = step4
          step3Body xs t = error $ "Impossible! step3Body received a list of length " ++ show (length xs) ++ ", iteration: " ++ show t
 
          -- Step 3 simply folds the body for the required loop-count
-         step3 = foldl step3Body hPrev [0 .. lim]
+         step3 = foldl' step3Body hPrev [0 .. lim]
 
          -- Step 4
          step4 = zipWith (+) step3 hPrev
 
 -- | Compute the hash of a given string using the specified parameterized hash algorithm.
 shaP :: (Num w, Bits w, ByteConverter w) => SHA w -> String -> [w]
-shaP p@SHA{h0} = foldl (hashBlock p) h0 . prepareMessage p
+shaP p@SHA{h0} = foldl' (hashBlock p) h0 . prepareMessage p
 
 -----------------------------------------------------------------------------
 -- * Computing the digest
