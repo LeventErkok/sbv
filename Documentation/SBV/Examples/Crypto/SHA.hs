@@ -378,6 +378,22 @@ cgSHA256 = compileToC Nothing "sha256" $ do
 
         cgOutputArr "hash" $ concatMap toBytes result
 
+-- | Generate code for one block of SHA512 in action, starting from an arbitrary hash value.
+cgSHA512 :: IO ()
+cgSHA512 = compileToC Nothing "sha512" $ do
+
+        let algorithm = sha512P
+
+        hInBytes   <- cgInputArr  64 "hIn"
+        blockBytes <- cgInputArr 128 "block"
+
+        let hIn   = chunkBy 8 fromBytes hInBytes
+            block = chunkBy 8 fromBytes blockBytes
+
+            result = hashBlock algorithm hIn (Block block)
+
+        cgOutputArr "hash" $ concatMap toBytes result
+
 -----------------------------------------------------------------------------
 -- * Helpers
 -----------------------------------------------------------------------------
