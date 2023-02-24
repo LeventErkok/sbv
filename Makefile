@@ -83,7 +83,8 @@ docTest:
 # Check a single module using doctest:
 #   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer.hs
 docTestModule:
-	cabal-docspec --verbose --trace-process --timeout=100 --module $(basename $(subst /,.,${TGT}))
+	# cabal-docspec --verbose --trace-process --timeout=100 --module $(basename $(subst /,.,${TGT}))
+	cabal-docspec --module $(basename $(subst /,.,${TGT}))
 
 test:
 	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
