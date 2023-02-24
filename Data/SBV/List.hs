@@ -402,6 +402,10 @@ mapUntyped op l = SBV $ SVal k $ Right $ cache r
 
 -- | @`mapi` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
+--
+-- >>> sat $ \l -> l .== mapi (+) 10 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [11,13,15,17,19] :: [Integer]
 mapi :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr a -> Expr b) -> SInteger -> SList a -> SList b
 mapi = mapiUntyped . lambda2 "i" "a"
 
@@ -417,12 +421,24 @@ mapiUntyped op i l = SBV $ SVal k $ Right $ cache r
                   newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, svl])
 
 -- | @`foldl` op base s@ folds the sequence. Note that SBV never constant folds this operation.
+--
+-- >>> sat $ \s -> s .== foldl (+) 0 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 15 :: Integer
+-- >>> sat $ \s -> s .== foldl (*) 1 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 120 :: Integer
 foldl :: forall a b. (SymVal a, SymVal b) => (Expr b -> Expr a -> Expr b) -> SBV b -> SList a -> SBV b
 foldl = foldlUntyped . lambda2 "b" "a"
 
 -- | @`foldlUntyped` op s@ folds the sequence. Note that SBV never constant folds this operation.
 -- Compare this to 'Data.SBV.List.foldl', instead we take a string representation of the SMTLib lambda. Use this
 -- function only in cases where the internal means of writing a lambda isn't sufficient.
+--
+-- >>> let reverseFunc = "(lambda ((revSoFar (Seq Int)) (elt Int)) (seq.++ (seq.unit elt) revSoFar))"
+-- >>> sat $ \l -> l .== foldlUntyped reverseFunc ([] :: SList Integer) [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [5,4,3,2,1] :: [Integer]
 foldlUntyped :: forall a b. (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
 foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
   where k = kindOf base
@@ -432,6 +448,10 @@ foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
 
 -- | @`foldli` op base s@ folds the sequence, with the optional counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
+--
+-- >>> sat $ \s -> s .== foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 75 :: Integer
 foldli :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr b -> Expr a -> Expr b) -> SInteger -> SBV b -> SList a -> SBV b
 foldli = foldliUntyped . lambda3 "i" "b" "a"
 
