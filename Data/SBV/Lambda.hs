@@ -10,21 +10,39 @@
 -- lambda-expressions for (limited) higher-order function support.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Lambda (
-          lambda1, lambda2, lambda3, Expr(..)
+          lambda, lambda1, lambda2, lambda3, Expr(..)
         ) where
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
+import Data.SBV.Core.Symbolic
+import Data.SBV.Provers.Prover
+
+import qualified Data.SBV.Control.Utils as Control
+
 import Data.SBV.Utils.PrettyNum
 
 import Data.Proxy
+
+-- Try:
+--   lambda (\x -> x+1::SInteger)
+lambda :: SymVal a => (SBV a -> SBV b) -> IO String
+lambda f = do
+      let cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
+      let mkArg = mkSymVal (NonQueryVar (Just EX)) Nothing
+      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup True cfg) $ mkArg >>= output . f
+
+      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun True cfg) QueryInternal [] res
+      return $ show (smtLibPgm cfg)
 
 -- | This module doesn't implement everything yet.
 tbd :: String -> a
