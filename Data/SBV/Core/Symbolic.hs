@@ -966,6 +966,7 @@ isRunIStage s = case s of
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                        -- ^ In regular mode, with a stage. Bool is True if this is SAT.
                 | CodeGen                                                           -- ^ Code generation mode.
+                | Lambda SMTConfig                                                  -- ^ Inside a lambda-expression
                 | Concrete (Maybe (Bool, [((Quantifier, NamedSymVar), Maybe CV)]))  -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
@@ -977,6 +978,7 @@ instance Show SBVRunMode where
    show (SMTMode qc ISafe  False _)  = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
    show (SMTMode qc IRun   False _)  = "Proof (" ++ show qc ++ ")"
    show CodeGen                      = "Code generation"
+   show Lambda{}                     = "Lambda generation"
    show (Concrete Nothing)           = "Concrete evaluation with random values"
    show (Concrete (Just (True, _)))  = "Concrete evaluation during model validation for sat"
    show (Concrete (Just (False, _))) = "Concrete evaluation during model validation for prove"
@@ -987,6 +989,7 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
                                   return $ case rm of
                                              Concrete{} -> False
                                              SMTMode{}  -> False
+                                             Lambda{}   -> False
                                              CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
@@ -1189,6 +1192,7 @@ inSMTMode :: State -> IO Bool
 inSMTMode State{runMode} = do rm <- readIORef runMode
                               return $ case rm of
                                          CodeGen    -> False
+                                         Lambda{}   -> False
                                          Concrete{} -> False
                                          SMTMode{}  -> True
 
@@ -1331,6 +1335,7 @@ internalVariable st k = do (NamedSymVar sv nm) <- newSV st k
                            let q = case rm of
                                      SMTMode  _ _ True  _ -> EX
                                      SMTMode  _ _ False _ -> ALL
+                                     Lambda{}             -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
                                n = "__internal_sbv_" <> nm
@@ -1600,6 +1605,9 @@ svMkSymVarGen isTracker varContext k mbNm st = do
           (Just EX, Concrete Nothing)    -> disallow "Existentially quantified variables"
           (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
 
+          (Just EX, Lambda{})            -> disallow "Existentially quantified variables"
+          (_,       Lambda{})            -> noUI $ mkS ALL
+
           -- Model validation:
           (_      , Concrete (Just (_isSat, env))) -> do
                         let bad why conc = error $ unlines [ ""
@@ -1814,12 +1822,13 @@ internalConstraint st isSoft attrs b = do v <- svToSV st b
                                           rm <- liftIO $ readIORef (runMode st)
 
                                           -- Are we running validation? If so, we always want to
-                                          -- add the constraint for debug purposes. Otherwie
+                                          -- add the constraint for debug purposes. Otherwise
                                           -- we only add it if it's interesting; i.e., not directly
                                           -- true or has some attributes.
                                           let isValidating = case rm of
                                                                SMTMode _ _ _ cfg -> validationRequested cfg
                                                                CodeGen           -> False
+                                                               Lambda{}          -> False
                                                                Concrete Nothing  -> False
                                                                Concrete (Just _) -> True   -- The case when we *are* running the validation
 

@@ -1642,6 +1642,7 @@ runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
 runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
+                                              Lambda c            -> (c, False, False, False)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
 
          flipQ (ALL, x) = (EX,  x)
@@ -1659,11 +1660,14 @@ runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is 
          o | isSafe = trueSV
            | True   = case outputs of
                         []  | isSetup -> trueSV
-                        [so]          -> case so of
-                                           SV KBool _ -> so
-                                           _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
-                                                                         , "Detected while generating the trace:\n" ++ show res
-                                                                         ]
+                        [so]          -> -- In a lambda, we can return any arbitrary type. Otherwise, we better have a boolean result.
+                                         case rm of
+                                           Lambda{} -> so
+                                           _        -> case so of
+                                                        SV KBool _ -> so
+                                                        _          -> error $ unlines [ "Impossible happened, non-boolean output: " ++ show so
+                                                                                      , "Detected while generating the trace:\n" ++ show res
+                                                                                      ]
                         os  -> error $ unlines [ "User error: Multiple output values detected: " ++ show os
                                                , "Detected while generating the trace:\n" ++ show res
                                                , "*** Check calls to \"output\", they are typically not needed!"
@@ -1713,8 +1717,9 @@ executeQuery queryContext (QueryT userQuery) = do
 
      let allowQQs = case rm of
                       SMTMode _ _ _ cfg -> allowQuantifiedQueries cfg
-                      CodeGen           -> False -- doesn't matter in these two
-                      Concrete{}        -> False -- cases, but we're being careful
+                      CodeGen           -> False -- doesn't matter in these cases
+                      Concrete{}        -> False -- but we're being careful
+                      Lambda{}          -> False
 
      () <- unless allowQQs $ liftIO $
                     case queryContext of

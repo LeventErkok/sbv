@@ -313,6 +313,7 @@ getModelAtIndex mbi = do
     rm <- io $ readIORef runMode
     case rm of
       m@CodeGen           -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Lambda{}          -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
       m@Concrete{}        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
       SMTMode _ _ isSAT _ -> do
           cfg   <- getConfig

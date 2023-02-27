@@ -38,10 +38,10 @@ import Data.Proxy
 lambda :: SymVal a => (SBV a -> SBV b) -> IO String
 lambda f = do
       let cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
-      let mkArg = mkSymVal (NonQueryVar (Just EX)) Nothing
-      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup True cfg) $ mkArg >>= output . f
+      let mkArg = mkSymVal (NonQueryVar (Just ALL)) Nothing
+      (_, res) <- runSymbolic (Lambda cfg) $ mkArg >>= output . f
 
-      let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun True cfg) QueryInternal [] res
+      let SMTProblem{smtLibPgm} = Control.runProofOn (Lambda cfg) QueryInternal [] res
       return $ show (smtLibPgm cfg)
 
 -- | This module doesn't implement everything yet.
