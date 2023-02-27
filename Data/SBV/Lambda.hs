@@ -10,6 +10,7 @@
 -- lambda-expressions for (limited) higher-order function support.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE RankNTypes            #-}
@@ -22,6 +23,8 @@ module Data.SBV.Lambda (
           lambda, lambda1, lambda2, lambda3, Expr(..)
         ) where
 
+import Control.Monad.IO.Class
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
@@ -33,16 +36,104 @@ import Data.SBV.Utils.PrettyNum
 
 import Data.Proxy
 
+-- | Values that we can turn into a lambda abstraction
 -- Try:
+--   lambda (2 :: SInteger)
 --   lambda (\x -> x+1::SInteger)
-lambda :: SymVal a => (SBV a -> SBV b) -> IO String
-lambda f = do
-      let cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
-      let mkArg = mkSymVal (NonQueryVar (Just ALL)) Nothing
-      (_, res) <- runSymbolic (Lambda cfg) $ mkArg >>= output . f
+--   lambda (\x y -> x+y*2 :: SInteger)
 
-      let SMTProblem{smtLibPgm} = Control.runProofOn (Lambda cfg) QueryInternal [] res
-      return $ show (smtLibPgm cfg)
+class Lambda a where
+  lambda :: a -> IO String
+
+-- | Turn a symbolic computation as a lambda abstraction
+generateLambda :: MonadIO m => SymbolicT m a -> m String
+generateLambda x = do
+   let cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
+
+   (_, res) <- runSymbolic (Lambda cfg) x
+
+   let SMTProblem{smtLibPgm} = Control.runProofOn (Lambda cfg) QueryInternal [] res
+
+   liftIO $ putStrLn $ show (smtLibPgm cfg)
+   pure ""
+
+-- | All SBV values are automatically lambda's, i.e., no argument function. This
+-- is also the base case for all lambda-convertible functions.
+instance Lambda (SBV a) where
+  lambda = generateLambda . output
+
+-- | Functions of one argument
+instance SymVal a => Lambda (SBV a -> SBV b) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of two arguments
+instance (SymVal a, SymVal b) => Lambda (SBV a -> SBV b -> SBV c) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of three arguments
+instance (SymVal a, SymVal b, SymVal c) => Lambda (SBV a -> SBV b -> SBV c -> SBV d) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of four arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d) => Lambda (SBV a -> SBV b -> SBV c -> SBV d -> SBV e) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of five arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Lambda (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of six arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Lambda (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of seven arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => Lambda (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBV f -> SBV g -> SBV h) where
+  lambda fn = generateLambda $ output =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+                                             <*> mkSymVal (NonQueryVar (Just ALL)) Nothing
+
+-- | Functions of 2-tuple argument
+instance (SymVal a, SymVal b) => Lambda ((SBV a, SBV b) -> SBV c) where
+  lambda fn = lambda $ \a b -> fn (a, b)
+
+-- | Functions of 3-tuple arguments
+instance (SymVal a, SymVal b, SymVal c) => Lambda ((SBV a, SBV b, SBV c) -> SBV d) where
+  lambda fn = lambda $ \a b c -> fn (a, b, c)
+
+-- | Functions of 4-tuple arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d) => Lambda ((SBV a, SBV b, SBV c, SBV d) -> SBV e) where
+  lambda fn = lambda $ \a b c d-> fn (a, b, c, d)
+
+-- | Functions of 5-tuple arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => Lambda ((SBV a, SBV b, SBV c, SBV d, SBV e) -> SBV f) where
+  lambda fn = lambda $ \a b c d e -> fn (a, b, c, d, e)
+
+-- | Functions of 6-tuple arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f) => Lambda ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> SBV g) where
+  lambda fn = lambda $ \a b c d e f -> fn (a, b, c, d, e, f)
+
+-- | Functions of 7-tuple arguments
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g) => Lambda ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> SBV h) where
+  lambda fn = lambda $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
 
 -- | This module doesn't implement everything yet.
 tbd :: String -> a
