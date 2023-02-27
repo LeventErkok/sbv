@@ -33,9 +33,9 @@ module Data.SBV.List (
         -- * Reverse
         , reverse
         -- * Mapping
-        , map, mapUntyped, mapi, mapiUntyped
+        , map, mapi
         -- * Folding
-        , foldl, foldlUntyped, foldli, foldliUntyped
+        , foldl, foldli
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
@@ -378,13 +378,6 @@ reverse l
 -- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: WordN 8]
 -- Satisfiable. Model:
 --   s0 = [2,3,4,5,6] :: [Word8]
-map :: forall a b. (SymVal a, SymVal b) => (Expr a -> Expr b) -> SList a -> SList b
-map = mapUntyped . lambda1 "x"
-
--- | @`mapUntyped` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
--- Compare this to 'Data.SBV.List.map', instead we take a string representation of the SMTLib lambda. Use this
--- function only in cases where the internal means of writing a lambda isn't sufficient.
---
 -- >>> sat $ \l -> l .== (mapUntyped "(lambda ((x Int)) (seq.unit x))" [1,2,3::Integer] :: SList [Integer])
 -- Satisfiable. Model:
 --   s0 = [[1],[2],[3]] :: [[Integer]]
@@ -394,11 +387,12 @@ map = mapUntyped . lambda1 "x"
 -- >>> sat $ \(l :: SList Integer) -> l .== mapUntyped func (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
 -- Satisfiable. Model:
 --   s0 = [5,6,7,6,7,8,7,8,9] :: [Integer]
-mapUntyped :: forall a b. (SymVal a, SymVal b) => String -> SList a -> SList b
-mapUntyped op l = SBV $ SVal k $ Right $ cache r
+map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
+map op l = SBV $ SVal k $ Right $ cache r
   where k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqMap op)) [sva])
+                  lam <- lambda op
+                  newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
 
 -- | @`mapi` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
@@ -406,19 +400,13 @@ mapUntyped op l = SBV $ SVal k $ Right $ cache r
 -- >>> sat $ \l -> l .== mapi (+) 10 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = [11,13,15,17,19] :: [Integer]
-mapi :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr a -> Expr b) -> SInteger -> SList a -> SList b
-mapi = mapiUntyped . lambda2 "i" "a"
-
--- | @`mapiUntyped` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
--- at the given value. Note that SBV never constant folds this operation.
--- Compare this to 'Data.SBV.List.map', instead we take a string representation of the SMTLib lambda. Use this
--- function only in cases where the internal means of writing a lambda isn't sufficient.
-mapiUntyped :: forall a b. (SymVal a, SymVal b) => String -> SInteger -> SList a -> SList b
-mapiUntyped op i l = SBV $ SVal k $ Right $ cache r
+mapi :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
+mapi op i l = SBV $ SVal k $ Right $ cache r
   where k = kindOf (Proxy @(SList b))
         r st = do svi <- sbvToSV st i
                   svl <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqMapI op)) [svi, svl])
+                  lam <- lambda op
+                  newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
 -- | @`foldl` op base s@ folds the sequence. Note that SBV never constant folds this operation.
 --
@@ -428,23 +416,17 @@ mapiUntyped op i l = SBV $ SVal k $ Right $ cache r
 -- >>> sat $ \s -> s .== foldl (*) 1 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = 120 :: Integer
-foldl :: forall a b. (SymVal a, SymVal b) => (Expr b -> Expr a -> Expr b) -> SBV b -> SList a -> SBV b
-foldl = foldlUntyped . lambda2 "b" "a"
-
--- | @`foldlUntyped` op s@ folds the sequence. Note that SBV never constant folds this operation.
--- Compare this to 'Data.SBV.List.foldl', instead we take a string representation of the SMTLib lambda. Use this
--- function only in cases where the internal means of writing a lambda isn't sufficient.
---
 -- >>> let reverseFunc = "(lambda ((revSoFar (Seq Int)) (elt Int)) (seq.++ (seq.unit elt) revSoFar))"
 -- >>> sat $ \l -> l .== foldlUntyped reverseFunc ([] :: SList Integer) [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = [5,4,3,2,1] :: [Integer]
-foldlUntyped :: forall a b. (SymVal a, SymVal b) => String -> SBV b -> SList a -> SBV b
-foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
+foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+foldl op base l = SBV $ SVal k $ Right $ cache r
   where k = kindOf base
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft op)) [svb, svl])
+                  lam <- lambda op
+                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
 
 -- | @`foldli` op base s@ folds the sequence, with the optional counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
@@ -452,19 +434,14 @@ foldlUntyped op base l = SBV $ SVal k $ Right $ cache r
 -- >>> sat $ \s -> s .== foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = 75 :: Integer
-foldli :: forall a b. (SymVal a, SymVal b) => (Expr Integer -> Expr b -> Expr a -> Expr b) -> SInteger -> SBV b -> SList a -> SBV b
-foldli = foldliUntyped . lambda3 "i" "b" "a"
-
--- | @`foldliUntyped` op s@ folds the operation on to sequence. Note that SBV never constant folds this operation.
--- Compare this to 'Data.SBV.List.foldli', instead we take a string representation of the SMTLib lambda. Use this
--- function only in cases where the internal means of writing a lambda isn't sufficient.
-foldliUntyped :: forall a b. (SymVal a, SymVal b) => String -> SInteger -> SBV b -> SList a -> SBV b
-foldliUntyped op baseI baseE l = SBV $ SVal k $ Right $ cache r
+foldli :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV b -> SBV a -> SBV b) -> SInteger -> SBV b -> SList a -> SBV b
+foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
   where k = kindOf baseE
         r st = do svi <- sbvToSV st baseI
                   sve <- sbvToSV st baseE
                   sva <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SeqFoldLeftI op)) [svi, sve, sva])
+                  lam <- lambda op
+                  newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b

@@ -1642,7 +1642,7 @@ runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
 runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
-                                              Lambda c            -> (c, False, False, False)
+                                              Lambda c            -> (c, False, False, True)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
 
          flipQ (ALL, x) = (EX,  x)
