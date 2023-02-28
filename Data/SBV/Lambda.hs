@@ -27,6 +27,8 @@ import Control.Monad.Trans
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
+import Data.SBV.Provers.Prover
+import Data.SBV.SMT.SMTLib
 
 import Data.Proxy
 
@@ -42,49 +44,69 @@ import Data.Proxy
 -- >>> lambda (\x (y, z) k -> x+y*2+z + k :: SInteger)
 -- WHAT
 lambda :: Lambda Symbolic a => a -> IO String
-lambda f = fst <$> runSymbolic Lambda (mkLambda f)
+lambda f = do st  <- mkNewState Lambda
+              res <- fst <$> runSymbolicInState st (mkLambda st f)
+              let SMTLibPgm _ p = sh res
+              pure $ unlines p
+ where sh :: Result -> SMTLibPgm
+       sh (Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
+           toSMTLib defaultSMTCfg{ smtLibVersion = SMTLib2 }
+                    QueryInternal
+                    ki
+                    True
+                    []
+                    is
+                    []
+                    consts
+                    tbls
+                    arrs
+                    uis
+                    axs
+                    pgm
+                    cstrs
+                    (head outputs)
+                    defaultSMTCfg{ smtLibVersion = SMTLib2 }
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
-  mkLambda :: a -> m String
+  mkLambda :: State -> a -> m Result
 
 -- | Turn a symbolic computation to an encapsulated lambda
 instance MonadSymbolic m => Lambda m (SymbolicT m (SBV a)) where
-  mkLambda cmp = do ((), res) <- runSymbolic Lambda (cmp >>= output >> return ())
-                    pure $ show res
+  mkLambda st cmp = do ((), res) <- runSymbolicInState st (cmp >>= output >> return ())
+                       pure res
 
 -- | Base case, simple values
 instance MonadSymbolic m => Lambda m (SBV a) where
-  mkLambda = mkLambda . (pure :: SBV a -> SymbolicT m (SBV a))
+  mkLambda st = mkLambda st . (pure :: SBV a -> SymbolicT m (SBV a))
 
 -- | Functions
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
-  mkLambda fn = mkLambda =<< fn <$> mkArg
-    where mkArg = do st <- symbolicEnv
-                     let k = kindOf (Proxy @a)
+  mkLambda st fn = mkLambda st =<< fn <$> mkArg
+    where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ internalVariable st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Functions of 2-tuple argument
 instance (SymVal a, SymVal b, Lambda m r) => Lambda m ((SBV a, SBV b) -> r) where
-  mkLambda fn = mkLambda $ \a b -> fn (a, b)
+  mkLambda st fn = mkLambda st $ \a b -> fn (a, b)
 
 -- | Functions of 3-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c) -> r) where
-  mkLambda fn = mkLambda $ \a b c -> fn (a, b, c)
+  mkLambda st fn = mkLambda st $ \a b c -> fn (a, b, c)
 
 -- | Functions of 4-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, SymVal d, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d) -> r) where
-  mkLambda fn = mkLambda $ \a b c d-> fn (a, b, c, d)
+  mkLambda st fn = mkLambda st $ \a b c d-> fn (a, b, c, d)
 
 -- | Functions of 5-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> r) where
-  mkLambda fn = mkLambda $ \a b c d e -> fn (a, b, c, d, e)
+  mkLambda st fn = mkLambda st $ \a b c d e -> fn (a, b, c, d, e)
 
 -- | Functions of 6-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> r) where
-  mkLambda fn = mkLambda $ \a b c d e f -> fn (a, b, c, d, e, f)
+  mkLambda st fn = mkLambda st $ \a b c d e f -> fn (a, b, c, d, e, f)
 
 -- | Functions of 7-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> r) where
-  mkLambda fn = mkLambda $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
+  mkLambda st fn = mkLambda st $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
