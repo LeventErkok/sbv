@@ -94,7 +94,11 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
 toLambda :: Result -> String
 toLambda = sh
- where bail xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs)
+ where bail xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct."
+                                 : map ("*** " ++) ("" : xs ++ report)
+       report = [ ""
+                , "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
+                ]
 
        sh (Result _ki           -- Kind info, we're assuming that all the kinds used are already available in the surrounding context.
                                 -- There's no way to create a new kind in a lambda. If a new kind is used, it should be registered.
@@ -103,7 +107,9 @@ toLambda = sh
 
                   observables   -- Observables: No way to display these, so if present we error out
 
-                  _codeSegs
+                  codeSegs      -- UI code segments: Again, shouldn't happen; if present, error out
+
+                  -- Left here
                   _is
                   _consts
                   _tbls
@@ -118,6 +124,10 @@ toLambda = sh
          | not (null observables)
          = bail [ "Observable values inside lambda's are not supported."
                 , "  Saw: " ++ intercalate ", " [o | (o, _, _) <- observables]
+                ]
+         | not (null codeSegs)
+         = bail [ "Uninterpreted code segments inside lambda's are not supported."
+                , "  Saw: " ++ intercalate ", " [o | (o, _) <- codeSegs]
                 ]
          | True
          = "TBD"
