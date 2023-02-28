@@ -23,11 +23,12 @@ module Data.SBV.Lambda (
           lambda
         ) where
 
+import Control.Monad.Trans
+
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
-import Data.SBV.Provers.Prover
 
-import qualified Data.SBV.Control.Utils as Control
+import Data.Proxy
 
 -- | Extract an SMTLib compliand lambda string
 -- >>> lambda (2 :: SInteger)
@@ -41,8 +42,7 @@ import qualified Data.SBV.Control.Utils as Control
 -- >>> lambda (\x (y, z) k -> x+y*2+z + k :: SInteger)
 -- WHAT
 lambda :: Lambda Symbolic a => a -> IO String
-lambda f = fst <$> runSymbolic (Lambda cfg) (mkLambda f)
-  where cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
+lambda f = fst <$> runSymbolic Lambda (mkLambda f)
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -50,20 +50,20 @@ class MonadSymbolic m => Lambda m a where
 
 -- | Turn a symbolic computation to an encapsulated lambda
 instance MonadSymbolic m => Lambda m (SymbolicT m (SBV a)) where
-  mkLambda cmp = do let cfg = defaultSMTCfg { smtLibVersion = SMTLib2 }
-                    (val, res) <- runSymbolic (Lambda cfg) cmp
-
-                    let SMTProblem{smtLibPgm} = Control.runProofOn (Lambda cfg) QueryInternal [] res
-
-                    pure $ show (smtLibPgm cfg) ++ "\n" ++ show val
+  mkLambda cmp = do ((), res) <- runSymbolic Lambda (cmp >>= output >> return ())
+                    pure $ show res
 
 -- | Base case, simple values
 instance MonadSymbolic m => Lambda m (SBV a) where
-  mkLambda = mkLambda . (output :: SBV a -> SymbolicT m (SBV a))
+  mkLambda = mkLambda . (pure :: SBV a -> SymbolicT m (SBV a))
 
 -- | Functions
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
-  mkLambda fn = mkLambda =<< fn <$> mkSymVal (NonQueryVar (Just ALL)) Nothing
+  mkLambda fn = mkLambda =<< fn <$> mkArg
+    where mkArg = do st <- symbolicEnv
+                     let k = kindOf (Proxy @a)
+                     sv <- liftIO $ internalVariable st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Functions of 2-tuple argument
 instance (SymVal a, SymVal b, Lambda m r) => Lambda m ((SBV a, SBV b) -> r) where
