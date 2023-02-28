@@ -55,7 +55,7 @@ module Data.SBV.Core.Symbolic
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
   , registerKind, registerLabel, recordObservable
-  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable
+  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
@@ -1350,6 +1350,13 @@ internalVariable st k = do NamedSymVar sv nm <- newSV st k
                                                                                                        ])
                            return sv
 {-# INLINE internalVariable #-}
+
+-- | Create a variable to be used in a lambda-expression
+lambdaVar :: State -> Kind -> IO SV
+lambdaVar st k = do v@(NamedSymVar sv nm) <- newSV st k
+                    modifyState st rinps (addUserInput ALL sv nm) $ modifyIncState st rNewInps (v :)
+                    return sv
+{-# INLINE lambdaVar #-}
 
 -- | Create a new SV
 newSV :: State -> Kind -> IO NamedSymVar

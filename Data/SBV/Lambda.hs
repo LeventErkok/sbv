@@ -26,6 +26,7 @@ module Data.SBV.Lambda (
 import Control.Monad.Trans
 
 import Data.SBV.Core.Data
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
 
 import Data.List
@@ -64,7 +65,7 @@ instance MonadSymbolic m => Lambda m (SBV a) where
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
   mkLambda st fn = mkLambda st =<< fn <$> mkArg
     where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ internalVariable st k
+                     sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Functions of 2-tuple argument
@@ -94,11 +95,10 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, 
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
 toLambda :: Result -> String
 toLambda = sh
- where bail xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct."
-                                 : map ("*** " ++) ("" : xs ++ report)
-       report = [ ""
-                , "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
-                ]
+ where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
+       bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
+       report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
+       bugReport = "Please report this at https://github.com/LeventErkok/sbv/issues"
 
        sh (Result _ki           -- Kind info, we're assuming that all the kinds used are already available in the surrounding context.
                                 -- There's no way to create a new kind in a lambda. If a new kind is used, it should be registered.
@@ -109,8 +109,9 @@ toLambda = sh
 
                   codeSegs      -- UI code segments: Again, shouldn't happen; if present, error out
 
+                  is            -- Inputs
+
                   -- Left here
-                  _is
                   _consts
                   _tbls
                   _arrs
@@ -122,12 +123,23 @@ toLambda = sh
                   _outputs
          )
          | not (null observables)
-         = bail [ "Observable values inside lambda's are not supported."
-                , "  Saw: " ++ intercalate ", " [o | (o, _, _) <- observables]
-                ]
+         = tbd [ "Observable values inside lambda's are not supported."
+               , "  Saw: " ++ intercalate ", " [o | (o, _, _) <- observables]
+               ]
          | not (null codeSegs)
-         = bail [ "Uninterpreted code segments inside lambda's are not supported."
-                , "  Saw: " ++ intercalate ", " [o | (o, _) <- codeSegs]
-                ]
+         = bad [ "Uninterpreted code segments inside lambda's are not supported."
+               , "  Saw: " ++ intercalate ", " [o | (o, _) <- codeSegs]
+               ]
          | True
-         = "TBD"
+         = "(lambda (" ++ params ++ ") BODY)"
+         where params = case is of
+                          (inps, trackers) | any ((== EX) . fst) inps
+                                           -> bad [ "Unexpected existentially quantified variables as inputs"
+                                                  , "   Saw: " ++ intercalate ", " [getUserName' n | (EX, n) <- inps]
+                                                  ]
+                                           | not (null trackers)
+                                           -> tbd [ "Tracker variables"
+                                                  , "   Saw: " ++ intercalate ", " (map getUserName' trackers)
+                                                  ]
+                                           | True
+                                           -> unwords ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
