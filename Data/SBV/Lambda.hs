@@ -27,9 +27,8 @@ import Control.Monad.Trans
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
-import Data.SBV.Provers.Prover
-import Data.SBV.SMT.SMTLib
 
+import Data.List
 import Data.Proxy
 
 -- | Extract an SMTLib compliand lambda string
@@ -46,26 +45,7 @@ import Data.Proxy
 lambda :: Lambda Symbolic a => a -> IO String
 lambda f = do st  <- mkNewState Lambda
               res <- fst <$> runSymbolicInState st (mkLambda st f)
-              let SMTLibPgm _ p = sh res
-              pure $ unlines p
- where sh :: Result -> SMTLibPgm
-       sh (Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
-           toSMTLib defaultSMTCfg{ smtLibVersion = SMTLib2 }
-                    QueryInternal
-                    ki
-                    True
-                    []
-                    is
-                    []
-                    consts
-                    tbls
-                    arrs
-                    uis
-                    axs
-                    pgm
-                    cstrs
-                    (head outputs)
-                    defaultSMTCfg{ smtLibVersion = SMTLib2 }
+              pure $ toLambda res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -110,3 +90,34 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, Lambda m r
 -- | Functions of 7-tuple arguments
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> r) where
   mkLambda st fn = mkLambda st $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
+
+-- | Convert the result of a symbolic run to an SMTLib lambda expression
+toLambda :: Result -> String
+toLambda = sh
+ where bail xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs)
+
+       sh (Result _ki           -- Kind info, we're assuming that all the kinds used are already available in the surrounding context.
+                                -- There's no way to create a new kind in a lambda. If a new kind is used, it should be registered.
+
+                  _qcInfo       -- Quickcheck info, does not apply, ignored
+
+                  observables   -- Observables: No way to display these, so if present we error out
+
+                  _codeSegs
+                  _is
+                  _consts
+                  _tbls
+                  _arrs
+                  _uis
+                  _axs
+                  _pgm
+                  _cstrs
+                  _assertions
+                  _outputs
+         )
+         | not (null observables)
+         = bail [ "Observable values inside lambda's are not supported."
+                , "  Saw: " ++ intercalate ", " [o | (o, _, _) <- observables]
+                ]
+         | True
+         = "TBD"
