@@ -28,25 +28,21 @@ import Control.Monad.Trans
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
+import Data.SBV.Provers.Prover
+import Data.SBV.SMT.SMTLib2
+import Data.SBV.Utils.PrettyNum
 
 import Data.List
 import Data.Proxy
+import qualified Data.Foldable      as F
+import qualified Data.Map.Strict    as M
+import qualified Data.IntMap.Strict as IM
 
--- | Extract an SMTLib compliand lambda string
--- >>> lambda (2 :: SInteger)
--- WHAT
--- >>> lambda (\x -> x+1::SInteger)
--- WHAT
--- >>> lambda (\x y -> x+y*2 :: SInteger)
--- WHAT
--- >>> lambda (\x (y, z) -> x+y*2+z :: SInteger)
--- WHAT
--- >>> lambda (\x (y, z) k -> x+y*2+z + k :: SInteger)
--- WHAT
+-- | Extract an SMTLib lambda string
 lambda :: Lambda Symbolic a => a -> IO String
 lambda f = do st  <- mkNewState Lambda
               res <- fst <$> runSymbolicInState st (mkLambda st f)
-              pure $ toLambda res
+              pure $ toLambda defaultSMTCfg{smtLibVersion = SMTLib2} res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -68,33 +64,9 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
--- | Functions of 2-tuple argument
-instance (SymVal a, SymVal b, Lambda m r) => Lambda m ((SBV a, SBV b) -> r) where
-  mkLambda st fn = mkLambda st $ \a b -> fn (a, b)
-
--- | Functions of 3-tuple arguments
-instance (SymVal a, SymVal b, SymVal c, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c) -> r) where
-  mkLambda st fn = mkLambda st $ \a b c -> fn (a, b, c)
-
--- | Functions of 4-tuple arguments
-instance (SymVal a, SymVal b, SymVal c, SymVal d, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d) -> r) where
-  mkLambda st fn = mkLambda st $ \a b c d-> fn (a, b, c, d)
-
--- | Functions of 5-tuple arguments
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> r) where
-  mkLambda st fn = mkLambda st $ \a b c d e -> fn (a, b, c, d, e)
-
--- | Functions of 6-tuple arguments
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> r) where
-  mkLambda st fn = mkLambda st $ \a b c d e f -> fn (a, b, c, d, e, f)
-
--- | Functions of 7-tuple arguments
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, Lambda m r) => Lambda m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> r) where
-  mkLambda st fn = mkLambda st $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
-
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: Result -> String
-toLambda = sh
+toLambda :: SMTConfig -> Result -> String
+toLambda cfg = sh
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -111,27 +83,58 @@ toLambda = sh
 
                   is            -- Inputs
 
-                  -- Left here
-                  _consts
-                  _tbls
-                  _arrs
-                  _uis
-                  _axs
-                  _pgm
-                  _cstrs
-                  _assertions
-                  _outputs
+                  ( _allConsts  -- This contains the CV->SV map, which isn't needed for lambdas since we don't support tables
+                  , consts      -- constants used
+                  )
+
+                  tbls          -- Tables: Not currently supported inside lambda's
+                  arrs          -- Arrays: Not currently supported inside lambda's
+                  uis           -- UIs:    Not currently supported inside lambda's
+                  axs           -- Axioms: Not currently supported inside lambda's
+
+                  pgm           -- Assignments
+
+                  cstrs         -- Additional constraints: Not currently supported inside lambda's
+                  assertions    -- Assertions: Not currently supported inside lambda's
+
+                  outputs       -- Outputs of the lambda (should be singular)
          )
          | not (null observables)
-         = tbd [ "Observable values inside lambda's are not supported."
+         = tbd [ "Observable values."
                , "  Saw: " ++ intercalate ", " [o | (o, _, _) <- observables]
                ]
          | not (null codeSegs)
-         = bad [ "Uninterpreted code segments inside lambda's are not supported."
+         = tbd [ "Uninterpreted code segments."
                , "  Saw: " ++ intercalate ", " [o | (o, _) <- codeSegs]
                ]
+         | not (null tbls)
+         = tbd [ "Auto-constructed tables."
+               , "  Saw: " ++ intercalate ", " ["table" ++ show i | ((i, _, _), _) <- tbls]
+               ]
+         | not (null arrs)
+         = tbd [ "Array values."
+               , "  Saw: " ++ intercalate ", " ["arr" ++ show i | (i, _) <- arrs]
+               ]
+         | not (null uis)
+         = tbd [ "Uninterpreted constants."
+               , "  Saw: " ++ intercalate ", " (map fst uis)
+               ]
+         | not (null axs)
+         = tbd [ "Axioms/definitions."
+               , "  Saw: " ++ intercalate ", " [n | (_, n, _) <- axs]
+               ]
+         | not (null cstrs)
+         = tbd [ "Constraints."
+               , "  Saw: " ++ show (length cstrs) ++ " additional constraint(s)."
+               ]
+         | not (null assertions)
+         = tbd [ "Assertions."
+               , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
+               ]
+         | null params
+         = body
          | True
-         = "(lambda (" ++ params ++ ") BODY)"
+         = "(lambda (" ++ params ++ ")\n" ++ body ++ ")"
          where params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"
@@ -143,3 +146,33 @@ toLambda = sh
                                                   ]
                                            | True
                                            -> unwords ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
+               body
+                | null bindings = ' ' : out
+                | True          = go bindings 0
+                where go []     n = "   " ++ out ++ replicate n ')'
+                      go (b:bs) n = tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
+
+                      tab | null params = ""
+                          | True        = "   "
+
+               bindings :: [String]
+               bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
+                        ++ map mkAsgn  (F.toList (pgmAssignments pgm))
+
+               mkConst :: (SV, CV) -> String
+               mkConst (sv, cv) = "(" ++ show sv ++ " (as " ++ cvToSMTLib (roundingMode cfg) cv ++ " " ++ smtType (kindOf sv) ++ "))"
+
+               out :: String
+               out = case outputs of
+                       [o] -> show o
+                       _   -> bad [ "Unexpected non-singular output"
+                                  , "   Saw: " ++ show outputs
+                                  ]
+
+               mkAsgn (s, e) = "(" ++ show s ++ " " ++ converter e ++ ")"
+               converter = cvtExp solverCaps rm skolemMap tableMap funcMap
+                 where solverCaps = capabilities (solver cfg)
+                       rm         = roundingMode cfg
+                       skolemMap  = M.empty
+                       tableMap   = IM.empty
+                       funcMap    = M.empty

@@ -59,6 +59,9 @@ module Data.SBV.Internals (
   , addSValOptGoal
   , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
   , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
+
+  -- * Lambda generation
+  , lambda
   ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -86,6 +89,8 @@ import Data.SBV.Utils.PrettyNum
 import GHC.TypeLits
 
 import qualified Data.SBV.Control.Utils as Query
+
+import Data.SBV.Lambda
 
 --- $setup
 --- >>> -- For doctest purposes only:
@@ -148,5 +153,26 @@ sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble
 -- Q.E.D.
 sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sComparableSWordAsSFloatingPoint = CF.sComparableSWordAsSFloatingPoint
+
+-- | Testing lambdas. NB. We can't do this where lambda is defined itself since that module is not
+-- exposed to the user, and doctest only works for exposed modules. So, we're just punting and putting
+-- it here; a better solution would be to put it in a proper test file; but that's more costly from a dev perspective.
+--
+-- >>> putStrLn =<< lambda (2 :: SInteger)
+-- (let ((s0 (as 2 Int)))
+--    s0)
+-- >>> putStrLn =<< lambda (\x -> x+1::SInteger)
+-- (lambda ((s0 Int))
+--    (let ((s1 (as 1 Int)))
+--    (let ((s2 (+ s0 s1)))
+--    s2)))
+-- >>> putStrLn =<< lambda (\x y -> x+y*2 :: SInteger)
+-- (lambda ((s0 Int) (s1 Int))
+--    (let ((s2 (as 2 Int)))
+--    (let ((s3 (* s1 s2)))
+--    (let ((s4 (+ s0 s3)))
+--    s4))))
+_lambdaTest :: ()
+_lambdaTest = ()
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
