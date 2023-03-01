@@ -378,13 +378,12 @@ reverse l
 -- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: WordN 8]
 -- Satisfiable. Model:
 --   s0 = [2,3,4,5,6] :: [Word8]
--- >>> sat $ \l -> l .== (mapUntyped "(lambda ((x Int)) (seq.unit x))" [1,2,3::Integer] :: SList [Integer])
+-- >>> sat $ \l -> l .== (map singleton [1,2,3::Integer] :: SList [Integer])
 -- Satisfiable. Model:
 --   s0 = [[1],[2],[3]] :: [[Integer]]
--- >>> import GHC.Exts
 -- >>> import Data.SBV.Tuple
--- >>> let func = "(lambda ((t (SBVTuple2 Int Int))) (+ (proj_1_SBVTuple2 t) (proj_2_SBVTuple2 t)))"
--- >>> sat $ \(l :: SList Integer) -> l .== mapUntyped func (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
+-- >>> import GHC.Exts (fromList)
+-- >>> sat $ \(l :: SList Integer) -> l .== map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
 -- Satisfiable. Model:
 --   s0 = [5,6,7,6,7,8,7,8,9] :: [Integer]
 map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
@@ -416,8 +415,7 @@ mapi op i l = SBV $ SVal k $ Right $ cache r
 -- >>> sat $ \s -> s .== foldl (*) 1 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = 120 :: Integer
--- >>> let reverseFunc = "(lambda ((revSoFar (Seq Int)) (elt Int)) (seq.++ (seq.unit elt) revSoFar))"
--- >>> sat $ \l -> l .== foldlUntyped reverseFunc ([] :: SList Integer) [1 .. 5 :: Integer]
+-- >>> sat $ \l -> l .== foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
 -- Satisfiable. Model:
 --   s0 = [5,4,3,2,1] :: [Integer]
 foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
