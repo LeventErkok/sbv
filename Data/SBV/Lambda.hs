@@ -160,7 +160,9 @@ toLambda cfg = sh
                         ++ map mkAsgn  (F.toList (pgmAssignments pgm))
 
                mkConst :: (SV, CV) -> String
-               mkConst (sv, cv) = "(" ++ show sv ++ " (as " ++ cvToSMTLib (roundingMode cfg) cv ++ " " ++ smtType (kindOf sv) ++ "))"
+               mkConst (sv, cv) = "(" ++ v ++ " " ++ c ++ ")"
+                  where v = show sv
+                        c = cvToSMTLib (roundingMode cfg) cv
 
                out :: String
                out = case outputs of
