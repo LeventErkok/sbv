@@ -32,6 +32,7 @@ tests =
     , goldenCapturedIO "lambda3" $ record $ lambda (\x y -> x+y*2 :: SInteger)
     , goldenCapturedIO "lambda4" $ check t1
     , goldenCapturedIO "lambda5" $ check t2
+    , goldenCapturedIO "lambda6" $ check t3
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -47,3 +48,8 @@ tests =
         t2 = do let arg = [1 .. 5 :: Integer]
                 res <- free_
                 constrain $ res .== (map (+1) . map (+2)) arg
+
+        t3 = do let arg = [1 .. 5 :: Integer]
+                res <- free_
+                constrain $ res .== map f arg
+          where f x = sum [x.^i | i <- [literal i | i <- [1..10 :: Integer]]]
