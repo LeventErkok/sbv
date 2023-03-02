@@ -355,6 +355,10 @@ offsetIndexOf s sub offset
 
 -- | @`reverse` s@ reverses the sequence.
 --
+-- NB. We can define @reverse@ in terms of @foldl@ as: @foldl (\soFar elt -> singleton elt ++ soFar) []@
+-- But in my experiments, I found that this definition performs worse instead of the recursive definition
+-- SBV generates for reverse calls. So we're keeping it intact.
+--
 -- >>> sat $ \(l :: SList Integer) -> reverse l .== literal [3, 2, 1]
 -- Satisfiable. Model:
 --   s0 = [1,2,3] :: [Integer]
