@@ -35,10 +35,10 @@ module Data.SBV.List (
         -- * Mapping
         , map, mapi
         -- * Folding
-        , foldl, foldli
+        , foldr, foldri, foldl, foldli
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -170,7 +170,7 @@ elemAt l i
 -- >>> prove $ \(e1 :: SInteger) e2 e3 -> P.map (elemAt (implode [e1, e2, e3])) (P.map literal [0 .. 2]) .== [e1, e2, e3]
 -- Q.E.D.
 implode :: SymVal a => [SBV a] -> SList a
-implode = foldr ((++) . singleton) (literal [])
+implode = P.foldr ((++) . singleton) (literal [])
 
 -- | Concatenate two lists. See also `++`.
 concat :: SymVal a => SList a -> SList a -> SList a
@@ -397,7 +397,7 @@ map op l = SBV $ SVal k $ Right $ cache r
                   lam <- lambda op
                   newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
 
--- | @`mapi` op s@ maps the operation on to sequence, with the optional counter given at each element, starting
+-- | @`mapi` op s@ maps the operation on to sequence, with the counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
 --
 -- >>> sat $ \l -> l .== mapi (+) 10 [1 .. 5 :: Integer]
@@ -411,7 +411,26 @@ mapi op i l = SBV $ SVal k $ Right $ cache r
                   lam <- lambda op
                   newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
--- | @`foldl` op base s@ folds the sequence. Note that SBV never constant folds this operation.
+-- | @`foldr` op base s@ folds the sequence from the right.
+--
+-- >>> sat $ \s -> s .== foldr (+) 0 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 15 :: Integer
+-- >>> sat $ \s -> s .== foldr (*) 1 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 120 :: Integer
+-- >>> sat $ \l -> l .== foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [5,4,3,2,1] :: [Integer]
+foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+foldr op b = foldl (flip op) b . reverse
+
+-- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
+-- at the given value. Note that SBV never constant folds this operation.
+foldri :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
+foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
+
+-- | @`foldl` op base s@ folds the from the left. Note that SBV never constant folds this operation.
 --
 -- >>> sat $ \s -> s .== foldl (+) 0 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
@@ -430,7 +449,7 @@ foldl op base l = SBV $ SVal k $ Right $ cache r
                   lam <- lambda op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
 
--- | @`foldli` op base s@ folds the sequence, with the optional counter given at each element, starting
+-- | @`foldli` op i base s@ folds the sequence, with the counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
 --
 -- >>> sat $ \s -> s .== foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
