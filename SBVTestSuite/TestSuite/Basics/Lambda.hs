@@ -16,7 +16,11 @@
 
 module TestSuite.Basics.Lambda(tests)  where
 
-import Data.SBV.Internals
+import Prelude hiding((++), map)
+import qualified Prelude as P
+
+import Data.SBV.List
+import Data.SBV.Internals hiding(free_)
 
 import Utils.SBVTestFramework
 
@@ -27,6 +31,16 @@ tests =
       goldenCapturedIO "lambda1" $ record $ lambda (2 :: SInteger)
     , goldenCapturedIO "lambda2" $ record $ lambda (\x -> x+1 :: SInteger)
     , goldenCapturedIO "lambda3" $ record $ lambda (\x y -> x+y*2 :: SInteger)
+    , goldenCapturedIO "lambda4" $ check t1
     ]
   where record :: IO String -> FilePath -> IO ()
-        record gen rf = appendFile rf . (++ "\n") =<< gen
+        record gen rf = appendFile rf . (P.++ "\n") =<< gen
+
+        check :: Symbolic () -> FilePath -> IO ()
+        check t rf = do r <- satWith z3{verbose=True, redirectVerbose=Just rf} t
+                        appendFile rf ("\nRESULT:\n" P.++ show r P.++ "\n")
+
+        t1 = do let arg = [1, 2, 3 :: Integer]
+                res <- free_
+                constrain $ res .== map (\_ -> sFalse) arg
+
