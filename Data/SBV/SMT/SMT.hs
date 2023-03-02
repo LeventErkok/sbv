@@ -45,7 +45,7 @@ import qualified Control.Exception as C
 
 import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
-import Control.Monad      (zipWithM)
+import Control.Monad      (zipWithM, mplus)
 import Data.Char          (isSpace)
 import Data.Maybe         (fromMaybe, isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
@@ -688,9 +688,9 @@ standardSolver config ctx pgm continuation = do
     rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
 
 -- | An internal type to track of solver interactions
-data SolverLine = SolverRegular   String  -- ^ All is well
-                | SolverTimeout   String  -- ^ Timeout expired
-                | SolverException String  -- ^ Something else went wrong
+data SolverLine = SolverRegular   String                   -- ^ All is well
+                | SolverTimeout   String  (String, String) -- ^ Timeout expired (stdout, stderr) when that happened
+                | SolverException String                   -- ^ Something else went wrong
 
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
@@ -710,10 +710,17 @@ runSolver cfg ctx execPath opts pgm continuation
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
-                    ask mbTimeOut command =
-                                  -- solvers don't respond to empty lines or comments; we just pass back
-                                  -- success in these cases to keep the illusion of everything has a response
-                                  let cmd = dropWhile isSpace command
+                    ask mbTimeOutGiven command =
+                                  let -- If the command is a set-option call, make sure there's a timeout on it
+                                      -- This ensures that if we try to set an option before diagnostic-output
+                                      -- is redirected to stdout and the solver chokes, then we can catch it
+                                      mbTimeOut | "(set-option :" `isPrefixOf` command = mbTimeOutGiven `mplus` Just 5000000
+                                                | True                                 = mbTimeOutGiven
+
+                                      -- solvers don't respond to empty lines or comments; we just pass back
+                                      -- success in these cases to keep the illusion of everything has a response
+                                      cmd = dropWhile isSpace command
+
                                   in if null cmd || ";" `isPrefixOf` cmd
                                      then return "success"
                                      else do send mbTimeOut command
@@ -758,8 +765,10 @@ runSolver cfg ctx execPath opts pgm continuation
                                               Just t  -> do r <- Timeout.timeout t getFullLine
                                                             case r of
                                                               Just l  -> return $ SolverRegular l
-                                                              Nothing -> return $ SolverTimeout $ timeOutMsg t
-
+                                                              Nothing -> do -- in this case, grab the stdout too
+                                                                            out <- hGetContents outh
+                                                                            err <- hGetContents errh
+                                                                            return $ SolverTimeout (timeOutMsg t) (out, err)
 
                             go isFirst i sofar = do
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
@@ -797,13 +806,19 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                                          else Nothing
                                                                                              }
 
-                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
+                                              SolverTimeout e (out, err) -> do
+                                                                    terminateProcess pid -- NB. Do not *wait* for the process, just quit.
+
+                                                                    let grab x = case dropWhile isSpace x of
+                                                                                    "" -> Nothing
+                                                                                    m  -> Just m
+
                                                                     C.throwIO SBVException { sbvExceptionDescription = "Timeout! " ++ e
                                                                                            , sbvExceptionSent        = mbCommand
                                                                                            , sbvExceptionExpected    = Nothing
                                                                                            , sbvExceptionReceived    = Just $ unlines (reverse sofar)
-                                                                                           , sbvExceptionStdOut      = Nothing
-                                                                                           , sbvExceptionStdErr      = Nothing
+                                                                                           , sbvExceptionStdOut      = grab out
+                                                                                           , sbvExceptionStdErr      = grab err
                                                                                            , sbvExceptionExitCode    = Nothing
                                                                                            , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
                                                                                            , sbvExceptionReason      = Nothing
