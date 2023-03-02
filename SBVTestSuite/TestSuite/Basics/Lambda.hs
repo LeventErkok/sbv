@@ -15,7 +15,7 @@
 
 module TestSuite.Basics.Lambda(tests)  where
 
-import Prelude hiding((++), map)
+import Prelude hiding((++), map, foldl, sum)
 import qualified Prelude as P
 
 import Data.SBV.List
@@ -33,6 +33,7 @@ tests =
     , goldenCapturedIO "lambda4" $ check t1
     , goldenCapturedIO "lambda5" $ check t2
     , goldenCapturedIO "lambda6" $ check t3
+    , goldenCapturedIO "lambda7" $ check t4
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -52,4 +53,9 @@ tests =
         t3 = do let arg = [1 .. 5 :: Integer]
                 res <- free_
                 constrain $ res .== map f arg
-          where f x = sum [x.^i | i <- [literal i | i <- [1..10 :: Integer]]]
+          where f x = P.sum [x.^i | i <- [literal i | i <- [1..10 :: Integer]]]
+
+        t4 = do let arg = [[1..5], [1..10], [1..20]] :: SList [Integer]
+                res <- free_
+                let sum = foldl (+) 0
+                constrain $ res .== sum (map sum arg)
