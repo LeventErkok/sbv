@@ -9,8 +9,7 @@
 -- Test lambda generation
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists     #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE OverloadedLists #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -32,6 +31,7 @@ tests =
     , goldenCapturedIO "lambda2" $ record $ lambda (\x -> x+1 :: SInteger)
     , goldenCapturedIO "lambda3" $ record $ lambda (\x y -> x+y*2 :: SInteger)
     , goldenCapturedIO "lambda4" $ check t1
+    , goldenCapturedIO "lambda5" $ check t2
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -44,3 +44,6 @@ tests =
                 res <- free_
                 constrain $ res .== map (\_ -> sFalse) arg
 
+        t2 = do let arg = [1 .. 5 :: Integer]
+                res <- free_
+                constrain $ res .== (map (+1) . map (+2)) arg
