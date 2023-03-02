@@ -36,6 +36,7 @@ import qualified TestSuite.Basics.GenBenchmark
 import qualified TestSuite.Basics.Higher
 import qualified TestSuite.Basics.Index
 import qualified TestSuite.Basics.IteTest
+import qualified TestSuite.Basics.Lambda
 import qualified TestSuite.Basics.List
 import qualified TestSuite.Basics.ModelValidate
 import qualified TestSuite.Basics.Nonlinear
@@ -147,6 +148,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Basics.Higher.tests
                       , TestSuite.Basics.Index.tests
                       , TestSuite.Basics.IteTest.tests
+                      , TestSuite.Basics.Lambda.tests
                       , TestSuite.Basics.List.tests
                       , TestSuite.Basics.ModelValidate.tests
                       , TestSuite.Basics.ModelValidate.testsABC

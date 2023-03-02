@@ -278,6 +278,7 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Higher
                   , TestSuite.Basics.Index
                   , TestSuite.Basics.IteTest
+                  , TestSuite.Basics.Lambda
                   , TestSuite.Basics.List
                   , TestSuite.Basics.ModelValidate
                   , TestSuite.Basics.Nonlinear

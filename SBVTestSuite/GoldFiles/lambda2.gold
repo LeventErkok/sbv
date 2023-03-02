@@ -1,0 +1,4 @@
+(lambda ((s0 Int))
+   (let ((s1 1))
+   (let ((s2 (+ s0 s1)))
+   s2)))
