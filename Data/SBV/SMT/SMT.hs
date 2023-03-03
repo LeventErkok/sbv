@@ -688,9 +688,9 @@ standardSolver config ctx pgm continuation = do
     rnf pgm `seq` pipeProcess config ctx exec opts pgm continuation
 
 -- | An internal type to track of solver interactions
-data SolverLine = SolverRegular   String                   -- ^ All is well
-                | SolverTimeout   String  (String, String) -- ^ Timeout expired (stdout, stderr) when that happened
-                | SolverException String                   -- ^ Something else went wrong
+data SolverLine = SolverRegular   String -- ^ All is well
+                | SolverTimeout   String -- ^ Timeout expired
+                | SolverException String -- ^ Something else went wrong
 
 -- | A variant of @readProcessWithExitCode@; except it deals with SBV continuations
 runSolver :: SMTConfig -> State -> FilePath -> [String] -> String -> (State -> IO a) -> IO a
@@ -760,15 +760,21 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                      then collect True sofar'
                                                                                      else return sofar'
 
+                                             -- grab the contents of a handle, and return it trimmed if any
+                                             grab handle = do mbCts <- (Just <$> hGetContents handle) `C.catch` (\(_ :: C.SomeException) -> pure Nothing)
+                                                              pure $ dropWhile isSpace <$> mbCts
+
                                          in case timeOutToUse of
                                               Nothing -> SolverRegular <$> getFullLine
                                               Just t  -> do r <- Timeout.timeout t getFullLine
                                                             case r of
                                                               Just l  -> return $ SolverRegular l
-                                                              Nothing -> do -- in this case, grab the stdout too
-                                                                            out <- hGetContents outh `C.catch` (\(e :: C.SomeException) -> pure (show e))
-                                                                            err <- hGetContents errh `C.catch` (\(e :: C.SomeException) -> pure (show e))
-                                                                            return $ SolverTimeout (timeOutMsg t) (out, err)
+                                                              Nothing -> do out <- grab outh
+                                                                            err <- grab errh
+                                                                            -- in this case, if we have something on out/err pass that back as regular
+                                                                            case err `mplus` out of
+                                                                              Just x  -> pure $ SolverRegular x
+                                                                              Nothing -> pure $ SolverTimeout (timeOutMsg t)
 
                             go isFirst i sofar = do
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
@@ -806,19 +812,14 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                                                          else Nothing
                                                                                              }
 
-                                              SolverTimeout e (out, err) -> do
-                                                                    terminateProcess pid -- NB. Do not *wait* for the process, just quit.
-
-                                                                    let grab x = case dropWhile isSpace x of
-                                                                                    "" -> Nothing
-                                                                                    m  -> Just m
+                                              SolverTimeout e -> do terminateProcess pid -- NB. Do not *wait* for the process, just quit.
 
                                                                     C.throwIO SBVException { sbvExceptionDescription = "Timeout! " ++ e
                                                                                            , sbvExceptionSent        = mbCommand
                                                                                            , sbvExceptionExpected    = Nothing
                                                                                            , sbvExceptionReceived    = Just $ unlines (reverse sofar)
-                                                                                           , sbvExceptionStdOut      = grab out
-                                                                                           , sbvExceptionStdErr      = grab err
+                                                                                           , sbvExceptionStdOut      = Nothing
+                                                                                           , sbvExceptionStdErr      = Nothing
                                                                                            , sbvExceptionExitCode    = Nothing
                                                                                            , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
                                                                                            , sbvExceptionReason      = Nothing
