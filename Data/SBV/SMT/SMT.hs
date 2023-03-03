@@ -714,7 +714,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                   let -- If the command is a set-option call, make sure there's a timeout on it
                                       -- This ensures that if we try to set an option before diagnostic-output
                                       -- is redirected to stdout and the solver chokes, then we can catch it
-                                      mbTimeOut | "(set-option :" `isPrefixOf` command = mbTimeOutGiven `mplus` Just 5000000
+                                      mbTimeOut | "(set-option :" `isPrefixOf` command = mbTimeOutGiven `mplus` Just 1000000
                                                 | True                                 = mbTimeOutGiven
 
                                       -- solvers don't respond to empty lines or comments; we just pass back
@@ -766,8 +766,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                             case r of
                                                               Just l  -> return $ SolverRegular l
                                                               Nothing -> do -- in this case, grab the stdout too
-                                                                            out <- hGetContents outh
-                                                                            err <- hGetContents errh
+                                                                            out <- hGetContents outh `C.catch` (\(e :: C.SomeException) -> pure (show e))
+                                                                            err <- hGetContents errh `C.catch` (\(e :: C.SomeException) -> pure (show e))
                                                                             return $ SolverTimeout (timeOutMsg t) (out, err)
 
                             go isFirst i sofar = do
