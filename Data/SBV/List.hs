@@ -477,12 +477,20 @@ foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
+--
+-- >>> sat (.== L.zip  [1..10::Integer] [11..20::Integer])
+-- Satisfiable. Model:
+--   s0 = [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(Integer, Integer)]CHECK
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
                 (mapi (curry tuple) 0 (take (length ys) xs))
 
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
+--
+-- >>> sat $ (.== zipWith (+) [1..10::Integer] [11..20::Integer])
+-- Satisfiable. Model:
+--   s0 = [12,14,16,18,20,22,24,26,28,30] :: [Integer]CHECK
 zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))
