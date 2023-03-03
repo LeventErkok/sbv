@@ -64,7 +64,7 @@ import Data.Either(rights)
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
 import System.Exit        (ExitCode(..))
-import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine)
+import System.IO          (hClose, hFlush, hPutStrLn, hGetContents, hGetLine, hReady, hGetChar)
 import System.Process     (runInteractiveProcess, waitForProcess, terminateProcess)
 
 import qualified Data.Map.Strict as M
@@ -708,14 +708,17 @@ runSolver cfg ctx execPath opts pgm continuation
                                                 hFlush inh
                                                 recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
+                    -- is this a set-command? Then we expect faster response
+                    isSetCommand = maybe False ("(set-option :" `isPrefixOf`)
+
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
                     ask mbTimeOutGiven command =
                                   let -- If the command is a set-option call, make sure there's a timeout on it
                                       -- This ensures that if we try to set an option before diagnostic-output
                                       -- is redirected to stdout and the solver chokes, then we can catch it
-                                      mbTimeOut | "(set-option :" `isPrefixOf` command = mbTimeOutGiven `mplus` Just 1000000
-                                                | True                                 = mbTimeOutGiven
+                                      mbTimeOut | isSetCommand (Just command) = Just 1000000
+                                                | True                        = mbTimeOutGiven
 
                                       -- solvers don't respond to empty lines or comments; we just pass back
                                       -- success in these cases to keep the illusion of everything has a response
@@ -738,8 +741,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                 return collated
 
                       where safeGetLine isFirst h =
-                                         let timeOutToUse | isFirst = mbTimeOut
-                                                          | True    = Just 5000000
+                                         let timeOutToUse | isSetCommand mbCommand = Just 1000000
+                                                          | isFirst                = mbTimeOut
+                                                          | True                   = Just 5000000
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded"
                                                           | True    = "A multiline complete response wasn't received before " ++ showTimeoutValue t ++ " exceeded"
 
@@ -760,8 +764,15 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                                      then collect True sofar'
                                                                                      else return sofar'
 
+                                             -- Carefully grab things as they are ready. But don't block!
+                                             collectH handle = reverse <$> coll ""
+                                               where coll sofar = do b <- hReady handle
+                                                                     if b
+                                                                        then hGetChar handle >>= \c -> coll (c:sofar)
+                                                                        else pure sofar
+
                                              -- grab the contents of a handle, and return it trimmed if any
-                                             grab handle = do mbCts <- (Just <$> hGetContents handle) `C.catch` (\(_ :: C.SomeException) -> pure Nothing)
+                                             grab handle = do mbCts <- (Just <$> collectH handle) `C.catch` (\(_ :: C.SomeException) -> pure Nothing)
                                                               pure $ dropWhile isSpace <$> mbCts
 
                                          in case timeOutToUse of
@@ -773,8 +784,8 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                             err <- grab errh
                                                                             -- in this case, if we have something on out/err pass that back as regular
                                                                             case err `mplus` out of
-                                                                              Just x  -> pure $ SolverRegular x
-                                                                              Nothing -> pure $ SolverTimeout (timeOutMsg t)
+                                                                              Just x | not (null x) -> pure $ SolverRegular x
+                                                                              _                     -> pure $ SolverTimeout (timeOutMsg t)
 
                             go isFirst i sofar = do
                                             errln <- safeGetLine isFirst outh `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (SolverException (show e))))
