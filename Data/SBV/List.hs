@@ -36,15 +36,19 @@ module Data.SBV.List (
         , map, mapi
         -- * Folding
         , foldr, foldri, foldl, foldli
+        -- * Zipping
+        , zip, zipWith
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr)
+import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
+                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
 
 import Data.SBV.Lambda
+import Data.SBV.Tuple
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
@@ -142,7 +146,7 @@ singleton = lift1 SeqUnit (Just (: []))
 listToListAt :: SymVal a => SList a -> SInteger -> SList a
 listToListAt s offset = subList s offset 1
 
--- | @`elemAt` l i@ is the value stored at location @i@. Unspecified if
+-- | @`elemAt` l i@ is the value stored at location @i@, starting at 0. Unspecified if
 -- index is out of bounds.
 --
 -- >>> prove $ \i -> i `inRange` (0, 4) .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
@@ -347,7 +351,7 @@ offsetIndexOf s sub offset
   , Just n <- unliteral sub      -- a constant search pattern
   , Just o <- unliteral offset   -- at a constant offset
   , o >= 0, o <= genericLength c        -- offset is good
-  = case [i | (i, t) <- zip [o ..] (L.tails (genericDrop o c)), n `L.isPrefixOf` t] of
+  = case [i | (i, t) <- P.zip [o ..] (L.tails (genericDrop o c)), n `L.isPrefixOf` t] of
       (i:_) -> literal i
       _     -> -1
   | True
@@ -398,7 +402,14 @@ map op l = SBV $ SVal k $ Right $ cache r
                   newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
 
 -- | @`mapi` op s@ maps the operation on to sequence, with the counter given at each element, starting
--- at the given value. Note that SBV never constant folds this operation.
+-- at the given value. In Haskell terms, it is:
+--
+-- @
+--    mapi :: (Int -> a -> b) -> Int -> [a] -> [b]
+--    mapi f i xs = zipWith f [i..] xs
+-- @
+--
+-- Note that SBV never constant folds this operation.
 --
 -- >>> sat $ \l -> l .== mapi (+) 10 [1 .. 5 :: Integer]
 -- Satisfiable. Model:
@@ -463,6 +474,18 @@ foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
                   sva <- sbvToSV st l
                   lam <- lambda op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
+
+-- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
+-- the minumum of the lengths of the given lists.
+zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
+zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
+                (mapi (curry tuple) 0 (take (length ys) xs))
+
+-- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
+-- The length of the final list is the minumum of the lengths of the given lists.
+zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
+                      (mapi (curry tuple) 0 (take (length ys) xs))
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
