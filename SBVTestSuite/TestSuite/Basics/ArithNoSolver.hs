@@ -583,10 +583,12 @@ genLists = map mkTest1 (   [("length",        show l,                   check1 S
                         ++ [("head",          show l,                   check1 SL.head          head          l      ) | l <- sl, not (null l)                                         ]
                         ++ [("tail",          show l,                   check1 SL.tail          tail          l      ) | l <- sl, not (null l)                                         ]
                         ++ [("singleton",     show i,                   check1 SL.singleton     (: [])        i      ) | i <- iUBs                                                     ]
-                        ++ [("implode",       show l,                   checkI SL.implode       id            l      ) | l <- sl                                                       ])
+                        ++ [("implode",       show l,                   checkI SL.implode       id            l      ) | l <- sl                                                       ]
+                        ++ [("concat",        show l,                   check1 SL.concat        concat        l      ) | l <- sll                                                      ]
+                       )
         ++ map mkTest2 (   [("listToListAt",  show l, show i,           check2 SL.listToListAt  listToListAt  l i    ) | l <- sl, i  <- range l                                        ]
                         ++ [("elemAt",        show l, show i,           check2 SL.elemAt        elemAt        l i    ) | l <- sl, i  <- range l                                        ]
-                        ++ [("concat",        show l, show l1,          check2 SL.concat        (++)          l l1   ) | l <- sl, l1 <- sl                                             ]
+                        ++ [("append",        show l, show l1,          check2 (SL.++)          (++)          l l1   ) | l <- sl, l1 <- sl                                             ]
                         ++ [("isInfixOf",     show l, show l1,          check2 SL.isInfixOf     isInfixOf     l l1   ) | l <- sl, l1 <- sl                                             ]
                         ++ [("isSuffixOf",    show l, show l1,          check2 SL.isSuffixOf    isSuffixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
                         ++ [("isPrefixOf",    show l, show l1,          check2 SL.isPrefixOf    isPrefixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
@@ -755,6 +757,10 @@ sss = map literal ss
 -- Lists are the worst in coverage!
 sl :: [[Integer]]
 sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
+
+-- Like wise, list of lists
+sll :: [[[Integer]]]
+sll = [[x, x, x] | x <- [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]]
 
 -- Lists are the worst in coverage!
 ssl :: [SList Integer]

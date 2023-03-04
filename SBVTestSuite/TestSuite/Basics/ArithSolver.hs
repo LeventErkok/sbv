@@ -703,24 +703,28 @@ genStrings = map mkTest1 (  [("length",        show s,                   mkThm1 
                                                        return $ literal (cop arg1 arg2 arg3) .== sop a b c
 
 genLists :: [TestTree]
-genLists = map mkTest1 (   [("length",        show l,                   mkThm1 SL.length        llen          l      ) | l <- sl                                                       ]
-                        ++ [("null",          show l,                   mkThm1 SL.null          null          l      ) | l <- sl                                                       ]
-                        ++ [("head",          show l,                   mkThm1 SL.head          head          l      ) | l <- sl, not (null l)                                         ]
-                        ++ [("tail",          show l,                   mkThm1 SL.tail          tail          l      ) | l <- sl, not (null l)                                         ]
-                        ++ [("singleton",     show i,                   mkThm1 SL.singleton     (: [])        i      ) | i <- iUBs                                                     ]
-                        ++ [("implode",       show l,                   mkThmI SL.implode       id            l      ) | l <- sl                                                       ])
-        ++ map mkTest2 (   [("listToListAt",  show l, show i,           mkThm2 SL.listToListAt  listToListAt  l i    ) | l <- sl, i  <- range l                                        ]
-                        ++ [("elemAt",        show l, show i,           mkThm2 SL.elemAt        elemAt        l i    ) | l <- sl, i  <- range l                                        ]
-                        ++ [("concat",        show l, show l1,          mkThm2 SL.concat        (++)          l l1   ) | l <- sl, l1 <- sl                                             ]
-                        ++ [("isInfixOf",     show l, show l1,          mkThm2 SL.isInfixOf     isInfixOf     l l1   ) | l <- sl, l1 <- sl                                             ]
-                        ++ [("isSuffixOf",    show l, show l1,          mkThm2 SL.isSuffixOf    isSuffixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
-                        ++ [("isPrefixOf",    show l, show l1,          mkThm2 SL.isPrefixOf    isPrefixOf    l l1   ) | l <- sl, l1 <- sl                                             ]
-                        ++ [("take",          show l, show i,           mkThm2 SL.take          genericTake   i l    ) | l <- sl, i <- iUBs                                            ]
-                        ++ [("drop",          show l, show i,           mkThm2 SL.drop          genericDrop   i l    ) | l <- sl, i <- iUBs                                            ]
-                        ++ [("indexOf",       show l, show l1,          mkThm2 SL.indexOf       indexOf       l l1   ) | l <- sl, l1 <- sl                                             ])
-        ++ map mkTest3 (   [("subList",       show l, show  i, show j,  mkThm3 SL.subList       subList       l i  j ) | l <- sl, i  <- range l, j <- range l, i + j <= genericLength l]
-                        ++ [("replace",       show l, show l1, show l2, mkThm3 SL.replace       replace       l l1 l2) | l <- sl, l1 <- sl, l2 <- sl                                   ]
-                        ++ [("offsetIndexOf", show l, show l1, show i,  mkThm3 SL.offsetIndexOf offsetIndexOf l l1 i ) | l <- sl, l1 <- sl, i <- range l                               ])
+genLists = map mkTest1 (   [("length",        show l,                   mkThm1 SL.length        llen          l      ) | l <- sl                                                        ]
+                        ++ [("null",          show l,                   mkThm1 SL.null          null          l      ) | l <- sl                                                        ]
+                        ++ [("head",          show l,                   mkThm1 SL.head          head          l      ) | l <- sl, not (null l)                                          ]
+                        ++ [("tail",          show l,                   mkThm1 SL.tail          tail          l      ) | l <- sl, not (null l)                                          ]
+                        ++ [("singleton",     show i,                   mkThm1 SL.singleton     (: [])        i      ) | i <- iUBs                                                      ]
+                        ++ [("implode",       show l,                   mkThmI SL.implode       id            l      ) | l <- sl                                                        ]
+                        ++ [("concat",        show l,                   mkThm1 SL.concat        concat        l      ) | l <- sll                                                       ]
+                       )
+        ++ map mkTest2 (   [("listToListAt",  show l, show i,           mkThm2 SL.listToListAt  listToListAt  l i    ) | l <- sl,  i  <- range l                                        ]
+                        ++ [("elemAt",        show l, show i,           mkThm2 SL.elemAt        elemAt        l i    ) | l <- sl,  i  <- range l                                        ]
+                        ++ [("append",        show l, show l1,          mkThm2 (SL.++)          (++)          l l1   ) | l <- sl,  l1 <- sl                                             ]
+                        ++ [("isInfixOf",     show l, show l1,          mkThm2 SL.isInfixOf     isInfixOf     l l1   ) | l <- sl,  l1 <- sl                                             ]
+                        ++ [("isSuffixOf",    show l, show l1,          mkThm2 SL.isSuffixOf    isSuffixOf    l l1   ) | l <- sl,  l1 <- sl                                             ]
+                        ++ [("isPrefixOf",    show l, show l1,          mkThm2 SL.isPrefixOf    isPrefixOf    l l1   ) | l <- sl,  l1 <- sl                                             ]
+                        ++ [("take",          show l, show i,           mkThm2 SL.take          genericTake   i l    ) | l <- sl,  i <- iUBs                                            ]
+                        ++ [("drop",          show l, show i,           mkThm2 SL.drop          genericDrop   i l    ) | l <- sl,  i <- iUBs                                            ]
+                        ++ [("indexOf",       show l, show l1,          mkThm2 SL.indexOf       indexOf       l l1   ) | l <- sl,  l1 <- sl                                             ]
+                       )
+        ++ map mkTest3 (   [("subList",       show l, show  i, show j,  mkThm3 SL.subList       subList       l i  j ) | l <- sl,  i  <- range l, j <- range l, i + j <= genericLength l]
+                        ++ [("replace",       show l, show l1, show l2, mkThm3 SL.replace       replace       l l1 l2) | l <- sl,  l1 <- sl, l2 <- sl                                   ]
+                        ++ [("offsetIndexOf", show l, show l1, show i,  mkThm3 SL.offsetIndexOf offsetIndexOf l l1 i ) | l <- sl,  l1 <- sl, i <- range l                               ]
+                       )
   where llen :: [Integer] -> Integer
         llen = fromIntegral . length
 
@@ -852,6 +856,10 @@ ss = ["", "palTRY", "teSTing", "SBV", "sTRIngs", "123", "surely", "thIS", "hI", 
 -- Lists are the worst in coverage!
 sl :: [[Integer]]
 sl = [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]
+
+-- List of lists are similarly inadequate
+sll :: [[[Integer]]]
+sll = [[x, x, x] | x <- [[], [0], [-1, 1], [-10, 0, 10], [3, 4, 5, 4, 5, 3]]]
 
 -- Ditto for maybe, either and tuple
 sm :: [Maybe Integer]
