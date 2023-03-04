@@ -9,16 +9,20 @@
 -- Test lambda generation
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module TestSuite.Basics.Lambda(tests)  where
 
-import Prelude hiding((++), map, foldl, sum)
+import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any)
 import qualified Prelude as P
 
+import Control.Monad (unless)
+
 import Data.SBV.List
+import Data.SBV.Control
 import Data.SBV.Internals hiding(free_)
 
 import Utils.SBVTestFramework
@@ -34,6 +38,7 @@ tests =
     , goldenCapturedIO "lambda5" $ check t2
     , goldenCapturedIO "lambda6" $ check t3
     , goldenCapturedIO "lambda7" $ check t4
+    , goldenCapturedIO "lambda8" $ t5
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -59,6 +64,37 @@ tests =
                 res <- free_
                 let sum = foldl (+) 0
                 constrain $ res .== sum (map sum arg)
+
+        t5 rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
+
+                   let expecting = 5 :: Integer
+
+                   a :: SList Integer <- sList_
+                   b :: SList Integer <- sList_
+
+                   query $ do
+
+                     constrain $ length (zip a b) .== literal expecting
+                     constrain $ length a .== literal expecting
+                     constrain $ length b .== literal expecting
+                     constrain $ all (.== 1) a
+                     constrain $ all (.== 2) b
+
+                     cs <- checkSat
+                     case cs of
+                       Sat -> do av <- getValue a
+                                 bv <- getValue b
+                                 let len = P.fromIntegral $ P.length (P.zip av bv)
+
+                                 unless (len == expecting) $
+                                    error $ unlines [ "Bad output:"
+                                                    , "  a       = " P.++ show av
+                                                    , "  b       = " P.++ show bv
+                                                    , "  zip a b = " P.++ show (P.zip av bv)
+                                                    , "  Length  = " P.++ show len P.++ " was expecting: " P.++ show expecting
+                                                    ]
+
+                       _ -> error $ "Unexpected output: " P.++ show cs
 
 {-# ANN module ("HLint: ignore Use map once" :: String) #-}
 {-# ANN module ("HLint: ignore Use sum"      :: String) #-}
