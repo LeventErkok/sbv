@@ -38,10 +38,14 @@ module Data.SBV.List (
         , foldr, foldri, foldl, foldli
         -- * Zipping
         , zip, zipWith
+        -- * Filtering
+        , filter
+        -- * Other list functions
+        , all, any
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
-                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith)
+                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (StrOp(..))
@@ -57,7 +61,7 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -176,12 +180,6 @@ elemAt l i
 implode :: SymVal a => [SBV a] -> SList a
 implode = P.foldr ((++) . singleton) (literal [])
 
--- | Concatenate two lists. See also `++`.
-concat :: SymVal a => SList a -> SList a -> SList a
-concat x y | isConcretelyEmpty x = y
-           | isConcretelyEmpty y = x
-           | True                = lift2 SeqConcat (Just (P.++)) x y
-
 -- | Prepend an element, the traditional @cons@.
 infixr 5 .:
 (.:) :: SymVal a => SBV a -> SList a -> SList a
@@ -198,7 +196,7 @@ as `snoc` a = as ++ singleton a
 nil :: SymVal a => SList a
 nil = []
 
--- | Short cut for `concat`.
+-- | Append two lists.
 --
 -- >>> sat $ \x y z -> length x .== 5 .&& length y .== 1 .&& x ++ y ++ z .== [1 .. 12]
 -- Satisfiable. Model:
@@ -207,7 +205,9 @@ nil = []
 --   s2 = [7,8,9,10,11,12] :: [Integer]
 infixr 5 ++
 (++) :: SymVal a => SList a -> SList a -> SList a
-(++) = concat
+x ++ y | isConcretelyEmpty x = y
+       | isConcretelyEmpty y = x
+       | True                = lift2 SeqConcat (Just (P.++)) x y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
@@ -501,6 +501,52 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))
+
+-- | Concatenate list of lists.
+--
+-- NB. Concat is typically defined in terms of foldr. Here we prefer foldl, since the underlying solver
+-- primitive is foldl: Otherwise, we'd induce an extra call to reverse.
+--
+-- >>> sat $ \l -> l .== concat [[1..3::Integer], [4..7], [8..10]]
+-- Satisfiable. Model:
+--   s0 = [1,2,3,4,5,6,7,8,9,10] :: [Integer]
+concat :: SymVal a => SList [a] -> SList a
+concat = foldl (++) []
+
+-- | Check all elements satisfy the predicate.
+--
+-- >>> let isEven x = x `sMod` 2 .== 0
+-- >>> sat $ \l -> l .== all isEven [2, 4, 6, 8, 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = True :: Bool
+-- >>> sat $ \l -> l .== all isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = False :: Bool
+all :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
+all f = foldl (\sofar e -> sofar .&& f e) sTrue
+
+-- | Check some element satisfies the predicate.
+-- --
+-- >>> let isEven x = x `sMod` 2 .== 0
+-- >>> sat $ \l -> l .== any (sNot . isEven) [2, 4, 6, 8, 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = False :: Bool
+-- >>> sat $ \l -> l .== any isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = True :: Bool
+any :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
+any f = foldl (\sofar e -> sofar .|| f e) sFalse
+
+-- | @filter f xs@ filters the list with the given predicate.
+--
+-- >>> sat $ \l -> l .== filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [2,4,6,8,10] :: [Integer]
+-- >>> sat $ \l -> l .== filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [1,3,5,7,9] :: [Integer]
+filter :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
+filter f = foldl (\sofar e -> sofar ++ ite (f e) (singleton e) []) []
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
