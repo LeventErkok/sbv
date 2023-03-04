@@ -720,15 +720,11 @@ type FunctionMap = M.Map Op String
 
 -- Present an SV; inline true/false as needed
 cvtSV :: SkolemMap -> SV -> String
-cvtSV skolemMap s@(SV _ (NodeId n))
+cvtSV skolemMap s
   | Just ss <- s `M.lookup` skolemMap
   = "(" ++ show s ++ concatMap ((" " ++) . show) ss ++ ")"
-  | s == trueSV
-  = "true"
-  | s == falseSV
-  = "false"
   | True
-  = 's' : show n
+  = show s
 
 cvtCV :: RoundingMode -> CV -> String
 cvtCV = cvToSMTLib

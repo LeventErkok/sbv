@@ -20,7 +20,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Lambda (
-          lambda
+          lambda, lambdaTop
         ) where
 
 import Control.Monad.Trans
@@ -32,17 +32,28 @@ import Data.SBV.Provers.Prover
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
+import Data.IORef (readIORef)
 import Data.List
 import Data.Proxy
+
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
--- | Extract an SMTLib lambda string
-lambda :: Lambda Symbolic a => a -> IO String
-lambda f = do st  <- mkNewState Lambda
-              res <- fst <$> runSymbolicInState st (mkLambda st f)
-              pure $ toLambda defaultSMTCfg{smtLibVersion = SMTLib2} res
+-- | Create a lambda-expression at the top. Only for internal testing purposes
+lambdaTop :: Lambda Symbolic a => a -> IO String
+lambdaTop = lambdaAtLevel 0
+
+-- | Create an SMTLib lambda, int he given state
+lambda :: Lambda Symbolic a => State -> a -> IO String
+lambda inState f = do ll <- readIORef (rLambdaLevel inState)
+                      lambdaAtLevel (ll+1) f
+
+lambdaAtLevel :: Lambda Symbolic a => Int -> a -> IO String
+lambdaAtLevel l f = do
+    st <- mkNewState $ Lambda l
+    res <- fst <$> runSymbolicInState st (mkLambda st f)
+    pure $ toLambda defaultSMTCfg{smtLibVersion = SMTLib2} res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where

@@ -114,18 +114,26 @@ import Control.Monad.Fail as Fail
 #endif
 
 -- | A symbolic node id
-newtype NodeId = NodeId { getId :: Int }
-  deriving (Eq, Ord, G.Data)
+newtype NodeId = NodeId { getId :: (Int, Int) } -- Lambda-level, and node-id
+  deriving (Ord, G.Data)
+
+-- Equality is pair-wise, except we accommodate for negative node-id; which is reserved for true/false
+instance Eq NodeId where
+  NodeId n1@(_, i) == NodeId n2@(_, j)
+     | i < 0 && j < 0
+     = i == j
+     | True
+     = n1 == n2
 
 -- | A symbolic word, tracking it's signedness and size.
 data SV = SV !Kind !NodeId
         deriving G.Data
 
--- | For equality, we merely use the node-id
+-- | For equality, we merely use the lambda-level/node-id
 instance Eq SV where
   SV _ n1 == SV _ n2 = n1 == n2
 
--- | Again, simply use the node-id for ordering
+-- | Again, simply use the lambda-level/node-id for ordering
 instance Ord SV where
   SV _ n1 `compare` SV _ n2 = n1 `compare` n2
 
@@ -133,10 +141,13 @@ instance HasKind SV where
   kindOf (SV k _) = k
 
 instance Show SV where
-  show (SV _ (NodeId n)) = case n of
-                             -2 -> "false"
-                             -1 -> "true"
-                             _  -> 's' : show n
+  show (SV _ (NodeId (l, n))) = case n of
+                                 -2 -> "false"
+                                 -1 -> "true"
+                                 _  -> prefix ++ 's' : show n
+        where prefix = case l of
+                         0 -> ""
+                         _ -> 'l' : show l ++ "_"
 
 -- | Kind of a symbolic word.
 swKind :: SV -> Kind
@@ -152,13 +163,13 @@ swNodeId (SV _ nid) = nid
 forceSVArg :: SV -> IO ()
 forceSVArg (SV k n) = k `seq` n `seq` return ()
 
--- | Constant False as an 'SV'. Note that this value always occupies slot -2.
+-- | Constant False as an 'SV'. Note that this value always occupies slot -2 and level 0.
 falseSV :: SV
-falseSV = SV KBool $ NodeId (-2)
+falseSV = SV KBool $ NodeId (0, -2)
 
--- | Constant True as an 'SV'. Note that this value always occupies slot -1.
+-- | Constant True as an 'SV'. Note that this value always occupies slot -1 and level 0.
 trueSV :: SV
-trueSV  = SV KBool $ NodeId (-1)
+trueSV  = SV KBool $ NodeId (0, -1)
 
 -- | Symbolic operations
 data Op = Plus
@@ -966,7 +977,7 @@ isRunIStage s = case s of
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                        -- ^ In regular mode, with a stage. Bool is True if this is SAT.
                 | CodeGen                                                           -- ^ Code generation mode.
-                | Lambda                                                            -- ^ Inside a lambda-expression
+                | Lambda   Int                                                      -- ^ Inside a lambda-expression at level
                 | Concrete (Maybe (Bool, [((Quantifier, NamedSymVar), Maybe CV)]))  -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
@@ -978,7 +989,7 @@ instance Show SBVRunMode where
    show (SMTMode qc ISafe  False _)  = error $ "ISafe-False is not an expected/supported combination for SBVRunMode! (" ++ show qc ++ ")"
    show (SMTMode qc IRun   False _)  = "Proof (" ++ show qc ++ ")"
    show CodeGen                      = "Code generation"
-   show Lambda                       = "Lambda generation"
+   show Lambda{}                     = "Lambda generation"
    show (Concrete Nothing)           = "Concrete evaluation with random values"
    show (Concrete (Just (True, _)))  = "Concrete evaluation during model validation for sat"
    show (Concrete (Just (False, _))) = "Concrete evaluation during model validation for prove"
@@ -989,7 +1000,7 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
                                   return $ case rm of
                                              Concrete{} -> False
                                              SMTMode{}  -> False
-                                             Lambda     -> False
+                                             Lambda{}   -> False
                                              CodeGen    -> True
 
 -- | The state in query mode, i.e., additional context
@@ -1097,17 +1108,20 @@ addUserInput q sv nm = goAll . goUser
 getInputs :: Inputs -> (UserInputs, InternInps)
 getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
 
--- | Find a user-input from its SV
+-- | Find a user-input from its SV. Note that only level-0 vars
+-- can be found this way.
 lookupInput :: Eq a => (a -> SV) -> SV -> S.Seq a -> Maybe a
-lookupInput f sv ns = res
+lookupInput f sv ns
+   | l == 0 = res
+   | True   = Nothing  -- l != 0, a lambda var, so we ignore
   where
-    i   = getId (swNodeId sv)
-    svs = fmap f ns
-    res = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
-            Nothing    -> secondLookup
-            x@(Just e) -> if sv == f e then x else secondLookup
-              -- we try the fast lookup first, if the node ids don't match then
-              -- we use the more expensive O (n) to find the index and the elem
+    (l, i) = getId (swNodeId sv)
+    svs    = fmap f ns
+    res    = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
+               Nothing    -> secondLookup
+               x@(Just e) -> if sv == f e then x else secondLookup
+                 -- we try the fast lookup first, if the node ids don't match then
+                 -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
 -- | Extract universals
@@ -1153,6 +1167,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rCInfo       :: IORef [(String, CV)]
                     , rObservables :: IORef (S.Seq (Name, CV -> Bool, SV))
                     , rctr         :: IORef Int
+                    , rLambdaLevel :: IORef Int
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef Inputs
@@ -1192,7 +1207,7 @@ inSMTMode :: State -> IO Bool
 inSMTMode State{runMode} = do rm <- readIORef runMode
                               return $ case rm of
                                          CodeGen    -> False
-                                         Lambda     -> False
+                                         Lambda{}   -> False
                                          Concrete{} -> False
                                          SMTMode{}  -> True
 
@@ -1335,7 +1350,7 @@ internalVariable st k = do NamedSymVar sv nm <- newSV st k
                            let q = case rm of
                                      SMTMode  _ _ True  _ -> EX
                                      SMTMode  _ _ False _ -> ALL
-                                     Lambda               -> ALL
+                                     Lambda{}             -> ALL
                                      CodeGen              -> ALL
                                      Concrete{}           -> ALL
                                n = "__internal_sbv_" <> nm
@@ -1361,9 +1376,10 @@ lambdaVar st k = do v@(NamedSymVar sv nm) <- newSV st k
 -- | Create a new SV
 newSV :: State -> Kind -> IO NamedSymVar
 newSV st k = do ctr <- incrementInternalCounter st
-                let sv = SV k (NodeId ctr)
+                ll  <- readIORef (rLambdaLevel st)
+                let sv = SV k (NodeId (ll, ctr))
                 registerKind st k
-                return $ NamedSymVar sv $ 's' `T.cons` T.pack (show ctr)
+                return $ NamedSymVar sv $ T.pack (show sv)
 {-# INLINE newSV #-}
 
 -- | Register a new kind with the system, used for uninterpreted sorts.
@@ -1612,8 +1628,8 @@ svMkSymVarGen isTracker varContext k mbNm st = do
           (Just EX, Concrete Nothing)    -> disallow "Existentially quantified variables"
           (_      , Concrete Nothing)    -> noUI (randomCV k >>= mkC)
 
-          (Just EX, Lambda)              -> disallow "Existentially quantified variables"
-          (_,       Lambda)              -> noUI $ mkS ALL
+          (Just EX, Lambda{})            -> disallow "Existentially quantified variables"
+          (_,       Lambda{})            -> noUI $ mkS ALL
 
           -- Model validation:
           (_      , Concrete (Just (_isSat, env))) -> do
@@ -1707,6 +1723,11 @@ mkNewState currentRunMode = liftIO $ do
      currTime  <- getCurrentTime
      rm        <- newIORef currentRunMode
      ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     lambda    <- newIORef $ case currentRunMode of
+                               SMTMode{}  -> 0
+                               CodeGen{}  -> 0
+                               Concrete{} -> 0
+                               Lambda i   -> i
      cInfo     <- newIORef []
      observes  <- newIORef mempty
      pgm       <- newIORef (SBVPgm S.empty)
@@ -1737,6 +1758,7 @@ mkNewState currentRunMode = liftIO $ do
                   , rCInfo       = cInfo
                   , rObservables = observes
                   , rctr         = ctr
+                  , rLambdaLevel = lambda
                   , rUsedKinds   = usedKinds
                   , rUsedLbls    = usedLbls
                   , rinps        = inps
@@ -1844,7 +1866,7 @@ internalConstraint st isSoft attrs b = do v <- svToSV st b
                                           let isValidating = case rm of
                                                                SMTMode _ _ _ cfg -> validationRequested cfg
                                                                CodeGen           -> False
-                                                               Lambda            -> False
+                                                               Lambda{}          -> False
                                                                Concrete Nothing  -> False
                                                                Concrete (Just _) -> True   -- The case when we *are* running the validation
 

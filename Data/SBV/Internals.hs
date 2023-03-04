@@ -61,7 +61,7 @@ module Data.SBV.Internals (
   , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
 
   -- * Lambda generation
-  , lambda
+  , lambda, lambdaTop
   ) where
 
 import Control.Monad.IO.Class (MonadIO)

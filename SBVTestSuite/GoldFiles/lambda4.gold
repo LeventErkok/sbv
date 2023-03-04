@@ -22,7 +22,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () (Seq Bool) (seq.map (lambda ((s0 Int))
+[GOOD] (define-fun s2 () (Seq Bool) (seq.map (lambda ((l1_s0 Int))
         false) s1))
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] ; --- arrayDelayeds ---

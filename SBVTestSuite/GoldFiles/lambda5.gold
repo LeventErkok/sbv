@@ -22,14 +22,14 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () (Seq Int) (seq.map (lambda ((s0 Int))
-          (let ((s1 2))
-          (let ((s2 (+ s0 s1)))
-          s2))) s1))
-[GOOD] (define-fun s3 () (Seq Int) (seq.map (lambda ((s0 Int))
-          (let ((s1 1))
-          (let ((s2 (+ s0 s1)))
-          s2))) s2))
+[GOOD] (define-fun s2 () (Seq Int) (seq.map (lambda ((l1_s0 Int))
+          (let ((l1_s1 2))
+          (let ((l1_s2 (+ l1_s0 l1_s1)))
+          l1_s2))) s1))
+[GOOD] (define-fun s3 () (Seq Int) (seq.map (lambda ((l1_s0 Int))
+          (let ((l1_s1 1))
+          (let ((l1_s2 (+ l1_s0 l1_s1)))
+          l1_s2))) s2))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---

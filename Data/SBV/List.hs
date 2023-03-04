@@ -57,7 +57,7 @@ import Data.Proxy
 
 -- $setup
 -- >>> -- For doctest purposes only:
--- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl)
+-- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
@@ -398,7 +398,7 @@ map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList 
 map op l = SBV $ SVal k $ Right $ cache r
   where k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
-                  lam <- lambda op
+                  lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
 
 -- | @`mapi` op s@ maps the operation on to sequence, with the counter given at each element, starting
@@ -419,7 +419,7 @@ mapi op i l = SBV $ SVal k $ Right $ cache r
   where k = kindOf (Proxy @(SList b))
         r st = do svi <- sbvToSV st i
                   svl <- sbvToSV st l
-                  lam <- lambda op
+                  lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
 -- | @`foldr` op base s@ folds the sequence from the right.
@@ -457,7 +457,7 @@ foldl op base l = SBV $ SVal k $ Right $ cache r
   where k = kindOf base
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  lam <- lambda op
+                  lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
 
 -- | @`foldli` op i base s@ folds the sequence, with the counter given at each element, starting
@@ -472,15 +472,15 @@ foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
         r st = do svi <- sbvToSV st baseI
                   sve <- sbvToSV st baseE
                   sva <- sbvToSV st l
-                  lam <- lambda op
+                  lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
 --
--- >>> sat (.== L.zip  [1..10::Integer] [11..20::Integer])
+-- >>> sat (.== zip  [1..10::Integer] [11..20::Integer])
 -- Satisfiable. Model:
---   s0 = [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(Integer, Integer)]CHECK
+--   s0 = [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(Integer, Integer)]
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
                 (mapi (curry tuple) 0 (take (length ys) xs))
@@ -490,7 +490,7 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 --
 -- >>> sat $ (.== zipWith (+) [1..10::Integer] [11..20::Integer])
 -- Satisfiable. Model:
---   s0 = [12,14,16,18,20,22,24,26,28,30] :: [Integer]CHECK
+--   s0 = [12,14,16,18,20,22,24,26,28,30] :: [Integer]
 zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))

@@ -27,9 +27,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" [
-      goldenCapturedIO "lambda1" $ record $ lambda (2 :: SInteger)
-    , goldenCapturedIO "lambda2" $ record $ lambda (\x -> x+1 :: SInteger)
-    , goldenCapturedIO "lambda3" $ record $ lambda (\x y -> x+y*2 :: SInteger)
+      goldenCapturedIO "lambda1" $ record $ lambdaTop (2 :: SInteger)
+    , goldenCapturedIO "lambda2" $ record $ lambdaTop (\x -> x+1 :: SInteger)
+    , goldenCapturedIO "lambda3" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
     , goldenCapturedIO "lambda4" $ check t1
     , goldenCapturedIO "lambda5" $ check t2
     , goldenCapturedIO "lambda6" $ check t3
