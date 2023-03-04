@@ -13,7 +13,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 
@@ -70,7 +69,7 @@ instance MonadSymbolic m => Lambda m (SBV a) where
 
 -- | Functions
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
-  mkLambda st fn = mkLambda st =<< fn <$> mkArg
+  mkLambda st fn = mkArg >>= mkLambda st . fn
     where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))

@@ -44,7 +44,7 @@ tests =
 
         t1 = do let arg = [1, 2, 3 :: Integer]
                 res <- free_
-                constrain $ res .== map (\_ -> sFalse) arg
+                constrain $ res .== map (const sFalse) arg
 
         t2 = do let arg = [1 .. 5 :: Integer]
                 res <- free_
@@ -59,3 +59,6 @@ tests =
                 res <- free_
                 let sum = foldl (+) 0
                 constrain $ res .== sum (map sum arg)
+
+{-# ANN module ("HLint: ignore Use map once" :: String) #-}
+{-# ANN module ("HLint: ignore Use sum"      :: String) #-}
