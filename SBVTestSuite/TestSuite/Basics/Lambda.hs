@@ -39,6 +39,7 @@ tests =
     , goldenCapturedIO "lambda6" $ check t3
     , goldenCapturedIO "lambda7" $ check t4
     , goldenCapturedIO "lambda8" $ t5
+    , goldenCapturedIO "lambda9" $ t6
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -92,6 +93,34 @@ tests =
                                                     , "  b       = " P.++ show bv
                                                     , "  zip a b = " P.++ show (P.zip av bv)
                                                     , "  Length  = " P.++ show len P.++ " was expecting: " P.++ show expecting
+                                                    ]
+
+                       _ -> error $ "Unexpected output: " P.++ show cs
+
+        t6 rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
+
+                   a :: SList [Integer] <- sList_
+
+                   sumVal <- sInteger_
+
+                   query $ do
+
+                     let expecting = 5
+
+                     constrain $ a .== literal (replicate expecting (replicate expecting 1))
+                     let sum = foldl (+) 0
+
+                     constrain $ sumVal .== sum (map sum a)  -- Must be expecting * expecting
+
+                     cs <- checkSat
+                     case cs of
+                       Sat -> do final <- getValue sumVal
+                                 av    <- getValue a
+
+                                 unless (final == fromIntegral (expecting * expecting)) $
+                                    error $ unlines [ "Bad output:"
+                                                    , "  a     = " P.++ show av
+                                                    , "  Final = " P.++ show final P.++ " was expecting: " P.++ show (expecting*expecting)
                                                     ]
 
                        _ -> error $ "Unexpected output: " P.++ show cs
