@@ -481,6 +481,10 @@ foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
 -- >>> sat (.== zip  [1..10::Integer] [11..20::Integer])
 -- Satisfiable. Model:
 --   s0 = [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(Integer, Integer)]
+-- >>> import Data.SBV.Tuple
+-- >>> sat $ (.== foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer])))
+-- Satisfiable. Model:
+--   s0 = 110 :: Integer
 zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
                 (mapi (curry tuple) 0 (take (length ys) xs))
@@ -491,6 +495,9 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 -- >>> sat $ (.== zipWith (+) [1..10::Integer] [11..20::Integer])
 -- Satisfiable. Model:
 --   s0 = [12,14,16,18,20,22,24,26,28,30] :: [Integer]
+-- >>> sat $ (.== foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer]))
+-- Satisfiable. Model:
+--   s0 = 110 :: Integer
 zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))
