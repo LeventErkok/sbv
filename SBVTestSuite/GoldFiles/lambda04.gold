@@ -39,5 +39,13 @@
 [RECV] sat
 [SEND] (get-value (s1))
 [RECV] ((s1 (seq.++ (seq.unit false) (seq.unit false) (seq.unit false))))
+[SEND] (get-value (s0))
+[RECV] ((s0 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))))
+[SEND] (get-value (s1))
+[RECV] ((s1 (seq.++ (seq.unit false) (seq.unit false) (seq.unit false))))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
+
+RESULT:
+  s0 =             [1,2,3] :: [Integer]
+  s1 = [False,False,False] :: [Bool]

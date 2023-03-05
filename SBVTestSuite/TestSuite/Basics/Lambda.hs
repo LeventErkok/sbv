@@ -119,25 +119,28 @@ tests =
                        _ -> error $ "Unexpected output: " P.++ show cs
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
-eval1 cArg (sFun, cFun) rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
-        arg <- free_
-        res <- free_
-        constrain $ arg .== literal cArg
-        constrain $ res .== sFun arg
+eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                                appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
 
-        let concResult = cFun cArg
+ where run = do arg <- free_
+                res <- free_
+                constrain $ arg .== literal cArg
+                constrain $ res .== sFun arg
 
-        query $ do
-          cs <- checkSat
-          case cs of
-            Sat -> do resV <- getValue res
-                      unless (resV == concResult) $
-                          error $ unlines [ "Bad output:"
-                                          , "  arg      = " P.++ show cArg
-                                          , "  concrete = " P.++ show concResult
-                                          , "  symbolic = " P.++ show resV
-                                          ]
-            _ -> error $ "Unexpected output: " P.++ show cs
+                let concResult = cFun cArg
+
+                query $ do
+                  cs <- checkSat
+                  case cs of
+                    Sat -> do resV <- getValue res
+                              unless (resV == concResult) $
+                                  error $ unlines [ "Bad output:"
+                                                  , "  arg      = " P.++ show cArg
+                                                  , "  concrete = " P.++ show concResult
+                                                  , "  symbolic = " P.++ show resV
+                                                  ]
+                              getModel
+                    _ -> error $ "Unexpected output: " P.++ show cs
 
 
 {-# ANN module ("HLint: ignore Use map once" :: String) #-}
