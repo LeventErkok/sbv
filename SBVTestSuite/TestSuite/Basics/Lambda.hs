@@ -45,10 +45,14 @@ tests =
                                           ( let sum = foldl (+) 0 in   sum .   map   sum
                                           ,                          P.sum . P.map P.sum
                                           )
+
     , goldenCapturedIO "lambda08" $ t5
     , goldenCapturedIO "lambda09" $ t6
+
     , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
     , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
+
+    , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (\x -> [x]))
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
