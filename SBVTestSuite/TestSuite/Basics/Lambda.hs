@@ -41,7 +41,10 @@ tests =
                                           , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                           )
 
-    , goldenCapturedIO "lambda07" $ check t4
+    , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
+                                          ( let sum = foldl (+) 0 in   sum .   map   sum
+                                          ,                          P.sum . P.map P.sum
+                                          )
     , goldenCapturedIO "lambda08" $ t5
     , goldenCapturedIO "lambda09" $ t6
     , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
@@ -49,15 +52,6 @@ tests =
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
-
-        check :: Symbolic () -> FilePath -> IO ()
-        check t rf = do r <- satWith z3{verbose=True, redirectVerbose=Just rf} t
-                        appendFile rf ("\nRESULT:\n" P.++ show r P.++ "\n")
-
-        t4 = do let arg = [[1..5], [1..10], [1..20]] :: SList [Integer]
-                res <- free_
-                let sum = foldl (+) 0
-                constrain $ res .== sum (map sum arg)
 
         t5 rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
 
