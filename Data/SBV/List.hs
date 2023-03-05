@@ -410,18 +410,27 @@ map op l
 -- at the given value. In Haskell terms, it is:
 --
 -- @
---    mapi :: (Int -> a -> b) -> Int -> [a] -> [b]
+--    mapi :: (Integer -> a -> b) -> Int -> [a] -> [b]
 --    mapi f i xs = zipWith f [i..] xs
 -- @
 --
--- Note that SBV never constant folds this operation.
+-- Note that `mapi` is definable in terms of `Data.SBV.List.zipWith`, with extra coding. The reason why SBV provides
+-- this function natively is because it maps to a native function in the underlying solver. So, hopefully it'll perform
+-- better in terms being decidable.
 --
--- >>> sat $ \l -> l .== mapi (+) 10 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = [11,13,15,17,19] :: [Integer]
+-- >>> mapi (+) 10 [1 .. 5 :: Integer]
+-- [11,13,15,17,19] :: [SInteger]
 mapi :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
-mapi op i l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (Proxy @(SList b))
+mapi op i l
+  | Just l' <- unliteral l, Just i' <- unliteral i
+  = case P.zipWith (\o e -> unliteral (op (literal o) (literal e))) [i' ..] l' of
+      xs | P.any isNothing xs -> symResult
+         | True               -> literal (catMaybes xs)
+  | True
+  = symResult
+  where symResult = SBV $ SVal k $ Right $ cache r
+
+        k = kindOf (Proxy @(SList b))
         r st = do svi <- sbvToSV st i
                   svl <- sbvToSV st l
                   lam <- lambda st op
