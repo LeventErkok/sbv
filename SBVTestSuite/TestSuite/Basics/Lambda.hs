@@ -31,15 +31,21 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" [
-      goldenCapturedIO "lambda1" $ record $ lambdaTop (2 :: SInteger)
-    , goldenCapturedIO "lambda2" $ record $ lambdaTop (\x -> x+1 :: SInteger)
-    , goldenCapturedIO "lambda3" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
-    , goldenCapturedIO "lambda4" $ check t1
-    , goldenCapturedIO "lambda5" $ check t2
-    , goldenCapturedIO "lambda6" $ check t3
-    , goldenCapturedIO "lambda7" $ check t4
-    , goldenCapturedIO "lambda8" $ t5
-    , goldenCapturedIO "lambda9" $ t6
+      goldenCapturedIO "lambda01" $ record $ lambdaTop (2 :: SInteger)
+    , goldenCapturedIO "lambda02" $ record $ lambdaTop (\x -> x+1 :: SInteger)
+    , goldenCapturedIO "lambda03" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
+    , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
+    , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
+    , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
+                                          ( map   (\x -> P.sum [x .^ literal i | i <- [1..10 :: Integer]])
+                                          , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
+                                          )
+
+    , goldenCapturedIO "lambda07" $ check t4
+    , goldenCapturedIO "lambda08" $ t5
+    , goldenCapturedIO "lambda09" $ t6
+    , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
+    , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -47,19 +53,6 @@ tests =
         check :: Symbolic () -> FilePath -> IO ()
         check t rf = do r <- satWith z3{verbose=True, redirectVerbose=Just rf} t
                         appendFile rf ("\nRESULT:\n" P.++ show r P.++ "\n")
-
-        t1 = do let arg = [1, 2, 3 :: Integer]
-                res <- free_
-                constrain $ res .== map (const sFalse) arg
-
-        t2 = do let arg = [1 .. 5 :: Integer]
-                res <- free_
-                constrain $ res .== (map (+1) . map (+2)) arg
-
-        t3 = do let arg = [1 .. 5 :: Integer]
-                res <- free_
-                constrain $ res .== map f arg
-          where f x = P.sum [x.^i | i <- [literal i | i <- [1..10 :: Integer]]]
 
         t4 = do let arg = [[1..5], [1..10], [1..20]] :: SList [Integer]
                 res <- free_
@@ -124,6 +117,28 @@ tests =
                                                     ]
 
                        _ -> error $ "Unexpected output: " P.++ show cs
+
+eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
+eval1 cArg (sFun, cFun) rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
+        arg <- free_
+        res <- free_
+        constrain $ arg .== literal cArg
+        constrain $ res .== sFun arg
+
+        let concResult = cFun cArg
+
+        query $ do
+          cs <- checkSat
+          case cs of
+            Sat -> do resV <- getValue res
+                      unless (resV == concResult) $
+                          error $ unlines [ "Bad output:"
+                                          , "  arg      = " P.++ show cArg
+                                          , "  concrete = " P.++ show concResult
+                                          , "  symbolic = " P.++ show resV
+                                          ]
+            _ -> error $ "Unexpected output: " P.++ show cs
+
 
 {-# ANN module ("HLint: ignore Use map once" :: String) #-}
 {-# ANN module ("HLint: ignore Use sum"      :: String) #-}
