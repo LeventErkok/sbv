@@ -60,6 +60,13 @@ tests =
                                           (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
 
     , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (mapi (+) 10, P.zipWith (+) [10..])
+
+    , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.foldl (+) 0)
+    , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.foldl (*) 1)
+    , goldenCapturedIO "lambda17" $ eval1 [1 .. 5 :: Integer]
+                                         (   foldl (\soFar elt -> singleton elt   ++ soFar) []
+                                         , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
+                                         )
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
