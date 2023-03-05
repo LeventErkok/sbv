@@ -21,9 +21,11 @@ import qualified Prelude as P
 
 import Control.Monad (unless)
 
-import Data.SBV.List
 import Data.SBV.Control
 import Data.SBV.Internals hiding(free_)
+
+import Data.SBV.List
+import Data.SBV.Tuple
 
 import Utils.SBVTestFramework
 
@@ -53,6 +55,9 @@ tests =
     , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
 
     , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (\x -> [x]))
+
+    , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
+                                          (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
