@@ -35,7 +35,7 @@ module Data.SBV.List (
         -- * Mapping
         , map, mapi
         -- * Folding
-        , foldr, foldri, foldl, foldli
+        , foldl, foldr, foldli, foldri
         -- * Zipping
         , zip, zipWith
         -- * Filtering
@@ -436,39 +436,28 @@ mapi op i l
                   lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
--- | @`foldr` op base s@ folds the sequence from the right.
---
--- >>> sat $ \s -> s .== foldr (+) 0 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 15 :: Integer
--- >>> sat $ \s -> s .== foldr (*) 1 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 120 :: Integer
--- >>> sat $ \l -> l .== foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = [5,4,3,2,1] :: [Integer]
-foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
-foldr op b = foldl (flip op) b . reverse
-
--- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
--- at the given value. Note that SBV never constant folds this operation.
-foldri :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
-foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
-
 -- | @`foldl` op base s@ folds the from the left. Note that SBV never constant folds this operation.
 --
--- >>> sat $ \s -> s .== foldl (+) 0 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 15 :: Integer
--- >>> sat $ \s -> s .== foldl (*) 1 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 120 :: Integer
--- >>> sat $ \l -> l .== foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = [5,4,3,2,1] :: [Integer]
+-- >>> foldl (+) 0 [1 .. 5 :: Integer]
+-- 15 :: SInteger
+-- >>> foldl (*) 1 [1 .. 5 :: Integer]
+-- 120 :: SInteger
+-- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
+-- [5,4,3,2,1] :: [SInteger]
 foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
-foldl op base l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf base
+foldl op base l
+  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- walk base' l'
+  = literal concResult
+  | True
+  = symResult
+  where symResult = SBV $ SVal k $ Right $ cache r
+
+        walk b []     = Just b
+        walk b (e:es) = case unliteral (op (literal b) (literal e)) of
+                          Nothing -> Nothing
+                          Just b' -> walk b' es
+
+        k = kindOf base
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
                   lam <- lambda st op
@@ -488,6 +477,25 @@ foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
                   sva <- sbvToSV st l
                   lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
+
+-- | @`foldr` op base s@ folds the sequence from the right.
+--
+-- >>> sat $ \s -> s .== foldr (+) 0 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 15 :: Integer
+-- >>> sat $ \s -> s .== foldr (*) 1 [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = 120 :: Integer
+-- >>> sat $ \l -> l .== foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [5,4,3,2,1] :: [Integer]
+foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+foldr op b = foldl (flip op) b . reverse
+
+-- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
+-- at the given value. Note that SBV never constant folds this operation.
+foldri :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
+foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
