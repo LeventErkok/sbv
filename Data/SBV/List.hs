@@ -54,6 +54,8 @@ import Data.SBV.Core.Model
 import Data.SBV.Lambda
 import Data.SBV.Tuple
 
+import Data.Maybe (isNothing, catMaybes)
+
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
 import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
@@ -378,25 +380,28 @@ reverse l
         r st = do sva <- sbvToSV st l
                   newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
 
--- | @`map` op s@ maps the operation on to sequence. Note that SBV never constant folds this operation.
+-- | @`map` op s@ maps the operation on to sequence.
 --
--- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = [2,3,4,5,6] :: [Integer]
--- >>> sat $ \l -> l .== map (+1) [1 .. 5 :: WordN 8]
--- Satisfiable. Model:
---   s0 = [2,3,4,5,6] :: [Word8]
--- >>> sat $ \l -> l .== (map singleton [1,2,3::Integer] :: SList [Integer])
--- Satisfiable. Model:
---   s0 = [[1],[2],[3]] :: [[Integer]]
+-- >>> map (+1) [1 .. 5 :: Integer]
+-- [2,3,4,5,6] :: [SInteger]
+-- >>> map (+1) [1 .. 5 :: WordN 8]
+-- [2,3,4,5,6] :: [SWord8]
+-- >>> map singleton [1 .. 3 :: Integer]
+-- [[1],[2],[3]] :: [[SInteger]]
 -- >>> import Data.SBV.Tuple
 -- >>> import GHC.Exts (fromList)
--- >>> sat $ \(l :: SList Integer) -> l .== map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
--- Satisfiable. Model:
---   s0 = [5,6,7,6,7,8,7,8,9] :: [Integer]
+-- >>> map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
+-- [5,6,7,6,7,8,7,8,9] :: [SInteger]
 map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
-map op l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf (Proxy @(SList b))
+map op l
+  | Just l' <- unliteral l
+  = case P.map (unliteral . op . literal) l' of
+      xs | P.any isNothing xs -> symResult
+         | True               -> literal (catMaybes xs)
+  | True
+  = symResult
+  where symResult = SBV $ SVal k $ Right $ cache r
+        k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
                   lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
