@@ -392,6 +392,12 @@ reverse l
 -- >>> import GHC.Exts (fromList)
 -- >>> map (\t -> t^._1 + t^._2) (fromList [(x, y) | x <- [1..3], y <- [4..6]] :: SList (Integer, Integer))
 -- [5,6,7,6,7,8,7,8,9] :: [SInteger]
+--
+-- Of course, SBV's 'map' can also be reused in reverse:
+--
+-- >>> sat $ \l -> map (+1) l .== [1,2,3 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [0,1,2] :: [Integer]
 map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
 map op l
   | Just l' <- unliteral l
@@ -444,6 +450,12 @@ mapi op i l
 -- 120 :: SInteger
 -- >>> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) [1 .. 5 :: Integer]
 -- [5,4,3,2,1] :: [SInteger]
+--
+-- Again, we can use 'Data.SBV.List.foldl' in the reverse too:
+--
+-- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
+-- Satisfiable. Model:
+--   s0 = [1,2,3,4,5] :: [Integer]
 foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 foldl op base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- walk base' l'
