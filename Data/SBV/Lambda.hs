@@ -39,33 +39,28 @@ import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
--- | Create a lambda-expression at the top. Only for internal testing purposes
-lambdaTop :: Lambda Symbolic a => a -> IO String
-lambdaTop = lambdaAtLevel 0
-
 -- | Create an SMTLib lambda, int he given state
 lambda :: Lambda Symbolic a => State -> a -> IO String
 lambda inState f = do ll <- readIORef (rLambdaLevel inState)
                       lambdaAtLevel (ll+1) f
 
+-- | Create a lambda-expression at the top. Only for internal testing purposes
+lambdaTop :: Lambda Symbolic a => a -> IO String
+lambdaTop = lambdaAtLevel 0
+
 lambdaAtLevel :: Lambda Symbolic a => Int -> a -> IO String
 lambdaAtLevel l f = do
     st <- mkNewState $ Lambda l
-    res <- fst <$> runSymbolicInState st (mkLambda st f)
+    ((), res) <- runSymbolicInState st (mkLambda st f)
     pure $ toLambda defaultSMTCfg{smtLibVersion = SMTLib2} res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
-  mkLambda :: State -> a -> m Result
-
--- | Turn a symbolic computation to an encapsulated lambda
-instance MonadSymbolic m => Lambda m (SymbolicT m (SBV a)) where
-  mkLambda st cmp = do ((), res) <- runSymbolicInState st (cmp >>= output >> return ())
-                       pure res
+  mkLambda :: State -> a -> m ()
 
 -- | Base case, simple values
 instance MonadSymbolic m => Lambda m (SBV a) where
-  mkLambda st = mkLambda st . (pure :: SBV a -> SymbolicT m (SBV a))
+  mkLambda _ out = output out >> pure ()
 
 -- | Functions
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
