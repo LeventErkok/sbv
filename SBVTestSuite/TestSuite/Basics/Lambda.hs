@@ -67,6 +67,11 @@ tests =
                                          (   foldl (\soFar elt -> singleton elt   ++ soFar) []
                                          , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
                                          )
+
+   , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
+                                         (   foldli (\i b a    -> i+b+a) 10 0
+                                         , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
+                                         )
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen

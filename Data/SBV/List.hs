@@ -400,13 +400,14 @@ reverse l
 --   s0 = [0,1,2] :: [Integer]
 map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
 map op l
-  | Just l' <- unliteral l
-  = case P.map (unliteral . op . literal) l' of
-      xs | P.any isNothing xs -> symResult
-         | True               -> literal (catMaybes xs)
+  | Just l' <- unliteral l, Just concResult <- concreteMap l'
+  = literal concResult
   | True
-  = symResult
-  where symResult = SBV $ SVal k $ Right $ cache r
+  = SBV $ SVal k $ Right $ cache r
+  where concreteMap l' = case P.map (unliteral . op . literal) l' of
+                           xs | P.any isNothing xs -> Nothing
+                              | True               -> Just (catMaybes xs)
+
         k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
                   lam <- lambda st op
@@ -416,7 +417,7 @@ map op l
 -- at the given value. In Haskell terms, it is:
 --
 -- @
---    mapi :: (Integer -> a -> b) -> Int -> [a] -> [b]
+--    mapi :: (Integer -> a -> b) -> Integer -> [a] -> [b]
 --    mapi f i xs = zipWith f [i..] xs
 -- @
 --
@@ -428,13 +429,13 @@ map op l
 -- [11,13,15,17,19] :: [SInteger]
 mapi :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
 mapi op i l
-  | Just l' <- unliteral l, Just i' <- unliteral i
-  = case P.zipWith (\o e -> unliteral (op (literal o) (literal e))) [i' ..] l' of
-      xs | P.any isNothing xs -> symResult
-         | True               -> literal (catMaybes xs)
+  | Just l' <- unliteral l, Just i' <- unliteral i, Just concResult <- concMapi i' l'
+  = literal concResult
   | True
-  = symResult
-  where symResult = SBV $ SVal k $ Right $ cache r
+  = SBV $ SVal k $ Right $ cache r
+  where concMapi b xs = case P.zipWith (\o e -> unliteral (op (literal o) (literal e))) [b ..] xs of
+                          vs | P.any isNothing vs -> Nothing
+                             | True               -> Just (catMaybes vs)
 
         k = kindOf (Proxy @(SList b))
         r st = do svi <- sbvToSV st i
@@ -458,16 +459,14 @@ mapi op i l
 --   s0 = [1,2,3,4,5] :: [Integer]
 foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 foldl op base l
-  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- walk base' l'
+  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
   | True
-  = symResult
-  where symResult = SBV $ SVal k $ Right $ cache r
-
-        walk b []     = Just b
-        walk b (e:es) = case unliteral (op (literal b) (literal e)) of
-                          Nothing -> Nothing
-                          Just b' -> walk b' es
+  = SBV $ SVal k $ Right $ cache r
+  where concreteFoldl b []     = Just b
+        concreteFoldl b (e:es) = case unliteral (op (literal b) (literal e)) of
+                                   Nothing -> Nothing
+                                   Just b' -> concreteFoldl b' es
 
         k = kindOf base
         r st = do svb <- sbvToSV st base
@@ -476,14 +475,30 @@ foldl op base l
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
 
 -- | @`foldli` op i base s@ folds the sequence, with the counter given at each element, starting
--- at the given value. Note that SBV never constant folds this operation.
+-- at the given value. In Haskell terms, it is:
 --
--- >>> sat $ \s -> s .== foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 75 :: Integer
+-- @
+--   foldli :: (Integer -> b -> a -> b) -> Integer -> b -> [a] -> b
+--   foldli f c e xs = foldl (\b (i, a) -> f i b a) e (zip [c..] xs)
+-- @
+--
+-- While this function is rather odd looking, it maps directly to the implementation in the underlying solver,
+-- and proofs involving it might have better decidability.
+--
+-- >>> foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
+-- 75 :: SInteger
 foldli :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV b -> SBV a -> SBV b) -> SInteger -> SBV b -> SList a -> SBV b
-foldli op baseI baseE l = SBV $ SVal k $ Right $ cache r
-  where k = kindOf baseE
+foldli op baseI baseE l
+   | Just l' <- unliteral l, Just baseI' <- unliteral baseI, Just baseE' <- unliteral baseE, Just concResult <- concreteFoldli baseI' baseE' l'
+   = literal concResult
+   | True
+   = SBV $ SVal k $ Right $ cache r
+  where concreteFoldli _ b []     = Just b
+        concreteFoldli c b (e:es) = case unliteral (op (literal c) (literal b) (literal e)) of
+                                      Nothing -> Nothing
+                                      Just b' -> concreteFoldli (c+1) b' es
+
+        k = kindOf baseE
         r st = do svi <- sbvToSV st baseI
                   sve <- sbvToSV st baseE
                   sva <- sbvToSV st l
