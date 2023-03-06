@@ -557,24 +557,20 @@ concat = foldl (++) []
 -- | Check all elements satisfy the predicate.
 --
 -- >>> let isEven x = x `sMod` 2 .== 0
--- >>> sat $ \l -> l .== all isEven [2, 4, 6, 8, 10 :: Integer]
--- Satisfiable. Model:
---   s0 = True :: Bool
--- >>> sat $ \l -> l .== all isEven [2, 4, 6, 1, 8, 10 :: Integer]
--- Satisfiable. Model:
---   s0 = False :: Bool
+-- >>> all isEven [2, 4, 6, 8, 10 :: Integer]
+-- True
+-- >>> all isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- False
 all :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
 all f = foldl (\sofar e -> sofar .&& f e) sTrue
 
 -- | Check some element satisfies the predicate.
 -- --
 -- >>> let isEven x = x `sMod` 2 .== 0
--- >>> sat $ \l -> l .== any (sNot . isEven) [2, 4, 6, 8, 10 :: Integer]
--- Satisfiable. Model:
---   s0 = False :: Bool
--- >>> sat $ \l -> l .== any isEven [2, 4, 6, 1, 8, 10 :: Integer]
--- Satisfiable. Model:
---   s0 = True :: Bool
+-- >>> any (sNot . isEven) [2, 4, 6, 8, 10 :: Integer]
+-- False
+-- >>> any isEven [2, 4, 6, 1, 8, 10 :: Integer]
+-- True
 any :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
 any f = foldl (\sofar e -> sofar .|| f e) sFalse
 
