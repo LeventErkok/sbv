@@ -160,7 +160,7 @@ listToListAt s offset = subList s offset 1
 --
 -- ->>> prove $ \(l :: SList Integer) i e -> i `inRange` (0, length l - 1) .&& l `elemAt` i .== e .=> indexOf l (singleton e) .<= i
 -- Q.E.D.
-elemAt :: forall a. SymVal a => SList a -> SInteger -> SBV a
+elemAt :: SymVal a => SList a -> SInteger -> SBV a
 elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
@@ -443,7 +443,7 @@ mapi op i l
                   lam <- lambda st op
                   newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
--- | @`foldl` op base s@ folds the from the left. Note that SBV never constant folds this operation.
+-- | @`foldl` op base s@ folds the from the left.
 --
 -- >>> foldl (+) 0 [1 .. 5 :: Integer]
 -- 15 :: SInteger
@@ -457,7 +457,7 @@ mapi op i l
 -- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
 -- Satisfiable. Model:
 --   s0 = [1,2,3,4,5] :: [Integer]
-foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+foldl :: (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
 foldl op base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
@@ -487,7 +487,7 @@ foldl op base l
 --
 -- >>> foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
 -- 75 :: SInteger
-foldli :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV b -> SBV a -> SBV b) -> SInteger -> SBV b -> SList a -> SBV b
+foldli :: (SymVal a, SymVal b) => (SInteger -> SBV b -> SBV a -> SBV b) -> SInteger -> SBV b -> SList a -> SBV b
 foldli op baseI baseE l
    | Just l' <- unliteral l, Just baseI' <- unliteral baseI, Just baseE' <- unliteral baseE, Just concResult <- concreteFoldli baseI' baseE' l'
    = literal concResult
@@ -507,21 +507,18 @@ foldli op baseI baseE l
 
 -- | @`foldr` op base s@ folds the sequence from the right.
 --
--- >>> sat $ \s -> s .== foldr (+) 0 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 15 :: Integer
--- >>> sat $ \s -> s .== foldr (*) 1 [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = 120 :: Integer
--- >>> sat $ \l -> l .== foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
--- Satisfiable. Model:
---   s0 = [5,4,3,2,1] :: [Integer]
-foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+-- >>> foldr (+) 0 [1 .. 5 :: Integer]
+-- 15 :: SInteger
+-- >>> foldr (*) 1 [1 .. 5 :: Integer]
+-- 120 :: SInteger
+-- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
+-- [5,4,3,2,1] :: [SInteger]
+foldr :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
 foldr op b = foldl (flip op) b . reverse
 
 -- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
 -- at the given value. Note that SBV never constant folds this operation.
-foldri :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
+foldri :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
 foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
@@ -534,7 +531,7 @@ foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 -- >>> sat $ (.== foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer])))
 -- Satisfiable. Model:
 --   s0 = 110 :: Integer
-zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
+zip :: (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
                 (mapi (curry tuple) 0 (take (length ys) xs))
 
@@ -547,7 +544,7 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 -- >>> sat $ (.== foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer]))
 -- Satisfiable. Model:
 --   s0 = 110 :: Integer
-zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+zipWith :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))
 
