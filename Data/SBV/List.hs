@@ -549,9 +549,8 @@ zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
 -- NB. Concat is typically defined in terms of foldr. Here we prefer foldl, since the underlying solver
 -- primitive is foldl: Otherwise, we'd induce an extra call to reverse.
 --
--- >>> sat $ \l -> l .== concat [[1..3::Integer], [4..7], [8..10]]
--- Satisfiable. Model:
---   s0 = [1,2,3,4,5,6,7,8,9,10] :: [Integer]
+-- >>> concat [[1..3::Integer], [4..7], [8..10]]
+-- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
 concat :: SymVal a => SList [a] -> SList a
 concat = foldl (++) []
 

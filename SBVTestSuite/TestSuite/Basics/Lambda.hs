@@ -16,7 +16,7 @@
 
 module TestSuite.Basics.Lambda(tests)  where
 
-import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any)
+import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any, concat)
 import qualified Prelude as P
 
 import Control.Monad (unless)
@@ -90,6 +90,9 @@ tests =
                                           ( \a b ->   foldr (+) 0 (  zipWith (+) a b)
                                           , \a b -> P.foldr (+) 0 (P.zipWith (+) a b)
                                           )
+
+    , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
+
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
