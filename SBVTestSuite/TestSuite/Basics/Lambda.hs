@@ -48,24 +48,24 @@ tests =
                                             ,                          P.sum . P.map P.sum
                                             )
 
-      , goldenCapturedIO "lambda08" $ t5
-      , goldenCapturedIO "lambda09" $ t6
+      , goldenCapturedIO "lambda08" t5
+      , goldenCapturedIO "lambda09" t6
 
       , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
       , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
 
-      , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (\x -> [x]))
+      , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (: []))
 
       , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
                                             (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
 
       , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (mapi (+) 10, P.zipWith (+) [10..])
 
-      , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.foldl (+) 0)
-      , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.foldl (*) 1)
+      , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.sum)
+      , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.product)
       , goldenCapturedIO "lambda17" $ eval1 [1 .. 5 :: Integer]
-                                           (   foldl (\soFar elt -> singleton elt   ++ soFar) []
-                                           , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
+                                           (   foldl (\soFar elt -> singleton elt ++ soFar) []
+                                           , P.foldl (\soFar elt ->           elt :  soFar) []
                                            )
 
       , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
@@ -217,5 +217,12 @@ eval2 cArg1 cArg2 (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirect
                     _ -> error $ "Unexpected output: " P.++ show cs
 
 
-{-# ANN module ("HLint: ignore Use map once" :: String) #-}
-{-# ANN module ("HLint: ignore Use sum"      :: String) #-}
+{-# ANN module ("HLint: ignore Use map once"   :: String) #-}
+{-# ANN module ("HLint: ignore Use sum"        :: String) #-}
+{-# ANN module ("HLint: ignore Fuse foldr/map" :: String) #-}
+{-# ANN module ("HLint: ignore Use zipWith"    :: String) #-}
+{-# ANN module ("HLint: ignore Use uncurry"    :: String) #-}
+{-# ANN module ("HLint: ignore Use even"       :: String) #-}
+{-# ANN module ("HLint: ignore Use odd"        :: String) #-}
+{-# ANN module ("HLint: ignore Use product"    :: String) #-}
+{-# ANN module ("HLint: ignore Avoid lambda"   :: String) #-}

@@ -22,6 +22,7 @@ module Data.SBV.Lambda (
           lambda, lambdaTop
         ) where
 
+import Control.Monad
 import Control.Monad.Trans
 
 import Data.SBV.Core.Data
@@ -60,7 +61,7 @@ class MonadSymbolic m => Lambda m a where
 
 -- | Base case, simple values
 instance MonadSymbolic m => Lambda m (SBV a) where
-  mkLambda _ out = output out >> pure ()
+  mkLambda _ out = void $ output out
 
 -- | Functions
 instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
