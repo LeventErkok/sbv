@@ -7,8 +7,16 @@
 
   * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
 
-  * Cure a performance bug in the SHA implementation, which particularly impacted codegeneration
-    at 384 and 512 bit sizes.
+  * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
+    Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
+    usual SBV interpretation. These functions map to the underlying solver's fold and map functions,
+    via lambda-abtractions. Note that the SMT engines remain incomplete with respect to sequence
+    theories. (That is, any property that requires induction for its proof will cause unknown
+    answers, or will not terminate.) However, basic properties, especially when the solver can determine the
+    shape of the sequence arguments (i.e., number of elements), should go through.
+
+  * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
+    (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 
 ### Version 9.2, 2023-1-16
 
