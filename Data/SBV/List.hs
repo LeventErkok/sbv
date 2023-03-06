@@ -576,12 +576,10 @@ any f = foldl (\sofar e -> sofar .|| f e) sFalse
 
 -- | @filter f xs@ filters the list with the given predicate.
 --
--- >>> sat $ \l -> l .== filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
--- Satisfiable. Model:
---   s0 = [2,4,6,8,10] :: [Integer]
--- >>> sat $ \l -> l .== filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
--- Satisfiable. Model:
---   s0 = [1,3,5,7,9] :: [Integer]
+-- >>> filter (\x -> x `sMod` 2 .== 0) [1 .. 10 :: Integer]
+-- [2,4,6,8,10] :: [SInteger]
+-- >>> filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
+-- [1,3,5,7,9] :: [SInteger]
 filter :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
 filter f = foldl (\sofar e -> sofar ++ ite (f e) (singleton e) []) []
 
