@@ -39,7 +39,7 @@ import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
--- | Create an SMTLib lambda, int he given state
+-- | Create an SMTLib lambda, in the given state
 lambda :: Lambda Symbolic a => State -> a -> IO String
 lambda inState f = do ll <- readIORef (rLambdaLevel inState)
                       lambdaAtLevel (ll+1) f
