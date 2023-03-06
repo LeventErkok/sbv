@@ -524,13 +524,11 @@ foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
 --
--- >>> sat (.== zip  [1..10::Integer] [11..20::Integer])
--- Satisfiable. Model:
---   s0 = [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(Integer, Integer)]
+-- >>> zip [1..10::Integer] [11..20::Integer]
+-- [(1,11),(2,12),(3,13),(4,14),(5,15),(6,16),(7,17),(8,18),(9,19),(10,20)] :: [(SInteger, SInteger)]
 -- >>> import Data.SBV.Tuple
--- >>> sat $ (.== foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer])))
--- Satisfiable. Model:
---   s0 = 110 :: Integer
+-- >>> foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer]))
+-- 110 :: SInteger
 zip :: (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
 zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
                 (mapi (curry tuple) 0 (take (length ys) xs))
@@ -538,12 +536,10 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
 --
--- >>> sat $ (.== zipWith (+) [1..10::Integer] [11..20::Integer])
--- Satisfiable. Model:
---   s0 = [12,14,16,18,20,22,24,26,28,30] :: [Integer]
--- >>> sat $ (.== foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer]))
--- Satisfiable. Model:
---   s0 = 110 :: Integer
+-- >>> zipWith (+) [1..10::Integer] [11..20::Integer]
+-- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
+-- >>> foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer])
+-- 110 :: SInteger
 zipWith :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
 zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
                       (mapi (curry tuple) 0 (take (length ys) xs))
