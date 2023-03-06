@@ -68,9 +68,16 @@ tests =
                                          , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
                                          )
 
-   , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
-                                         (   foldli (\i b a    -> i+b+a) 10 0
-                                         , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
+    , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
+                                          (   foldli (\i b a    -> i+b+a) 10 0
+                                          , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
+                                          )
+
+    , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
+    , goldenCapturedIO "lambda20" $ eval1 [1 .. 5 :: Integer] (foldr (*) 1, P.foldr (*) 1)
+    , goldenCapturedIO "lambda21" $ eval1 [1 .. 5 :: Integer]
+                                         (   foldr (\elt soFar -> soFar   ++ singleton elt) []
+                                         , P.foldr (\elt soFar -> soFar P.++ [elt])         []
                                          )
     ]
   where record :: IO String -> FilePath -> IO ()
