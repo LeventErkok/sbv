@@ -517,7 +517,7 @@ foldr :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -
 foldr op b = foldl (flip op) b . reverse
 
 -- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
--- at the given value. Note that SBV never constant folds this operation.
+-- at the given value. This function is provided as a parallel to `foldli`.
 foldri :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
 foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 
