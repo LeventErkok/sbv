@@ -79,6 +79,17 @@ tests =
                                          (   foldr (\elt soFar -> soFar   ++ singleton elt) []
                                          , P.foldr (\elt soFar -> soFar P.++ [elt])         []
                                          )
+
+    , goldenCapturedIO "lambda22" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zip, P.zip)
+    , goldenCapturedIO "lambda23" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
+                                          ( \a b ->   foldr (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
+                                          , \a b -> P.foldr (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
+                                          )
+    , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWith (+), P.zipWith (+))
+    , goldenCapturedIO "lambda25" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
+                                          ( \a b ->   foldr (+) 0 (  zipWith (+) a b)
+                                          , \a b -> P.foldr (+) 0 (P.zipWith (+) a b)
+                                          )
     ]
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
@@ -160,6 +171,33 @@ eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose
                               unless (resV == concResult) $
                                   error $ unlines [ "Bad output:"
                                                   , "  arg      = " P.++ show cArg
+                                                  , "  concrete = " P.++ show concResult
+                                                  , "  symbolic = " P.++ show resV
+                                                  ]
+                              getModel
+                    _ -> error $ "Unexpected output: " P.++ show cs
+
+eval2 :: (SymVal a, SymVal b, SymVal c, Eq c, Show a, Show b, Show c) => a -> b -> (SBV a -> SBV b -> SBV c, a -> b -> c) -> FilePath -> IO ()
+eval2 cArg1 cArg2 (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                                       appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
+
+ where run = do arg1 <- free_
+                arg2 <- free_
+                res <- free_
+                constrain $ arg1 .== literal cArg1
+                constrain $ arg2 .== literal cArg2
+                constrain $ res  .== sFun arg1 arg2
+
+                let concResult = cFun cArg1 cArg2
+
+                query $ do
+                  cs <- checkSat
+                  case cs of
+                    Sat -> do resV <- getValue res
+                              unless (resV == concResult) $
+                                  error $ unlines [ "Bad output:"
+                                                  , "  arg1     = " P.++ show cArg1
+                                                  , "  arg2     = " P.++ show cArg2
                                                   , "  concrete = " P.++ show concResult
                                                   , "  symbolic = " P.++ show resV
                                                   ]
