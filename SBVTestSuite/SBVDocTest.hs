@@ -13,8 +13,11 @@
 
 module Main (main) where
 
-import System.Process
+import System.Environment(getArgs)
 import System.Exit(exitWith)
 
+import System.Process
+
 main :: IO ()
-main = exitWith =<< rawSystem "cabal-docspec" ["--timeout", "120"]
+main = do args <- getArgs
+          exitWith =<< rawSystem "cabal-docspec" args
