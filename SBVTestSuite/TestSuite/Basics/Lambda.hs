@@ -32,76 +32,77 @@ import Utils.SBVTestFramework
 -- Test suite
 tests :: TestTree
 tests =
-  testGroup "Basics.Lambda" [
-      goldenCapturedIO "lambda01" $ record $ lambdaTop (2 :: SInteger)
-    , goldenCapturedIO "lambda02" $ record $ lambdaTop (\x -> x+1 :: SInteger)
-    , goldenCapturedIO "lambda03" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
-    , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
-    , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
-    , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
-                                          ( map   (\x -> P.sum [x .^ literal i | i <- [1..10 :: Integer]])
-                                          , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
-                                          )
+  testGroup "Basics.Lambda" $ [
+        goldenCapturedIO "lambda01" $ record $ lambdaTop (2 :: SInteger)
+      , goldenCapturedIO "lambda02" $ record $ lambdaTop (\x -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda03" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
+      , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
+      , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
+      , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
+                                            ( map   (\x -> P.sum [x .^ literal i | i <- [1..10 :: Integer]])
+                                            , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
+                                            )
 
-    , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
-                                          ( let sum = foldl (+) 0 in   sum .   map   sum
-                                          ,                          P.sum . P.map P.sum
-                                          )
+      , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
+                                            ( let sum = foldl (+) 0 in   sum .   map   sum
+                                            ,                          P.sum . P.map P.sum
+                                            )
 
-    , goldenCapturedIO "lambda08" $ t5
-    , goldenCapturedIO "lambda09" $ t6
+      , goldenCapturedIO "lambda08" $ t5
+      , goldenCapturedIO "lambda09" $ t6
 
-    , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
-    , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
+      , goldenCapturedIO "lambda10" $ eval1 [1 .. 5 :: Integer] (map (+1), P.map (+1))
+      , goldenCapturedIO "lambda11" $ eval1 [1 .. 5 :: Word8]   (map (+1), P.map (+1))
 
-    , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (\x -> [x]))
+      , goldenCapturedIO "lambda12" $ eval1 [1 .. 3 :: Integer] (map singleton, P.map (\x -> [x]))
 
-    , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
-                                          (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
+      , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
+                                            (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
 
-    , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (mapi (+) 10, P.zipWith (+) [10..])
+      , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (mapi (+) 10, P.zipWith (+) [10..])
 
-    , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.foldl (+) 0)
-    , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.foldl (*) 1)
-    , goldenCapturedIO "lambda17" $ eval1 [1 .. 5 :: Integer]
-                                         (   foldl (\soFar elt -> singleton elt   ++ soFar) []
-                                         , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
-                                         )
+      , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.foldl (+) 0)
+      , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.foldl (*) 1)
+      , goldenCapturedIO "lambda17" $ eval1 [1 .. 5 :: Integer]
+                                           (   foldl (\soFar elt -> singleton elt   ++ soFar) []
+                                           , P.foldl (\soFar elt ->         [elt] P.++ soFar) []
+                                           )
 
-    , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
-                                          (   foldli (\i b a    -> i+b+a) 10 0
-                                          , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
-                                          )
+      , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
+                                            (   foldli (\i b a    -> i+b+a) 10 0
+                                            , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
+                                            )
 
-    , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
-    , goldenCapturedIO "lambda20" $ eval1 [1 .. 5 :: Integer] (foldr (*) 1, P.foldr (*) 1)
-    , goldenCapturedIO "lambda21" $ eval1 [1 .. 5 :: Integer]
-                                         (   foldr (\elt soFar -> soFar   ++ singleton elt) []
-                                         , P.foldr (\elt soFar -> soFar P.++ [elt])         []
-                                         )
+      , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
+      , goldenCapturedIO "lambda20" $ eval1 [1 .. 5 :: Integer] (foldr (*) 1, P.foldr (*) 1)
+      , goldenCapturedIO "lambda21" $ eval1 [1 .. 5 :: Integer]
+                                           (   foldr (\elt soFar -> soFar   ++ singleton elt) []
+                                           , P.foldr (\elt soFar -> soFar P.++ [elt])         []
+                                           )
 
-    , goldenCapturedIO "lambda22" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zip, P.zip)
-    , goldenCapturedIO "lambda23" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
-                                          ( \a b ->   foldr (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
-                                          , \a b -> P.foldr (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
-                                          )
-    , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWith (+), P.zipWith (+))
-    , goldenCapturedIO "lambda25" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
-                                          ( \a b ->   foldr (+) 0 (  zipWith (+) a b)
-                                          , \a b -> P.foldr (+) 0 (P.zipWith (+) a b)
-                                          )
+      , goldenCapturedIO "lambda22" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zip, P.zip)
+      , goldenCapturedIO "lambda23" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
+                                            ( \a b ->   foldr (+) 0 (  map (\t -> t^._1+t^._2::SInteger) (  zip a b))
+                                            , \a b -> P.foldr (+) 0 (P.map (\t -> fst t+snd t::Integer ) (P.zip a b))
+                                            )
+      , goldenCapturedIO "lambda24" $ eval2 [1 .. 10 :: Integer] [11..20 :: Integer] (zipWith (+), P.zipWith (+))
+      , goldenCapturedIO "lambda25" $ eval2 [1 .. 10 :: Integer] [10, 9 .. 1 :: Integer]
+                                            ( \a b ->   foldr (+) 0 (  zipWith (+) a b)
+                                            , \a b -> P.foldr (+) 0 (P.zipWith (+) a b)
+                                            )
 
-    , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
+      , goldenCapturedIO "lambda26" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]]) (concat, P.concat)
 
-    , goldenCapturedIO "lambda27" $ eval1 [2, 4, 6,    8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
-    , goldenCapturedIO "lambda28" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda27" $ eval1 [2, 4, 6,    8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda28" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (all (\x -> x `sMod` 2 .== 0), P.all (\x -> x `mod` 2 == 0))
 
-    , goldenCapturedIO "lambda29" $ eval1 [2, 4, 6,    8, 10 :: Integer] (any (\x -> x `sMod` 2 ./= 0), P.any (\x -> x `mod` 2 /= 0))
-    , goldenCapturedIO "lambda30" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (any (\x -> x `sMod` 2 .== 0), P.any (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda29" $ eval1 [2, 4, 6,    8, 10 :: Integer] (any (\x -> x `sMod` 2 ./= 0), P.any (\x -> x `mod` 2 /= 0))
+      , goldenCapturedIO "lambda30" $ eval1 [2, 4, 6, 1, 8, 10 :: Integer] (any (\x -> x `sMod` 2 .== 0), P.any (\x -> x `mod` 2 == 0))
 
-    , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
-    , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
-    ]
+      , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
+      , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
+      ]
+   P.++ qc1 "lambda33" P.sum (foldr (+) (0::SInteger))
   where record :: IO String -> FilePath -> IO ()
         record gen rf = appendFile rf . (P.++ "\n") =<< gen
 
