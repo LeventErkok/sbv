@@ -100,7 +100,7 @@ numberOfModels p = do AllSatResult { allSatMaxModelCountReached  = maxHit
 
 -- | Symbolically run a SAT instance using the default config
 runSAT :: Symbolic a -> IO Result
-runSAT cmp = snd <$> runSymbolic (SMTMode QueryInternal ISetup True defaultSMTCfg) cmp
+runSAT cmp = snd <$> runSymbolic defaultSMTCfg (SMTMode QueryInternal ISetup True defaultSMTCfg) cmp
 
 -- | Turn provable to an assertion, theorem case
 assertIsThm :: Provable a => a -> Assertion

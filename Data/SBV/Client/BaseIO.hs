@@ -939,7 +939,7 @@ svToSymSV = Trans.svToSymSV
 -- | Run a symbolic computation, and return a extra value paired up with the 'Result'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.runSymbolic'
-runSymbolic :: SBVRunMode -> Symbolic a -> IO (a, Result)
+runSymbolic :: SMTConfig -> SBVRunMode -> Symbolic a -> IO (a, Result)
 runSymbolic = Trans.runSymbolic
 
 -- | Add a new option

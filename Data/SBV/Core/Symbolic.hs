@@ -1161,6 +1161,7 @@ inputsToList =  (userInputsToList *** internInputsToList) . getInputs
 
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
+                    , stCfg        :: SMTConfig
                     , startTime    :: UTCTime
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
@@ -1718,8 +1719,8 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
          mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> T.pack (show i) | i <- [(0::Int)..]])
 
 -- | Create a new state
-mkNewState :: MonadIO m => SBVRunMode -> m State
-mkNewState currentRunMode = liftIO $ do
+mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
+mkNewState cfg currentRunMode = liftIO $ do
      currTime  <- getCurrentTime
      rm        <- newIORef currentRunMode
      ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -1752,6 +1753,7 @@ mkNewState currentRunMode = liftIO $ do
      istate    <- newIORef =<< newIncState
      qstate    <- newIORef Nothing
      pure $ State { runMode      = rm
+                  , stCfg        = cfg
                   , startTime    = currTime
                   , pathCond     = SVal KBool (Left trueCV)
                   , rIncState    = istate
@@ -1782,9 +1784,9 @@ mkNewState currentRunMode = liftIO $ do
                   }
 
 -- | Generalization of 'Data.SBV.runSymbolic'
-runSymbolic :: MonadIO m => SBVRunMode -> SymbolicT m a -> m (a, Result)
-runSymbolic currentRunMode comp = do
-   st <- mkNewState currentRunMode
+runSymbolic :: MonadIO m => SMTConfig -> SBVRunMode -> SymbolicT m a -> m (a, Result)
+runSymbolic cfg currentRunMode comp = do
+   st <- mkNewState cfg currentRunMode
    runSymbolicInState st comp
 
 -- | Run a symbolic computation in a given state

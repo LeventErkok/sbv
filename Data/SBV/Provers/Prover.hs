@@ -364,7 +364,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic (SMTMode QueryInternal ISetup True cfg) (existential_ a >> Control.executeQuery QueryInternal check)
+       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (existential_ a >> Control.executeQuery QueryInternal check)
      where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
@@ -449,7 +449,7 @@ class ExtractIO m => MProvable m a where
                                 notify   "    We will assume that they are essentially zero for the purposes of validation."
                                 notify   "    Note that this is a gross simplification of the model validation with universals!"
 
-                         result <- snd <$> runSymbolic (Concrete (Just (isSAT, env))) ((if isSAT then existential_ p else universal_ p) >>= output)
+                         result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) ((if isSAT then existential_ p else universal_ p) >>= output)
 
                          let explain  = [ ""
                                         , "Assignment:"  ++ if null env then " <none>" else ""
@@ -625,7 +625,7 @@ generateSMTBenchmark isSat a = do
       let comments = ["Automatically created by SBV on " ++ show t]
           cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-      (_, res) <- runSymbolic (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then existential_ else universal_) a >>= output
+      (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then existential_ else universal_) a >>= output
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
@@ -753,11 +753,11 @@ runSMT = runSMTWith defaultSMTCfg
 
 -- | Generalization of 'Data.SBV.runSMTWith'
 runSMTWith :: MonadIO m => SMTConfig -> SymbolicT m a -> m a
-runSMTWith cfg a = fst <$> runSymbolic (SMTMode QueryExternal ISetup True cfg) a
+runSMTWith cfg a = fst <$> runSymbolic cfg (SMTMode QueryExternal ISetup True cfg) a
 
 -- | Runs with a query.
 runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
-runWithQuery isSAT q cfg a = fst <$> runSymbolic (SMTMode QueryInternal ISetup isSAT cfg) comp
+runWithQuery isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup isSAT cfg) comp
   where comp =  do _ <- (if isSAT then existential_ else universal_) a >>= output
                    Control.executeQuery QueryInternal q
 
@@ -847,7 +847,7 @@ class ExtractIO m => SExecutable m a where
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
-                       fst <$> runSymbolic (SMTMode QueryInternal ISafe True cfg) (sName_ a >> check mkRelative)
+                       fst <$> runSymbolic cfg (SMTMode QueryInternal ISafe True cfg) (sName_ a >> check mkRelative)
      where check :: (FilePath -> FilePath) -> SymbolicT m [SafeResult]
            check mkRelative = Control.executeQuery QueryInternal $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 

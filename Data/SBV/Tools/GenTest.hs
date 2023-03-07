@@ -26,6 +26,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 
 import Data.SBV.Utils.PrettyNum
+import Data.SBV.Provers.Prover(defaultSMTCfg)
 
 import qualified Data.Foldable as F (toList)
 
@@ -48,7 +49,7 @@ genTest n m = gen 0 []
          | i == n = return $ TV $ reverse sofar
          | True   = do t <- tc
                        gen (i+1) (t:sofar)
-        tc = do (_, Result {resTraces=tvals, resConsts=(_, cs), resConstraints=cstrs, resOutputs=os}) <- runSymbolic (Concrete Nothing) (m >>= output)
+        tc = do (_, Result {resTraces=tvals, resConsts=(_, cs), resConstraints=cstrs, resOutputs=os}) <- runSymbolic defaultSMTCfg (Concrete Nothing) (m >>= output)
                 let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
                     cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
                 if cond

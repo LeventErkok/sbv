@@ -57,6 +57,8 @@ import qualified Text.PrettyPrint.HughesPJ as P (render)
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (MonadSymbolic(..), svToSymSV, svMkSymVar, outputSVal, VarContext(..))
 
+import Data.SBV.Provers.Prover(defaultSMTCfg)
+
 #if MIN_VERSION_base(4,11,0)
 import Control.Monad.Fail as Fail
 #endif
@@ -337,7 +339,7 @@ instance Show CgPgmBundle where
 -- of makefiles, source code, headers, etc.
 codeGen :: CgTarget l => l -> CgConfig -> String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
 codeGen l cgConfig nm (SBVCodeGen comp) = do
-   ((retVal, st'), res) <- runSymbolic CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
+   ((retVal, st'), res) <- runSymbolic defaultSMTCfg CodeGen $ runStateT comp initCgState { cgFinalConfig = cgConfig }
    let st = st' { cgInputs       = reverse (cgInputs st')
                 , cgOutputs      = reverse (cgOutputs st')
                 }
