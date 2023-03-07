@@ -86,6 +86,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Kind
+import Data.SBV.Lambda
 
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
@@ -2576,7 +2577,9 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    softConstrain               (SBV c) = imposeConstraint True  []               c
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
    constrainWithAttribute atts (SBV c) = imposeConstraint False atts             c
-   addAxiom                            = addSymAxiom False
+   addAxiom nm f                       = do st <- symbolicEnv
+                                            ax <- liftIO $ axiom st f
+                                            addSymAxiom False nm [ax]
    addSMTDefinition                    = addSymAxiom True
    contextState                        = symbolicEnv
 

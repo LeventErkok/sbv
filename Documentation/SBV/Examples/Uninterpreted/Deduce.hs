@@ -54,31 +54,6 @@ not :: SB -> SB
 not = uninterpret "NOT"
 
 -----------------------------------------------------------------------------
--- * Axioms of the logical system
------------------------------------------------------------------------------
-
--- | Distributivity of OR over AND, as an axiom in terms of
--- the uninterpreted functions we have introduced. Note how
--- variables range over the uninterpreted sort 'B'.
-ax1 :: [String]
-ax1 = [ "(assert (forall ((p B) (q B) (r B))"
-      , "   (= (AND (OR p q) (OR p r))"
-      , "      (OR p (AND q r)))))"
-      ]
-
--- | One of De Morgan's laws, again as an axiom in terms
--- of our uninterpeted logical connectives.
-ax2 :: [String]
-ax2 = [ "(assert (forall ((p B) (q B))"
-      , "   (= (NOT (OR p q))"
-      , "      (AND (NOT p) (NOT q)))))"
-      ]
-
--- | Double negation axiom, similar to the above.
-ax3 :: [String]
-ax3 = ["(assert (forall ((p B)) (= (NOT (NOT p)) p)))"]
-
------------------------------------------------------------------------------
 -- * Demonstrated deduction
 -----------------------------------------------------------------------------
 
@@ -88,9 +63,9 @@ ax3 = ["(assert (forall ((p B)) (= (NOT (NOT p)) p)))"]
 -- >>> test
 -- Q.E.D.
 test :: IO ThmResult
-test = prove $ do addAxiom "OR distributes over AND" ax1
-                  addAxiom "de Morgan"               ax2
-                  addAxiom "double negation"         ax3
+test = prove $ do addAxiom "OR distributes over AND" $ \p q r -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
+                  addAxiom "de Morgan"               $ \p q   -> not (p `or` q) .== not p `and` not q
+                  addAxiom "double negation"         $ \p     -> not (not p) .== p
                   p <- free "p"
                   q <- free "q"
                   r <- free "r"

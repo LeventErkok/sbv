@@ -113,18 +113,11 @@ axiomatizeFib = do -- Base cases.
                    --
                    -- As otherwise they would be concretely evaluated and
                    -- would not be sent to the SMT solver!
-
                    x <- sInteger_
                    constrain $ x .== 0 .=> fib x .== 0
                    constrain $ x .== 1 .=> fib x .== 1
 
-                   -- The inductive case. Unfortunately; SBV does not support
-                   -- adding quantified constraints in the query mode. So we
-                   -- have to write this axiom directly in SMT-Lib. Note also how
-                   -- carefully we've chosen this axiom to work with our proof!
-                   addAxiom "fib_n" [ "(assert (forall ((x Int))"
-                                    , "                (= (fib (+ x 2)) (+ (fib (+ x 1)) (fib x)))))"
-                                    ]
+                   addAxiom "fib_n" $ \n -> fib (n+2) .== fib (n+1) + fib n
 
 -- | Precondition for our program: @n@ must be non-negative.
 pre :: F -> SBool

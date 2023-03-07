@@ -44,28 +44,14 @@ a = uninterpret "a"
 e :: SBitstring -> SBitstring -> SBitstring
 e = uninterpret "e"
 
-axE :: [String]
-axE = [ "(assert (forall ((p Bitstring) (k Bitstring))"
-      , "         (=> (and (a k) (a p)) (a (e k p)))))"
-      ]
-
 p0 :: Symbolic SBool
 p0 = do
+    addAxiom "axE" $ \p k -> a k .&& a p .=> a (e k p)
     p <- free "p" :: Symbolic SBitstring
     k <- free "k" :: Symbolic SBitstring
-    addAxiom "axE" axE
     constrain $ a p
     constrain $ a k
     return $ a (e k p)
-
-axThings :: [String]
-axThings = [ -- thingCompare is reflexive
-             "(assert (forall ((k1 Thing))"
-           , "  (thingCompare k1 k1)))"
-           -- thingMerge produces a new, distinct thing
-           , "(assert (forall ((k1 Thing) (k2 Thing))"
-           , "  (distinct k1 (thingMerge k1 k2))))"
-           ]
 
 thingCompare :: SThing -> SThing -> SBV Bool
 thingCompare = uninterpret "thingCompare"
@@ -74,7 +60,8 @@ thingMerge :: SThing -> SThing -> SThing
 thingMerge = uninterpret "thingMerge"
 
 p1 :: Symbolic SBool
-p1 = do addAxiom "things" axThings
+p1 = do addAxiom "thingCompare is reflexive"                 $ \x -> thingCompare x x
+        addAxiom "thingMerge produces a new, distinct thing" $ \k1 k2 -> k1 ./= thingMerge k1 k2
         registerUISMTFunction thingMerge
         k1 <- sbvForall_
         k2 <- sbvForall_
@@ -83,22 +70,16 @@ p1 = do addAxiom "things" axThings
 testQuery :: FilePath -> IO ()
 testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t
                   appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
- where t = do p <- free "p"
-              q <- free "q"
-              r <- free "r"
+ where t = do vp <- free "p"
+              vq <- free "q"
+              vr <- free "r"
               query $ do let oR, aND :: SB  -> SB -> SB
                              oR  = uninterpret "OR"
                              aND = uninterpret "AND"
                              nOT :: SB -> SB
                              nOT = uninterpret "NOT"
-                         constrain $ nOT (p `oR` (q `aND` r)) ./= (nOT p `aND` nOT q) `oR` (nOT p `aND` nOT r)
-                         addAxiom "OR distributes over AND" [ "(assert (forall ((p B) (q B) (r B))"
-                                                            , "   (= (AND (OR p q) (OR p r))"
-                                                            , "      (OR p (AND q r)))))"
-                                                            ]
-                         addAxiom "de Morgan"               [ "(assert (forall ((p B) (q B))"
-                                                            , "   (= (NOT (OR p q))"
-                                                            , "      (AND (NOT p) (NOT q)))))"
-                                                            ]
-                         addAxiom "double negation"         ["(assert (forall ((p B)) (= (NOT (NOT p)) p)))"]
+                         constrain $ nOT (vp `oR` (vq `aND` vr)) ./= (nOT vp `aND` nOT vq) `oR` (nOT vp `aND` nOT vr)
+                         addAxiom "OR distributes over AND" $ \p q r -> (p `oR` q) `aND` (p `oR` r) .== p `oR` (q `aND` r)
+                         addAxiom "de Morgan"               $ \p q   -> nOT (p `oR` q) .== nOT p `aND` nOT q
+                         addAxiom "double negation"         $ \p     -> nOT (nOT p) .== p
                          checkSat

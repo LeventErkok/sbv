@@ -79,21 +79,6 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
--- | Values that we can turn into an axiom
-class MonadSymbolic m => Axiom m a where
-  mkAxiom :: State -> a -> m ()
-
--- | Base case: simple booleans
-instance MonadSymbolic m => Axiom m SBool where
-  mkAxiom _ out = void $ output out
-
--- | Functions
-instance (SymVal a, Axiom m r) => Axiom m (SBV a -> r) where
-  mkAxiom st fn = mkArg >>= mkAxiom st . fn
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ lambdaVar st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
-
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
 toLambda :: Bool -> SMTConfig -> Result -> String
 toLambda axiomMode cfg = sh
@@ -119,7 +104,7 @@ toLambda axiomMode cfg = sh
 
                   tbls          -- Tables: Not currently supported inside lambda's
                   arrs          -- Arrays: Not currently supported inside lambda's
-                  uis           -- UIs:    Not currently supported inside lambda's
+                  _uis          -- Uninterpeted constants; nothing to do with them
                   axs           -- Axioms: Not currently supported inside lambda's
 
                   pgm           -- Assignments
@@ -144,10 +129,6 @@ toLambda axiomMode cfg = sh
          | not (null arrs)
          = tbd [ "Array values."
                , "  Saw: " ++ intercalate ", " ["arr" ++ show i | (i, _) <- arrs]
-               ]
-         | not (null uis)
-         = tbd [ "Uninterpreted constants."
-               , "  Saw: " ++ intercalate ", " (map fst uis)
                ]
          | not (null axs)
          = tbd [ "Axioms/definitions."

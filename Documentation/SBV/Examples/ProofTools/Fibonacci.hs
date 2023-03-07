@@ -74,14 +74,7 @@ fibCorrect = induct chatty setup initial trans strengthenings inv goal
         setup :: Symbolic ()
         setup = do constrain $ fib 0 .== 0
                    constrain $ fib 1 .== 1
-
-                   -- This is unfortunate; but SBV currently does not support
-                   -- adding quantified constraints in the query mode. So we
-                   -- have to write this axiom in SMT-Lib. Note also how carefully
-                   -- we've chosen this axiom to work with our proof!
-                   addAxiom "fib_n" [ "(assert (forall ((x Int))"
-                                    , "                (= (fib (+ x 2)) (+ (fib (+ x 1)) (fib x)))))"
-                                    ]
+                   addAxiom "fib_n" $ \x -> fib (x+2) .== fib (x+1) + fib x
 
         -- Initialize variables
         initial :: S SInteger -> SBool

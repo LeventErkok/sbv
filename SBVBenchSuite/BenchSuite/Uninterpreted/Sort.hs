@@ -22,11 +22,11 @@ import BenchSuite.Bench.Bench
 benchmarks :: Runner
 benchmarks = rGroup
   [ run "t1" _t1 `using` runner satWith
-  , run "r2" _t1 `using` runner satWith
+  , run "t2" _t2 `using` runner satWith
   ]
   where _t1 = do x <- free "x"
                  return $ f x ./= x
 
-        _t2 = do x <- free "x"
-                 addAxiom "Q" ["(assert (forall ((x Q) (y Q)) (= x y)))"]
+        _t2 = do addAxiom "Q" $ \x y -> x .== (y :: SQ)
+                 x <- free "x"
                  return $ f x ./= x

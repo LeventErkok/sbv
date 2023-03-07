@@ -124,25 +124,12 @@ axiomatizeGCD :: Symbolic ()
 axiomatizeGCD = do -- Base case. Strictly speaking, we don't really need this case
                    -- here, but it declares the presence of gcd as an uninterpreted
                    -- function to SBV so it gets registered as such.
-                   x <- sInteger_
-                   constrain $ gcd x x .== x
+                   e <- sInteger_
+                   constrain $ gcd e e .== e
 
-                   -- Unfortunately; SBV does not support adding quantified constraints
-                   -- in the query mode. So we have to write this axiom directly in SMT-Lib.
-                   -- Note also how carefully we've chosen these axioms to work with our proof!
-                   -- Actually proving these is beyond the scope of our WP proof, but obviously
-                   -- should be done in some other system. (Note that SMT solvers will have hard
-                   -- time with the definition of GCD in general as the axiomatization requires
-                   -- quantification and definition requires recursion.)
-                   addAxiom "gcd_equal"    [ "(assert (forall ((x Int))"
-                                           , "                (=> (> x 0) (= (gcd x x) x))))"
-                                           ]
-                   addAxiom "gcd_unequal1" [ "(assert (forall ((x Int) (y Int))"
-                                           , "                (=> (and (> x 0) (> y 0)) (= (gcd (+ x y) y) (gcd x y)))))"
-                                           ]
-                   addAxiom "gcd_unequal2" [ "(assert (forall ((x Int) (y Int))"
-                                           , "                (=> (and (> x 0) (> y 0)) (= (gcd x (+ y x)) (gcd x y)))))"
-                                           ]
+                   addAxiom "gcd_equal"    $ \x   -> x .> 0            .=> gcd x x     .== x
+                   addAxiom "gcd_unequal1" $ \x y -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
+                   addAxiom "gcd_unequal2" $ \x y -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
 
 -- | Precondition for our program: @x@ and @y@ must be strictly positive
 pre :: G -> SBool

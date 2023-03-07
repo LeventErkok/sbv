@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Axiom(..)
  ) where
 
 import GHC.TypeLits
@@ -68,6 +68,7 @@ import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
+import Control.Monad          (void)
 import Control.Monad.Trans    (liftIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
@@ -403,6 +404,21 @@ sbvToSymSV sbv = do
         st <- symbolicEnv
         liftIO $ sbvToSV st sbv
 
+-- | Values that we can turn into an axiom
+class MonadSymbolic m => Axiom m a where
+  mkAxiom :: State -> a -> m ()
+
+-- | Base case: simple booleans
+instance MonadSymbolic m => Axiom m SBool where
+  mkAxiom _ out = void $ output out
+
+-- | Functions
+instance (SymVal a, Axiom m r) => Axiom m (SBV a -> r) where
+  mkAxiom st fn = mkArg >>= mkAxiom st . fn
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ lambdaVar st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
 -- | Actions we can do in a context: Either at problem description
 -- time or while we are dynamically querying. 'Symbolic' and 'Query' are
 -- two instances of this class. Note that we use this mechanism
@@ -422,12 +438,8 @@ class SolverContext m where
    setOption :: SMTOption -> m ()
    -- | Set the logic.
    setLogic :: Logic -> m ()
-   -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is a mere
-   -- string, use for commenting purposes. The second argument is intended to hold the multiple-lines
-   -- of the axiom text as expressed in SMT-Lib notation. Note that we perform no checks on the axiom
-   -- itself, to see whether it's actually well-formed or is sensible by any means.
-   -- A separate formalization of SMT-Lib would be very useful here.
-   addAxiom :: String -> [String] -> m ()
+   -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is for commenting purposes.
+   addAxiom :: Axiom Symbolic a => String -> a -> m ()
    -- | Add a user-defined SMTLib function. You should define the name given here as an uninterpreted
    -- value as well. SBV performs no checks on the SMTLib definition you give, so if it doesn't match
    -- the required type, or is malformed in any way, the call will fail at run-time.

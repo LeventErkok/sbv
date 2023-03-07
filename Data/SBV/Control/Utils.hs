@@ -103,6 +103,8 @@ import Data.SBV.Utils.Lib       (qfsToString)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
 
+import Data.SBV.Lambda
+
 import Data.SBV.Control.Types
 
 import qualified Data.Set as Set (empty, fromList, toAscList)
@@ -117,7 +119,11 @@ instance MonadIO m => SolverContext (QueryT m) where
    softConstrain          = addQueryConstraint True  []
    namedConstraint nm     = addQueryConstraint False [(":named", nm)]
    constrainWithAttribute = addQueryConstraint False
-   addAxiom               = addQueryAxiom
+   addAxiom nm f          = do st <- queryState
+                               ax <- liftIO $ axiom st f
+                               send True $ "; -- user given axiom: " ++ nm
+                               send True $ intercalate "\n" [ax]
+
    contextState           = queryState
 
    setOption o
@@ -142,10 +148,6 @@ addQueryConstraint isSoft atts b = do sv <- inNewContext (\st -> liftIO $ do map
                                              send True $ "(" ++ asrt ++ " " ++ addAnnotations atts (show sv)  ++ ")"
    where asrt | isSoft = "assert-soft"
               | True   = "assert"
-
-addQueryAxiom :: (MonadIO m, MonadQuery m) => String -> [String] -> m ()
-addQueryAxiom nm ls = do send True $ "; -- user given axiom: " ++ nm
-                         send True $ intercalate "\n" ls
 
 -- | Get the current configuration
 getConfig :: (MonadIO m, MonadQuery m) => m SMTConfig
