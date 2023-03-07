@@ -15,6 +15,10 @@
     answers, or will not terminate.) However, basic properties, especially when the solver can determine the
     shape of the sequence arguments (i.e., number of elements), should go through.
 
+  * The signature of addAxiom has changed: Instead of taking an SMTLib string, it now takes an SBV lambda
+    expression that evalues a boolean, and translates that to an SMTLib-axiom on the fly. This is much safer
+    both from a typing perspective, and also saves you from trying to figure out the exact SMTLib syntax.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 
