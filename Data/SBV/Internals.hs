@@ -25,7 +25,7 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-    Result(..), SBVRunMode(..), IStage(..), QueryContext(..), VarContext(..)
+    Result(..), SBVRunMode(..), IStage(..), QueryContext(..), VarContext(..), mkNewState
 
   -- * Solver capabilities
   , SolverCapabilities(..)
@@ -60,8 +60,8 @@ module Data.SBV.Internals (
   , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
   , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
 
-  -- * Lambda generation
-  , lambda, lambdaTop
+  -- * lambdas and axioms
+  , lambda, axiom, Lambda(..), Axiom(..)
   ) where
 
 import Control.Monad.IO.Class (MonadIO)
@@ -70,7 +70,7 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Sized      (SWord)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
-import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV)
+import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState)
 
 import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord)
 

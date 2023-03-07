@@ -33,9 +33,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" $ [
-        goldenCapturedIO "lambda01" $ record $ lambdaTop (2 :: SInteger)
-      , goldenCapturedIO "lambda02" $ record $ lambdaTop (\x -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda03" $ record $ lambdaTop (\x y -> x+y*2 :: SInteger)
+        goldenCapturedIO "lambda01" $ record $ \st -> lambda st (2 :: SInteger)
+      , goldenCapturedIO "lambda02" $ record $ \st -> lambda st (\x -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda03" $ record $ \st -> lambda st (\x y -> x+y*2 :: SInteger)
       , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
       , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
       , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
@@ -102,8 +102,9 @@ tests =
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
       ]
    P.++ qc1 "lambda33" P.sum (foldr (+) (0::SInteger))
-  where record :: IO String -> FilePath -> IO ()
-        record gen rf = appendFile rf . (P.++ "\n") =<< gen
+  where record :: (State -> IO String) -> FilePath -> IO ()
+        record gen rf = do st <- mkNewState defaultSMTCfg (Lambda (-1))
+                           appendFile rf . (P.++ "\n") =<< gen st
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
 eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
