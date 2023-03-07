@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Lambda (
-          lambda, lambdaTop
+          lambda, axiom, Lambda(..), Axiom(..)
         ) where
 
 import Control.Monad
@@ -28,7 +28,6 @@ import Control.Monad.Trans
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Symbolic
-import Data.SBV.Provers.Prover
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
@@ -40,20 +39,30 @@ import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
--- | Create an SMTLib lambda, in the given state
+-- | Create an SMTLib lambda, in the given state.
 lambda :: Lambda Symbolic a => State -> a -> IO String
-lambda inState f = do ll <- readIORef (rLambdaLevel inState)
-                      lambdaAtLevel (ll+1) f
+lambda inState f = do
+   ll  <- readIORef (rLambdaLevel inState)
+   st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
+   convert st False (mkLambda st f)
 
--- | Create a lambda-expression at the top. Only for internal testing purposes
-lambdaTop :: Lambda Symbolic a => a -> IO String
-lambdaTop = lambdaAtLevel 0
+-- | Create a forall quantified axiom at the top.
+axiom :: Axiom Symbolic a => State -> a -> IO String
+axiom inState f = do
+   -- make sure we're at the top
+   ll <- readIORef (rLambdaLevel inState)
+   () <- case ll of
+           0 -> pure ()
+           _ -> error "Data.SBV.mkAxiom: Not supported: mkAxiom calls that are not at the top-level."
 
-lambdaAtLevel :: Lambda Symbolic a => Int -> a -> IO String
-lambdaAtLevel l f = do
-    st <- mkNewState $ Lambda l
-    ((), res) <- runSymbolicInState st (mkLambda st f)
-    pure $ toLambda defaultSMTCfg{smtLibVersion = SMTLib2} res
+   st <- mkNewState (stCfg inState) $ Lambda 0
+   convert st True (mkAxiom st f)
+
+-- | Convert to an appropriate SMTLib representation.
+convert :: MonadIO m => State -> Bool -> SymbolicT m () -> m String
+convert st isAxiom comp = do
+   ((), res) <- runSymbolicInState st comp
+   pure $ toLambda isAxiom (stCfg st) res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -70,9 +79,24 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
+-- | Values that we can turn into an axiom
+class MonadSymbolic m => Axiom m a where
+  mkAxiom :: State -> a -> m ()
+
+-- | Base case: simple booleans
+instance MonadSymbolic m => Axiom m SBool where
+  mkAxiom _ out = void $ output out
+
+-- | Functions
+instance (SymVal a, Axiom m r) => Axiom m (SBV a -> r) where
+  mkAxiom st fn = mkArg >>= mkAxiom st . fn
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ lambdaVar st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: SMTConfig -> Result -> String
-toLambda cfg = sh
+toLambda :: Bool -> SMTConfig -> Result -> String
+toLambda axiomMode cfg = sh
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -139,6 +163,8 @@ toLambda cfg = sh
                ]
          | null params
          = body
+         | axiomMode
+         = "(assert (forall (" ++ params ++ ")\n" ++ body ++ "))"
          | True
          = "(lambda (" ++ params ++ ")\n" ++ body ++ ")"
          where params = case is of
@@ -155,11 +181,14 @@ toLambda cfg = sh
                body
                 | null bindings = ' ' : out
                 | True          = go bindings 0
-                where go []     n = "   " ++ out ++ replicate n ')'
-                      go (b:bs) n = tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
+                where go []     n = extraTab ++ "   " ++ out ++ replicate n ')'
+                      go (b:bs) n = extraTab ++ tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
 
                       tab | null params = ""
                           | True        = "   "
+
+                      extraTab | axiomMode = "        "
+                               | True      = ""
 
                bindings :: [String]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
