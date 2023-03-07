@@ -69,6 +69,9 @@ ghcid:
 ghcid_SBVTest:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVTest"
 
+ghcid_Bench:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVBench"
+
 bench:
 	cabal new-bench
 
