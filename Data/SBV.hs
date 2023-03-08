@@ -296,9 +296,6 @@ module Data.SBV (
   -- $uninterpreted
   , mkUninterpretedSort, Uninterpreted(..), addAxiom
 
-  -- * Adding SMT functions
-  , addSMTDefinition
-
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
   -- $noteOnNestedQuantifiers
