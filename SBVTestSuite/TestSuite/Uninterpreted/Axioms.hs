@@ -33,8 +33,8 @@ mkUninterpretedSort ''Thing
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.Axioms"
-    [ testCase         "unint-axioms"       (assertIsThm p0)
-    , testCase         "unint-axioms-empty" (assertIsThm p1)
+    [ goldenCapturedIO "unint-axioms"       $ \rf -> isTheoremWith z3{verbose=True, redirectVerbose=Just rf} p0 >>= \r -> appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
+    , goldenCapturedIO "unint-axioms-empty" $ \rf -> isTheoremWith z3{verbose=True, redirectVerbose=Just rf} p1 >>= \r -> appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
     , goldenCapturedIO "unint-axioms-query" testQuery
     ]
 
