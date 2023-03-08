@@ -11,11 +11,14 @@
 -- for recursive definitions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE OverloadedLists #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Misc.Definitions where
 
 import Data.SBV
+import qualified Data.SBV.List as L
 
 -- | Add one to an argument
 add1 :: SInteger -> SInteger
@@ -33,15 +36,13 @@ add1Example = sat $ do
         pure $ 5 .== add1 x
 
 -- | Sum of numbers from 0 to the given number. Since this is a recursive
--- definition, we use the function generation facilities to define it
--- directly in SMTLib.
+-- definition, we cannot simply symbolically simulate it as it wouldn't
+-- terminat. So, we use the function generation facilities to define it
+-- directly in SMTLib. Note how the function itself takes a "recursive version"
+-- of itself, and all recursive calls are made with this name.
 sumToN :: SInteger -> SInteger
-sumToN = magic "sumToN" f
+sumToN = smtRecFunction "sumToN" f
   where f rF x = ite (x .<= 0) 0 (x + rF (x - 1))
-
-        magic :: String -> ((SInteger -> SInteger) -> SInteger -> SInteger) -> SInteger -> SInteger
-        magic nm fn = smtRecFunction nm (fn (uninterpret nm))
-
 
 -- | Prove that sumToN works as expected.
 --
@@ -51,4 +52,19 @@ sumToN = magic "sumToN" f
 -- Satisfiable. Model:
 --   s0 = 15 :: Integer
 recExample :: IO SatResult
-recExample = satWith z3 $ (.== sumToN 5)
+recExample = sat $ (.== sumToN 5)
+
+-- | Coding list-length recursively. Again, we map directly to an SMTLib function.
+len :: SList Integer -> SInteger
+len = smtRecFunction "list_length" f
+  where f rF xs = ite (L.null xs) 0 (1 + rF (L.tail xs))
+
+-- | Calculate the length of a list, using recursive functions.
+--
+-- We have:
+--
+-- >>> lenExample
+-- Satisfiable. Model:
+--   s0 = 3 :: Integer
+lenExample :: IO SatResult
+lenExample = sat $ (.== len [1,2,3::Integer])

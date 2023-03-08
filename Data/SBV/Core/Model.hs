@@ -2345,7 +2345,7 @@ class Uninterpreted a where
   smtFunction    :: Lambda Symbolic a => String -> a -> a
 
   -- | Variant of smtFunction, but use it when the function is recursively defined.
-  smtRecFunction :: Lambda Symbolic a => String -> a -> a
+  smtRecFunction :: (Lambda Symbolic (a -> b), Uninterpreted (a -> b)) => String -> ((a -> b) -> a -> b) -> a -> b
 
   -- | Uninterpret a value, only for the purposes of code-generation. For execution
   -- and verification the value is used as is. For code-generation, the alternate
@@ -2365,9 +2365,9 @@ class Uninterpreted a where
 
   -- defaults:
   uninterpret              = sbvUninterpret UIFree
-  smtFunction    nm      v = sbvUninterpret (UIFun (\st fk -> namedLambda st False nm fk v)) nm
-  smtRecFunction nm      v = sbvUninterpret (UIFun (\st fk -> namedLambda st True  nm fk v)) nm
-  cgUninterpret  nm code v = sbvUninterpret (UICodeC (code, v))                              nm
+  smtFunction    nm      v = sbvUninterpret (UIFun (\st fk -> namedLambda st False nm fk v                   )) nm
+  smtRecFunction nm      v = sbvUninterpret (UIFun (\st fk -> namedLambda st True  nm fk (v (uninterpret nm)))) nm
+  cgUninterpret  nm code v = sbvUninterpret (UICodeC (code, v))                                                 nm
   sym                      = uninterpret
 
 -- | Kind of uninterpretation
