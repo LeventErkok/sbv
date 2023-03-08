@@ -118,14 +118,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            = let pretty n = case userName n of
                               Nothing -> show n
                               Just x  -> show n ++ " (" ++ x ++ ")"
-             in error $ unlines $ [ ""
-                               , "*** SBV cannot currently handle axioms in the presence of quantified variables."
-                               , "***"
-                               , "***    Found axioms   : " ++ unwords [n | (_, n, _) <- axs]
-                               , "***    Quantified args: " ++ unwords (map pretty foralls)
-                               , "***"
-                               , "*** Please report this as a feature request."
-                               ]
+             in error $ unlines [ ""
+                                , "*** SBV cannot currently handle axioms in the presence of quantified variables."
+                                , "***"
+                                , "***    Found axioms   : " ++ unwords [n | (_, n, _) <- axs]
+                                , "***    Quantified args: " ++ unwords (map pretty foralls)
+                                , "***"
+                                , "*** Please report this as a feature request."
+                                ]
 
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
