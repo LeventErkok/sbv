@@ -86,7 +86,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
                               , UserInputs, getInputs, prefixExistentials, getSV, quantifier, getUserName
                               , namedSymVar, NamedSymVar(..), lookupInput, userInputs, userInputsToList
-                              , getUserName', Name, CnstMap
+                              , getUserName', Name, CnstMap, UICodeKind(UINone)
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -132,11 +132,6 @@ instance MonadIO m => SolverContext (QueryT m) where
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
      | True                = send True $ setSMTOption o
-
-   addSMTDefinition nm _ = error $ unlines [ ""
-                                           , "*** Data.SBV: '" ++ show nm ++ "' must be defined in regular (non-query) mode."
-                                           , "*** Hint: Define all functions before starting the query."
-                                           ]
 
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.
@@ -440,7 +435,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
 registerUISMTFunction f = do st <- contextState
                              nm <- smtFunName f
-                             io $ newUninterpreted st nm (smtFunType f) Nothing
+                             io $ newUninterpreted st nm (smtFunType f) UINone
 
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our

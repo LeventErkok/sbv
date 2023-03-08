@@ -440,10 +440,6 @@ class SolverContext m where
    setLogic :: Logic -> m ()
    -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is for commenting purposes.
    addAxiom :: Axiom Symbolic a => String -> a -> m ()
-   -- | Add a user-defined SMTLib function. You should define the name given here as an uninterpreted
-   -- value as well. SBV performs no checks on the SMTLib definition you give, so if it doesn't match
-   -- the required type, or is malformed in any way, the call will fail at run-time.
-   addSMTDefinition :: String -> [String] -> m ()
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
@@ -453,7 +449,7 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, addSMTDefinition, contextState #-}
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]

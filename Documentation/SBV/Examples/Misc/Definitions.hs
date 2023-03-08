@@ -17,51 +17,38 @@ module Documentation.SBV.Examples.Misc.Definitions where
 
 import Data.SBV
 
--- | Sum of numbers from 0 to the given number.
--- Note that this cannot be defined as a regular Haskell function, as
--- it wouldn't terminate as it recurses on a symbolic argument.
+-- | Add one to an argument
+add1 :: SInteger -> SInteger
+add1 = smtFunction "add1" (+1)
+
+-- | Reverse run the add1 function. Note that the generated SMTLib will have the function
+-- add1 itself defined. You can verify this by running the below in verbose mode.
+--
+-- >>> add1Example
+-- Satisfiable. Model:
+--   x = 4 :: Integer
+add1Example :: IO SatResult
+add1Example = sat $ do
+        x <- sInteger "x"
+        pure $ 5 .== add1 x
+
+-- | Sum of numbers from 0 to the given number. Since this is a recursive
+-- definition, we use the function generation facilities to define it
+-- directly in SMTLib.
 sumToN :: SInteger -> SInteger
-sumToN = uninterpret "sumToN"
+sumToN = magic "sumToN" f
+  where f rF x = ite (x .<= 0) 0 (x + rF (x - 1))
 
--- | Add the definition of sum to the SMT solver. Note that SBV
--- performs no checks on your definition, neither that it is
--- well formed, or even has the correct type!
-defineSum :: Symbolic ()
-defineSum = addSMTDefinition "sumToN"
-                [ "(define-fun-rec sumToN ((x Int)) Int"
-                , "                (ite (<= x 0)"
-                , "                     0"
-                , "                     (+ x (sumToN (- x 1)))))"
-                ]
+        magic :: String -> ((SInteger -> SInteger) -> SInteger -> SInteger) -> SInteger -> SInteger
+        magic nm fn = smtRecFunction nm (fn (uninterpret nm))
 
--- | A simple proof using 'sumToN'. We get a failure, because we haven't
--- given the solver the definition, and thus it goes completely uninterpreted.
+
+-- | Prove that sumToN works as expected.
 --
 -- We have:
 --
--- >>> badExample
--- Falsifiable. Counter-example:
---   sumToN :: Integer -> Integer
---   sumToN _ = 0
---
--- Since 'sumToN' remains uninterpreted, the solver gave us a model that obviously
--- fails the property.
-badExample :: IO ThmResult
-badExample = prove $ do
-        let check = sumToN 5 .== 15  -- Should fail, even though 5*6/2 = 15
-        pure check :: Predicate
-
--- | Same example, except this time we give the solver the definition of the function,
--- and thus the proof goes through.
---
--- We have:
---
--- >>> goodExample
--- Q.E.D.
---
--- In this case, the solver has the definition, and proves the predicate as expected.
-goodExample :: IO ThmResult
-goodExample = prove $ do
-        defineSum
-        let check = sumToN 5 .== 15  -- Should fail, even though 5*6/2 = 15
-        pure check :: Predicate
+-- >>> recExample
+-- Satisfiable. Model:
+--   s0 = 15 :: Integer
+recExample :: IO SatResult
+recExample = satWith z3 $ (.== sumToN 5)

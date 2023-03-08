@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Lambda (
-          lambda, axiom, Lambda(..), Axiom(..)
+          lambda, namedLambda, axiom, Lambda(..), Axiom(..)
         ) where
 
 import Control.Monad
@@ -39,12 +39,24 @@ import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
+-- | What kind of output to generate?
+data GenKind = GenLambda
+             | GenDefn   Bool String Kind  -- Bool is True if recursive and the resulting kind (note, not the arguments kinds, the result type)
+             | GenAxiom
+
 -- | Create an SMTLib lambda, in the given state.
 lambda :: Lambda Symbolic a => State -> a -> IO String
 lambda inState f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
-   convert st False (mkLambda st f)
+   convert st GenLambda (mkLambda st f)
+
+-- | Create a named SMTLib function, in the given state.
+namedLambda :: Lambda Symbolic a => State -> Bool -> String -> Kind -> a -> IO String
+namedLambda inState isRec nm fk f = do
+   ll  <- readIORef (rLambdaLevel inState)
+   st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
+   convert st (GenDefn isRec nm fk) (mkLambda st f)
 
 -- | Create a forall quantified axiom at the top.
 axiom :: Axiom Symbolic a => State -> a -> IO String
@@ -56,13 +68,13 @@ axiom inState f = do
            _ -> error "Data.SBV.mkAxiom: Not supported: mkAxiom calls that are not at the top-level."
 
    st <- mkNewState (stCfg inState) $ Lambda 1
-   convert st True (mkAxiom st f)
+   convert st GenAxiom (mkAxiom st f)
 
 -- | Convert to an appropriate SMTLib representation.
-convert :: MonadIO m => State -> Bool -> SymbolicT m () -> m String
-convert st isAxiom comp = do
+convert :: MonadIO m => State -> GenKind -> SymbolicT m () -> m String
+convert st knd comp = do
    ((), res) <- runSymbolicInState st comp
-   pure $ toLambda isAxiom (stCfg st) res
+   pure $ toLambda knd (stCfg st) res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -80,8 +92,8 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: Bool -> SMTConfig -> Result -> String
-toLambda axiomMode cfg = sh
+toLambda :: GenKind -> SMTConfig -> Result -> String
+toLambda knd cfg = sh
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -142,12 +154,8 @@ toLambda axiomMode cfg = sh
          = tbd [ "Assertions."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
                ]
-         | null params
-         = body
-         | axiomMode
-         = "(assert (forall (" ++ params ++ ")\n" ++ body ++ "))"
          | True
-         = "(lambda (" ++ params ++ ")\n" ++ body ++ ")"
+         = genSMTLib knd params body
          where params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"
@@ -158,7 +166,7 @@ toLambda axiomMode cfg = sh
                                                   , "   Saw: " ++ intercalate ", " (map getUserName' trackers)
                                                   ]
                                            | True
-                                           -> unwords ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
+                                           -> ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
                body
                 | null bindings = ' ' : out
                 | True          = go bindings 0
@@ -168,8 +176,10 @@ toLambda axiomMode cfg = sh
                       tab | null params = ""
                           | True        = "   "
 
-                      extraTab | axiomMode = "        "
-                               | True      = ""
+                      extraTab = case knd of
+                                   GenLambda -> ""
+                                   GenDefn{} -> replicate (2 + length "define-fun") ' '
+                                   GenAxiom  -> replicate (2 + length "assert")     ' '
 
                bindings :: [String]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
@@ -194,3 +204,20 @@ toLambda axiomMode cfg = sh
                        skolemMap  = M.empty
                        tableMap   = IM.empty
                        funcMap    = M.empty
+
+genSMTLib :: GenKind -> [String] -> String -> String
+genSMTLib k = case k of
+               GenLambda           -> mkLam
+               GenDefn isRec nm fk -> mkDef isRec nm (smtType fk)
+               GenAxiom            -> mkAxm
+  where mkLam [] body = body
+        mkLam ps body = "(lambda (" ++ unwords ps ++ ")\n" ++ body ++ ")"
+
+        mkDef isRec nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                     ++ body ++ ")"
+        mkDef isRec nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") (" ++ fk ++ ")\n" ++ body ++ ")"
+
+        definer False = "define-fun"
+        definer True  = "define-fun-rec"
+
+        mkAxm [] body = "(assert " ++ body ++ ")"
+        mkAxm ps body = "(assert (" ++ unwords ps ++ ")\n" ++ body ++ ")"

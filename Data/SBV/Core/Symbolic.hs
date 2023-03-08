@@ -53,7 +53,7 @@ module Data.SBV.Core.Symbolic
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), withNewIncState, IncState(..), incrementInternalCounter
-  , inSMTMode, SBVRunMode(..), IStage(..), Result(..)
+  , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
@@ -78,7 +78,7 @@ import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy)
-import Data.Maybe                  (isJust, fromJust, fromMaybe)
+import Data.Maybe                  (fromMaybe)
 import Data.String                 (IsString(fromString))
 
 import Data.Time (getCurrentTime, UTCTime)
@@ -1294,6 +1294,11 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  modifyState st rctr (+1) (return ())
                                  return ctr
 
+-- Kind of code we have for uninterpretation
+data UICodeKind = UINone          -- no code
+                | UISMT  String   -- SMTLib
+                | UICgC  [String] -- Code-gen, currently only C
+
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
 -- about these values are that they are equivalent to themselves; i.e., (for
@@ -1301,7 +1306,7 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
 -- We support uninterpreted-functions as a general means of black-box'ing
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
-svUninterpreted :: Kind -> String -> Maybe [String] -> [SVal] -> SVal
+svUninterpreted :: Kind -> String -> UICodeKind -> [SVal] -> SVal
 svUninterpreted k nm code args = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
                        newUninterpreted st nm ty code
@@ -1310,20 +1315,28 @@ svUninterpreted k nm code args = SVal k $ Right $ cache result
                        newExpr st k $ SBVApp (Uninterpreted nm) sws
 
 -- | Create a new uninterpreted symbol, possibly with user given code
-newUninterpreted :: State -> String -> SBVType -> Maybe [String] -> IO ()
-newUninterpreted st nm t mbCode
+newUninterpreted :: State -> String -> SBVType -> UICodeKind -> IO ()
+newUninterpreted st nm t uiCode
   | null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm)))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
-  | True = do uiMap <- readIORef (rUIMap st)
-              case nm `Map.lookup` uiMap of
-                Just t' -> checkType t' (return ())
-                Nothing -> do modifyState st rUIMap (Map.insert nm t)
-                                        $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
-                                                                                  Just t' -> checkType t' newUIs
-                                                                                  Nothing -> Map.insert nm t newUIs)
+  | True
+  = do uiMap <- readIORef (rUIMap st)
+       case nm `Map.lookup` uiMap of
+         Just t' -> checkType t' (return ())
+         Nothing -> do modifyState st rUIMap (Map.insert nm t)
+                                 $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
+                                                                           Just t' -> checkType t' newUIs
+                                                                           Nothing -> Map.insert nm t newUIs)
 
-                              -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                              when (isJust mbCode) $ modifyState st rCgMap (Map.insert nm (fromJust mbCode)) (return ())
+                       case uiCode of
+                          UINone  -> pure ()
+                          UISMT s -> modifyState st raxioms ((True, nm, [s]):)
+                                       $ noInteractive [ "Defined functions (smtFunction):"
+                                                       , "  Name: " ++ nm
+                                                       , "  Type: " ++ show t
+                                                       ]
+                          UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                                     modifyState st rCgMap (Map.insert nm c) (return ())
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
