@@ -115,11 +115,14 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            -- there's no free variable, but let's not complicate the code. This is easier and likely
            -- covers 99.99% of all the use cases.)
            | not (null foralls) && not (null axs)
-           = error $ unlines $ [ ""
+           = let pretty n = case userName n of
+                              Nothing -> show n
+                              Just x  -> show n ++ " (" ++ x ++ ")"
+             in error $ unlines $ [ ""
                                , "*** SBV cannot currently handle axioms in the presence of quantified variables."
                                , "***"
                                , "***    Found axioms   : " ++ unwords [n | (_, n, _) <- axs]
-                               , "***    Quantified args: " ++ unwords (map (\f -> fromMaybe (show f) (userName f)) foralls)
+                               , "***    Quantified args: " ++ unwords (map pretty foralls)
                                , "***"
                                , "*** Please report this as a feature request."
                                ]
