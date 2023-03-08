@@ -55,7 +55,7 @@ axiom inState f = do
            0 -> pure ()
            _ -> error "Data.SBV.mkAxiom: Not supported: mkAxiom calls that are not at the top-level."
 
-   st <- mkNewState (stCfg inState) $ Lambda 0
+   st <- mkNewState (stCfg inState) $ Lambda 1
    convert st True (mkAxiom st f)
 
 -- | Convert to an appropriate SMTLib representation.

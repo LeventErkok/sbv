@@ -109,6 +109,21 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                                 , "*** Please report this as a feature request, either for SBV or the backend solver."
                                 ]
 
+           -- Are there user-defined axioms (quantified), and user-level forall's. We don't support that
+           -- since with a quantified formula we generate a full expression and there's no way to put
+           -- the axiom in there if it has a free variable. (This can be handled for the cases where
+           -- there's no free variable, but let's not complicate the code. This is easier and likely
+           -- covers 99.99% of all the use cases.)
+           | not (null foralls) && not (null axs)
+           = error $ unlines $ [ ""
+                               , "*** SBV cannot currently handle axioms in the presence of quantified variables."
+                               , "***"
+                               , "***    Found axioms   : " ++ unwords [n | (_, n, _) <- axs]
+                               , "***    Quantified args: " ++ unwords (map (\f -> fromMaybe (show f) (userName f)) foralls)
+                               , "***"
+                               , "*** Please report this as a feature request."
+                               ]
+
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
 
