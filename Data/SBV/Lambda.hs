@@ -214,7 +214,7 @@ genSMTLib k = case k of
         mkLam ps body = "(lambda (" ++ unwords ps ++ ")\n" ++ body ++ ")"
 
         mkDef isRec nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                     ++ body ++ ")"
-        mkDef isRec nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") (" ++ fk ++ ")\n" ++ body ++ ")"
+        mkDef isRec nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") " ++ fk ++ "\n" ++ body ++ ")"
 
         definer False = "define-fun"
         definer True  = "define-fun-rec"
