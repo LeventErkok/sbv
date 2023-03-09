@@ -104,9 +104,18 @@ tests =
       , goldenCapturedIO "lambda33" $ record $ \st -> lambda st (0           :: SInteger)
       , goldenCapturedIO "lambda34" $ record $ \st -> lambda st (\x   -> x+1 :: SInteger)
       , goldenCapturedIO "lambda35" $ record $ \st -> lambda st (\x y -> x+y :: SInteger)
+
       , goldenCapturedIO "lambda36" $ record $ \st -> axiom  st sTrue
       , goldenCapturedIO "lambda37" $ record $ \st -> axiom  st sNot
       , goldenCapturedIO "lambda38" $ record $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
+
+      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambda st False "lambda40" KUnbounded (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambda st False "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambda st False "lambda42" KUnbounded (\x y -> x+y :: SInteger)
+
+      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambda st True  "lambda43" KUnbounded (0           :: SInteger)
+      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambda st True  "lambda44" KUnbounded (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambda st True  "lambda45" KUnbounded (\x y -> x+y :: SInteger)
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()

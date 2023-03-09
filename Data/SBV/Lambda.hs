@@ -177,9 +177,10 @@ toLambda knd cfg = sh
                           | True        = "   "
 
                       extraTab = case knd of
-                                   GenLambda -> ""
-                                   GenDefn{} -> replicate (2 + length "define-fun") ' '
-                                   GenAxiom  -> replicate (2 + length "assert")     ' '
+                                   GenLambda         -> ""
+                                   GenDefn False _ _ -> replicate (2 + length "define-fun")     ' '
+                                   GenDefn True  _ _ -> replicate (2 + length "define-fun-rec") ' '
+                                   GenAxiom          -> replicate (2 + length "assert")         ' '
 
                bindings :: [String]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
