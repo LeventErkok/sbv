@@ -100,10 +100,17 @@ tests =
 
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
+
+      , goldenCapturedIO "lambda33" $ record $ \st -> lambda st (0           :: SInteger)
+      , goldenCapturedIO "lambda34" $ record $ \st -> lambda st (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda35" $ record $ \st -> lambda st (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda36" $ record $ \st -> axiom  st sTrue
+      , goldenCapturedIO "lambda37" $ record $ \st -> axiom  st sNot
+      , goldenCapturedIO "lambda38" $ record $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
       ]
-   P.++ qc1 "lambda33" P.sum (foldr (+) (0::SInteger))
+   P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
-        record gen rf = do st <- mkNewState defaultSMTCfg (Lambda (-1))
+        record gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
                            appendFile rf . (P.++ "\n") =<< gen st
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
