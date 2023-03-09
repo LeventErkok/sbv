@@ -168,7 +168,7 @@ toLambda knd cfg = sh
                                            | True
                                            -> ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
                body
-                | null bindings = ' ' : out
+                | null bindings = out
                 | True          = go bindings 0
                 where go []     n = extraTab ++ "   " ++ out ++ replicate n ')'
                       go (b:bs) n = extraTab ++ tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
@@ -213,7 +213,7 @@ genSMTLib k = case k of
   where mkLam [] body = body
         mkLam ps body = "(lambda (" ++ unwords ps ++ ")\n" ++ body ++ ")"
 
-        mkDef isRec nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                     ++ body ++ ")"
+        mkDef isRec nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                   ++ body ++ ")"
         mkDef isRec nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") " ++ fk ++ "\n" ++ body ++ ")"
 
         definer False = "define-fun"
