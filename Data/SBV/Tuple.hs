@@ -26,6 +26,8 @@ module Data.SBV.Tuple (
     (^.), _1, _2, _3, _4, _5, _6, _7, _8
   -- * Tupling and untupling
   , tuple, untuple
+  -- * Swapping, only for 2-tuples
+  , swap
   ) where
 
 import GHC.TypeLits
@@ -47,6 +49,11 @@ import Data.SBV.Core.Model
 (^.) :: a -> (a -> b) -> b
 t ^. f = f t
 infixl 8 ^.
+
+-- | Swap the elements of a 2-tuple
+swap :: (SymVal a, SymVal b) => STuple a b -> STuple b a
+swap t = tuple (b, a)
+  where (a, b) = untuple t
 
 -- | Dynamic interface to exporting tuples, this function is not
 -- exported on purpose; use it only via the field functions '_1', '_2', etc.
