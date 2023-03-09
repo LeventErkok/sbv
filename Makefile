@@ -51,23 +51,29 @@ docs:
 ghci:
 	cabal new-repl --repl-options=-Wno-unused-packages
 
+ghcid:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
+
 ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
+
+ghcid_SBVTest:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVTest"
 
 ghci_SBVDocTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
 
+ghcid_SBVDocTest:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest"
+
 ghci_HLint:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVHLint
 
+ghcid_HLint:
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVHLint"
+
 ghci_Bench:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVBench
-
-ghcid:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
-
-ghcid_SBVTest:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVTest"
 
 ghcid_Bench:
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVBench"
