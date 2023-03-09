@@ -15,9 +15,19 @@
     answers, or will not terminate.) However, basic properties, especially when the solver can determine the
     shape of the sequence arguments (i.e., number of elements), should go through.
 
+  * The signature of Data.SBV.List's concat has changed. In previous releases this was a synonym for appending
+    two lists, now it takes a list-of-lists and flattens it, matching the Haskell list function with the same name.
+
   * The signature of addAxiom has changed: Instead of taking an SMTLib string, it now takes an SBV lambda
     expression that evalues a boolean, and translates that to an SMTLib-axiom on the fly. This is much safer
     both from a typing perspective, and also saves you from trying to figure out the exact SMTLib syntax.
+
+  * You can now define new functions in the generated SMTLib output, via smtFunction and smtRecFunction calls.
+    Typically, we simply unroll all definitions, but there are certain cases where we would like the functions
+    remain intact in the output. This is especially true of recursive functions, where the termination would
+    depend on a symbolic variable, which cannot be symbolically-simulated. By translating these to SMTLib
+    functions, we can now handle such definitions. Note that such definitions will no longer be constant-folded
+    on the Haskell side, and each call will induce a call in the solver instead.
 
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.

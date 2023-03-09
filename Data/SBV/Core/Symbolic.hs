@@ -1334,6 +1334,9 @@ newUninterpreted st nm t uiCode
                                        $ noInteractive [ "Defined functions (smtFunction/smtRecFunction):"
                                                        , "  Name: " ++ nm
                                                        , "  Type: " ++ show t
+                                                       , ""
+                                                       , "You should use these functions at least once the query part starts"
+                                                       , "and then use them in the query section as usual."
                                                        ]
                           UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
                                      modifyState st rCgMap (Map.insert nm c) (return ())
