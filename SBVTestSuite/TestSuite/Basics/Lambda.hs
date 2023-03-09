@@ -24,6 +24,8 @@ import Control.Monad (unless)
 import Data.SBV.Control
 import Data.SBV.Internals hiding(free_)
 
+import Documentation.SBV.Examples.Misc.Definitions
+
 import Data.SBV.List
 import Data.SBV.Tuple
 
@@ -116,11 +118,30 @@ tests =
       , goldenCapturedIO "lambda43" $ record $ \st -> namedLambda st True  "lambda43" KUnbounded (0           :: SInteger)
       , goldenCapturedIO "lambda44" $ record $ \st -> namedLambda st True  "lambda44" KUnbounded (\x   -> x+1 :: SInteger)
       , goldenCapturedIO "lambda45" $ record $ \st -> namedLambda st True  "lambda45" KUnbounded (\x y -> x+y :: SInteger)
+
+      , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
+      , goldenCapturedIO "lambda47" $ runSat (sumToN 5 .==)
+      , goldenCapturedIO "lambda48" $ runSat (len [1,2,3::Integer] .==)
+      , goldenCapturedIO "lambda49" $ runSat (isEven 20 .==)
+      , goldenCapturedIO "lambda50" $ runSat (isEven 21 .==)
+      , goldenCapturedIO "lambda51" $ runSat (isOdd  20 .==)
+      , goldenCapturedIO "lambda52" $ runSat (isOdd  21 .==)
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
                            appendFile rf . (P.++ "\n") =<< gen st
+
+        runSat f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                         appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
+           where run = do arg <- free_
+                          constrain $ f arg
+                          query $ do arg2 <- freshVar_
+                                     constrain $ f arg2
+                                     cs <- checkSat
+                                     case cs of
+                                       Sat -> getModel
+                                       _   -> error $ "Unexpected output: " P.++ show cs
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
 eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
