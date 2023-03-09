@@ -1331,7 +1331,7 @@ newUninterpreted st nm t uiCode
                        case uiCode of
                           UINone  -> pure ()
                           UISMT s -> modifyState st raxioms ((True, nm, [s]):)
-                                       $ noInteractive [ "Defined functions (smtFunction):"
+                                       $ noInteractive [ "Defined functions (smtFunction/smtRecFunction):"
                                                        , "  Name: " ++ nm
                                                        , "  Type: " ++ show t
                                                        ]
