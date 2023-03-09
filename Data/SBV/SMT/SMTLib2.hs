@@ -119,12 +119,13 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                               Nothing -> show n
                               Just x  -> show n ++ " (" ++ x ++ ")"
              in error $ unlines [ ""
-                                , "*** SBV cannot currently handle axioms in the presence of quantified variables."
+                                , "*** SBV cannot currently handle function definitions and axioms in the presence of quantified variables."
                                 , "***"
-                                , "***    Found axioms   : " ++ unwords [n | (_, n, _) <- axs]
-                                , "***    Quantified args: " ++ unwords (map pretty foralls)
+                                , "***    Found declaration: " ++ unwords [n | (_, n, _) <- axs]
+                                , "***    Quantified args  : " ++ unwords (map pretty foralls)
                                 , "***"
-                                , "*** Please report this as a feature request."
+                                , "*** If you use smtFunction/smtRecFunction/addAxiom, you cannot have explicit quantifiers."
+                                , "*** Please report this as a feature request, if you cannot work around this limitation."
                                 ]
 
            -- Otherwise, we try to determine the most suitable logic.
