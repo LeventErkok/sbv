@@ -116,8 +116,8 @@ toLambda knd cfg = sh
 
                   tbls          -- Tables: Not currently supported inside lambda's
                   arrs          -- Arrays: Not currently supported inside lambda's
-                  _uis          -- Uninterpeted constants; nothing to do with them
-                  axs           -- Axioms: Not currently supported inside lambda's
+                  _uis          -- Uninterpeted constants: nothing to do with them
+                  _axs          -- Axioms definitions    : nothing to do with them
 
                   pgm           -- Assignments
 
@@ -141,10 +141,6 @@ toLambda knd cfg = sh
          | not (null arrs)
          = tbd [ "Array values."
                , "  Saw: " ++ intercalate ", " ["arr" ++ show i | (i, _) <- arrs]
-               ]
-         | not (null axs)
-         = tbd [ "Axioms/definitions."
-               , "  Saw: " ++ intercalate ", " [n | (_, n, _) <- axs]
                ]
          | not (null cstrs)
          = tbd [ "Constraints."
