@@ -49,11 +49,11 @@ sumToN = smtRecFunction "sumToN" f
 --
 -- We have:
 --
--- >>> recExample
+-- >>> sumToNExample
 -- Satisfiable. Model:
 --   s0 = 15 :: Integer
-recExample :: IO SatResult
-recExample = sat $ (.== sumToN 5)
+sumToNExample :: IO SatResult
+sumToNExample = sat $ (.== sumToN 5)
 
 -- | Coding list-length recursively. Again, we map directly to an SMTLib function.
 len :: SList Integer -> SInteger
