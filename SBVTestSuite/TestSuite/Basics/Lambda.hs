@@ -126,6 +126,8 @@ tests =
       , goldenCapturedIO "lambda50" $ runSat (isEven 21 .==)
       , goldenCapturedIO "lambda51" $ runSat (isOdd  20 .==)
       , goldenCapturedIO "lambda52" $ runSat (isOdd  21 .==)
+
+      , goldenCapturedIO "lambda53" $ runSat (\x -> x .== smtFunction "foo" (+(x::SInteger)) x)
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
