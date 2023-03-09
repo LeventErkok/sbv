@@ -90,7 +90,7 @@ isOdd x = isEvenOdd x ^._2
 -- We have:
 -- >>> mutRecExample
 -- Satisfiable. Model:
---  s0 = True :: Bool
+--   s0 = True :: Bool
 --
 -- Note that we would love to prove things of the form:
 --

@@ -220,4 +220,4 @@ genSMTLib k = case k of
         definer True  = "define-fun-rec"
 
         mkAxm [] body = "(assert " ++ body ++ ")"
-        mkAxm ps body = "(assert (" ++ unwords ps ++ ")\n" ++ body ++ ")"
+        mkAxm ps body = "(assert (forall (" ++ unwords ps ++ ")\n" ++ body ++ "))"
