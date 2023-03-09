@@ -127,7 +127,16 @@ tests =
       , goldenCapturedIO "lambda51" $ runSat (isOdd  20 .==)
       , goldenCapturedIO "lambda52" $ runSat (isOdd  21 .==)
 
+      -- Free variables are OK!
       , goldenCapturedIO "lambda53" $ runSat (\x -> x .== smtFunction "foo" (+(x::SInteger)) x)
+
+      -- Make sure we can handle dependency orders
+      , goldenCapturedIO "lambda54" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                        bar = smtFunction "bar" (+1)
+                                                    in bar x + foo x .== (x :: SInteger))
+      , goldenCapturedIO "lambda55" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                        bar = smtFunction "bar" (+1)
+                                                    in foo x + bar x .== (x :: SInteger))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
