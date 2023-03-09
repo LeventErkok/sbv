@@ -168,7 +168,7 @@ toLambda knd cfg = sh
                                            | True
                                            -> ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
                body
-                | null bindings = out
+                | null bindings = tab ++ out
                 | True          = go bindings 0
                 where go []     n = extraTab ++ "   " ++ out ++ replicate n ')'
                       go (b:bs) n = extraTab ++ tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
