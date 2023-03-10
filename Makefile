@@ -39,11 +39,11 @@ endif
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-build
+	@$(TIME) cabal new-install --lib
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --allow-newer --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal new-build
+	@$(TIME) cabal new-install --lib
 
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
