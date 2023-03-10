@@ -79,7 +79,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , RCSet(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), svToSV, symbolicEnv, SymbolicT
                               , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..), VarContext(..)
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
@@ -120,7 +120,7 @@ instance MonadIO m => SolverContext (QueryT m) where
    namedConstraint nm     = addQueryConstraint False [(":named", nm)]
    constrainWithAttribute = addQueryConstraint False
    addAxiom nm f          = do st <- queryState
-                               ax <- liftIO $ axiom st f
+                               (_frees, ax) <- liftIO $ axiom st f
                                send True $ "; -- user given axiom: " ++ nm
                                send True $ intercalate "\n" [ax]
 
@@ -1098,13 +1098,13 @@ getObservables = do State{rObservables} <- queryState
                     walk (F.toList rObs) []
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
--- Generalization of 'Data.SBV.Control.getUIs'. Note that if we have an defined axiom, then it
--- is not really a UI, so we drop those.
+-- Generalization of 'Data.SBV.Control.getUIs'.
 getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
-getUIs = do State{rUIMap, raxioms, rIncState} <- queryState
+getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
-            defines <- do allAxs <- io $ readIORef raxioms
-                          pure [nm | (True, nm, _) <- allAxs]
+            defines <- do allDefs <- io $ readIORef rDefns
+                          let get (SMTDef nm _ _) = nm
+                          pure $ map get allDefs
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs
@@ -1636,7 +1636,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
-runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis axs pgm cstrs _assertions outputs) =
+runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis defns pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
@@ -1666,7 +1666,7 @@ runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is 
                                                , "*** Check calls to \"output\", they are typically not needed!"
                                                ]
 
-     in SMTProblem { smtLibPgm = toSMTLib config context ki isSat comments is skolemMap consts tbls arrs uis axs pgm cstrs o }
+     in SMTProblem { smtLibPgm = toSMTLib config context ki isSat comments is skolemMap consts tbls arrs uis defns pgm cstrs o }
 
 -- | Generalization of 'Data.SBV.Control.executeQuery'
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a

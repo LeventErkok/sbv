@@ -31,7 +31,7 @@ import qualified Control.Exception as C
 import Control.Monad.Trans (MonadIO, liftIO)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext, CnstMap)
+import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef)
 import Data.SBV.Utils.Lib (joinArgs)
 
 import Data.List (intercalate)
@@ -51,7 +51,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> [((Int, Kind, Kind), [SV])]                   -- ^ auto-generated tables
                        -> [(Int, ArrayInfo)]                            -- ^ user specified arrays
                        -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
-                       -> [(Bool, String, [String])]                    -- ^ user given axioms/definitions
+                       -> [SMTDef]                                      -- ^ user given axioms/definitions
                        -> SBVPgm                                        -- ^ assignments
                        -> S.Seq (Bool, [(String, String)], SV)          -- ^ extra constraints
                        -> SV                                            -- ^ output variable

@@ -39,6 +39,8 @@ import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 
+import qualified Data.Generics.Uniplate.Data as G
+
 -- | What kind of output to generate?
 data GenKind = GenLambda
              | GenDefn   Bool String Kind  -- Bool is True if recursive and the resulting kind (note, not the arguments kinds, the result type)
@@ -49,17 +51,18 @@ lambda :: Lambda Symbolic a => State -> a -> IO String
 lambda inState f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
-   convert st GenLambda (mkLambda st f)
+   -- in this case we ignore the firee vars
+   snd <$> convert st GenLambda (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
-namedLambda :: Lambda Symbolic a => State -> Bool -> String -> Kind -> a -> IO String
+namedLambda :: Lambda Symbolic a => State -> Bool -> String -> Kind -> a -> IO ([String], String)
 namedLambda inState isRec nm fk f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
    convert st (GenDefn isRec nm fk) (mkLambda st f)
 
--- | Create a forall quantified axiom at the top.
-axiom :: Axiom Symbolic a => State -> a -> IO String
+-- | Create a forall quantified axiom at the top. The list of strings is the free vars in it.
+axiom :: Axiom Symbolic a => State -> a -> IO ([String], String)
 axiom inState f = do
    -- make sure we're at the top
    ll <- readIORef (rLambdaLevel inState)
@@ -71,7 +74,7 @@ axiom inState f = do
    convert st GenAxiom (mkAxiom st f)
 
 -- | Convert to an appropriate SMTLib representation.
-convert :: MonadIO m => State -> GenKind -> SymbolicT m () -> m String
+convert :: MonadIO m => State -> GenKind -> SymbolicT m () -> m ([String], String)
 convert st knd comp = do
    ((), res) <- runSymbolicInState st comp
    pure $ toLambda knd (stCfg st) res
@@ -92,8 +95,8 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: GenKind -> SMTConfig -> Result -> String
-toLambda knd cfg = sh
+toLambda :: GenKind -> SMTConfig -> Result -> ([String], String)
+toLambda knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -151,7 +154,7 @@ toLambda knd cfg = sh
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
                ]
          | True
-         = genSMTLib knd params body
+         = (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq], genSMTLib knd params body)
          where params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"

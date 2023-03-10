@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..))
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -44,7 +44,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis axs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
@@ -114,14 +114,15 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            -- the axiom in there if it has a free variable. (This can be handled for the cases where
            -- there's no free variable, but let's not complicate the code. This is easier and likely
            -- covers 99.99% of all the use cases.)
-           | not (null foralls) && not (null axs)
+           | not (null foralls) && not (null defs)
            = let pretty n = case userName n of
                               Nothing -> show n
                               Just x  -> show n ++ " (" ++ x ++ ")"
+                 getN (SMTDef n _ _) = n
              in error $ unlines [ ""
                                 , "*** SBV cannot currently handle function definitions and axioms in the presence of quantified variables."
                                 , "***"
-                                , "***    Found declaration: " ++ unwords [n | (_, n, _) <- axs]
+                                , "***    Found declaration: " ++ unwords (map getN defs)
                                 , "***    Quantified args  : " ++ unwords (map pretty foralls)
                                 , "***"
                                 , "*** If you use smtFunction/smtRecFunction/addAxiom, you cannot have explicit quantifiers."
@@ -166,12 +167,12 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                QueryInternal -> if supportsBitVectors solverCaps
                                 then ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
                                 else ["(set-logic ALL)"] -- fall-thru
-          where qs  | null foralls && null axs = "QF_"  -- axioms are likely to contain quantifiers
-                    | True                     = ""
-                as  | null arrs                = ""
-                    | True                     = "A"
-                ufs | null uis && null tbls    = ""     -- we represent tables as UFs
-                    | True                     = "UF"
+          where qs  | null foralls && null defs = "QF_"  -- axioms are likely to contain quantifiers
+                    | True                      = ""
+                as  | null arrs                 = ""
+                    | True                      = "A"
+                ufs | null uis && null tbls     = ""     -- we represent tables as UFs
+                    | True                      = "UF"
 
         -- SBV always requires the production of models!
         getModels   = "(set-option :produce-models true)"
@@ -223,7 +224,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
              ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
              ++ [ "; --- user given axioms ---" ]
-             ++ map declAx axs
+             ++ map declUserDef defs
              ++ [ "; --- preQuantifier assignments ---" ]
              ++ concatMap (declDef cfg skolemMap tableMap funcMap) preQuantifierAssigns
              ++ [ "; --- arrayDelayeds ---" ]
@@ -609,11 +610,8 @@ declConst cfg (s, c)
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = declareName i t Nothing
 
--- NB. We perform no check to as to whether the axiom is meaningful in any way.
-declAx :: (Bool, String, [String]) -> String
-declAx (hasDefinition, nm, ls) = (";; -- user given " ++ what ++ ": " ++ nm ++ "\n") ++ intercalate "\n" ls
-  where what | hasDefinition = "definition"
-             | True          = "axiom"
+declUserDef :: SMTDef -> String
+declUserDef (SMTDef nm _ s) = (";; -- user given: " ++ nm ++ "\n") ++ s
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
 constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)

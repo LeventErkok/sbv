@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
@@ -813,7 +813,7 @@ data Result = Result { reskinds       :: Set.Set Kind                           
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
-                     , resAxioms      :: [(Bool, String, [String])]                   -- ^ axioms/definitions
+                     , resAxioms      :: [SMTDef]                                     -- ^ axioms/definitions
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
@@ -828,7 +828,7 @@ instance Show Result where
   show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ _ cgs is (_, cs) ts as uis axs xs cstrs asserts os) = intercalate "\n" $
+  show (Result kinds _ _ cgs is (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn (fst is)
@@ -843,8 +843,8 @@ instance Show Result where
                 ++ map shui uis
                 ++ ["USER GIVEN CODE SEGMENTS"]
                 ++ concatMap shcg cgs
-                ++ ["AXIOMS"]
-                ++ map shax axs
+                ++ ["AXIOMS-DEFINITIONS"]
+                ++ map shDef defns
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -888,9 +888,7 @@ instance Show Result where
 
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
 
-          shax (hasDefinition, nm, ss) = "  -- user defined " ++ what ++ ": " ++ nm ++ "\n  " ++ intercalate "\n  " ss
-             where what | hasDefinition = "value"
-                        | True          = "axiom"
+          shDef (SMTDef nm _ s) = "  -- user defined: " ++ nm ++ "\n  " ++ s
 
           shCstr (isSoft, [], c)               = soft isSoft ++ show c
           shCstr (isSoft, [(":named", nm)], c) = soft isSoft ++ nm ++ ": " ++ show c
@@ -1159,6 +1157,15 @@ internInputsToList = F.toList
 inputsToList :: Inputs -> ([(Quantifier, NamedSymVar)], [NamedSymVar])
 inputsToList =  (userInputsToList *** internInputsToList) . getInputs
 
+-- | A defined function/value
+data SMTDef = SMTDef String   -- ^ name
+                     [String] -- ^ other definitions it refers to
+                     String   -- ^ Body, in SMTLib syntax
+
+-- | NFData instance for SMTDef
+instance NFData SMTDef where
+  rnf (SMTDef n xs body) = rnf n `seq` rnf xs `seq` rnf body
+
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
                     , stCfg        :: SMTConfig
@@ -1182,7 +1189,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rFArrayMap   :: IORef FArrayMap
                     , rUIMap       :: IORef UIMap
                     , rCgMap       :: IORef CgMap
-                    , raxioms      :: IORef [(Bool, String, [String])]
+                    , rDefns       :: IORef [SMTDef]
                     , rSMTOptions  :: IORef [SMTOption]
                     , rOptGoals    :: IORef [Objective (SV, SV)]
                     , rAsserts     :: IORef [(String, Maybe CallStack, SV)]
@@ -1295,9 +1302,9 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  return ctr
 
 -- Kind of code we have for uninterpretation
-data UICodeKind = UINone          -- no code
-                | UISMT  String   -- SMTLib
-                | UICgC  [String] -- Code-gen, currently only C
+data UICodeKind = UINone                    -- no code
+                | UISMT  ([String], String) -- SMTLib, first argument are the free-variables in it
+                | UICgC  [String]           -- Code-gen, currently only C
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1329,17 +1336,17 @@ newUninterpreted st nm t uiCode
                                                                            Nothing -> Map.insert nm t newUIs)
 
                        case uiCode of
-                          UINone  -> pure ()
-                          UISMT s -> modifyState st raxioms ((True, nm, [s]):)
-                                       $ noInteractive [ "Defined functions (smtFunction/smtRecFunction):"
-                                                       , "  Name: " ++ nm
-                                                       , "  Type: " ++ show t
-                                                       , ""
-                                                       , "You should use these functions at least once the query part starts"
-                                                       , "and then use them in the query section as usual."
-                                                       ]
-                          UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                                     modifyState st rCgMap (Map.insert nm c) (return ())
+                          UINone        -> pure ()
+                          UISMT (fs, s) -> modifyState st rDefns (SMTDef nm fs s :)
+                                             $ noInteractive [ "Defined functions (smtFunction/smtRecFunction):"
+                                                             , "  Name: " ++ nm
+                                                             , "  Type: " ++ show t
+                                                             , ""
+                                                             , "You should use these functions at least once the query part starts"
+                                                             , "and then use them in the query section as usual."
+                                                             ]
+                          UICgC c       -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                                           modifyState st rCgMap (Map.insert nm c) (return ())
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
@@ -1757,7 +1764,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      fArrays   <- newIORef IMap.empty
      uis       <- newIORef Map.empty
      cgs       <- newIORef Map.empty
-     axioms    <- newIORef []
+     defns     <- newIORef []
      swCache   <- newIORef IMap.empty
      aiCache   <- newIORef IMap.empty
      usedKinds <- newIORef Set.empty
@@ -1789,7 +1796,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rexprMap     = emap
                   , rUIMap       = uis
                   , rCgMap       = cgs
-                  , raxioms      = axioms
+                  , rDefns       = defns
                   , rSVCache     = swCache
                   , rAICache     = aiCache
                   , rConstraints = cstrs
@@ -1823,7 +1830,7 @@ runSymbolicInState st (SymbolicT c) = do
 
 -- | Grab the program from a running symbolic simulation state.
 extractSymbolicSimulationState :: State -> IO Result
-extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, raxioms=axioms
+extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, rDefns=defns
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
                                        , rObservables=observes
                                        } = do
@@ -1840,10 +1847,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
-   axs   <- reverse <$> readIORef axioms
+   ds    <- do ds <- reverse <$> readIORef defns
+               -- topologically sort, and catch recursive values
+               return ds
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has an axiom associated with it
-               let defineds = [nm | (True, nm, _) <- axs]
+               let defineds = [nm | SMTDef nm _ _ <- ds]
                pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
@@ -1854,7 +1863,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
-   return $ Result knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint axs (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
