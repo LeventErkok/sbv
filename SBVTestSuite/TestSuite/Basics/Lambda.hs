@@ -103,21 +103,21 @@ tests =
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
-      , goldenCapturedIO "lambda33" $ record $ \st -> lambda st (0           :: SInteger)
-      , goldenCapturedIO "lambda34" $ record $ \st -> lambda st (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda35" $ record $ \st -> lambda st (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda33" $ record  $ \st -> lambda st (0           :: SInteger)
+      , goldenCapturedIO "lambda34" $ record  $ \st -> lambda st (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda35" $ record  $ \st -> lambda st (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda36" $ record $ \st -> axiom  st sTrue
-      , goldenCapturedIO "lambda37" $ record $ \st -> axiom  st sNot
-      , goldenCapturedIO "lambda38" $ record $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
+      , goldenCapturedIO "lambda36" $ record2 $ \st -> axiom  st sTrue
+      , goldenCapturedIO "lambda37" $ record2 $ \st -> axiom  st sNot
+      , goldenCapturedIO "lambda38" $ record2 $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
 
-      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambda st False "lambda40" KUnbounded (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambda st False "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambda st False "lambda42" KUnbounded (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record2 $ \st -> namedLambda st False "lambda40" KUnbounded (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record2 $ \st -> namedLambda st False "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record2 $ \st -> namedLambda st False "lambda42" KUnbounded (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambda st True  "lambda43" KUnbounded (0           :: SInteger)
-      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambda st True  "lambda44" KUnbounded (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambda st True  "lambda45" KUnbounded (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda43" $ record2 $ \st -> namedLambda st True  "lambda43" KUnbounded (0           :: SInteger)
+      , goldenCapturedIO "lambda44" $ record2 $ \st -> namedLambda st True  "lambda44" KUnbounded (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda45" $ record2 $ \st -> namedLambda st True  "lambda45" KUnbounded (\x y -> x+y :: SInteger)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
       , goldenCapturedIO "lambda47" $ runSat (sumToN 5 .==)
@@ -142,6 +142,11 @@ tests =
   where record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
                            appendFile rf . (P.++ "\n") =<< gen st
+
+        record2 :: (State -> IO ([String], String)) -> FilePath -> IO ()
+        record2 gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
+                            (frees, res) <- gen st
+                            appendFile rf (res P.++ "\n" P.++ "Frees: " P.++ show frees P.++ "\n")
 
         runSat f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
                          appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")

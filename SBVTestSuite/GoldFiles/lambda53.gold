@@ -17,7 +17,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given definition: foo
+[GOOD] ;; -- user given: foo
 [GOOD] (define-fun foo ((l1_s0 Int)) Int
                       (let ((l1_s1 (+ s0 l1_s0)))
                       l1_s1))
