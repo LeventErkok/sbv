@@ -22,7 +22,7 @@
 [GOOD] (declare-fun a (Bitstring) Bool)
 [GOOD] (declare-fun e (Bitstring Bitstring) Bitstring)
 [GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given axiom: axE
+[GOOD] ;; -- user given: axE [Refers to: a e]
 [GOOD] (assert (forall ((l1_s0 Bitstring) (l1_s1 Bitstring))
                   (let ((l1_s2 (a l1_s1)))
                   (let ((l1_s3 (a l1_s0)))

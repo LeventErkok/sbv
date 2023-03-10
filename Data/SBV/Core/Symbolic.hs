@@ -99,6 +99,8 @@ import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
 import qualified Data.Text                   as T
 
+import qualified Data.Graph as DG
+
 import System.Mem.StableName
 
 import Data.SBV.Core.Kind
@@ -1848,8 +1850,22 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
    ds    <- do ds <- reverse <$> readIORef defns
-               -- topologically sort, and catch recursive values
-               return ds
+               -- Topologically sort
+               let mkNode n@(SMTDef nm deps _) = (n, getKey n, filter (/= nm) deps)
+                   getKey (SMTDef nm _ _) = nm
+                   extract (DG.AcyclicSCC b)  = b
+                   extract (DG.CyclicSCC  xs)
+                      = error $ unlines [ ""
+                                        , "*** Data.SBV: Defined functions are mutually dependent."
+                                        , "***"
+                                        , "*** Functions: " ++ unwords (map getKey xs)
+                                        , "***"
+                                        , "*** To use mutually-recursive definitions, define them as a single recursive"
+                                        , "*** function that returns all results in a tuple, and project them out in"
+                                        , "*** individual functions. See 'Documentation.SBV.Examples.Misc.Definitions'"
+                                        , "*** module in the SBV documentation for an example."
+                                        ]
+               return $ map extract $ DG.stronglyConnComp (map mkNode ds)
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has an axiom associated with it
                let defineds = [nm | SMTDef nm _ _ <- ds]
