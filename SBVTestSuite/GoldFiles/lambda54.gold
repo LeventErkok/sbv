@@ -22,7 +22,7 @@
                       (let ((l1_s1 1))
                       (let ((l1_s2 (+ l1_s0 l1_s1)))
                       l1_s2)))
-[GOOD] ;; -- user given: foo
+[GOOD] ;; -- user given: foo [Refers to: bar]
 [GOOD] (define-fun foo ((l1_s0 Int)) Int
                       (let ((l1_s2 1))
                       (let ((l1_s1 (bar l1_s0)))

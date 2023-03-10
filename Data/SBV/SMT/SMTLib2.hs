@@ -611,7 +611,14 @@ declUI :: (String, SBVType) -> [String]
 declUI (i, t) = declareName i t Nothing
 
 declUserDef :: SMTDef -> String
-declUserDef (SMTDef nm _ s) = (";; -- user given: " ++ nm ++ "\n") ++ s
+declUserDef (SMTDef nm fsAll s) = (";; -- user given: " ++ nm ++ recursive ++ frees ++ "\n") ++ s
+  where fs = filter (/= nm) fsAll
+
+        recursive | nm `elem` fsAll = " [Recursive]"
+                  | True            = ""
+
+        frees | null fs = ""
+              | True    = " [Refers to: " ++ unwords fs ++ "]"
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
 constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)

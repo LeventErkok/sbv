@@ -18,7 +18,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given: sumToN
+[GOOD] ;; -- user given: sumToN [Recursive]
 [GOOD] (define-fun-rec sumToN ((l1_s0 Int)) Int
                           (let ((l1_s1 0))
                           (let ((l1_s3 1))

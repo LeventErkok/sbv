@@ -21,7 +21,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given: list_length
+[GOOD] ;; -- user given: list_length [Recursive]
 [GOOD] (define-fun-rec list_length ((l1_s0 (Seq Int))) Int
                           (let ((l1_s2 0))
                           (let ((l1_s4 1))
