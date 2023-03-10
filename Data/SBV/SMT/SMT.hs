@@ -700,6 +700,9 @@ runSolver cfg ctx execPath opts pgm continuation
 
           clean = preprocess (solver cfg)
 
+          -- the very first command we send
+          heartbeat = "(set-option :print-success true)"
+
       (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid) <- do
                 (inh, outh, errh, pid) <- runInteractiveProcess execPath opts Nothing Nothing
 
@@ -708,8 +711,9 @@ runSolver cfg ctx execPath opts pgm continuation
                                                 hFlush inh
                                                 recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
 
-                    -- is this a set-command? Then we expect faster response
-                    isSetCommand = maybe False ("(set-option :" `isPrefixOf`)
+                    -- is this a set-command? Then we expect faster response; except for the heartbeat
+                    isSetCommand = maybe False chk
+                      where chk cmd = cmd /= heartbeat && "(set-option :" `isPrefixOf` cmd
 
                     -- Send a line, get a whole s-expr. We ignore the pathetic case that there might be a string with an unbalanced parentheses in it in a response.
                     ask :: Maybe Int -> String -> IO String
@@ -941,8 +945,7 @@ runSolver cfg ctx execPath opts pgm continuation
                              let backend = name $ solver cfg
                              if not (supportsCustomQueries (capabilities (solver cfg)))
                                 then debug cfg ["** Skipping heart-beat for the solver " ++ show backend]
-                                else do let heartbeat = "(set-option :print-success true)"
-                                        r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
+                                else do r <- ask (Just 5000000) heartbeat  -- Give the solver 5s to respond, this should be plenty enough!
                                         case words r of
                                           ["success"]     -> debug cfg ["[GOOD] " ++ heartbeat]
                                           ["unsupported"] -> error $ unlines [ ""
