@@ -189,9 +189,10 @@ toLambda mbNm knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                           | True        = "   "
 
                       extraTab = case knd of
-                                   GenLambda     -> ""
-                                   GenDefn   _ _ -> replicate (2 + length "define-fun")     ' '
-                                   GenAxiom      -> replicate (2 + length "assert")         ' '
+                                   GenLambda                   -> ""
+                                   GenDefn   _ _ | isRecursive -> replicate (2 + length "define-fun-rec") ' '
+                                                 | True        -> replicate (2 + length "define-fun")     ' '
+                                   GenAxiom                    -> replicate (2 + length "assert")         ' '
 
                bindings :: [String]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
