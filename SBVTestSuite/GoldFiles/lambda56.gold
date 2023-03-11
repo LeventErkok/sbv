@@ -1,0 +1,15 @@
+** Calling: z3 -nw -in -smt2
+
+EXCEPTION CAUGHT:
+
+*** Data.SBV: Defined functions are mutually dependent.
+***
+*** Functions: bar foo
+***
+*** To use mutually-recursive definitions, define them as a single recursive
+*** function that returns all results in a tuple, and project them out in
+*** individual functions. See 'Documentation.SBV.Examples.Misc.Definitions'
+*** module in the SBV documentation for an example.
+
+CallStack (from HasCallStack):
+  error, called at ./Data/SBV/Core/Symbolic.hs:1862:25 in sbv-9.2.5-inplace:Data.SBV.Core.Symbolic

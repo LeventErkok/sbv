@@ -20,6 +20,7 @@ import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, a
 import qualified Prelude as P
 
 import Control.Monad (unless)
+import qualified Control.Exception as C
 
 import Data.SBV.Control
 import Data.SBV.Internals hiding(free_)
@@ -149,6 +150,9 @@ tests =
       , goldenCapturedIO "lambda55" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
                                                         bar = smtFunction "bar" (+1)
                                                     in foo x + bar x .== (x :: SInteger))
+      , goldenCapturedIO "lambda56" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                        bar = smtFunction "bar" (\a -> foo a + 1)
+                                                    in foo x + bar x .== (x :: SInteger))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
@@ -162,6 +166,7 @@ tests =
 
         runSat f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
                          appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
+                     `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
            where run = do arg <- free_
                           constrain $ f arg
                           query $ do arg2 <- freshVar_
