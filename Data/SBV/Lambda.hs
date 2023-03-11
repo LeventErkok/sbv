@@ -62,11 +62,12 @@ namedLambda inState nm fk f = do
    stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
 
    -- if we're in a recursive loop, make sure we restore it
+   -- This is a bit dicey, but it seems to work..
    st <- do curDefs <- readIORef (rUserFuncs inState)
             if nm `Set.member` curDefs
-               then do nr <- newIORef (Set.singleton nm)
-                       pure $ stEmpty {rUserFuncs = nr}
-               else pure $ stEmpty
+               then do nr <- newIORef curDefs
+                       pure stEmpty{rUserFuncs = nr}
+               else pure stEmpty
 
    convert st (Just nm) (GenDefn nm fk) (mkLambda st f)
 

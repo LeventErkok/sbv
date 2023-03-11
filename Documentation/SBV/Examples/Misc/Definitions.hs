@@ -50,7 +50,8 @@ sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 --
 -- >>> sumToNExample
 -- Satisfiable. Model:
---   s0 = 15 :: Integer
+--   s0 =  5 :: Integer
+--   s1 = 15 :: Integer
 sumToNExample :: IO SatResult
 sumToNExample = sat $ \a r -> a .== 5 .&& r .== sumToN a
 
@@ -64,7 +65,8 @@ len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 --
 -- >>> lenExample
 -- Satisfiable. Model:
---   s0 = 3 :: Integer
+--   s0 = [1,2,3] :: [Integer]
+--   s1 =       3 :: Integer
 lenExample :: IO SatResult
 lenExample = sat $ \a r -> a .== [1,2,3::Integer] .&& r .== len a
 
@@ -88,7 +90,8 @@ isOdd x = isEvenOdd x ^._2
 -- We have:
 -- >>> mutRecExample
 -- Satisfiable. Model:
---   s0 = True :: Bool
+--   s0 =   20 :: Integer
+--   s1 = True :: Bool
 --
 -- Note that we would love to prove things of the form:
 --
