@@ -1,5 +1,5 @@
-(define-fun-rec lambda44 ((l1_s0 Int)) Int
-                   (let ((l1_s1 1))
-                   (let ((l1_s2 (+ l1_s0 l1_s1)))
-                   l1_s2)))
+(define-fun lambda44 ((l1_s0 (_ BitVec 32))) Int
+               (let ((l1_s1 #x00000001))
+               (let ((l1_s2 (bvadd l1_s0 l1_s1)))
+               l1_s2)))
 Frees: []

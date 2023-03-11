@@ -22,12 +22,14 @@
     expression that evalues a boolean, and translates that to an SMTLib-axiom on the fly. This is much safer
     both from a typing perspective, and also saves you from trying to figure out the exact SMTLib syntax.
 
-  * You can now define new functions in the generated SMTLib output, via smtFunction and smtRecFunction calls.
-    Typically, we simply unroll all definitions, but there are certain cases where we would like the functions
+  * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
+     unroll all definitions, but there are certain cases where we would like the functions
     remain intact in the output. This is especially true of recursive functions, where the termination would
     depend on a symbolic variable, which cannot be symbolically-simulated. By translating these to SMTLib
     functions, we can now handle such definitions. Note that such definitions will no longer be constant-folded
-    on the Haskell side, and each call will induce a call in the solver instead.
+    on the Haskell side, and each call will induce a call in the solver instead. The new method smtFunction
+    can handle both recursive and non-recursive functions. See "Documentation/SBV/Examples/Misc/Definitions.hs"
+    for examples.
 
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.

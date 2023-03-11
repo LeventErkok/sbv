@@ -1190,6 +1190,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rArrayMap    :: IORef ArrayMap
                     , rFArrayMap   :: IORef FArrayMap
                     , rUIMap       :: IORef UIMap
+                    , rUserFuncs   :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap       :: IORef CgMap
                     , rDefns       :: IORef [SMTDef]
                     , rSMTOptions  :: IORef [SMTOption]
@@ -1340,7 +1341,7 @@ newUninterpreted st nm t uiCode
                        case uiCode of
                           UINone        -> pure ()
                           UISMT (fs, s) -> modifyState st rDefns (SMTDef nm fs s :)
-                                             $ noInteractive [ "Defined functions (smtFunction/smtRecFunction):"
+                                             $ noInteractive [ "Defined functions (smtFunction):"
                                                              , "  Name: " ++ nm
                                                              , "  Type: " ++ show t
                                                              , ""
@@ -1764,6 +1765,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      tables    <- newIORef Map.empty
      arrays    <- newIORef IMap.empty
      fArrays   <- newIORef IMap.empty
+     userFuncs <- newIORef Set.empty
      uis       <- newIORef Map.empty
      cgs       <- newIORef Map.empty
      defns     <- newIORef []
@@ -1796,6 +1798,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rArrayMap    = arrays
                   , rFArrayMap   = fArrays
                   , rexprMap     = emap
+                  , rUserFuncs   = userFuncs
                   , rUIMap       = uis
                   , rCgMap       = cgs
                   , rDefns       = defns
@@ -1852,6 +1855,7 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    ds    <- do ds <- reverse <$> readIORef defns
                -- Topologically sort
                let mkNode n@(SMTDef nm deps _) = (n, getKey n, filter (/= nm) deps)
+
                    getKey (SMTDef nm _ _) = nm
                    extract (DG.AcyclicSCC b)  = b
                    extract (DG.CyclicSCC  xs)

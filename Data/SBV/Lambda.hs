@@ -31,19 +31,20 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
-import Data.IORef (readIORef)
+import Data.IORef (readIORef, newIORef)
 import Data.List
 import Data.Proxy
 
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Set as Set
 
 import qualified Data.Generics.Uniplate.Data as G
 
 -- | What kind of output to generate?
 data GenKind = GenLambda
-             | GenDefn   Bool String Kind  -- Bool is True if recursive and the resulting kind (note, not the arguments kinds, the result type)
+             | GenDefn   String Kind  -- kind is the resulting kind (note, not the arguments kinds, the result type)
              | GenAxiom
 
 -- | Create an SMTLib lambda, in the given state.
@@ -52,14 +53,22 @@ lambda inState f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
    -- in this case we ignore the firee vars
-   snd <$> convert st GenLambda (mkLambda st f)
+   snd <$> convert st Nothing GenLambda (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
-namedLambda :: Lambda Symbolic a => State -> Bool -> String -> Kind -> a -> IO ([String], String)
-namedLambda inState isRec nm fk f = do
-   ll  <- readIORef (rLambdaLevel inState)
-   st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
-   convert st (GenDefn isRec nm fk) (mkLambda st f)
+namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO ([String], String)
+namedLambda inState nm fk f = do
+   ll      <- readIORef (rLambdaLevel inState)
+   stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
+
+   -- if we're in a recursive loop, make sure we restore it
+   st <- do curDefs <- readIORef (rUserFuncs inState)
+            if nm `Set.member` curDefs
+               then do nr <- newIORef (Set.singleton nm)
+                       pure $ stEmpty {rUserFuncs = nr}
+               else pure $ stEmpty
+
+   convert st (Just nm) (GenDefn nm fk) (mkLambda st f)
 
 -- | Create a forall quantified axiom at the top. The list of strings is the free vars in it.
 axiom :: Axiom Symbolic a => State -> a -> IO ([String], String)
@@ -68,16 +77,16 @@ axiom inState f = do
    ll <- readIORef (rLambdaLevel inState)
    () <- case ll of
            0 -> pure ()
-           _ -> error "Data.SBV.mkAxiom: Not supported: mkAxiom calls that are not at the top-level."
+           _ -> error "Data.SBV.axiom: Not supported: axiom calls that are not at the top-level."
 
    st <- mkNewState (stCfg inState) $ Lambda 1
-   convert st GenAxiom (mkAxiom st f)
+   convert st Nothing GenAxiom (mkAxiom st f)
 
 -- | Convert to an appropriate SMTLib representation.
-convert :: MonadIO m => State -> GenKind -> SymbolicT m () -> m ([String], String)
-convert st knd comp = do
+convert :: MonadIO m => State -> Maybe String -> GenKind -> SymbolicT m () -> m ([String], String)
+convert st mbNm knd comp = do
    ((), res) <- runSymbolicInState st comp
-   pure $ toLambda knd (stCfg st) res
+   pure $ toLambda mbNm knd (stCfg st) res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -95,8 +104,8 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: GenKind -> SMTConfig -> Result -> ([String], String)
-toLambda knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
+toLambda :: Maybe String -> GenKind -> SMTConfig -> Result -> ([String], String)
+toLambda mbNm knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -154,8 +163,11 @@ toLambda knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
                ]
          | True
-         = (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq], genSMTLib knd params body)
-         where params = case is of
+         = (deps, genSMTLib isRecursive knd params body)
+         where deps        = nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq]
+               isRecursive = maybe False (`elem` deps) mbNm
+
+               params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"
                                                   , "   Saw: " ++ intercalate ", " [getUserName' n | (EX, n) <- inps]
@@ -176,10 +188,9 @@ toLambda knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                           | True        = "   "
 
                       extraTab = case knd of
-                                   GenLambda         -> ""
-                                   GenDefn False _ _ -> replicate (2 + length "define-fun")     ' '
-                                   GenDefn True  _ _ -> replicate (2 + length "define-fun-rec") ' '
-                                   GenAxiom          -> replicate (2 + length "assert")         ' '
+                                   GenLambda     -> ""
+                                   GenDefn   _ _ -> replicate (2 + length "define-fun")     ' '
+                                   GenAxiom      -> replicate (2 + length "assert")         ' '
 
                bindings :: [String]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
@@ -205,16 +216,16 @@ toLambda knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                        tableMap   = IM.empty
                        funcMap    = M.empty
 
-genSMTLib :: GenKind -> [String] -> String -> String
-genSMTLib k = case k of
-               GenLambda           -> mkLam
-               GenDefn isRec nm fk -> mkDef isRec nm (smtType fk)
-               GenAxiom            -> mkAxm
+genSMTLib :: Bool -> GenKind -> [String] -> String -> String
+genSMTLib isRec k = case k of
+                      GenLambda       -> mkLam
+                      GenDefn   nm fk -> mkDef nm (smtType fk)
+                      GenAxiom        -> mkAxm
   where mkLam [] body = body
         mkLam ps body = "(lambda (" ++ unwords ps ++ ")\n" ++ body ++ ")"
 
-        mkDef isRec nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                   ++ body ++ ")"
-        mkDef isRec nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") " ++ fk ++ "\n" ++ body ++ ")"
+        mkDef nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                   ++ body ++ ")"
+        mkDef nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") " ++ fk ++ "\n" ++ body ++ ")"
 
         definer False = "define-fun"
         definer True  = "define-fun-rec"

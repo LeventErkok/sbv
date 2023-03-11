@@ -42,8 +42,7 @@ add1Example = sat $ do
 -- directly in SMTLib. Note how the function itself takes a "recursive version"
 -- of itself, and all recursive calls are made with this name.
 sumToN :: SInteger -> SInteger
-sumToN = smtRecFunction "sumToN" f
-  where f sumToN_ x = ite (x .<= 0) 0 (x + sumToN_ (x - 1))
+sumToN = smtFunction "sumToN" $ \x -> ite (x .<= 0) 0 (x + sumToN (x - 1))
 
 -- | Prove that sumToN works as expected.
 --
@@ -53,12 +52,11 @@ sumToN = smtRecFunction "sumToN" f
 -- Satisfiable. Model:
 --   s0 = 15 :: Integer
 sumToNExample :: IO SatResult
-sumToNExample = sat $ (.== sumToN 5)
+sumToNExample = sat $ \a r -> a .== 5 .&& r .== sumToN a
 
 -- | Coding list-length recursively. Again, we map directly to an SMTLib function.
 len :: SList Integer -> SInteger
-len = smtRecFunction "list_length" f
-  where f len_ xs = ite (L.null xs) 0 (1 + len_ (L.tail xs))
+len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 
 -- | Calculate the length of a list, using recursive functions.
 --
@@ -68,14 +66,14 @@ len = smtRecFunction "list_length" f
 -- Satisfiable. Model:
 --   s0 = 3 :: Integer
 lenExample :: IO SatResult
-lenExample = sat $ (.== len [1,2,3::Integer])
+lenExample = sat $ \a r -> a .== [1,2,3::Integer] .&& r .== len a
 
 -- | Mutually recursive definitions. The trick is to define the functions together, and pull the results out individually.
 isEvenOdd :: SInteger -> STuple Bool Bool
-isEvenOdd = smtRecFunction "isEvenOdd" f
-  where f isEvenOdd_ x = ite (x .<  0) (isEvenOdd_ (-x))
-                       $ ite (x .== 0) (tuple (sTrue, sFalse))
-                                       (swap (isEvenOdd_ (x - 1)))
+isEvenOdd = smtFunction "isEvenOdd" $ \x ->
+                  ite (x .<  0) (isEvenOdd (-x))
+                $ ite (x .== 0) (tuple (sTrue, sFalse))
+                                (swap (isEvenOdd (x - 1)))
 
 -- | Extract the isEven function for easier use.
 isEven :: SInteger -> SBool
@@ -101,4 +99,4 @@ isOdd x = isEvenOdd x ^._2
 -- alas, if you try this you'll see that z3 goes on forever. Such proofs require induction
 -- and SMT-solvers do not do induction out-of-the box, at least not yet!
 mutRecExample :: IO SatResult
-mutRecExample = sat $ (.== isEven 20)
+mutRecExample = sat $ \a r -> a .== 20 .&& r .== isEven a

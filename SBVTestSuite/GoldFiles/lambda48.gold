@@ -13,9 +13,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3)))
+[GOOD] (define-fun s2 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3)))
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () Int)
+[GOOD] (declare-fun s0 () (Seq Int))
+[GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -23,38 +24,50 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ;; -- user given: list_length [Recursive]
 [GOOD] (define-fun-rec list_length ((l1_s0 (Seq Int))) Int
-                          (let ((l1_s2 0))
-                          (let ((l1_s4 1))
-                          (let ((l1_s1 (seq.len l1_s0)))
-                          (let ((l1_s3 (= l1_s1 l1_s2)))
-                          (let ((l1_s5 (- l1_s1 l1_s4)))
-                          (let ((l1_s6 (seq.extract l1_s0 l1_s4 l1_s5)))
-                          (let ((l1_s7 (list_length l1_s6)))
-                          (let ((l1_s8 (+ l1_s4 l1_s7)))
-                          (let ((l1_s9 (ite l1_s3 l1_s2 l1_s8)))
-                          l1_s9))))))))))
+                      (let ((l1_s2 0))
+                      (let ((l1_s4 1))
+                      (let ((l1_s1 (seq.len l1_s0)))
+                      (let ((l1_s3 (= l1_s1 l1_s2)))
+                      (let ((l1_s5 (- l1_s1 l1_s4)))
+                      (let ((l1_s6 (seq.extract l1_s0 l1_s4 l1_s5)))
+                      (let ((l1_s7 (list_length l1_s6)))
+                      (let ((l1_s8 (+ l1_s4 l1_s7)))
+                      (let ((l1_s9 (ite l1_s3 l1_s2 l1_s8)))
+                      l1_s9))))))))))
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () Int (list_length s1))
 [GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () Int (list_length s0))
+[GOOD] (define-fun s5 () Bool (= s1 s4))
+[GOOD] (define-fun s6 () Bool (and s3 s5))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert s3)
-[GOOD] (declare-fun s4 () Int)
-[GOOD] (define-fun s5 () Bool (= s2 s4))
-[GOOD] (assert s5)
+[GOOD] (assert s6)
+[GOOD] (declare-fun s7 () (Seq Int))
+[GOOD] (declare-fun s8 () Int)
+[GOOD] (define-fun s9 () Bool (= s2 s7))
+[GOOD] (define-fun s10 () Int (list_length s7))
+[GOOD] (define-fun s11 () Bool (= s8 s10))
+[GOOD] (define-fun s12 () Bool (and s9 s11))
+[GOOD] (assert s12)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 3))
-[SEND] (get-value (s4))
-[RECV] ((s4 3))
+[RECV] ((s0 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))))
+[SEND] (get-value (s1))
+[RECV] ((s1 3))
+[SEND] (get-value (s7))
+[RECV] ((s7 (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3))))
+[SEND] (get-value (s8))
+[RECV] ((s8 3))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-  s0 = 3 :: Integer
-  s4 = 3 :: Integer
+  s0 = [1,2,3] :: [Integer]
+  s1 =       3 :: Integer
+  s7 = [1,2,3] :: [Integer]
+  s8 =       3 :: Integer

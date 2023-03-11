@@ -111,21 +111,33 @@ tests =
       , goldenCapturedIO "lambda37" $ record2 $ \st -> axiom  st sNot
       , goldenCapturedIO "lambda38" $ record2 $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
 
-      , goldenCapturedIO "lambda40" $ record2 $ \st -> namedLambda st False "lambda40" KUnbounded (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record2 $ \st -> namedLambda st False "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record2 $ \st -> namedLambda st False "lambda42" KUnbounded (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record2 $ \st -> namedLambda st "lambda40" KUnbounded (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record2 $ \st -> namedLambda st "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record2 $ \st -> namedLambda st "lambda42" KUnbounded (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record2 $ \st -> namedLambda st True  "lambda43" KUnbounded (0           :: SInteger)
-      , goldenCapturedIO "lambda44" $ record2 $ \st -> namedLambda st True  "lambda44" KUnbounded (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda45" $ record2 $ \st -> namedLambda st True  "lambda45" KUnbounded (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda43" $ record2 $ \st -> namedLambda st "lambda43" KUnbounded (0           :: SWord32)
+      , goldenCapturedIO "lambda44" $ record2 $ \st -> namedLambda st "lambda44" KUnbounded (\x   -> x+1 :: SWord32)
+      , goldenCapturedIO "lambda45" $ record2 $ \st -> namedLambda st "lambda45" KUnbounded (\x y -> x+y :: SWord32)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
-      , goldenCapturedIO "lambda47" $ runSat (sumToN 5 .==)
-      , goldenCapturedIO "lambda48" $ runSat (len [1,2,3::Integer] .==)
-      , goldenCapturedIO "lambda49" $ runSat (isEven 20 .==)
-      , goldenCapturedIO "lambda50" $ runSat (isEven 21 .==)
-      , goldenCapturedIO "lambda51" $ runSat (isOdd  20 .==)
-      , goldenCapturedIO "lambda52" $ runSat (isOdd  21 .==)
+
+      , goldenCapturedIO "lambda47"   $ runSat2 (\a r -> a .== 5 .&& sumToN a .== r)
+      , goldenCapturedIO "lambda47_c" $ runSat  (sumToN 5 .==)
+
+      , goldenCapturedIO "lambda48"   $ runSat2 (\a r -> a .== [1,2,3::Integer] .&& len a .== r)
+      , goldenCapturedIO "lambda48_c" $ runSat  (len [1,2,3::Integer] .==)
+
+      , goldenCapturedIO "lambda49"   $ runSat2 (\a r -> a .== 20 .&& isEven a .== r)
+      , goldenCapturedIO "lambda49_c" $ runSat  (isEven 20 .==)
+
+      , goldenCapturedIO "lambda50"   $ runSat2 (\a r -> a .== 21 .&& isEven a .== r)
+      , goldenCapturedIO "lambda50_c" $ runSat  (isEven 21 .==)
+
+      , goldenCapturedIO "lambda51"   $ runSat2 (\a r -> a .== 20 .&& isOdd  a .== r)
+      , goldenCapturedIO "lambda51_c" $ runSat  (isOdd  20 .==)
+
+      , goldenCapturedIO "lambda52"   $ runSat2 (\a r -> a .== 21 .&& isOdd  a .== r)
+      , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
       -- Free variables are OK!
       , goldenCapturedIO "lambda53" $ runSat (\x -> x .== smtFunction "foo" (+(x::SInteger)) x)
@@ -154,6 +166,19 @@ tests =
                           constrain $ f arg
                           query $ do arg2 <- freshVar_
                                      constrain $ f arg2
+                                     cs <- checkSat
+                                     case cs of
+                                       Sat -> getModel
+                                       _   -> error $ "Unexpected output: " P.++ show cs
+
+        runSat2 f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                          appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
+           where run = do arg1 <- free_
+                          arg2 <- free_
+                          constrain $ f arg1 arg2
+                          query $ do arg3 <- freshVar_
+                                     arg4 <- freshVar_
+                                     constrain $ f arg3 arg4
                                      cs <- checkSat
                                      case cs of
                                        Sat -> getModel

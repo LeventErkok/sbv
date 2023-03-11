@@ -10,9 +10,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () Int 5)
+[GOOD] (define-fun s2 () Int 5)
 [GOOD] ; --- skolem constants ---
 [GOOD] (declare-fun s0 () Int)
+[GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -20,36 +21,48 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ;; -- user given: sumToN [Recursive]
 [GOOD] (define-fun-rec sumToN ((l1_s0 Int)) Int
-                          (let ((l1_s1 0))
-                          (let ((l1_s3 1))
-                          (let ((l1_s2 (<= l1_s0 l1_s1)))
-                          (let ((l1_s4 (- l1_s0 l1_s3)))
-                          (let ((l1_s5 (sumToN l1_s4)))
-                          (let ((l1_s6 (+ l1_s0 l1_s5)))
-                          (let ((l1_s7 (ite l1_s2 l1_s1 l1_s6)))
-                          l1_s7))))))))
+                      (let ((l1_s1 0))
+                      (let ((l1_s3 1))
+                      (let ((l1_s2 (<= l1_s0 l1_s1)))
+                      (let ((l1_s4 (- l1_s0 l1_s3)))
+                      (let ((l1_s5 (sumToN l1_s4)))
+                      (let ((l1_s6 (+ l1_s0 l1_s5)))
+                      (let ((l1_s7 (ite l1_s2 l1_s1 l1_s6)))
+                      l1_s7))))))))
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () Int (sumToN s1))
 [GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () Int (sumToN s0))
+[GOOD] (define-fun s5 () Bool (= s1 s4))
+[GOOD] (define-fun s6 () Bool (and s3 s5))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert s3)
-[GOOD] (declare-fun s4 () Int)
-[GOOD] (define-fun s5 () Bool (= s2 s4))
-[GOOD] (assert s5)
+[GOOD] (assert s6)
+[GOOD] (declare-fun s7 () Int)
+[GOOD] (declare-fun s8 () Int)
+[GOOD] (define-fun s9 () Bool (= s2 s7))
+[GOOD] (define-fun s10 () Int (sumToN s7))
+[GOOD] (define-fun s11 () Bool (= s8 s10))
+[GOOD] (define-fun s12 () Bool (and s9 s11))
+[GOOD] (assert s12)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 15))
-[SEND] (get-value (s4))
-[RECV] ((s4 15))
+[RECV] ((s0 5))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s7))
+[RECV] ((s7 5))
+[SEND] (get-value (s8))
+[RECV] ((s8 15))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-  s0 = 15 :: Integer
-  s4 = 15 :: Integer
+  s0 =  5 :: Integer
+  s1 = 15 :: Integer
+  s7 =  5 :: Integer
+  s8 = 15 :: Integer

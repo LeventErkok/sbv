@@ -1,4 +1,4 @@
-(define-fun-rec lambda43 () (Int)
-                (let ((l1_s0 0))
-                   l1_s0))
+(define-fun lambda43 () (Int)
+            (let ((l1_s0 #x00000000))
+               l1_s0))
 Frees: []

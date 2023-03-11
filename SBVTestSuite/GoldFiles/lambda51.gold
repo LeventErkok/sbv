@@ -16,9 +16,10 @@
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () Int 20)
+[GOOD] (define-fun s2 () Int 20)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () Bool)
+[GOOD] (declare-fun s0 () Int)
+[GOOD] (declare-fun s1 () Bool)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -26,44 +27,57 @@
 [GOOD] ; --- user given axioms ---
 [GOOD] ;; -- user given: isEvenOdd [Recursive]
 [GOOD] (define-fun-rec isEvenOdd ((l1_s0 Int)) (SBVTuple2 Bool Bool)
-                          (let ((l1_s1 0))
-                          (let ((l1_s6 (mkSBVTuple2 true false)))
-                          (let ((l1_s7 1))
-                          (let ((l1_s2 (< l1_s0 l1_s1)))
-                          (let ((l1_s3 (- l1_s0)))
-                          (let ((l1_s4 (isEvenOdd l1_s3)))
-                          (let ((l1_s5 (= l1_s0 l1_s1)))
-                          (let ((l1_s8 (- l1_s0 l1_s7)))
-                          (let ((l1_s9 (isEvenOdd l1_s8)))
-                          (let ((l1_s10 (proj_2_SBVTuple2 l1_s9)))
-                          (let ((l1_s11 (proj_1_SBVTuple2 l1_s9)))
-                          (let ((l1_s12 ((as mkSBVTuple2 (SBVTuple2 Bool Bool)) l1_s10 l1_s11)))
-                          (let ((l1_s13 (ite l1_s5 l1_s6 l1_s12)))
-                          (let ((l1_s14 (ite l1_s2 l1_s4 l1_s13)))
-                          l1_s14)))))))))))))))
+                      (let ((l1_s1 0))
+                      (let ((l1_s6 (mkSBVTuple2 true false)))
+                      (let ((l1_s7 1))
+                      (let ((l1_s2 (< l1_s0 l1_s1)))
+                      (let ((l1_s3 (- l1_s0)))
+                      (let ((l1_s4 (isEvenOdd l1_s3)))
+                      (let ((l1_s5 (= l1_s0 l1_s1)))
+                      (let ((l1_s8 (- l1_s0 l1_s7)))
+                      (let ((l1_s9 (isEvenOdd l1_s8)))
+                      (let ((l1_s10 (proj_2_SBVTuple2 l1_s9)))
+                      (let ((l1_s11 (proj_1_SBVTuple2 l1_s9)))
+                      (let ((l1_s12 ((as mkSBVTuple2 (SBVTuple2 Bool Bool)) l1_s10 l1_s11)))
+                      (let ((l1_s13 (ite l1_s5 l1_s6 l1_s12)))
+                      (let ((l1_s14 (ite l1_s2 l1_s4 l1_s13)))
+                      l1_s14)))))))))))))))
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () (SBVTuple2 Bool Bool) (isEvenOdd s1))
-[GOOD] (define-fun s3 () Bool (proj_2_SBVTuple2 s2))
-[GOOD] (define-fun s4 () Bool (= s0 s3))
+[GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () (SBVTuple2 Bool Bool) (isEvenOdd s0))
+[GOOD] (define-fun s5 () Bool (proj_2_SBVTuple2 s4))
+[GOOD] (define-fun s6 () Bool (= s1 s5))
+[GOOD] (define-fun s7 () Bool (and s3 s6))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert s4)
-[GOOD] (declare-fun s5 () Bool)
-[GOOD] (define-fun s6 () Bool (= s3 s5))
-[GOOD] (assert s6)
+[GOOD] (assert s7)
+[GOOD] (declare-fun s8 () Int)
+[GOOD] (declare-fun s9 () Bool)
+[GOOD] (define-fun s10 () Bool (= s2 s8))
+[GOOD] (define-fun s11 () (SBVTuple2 Bool Bool) (isEvenOdd s8))
+[GOOD] (define-fun s12 () Bool (proj_2_SBVTuple2 s11))
+[GOOD] (define-fun s13 () Bool (= s9 s12))
+[GOOD] (define-fun s14 () Bool (and s10 s13))
+[GOOD] (assert s14)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 false))
-[SEND] (get-value (s5))
-[RECV] ((s5 false))
+[RECV] ((s0 20))
+[SEND] (get-value (s1))
+[RECV] ((s1 false))
+[SEND] (get-value (s8))
+[RECV] ((s8 20))
+[SEND] (get-value (s9))
+[RECV] ((s9 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-  s0 = False :: Bool
-  s5 = False :: Bool
+  s0 =    20 :: Integer
+  s1 = False :: Bool
+  s8 =    20 :: Integer
+  s9 = False :: Bool
