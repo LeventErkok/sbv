@@ -22,12 +22,12 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s5 () (Seq Int) (seq.foldl (lambda ((l1_s0 (Seq Int)) (l1_s1 (Seq Int)))
-          (let ((l1_s2 (seq.++ l1_s0 l1_s1)))
-          l1_s2)) s4 s0))
+         (let ((l1_s2 (seq.++ l1_s0 l1_s1)))
+         l1_s2)) s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---

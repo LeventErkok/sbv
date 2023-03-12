@@ -1,4 +1,4 @@
-(lambda ((l1_s0 Int))
-   (let ((l1_s1 1))
-   (let ((l1_s2 (+ l1_s0 l1_s1)))
-   l1_s2)))
+(lambda ((l1_s0 (_ BitVec 8)))
+  (let ((l1_s1 #x01))
+  (let ((l1_s2 (bvadd l1_s0 l1_s1)))
+  l1_s2)))

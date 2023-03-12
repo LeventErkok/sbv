@@ -27,13 +27,13 @@
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
                             (seq.++ (sbv.reverse_0 (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s5 () (Seq Int) (sbv.reverse_0 s0))
 [GOOD] (define-fun s6 () Int (seq.foldl (lambda ((l1_s0 Int) (l1_s1 Int))
-          (let ((l1_s2 (* l1_s0 l1_s1)))
-          l1_s2)) s4 s5))
+         (let ((l1_s2 (* l1_s0 l1_s1)))
+         l1_s2)) s4 s5))
 [GOOD] (define-fun s7 () Bool (= s1 s6))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---

@@ -23,13 +23,13 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s6 () Int (seq.foldli (lambda ((l1_s0 Int) (l1_s1 Int) (l1_s2 Int))
-          (let ((l1_s3 (+ l1_s0 l1_s1)))
-          (let ((l1_s4 (+ l1_s2 l1_s3)))
-          l1_s4))) s4 s5 s0))
+         (let ((l1_s3 (+ l1_s0 l1_s1)))
+         (let ((l1_s4 (+ l1_s2 l1_s3)))
+         l1_s4))) s4 s5 s0))
 [GOOD] (define-fun s7 () Bool (= s1 s6))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
