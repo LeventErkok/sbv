@@ -133,7 +133,7 @@ instance MonadIO m => SolverContext (QueryT m) where
       case ax of
         SMTLam{}        -> bad "anonymous function"
         SMTDef{}        -> bad "defined function"
-        SMTAxm _ deps s -> do send True $ "; -- user given axiom: " ++ nm ++ if null deps then "" else " [Refers to: " ++ intercalate "," deps ++ "]"
+        SMTAxm _ deps s -> do send True $ "; -- user given axiom: " ++ nm ++ if null deps then "" else " [Refers to: " ++ intercalate ", " deps ++ "]"
                               send True $ intercalate "\n" [s]
 
    setOption o

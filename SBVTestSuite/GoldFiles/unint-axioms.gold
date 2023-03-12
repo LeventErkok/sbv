@@ -21,17 +21,17 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun a (Bitstring) Bool)
 [GOOD] (declare-fun e (Bitstring Bitstring) Bitstring)
-[GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given: axE [Refers to: a e]
+[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; -- user given axiom: axE [Refers to: a, e]
 [GOOD] (assert (forall ((l1_s0 Bitstring) (l1_s1 Bitstring))
-                  (let ((l1_s2 (a l1_s1)))
-                  (let ((l1_s3 (a l1_s0)))
-                  (let ((l1_s4 (and l1_s2 l1_s3)))
-                  (let ((l1_s5 (not l1_s4)))
-                  (let ((l1_s6 (e l1_s1 l1_s0)))
-                  (let ((l1_s7 (a l1_s6)))
-                  (let ((l1_s8 (or l1_s5 l1_s7)))
-                  l1_s8)))))))))
+                 (let ((l1_s2 (a l1_s1)))
+                 (let ((l1_s3 (a l1_s0)))
+                 (let ((l1_s4 (and l1_s2 l1_s3)))
+                 (let ((l1_s5 (not l1_s4)))
+                 (let ((l1_s6 (e l1_s1 l1_s0)))
+                 (let ((l1_s7 (a l1_s6)))
+                 (let ((l1_s8 (or l1_s5 l1_s7)))
+                 l1_s8)))))))))
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Bool (a s0))
 [GOOD] (define-fun s3 () Bool (a s1))

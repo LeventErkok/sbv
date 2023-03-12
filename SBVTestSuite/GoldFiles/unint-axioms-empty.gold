@@ -22,16 +22,16 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun thingCompare (Thing Thing) Bool)
 [GOOD] (declare-fun thingMerge (Thing Thing) Thing)
-[GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given: thingMerge produces a new, distinct thing [Refers to: thingMerge]
+[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; -- user given axiom: thingMerge produces a new, distinct thing [Refers to: thingMerge]
 [GOOD] (assert (forall ((l1_s0 Thing) (l1_s1 Thing))
-                  (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
-                  (let ((l1_s3 (distinct l1_s0 l1_s2)))
-                  l1_s3))))
-[GOOD] ;; -- user given: thingCompare is reflexive [Refers to: thingCompare]
+                 (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
+                 (let ((l1_s3 (distinct l1_s0 l1_s2)))
+                 l1_s3))))
+[GOOD] ; -- user given axiom: thingCompare is reflexive [Refers to: thingCompare]
 [GOOD] (assert (forall ((l1_s0 Thing))
-                  (let ((l1_s1 (thingCompare l1_s0 l1_s0)))
-                  l1_s1)))
+                 (let ((l1_s1 (thingCompare l1_s0 l1_s0)))
+                 l1_s1)))
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () Thing (thingMerge s0 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))

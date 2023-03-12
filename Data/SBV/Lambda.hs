@@ -109,7 +109,7 @@ axiomGen trans inState f = do
 -- | Create a named SMTLib axiom, in the given state.
 axiom :: Axiom Symbolic a => State -> String -> a -> IO SMTDef
 axiom inState nm = axiomGen mkAx inState
-   where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ ")"
+   where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
 
 -- | Create a named SMTLib axiom, in the given state, string version.
 axiomStr :: Axiom Symbolic a => State -> String -> a -> IO String
