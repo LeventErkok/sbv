@@ -17,7 +17,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () (_ FloatingPoint  8 24) (fp.fma s1 s0 s0 s0))
 [GOOD] (define-fun s3 () Bool (fp.eq s0 s2))

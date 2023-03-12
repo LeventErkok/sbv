@@ -56,7 +56,7 @@
 [GOOD] (declare-fun q3 ((_ FloatingPoint  8 24) Bool Int) (_ FloatingPoint  8 24))
 [GOOD] (declare-fun q4 (String String) (_ FloatingPoint  8 24))
 [GOOD] (declare-fun q5 ((Seq Int) (Seq (_ FloatingPoint  8 24))) Int)
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Int (q1 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))

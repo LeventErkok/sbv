@@ -24,7 +24,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s4 () (Seq Int) (seq.++ s3 s1))
 [GOOD] (define-fun s5 () (Seq Int) (seq.++ s0 s4))

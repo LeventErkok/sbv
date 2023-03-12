@@ -34,7 +34,7 @@
 [GOOD] (declare-fun array_4 () (Array Int Int))
 [GOOD] (define-fun array_4_initializer_0 () Bool (= array_4 (store array_3 s9 s16)))
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Bool (< s0 s1))
 [GOOD] (define-fun s4 () Bool (= s0 s3))

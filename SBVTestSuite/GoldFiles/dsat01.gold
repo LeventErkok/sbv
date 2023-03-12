@@ -20,7 +20,7 @@
 [ISSUE] ; --- skolemized tables ---
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
-[ISSUE] ; --- user given axioms ---
+[ISSUE] ; --- user given axioms and definitions ---
 [ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s4 () Bool (> s0 s3))
 [ISSUE] (define-fun s6 () Bool (<= s0 s5))

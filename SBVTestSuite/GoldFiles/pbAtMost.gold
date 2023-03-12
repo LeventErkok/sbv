@@ -28,7 +28,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s10 () Bool ((_ at-most 8) s0 s1 s2 s3 s4 s5 s6 s7 s8 s9))
 [GOOD] (define-fun s13 () (_ BitVec 32) (ite s0 s11 s12))

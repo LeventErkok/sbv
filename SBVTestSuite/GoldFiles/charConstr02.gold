@@ -32,7 +32,7 @@
                                  (= 1 (str.len (proj_3_SBVTuple3 result)))
                             )
                        )))
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () (SBVTuple3 String String String) (cf3 s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))

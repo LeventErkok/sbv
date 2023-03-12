@@ -26,7 +26,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int Int))) s0))
 [GOOD] (define-fun s3 () Bool (ite s2 true false))

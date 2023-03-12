@@ -27,7 +27,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () (SBVTuple2 Int (SBVTuple2 String String)) (proj_1_SBVTuple2 s0))
 [GOOD] (define-fun s2 () Int (proj_1_SBVTuple2 s1))

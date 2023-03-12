@@ -18,7 +18,7 @@
 [ISSUE] ; --- skolemized tables ---
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
-[ISSUE] ; --- user given axioms ---
+[ISSUE] ; --- user given axioms and definitions ---
 [ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s3 () Bool (bvsgt s0 s2))
 [ISSUE] (define-fun s4 () Bool (bvsgt s1 s2))

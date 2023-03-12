@@ -17,7 +17,7 @@
 [ISSUE] ; --- skolemized tables ---
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
-[ISSUE] ; --- user given axioms ---
+[ISSUE] ; --- user given axioms and definitions ---
 [ISSUE] ; --- preQuantifier assignments ---
 [ISSUE] (define-fun s2 () Bool (bvult s0 s1))
 [ISSUE] ; --- arrayDelayeds ---

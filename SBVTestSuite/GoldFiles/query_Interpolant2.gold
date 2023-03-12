@@ -21,7 +21,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun f (Int) Int)
 [GOOD] (declare-fun g (Int) Int)
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s4 () Int (f s0))
 [GOOD] (define-fun s5 () Bool (= s2 s4))

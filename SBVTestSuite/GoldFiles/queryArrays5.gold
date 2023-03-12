@@ -18,7 +18,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] (declare-fun array_0 () (Array (_ BitVec 8) (_ BitVec 8)))
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---

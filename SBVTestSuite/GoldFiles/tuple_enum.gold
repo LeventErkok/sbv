@@ -34,7 +34,7 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s2 () Bool (not s1))
 [GOOD] (define-fun s4 () (SBVTuple2 E (Seq Bool)) (seq.nth s0 s3))

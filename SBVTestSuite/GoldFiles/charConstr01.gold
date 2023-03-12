@@ -22,7 +22,7 @@
                        (let ((result (cf a1)))
                             (= 1 (str.len result))
                        )))
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () String (cf s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
