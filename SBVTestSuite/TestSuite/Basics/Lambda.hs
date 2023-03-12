@@ -177,7 +177,7 @@ tests =
                                      if cs /= what
                                         then error $ "Unexpected output: " P.++ show cs
                                         else if cs == Sat
-                                                then getModel >>= pure . showModel z3
+                                                then showModel z3 <$> getModel
                                                 else pure "All good!"
 
         runSat2 f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
