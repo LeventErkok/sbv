@@ -1,2 +1,3 @@
-(assert true)
-Frees: []
+; user given axiom for: all_true
+(assert (forall ()
+          true))

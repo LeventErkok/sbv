@@ -1,4 +1,4 @@
+; user given axiom for: negated
 (assert (forall ((l1_s0 Bool))
-           (let ((l1_s1 (not l1_s0)))
-           l1_s1)))
-Frees: []
+          (let ((l1_s1 (not l1_s0)))
+          l1_s1)))
