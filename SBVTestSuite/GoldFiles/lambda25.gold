@@ -33,7 +33,7 @@
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
                             (seq.++ (sbv.reverse_0 (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
-[GOOD] ; --- user given axioms ---
+[GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
@@ -45,18 +45,18 @@
 [GOOD] (define-fun s14 () (Seq Int) (ite s12 s0 s13))
 [GOOD] (define-fun s15 () (Seq Int) (ite s9 s10 s14))
 [GOOD] (define-fun s16 () (Seq (SBVTuple2 Int Int)) (seq.mapi (lambda ((l1_s0 Int) (l1_s1 Int))
-          (let ((l1_s2 ((as mkSBVTuple2 (SBVTuple2 Int Int)) l1_s0 l1_s1)))
-          l1_s2)) s7 s15))
+         (let ((l1_s2 ((as mkSBVTuple2 (SBVTuple2 Int Int)) l1_s0 l1_s1)))
+         l1_s2)) s7 s15))
 [GOOD] (define-fun s17 () (Seq Int) (seq.map (lambda ((l1_s0 (SBVTuple2 Int Int)))
-          (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
-          (let ((l1_s2 (proj_1_SBVTuple2 l1_s0)))
-          (let ((l1_s3 (seq.nth s1 l1_s2)))
-          (let ((l1_s4 (+ l1_s1 l1_s3)))
-          l1_s4))))) s16))
+         (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
+         (let ((l1_s2 (proj_1_SBVTuple2 l1_s0)))
+         (let ((l1_s3 (seq.nth s1 l1_s2)))
+         (let ((l1_s4 (+ l1_s1 l1_s3)))
+         l1_s4))))) s16))
 [GOOD] (define-fun s18 () (Seq Int) (sbv.reverse_0 s17))
 [GOOD] (define-fun s19 () Int (seq.foldl (lambda ((l1_s0 Int) (l1_s1 Int))
-          (let ((l1_s2 (+ l1_s0 l1_s1)))
-          l1_s2)) s7 s18))
+         (let ((l1_s2 (+ l1_s0 l1_s1)))
+         l1_s2)) s7 s18))
 [GOOD] (define-fun s20 () Bool (= s2 s19))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
