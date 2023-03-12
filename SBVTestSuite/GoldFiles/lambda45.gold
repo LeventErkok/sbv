@@ -1,4 +1,4 @@
-(define-fun lambda45 ((l1_s0 (_ BitVec 32)) (l1_s1 (_ BitVec 32))) Int
-               (let ((l1_s2 (bvadd l1_s0 l1_s1)))
-               l1_s2))
-Frees: []
+; -- user given definition: lambda45
+(define-fun lambda45 ((l1_s0 (_ BitVec 32)) (l1_s1 (_ BitVec 32)))(_ BitVec 32)
+  (let ((l1_s2 (bvadd l1_s0 l1_s1)))
+  l1_s2))
