@@ -16,18 +16,18 @@
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms ---
-[GOOD] ;; -- user given: bar
-[GOOD] (define-fun bar ((l1_s0 Int)) Int
-                      (let ((l1_s1 1))
-                      (let ((l1_s2 (+ l1_s0 l1_s1)))
-                      l1_s2)))
-[GOOD] ;; -- user given: foo [Refers to: bar]
-[GOOD] (define-fun foo ((l1_s0 Int)) Int
-                      (let ((l1_s2 1))
-                      (let ((l1_s1 (bar l1_s0)))
-                      (let ((l1_s3 (+ l1_s1 l1_s2)))
-                      l1_s3))))
+[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; -- user given definition: bar
+[GOOD] (define-fun bar ((l1_s0 Int))Int
+         (let ((l1_s1 1))
+         (let ((l1_s2 (+ l1_s0 l1_s1)))
+         l1_s2)))
+[GOOD] ; -- user given definition: foo [Refers to: bar]
+[GOOD] (define-fun foo ((l1_s0 Int))Int
+         (let ((l1_s2 1))
+         (let ((l1_s1 (bar l1_s0)))
+         (let ((l1_s3 (+ l1_s1 l1_s2)))
+         l1_s3))))
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () Int (foo s0))
 [GOOD] (define-fun s2 () Int (bar s0))

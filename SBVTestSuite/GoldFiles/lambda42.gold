@@ -1,4 +1,4 @@
-(define-fun lambda42 ((l1_s0 Int) (l1_s1 Int)) Int
-               (let ((l1_s2 (+ l1_s0 l1_s1)))
-               l1_s2))
-Frees: []
+; -- user given definition: lambda42
+(define-fun lambda42 ((l1_s0 Int) (l1_s1 Int))Int
+  (let ((l1_s2 (+ l1_s0 l1_s1)))
+  l1_s2))
