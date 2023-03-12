@@ -61,7 +61,7 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
-import Data.Maybe (isNothing, isJust)
+import Data.Maybe (isNothing, isJust, mapMaybe)
 
 import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 
@@ -79,7 +79,8 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , RCSet(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), svToSV, symbolicEnv, SymbolicT
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), smtDefName, svToSV
+                              , symbolicEnv, SymbolicT
                               , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..), VarContext(..)
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
@@ -119,12 +120,21 @@ instance MonadIO m => SolverContext (QueryT m) where
    softConstrain          = addQueryConstraint True  []
    namedConstraint nm     = addQueryConstraint False [(":named", nm)]
    constrainWithAttribute = addQueryConstraint False
-   addAxiom nm f          = do st <- queryState
-                               (_frees, ax) <- liftIO $ axiom st f
-                               send True $ "; -- user given axiom: " ++ nm
-                               send True $ intercalate "\n" [ax]
-
    contextState           = queryState
+
+   addAxiom nm f          = do
+      st <- queryState
+      ax <- liftIO $ axiom st nm f
+
+      let bad what = error $ unlines [ ""
+                                     , "*** Data.SBV.Control.addAxiom: impossible happened."
+                                     , "*** Got a " ++ what ++ " when expecing an axiom for: " ++ nm
+                                     ]
+      case ax of
+        SMTLam{}        -> bad "anonymous function"
+        SMTDef{}        -> bad "defined function"
+        SMTAxm _ deps s -> do send True $ "; -- user given axiom: " ++ nm ++ if null deps then "" else " [Refers to: " ++ intercalate "," deps ++ "]"
+                              send True $ intercalate "\n" [s]
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -1103,8 +1113,7 @@ getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
-                          let get (SMTDef nm _ _) = nm
-                          pure $ map get allDefs
+                          pure $ mapMaybe smtDefName allDefs
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs

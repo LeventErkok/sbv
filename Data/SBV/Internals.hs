@@ -61,7 +61,7 @@ module Data.SBV.Internals (
   , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
 
   -- * lambdas and axioms
-  , lambda, axiom, namedLambda, Lambda(..), Axiom(..)
+  , lambda, lambdaStr, namedLambda, namedLambdaStr, axiom, axiomStr, Lambda(..), Axiom(..)
   ) where
 
 import Control.Monad.IO.Class (MonadIO)

@@ -15,11 +15,11 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc) where
+module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition, nub, sort)
-import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
+import Data.Maybe (listToMaybe, fromMaybe, mapMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map.Strict      as M
@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..))
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..), smtDefName)
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -38,6 +38,8 @@ import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
 import qualified Data.Generics.Uniplate.Data as G
 
 import Data.Either(lefts)
+
+import qualified Data.Graph as DG
 
 tbd :: String -> a
 tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
@@ -118,11 +120,10 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            = let pretty n = case userName n of
                               Nothing -> show n
                               Just x  -> show n ++ " (" ++ x ++ ")"
-                 getN (SMTDef n _ _) = n
              in error $ unlines [ ""
                                 , "*** SBV cannot currently handle function definitions and axioms in the presence of quantified variables."
                                 , "***"
-                                , "***    Found declaration: " ++ unwords (map getN defs)
+                                , "***    Found declaration: " ++ unwords (mapMaybe smtDefName defs)
                                 , "***    Quantified args  : " ++ unwords (map pretty foralls)
                                 , "***"
                                 , "*** If you use smtFunction/addAxiom, you cannot have explicit quantifiers."
@@ -223,8 +224,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              ++ concatMap declUI uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
              ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
-             ++ [ "; --- user given axioms ---" ]
-             ++ map declUserDef defs
+             ++ [ "; --- user given axioms and definitions ---" ]
+             ++ declUserFuns defs
              ++ [ "; --- preQuantifier assignments ---" ]
              ++ concatMap (declDef cfg skolemMap tableMap funcMap) preQuantifierAssigns
              ++ [ "; --- arrayDelayeds ---" ]
@@ -610,15 +611,86 @@ declConst cfg (s, c)
 declUI :: (String, SBVType) -> [String]
 declUI (i, t) = declareName i t Nothing
 
-declUserDef :: SMTDef -> String
-declUserDef (SMTDef nm fsAll s) = (";; -- user given: " ++ nm ++ recursive ++ frees ++ "\n") ++ s
-  where fs = filter (/= nm) fsAll
+-- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
+-- and axioms. We spit axioms as is; and topologically sort the definitions.
+declUserFuns :: [SMTDef] -> [String]
+declUserFuns ds
+  | not (null lambdas)
+  = error $ unlines $ "Data.SBV.declUserFuns: Unexpected anonymous functions in declDef:" : map show lambdas
+  | True
+  = declFuncs others
+  where (lambdas, others) = partition isLam ds
+        isLam SMTLam{} = True
+        isLam SMTAxm{} = False
+        isLam SMTDef{} = False
 
-        recursive | nm `elem` fsAll = " [Recursive]"
-                  | True            = ""
+-- We need to topologically sort the user given definitions and axioms and put them in the proper order and construct.
+-- Note that there are no anonymous functions at this level.
+declFuncs :: [SMTDef] -> [String]
+declFuncs ds = map declGroup sorted
+  where mkNode d = (d, getName d, getDeps d)
 
-        frees | null fs = ""
-              | True    = " [Refers to: " ++ unwords fs ++ "]"
+        getName d = case smtDefName d of
+                      Just n  -> n
+                      Nothing -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+
+        getDeps (SMTDef _ _ d _ _) = d
+        getDeps (SMTAxm _   d   _) = d
+        getDeps l@SMTLam{}         = error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show l
+
+        sorted = DG.stronglyConnComp (map mkNode ds)
+
+        declGroup (DG.AcyclicSCC b)  = declUserDef False b
+        declGroup (DG.CyclicSCC  bs) = case bs of
+                                         []  -> error "Data.SBV.declFuns: Impossible happened: an empty cyclic group was returned!"
+                                         [x] -> declUserDef True x
+                                         xs  -> declUserDefMulti xs
+
+        declUserDef _ d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
+
+        declUserDef isRec a@(SMTAxm nm deps body)
+            | isRec = error $ "Data.SBV.declFuns: Unexpected recursive axiom: " ++ show a
+            | True  = "; -- user given axiom: " ++ nm ++ frees ++ "\n" ++ body
+           where frees | null deps = ""
+                       | True      = " [Refers to: " ++ intercalate ", " deps ++ "]"
+
+        declUserDef isRec (SMTDef nm fk deps param body) = ("; -- user given definition: " ++ nm ++ recursive ++ frees ++ "\n") ++ s
+           where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
+                                      | True  = ("",             "define-fun")
+
+                 otherDeps = filter (/= nm) deps
+                 frees | null otherDeps = ""
+                       | True           = " [Refers to: " ++ intercalate ", " otherDeps ++ "]"
+
+                 decl | null param = smtType fk
+                      | True       = param ++ smtType fk
+
+                 s = "(" ++ definer ++ " " ++ nm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
+
+        -- declare a bunch of mutually-recursive functions
+        declUserDefMulti bs = render $ map collect bs
+          where collect d@SMTAxm{} = error $ "Data.SBV.declFuns: Unexpected axiom in user-defined mutual-recursion group: "  ++ show d
+                collect d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
+                collect (SMTDef nm fk deps param body) = (deps, nm, '(' : nm ++ " " ++  decl ++ ")", body 2)
+                  where decl | null param =                 smtType fk
+                             | True       = param ++ " " ++ smtType fk
+
+                render defs = intercalate "\n" $
+                                  [ "; -- user given mutually-recursive definitions: " ++ unwords [n | (_, n, _, _) <- defs]
+                                  , "(define-funs-rec"
+                                  ]
+                               ++ [ open i ++ d ++ close i ++ cmnt deps | (i, (deps, _, d, _)) <- zip [1..] defs]
+                               ++ [ open i ++ b ++ close i ++ cmnt deps | (i, (deps, _, _, b)) <- zip [1..] defs]
+                               ++ [ ")"]
+                     where open 1 = "  ("
+                           open _ = "   "
+
+                           ld = length defs
+
+                           close n | n == ld = ")"
+                                   | True    = ""
+
+                           cmnt deps = " ; Refers to: " ++ intercalate ", " deps
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
 constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)

@@ -404,7 +404,7 @@ map op l
 
         k = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
-                  lam <- lambda st op
+                  lam <- lambdaStr st (kindOf (Proxy @b)) op
                   newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
 
 -- | @`mapi` op s@ maps the operation on to sequence, with the counter given at each element, starting
@@ -434,7 +434,7 @@ mapi op i l
         k = kindOf (Proxy @(SList b))
         r st = do svi <- sbvToSV st i
                   svl <- sbvToSV st l
-                  lam <- lambda st op
+                  lam <- lambdaStr st (kindOf (Proxy @b)) op
                   newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
 
 -- | @`foldl` op base s@ folds the from the left.
@@ -459,7 +459,7 @@ foldl op base l
         k = kindOf base
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  lam <- lambda st op
+                  lam <- lambdaStr st k op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
 
 -- | @`foldli` op i base s@ folds the sequence, with the counter given at each element, starting
@@ -490,7 +490,7 @@ foldli op baseI baseE l
         r st = do svi <- sbvToSV st baseI
                   sve <- sbvToSV st baseE
                   sva <- sbvToSV st l
-                  lam <- lambda st op
+                  lam <- lambdaStr st k op
                   newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
 
 -- | @`foldr` op base s@ folds the sequence from the right.

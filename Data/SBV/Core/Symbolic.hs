@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
@@ -98,8 +98,6 @@ import qualified Data.Set                    as Set  (Set, empty, toList, insert
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
 import qualified Data.Text                   as T
-
-import qualified Data.Graph as DG
 
 import System.Mem.StableName
 
@@ -846,7 +844,7 @@ instance Show Result where
                 ++ ["USER GIVEN CODE SEGMENTS"]
                 ++ concatMap shcg cgs
                 ++ ["AXIOMS-DEFINITIONS"]
-                ++ map shDef defns
+                ++ map show defns
                 ++ ["DEFINE"]
                 ++ map (\(s, e) -> "  " ++ shs s ++ " = " ++ show e) (F.toList (pgmAssignments xs))
                 ++ ["CONSTRAINTS"]
@@ -889,8 +887,6 @@ instance Show Result where
                         | True     = ", aliasing " ++ show nm
 
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
-
-          shDef (SMTDef nm _ s) = "  -- user defined: " ++ nm ++ "\n  " ++ s
 
           shCstr (isSoft, [], c)               = soft isSoft ++ show c
           shCstr (isSoft, [(":named", nm)], c) = soft isSoft ++ nm ++ ": " ++ show c
@@ -1160,13 +1156,49 @@ inputsToList :: Inputs -> ([(Quantifier, NamedSymVar)], [NamedSymVar])
 inputsToList =  (userInputsToList *** internInputsToList) . getInputs
 
 -- | A defined function/value
-data SMTDef = SMTDef String   -- ^ name
-                     [String] -- ^ other definitions it refers to
-                     String   -- ^ Body, in SMTLib syntax
+data SMTDef = SMTDef String           -- ^ Defined functions -- name
+                     Kind             -- ^ Final kind of the definition (resulting kind, not the params)
+                     [String]         -- ^ other definitions it refers to
+                     String           -- ^ parameter string
+                     (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+            | SMTLam Kind             -- ^ Final kind of the definition (resulting kind, not the params)
+                     [String]         -- ^ Anonymous function -- other definitions it refers to
+                     String           -- ^ parameter string
+                     (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+            | SMTAxm String           -- ^ Defined axion -- name
+                     [String]         -- ^ other definitions it refers to
+                     String           -- ^ Body, in SMTLib syntax. This has the relevant "forall" inserted
+
+-- | For debug purposes
+instance Show SMTDef where
+  show d = case d of
+             SMTDef nm fk frees p body -> shDef (Just nm) fk frees p body
+             SMTLam    fk frees p body -> shDef Nothing   fk frees p body
+             SMTAxm nm    frees   body -> shAxm nm           frees   body
+    where shDef mbNm fk frees p body = unlines [ "-- User defined function: " ++ fromMaybe "Anonymous" mbNm
+                                               , "-- Final return type    : " ++ show fk
+                                               , "-- Refers to            : " ++ unwords frees
+                                               , "-- Parameters           : " ++ p
+                                               , "-- Body                 : "
+                                               , body 2
+                                               ]
+          shAxm nm      frees   body = unlines [ "-- User defined axiom: " ++ nm
+                                               , "-- Refers to            : " ++ unwords frees
+                                               , "-- Body                 : "
+                                               , body
+                                               ]
+
+-- The name of this definition
+smtDefName :: SMTDef -> Maybe String
+smtDefName (SMTDef n _ _ _ _) = Just n
+smtDefName (SMTLam{})         = Nothing
+smtDefName (SMTAxm n _ _)     = Just n
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef n xs body) = rnf n `seq` rnf xs `seq` rnf body
+  rnf (SMTDef n fk frees params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTAxm n    frees        body) = rnf n              `seq` rnf frees                  `seq` rnf body
 
 -- | The state of the symbolic interpreter
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
@@ -1305,9 +1337,9 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  return ctr
 
 -- Kind of code we have for uninterpretation
-data UICodeKind = UINone                    -- no code
-                | UISMT  ([String], String) -- SMTLib, first argument are the free-variables in it
-                | UICgC  [String]           -- Code-gen, currently only C
+data UICodeKind = UINone          -- no code
+                | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
+                | UICgC  [String] -- Code-gen, currently only C
 
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
@@ -1339,17 +1371,17 @@ newUninterpreted st nm t uiCode
                                                                            Nothing -> Map.insert nm t newUIs)
 
                        case uiCode of
-                          UINone        -> pure ()
-                          UISMT (fs, s) -> modifyState st rDefns (SMTDef nm fs s :)
-                                             $ noInteractive [ "Defined functions (smtFunction):"
-                                                             , "  Name: " ++ nm
-                                                             , "  Type: " ++ show t
-                                                             , ""
-                                                             , "You should use these functions at least once the query part starts"
-                                                             , "and then use them in the query section as usual."
-                                                             ]
-                          UICgC c       -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                                           modifyState st rCgMap (Map.insert nm c) (return ())
+                          UINone  -> pure ()
+                          UISMT d -> modifyState st rDefns (d :)
+                                       $ noInteractive [ "Defined functions (smtFunction):"
+                                                       , "  Name: " ++ nm
+                                                       , "  Type: " ++ show t
+                                                       , ""
+                                                       , "You should use these functions at least once the query part starts"
+                                                       , "and then use them in the query section as usual."
+                                                       ]
+                          UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                                     modifyState st rCgMap (Map.insert nm c) (return ())
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
@@ -1852,28 +1884,11 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
 
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
    arrs  <- IMap.toAscList <$> readIORef arrays
-   ds    <- do ds <- reverse <$> readIORef defns
-               -- Topologically sort
-               let mkNode n@(SMTDef nm deps _) = (n, getKey n, filter (/= nm) deps)
-
-                   getKey (SMTDef nm _ _) = nm
-                   extract (DG.AcyclicSCC b)  = b
-                   extract (DG.CyclicSCC  xs)
-                      = error $ unlines [ ""
-                                        , "*** Data.SBV: Defined functions are mutually dependent."
-                                        , "***"
-                                        , "*** Functions: " ++ unwords (map getKey xs)
-                                        , "***"
-                                        , "*** To use mutually-recursive definitions, define them as a single recursive"
-                                        , "*** function that returns all results in a tuple, and project them out in"
-                                        , "*** individual functions. See 'Documentation.SBV.Examples.Misc.Definitions'"
-                                        , "*** module in the SBV documentation for an example."
-                                        ]
-               return $ map extract $ DG.stronglyConnComp (map mkNode ds)
+   ds    <- reverse <$> readIORef defns
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has an axiom associated with it
-               let defineds = [nm | SMTDef nm _ _ <- ds]
-               pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
+               let defineds = map smtDefName ds
+               pure [ui | ui@(nm, _) <- unints, Just nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
 

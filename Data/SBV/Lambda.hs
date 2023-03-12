@@ -19,7 +19,10 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Lambda (
-          lambda, namedLambda, axiom, Lambda(..), Axiom(..)
+            lambda,      lambdaStr
+          , namedLambda, namedLambdaStr
+          , axiom,       axiomStr
+          , Lambda(..), Axiom(..)
         ) where
 
 import Control.Monad
@@ -42,22 +45,31 @@ import qualified Data.Set as Set
 
 import qualified Data.Generics.Uniplate.Data as G
 
--- | What kind of output to generate?
-data GenKind = GenLambda
-             | GenDefn   String Kind  -- kind is the resulting kind (note, not the arguments kinds, the result type)
-             | GenAxiom
+data Defn = Defn [String]        -- The uninterpreted names referred to in the body
+                 String          -- Param declaration. Empty if there are no params
+                 (Int -> String) -- Body, given the tab amount.
 
--- | Create an SMTLib lambda, in the given state.
-lambda :: Lambda Symbolic a => State -> a -> IO String
-lambda inState f = do
+-- | Generic creator for anonymous lamdas.
+lambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
+lambdaGen trans inState fk f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
-   -- in this case we ignore the firee vars
-   snd <$> convert st Nothing GenLambda (mkLambda st f)
 
--- | Create a named SMTLib function, in the given state.
-namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO ([String], String)
-namedLambda inState nm fk f = do
+   trans <$> convert st fk (mkLambda st f)
+
+-- | Create an SMTLib lambda, in the given state.
+lambda :: Lambda Symbolic a => State -> Kind -> a -> IO SMTDef
+lambda inState fk = lambdaGen mkLam inState fk
+   where mkLam (Defn frees params body) = SMTLam fk frees params body
+
+-- | Create an anonymous lambda, rendered as n SMTLib string
+lambdaStr :: Lambda Symbolic a => State -> Kind -> a -> IO String
+lambdaStr = lambdaGen mkLam
+   where mkLam (Defn _frees params body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
+
+-- | Generaic creator for named functions,
+namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> String -> Kind -> a -> IO b
+namedLambdaGen trans inState nm fk f = do
    ll      <- readIORef (rLambdaLevel inState)
    stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
 
@@ -69,11 +81,21 @@ namedLambda inState nm fk f = do
                        pure stEmpty{rUserFuncs = nr}
                else pure stEmpty
 
-   convert st (Just nm) (GenDefn nm fk) (mkLambda st f)
+   trans <$> convert st fk (mkLambda st f)
 
--- | Create a forall quantified axiom at the top. The list of strings is the free vars in it.
-axiom :: Axiom Symbolic a => State -> a -> IO ([String], String)
-axiom inState f = do
+-- | Create a named SMTLib function, in the given state.
+namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO SMTDef
+namedLambda inState nm fk = namedLambdaGen mkDef inState nm fk
+   where mkDef (Defn frees params body) = SMTDef nm fk frees params body
+
+-- | Create a named SMTLib function, in the given state, string version
+namedLambdaStr :: Lambda Symbolic a => State -> String -> Kind -> a -> IO String
+namedLambdaStr inState nm fk = namedLambdaGen mkDef inState nm fk
+   where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
+
+-- | Generic axiom generator.
+axiomGen :: Axiom Symbolic a => (Defn -> b) -> State -> a -> IO b
+axiomGen trans inState f = do
    -- make sure we're at the top
    ll <- readIORef (rLambdaLevel inState)
    () <- case ll of
@@ -81,13 +103,27 @@ axiom inState f = do
            _ -> error "Data.SBV.axiom: Not supported: axiom calls that are not at the top-level."
 
    st <- mkNewState (stCfg inState) $ Lambda 1
-   convert st Nothing GenAxiom (mkAxiom st f)
+
+   trans <$> convert st KBool (mkAxiom st f)
+
+-- | Create a named SMTLib axiom, in the given state.
+axiom :: Axiom Symbolic a => State -> String -> a -> IO SMTDef
+axiom inState nm = axiomGen mkAx inState
+   where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ ")"
+
+-- | Create a named SMTLib axiom, in the given state, string version.
+axiomStr :: Axiom Symbolic a => State -> String -> a -> IO String
+axiomStr inState nm = axiomGen mkAx inState
+   where mkAx (Defn frees params body) = intercalate "\n"
+                ["; user given axiom for: " ++ nm ++ if null frees then "" else " [Refers to: " ++ intercalate ", " frees ++ "]"
+                , "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
+                ]
 
 -- | Convert to an appropriate SMTLib representation.
-convert :: MonadIO m => State -> Maybe String -> GenKind -> SymbolicT m () -> m ([String], String)
-convert st mbNm knd comp = do
+convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
+convert st expectedKind comp = do
    ((), res) <- runSymbolicInState st comp
-   pure $ toLambda mbNm knd (stCfg st) res
+   pure $ toLambda (stCfg st) expectedKind res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -104,9 +140,9 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
--- | Convert the result of a symbolic run to an SMTLib lambda expression
-toLambda :: Maybe String -> GenKind -> SMTConfig -> Result -> ([String], String)
-toLambda mbNm knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
+-- | Convert the result of a symbolic run to a more abstract representation
+toLambda :: SMTConfig -> Kind -> Result -> Defn
+toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -163,12 +199,16 @@ toLambda mbNm knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
          = tbd [ "Assertions."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
                ]
+         | kindOf out /= expectedKind
+         = bad [ "Expected kind and final kind do not match"
+               , "   Saw     : " ++ show (kindOf out)
+               , "   Expected: " ++ show expectedKind
+               ]
          | True
-         = (deps, genSMTLib isRecursive knd params body)
-         where deps        = nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq]
-               isRecursive = maybe False (`elem` deps) mbNm
-
-               params = case is of
+         = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
+                paramStr
+                (intercalate "\n" . body)
+         where params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"
                                                   , "   Saw: " ++ intercalate ", " [getUserName' n | (EX, n) <- inps]
@@ -178,59 +218,32 @@ toLambda mbNm knd cfg result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                                                   , "   Saw: " ++ intercalate ", " (map getUserName' trackers)
                                                   ]
                                            | True
-                                           -> ['(' : getUserName' p ++ " " ++ smtType (kindOf (getSV p)) ++ ")" | (_, p) <- inps]
-               body
-                | null bindings = tab ++ out
-                | True          = go bindings 0
-                where go []     n = extraTab ++ "   " ++ out ++ replicate n ')'
-                      go (b:bs) n = extraTab ++ tab ++ "(let (" ++ b ++ ")\n" ++ go bs (n+1)
+                                           -> map (getSV . snd) inps
 
-                      tab | null params = ""
-                          | True        = "   "
+               paramStr = '(' : unwords (map (\p -> '(' : show p ++ " " ++ smtType (kindOf p) ++ ")")  params) ++ ")"
 
-                      extraTab = case knd of
-                                   GenLambda                   -> ""
-                                   GenDefn   _ _ | isRecursive -> replicate (2 + length "define-fun-rec") ' '
-                                                 | True        -> replicate (2 + length "define-fun")     ' '
-                                   GenAxiom                    -> replicate (2 + length "assert")         ' '
+               body tabAmnt = let tab = replicate tabAmnt ' '
+                              in    [tab ++ "(let ((" ++ show s ++ " " ++ v ++ "))" | (s, v) <- bindings]
+                                 ++ [tab ++ show out ++ replicate (length bindings) ')']
 
-               bindings :: [String]
+               bindings :: [(SV, String)]
                bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
                         ++ map mkAsgn  (F.toList (pgmAssignments pgm))
 
-               mkConst :: (SV, CV) -> String
-               mkConst (sv, cv) = "(" ++ v ++ " " ++ c ++ ")"
-                  where v = show sv
-                        c = cvToSMTLib (roundingMode cfg) cv
+               mkConst :: (SV, CV) -> (SV, String)
+               mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
 
-               out :: String
+               out :: SV
                out = case outputs of
-                       [o] -> show o
+                       [o] -> o
                        _   -> bad [ "Unexpected non-singular output"
                                   , "   Saw: " ++ show outputs
                                   ]
 
-               mkAsgn (s, e) = "(" ++ show s ++ " " ++ converter e ++ ")"
+               mkAsgn (sv, e) = (sv, converter e)
                converter = cvtExp solverCaps rm skolemMap tableMap funcMap
                  where solverCaps = capabilities (solver cfg)
                        rm         = roundingMode cfg
                        skolemMap  = M.empty
                        tableMap   = IM.empty
                        funcMap    = M.empty
-
-genSMTLib :: Bool -> GenKind -> [String] -> String -> String
-genSMTLib isRec k = case k of
-                      GenLambda       -> mkLam
-                      GenDefn   nm fk -> mkDef nm (smtType fk)
-                      GenAxiom        -> mkAxm
-  where mkLam [] body = body
-        mkLam ps body = "(lambda (" ++ unwords ps ++ ")\n" ++ body ++ ")"
-
-        mkDef nm fk [] body = "(" ++ definer isRec ++ " " ++ nm ++ " () (" ++ fk ++ ")\n"                   ++ body ++ ")"
-        mkDef nm fk ps body = "(" ++ definer isRec ++ " " ++ nm ++ " (" ++ unwords ps ++ ") " ++ fk ++ "\n" ++ body ++ ")"
-
-        definer False = "define-fun"
-        definer True  = "define-fun-rec"
-
-        mkAxm [] body = "(assert " ++ body ++ ")"
-        mkAxm ps body = "(assert (forall (" ++ unwords ps ++ ")\n" ++ body ++ "))"

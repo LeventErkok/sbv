@@ -11,6 +11,7 @@
 
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -30,15 +31,18 @@ import Documentation.SBV.Examples.Misc.Definitions
 import Data.SBV.List
 import Data.SBV.Tuple
 
+import Data.Proxy
+
 import Utils.SBVTestFramework
 
 -- Test suite
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" $ [
-        goldenCapturedIO "lambda01" $ record $ \st -> lambda st (2 :: SInteger)
-      , goldenCapturedIO "lambda02" $ record $ \st -> lambda st (\x -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda03" $ record $ \st -> lambda st (\x y -> x+y*2 :: SInteger)
+        goldenCapturedIO "lambda01" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (2             :: SInteger)
+      , goldenCapturedIO "lambda02" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
+      , goldenCapturedIO "lambda03" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
+
       , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
       , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
       , goldenCapturedIO "lambda06" $ eval1 [1 .. 5 :: Integer]
@@ -104,21 +108,21 @@ tests =
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
-      , goldenCapturedIO "lambda33" $ record  $ \st -> lambda st (0           :: SInteger)
-      , goldenCapturedIO "lambda34" $ record  $ \st -> lambda st (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda35" $ record  $ \st -> lambda st (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda33" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (0           :: SInt8)
+      , goldenCapturedIO "lambda34" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
+      , goldenCapturedIO "lambda35" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
-      , goldenCapturedIO "lambda36" $ record2 $ \st -> axiom  st sTrue
-      , goldenCapturedIO "lambda37" $ record2 $ \st -> axiom  st sNot
-      , goldenCapturedIO "lambda38" $ record2 $ \st -> axiom  st (\x y -> x .== (0 :: SInteger) .|| y)
+      , goldenCapturedIO "lambda36" $ record $ \st -> axiomStr  st "all_true" sTrue
+      , goldenCapturedIO "lambda37" $ record $ \st -> axiomStr  st "negated"  sNot
+      , goldenCapturedIO "lambda38" $ record $ \st -> axiomStr  st "arith"    (\x y -> x .== (0 :: SInteger) .|| y)
 
-      , goldenCapturedIO "lambda40" $ record2 $ \st -> namedLambda st "lambda40" KUnbounded (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record2 $ \st -> namedLambda st "lambda41" KUnbounded (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record2 $ \st -> namedLambda st "lambda42" KUnbounded (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" (kindOf (Proxy @SInteger)) (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" (kindOf (Proxy @SInteger)) (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr st "lambda42" (kindOf (Proxy @SInteger)) (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record2 $ \st -> namedLambda st "lambda43" KUnbounded (0           :: SWord32)
-      , goldenCapturedIO "lambda44" $ record2 $ \st -> namedLambda st "lambda44" KUnbounded (\x   -> x+1 :: SWord32)
-      , goldenCapturedIO "lambda45" $ record2 $ \st -> namedLambda st "lambda45" KUnbounded (\x y -> x+y :: SWord32)
+      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr st "lambda43" (kindOf (Proxy @SWord32)) (0           :: SWord32)
+      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr st "lambda44" (kindOf (Proxy @SWord32)) (\x   -> x+1 :: SWord32)
+      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr st "lambda45" (kindOf (Proxy @SWord32)) (\x y -> x+y :: SWord32)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
 
@@ -150,31 +154,31 @@ tests =
       , goldenCapturedIO "lambda55" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
                                                         bar = smtFunction "bar" (+1)
                                                     in foo x + bar x .== (x :: SInteger))
-      , goldenCapturedIO "lambda56" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                        bar = smtFunction "bar" (\a -> foo a + 1)
-                                                    in foo x + bar x .== (x :: SInteger))
+      , goldenCapturedIO "lambda56" $ runUnsat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                          bar = smtFunction "bar" (\a -> foo a + 1)
+                                                      in foo x + bar x .== (x :: SInteger))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
                            appendFile rf . (P.++ "\n") =<< gen st
 
-        record2 :: (State -> IO ([String], String)) -> FilePath -> IO ()
-        record2 gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
-                            (frees, res) <- gen st
-                            appendFile rf (res P.++ "\n" P.++ "Frees: " P.++ show frees P.++ "\n")
+        runSat   f = runSatExpecting f Sat
+        runUnsat f = runSatExpecting f Unsat
 
-        runSat f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
-                         appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
-                     `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
+        runSatExpecting f what rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                                       appendFile rf ("\nRESULT:\n" P.++ m P.++ "\n")
+                                       `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
            where run = do arg <- free_
                           constrain $ f arg
                           query $ do arg2 <- freshVar_
                                      constrain $ f arg2
                                      cs <- checkSat
-                                     case cs of
-                                       Sat -> getModel
-                                       _   -> error $ "Unexpected output: " P.++ show cs
+                                     if cs /= what
+                                        then error $ "Unexpected output: " P.++ show cs
+                                        else if cs == Sat
+                                                then getModel >>= pure . showModel z3
+                                                else pure "All good!"
 
         runSat2 f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
                           appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
