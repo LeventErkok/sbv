@@ -157,6 +157,11 @@ tests =
       , goldenCapturedIO "lambda56" $ runUnsat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
                                                           bar = smtFunction "bar" (\a -> foo a + 1)
                                                       in foo x + bar x .== (x :: SInteger))
+      , goldenCapturedIO "lambda57" $ runSat (\x -> let f1 = smtFunction "f1" (\a -> ite (a .== 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
+                                                        f2 = smtFunction "f2" (\a -> ite (a .== 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
+                                                        f3 = smtFunction "f3" (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
+                                                        f4 = smtFunction "f4" (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
+                                                    in f1 x .== (x :: SWord8))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
