@@ -61,7 +61,7 @@ import Control.Monad.IO.Class   (MonadIO, liftIO)
 import Control.Monad.Trans      (lift)
 import Control.Monad.Reader     (runReaderT)
 
-import Data.Maybe (isNothing, isJust, mapMaybe)
+import Data.Maybe (isNothing, isJust)
 
 import Data.IORef (readIORef, writeIORef, IORef, newIORef, modifyIORef')
 
@@ -79,7 +79,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , RCSet(..)
                               )
 
-import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), smtDefName, svToSV
+import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), svToSV
                               , symbolicEnv, SymbolicT
                               , MonadQuery(..), QueryContext(..), Queriable(..), Fresh(..), VarContext(..)
                               , registerLabel, svMkSymVar, validationRequested
@@ -1113,7 +1113,10 @@ getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
-                          pure $ mapMaybe smtDefName allDefs
+                          let definedFunctionName (SMTDef n _ _ _ _) = [n]
+                              definedFunctionName SMTLam{}           = []
+                              definedFunctionName SMTAxm{}           = []
+                          pure $ concatMap definedFunctionName allDefs
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs

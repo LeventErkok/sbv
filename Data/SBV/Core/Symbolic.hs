@@ -52,7 +52,7 @@ module Data.SBV.Core.Symbolic
   , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
-  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefName, withNewIncState, IncState(..), incrementInternalCounter
+  , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
@@ -1189,10 +1189,10 @@ instance Show SMTDef where
                                                ]
 
 -- The name of this definition
-smtDefName :: SMTDef -> Maybe String
-smtDefName (SMTDef n _ _ _ _) = Just n
-smtDefName (SMTLam{})         = Nothing
-smtDefName (SMTAxm n _ _)     = Just n
+smtDefGivenName :: SMTDef -> Maybe String
+smtDefGivenName (SMTDef n _ _ _ _) = Just n
+smtDefGivenName (SMTLam{})         = Nothing
+smtDefGivenName (SMTAxm n _ _)     = Just n
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
@@ -1886,9 +1886,12 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    arrs  <- IMap.toAscList <$> readIORef arrays
    ds    <- reverse <$> readIORef defns
    unint <- do unints <- Map.toList <$> readIORef uis
-               -- drop those that has an axiom associated with it
-               let defineds = map smtDefName ds
-               pure [ui | ui@(nm, _) <- unints, Just nm `notElem` defineds]
+               -- drop those that has a definition associated with it
+               let definedFunctionName (SMTDef nm _ _ _ _) = [nm]
+                   definedFunctionName SMTAxm{}            = []
+                   definedFunctionName SMTLam{}            = []
+                   defineds = concatMap definedFunctionName ds
+               pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs
 

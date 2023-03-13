@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..), smtDefName)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..), smtDefGivenName)
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -123,7 +123,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
              in error $ unlines [ ""
                                 , "*** SBV cannot currently handle function definitions and axioms in the presence of quantified variables."
                                 , "***"
-                                , "***    Found declaration: " ++ unwords (mapMaybe smtDefName defs)
+                                , "***    Found declaration: " ++ unwords (mapMaybe smtDefGivenName defs)
                                 , "***    Quantified args  : " ++ unwords (map pretty foralls)
                                 , "***"
                                 , "*** If you use smtFunction/addAxiom, you cannot have explicit quantifiers."
@@ -628,11 +628,15 @@ declUserFuns ds
 -- Note that there are no anonymous functions at this level.
 declFuncs :: [SMTDef] -> [String]
 declFuncs ds = map declGroup sorted
-  where mkNode d = (d, getName d, getDeps d)
+  where mkNode d = (d, getKey d, getDeps d)
 
-        getName d = case smtDefName d of
-                      Just n  -> n
-                      Nothing -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+        allNames = mapMaybe smtDefGivenName ds
+        getKey d = case d of
+                     SMTDef n _ _ _ _ -> n
+                     SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+                     -- Uniquify names of axioms. Why? Because axioms are actually unnamed, but we want to put them after any function
+                     -- definition they might refer to. So, give them a brand new name.
+                     SMTAxm n _ _     -> head [nm | i <- [(1::Int)..], let nm = n ++ " " ++ show i, nm `notElem` allNames]
 
         getDeps (SMTDef _ _ d _ _) = d
         getDeps (SMTAxm _   d   _) = d
