@@ -13,8 +13,8 @@
 
 module Main (main) where
 
-import Language.Haskell.HLint (hlint)
-import System.Exit (exitFailure, exitSuccess)
+import System.Exit (exitWith)
+import System.Process
 
 arguments :: [String]
 arguments =
@@ -26,7 +26,4 @@ arguments =
     ]
 
 main :: IO ()
-main = do hints <- hlint arguments
-          if null hints
-             then exitSuccess
-             else exitFailure
+main = exitWith =<< rawSystem "hlint" arguments
