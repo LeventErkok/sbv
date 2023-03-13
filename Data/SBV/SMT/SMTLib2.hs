@@ -671,26 +671,28 @@ declFuncs ds = map declGroup sorted
         declUserDefMulti bs = render $ map collect bs
           where collect d@SMTAxm{} = error $ "Data.SBV.declFuns: Unexpected axiom in user-defined mutual-recursion group: "  ++ show d
                 collect d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
-                collect (SMTDef nm fk deps param body) = (deps, nm, '(' : nm ++ " " ++  decl ++ ")", body 2)
+                collect (SMTDef nm fk deps param body) = (deps, nm, '(' : nm ++ " " ++  decl ++ ")", body 3)
                   where decl | null param =                 smtType fk
                              | True       = param ++ " " ++ smtType fk
 
                 render defs = intercalate "\n" $
-                                  [ "; -- user given mutually-recursive definitions: " ++ unwords [n | (_, n, _, _) <- defs]
+                                  [ "; -- user given mutually-recursive definitions: " ++ intercalate ", " [n | (_, n, _, _) <- defs]
                                   , "(define-funs-rec"
                                   ]
-                               ++ [ open i ++ d ++ close i ++ cmnt deps | (i, (deps, _, d, _)) <- zip [1..] defs]
-                               ++ [ open i ++ b ++ close i ++ cmnt deps | (i, (deps, _, _, b)) <- zip [1..] defs]
-                               ++ [ ")"]
+                               ++ [ open i ++ param d ++ close1 i | (i, d) <- zip [1..] defs]
+                               ++ [ open i ++ dump  d ++ close2 i | (i, d) <- zip [1..] defs]
                      where open 1 = "  ("
                            open _ = "   "
 
+                           param (_, _, p, _) = p
+
+                           dump (deps, nm, _, body) = "; Definition of: " ++ nm ++ ". [Refers to: " ++ intercalate ", " deps ++ "]"
+                                                    ++ "\n" ++ body
+
                            ld = length defs
 
-                           close n | n == ld = ")"
-                                   | True    = ""
-
-                           cmnt deps = " ; Refers to: " ++ intercalate ", " deps
+                           close1 n = if n == ld then ")"  else ""
+                           close2 n = if n == ld then "))" else ""
 
 constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
 constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)
