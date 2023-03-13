@@ -26,7 +26,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), Uninterpreted(..), Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , oneIf, genVar, genVar_, sbvForall, sbvForall_, sbvExists, sbvExists_
   , pbAtMost, pbAtLeast, pbExactly, pbLe, pbGe, pbEq, pbMutexed, pbStronglyMutexed
@@ -2326,9 +2326,11 @@ instance EqSymbolic (SArray a b) where
 instance SymVal b => Mergeable (SArray a b) where
   symbolicMerge _ = mergeArrays
 
--- | Uninterpreted constants and functions. An uninterpreted constant is
--- a value that is indexed by its name. The only property the prover assumes
--- about these values are that they are equivalent to themselves; i.e., (for
+-- | SMT definable constants and functions, which can also be uninterpeted.
+-- This class captures functions that we can generate standalone-code for
+-- in the SMT solver. Note that we also allow uninterpreted constants and
+-- functions too. An uninterpreted constant is a value that is indexed by its name. The only
+-- property the prover assumes -- about these values are that they are equivalent to themselves; i.e., (for
 -- functions) they return the same results when applied to same arguments.
 -- We support uninterpreted-functions as a general means of black-box'ing
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
@@ -2337,14 +2339,16 @@ instance SymVal b => Mergeable (SArray a b) where
 -- Minimal complete definition: 'sbvUninterpret'. However, most instances in
 -- practice are already provided by SBV, so end-users should not need to define their
 -- own instances.
-class Uninterpreted a where
+class SMTDefinable a where
+  -- | Generate the code for this value as an SMTLib function, instead of
+  -- the usual unrolling semantics. This is useful for generating sub-functions
+  -- in generated SMTLib problem, or handling recursive (and mutually-recursive)
+  -- definitions that wouldn't terminate in an unrolling symbolic simulation context.
+  smtFunction :: Lambda Symbolic a => String -> a -> a
+
   -- | Uninterpret a value, receiving an object that can be used instead. Use this version
   -- when you do not need to add an axiom about this value.
   uninterpret :: String -> a
-
-  -- | Uninterpret for simulation purposes, but in the generated SMTLib code, use the given
-  -- definition. This is useful for generating sub-functions in generated SMTLib problem.
-  smtFunction :: Lambda Symbolic a => String -> a -> a
 
   -- | Uninterpret a value, only for the purposes of code-generation. For execution
   -- and verification the value is used as is. For code-generation, the alternate
@@ -2392,7 +2396,7 @@ retrieveConstCode (UIFun   (v, _)) = Just v
 retrieveConstCode (UICodeC (v, _)) = Just v
 
 -- Plain constants
-instance HasKind a => Uninterpreted (SBV a) where
+instance HasKind a => SMTDefinable (SBV a) where
   sbvUninterpret nm uiKind
      | Just v <- retrieveConstCode uiKind
      = v
@@ -2406,7 +2410,7 @@ instance HasKind a => Uninterpreted (SBV a) where
                                                         newExpr st ka $ SBVApp (Uninterpreted nm) []
 
 -- Functions of one argument
-instance (SymVal b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
+instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0
            | Just v <- retrieveConstCode uiKind, isConcrete arg0
@@ -2424,7 +2428,7 @@ instance (SymVal b, HasKind a) => Uninterpreted (SBV b -> SBV a) where
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
-instance (SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV c -> SBV b -> SBV a) where
+instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1
@@ -2444,7 +2448,7 @@ instance (SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV c -> SBV b -> SBV
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
-instance (SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1 arg2
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2
@@ -2466,7 +2470,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV d -> SB
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
-instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1 arg2 arg3
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
@@ -2490,7 +2494,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (S
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
-instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
@@ -2516,7 +2520,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninte
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
-instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
@@ -2545,7 +2549,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
 
 -- Functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
-            => Uninterpreted (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+            => SMTDefinable (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbvUninterpret nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
@@ -2575,35 +2579,35 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Uncurried functions of two arguments
-instance (SymVal c, SymVal b, HasKind a) => Uninterpreted ((SBV c, SBV b) -> SBV a) where
+instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (curry <$> uiKind) in uncurry f
 
 -- Uncurried functions of three arguments
-instance (SymVal d, SymVal c, SymVal b, HasKind a) => Uninterpreted ((SBV d, SBV c, SBV b) -> SBV a) where
+instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
 
 -- Uncurried functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
-            => Uninterpreted ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+            => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 fn a b c d = fn (a, b, c, d)
 
 -- Uncurried functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
-            => Uninterpreted ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+            => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 fn a b c d e = fn (a, b, c, d, e)
 
 -- Uncurried functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
-            => Uninterpreted ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+            => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
 
 -- Uncurried functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
-            => Uninterpreted ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+            => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
 

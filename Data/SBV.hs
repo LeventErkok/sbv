@@ -78,6 +78,8 @@
 --
 --   * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 --
+--   * Ability to define SMTLib functions, generated directly from Haskell versions.
+--
 --   * Model validation: SBV can validate models returned by solvers, which allows
 --     for protection against bugs in SMT solvers and SBV itself. (See the 'validateModel'
 --     parameter.)
@@ -294,7 +296,10 @@ module Data.SBV (
 
   -- * Uninterpreted sorts, axioms, constants, and functions
   -- $uninterpreted
-  , mkUninterpretedSort, Uninterpreted(..), addAxiom
+  , mkUninterpretedSort, addAxiom
+
+  -- * Stopping unrolling: Defined functions
+  , SMTDefinable(..)
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
@@ -932,7 +937,7 @@ for @SBV B@.
 
 
 Uninterpreted functions over both uninterpreted and regular sorts can be declared using the facilities introduced by
-the 'Data.SBV.Core.Model.Uninterpreted' class.
+the 'Data.SBV.Core.Model.SMTDefinable' class.
 -}
 
 {- $enumerations

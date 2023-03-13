@@ -79,7 +79,7 @@ import Data.SBV
 -- final result incorrect. (Note that @7257600 = 2 * 3628800@.) A wrapper algorithm can
 -- then assert the actual value of @bfac 10@ here as an extra constraint and can
 -- search for "deeper bugs."
-bfix :: (SymVal a, Uninterpreted (SBV a -> r)) => Int -> String -> ((SBV a -> r) -> (SBV a -> r)) -> SBV a -> r
+bfix :: (SymVal a, SMTDefinable (SBV a -> r)) => Int -> String -> ((SBV a -> r) -> (SBV a -> r)) -> SBV a -> r
 bfix bound nm f x
   | isConcrete x = g x
   | True         = unroll bound x
