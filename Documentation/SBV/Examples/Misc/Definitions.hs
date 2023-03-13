@@ -70,36 +70,66 @@ len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 lenExample :: IO SatResult
 lenExample = sat $ \a r -> a .== [1,2,3::Integer] .&& r .== len a
 
--- | Mutually recursive definitions. The trick is to define the functions together, and pull the results out individually.
+-- | A simple mutual-recursion example, from the z3 documentation. We have:
+--
+-- >>> pingPong
+-- Satisfiable. Model:
+--   s0 = 1 :: Integer
+pingPong :: IO SatResult
+pingPong = sat $ \x -> x .> 0 .&& ping x sTrue .> x
+  where ping :: SInteger -> SBool -> SInteger
+        ping = smtFunction "ping" $ \x y -> ite y (pong (x+1) (sNot y)) (x - 1)
+
+        pong :: SInteger -> SBool -> SInteger
+        pong = smtFunction "pong" $ \a b -> ite b (ping (a-1) (sNot b)) a
+
+-- | Usual way to define even-odd mutually recursively. Unfortunately, while this goes through,
+-- the backend solver does not terminate on this example. See 'evenOdd2' for an alternative
+-- technique to handle such definitions, which seems to be more solver friendly.
+evenOdd :: IO SatResult
+evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
+  where isE, isO :: SInteger -> SBool
+        isE = smtFunction "isE" $ \x -> ite (x .< 0) (isE (-x)) (x .== 0 .|| isO  (x - 1))
+        isO = smtFunction "isO"  $ \x -> ite (x .< 0) (isO  (-x)) (x .== 0 .|| isE (x - 1))
+
+-- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
+-- This usually works better than defining the functions separately, from a solver perspective. We can prove 20 is even and
+-- definitely not odd, thusly:
+--
+-- >>> evenOdd2
+-- Satisfiable. Model:
+--   s0 =    20 :: Integer
+--   s1 =  True :: Bool
+--   s2 = False :: Bool
+evenOdd2 :: IO SatResult
+evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
 isEvenOdd :: SInteger -> STuple Bool Bool
-isEvenOdd = smtFunction "isEvenOdd" $ \x ->
-                  ite (x .<  0) (isEvenOdd (-x))
-                $ ite (x .== 0) (tuple (sTrue, sFalse))
-                                (swap (isEvenOdd (x - 1)))
+isEvenOdd = smtFunction "isEvenOdd" $ \x -> ite (x .<  0) (isEvenOdd (-x))
+                                          $ ite (x .== 0) (tuple (sTrue, sFalse))
+                                                          (swap (isEvenOdd (x - 1)))
 
 -- | Extract the isEven function for easier use.
 isEven :: SInteger -> SBool
 isEven x = isEvenOdd x ^._1
 
--- | Extract the isEven function for easier use.
+-- | Extract the isOdd function for easier use.
 isOdd :: SInteger -> SBool
 isOdd x = isEvenOdd x ^._2
 
--- | Prove that 20 is even.
+-- | We can prove constant-folding instances of the equality @ack 1 y == y + 2@:
 --
--- We have:
--- >>> mutRecExample
+-- >>> ack1y
 -- Satisfiable. Model:
---   s0 =   20 :: Integer
---   s1 = True :: Bool
+--   s0 = 5 :: Integer
+--   s1 = 7 :: Integer
 --
--- Note that we would love to prove things of the form:
---
--- @
---   proveWith z3{verbose=True} $ \x -> isEven x .|| isOdd x
--- @
---
--- alas, if you try this you'll see that z3 goes on forever. Such proofs require induction
--- and SMT-solvers do not do induction out-of-the box, at least not yet!
-mutRecExample :: IO SatResult
-mutRecExample = sat $ \a r -> a .== 20 .&& r .== isEven a
+-- Expecting the prover to handle the general case for arbitrary @y@ is beyond the current
+-- scope of what SMT solvers do out-of-the-box for the time being.
+ack1y :: IO SatResult
+ack1y = sat $ \y r -> y .== 5 .&& r .== ack 1 y
+
+-- | Ackermann function, demonstrating nested recursion.
+ack :: SInteger -> SInteger -> SInteger
+ack = smtFunction "ack" $ \x y -> ite (x .== 0) (y + 1)
+                                $ ite (y .== 0) (ack (x - 1) 1)
+                                                (ack (x - 1) (ack x (y - 1)))
