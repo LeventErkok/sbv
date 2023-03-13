@@ -6,7 +6,7 @@ EXCEPTION CAUGHT:
 *** Function definition refers to free variable(s)
 *** 
 ***    Function : bar
-***    Refers to: [s0]
+***    Refers to: s0
 *** 
 *** Check your smtFunction calls and make sure they don't have any free
 *** variables in their definitions. (NB. The refers to variables are
