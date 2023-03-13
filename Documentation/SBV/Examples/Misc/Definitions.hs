@@ -93,16 +93,7 @@ evenOdd = satWith z3{verbose=True} $ \a r -> a .== 20 .&& r .== isE a
         isO = smtFunction "isO"  $ \x -> ite (x .< 0) (isO  (-x)) (x .== 0 .|| isE (x - 1))
 
 -- | Another technique to handle mutually definitions is to define the functions together, and pull the results out individually.
--- This usually works better than defining the functions separately, from a solver perspective. We can prove 20 is even and
--- definitely not odd, thusly:
---
--- >>> evenOdd2
--- Satisfiable. Model:
---   s0 =    20 :: Integer
---   s1 =  True :: Bool
---   s2 = False :: Bool
-evenOdd2 :: IO SatResult
-evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
+-- This usually works better than defining the functions separately, from a solver perspective.
 isEvenOdd :: SInteger -> STuple Bool Bool
 isEvenOdd = smtFunction "isEvenOdd" $ \x -> ite (x .<  0) (isEvenOdd (-x))
                                           $ ite (x .== 0) (tuple (sTrue, sFalse))
@@ -116,6 +107,22 @@ isEven x = isEvenOdd x ^._1
 isOdd :: SInteger -> SBool
 isOdd x = isEvenOdd x ^._2
 
+-- | We can prove 20 is even and definitely not odd, thusly:
+--
+-- >>> evenOdd2
+-- Satisfiable. Model:
+--   s0 =    20 :: Integer
+--   s1 =  True :: Bool
+--   s2 = False :: Bool
+evenOdd2 :: IO SatResult
+evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
+
+-- | Ackermann function, demonstrating nested recursion.
+ack :: SInteger -> SInteger -> SInteger
+ack = smtFunction "ack" $ \x y -> ite (x .== 0) (y + 1)
+                                $ ite (y .== 0) (ack (x - 1) 1)
+                                                (ack (x - 1) (ack x (y - 1)))
+
 -- | We can prove constant-folding instances of the equality @ack 1 y == y + 2@:
 --
 -- >>> ack1y
@@ -127,9 +134,3 @@ isOdd x = isEvenOdd x ^._2
 -- scope of what SMT solvers do out-of-the-box for the time being.
 ack1y :: IO SatResult
 ack1y = sat $ \y r -> y .== 5 .&& r .== ack 1 y
-
--- | Ackermann function, demonstrating nested recursion.
-ack :: SInteger -> SInteger -> SInteger
-ack = smtFunction "ack" $ \x y -> ite (x .== 0) (y + 1)
-                                $ ite (y .== 0) (ack (x - 1) 1)
-                                                (ack (x - 1) (ack x (y - 1)))
