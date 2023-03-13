@@ -49,48 +49,51 @@ data Defn = Defn [String]        -- The uninterpreted names referred to in the b
                  String          -- Param declaration. Empty if there are no params
                  (Int -> String) -- Body, given the tab amount.
 
+data Free = Closed String -- Must be a closed definition, string is the function
+          | Open          -- Free variables are OK
+
 -- | Generic creator for anonymous lamdas.
-lambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
-lambdaGen trans inState fk f = do
+lambdaGen :: Lambda Symbolic a => Free -> (Defn -> b) -> State -> Kind -> a -> IO b
+lambdaGen freeKind trans inState fk f = do
    ll  <- readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
 
-   trans <$> convert st fk (mkLambda st f)
+   trans <$> convert freeKind st fk (mkLambda st f)
 
 -- | Create an SMTLib lambda, in the given state.
 lambda :: Lambda Symbolic a => State -> Kind -> a -> IO SMTDef
-lambda inState fk = lambdaGen mkLam inState fk
+lambda inState fk = lambdaGen Open mkLam inState fk
    where mkLam (Defn frees params body) = SMTLam fk frees params body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string
 lambdaStr :: Lambda Symbolic a => State -> Kind -> a -> IO String
-lambdaStr = lambdaGen mkLam
+lambdaStr = lambdaGen Open mkLam
    where mkLam (Defn _frees params body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
-namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
-namedLambdaGen trans inState@State{rUserFuncs, rDefns} fk f = do
+namedLambdaGen :: Lambda Symbolic a => Free -> (Defn -> b) -> State -> Kind -> a -> IO b
+namedLambdaGen freeKind trans inState@State{rUserFuncs, rDefns} fk f = do
    ll      <- readIORef (rLambdaLevel inState)
    stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
 
    -- restore user-funcs and their definitions
    let st = stEmpty{rUserFuncs = rUserFuncs, rDefns = rDefns}
 
-   trans <$> convert st fk (mkLambda st f)
+   trans <$> convert freeKind st fk (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO SMTDef
-namedLambda inState nm fk = namedLambdaGen mkDef inState fk
+namedLambda inState nm fk = namedLambdaGen (Closed nm) mkDef inState fk
    where mkDef (Defn frees params body) = SMTDef nm fk frees params body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: Lambda Symbolic a => State -> String -> Kind -> a -> IO String
-namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
+namedLambdaStr inState nm fk = namedLambdaGen (Closed nm) mkDef inState fk
    where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
 
 -- | Generic axiom generator.
-axiomGen :: Axiom Symbolic a => (Defn -> b) -> State -> a -> IO b
-axiomGen trans inState f = do
+axiomGen :: Axiom Symbolic a => Free -> (Defn -> b) -> State -> a -> IO b
+axiomGen freeKind trans inState f = do
    -- make sure we're at the top
    ll <- readIORef (rLambdaLevel inState)
    () <- case ll of
@@ -99,26 +102,26 @@ axiomGen trans inState f = do
 
    st <- mkNewState (stCfg inState) $ Lambda 1
 
-   trans <$> convert st KBool (mkAxiom st f)
+   trans <$> convert freeKind st KBool (mkAxiom st f)
 
 -- | Create a named SMTLib axiom, in the given state.
 axiom :: Axiom Symbolic a => State -> String -> a -> IO SMTDef
-axiom inState nm = axiomGen mkAx inState
+axiom inState nm = axiomGen (Closed nm) mkAx inState
    where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
 
 -- | Create a named SMTLib axiom, in the given state, string version.
 axiomStr :: Axiom Symbolic a => State -> String -> a -> IO String
-axiomStr inState nm = axiomGen mkAx inState
+axiomStr inState nm = axiomGen (Closed nm) mkAx inState
    where mkAx (Defn frees params body) = intercalate "\n"
                 ["; user given axiom for: " ++ nm ++ if null frees then "" else " [Refers to: " ++ intercalate ", " frees ++ "]"
                 , "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
                 ]
 
 -- | Convert to an appropriate SMTLib representation.
-convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
-convert st expectedKind comp = do
+convert :: MonadIO m => Free -> State -> Kind -> SymbolicT m () -> m Defn
+convert freeKind st expectedKind comp = do
    ((), res) <- runSymbolicInState st comp
-   pure $ toLambda (stCfg st) expectedKind res
+   pure $ toLambda freeKind (stCfg st) expectedKind res
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
@@ -136,8 +139,8 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Convert the result of a symbolic run to a more abstract representation
-toLambda :: SMTConfig -> Kind -> Result -> Defn
-toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
+toLambda :: Free -> SMTConfig -> Kind -> Result -> Defn
+toLambda freeKind cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -200,10 +203,24 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                , "   Expected: " ++ show expectedKind
                ]
          | True
-         = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
-                paramStr
-                (intercalate "\n" . body)
-         where params = case is of
+         = case freeKind of
+             Open                 -> res
+             Closed nm | null fvs -> res
+                       | True     -> bad [ "Function definition refers to free variable(s)"
+                                         , ""
+                                         , "   Function : " ++ nm
+                                         , "   Refers to: " ++ intercalate ", " (map show fvs)
+                                         , ""
+                                         , "Check your smtFunction calls and make sure they don't have any free"
+                                         , "variables in their definitions. (NB. The refers to variables are"
+                                         , "internal names, unfortunately. Check the definition for " ++ show nm
+                                         , "for any variables it doesn't take in as a parameter itsef."
+                                         ]
+         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
+                          paramStr
+                          (intercalate "\n" . body)
+
+               params = case is of
                           (inps, trackers) | any ((== EX) . fst) inps
                                            -> bad [ "Unexpected existentially quantified variables as inputs"
                                                   , "   Saw: " ++ intercalate ", " [getUserName' n | (EX, n) <- inps]
@@ -221,9 +238,22 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                               in    [tab ++ "(let ((" ++ show s ++ " " ++ v ++ "))" | (s, v) <- bindings]
                                  ++ [tab ++ show out ++ replicate (length bindings) ')']
 
+               assignments = F.toList (pgmAssignments pgm)
+
+               constants = filter ((`notElem` [falseSV, trueSV]) . fst) consts
+
+               fvs :: [SV]
+               fvs = reverse $ walk (params ++ map fst constants) [] assignments
+                 where walk _     sofar []       = sofar
+                       walk known sofar (a : as) = let (defines, uses) = extract a
+                                                       currentFVs      = uses \\ known
+                                                   in walk (defines : known) (currentFVs ++ sofar) as
+
+                       extract :: (SV, SBVExpr) -> (SV, [SV])
+                       extract (d, expr) = (d, G.universeBi expr)
+
                bindings :: [(SV, String)]
-               bindings =  map mkConst (filter ((`notElem` [falseSV, trueSV]) . fst) consts)
-                        ++ map mkAsgn  (F.toList (pgmAssignments pgm))
+               bindings =  map mkConst constants ++ map mkAsgn  assignments
 
                mkConst :: (SV, CV) -> (SV, String)
                mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)

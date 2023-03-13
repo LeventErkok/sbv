@@ -5,12 +5,12 @@ EXCEPTION CAUGHT:
 *** 
 *** Function definition refers to free variable(s)
 *** 
-***    Function : foo
+***    Function : bar
 ***    Refers to: [s0]
 *** 
 *** Check your smtFunction calls and make sure they don't have any free
 *** variables in their definitions. (NB. The refers to variables are
-*** internal names, unfortunately. Check the definition for "foo"
+*** internal names, unfortunately. Check the definition for "bar"
 *** for any variables it doesn't take in as a parameter itsef.
 *** 
 *** Please report this at https://github.com/LeventErkok/sbv/issues
