@@ -13,6 +13,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
 
@@ -34,14 +35,13 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
-import Data.IORef (readIORef, newIORef)
+import Data.IORef (readIORef)
 import Data.List
 import Data.Proxy
 
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
-import qualified Data.Set as Set
 
 import qualified Data.Generics.Uniplate.Data as G
 
@@ -68,29 +68,24 @@ lambdaStr = lambdaGen mkLam
    where mkLam (Defn _frees params body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
-namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> String -> Kind -> a -> IO b
-namedLambdaGen trans inState nm fk f = do
+namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
+namedLambdaGen trans inState@State{rUserFuncs, rDefns} fk f = do
    ll      <- readIORef (rLambdaLevel inState)
    stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
 
-   -- if we're in a recursive loop, make sure we restore it
-   -- This is a bit dicey, but it seems to work..
-   st <- do curDefs <- readIORef (rUserFuncs inState)
-            if nm `Set.member` curDefs
-               then do nr <- newIORef curDefs
-                       pure stEmpty{rUserFuncs = nr}
-               else pure stEmpty
+   -- restore user-funcs and their definitions
+   let st = stEmpty{rUserFuncs = rUserFuncs, rDefns = rDefns}
 
    trans <$> convert st fk (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO SMTDef
-namedLambda inState nm fk = namedLambdaGen mkDef inState nm fk
+namedLambda inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = SMTDef nm fk frees params body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: Lambda Symbolic a => State -> String -> Kind -> a -> IO String
-namedLambdaStr inState nm fk = namedLambdaGen mkDef inState nm fk
+namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
 
 -- | Generic axiom generator.

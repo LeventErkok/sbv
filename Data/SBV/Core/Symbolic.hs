@@ -1362,26 +1362,26 @@ newUninterpreted st nm t uiCode
   | null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm)))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
   | True
-  = do uiMap <- readIORef (rUIMap st)
+  = do () <- case uiCode of
+               UINone  -> pure ()
+               UISMT d -> modifyState st rDefns (\defs -> d : filter (\o -> smtDefGivenName o /= Just nm) defs)
+                            $ noInteractive [ "Defined functions (smtFunction):"
+                                            , "  Name: " ++ nm
+                                            , "  Type: " ++ show t
+                                            , ""
+                                            , "You should use these functions at least once the query part starts"
+                                            , "and then use them in the query section as usual."
+                                            ]
+               UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                          modifyState st rCgMap (Map.insert nm c) (return ())
+
+       uiMap <- readIORef (rUIMap st)
        case nm `Map.lookup` uiMap of
          Just t' -> checkType t' (return ())
-         Nothing -> do modifyState st rUIMap (Map.insert nm t)
-                                 $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
-                                                                           Just t' -> checkType t' newUIs
-                                                                           Nothing -> Map.insert nm t newUIs)
-
-                       case uiCode of
-                          UINone  -> pure ()
-                          UISMT d -> modifyState st rDefns (d :)
-                                       $ noInteractive [ "Defined functions (smtFunction):"
-                                                       , "  Name: " ++ nm
-                                                       , "  Type: " ++ show t
-                                                       , ""
-                                                       , "You should use these functions at least once the query part starts"
-                                                       , "and then use them in the query section as usual."
-                                                       ]
-                          UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                                     modifyState st rCgMap (Map.insert nm c) (return ())
+         Nothing -> modifyState st rUIMap (Map.insert nm t)
+                           $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
+                                                                     Just t' -> checkType t' newUIs
+                                                                     Nothing -> Map.insert nm t newUIs)
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
