@@ -19,13 +19,13 @@
 [GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; -- user given mutually-recursive definitions: bar, foo
 [GOOD] (define-funs-rec
-         ((bar ((l1_s0 Int)) Int)
+         ((bar ((l2_s0 Int)) Int)
           (foo ((l1_s0 Int)) Int))
          (; Definition of: bar. [Refers to: foo]
-          (let ((l1_s2 1))
-          (let ((l1_s1 (foo l1_s0)))
-          (let ((l1_s3 (+ l1_s1 l1_s2)))
-          l1_s3)))
+          (let ((l2_s2 1))
+          (let ((l2_s1 (foo l2_s0)))
+          (let ((l2_s3 (+ l2_s1 l2_s2)))
+          l2_s3)))
           ; Definition of: foo. [Refers to: bar]
           (let ((l1_s2 1))
           (let ((l1_s1 (bar l1_s0)))
