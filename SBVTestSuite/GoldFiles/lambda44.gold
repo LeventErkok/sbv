@@ -1,5 +1,5 @@
 ; -- user given definition: lambda44
-(define-fun lambda44 ((l1_s0 (_ BitVec 32)))(_ BitVec 32)
+(define-fun lambda44 ((l1_s0 (_ BitVec 32))) (_ BitVec 32)
   (let ((l1_s1 #x00000001))
   (let ((l1_s2 (bvadd l1_s0 l1_s1)))
   l1_s2)))

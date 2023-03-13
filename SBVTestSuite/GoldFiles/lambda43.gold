@@ -1,4 +1,4 @@
 ; -- user given definition: lambda43
-(define-fun lambda43 ()(_ BitVec 32)
+(define-fun lambda43 () (_ BitVec 32)
   (let ((l1_s0 #x00000000))
   l1_s0))

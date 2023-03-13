@@ -26,7 +26,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; -- user given definition: isEvenOdd [Recursive]
-[GOOD] (define-fun-rec isEvenOdd ((l1_s0 Int))(SBVTuple2 Bool Bool)
+[GOOD] (define-fun-rec isEvenOdd ((l1_s0 Int)) (SBVTuple2 Bool Bool)
          (let ((l1_s1 0))
          (let ((l1_s6 (mkSBVTuple2 true false)))
          (let ((l1_s7 1))
