@@ -21,6 +21,10 @@ import Data.SBV
 import Data.SBV.Tuple
 import qualified Data.SBV.List as L
 
+-------------------------------------------------------------------------
+-- * Simple functions
+-------------------------------------------------------------------------
+
 -- | Add one to an argument
 add1 :: SInteger -> SInteger
 add1 = smtFunction "add1" (+1)
@@ -35,6 +39,10 @@ add1Example :: IO SatResult
 add1Example = sat $ do
         x <- sInteger "x"
         pure $ 5 .== add1 x
+
+-------------------------------------------------------------------------
+-- * Basic recursive functions
+-------------------------------------------------------------------------
 
 -- | Sum of numbers from 0 to the given number. Since this is a recursive
 -- definition, we cannot simply symbolically simulate it as it wouldn't
@@ -69,6 +77,10 @@ len = smtFunction "list_length" $ \xs -> ite (L.null xs) 0 (1 + len (L.tail xs))
 --   s1 =       3 :: Integer
 lenExample :: IO SatResult
 lenExample = sat $ \a r -> a .== [1,2,3::Integer] .&& r .== len a
+
+-------------------------------------------------------------------------
+-- * Mutual recursion
+-------------------------------------------------------------------------
 
 -- | A simple mutual-recursion example, from the z3 documentation. We have:
 --
@@ -116,6 +128,10 @@ isOdd x = isEvenOdd x ^._2
 --   s2 = False :: Bool
 evenOdd2 :: IO SatResult
 evenOdd2 = sat $ \a r1 r2 -> a .== 20 .&& r1 .== isEven a .&& r2 .== isOdd a
+
+-------------------------------------------------------------------------
+-- * Nested recursion
+-------------------------------------------------------------------------
 
 -- | Ackermann function, demonstrating nested recursion.
 ack :: SInteger -> SInteger -> SInteger
