@@ -667,7 +667,7 @@ declFuncs ds = map declGroup sorted
                        | True           = " [Refers to: " ++ intercalate ", " otherDeps ++ "]"
 
                  decl | null param = smtType fk
-                      | True       = param ++ smtType fk
+                      | True       = param ++ " " ++ smtType fk
 
                  s = "(" ++ definer ++ " " ++ nm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
 
