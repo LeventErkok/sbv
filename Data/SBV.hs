@@ -78,7 +78,8 @@
 --
 --   * Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
 --
---   * Ability to define SMTLib functions, generated directly from Haskell versions.
+--   * Ability to define SMTLib functions, generated directly from Haskell versions,
+--     including support for recursive and mutually recursive functions.
 --
 --   * Model validation: SBV can validate models returned by solvers, which allows
 --     for protection against bugs in SMT solvers and SBV itself. (See the 'validateModel'
