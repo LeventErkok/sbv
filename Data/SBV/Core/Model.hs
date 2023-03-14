@@ -2336,7 +2336,7 @@ instance SymVal b => Mergeable (SArray a b) where
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
 --
--- Minimal complete definition: 'sbvUninterpret'. However, most instances in
+-- Minimal complete definition: 'sbvDefineValue'. However, most instances in
 -- practice are already provided by SBV, so end-users should not need to define their
 -- own instances.
 class SMTDefinable a where
@@ -2344,10 +2344,41 @@ class SMTDefinable a where
   -- the usual unrolling semantics. This is useful for generating sub-functions
   -- in generated SMTLib problem, or handling recursive (and mutually-recursive)
   -- definitions that wouldn't terminate in an unrolling symbolic simulation context.
+  --
+  -- __IMPORTANT NOTE__ The string argument names this function. Note that SBV will identify
+  -- this function with that name, i.e., if you use this function twice (or use it recursively),
+  -- it will simply assume this name uniquely identifies the function being defined. Hence,
+  -- the user has to assure that this string is unique amongst all the functions you use.
+  -- Furthermore, if the call to 'smtFunction' happens in the scope of a parameter, you
+  -- must make sure the string is chosen to keep it unique per parameter value. For instance,
+  -- if you have:
+  --
+  -- @
+  --   bar :: SInteger -> SInteger -> SInteger
+  --   bar k = smtFunction "bar" (\x -> x+k)   -- Note the capture of k!
+  -- @
+  --
+  -- and you call @bar 2@ and @bar 3@, you *will* get the same SMTLib function. Obviously
+  -- this is unsound. The reason is that the parameter value isn't captured by the name. In general,
+  -- you should simply not do this, but if you must, have a concrete argument to make sure you can
+  -- create a unique name. Something like:
+  --
+  -- @
+  --   bar :: String -> SInteger -> SInteger -> SInteger
+  --   bar tag k = smtFunction ("bar_" ++ tag) (\x -> x+k)   -- Tag should make the name unique!
+  -- @
+  --
+  -- Then, make sure you use @bar "two" 2@ and @bar "three" 3@ etc. to preserve the invariant.
+  --
+  -- Note that this is a design choice, to keep function creation as easy to use as possible. SBV
+  -- could've made 'smtFunction' a monadic call and generated the name itself to avoid all these issues.
+  -- But the ergonomics of that is worse, and doesn't fit with the general design philosophy. If you
+  -- can think of a solution (perhaps using some nifty GHC tricks?) to avoid this issue without making
+  -- 'smtFunction' return a monadic result, please get in touch!
   smtFunction :: Lambda Symbolic a => String -> a -> a
 
-  -- | Uninterpret a value, receiving an object that can be used instead. Use this version
-  -- when you do not need to add an axiom about this value.
+  -- | Uninterpret a value, i.e., add this value as a completely undefined value/function that
+  -- the solver is free to instantiate to satisfy other constraints.
   uninterpret :: String -> a
 
   -- | Uninterpret a value, only for the purposes of code-generation. For execution
@@ -2358,18 +2389,18 @@ class SMTDefinable a where
 
   -- | Most generalized form of uninterpretation, this function should not be needed
   -- by end-user-code, but is rather useful for the library development.
-  sbvUninterpret :: String -> UIKind a -> a
+  sbvDefineValue :: String -> UIKind a -> a
 
   -- | A synonym for 'uninterpret'. Allows us to create variables without
   -- having to call 'free' explicitly, i.e., without being in the symbolic monad.
   sym :: String -> a
 
-  {-# MINIMAL sbvUninterpret #-}
+  {-# MINIMAL sbvDefineValue #-}
 
   -- defaults:
-  uninterpret    nm        = sbvUninterpret nm   UIFree
-  smtFunction    nm      v = sbvUninterpret nm $ UIFun   (v, \st fk -> namedLambda st nm fk v)
-  cgUninterpret  nm code v = sbvUninterpret nm $ UICodeC (v, code)
+  uninterpret    nm        = sbvDefineValue nm   UIFree
+  smtFunction    nm      v = sbvDefineValue nm $ UIFun   (v, \st fk -> namedLambda st nm fk v)
+  cgUninterpret  nm code v = sbvDefineValue nm $ UICodeC (v, code)
   sym                      = uninterpret
 
 -- | Kind of uninterpretation
@@ -2397,7 +2428,7 @@ retrieveConstCode (UICodeC (v, _)) = Just v
 
 -- Plain constants
 instance HasKind a => SMTDefinable (SBV a) where
-  sbvUninterpret nm uiKind
+  sbvDefineValue nm uiKind
      | Just v <- retrieveConstCode uiKind
      = v
      | True
@@ -2411,7 +2442,7 @@ instance HasKind a => SMTDefinable (SBV a) where
 
 -- Functions of one argument
 instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0
            | Just v <- retrieveConstCode uiKind, isConcrete arg0
            = v arg0
@@ -2429,7 +2460,7 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
 
 -- Functions of two arguments
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1
            = v arg0 arg1
@@ -2449,7 +2480,7 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
 
 -- Functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2
            = v arg0 arg1 arg2
@@ -2471,7 +2502,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
 
 -- Functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
            = v arg0 arg1 arg2 arg3
@@ -2495,7 +2526,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
 
 -- Functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
            = v arg0 arg1 arg2 arg3 arg4
@@ -2521,7 +2552,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
 
 -- Functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
            = v arg0 arg1 arg2 arg3 arg4 arg5
@@ -2550,7 +2581,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
 -- Functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpret nm uiKind = f
+  sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
@@ -2580,35 +2611,35 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
 
 -- Uncurried functions of two arguments
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (curry <$> uiKind) in uncurry f
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (curry <$> uiKind) in uncurry f
 
 -- Uncurried functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
 
 -- Uncurried functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 fn a b c d = fn (a, b, c, d)
 
 -- Uncurried functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 fn a b c d e = fn (a, b, c, d, e)
 
 -- Uncurried functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
 
 -- Uncurried functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpret nm uiKind = let f = sbvUninterpret nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
 
 -- | Symbolic computations provide a context for writing symbolic programs.
