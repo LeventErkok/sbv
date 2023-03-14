@@ -17,7 +17,7 @@ import Data.SBV
 
 -- | Given an array, and bounds on it, initialize it within the bounds to the element given.
 -- Otherwise, leave it untouched.
-memset :: SArray Integer Integer -> SInteger -> SInteger -> SInteger -> Symbolic (SArray Integer Integer)
+memset :: SArray Integer Integer -> SInteger -> SInteger -> SInteger -> SArray Integer Integer
 memset mem lo hi newVal = lambdaAsArray update
   where update :: SInteger -> SInteger
         update idx = let oldVal = readArray mem idx
@@ -35,15 +35,12 @@ memsetExample = prove $ do
    hi   <- sInteger "hi"
    zero <- sInteger "zero"
 
-   -- initialize lo-hi to zero. Otherwise free.
-   initialized <- memset mem lo hi zero
-
    -- Get an index within lo/hi
    idx  <- sInteger "idx"
    constrain $ idx .>= lo .&& idx .<= hi
 
-   -- It must be the case that we get zero back
-   pure $ readArray initialized idx .== zero
+   -- It must be the case that we get zero back after mem-setting
+   pure $ readArray (memset mem lo hi zero) idx .== zero
 
 -- | Get an example of reading a value out of range. The value returned should be out-of-range for lo/hi
 --
@@ -61,12 +58,8 @@ outOfInit = sat $ do
    hi   <- sInteger "hi"
    zero <- sInteger "zero"
 
-   -- initialize lo-hi to zero. Otherwise free.
-   constrain $ lo .<= hi
-   initialized <- memset mem lo hi zero
-
    -- Get an index within lo/hi
    idx  <- sInteger "idx"
 
    -- Let read produce non-zero
-   constrain $ readArray initialized idx ./= zero
+   constrain $ observe "Read" (readArray (memset mem lo hi zero) idx) ./= zero
