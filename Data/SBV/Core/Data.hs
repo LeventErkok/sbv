@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Axiom(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Axiom(..), Lambda(..)
  ) where
 
 import GHC.TypeLits
@@ -415,6 +415,21 @@ instance MonadSymbolic m => Axiom m SBool where
 -- | Functions
 instance (SymVal a, Axiom m r) => Axiom m (SBV a -> r) where
   mkAxiom st fn = mkArg >>= mkAxiom st . fn
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ lambdaVar st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
+-- | Values that we can turn into a lambda abstraction
+class MonadSymbolic m => Lambda m a where
+  mkLambda :: State -> a -> m ()
+
+-- | Base case, simple values
+instance MonadSymbolic m => Lambda m (SBV a) where
+  mkLambda _ out = void $ output out
+
+-- | Functions
+instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
+  mkLambda st fn = mkArg >>= mkLambda st . fn
     where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))

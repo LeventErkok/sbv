@@ -23,10 +23,8 @@ module Data.SBV.Lambda (
             lambda,      lambdaStr
           , namedLambda, namedLambdaStr
           , axiom,       axiomStr
-          , Lambda(..), Axiom(..)
         ) where
 
-import Control.Monad
 import Control.Monad.Trans
 
 import Data.SBV.Core.Data
@@ -37,7 +35,6 @@ import Data.SBV.Utils.PrettyNum
 
 import Data.IORef (readIORef)
 import Data.List
-import Data.Proxy
 
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
@@ -119,21 +116,6 @@ convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
 convert st expectedKind comp = do
    ((), res) <- runSymbolicInState st comp
    pure $ toLambda (stCfg st) expectedKind res
-
--- | Values that we can turn into a lambda abstraction
-class MonadSymbolic m => Lambda m a where
-  mkLambda :: State -> a -> m ()
-
--- | Base case, simple values
-instance MonadSymbolic m => Lambda m (SBV a) where
-  mkLambda _ out = void $ output out
-
--- | Functions
-instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
-  mkLambda st fn = mkArg >>= mkLambda st . fn
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ lambdaVar st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Convert the result of a symbolic run to a more abstract representation
 toLambda :: SMTConfig -> Kind -> Result -> Defn

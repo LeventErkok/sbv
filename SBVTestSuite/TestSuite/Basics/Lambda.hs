@@ -164,7 +164,7 @@ tests =
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
-        record gen rf = do st <- mkNewState defaultSMTCfg (Lambda 0)
+        record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
                            appendFile rf . (P.++ "\n") =<< gen st
 
         runSat   f = runSatExpecting f Sat
