@@ -623,19 +623,25 @@ instance (Random a, SymVal a) => Random (SBV a) where
 -- referential transparency. See https://github.com/LeventErkok/sbv/issues/553 for details.
 class SymArray array where
   -- | Generalization of 'Data.SBV.newArray_'
-  newArray_      :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
+  newArray_ :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
+
   -- | Generalization of 'Data.SBV.newArray'
-  newArray       :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
+  newArray  :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
+
   -- | Create a literal array
-  sListArray     :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
+  sListArray :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
+
   -- | Read the array element at @a@
-  readArray      :: array a b -> SBV a -> SBV b
+  readArray :: array a b -> SBV a -> SBV b
+
   -- | Update the element at @a@ to be @b@
-  writeArray     :: SymVal b => array a b -> SBV a -> SBV b -> array a b
+  writeArray :: SymVal b => array a b -> SBV a -> SBV b -> array a b
+
   -- | Merge two given arrays on the symbolic condition
   -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
   -- Merging pushes the if-then-else choice down on to elements
-  mergeArrays    :: SymVal b => SBV Bool -> array a b -> array a b -> array a b
+  mergeArrays :: SymVal b => SBV Bool -> array a b -> array a b -> array a b
+
   -- | Internal function, not exported to the user
   newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
 
