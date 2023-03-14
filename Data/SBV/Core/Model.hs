@@ -2847,10 +2847,14 @@ instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e,
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 -- | Using a lambda as an array
-lambdaAsArray :: forall array a b. (SymArray array, SymVal a, HasKind b) => (SBV a -> SBV b) -> Symbolic (array a b)
-lambdaAsArray f = do st  <- symbolicEnv
-                     liftIO $ do def <- lambdaStr st (kindOf (Proxy @b)) f
-                                 newArrayInState Nothing (Right def) st
+lambdaAsArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
+lambdaAsArray f = SArray $ SArr (kindOf (Proxy @a), kindOf (Proxy @b)) $ cache g
+  where g st = do def  <- lambdaStr st (kindOf (Proxy @b)) f
+
+                  let extract :: SArray a b -> IO ArrayIndex
+                      extract (SArray (SArr _ ci)) = uncacheAI ci st
+
+                  extract =<< newArrayInState Nothing (Right def) st
 
 {-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}
