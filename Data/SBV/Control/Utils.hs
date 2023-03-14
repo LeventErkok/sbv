@@ -1724,7 +1724,7 @@ executeQuery queryContext (QueryT userQuery) = do
                       SMTMode _ _ _ cfg -> allowQuantifiedQueries cfg
                       CodeGen           -> False -- doesn't matter in these cases
                       Concrete{}        -> False -- but we're being careful
-                      Lambda{}          -> False
+                      LambdaGen{}       -> False
 
      () <- unless allowQQs $ liftIO $
                     case queryContext of

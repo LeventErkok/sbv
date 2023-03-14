@@ -53,7 +53,7 @@ data Defn = Defn [String]        -- The uninterpreted names referred to in the b
 lambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
 lambdaGen trans inState fk f = do
    ll  <- readIORef (rLambdaLevel inState)
-   st  <- mkNewState (stCfg inState) $ Lambda (ll + 1)
+   st  <- mkNewState (stCfg inState) $ LambdaGen (ll + 1)
 
    trans <$> convert st fk (mkLambda st f)
 
@@ -71,7 +71,7 @@ lambdaStr = lambdaGen mkLam
 namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
 namedLambdaGen trans inState@State{rUserFuncs, rDefns} fk f = do
    ll      <- readIORef (rLambdaLevel inState)
-   stEmpty <- mkNewState (stCfg inState) $ Lambda (ll + 1)
+   stEmpty <- mkNewState (stCfg inState) $ LambdaGen (ll + 1)
 
    -- restore user-funcs and their definitions
    let st = stEmpty{rUserFuncs = rUserFuncs, rDefns = rDefns}
@@ -97,7 +97,7 @@ axiomGen trans inState f = do
            0 -> pure ()
            _ -> error "Data.SBV.axiom: Not supported: axiom calls that are not at the top-level."
 
-   st <- mkNewState (stCfg inState) $ Lambda 1
+   st <- mkNewState (stCfg inState) $ LambdaGen 1
 
    trans <$> convert st KBool (mkAxiom st f)
 
