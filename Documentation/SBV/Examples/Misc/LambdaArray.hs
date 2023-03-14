@@ -46,6 +46,7 @@ memsetExample = prove $ do
 --
 -- >>> outOfInit
 -- Satisfiable. Model:
+--   Read = 1 :: Integer
 --   lo   = 0 :: Integer
 --   hi   = 0 :: Integer
 --   zero = 0 :: Integer
@@ -58,7 +59,10 @@ outOfInit = sat $ do
    hi   <- sInteger "hi"
    zero <- sInteger "zero"
 
-   -- Get an index within lo/hi
+   -- Get a meaningful range:
+   constrain $ lo .<= hi
+
+   -- Get an index
    idx  <- sInteger "idx"
 
    -- Let read produce non-zero
