@@ -47,27 +47,27 @@ data Defn = Defn [String]        -- The uninterpreted names referred to in the b
                  (Int -> String) -- Body, given the tab amount.
 
 -- | Generic creator for anonymous lamdas.
-lambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
+lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen trans inState fk f = do
-   ll  <- readIORef (rLambdaLevel inState)
+   ll  <- liftIO $ readIORef (rLambdaLevel inState)
    st  <- mkNewState (stCfg inState) $ LambdaGen (ll + 1)
 
    trans <$> convert st fk (mkLambda st f)
 
 -- | Create an SMTLib lambda, in the given state.
-lambda :: Lambda Symbolic a => State -> Kind -> a -> IO SMTDef
+lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTDef
 lambda inState fk = lambdaGen mkLam inState fk
    where mkLam (Defn frees params body) = SMTLam fk frees params body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string
-lambdaStr :: Lambda Symbolic a => State -> Kind -> a -> IO String
+lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
 lambdaStr = lambdaGen mkLam
    where mkLam (Defn _frees params body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
-namedLambdaGen :: Lambda Symbolic a => (Defn -> b) -> State -> Kind -> a -> IO b
+namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
 namedLambdaGen trans inState@State{rUserFuncs, rDefns} fk f = do
-   ll      <- readIORef (rLambdaLevel inState)
+   ll      <- liftIO $ readIORef (rLambdaLevel inState)
    stEmpty <- mkNewState (stCfg inState) $ LambdaGen (ll + 1)
 
    -- restore user-funcs and their definitions
@@ -76,20 +76,20 @@ namedLambdaGen trans inState@State{rUserFuncs, rDefns} fk f = do
    trans <$> convert st fk (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
-namedLambda :: Lambda Symbolic a => State -> String -> Kind -> a -> IO SMTDef
+namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m SMTDef
 namedLambda inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = SMTDef nm fk frees params body
 
 -- | Create a named SMTLib function, in the given state, string version
-namedLambdaStr :: Lambda Symbolic a => State -> String -> Kind -> a -> IO String
+namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m String
 namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
 
 -- | Generic axiom generator.
-axiomGen :: Axiom Symbolic a => (Defn -> b) -> State -> a -> IO b
+axiomGen :: (MonadIO m, Axiom (SymbolicT m) a) => (Defn -> b) -> State -> a -> m b
 axiomGen trans inState f = do
    -- make sure we're at the top
-   ll <- readIORef (rLambdaLevel inState)
+   ll <- liftIO $ readIORef (rLambdaLevel inState)
    () <- case ll of
            0 -> pure ()
            _ -> error "Data.SBV.axiom: Not supported: axiom calls that are not at the top-level."
@@ -99,12 +99,12 @@ axiomGen trans inState f = do
    trans <$> convert st KBool (mkAxiom st f)
 
 -- | Create a named SMTLib axiom, in the given state.
-axiom :: Axiom Symbolic a => State -> String -> a -> IO SMTDef
+axiom :: (MonadIO m, Axiom (SymbolicT m) a) => State -> String -> a -> m SMTDef
 axiom inState nm = axiomGen mkAx inState
    where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
 
 -- | Create a named SMTLib axiom, in the given state, string version.
-axiomStr :: Axiom Symbolic a => State -> String -> a -> IO String
+axiomStr :: (MonadIO m, Axiom (SymbolicT m) a) => State -> String -> a -> m String
 axiomStr inState nm = axiomGen mkAx inState
    where mkAx (Defn frees params body) = intercalate "\n"
                 ["; user given axiom for: " ++ nm ++ if null frees then "" else " [Refers to: " ++ intercalate ", " frees ++ "]"

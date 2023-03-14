@@ -31,7 +31,7 @@ module Data.SBV.Control.Utils (
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
      , checkSat, checkSatUsing, getAllSatResult
-     , inNewContext, freshVar, freshVar_, freshArray, freshArray_
+     , inNewContext, freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
      , parse
      , unexpected
      , timeout
@@ -76,7 +76,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
-                              , RCSet(..)
+                              , RCSet(..), Lambda(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), SMTDef(..), svToSV
@@ -267,7 +267,21 @@ freshArray nm = mkFreshArray (Just nm)
 
 -- | Creating arrays, internal use only.
 mkFreshArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> m (array a b)
-mkFreshArray mbNm mbVal = inNewContext $ newArrayInState mbNm mbVal
+mkFreshArray mbNm mbVal = inNewContext $ newArrayInState mbNm (Left mbVal)
+
+-- | Generalization of 'Data.SBV.Control.freshLambdaArray_'
+freshLambdaArray_ :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => (a -> b) -> m (array a b)
+freshLambdaArray_ = mkFreshLambdaArray Nothing
+
+-- | Generalization of 'Data.SBV.Control.freshLambdaArray'
+freshLambdaArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => String -> (a -> b) -> m (array a b)
+freshLambdaArray nm = mkFreshLambdaArray (Just nm)
+
+-- | Creating arrays, internal use only.
+mkFreshLambdaArray :: forall m array a b. (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => Maybe String -> (a -> b) -> m (array a b)
+mkFreshLambdaArray mbNm f = inNewContext $ \st -> do
+                                lam <- lambdaStr st (kindOf (Proxy @b)) f
+                                newArrayInState mbNm (Right lam) st
 
 -- | Generalization of 'Data.SBV.Control.queryDebug'
 queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()

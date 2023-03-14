@@ -22,7 +22,9 @@
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
-     , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAssignment, getOption, freshVar, freshVar_, freshArray, freshArray_, push, pop, getAssertionStackDepth
+     , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAssignment, getOption
+     , freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
+     , push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
      , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, getObservables, ensureSat
      , SMTOption(..), SMTInfoFlag(..), SMTErrorBehavior(..), SMTReasonUnknown(..), SMTInfoResponse(..), getInfo

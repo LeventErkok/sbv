@@ -658,11 +658,11 @@ class SymArray array where
   mergeArrays :: SymVal b => SBV Bool -> array a b -> array a b -> array a b
 
   -- | Internal function, not exported to the user
-  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (array a b)
+  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Either (Maybe (SBV b)) String -> State -> IO (array a b)
 
   {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState), sListArray #-}
-  newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   mbVal
-  newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) mbVal
+  newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   (Left mbVal)
+  newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) (Left mbVal)
 
   -- Despite our MINIMAL pragma and default implementations for newArray_ and
   -- newArray, we must provide a dummy implementation for newArrayInState:
@@ -701,14 +701,14 @@ instance SymArray SArray where
 
                            iSV <- sbvToSV st iVal
 
-                           let upd  = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree (Just iSV))
+                           let upd  = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree (Left (Just iSV)))
 
                            k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
                            return k
 
-  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> State -> IO (SArray a b)
-  newArrayInState mbNm mbVal st = do mapM_ (registerKind st) [aknd, bknd]
-                                     SArray <$> newSArr st (aknd, bknd) (mkNm mbNm) (unSBV <$> mbVal)
+  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Either (Maybe (SBV b)) String -> State -> IO (SArray a b)
+  newArrayInState mbNm eiVal st = do mapM_ (registerKind st) [aknd, bknd]
+                                     SArray <$> newSArr st (aknd, bknd) (mkNm mbNm) (either (Left . (unSBV <$>)) Right eiVal)
      where mkNm Nothing   t = "array_" ++ show t
            mkNm (Just nm) _ = nm
            aknd = kindOf (Proxy @a)

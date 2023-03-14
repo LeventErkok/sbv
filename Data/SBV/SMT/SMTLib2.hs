@@ -61,7 +61,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
         hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
-        hasArrayInits  = (not . null) [() | (_, (_, _, ArrayFree (Just _))) <- arrs]
+        hasArrayInits  = (not . null) $  [() | (_, (_, _, ArrayFree (Left  (Just _)))) <- arrs]
+                                      ++ [() | (_, (_, _, ArrayFree (Right _       ))) <- arrs]
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
@@ -755,9 +756,10 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         constNames   = M.keys constMapping
 
         topLevel = not quantified || case ctx of
-                                       ArrayFree mbi      -> maybe True (`elem` constNames) mbi
-                                       ArrayMutate _ a b  -> all (`elem` constNames) [a, b]
-                                       ArrayMerge c _ _   -> c `elem` constNames
+                                       ArrayFree (Left mbi) -> maybe True (`elem` constNames) mbi
+                                       ArrayFree (Right{})  -> True
+                                       ArrayMutate _ a b    -> all (`elem` constNames) [a, b]
+                                       ArrayMerge c _ _     -> c `elem` constNames
         (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
 
@@ -770,8 +772,9 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         atyp  = "(Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ ")"
 
         adecl = case ctx of
-                  ArrayFree (Just v) -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " ((as const " ++ atyp ++ ") " ++ constInit v ++ "))"
-                  ArrayFree Nothing
+                  ArrayFree (Right lam)     -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " " ++ lam ++ ")"
+                  ArrayFree (Left (Just v)) -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " ((as const " ++ atyp ++ ") " ++ constInit v ++ "))"
+                  ArrayFree (Left Nothing)
                     | bKnd == KChar  ->  -- Can't support yet, because we need to make sure all the elements are length-1 strings. So, punt for now.
                                          tbd "Free array declarations containing SChars"
                   _                  -> "(declare-fun " ++ nm ++ " () " ++ atyp ++                                                  ")"

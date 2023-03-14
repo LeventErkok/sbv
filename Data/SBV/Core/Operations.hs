@@ -1019,13 +1019,15 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
                   return k
 
 -- | Create a named new array
-newSArr :: State -> (Kind, Kind) -> (Int -> String) -> Maybe SVal -> IO SArr
-newSArr st ainfo mkNm mbDef = do
+newSArr :: State -> (Kind, Kind) -> (Int -> String) -> Either (Maybe SVal) String -> IO SArr
+newSArr st ainfo mkNm mbVal = do
     amap <- R.readIORef $ rArrayMap st
 
-    mbSWDef <- case mbDef of
-                 Nothing -> return Nothing
-                 Just sv -> Just <$> svToSV st sv
+    mbSWDef <- case mbVal of
+                 Left mbSV -> case mbSV of
+                                Nothing -> pure (Left Nothing)
+                                Just sv -> Left . Just <$> svToSV st sv
+                 Right lam -> pure (Right lam)
 
     let i   = ArrayIndex $ IMap.size amap
         nm  = mkNm (unArrayIndex i)

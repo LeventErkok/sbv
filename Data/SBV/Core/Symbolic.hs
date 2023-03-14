@@ -904,13 +904,14 @@ instance Show Result where
                 stk ++ ": " ++ show p
 
 -- | The context of a symbolic array as created
-data ArrayContext = ArrayFree (Maybe SV)                   -- ^ A new array, the contents are initialized with the given value, if any
+data ArrayContext = ArrayFree   (Either (Maybe SV) String) -- ^ A new array, the contents are initialized with the given value, if any, or the custom lambda given
                   | ArrayMutate ArrayIndex SV SV           -- ^ An array created by mutating another array at a given cell
                   | ArrayMerge  SV ArrayIndex ArrayIndex   -- ^ An array created by symbolically merging two other arrays
 
 instance Show ArrayContext where
-  show (ArrayFree Nothing)   = " initialized with random elements"
-  show (ArrayFree (Just sv)) = " initialized with " ++ show sv
+  show (ArrayFree (Left Nothing))   = " initialized with random elements"
+  show (ArrayFree (Left (Just sv))) = " initialized with " ++ show sv
+  show (ArrayFree (Right lambda))   = " initialized with " ++ show lambda
   show (ArrayMutate i a b)   = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
   show (ArrayMerge  s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
 

@@ -46,7 +46,7 @@ module Data.SBV.Core.Model (
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
-  , sbvQuickCheck
+  , sbvQuickCheck, lambdaAsArray
   )
   where
 
@@ -981,7 +981,7 @@ instance EqSymbolic (SBV a) where
 
           r st = do let zero = 0 :: SInteger
 
-                    arr <- SArray <$> newSArr st (ek, KUnbounded) (\i -> "array_" ++ show i) (Just (unSBV zero))
+                    arr <- SArray <$> newSArr st (ek, KUnbounded) (\i -> "array_" ++ show i) (Left (Just (unSBV zero)))
 
                     let incr x table = ite (x `sElem` ignored) zero (1 + readArray table x)
 
@@ -2845,6 +2845,12 @@ instance {-# OVERLAPPABLE #-}
 
 instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
+
+-- | Using a lambda as an array
+lambdaAsArray :: forall array a b. (SymArray array, SymVal a, HasKind b) => (SBV a -> SBV b) -> Symbolic (array a b)
+lambdaAsArray f = do st  <- symbolicEnv
+                     liftIO $ do def <- lambdaStr st (kindOf (Proxy @b)) f
+                                 newArrayInState Nothing (Right def) st
 
 {-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
 {-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}
