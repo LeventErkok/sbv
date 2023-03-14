@@ -246,7 +246,7 @@ toLambda freeKind cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = s
                fvs = reverse $ walk (params ++ map fst constants) [] assignments
                  where walk _     sofar []       = sofar
                        walk known sofar (a : as) = let (defines, uses) = extract a
-                                                       currentFVs      = uses \\ known
+                                                       currentFVs      = nub uses \\ known
                                                    in walk (defines : known) (currentFVs ++ sofar) as
 
                        extract :: (SV, SBVExpr) -> (SV, [SV])
