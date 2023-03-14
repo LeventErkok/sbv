@@ -17,7 +17,7 @@ report any issues you might see with newer releases.
         on Jul 27, 2020.
   * CVC5:
       * https://github.com/cvc5/cvc5
-      * Version compiled from GitHub repo above on Jun 20th, 2022.
+      * Version 1.0.5, downloaded compiled from GitHub repo above on Mar 13th, 2023.
   * dReal:
       * http://dreal.github.io/
       * Version installed via `brew tap dreal/dreal; brew rm dreal; brew install dreal --HEAD`
