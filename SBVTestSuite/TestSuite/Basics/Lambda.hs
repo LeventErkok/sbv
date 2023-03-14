@@ -144,7 +144,6 @@ tests =
       , goldenCapturedIO "lambda52"   $ runSat2 (\a r -> a .== 21 .&& isOdd  a .== r)
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
-      -- Free variables are not OK
       , goldenCapturedIO "lambda53" $ runSat (\x -> x .== smtFunction "foo" (+(x::SInteger)) x)
 
       -- Make sure we can handle dependency orders
@@ -162,10 +161,6 @@ tests =
                                                         f3 = smtFunction "f3" (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
                                                         f4 = smtFunction "f4" (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
                                                     in f1 x .== (x :: SWord8))
-
-      -- Another free var test
-      , goldenCapturedIO "lambda58" $ runSat (\x -> let bar = smtFunction "bar" (x+)  -- This x is free; so no good!
-                                                    in bar x .== (x :: SInteger))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
