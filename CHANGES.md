@@ -24,6 +24,10 @@
     can handle both recursive and non-recursive functions. See "Documentation/SBV/Examples/Misc/Definitions.hs"
     for examples.
 
+  * New function 'lambdaAsArray' allows creation of array values out of lambda-expressions. See
+    "Documentation/SBV/Examples/Misc/LambdaArray.hs" for an example use. This adds expressive power,
+    as we can now specify arrays with index dependent contents much more easily.
+
   * [BACKWARDS COMPATIBILITY] The signature of Data.SBV.List's concat has changed. In previous releases
     this was a synonym for appending two lists, now it takes a list-of-lists and flattens it, matching the
     Haskell list function with the same name.
