@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Generating lambda-expressions, axioms, and named functions, for (limited)
+-- Generating lambda-expressions, constraints, and named functions, for (limited)
 -- higher-order function support in SBV.
 -----------------------------------------------------------------------------
 
@@ -21,7 +21,7 @@
 module Data.SBV.Lambda (
             lambda,      lambdaStr
           , namedLambda, namedLambdaStr
-          , axiom,       axiomStr
+          , constraint,  constraintStr
         ) where
 
 import Control.Monad.Trans
@@ -84,29 +84,29 @@ namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind
 namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
 
--- | Generic axiom generator.
-axiomGen :: (MonadIO m, Axiom (SymbolicT m) a) => (Defn -> b) -> State -> a -> m b
-axiomGen trans inState f = do
+-- | Generic constraint generator.
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => (Defn -> b) -> State -> a -> m b
+constraintGen trans inState f = do
    -- make sure we're at the top
    ll <- liftIO $ readIORef (rLambdaLevel inState)
    () <- case ll of
            0 -> pure ()
-           _ -> error "Data.SBV.axiom: Not supported: axiom calls that are not at the top-level."
+           _ -> error "Data.SBV.constraintGen: Not supported: constraint calls that are not at the top-level."
 
    st <- mkNewState (stCfg inState) $ LambdaGen 1
 
-   trans <$> convert st KBool (mkAxiom st f)
+   trans <$> convert st KBool (mkConstraint st f)
 
--- | Create a named SMTLib axiom, in the given state.
-axiom :: (MonadIO m, Axiom (SymbolicT m) a) => State -> String -> a -> m SMTDef
-axiom inState nm = axiomGen mkAx inState
+-- | Create a named SMTLib constraint, in the given state.
+constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m SMTDef
+constraint inState nm = constraintGen mkAx inState
    where mkAx (Defn deps params body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
 
--- | Create a named SMTLib axiom, in the given state, string version.
-axiomStr :: (MonadIO m, Axiom (SymbolicT m) a) => State -> String -> a -> m String
-axiomStr inState nm = axiomGen mkAx inState
+-- | Create an SMTLib constraint, in the given state, string version.
+constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
+constraintStr inState nm = constraintGen mkAx inState
    where mkAx (Defn frees params body) = intercalate "\n"
-                ["; user given axiom for: " ++ nm ++ if null frees then "" else " [Refers to: " ++ intercalate ", " frees ++ "]"
+                ["; user given constraint for: " ++ nm ++ if null frees then "" else " [Refers to: " ++ intercalate ", " frees ++ "]"
                 , "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
                 ]
 

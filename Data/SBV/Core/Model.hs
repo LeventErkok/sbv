@@ -2651,7 +2651,7 @@ instance MonadIO m => SolverContext (SymbolicT m) where
 
    addAxiom nm f                       = do
         st <- symbolicEnv
-        ax <- liftIO $ axiom st nm f
+        ax <- liftIO $ constraint st nm f
         liftIO $ modifyState st rDefns (ax :) (return ())
 
    contextState  = symbolicEnv

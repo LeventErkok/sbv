@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Axiom(..), Lambda(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..)
  ) where
 
 import GHC.TypeLits
@@ -404,17 +404,17 @@ sbvToSymSV sbv = do
         st <- symbolicEnv
         liftIO $ sbvToSV st sbv
 
--- | Values that we can turn into an axiom
-class MonadSymbolic m => Axiom m a where
-  mkAxiom :: State -> a -> m ()
+-- | Values that we can turn into a constraint
+class MonadSymbolic m => Constraint m a where
+  mkConstraint :: State -> a -> m ()
 
 -- | Base case: simple booleans
-instance MonadSymbolic m => Axiom m SBool where
-  mkAxiom _ out = void $ output out
+instance MonadSymbolic m => Constraint m SBool where
+  mkConstraint _ out = void $ output out
 
 -- | Functions
-instance (SymVal a, Axiom m r) => Axiom m (SBV a -> r) where
-  mkAxiom st fn = mkArg >>= mkAxiom st . fn
+instance (SymVal a, Constraint m r) => Constraint m (SBV a -> r) where
+  mkConstraint st fn = mkArg >>= mkConstraint st . fn
     where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
@@ -441,26 +441,35 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
 class SolverContext m where
    -- | Add a constraint, any satisfying instance must satisfy this condition.
    constrain :: SBool -> m ()
+
    -- | Add a soft constraint. The solver will try to satisfy this condition if possible, but won't if it cannot.
    softConstrain :: SBool -> m ()
+
    -- | Add a named constraint. The name is used in unsat-core extraction.
    namedConstraint :: String -> SBool -> m ()
+
    -- | Add a constraint, with arbitrary attributes.
    constrainWithAttribute :: [(String, String)] -> SBool -> m ()
+
    -- | Set info. Example: @setInfo ":status" ["unsat"]@.
    setInfo :: String -> [String] -> m ()
+
    -- | Set an option.
    setOption :: SMTOption -> m ()
+
    -- | Set the logic.
    setLogic :: Logic -> m ()
+
    -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is for commenting purposes.
-   addAxiom :: Axiom Symbolic a => String -> a -> m ()
+   addAxiom :: Constraint Symbolic a => String -> a -> m ()
+
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
    -- is in milliseconds. Also see the function 'Data.SBV.Control.timeOut' for finer level
    -- control of time-outs, directly from SBV.
    setTimeOut :: Integer -> m ()
+
    -- | Get the state associated with this context
    contextState :: m State
 

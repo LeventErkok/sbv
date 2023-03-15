@@ -112,9 +112,9 @@ tests =
       , goldenCapturedIO "lambda34" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
       , goldenCapturedIO "lambda35" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
-      , goldenCapturedIO "lambda36" $ record $ \st -> axiomStr  st "all_true" sTrue
-      , goldenCapturedIO "lambda37" $ record $ \st -> axiomStr  st "negated"  sNot
-      , goldenCapturedIO "lambda38" $ record $ \st -> axiomStr  st "arith"    (\x y -> x .== (0 :: SInteger) .|| y)
+      , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st "all_true" sTrue
+      , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st "negated"  sNot
+      , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st "arith"    (\x y -> x .== (0 :: SInteger) .|| y)
 
       , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" (kindOf (Proxy @SInteger)) (0           :: SInteger)
       , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" (kindOf (Proxy @SInteger)) (\x   -> x+1 :: SInteger)

@@ -124,7 +124,7 @@ instance MonadIO m => SolverContext (QueryT m) where
 
    addAxiom nm f          = do
       st <- queryState
-      ax <- liftIO $ axiom st nm f
+      ax <- liftIO $ constraint st nm f
 
       let bad what = error $ unlines [ ""
                                      , "*** Data.SBV.Control.addAxiom: impossible happened."
