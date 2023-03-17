@@ -30,8 +30,7 @@
                  l1_s3))))
 [GOOD] ; -- user given axiom: thingCompare is reflexive [Refers to: thingCompare]
 [GOOD] (assert (forall ((l1_s0 Thing))
-                 (let ((l1_s1 (thingCompare l1_s0 l1_s0)))
-                 l1_s1)))
+                 (thingCompare l1_s0 l1_s0)))
 [GOOD] ; --- preQuantifier assignments ---
 [GOOD] (define-fun s1 () Thing (thingMerge s0 s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
