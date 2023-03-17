@@ -153,9 +153,9 @@ constraint inState nm = constraintGen mkAx inState
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
 constraintStr inState nm f = toStr <$> constraint inState nm f
-   where toStr (SMTAxm anm deps body) = unlines [ "; user defined axiom: " ++ anm ++ depInfo deps
-                                                , body
-                                                ]
+   where toStr (SMTAxm anm deps body) = intercalate "\n" [ "; user defined axiom: " ++ anm ++ depInfo deps
+                                                         , body
+                                                         ]
          toStr d = error $ unlines ["Data.SBV.Lambda: Unexpected definition in constraintStr:", show d]
 
          depInfo [] = ""
