@@ -933,9 +933,6 @@ type ArrayInfo = (String, (Kind, Kind), ArrayContext)
 -- | SMT Arrays generated during a symbolic run
 type ArrayMap  = IMap.IntMap ArrayInfo
 
--- | Functional Arrays generated during a symbolic run
-type FArrayMap  = IMap.IntMap (SVal -> SVal, IORef (IMap.IntMap SV))
-
 -- | Uninterpreted-constants generated during a symbolic run
 type UIMap     = Map.Map String SBVType
 
@@ -1221,7 +1218,6 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rconstMap    :: IORef CnstMap
                     , rexprMap     :: IORef ExprMap
                     , rArrayMap    :: IORef ArrayMap
-                    , rFArrayMap   :: IORef FArrayMap
                     , rUIMap       :: IORef UIMap
                     , rUserFuncs   :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap       :: IORef CgMap
@@ -1797,7 +1793,6 @@ mkNewState cfg currentRunMode = liftIO $ do
      outs      <- newIORef []
      tables    <- newIORef Map.empty
      arrays    <- newIORef IMap.empty
-     fArrays   <- newIORef IMap.empty
      userFuncs <- newIORef Set.empty
      uis       <- newIORef Map.empty
      cgs       <- newIORef Map.empty
@@ -1829,7 +1824,6 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , spgm         = pgm
                   , rconstMap    = cmap
                   , rArrayMap    = arrays
-                  , rFArrayMap   = fArrays
                   , rexprMap     = emap
                   , rUserFuncs   = userFuncs
                   , rUIMap       = uis
