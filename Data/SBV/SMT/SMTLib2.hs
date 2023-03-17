@@ -72,11 +72,18 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
         hasRational    = any isRational kindInfo
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
+        hasFoldMap     = let isFoldMap SeqMap{}       = True
+                             isFoldMap SeqMapI{}      = True
+                             isFoldMap SeqFoldLeft{}  = True
+                             isFoldMap SeqFoldLeftI{} = True
+                             isFoldMap _              = False
+                         in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not have]
            where checks = [ ("data types",     supportsDataTypes  solverCaps, hasTuples || hasEither || hasMaybe)
+                          , ("folds and maps", supportsFoldAndMap solverCaps, hasFoldMap)
                           , ("set operations", supportsSets       solverCaps, hasSets)
                           , ("bit vectors",    supportsBitVectors solverCaps, hasBVs)
                           ]

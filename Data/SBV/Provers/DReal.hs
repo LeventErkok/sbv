@@ -48,6 +48,7 @@ dReal = SMTSolver {
                               , supportsCustomQueries      = False
                               , supportsGlobalDecls        = False
                               , supportsDataTypes          = False
+                              , supportsFoldAndMap         = False
                               , supportsDirectAccessors    = False
                               , supportsFlattenedModels    = Nothing
                               }
