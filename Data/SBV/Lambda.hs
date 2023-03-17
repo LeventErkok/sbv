@@ -36,7 +36,6 @@ import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
 import Data.IORef (readIORef)
 import Data.List
-import Data.Maybe (fromMaybe)
 
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
@@ -117,7 +116,8 @@ lambda inState fk = lambdaGen mkLam inState fk
 -- | Create an anonymous lambda, rendered as n SMTLib string
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
 lambdaStr = lambdaGen mkLam
-   where mkLam (Defn _frees mbParams body) = "(lambda " ++ fromMaybe "()" mbParams ++ "\n" ++ body 2 ++ ")"
+   where mkLam (Defn _frees Nothing       body) = body 0
+         mkLam (Defn _frees (Just params) body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
@@ -153,10 +153,13 @@ constraint inState nm = constraintGen mkAx inState
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
 constraintStr inState nm f = toStr <$> constraint inState nm f
-   where toStr (SMTAxm anm deps body) = unlines [ "; user defined axiom: " ++ anm ++ if null deps then "" else (" [Refers to: " ++ intercalate ", " deps ++ "]")
+   where toStr (SMTAxm anm deps body) = unlines [ "; user defined axiom: " ++ anm ++ depInfo deps
                                                 , body
                                                 ]
          toStr d = error $ unlines ["Data.SBV.Lambda: Unexpected definition in constraintStr:", show d]
+
+         depInfo [] = ""
+         depInfo ds = " [Refers to: " ++ intercalate ", " ds ++ "]"
 
 -- | Convert to an appropriate SMTLib representation.
 convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
