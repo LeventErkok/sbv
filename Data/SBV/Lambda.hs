@@ -148,7 +148,7 @@ constraintGen trans inState@State{rLambdaLevel} f = do
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m SMTDef
 constraint inState nm = constraintGen mkAx inState
    where mkAx (Defn deps (Just params) body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
-         mkAx (Defn deps Nothing       body) = SMTAxm nm deps $ "(assert " ++ body 2 ++ ")"
+         mkAx (Defn deps Nothing       body) = SMTAxm nm deps $ "(assert " ++ body 0 ++ ")"
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
