@@ -1,3 +1,2 @@
-; user given axiom for: all_true
-(assert (forall ()
-          true))
+; user defined axiom: all_true
+(assert true)

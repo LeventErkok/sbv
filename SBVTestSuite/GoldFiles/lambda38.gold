@@ -1,4 +1,4 @@
-; user given axiom for: arith
+; user defined axiom: arith
 (assert (forall ((l1_s0 Int) (l1_s1 Bool))
           (let ((l1_s2 0))
           (let ((l1_s3 (= l1_s0 l1_s2)))
