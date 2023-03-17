@@ -650,7 +650,7 @@ declFuncs ds = map declGroup sorted
         getDeps (SMTAxm _   d   _) = d
         getDeps l@SMTLam{}         = error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show l
 
-        mkDecl Nothing  rt = rt
+        mkDecl Nothing  rt = "() "    ++ rt
         mkDecl (Just p) rt = p ++ " " ++ rt
 
         sorted = DG.stronglyConnComp (map mkNode ds)

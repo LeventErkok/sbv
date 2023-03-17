@@ -1,4 +1,3 @@
 ; -- user given definition: lambda40
 (define-fun lambda40 () Int
-  (let ((l1_s0 0))
-  l1_s0))
+  0)
