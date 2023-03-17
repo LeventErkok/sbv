@@ -55,4 +55,4 @@
 *** Exit code: ExitSuccess
 
 RESULT:
-All good!
+All good, expecting: Unsat
