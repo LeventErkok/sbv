@@ -1,0 +1,5 @@
+; user defined axiom: t1
+(assert (forall ((l1_s0 Bool)) (exists ((l1_s1 Bool))
+          (let ((l1_s2 (not l1_s0)))
+          (let ((l1_s3 (or l1_s1 l1_s2)))
+          l1_s3)))))
