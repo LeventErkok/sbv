@@ -46,7 +46,7 @@ e = uninterpret "e"
 
 p0 :: Symbolic SBool
 p0 = do
-    addAxiom "axE" $ \p k -> a k .&& a p .=> a (e k p)
+    addAxiom "axE" $ \(Forall p) (Forall k) -> a k .&& a p .=> a (e k p)
     p <- free "p" :: Symbolic SBitstring
     k <- free "k" :: Symbolic SBitstring
     constrain $ a p
@@ -60,8 +60,8 @@ thingMerge :: SThing -> SThing -> SThing
 thingMerge = uninterpret "thingMerge"
 
 p1 :: Symbolic SBool
-p1 = do addAxiom "thingCompare is reflexive"                 $ \x -> thingCompare x x
-        addAxiom "thingMerge produces a new, distinct thing" $ \k1 k2 -> k1 ./= thingMerge k1 k2
+p1 = do addAxiom "thingCompare is reflexive"                 $ \(Forall x) -> thingCompare x x
+        addAxiom "thingMerge produces a new, distinct thing" $ \(Forall k1) (Forall k2) -> k1 ./= thingMerge k1 k2
         registerUISMTFunction thingMerge
         k1 <- sbvForall_
         k2 <- sbvForall_
@@ -79,7 +79,7 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
                              nOT :: SB -> SB
                              nOT = uninterpret "NOT"
                          constrain $ nOT (vp `oR` (vq `aND` vr)) ./= (nOT vp `aND` nOT vq) `oR` (nOT vp `aND` nOT vr)
-                         addAxiom "OR distributes over AND" $ \p q r -> (p `oR` q) `aND` (p `oR` r) .== p `oR` (q `aND` r)
-                         addAxiom "de Morgan"               $ \p q   -> nOT (p `oR` q) .== nOT p `aND` nOT q
-                         addAxiom "double negation"         $ \p     -> nOT (nOT p) .== p
+                         addAxiom "OR distributes over AND" $ \(Forall p) (Forall q) (Forall r) -> (p `oR` q) `aND` (p `oR` r) .== p `oR` (q `aND` r)
+                         addAxiom "de Morgan"               $ \(Forall p) (Forall q)            -> nOT (p `oR` q) .== nOT p `aND` nOT q
+                         addAxiom "double negation"         $ \(Forall p)                       -> nOT (nOT p) .== p
                          checkSat

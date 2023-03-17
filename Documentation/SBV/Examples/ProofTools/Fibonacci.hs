@@ -74,7 +74,7 @@ fibCorrect = induct chatty setup initial trans strengthenings inv goal
         setup :: Symbolic ()
         setup = do constrain $ fib 0 .== 0
                    constrain $ fib 1 .== 1
-                   addAxiom "fib_n" $ \x -> fib (x+2) .== fib (x+1) + fib x
+                   addAxiom "fib_n" $ \(Forall x) -> fib (x+2) .== fib (x+1) + fib x
 
         -- Initialize variables
         initial :: S SInteger -> SBool

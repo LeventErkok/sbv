@@ -127,9 +127,9 @@ axiomatizeGCD = do -- Base case. Strictly speaking, we don't really need this ca
                    e <- sInteger_
                    constrain $ gcd e e .== e
 
-                   addAxiom "gcd_equal"    $ \x   -> x .> 0            .=> gcd x x     .== x
-                   addAxiom "gcd_unequal1" $ \x y -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
-                   addAxiom "gcd_unequal2" $ \x y -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
+                   addAxiom "gcd_equal"    $ \(Forall x)            -> x .> 0            .=> gcd x x     .== x
+                   addAxiom "gcd_unequal1" $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
+                   addAxiom "gcd_unequal2" $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
 
 -- | Precondition for our program: @x@ and @y@ must be strictly positive
 pre :: G -> SBool

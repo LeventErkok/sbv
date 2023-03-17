@@ -55,7 +55,7 @@ module Data.SBV.Core.Symbolic
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
-  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar
+  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
@@ -1422,11 +1422,16 @@ internalVariable st k = do NamedSymVar sv nm <- newSV st k
                            return sv
 {-# INLINE internalVariable #-}
 
+-- | Create a variable to be used in a constraint-expression
+quantVar :: Quantifier -> State -> Kind -> IO SV
+quantVar q st k = do v@(NamedSymVar sv nm) <- newSV st k
+                     modifyState st rinps (addUserInput q sv nm) $ modifyIncState st rNewInps (v :)
+                     return sv
+{-# INLINE quantVar #-}
+
 -- | Create a variable to be used in a lambda-expression
 lambdaVar :: State -> Kind -> IO SV
-lambdaVar st k = do v@(NamedSymVar sv nm) <- newSV st k
-                    modifyState st rinps (addUserInput ALL sv nm) $ modifyIncState st rNewInps (v :)
-                    return sv
+lambdaVar = quantVar ALL
 {-# INLINE lambdaVar #-}
 
 -- | Create a new SV

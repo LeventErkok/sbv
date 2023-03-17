@@ -25,9 +25,9 @@ benchmarks :: Runner
 benchmarks = rGroup
   [ run "test" t `using` runner proveWith
   ]
-  where t = do addAxiom "OR distributes over AND" $ \p q r -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
-               addAxiom "de Morgan"               $ \p q   -> not (p `or` q) .== not p `and` not q
-               addAxiom "double negation"         $ \p     -> not (not p) .== p
+  where t = do addAxiom "OR distributes over AND" $ \(Forall p) (Forall q) (Forall r) -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
+               addAxiom "de Morgan"               $ \(Forall p) (Forall q)            -> not (p `or` q) .== not p `and` not q
+               addAxiom "double negation"         $ \(Forall p)                       -> not (not p) .== p
                p <- free "p"
                q <- free "q"
                r <- free "r"

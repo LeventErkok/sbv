@@ -43,9 +43,9 @@ import qualified Data.IntMap.Strict as IM
 
 import qualified Data.Generics.Uniplate.Data as G
 
-data Defn = Defn [String]        -- The uninterpreted names referred to in the body
-                 (Maybe String)  -- Param declaration, if any
-                 (Int -> String) -- Body, given the tab amount.
+data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
+                 (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
+                 (Int -> String)                 -- Body, given the tab amount.
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
 inSubState :: MonadIO m => State -> (State -> m b) -> m b
@@ -104,6 +104,18 @@ inSubState inState comp = do
                    , rQueryState  = fresh rQueryState
                    }
 
+-- In this case, we expect just one group of parameters, with universal quantification
+extractAllUniversals :: [(Quantifier, String)] -> String
+extractAllUniversals [(ALL, s)] = s
+extractAllUniversals other      = error $ unlines [ ""
+                                                  , "*** Data.SBV.Lambda: Impossible happened. Got existential quantifiers."
+                                                  , "***"
+                                                  , "***  Params: " ++ show other
+                                                  , "***"
+                                                  , "*** Please report this as a bug!"
+                                                  ]
+
+
 -- | Generic creator for anonymous lamdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> convert st fk (mkLambda st f)
@@ -111,13 +123,13 @@ lambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> convert st 
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTDef
 lambda inState fk = lambdaGen mkLam inState fk
-   where mkLam (Defn frees params body) = SMTLam fk frees params body
+   where mkLam (Defn frees params body) = SMTLam fk frees (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
 lambdaStr = lambdaGen mkLam
    where mkLam (Defn _frees Nothing       body) = body 0
-         mkLam (Defn _frees (Just params) body) = "(lambda " ++ params ++ "\n" ++ body 2 ++ ")"
+         mkLam (Defn _frees (Just params) body) = "(lambda " ++ (extractAllUniversals params) ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
@@ -126,12 +138,12 @@ namedLambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> conver
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m SMTDef
 namedLambda inState nm fk = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = SMTDef nm fk frees params body
+   where mkDef (Defn frees params body) = SMTDef nm fk frees (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m String
 namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees params body]
+   where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees (extractAllUniversals <$> params) body]
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => (Defn -> b) -> State -> a -> m b
@@ -147,8 +159,12 @@ constraintGen trans inState@State{rLambdaLevel} f = do
 -- | Generate a constraint.
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m SMTDef
 constraint inState nm = constraintGen mkAx inState
-   where mkAx (Defn deps (Just params) body) = SMTAxm nm deps $ "(assert (forall " ++ params ++ "\n" ++ body 10 ++ "))"
-         mkAx (Defn deps Nothing       body) = SMTAxm nm deps $ "(assert " ++ body 0 ++ ")"
+   where mkAx (Defn deps Nothing       body) = SMTAxm nm deps $ "(assert " ++ body 0 ++ ")"
+         mkAx (Defn deps (Just params) body) = SMTAxm nm deps $ "(assert " ++ unwords (map mkGroup params) ++ "\n"
+                                                              ++ body 10
+                                                              ++ replicate (length params + 1) ')'
+         mkGroup (ALL, s) = "(forall " ++ s
+         mkGroup (EX,  s) = "(exists " ++ s
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
@@ -226,20 +242,18 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                           (intercalate "\n" . body)
 
                params = case is of
-                          (inps, trackers) | any ((== EX) . fst) inps
-                                           -> bad [ "Unexpected existentially quantified variables as inputs"
-                                                  , "   Saw: " ++ intercalate ", " [getUserName' n | (EX, n) <- inps]
-                                                  ]
-                                           | not (null trackers)
+                          (inps, trackers) | not (null trackers)
                                            -> tbd [ "Tracker variables"
                                                   , "   Saw: " ++ intercalate ", " (map getUserName' trackers)
                                                   ]
                                            | True
-                                           -> map (getSV . snd) inps
+                                           -> map (\(q, v) -> (q, getSV v)) inps
 
                mbParam
                  | null params = Nothing
-                 | True        = Just $ '(' : unwords (map (\p -> '(' : show p ++ " " ++ smtType (kindOf p) ++ ")")  params) ++ ")"
+                 | True        = Just [(q, paramList (map snd l)) | l@((q, _) : _)  <- pGroups]
+                 where pGroups = groupBy (\(q1, _) (q2, _) -> q1 == q2) params
+                       paramList ps = '(' : unwords (map (\p -> '(' : show p ++ " " ++ smtType (kindOf p) ++ ")")  ps) ++ ")"
 
                body tabAmnt
                  | Just e <- simpleBody bindings out

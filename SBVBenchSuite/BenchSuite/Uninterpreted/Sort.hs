@@ -27,6 +27,6 @@ benchmarks = rGroup
   where _t1 = do x <- free "x"
                  return $ f x ./= x
 
-        _t2 = do addAxiom "Q" $ \x y -> x .== (y :: SQ)
+        _t2 = do addAxiom "Q" $ \(Forall x) (Forall y) -> x .== (y :: SQ)
                  x <- free "x"
                  return $ f x ./= x

@@ -117,7 +117,7 @@ axiomatizeFib = do -- Base cases.
                    constrain $ x .== 0 .=> fib x .== 0
                    constrain $ x .== 1 .=> fib x .== 1
 
-                   addAxiom "fib_n" $ \n -> fib (n+2) .== fib (n+1) + fib n
+                   addAxiom "fib_n" $ \(Forall n) -> fib (n+2) .== fib (n+1) + fib n
 
 -- | Precondition for our program: @n@ must be non-negative.
 pre :: F -> SBool

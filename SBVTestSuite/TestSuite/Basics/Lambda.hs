@@ -108,13 +108,13 @@ tests =
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
-      , goldenCapturedIO "lambda33" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (0           :: SInt8)
-      , goldenCapturedIO "lambda34" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
-      , goldenCapturedIO "lambda35" $ record  $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
+      , goldenCapturedIO "lambda33" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (0           :: SInt8)
+      , goldenCapturedIO "lambda34" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
+      , goldenCapturedIO "lambda35" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
-      , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st "all_true" sTrue
-      , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st "negated"  sNot
-      , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st "arith"    (\x y -> x .== (0 :: SInteger) .|| y)
+      , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st "all_true" $ \(Forall (_ :: SBool))  -> sTrue
+      , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st "negated"  $ \(Forall b)             -> sNot b
+      , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st "arith"    $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
 
       , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" (kindOf (Proxy @SInteger)) (0           :: SInteger)
       , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" (kindOf (Proxy @SInteger)) (\x   -> x+1 :: SInteger)
@@ -144,23 +144,30 @@ tests =
       , goldenCapturedIO "lambda52"   $ runSat2 (\a r -> a .== 21 .&& isOdd  a .== r)
       , goldenCapturedIO "lambda52_c" $ runSat  (isOdd  21 .==)
 
-      , goldenCapturedIO "lambda53" $ runSat (\x -> x .== smtFunction "foo" (+(x::SInteger)) x)
+      , goldenCapturedIO "lambda53" $ runSat $ \x -> x .== smtFunction "foo" (+(x::SInteger)) x
 
       -- Make sure we can handle dependency orders
-      , goldenCapturedIO "lambda54" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                        bar = smtFunction "bar" (+1)
-                                                    in bar x + foo x .== (x :: SInteger))
-      , goldenCapturedIO "lambda55" $ runSat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                        bar = smtFunction "bar" (+1)
-                                                    in foo x + bar x .== (x :: SInteger))
-      , goldenCapturedIO "lambda56" $ runUnsat (\x -> let foo = smtFunction "foo" (\a -> bar a + 1)
-                                                          bar = smtFunction "bar" (\a -> foo a + 1)
-                                                      in foo x + bar x .== (x :: SInteger))
-      , goldenCapturedIO "lambda57" $ runSat (\x -> let f1 = smtFunction "f1" (\a -> ite (a .== 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
-                                                        f2 = smtFunction "f2" (\a -> ite (a .== 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
-                                                        f3 = smtFunction "f3" (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
-                                                        f4 = smtFunction "f4" (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
-                                                    in f1 x .== (x :: SWord8))
+      , goldenCapturedIO "lambda54" $ runSat   $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" (+1)
+                                                       in bar x + foo x .== (x :: SInteger)
+      , goldenCapturedIO "lambda55" $ runSat   $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" (+1)
+                                                       in foo x + bar x .== (x :: SInteger)
+      , goldenCapturedIO "lambda56" $ runUnsat $ \x -> let foo = smtFunction "foo" (\a -> bar a + 1)
+                                                           bar = smtFunction "bar" (\a -> foo a + 1)
+                                                       in foo x + bar x .== (x :: SInteger)
+      , goldenCapturedIO "lambda57" $ runSat   $ \x -> let f1 = smtFunction "f1" (\a -> ite (a .== 0) 0 (1 + (f1 (a-1) + f2 (a-2))))
+                                                           f2 = smtFunction "f2" (\a -> ite (a .== 0) 0 (1 + (f2 (a-1) + f3 (a-2))))
+                                                           f3 = smtFunction "f3" (\a -> ite (a .== 0) 0 (1 + (f3 (a-1) + f4 (a-2))))
+                                                           f4 = smtFunction "f4" (\a -> ite (a .== 0) 0 (1 + (f4 (a-1) + f1 (a-2))))
+                                                       in f1 x .== (x :: SWord8)
+
+      -- Quantified axioms
+      , goldenCapturedIO "lambda58" $ record $ \st -> constraintStr st "t1" $ \(Forall b) (Exists c) -> sNot b .|| c
+      , goldenCapturedIO "lambda59" $ record $ \st -> constraintStr st "t2" $ \(Forall x) (Exists y) -> x .== (0 :: SInteger) .|| y
+
+      , goldenCapturedIO "lambda60" $ runAxSat   $ addAxiom "t3" $ \(Forall x) (Exists y) (Exists z) -> y .> (x+z :: SInteger)
+      , goldenCapturedIO "lambda61" $ runAxUnsat $ addAxiom "t3" $ \(Forall x) (Exists y) -> y .> (x :: SWord8)
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
@@ -169,6 +176,20 @@ tests =
 
         runSat   f = runSatExpecting f Sat
         runUnsat f = runSatExpecting f Unsat
+
+        runAxSat   f = runSatAxExpecting f Sat
+        runAxUnsat f = runSatAxExpecting f Unsat
+
+        runSatAxExpecting f what rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
+                                         appendFile rf ("\nRESULT:\n" P.++ m P.++ "\n")
+                                         `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
+           where run = do _ <- f
+                          query $ do cs <- checkSat
+                                     if cs /= what
+                                        then error $ "Unexpected output: " P.++ show cs
+                                        else if cs == Sat
+                                                then showModel z3 <$> getModel
+                                                else pure $ "All good, expecting: " P.++ show cs
 
         runSatExpecting f what rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
                                        appendFile rf ("\nRESULT:\n" P.++ m P.++ "\n")
@@ -182,7 +203,7 @@ tests =
                                         then error $ "Unexpected output: " P.++ show cs
                                         else if cs == Sat
                                                 then showModel z3 <$> getModel
-                                                else pure "All good!"
+                                                else pure $ "All good, expecting: " P.++ show cs
 
         runSat2 f rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
                           appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")

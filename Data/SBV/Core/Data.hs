@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..)
  ) where
 
 import GHC.TypeLits
@@ -412,11 +412,23 @@ class MonadSymbolic m => Constraint m a where
 instance MonadSymbolic m => Constraint m SBool where
   mkConstraint _ out = void $ output out
 
+-- | An existential symbolic variable, used in 'addAxiom'
+data Exists a = Exists (SBV a)
+
+-- | A universal symbolic variable, used in 'addAxiom'
+data Forall a = Forall (SBV a)
+
 -- | Functions
-instance (SymVal a, Constraint m r) => Constraint m (SBV a -> r) where
-  mkConstraint st fn = mkArg >>= mkConstraint st . fn
+instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
+  mkConstraint st fn = mkArg >>= mkConstraint st . fn . Exists
     where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ lambdaVar st k
+                     sv <- liftIO $ quantVar EX  st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
+instance (SymVal a, Constraint m r) => Constraint m (Forall a -> r) where
+  mkConstraint st fn = mkArg >>= mkConstraint st . fn . Forall
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ quantVar ALL st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Values that we can turn into a lambda abstraction
