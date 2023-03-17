@@ -643,6 +643,9 @@ declFuncs ds = map declGroup sorted
         getDeps (SMTAxm _   d   _) = d
         getDeps l@SMTLam{}         = error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show l
 
+        mkDecl Nothing  rt = rt
+        mkDecl (Just p) rt = p ++ " " ++ rt
+
         sorted = DG.stronglyConnComp (map mkNode ds)
 
         declGroup (DG.AcyclicSCC b)  = declUserDef False b
@@ -667,8 +670,7 @@ declFuncs ds = map declGroup sorted
                  frees | null otherDeps = ""
                        | True           = " [Refers to: " ++ intercalate ", " otherDeps ++ "]"
 
-                 decl | null param = smtType fk
-                      | True       = param ++ " " ++ smtType fk
+                 decl = mkDecl param (smtType fk)
 
                  s = "(" ++ definer ++ " " ++ nm ++ " " ++ decl ++ "\n" ++ body 2 ++ ")"
 
@@ -677,8 +679,7 @@ declFuncs ds = map declGroup sorted
           where collect d@SMTAxm{} = error $ "Data.SBV.declFuns: Unexpected axiom in user-defined mutual-recursion group: "  ++ show d
                 collect d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
                 collect (SMTDef nm fk deps param body) = (deps, nm, '(' : nm ++ " " ++  decl ++ ")", body 3)
-                  where decl | null param =                 smtType fk
-                             | True       = param ++ " " ++ smtType fk
+                  where decl = mkDecl param (smtType fk)
 
                 render defs = intercalate "\n" $
                                   [ "; -- user given mutually-recursive definitions: " ++ intercalate ", " [n | (_, n, _, _) <- defs]
