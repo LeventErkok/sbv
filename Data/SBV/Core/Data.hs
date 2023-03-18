@@ -413,10 +413,10 @@ instance MonadSymbolic m => Constraint m SBool where
   mkConstraint _ out = void $ output out
 
 -- | An existential symbolic variable, used in 'addAxiom'
-data Exists a = Exists (SBV a)
+newtype Exists a = Exists (SBV a)
 
 -- | A universal symbolic variable, used in 'addAxiom'
-data Forall a = Forall (SBV a)
+newtype Forall a = Forall (SBV a)
 
 -- | Functions
 instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where

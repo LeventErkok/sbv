@@ -129,7 +129,7 @@ lambda inState fk = lambdaGen mkLam inState fk
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
 lambdaStr = lambdaGen mkLam
    where mkLam (Defn _frees Nothing       body) = body 0
-         mkLam (Defn _frees (Just params) body) = "(lambda " ++ (extractAllUniversals params) ++ "\n" ++ body 2 ++ ")"
+         mkLam (Defn _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
@@ -292,3 +292,5 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                        skolemMap  = M.empty
                        tableMap   = IM.empty
                        funcMap    = M.empty
+
+{-# ANN module ("HLint: ignore Use second" :: String) #-}
