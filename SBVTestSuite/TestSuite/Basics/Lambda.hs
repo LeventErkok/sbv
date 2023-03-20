@@ -9,8 +9,12 @@
 -- Test lambda generation
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -34,6 +38,14 @@ import Data.SBV.Tuple
 import Data.Proxy
 
 import Utils.SBVTestFramework
+
+data P
+mkUninterpretedSort ''P
+
+drinker :: Predicate
+drinker = quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
+  where d :: SP -> SBool
+        d = uninterpret "D"
 
 -- Test suite
 tests :: TestTree
@@ -112,9 +124,9 @@ tests =
       , goldenCapturedIO "lambda34" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
       , goldenCapturedIO "lambda35" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
-      , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st "all_true" $ \(Forall (_ :: SBool))  -> sTrue
-      , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st "negated"  $ \(Forall b)             -> sNot b
-      , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st "arith"    $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
+      , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st $ \(Forall (_ :: SBool))  -> sTrue
+      , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st $ \(Forall b)             -> sNot b
+      , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
 
       , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" (kindOf (Proxy @SInteger)) (0           :: SInteger)
       , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" (kindOf (Proxy @SInteger)) (\x   -> x+1 :: SInteger)
@@ -163,11 +175,16 @@ tests =
                                                        in f1 x .== (x :: SWord8)
 
       -- Quantified axioms
-      , goldenCapturedIO "lambda58" $ record $ \st -> constraintStr st "t1" $ \(Forall b) (Exists c) -> sNot b .|| c
-      , goldenCapturedIO "lambda59" $ record $ \st -> constraintStr st "t2" $ \(Forall x) (Exists y) -> x .== (0 :: SInteger) .|| y
+      , goldenCapturedIO "lambda58" $ record $ \st -> constraintStr st $ \(Forall b) (Exists c) -> sNot b .|| c
+      , goldenCapturedIO "lambda59" $ record $ \st -> constraintStr st $ \(Forall x) (Exists y) -> x .== (0 :: SInteger) .|| y
 
-      , goldenCapturedIO "lambda60" $ runAxSat   $ addAxiom "t3" $ \(Forall x) (Exists y) (Exists z) -> y .> (x+z :: SInteger)
-      , goldenCapturedIO "lambda61" $ runAxUnsat $ addAxiom "t3" $ \(Forall x) (Exists y) -> y .> (x :: SWord8)
+      , goldenCapturedIO "lambda60" $ runAxSat   $ qConstrain $ \(Forall x) (Exists y) (Exists z) -> y .> (x+z :: SInteger)
+      , goldenCapturedIO "lambda61" $ runAxUnsat $ qConstrain $ \(Forall x) (Exists y) -> y .> (x :: SWord8)
+
+      -- Quantified booleans
+      , goldenCapturedIO "lambda62" $ \rf -> do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} drinker
+                                                appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
+                                                `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
       ]
    P.++ qc1 "lambdaQC" P.sum (foldr (+) (0::SInteger))
   where record :: (State -> IO String) -> FilePath -> IO ()
@@ -217,6 +234,8 @@ tests =
                                      case cs of
                                        Sat -> getModel
                                        _   -> error $ "Unexpected output: " P.++ show cs
+
+        
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
 eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run

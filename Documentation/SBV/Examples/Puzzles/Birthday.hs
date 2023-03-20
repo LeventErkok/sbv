@@ -100,8 +100,8 @@ forallMonth f = sAll f [may .. august]
 -- assert the conversation line-by-line, and see how the search-space gets reduced in each
 -- step.
 puzzle :: Predicate
-puzzle = do birthDay   <- sbvExists "birthDay"
-            birthMonth <- sbvExists "birthMonth"
+puzzle = do birthDay   <- free "birthDay"
+            birthMonth <- free "birthMonth"
 
             -- Albert: I do not know
             let a1 m = existsDay $ \d1 -> existsDay $ \d2 ->

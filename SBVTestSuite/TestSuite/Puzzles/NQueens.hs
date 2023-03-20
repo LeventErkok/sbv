@@ -32,4 +32,4 @@ tests =
    ]
 
 mkQueens :: Int -> Symbolic SBool
-mkQueens n = isValid n `fmap` mkExistVars n
+mkQueens n = isValid n `fmap` mkFreeVars n

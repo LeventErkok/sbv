@@ -14,18 +14,6 @@
 -- @
 --     ∃x : P. D(x) -> ∀y : P. D(y)
 -- @
---
--- In SBV, quantifiers are allowed, but you need to put the formula into prenex normal form manually. See
--- <http://en.wikipedia.org/wiki/Prenex_normal_form> for details. (Note that you do not need to do skolemization
--- by hand, though SBV will do that for you automatically as well as it casts the problem into an SMT query.)
--- If we transform the above to prenex form, we get:
---
--- @
---     ∃x : P. ∀y : P. D(x) -> D(y)
--- @
---
--- In this file, we show two different ways of proving the above in SBV; one using the monadic style,
--- and the other using the expression style.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass     #-}
@@ -51,23 +39,9 @@ mkUninterpretedSort ''P
 d :: SP -> SBool
 d = uninterpret "D"
 
--- | Monadic formulation. In this style, we use the 'sbvExists' and 'sbvForall' constructs to create
--- our quantified variables. We have:
---
--- >>> drinker1
+-- >>> drinker
 -- Q.E.D.
-drinker1 :: IO ThmResult
-drinker1 = prove $ do x <- sbvExists "x"
-                      y <- sbvForall "y"
-
-                      pure $ d x .=> d y
-
--- | Expression level formulation. In this style, we use the 'existential' and 'universal' functions instead.
--- We have:
---
--- >>> drinker2
--- Q.E.D.
-drinker2 :: IO ThmResult
-drinker2 = prove $ existential ["x"] $ \x ->
-                     universal ["y"] $ \y ->
-                        d x .=> d y
+drinker :: IO ThmResult
+drinker = prove p
+  where p :: Predicate
+        p = quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y

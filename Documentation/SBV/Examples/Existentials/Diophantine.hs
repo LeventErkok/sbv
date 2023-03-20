@@ -10,11 +10,18 @@
 -- using explicit quantification.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Existentials.Diophantine where
 
 import Data.SBV
+import Data.Proxy
+
+import GHC.TypeLits
 
 --------------------------------------------------------------------------------------------------
 -- * Representing solutions
@@ -31,15 +38,16 @@ data Solution = Homogeneous    [[Integer]]
 --------------------------------------------------------------------------------------------------
 -- | ldn: Solve a (L)inear (D)iophantine equation, returning minimal solutions over (N)aturals.
 -- The input is given as a rows of equations, with rhs values separated into a tuple. The first
--- parameter limits the search to bound: In case there are too many solutions, you might want
--- to limit your search space.
-ldn :: Maybe Int -> [([Integer], Integer)] -> IO Solution
-ldn mbLim problem = do solution <- basis mbLim (map (map literal) m)
-                       if homogeneous
-                           then return $ Homogeneous solution
-                           else do let ones  = [xs | (1:xs) <- solution]
-                                       zeros = [xs | (0:xs) <- solution]
-                                   return $ NonHomogeneous ones zeros
+-- argument must be a proxy of a natural, must be total number of columns in the system. (i.e.,
+-- #of variables + 1). The second parameter limits the search to bound: In case there are
+-- too many solutions, you might want to limit your search space.
+ldn :: forall proxy n. KnownNat n => proxy n -> Maybe Int -> [([Integer], Integer)] -> IO Solution
+ldn pn mbLim problem = do solution <- basis pn mbLim (map (map literal) m)
+                          if homogeneous
+                              then return $ Homogeneous solution
+                              else do let ones  = [xs | (1:xs) <- solution]
+                                          zeros = [xs | (0:xs) <- solution]
+                                      return $ NonHomogeneous ones zeros
   where rhs = map snd problem
         lhs = map fst problem
         homogeneous = all (== 0) rhs
@@ -50,12 +58,12 @@ ldn mbLim problem = do solution <- basis mbLim (map (map literal) m)
 -- that cannot be written as the sum of two other solutions. We use the mathematically equivalent
 -- statement that a solution is in the basis if it's least according to the natural partial
 -- order using the ordinary less-than relation.
-basis :: Maybe Int -> [[SInteger]] -> IO [[Integer]]
-basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} cond
- where cond = do as <- mkExistVars  n
-                 bs <- mkForallVars n
+basis :: forall proxy n. KnownNat n => proxy n -> Maybe Int -> [[SInteger]] -> IO [[Integer]]
+basis _ mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} cond
+ where cond = do as <- mkFreeVars  n
 
-                 return $ ok as .&& (ok bs .=> as .== bs .|| sNot (bs `less` as))
+                 qConstrain $ \(ForallN bs :: ForallN n Integer) ->
+                        ok as .&& (ok bs .=> as .== bs .|| sNot (bs `less` as))
 
        n = if null m then 0 else length (head m)
 
@@ -88,7 +96,7 @@ basis mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} 
 -- to the equation given. It's harder to see that they cover all possibilities,
 -- but a moments thought reveals that is indeed the case.
 test :: IO Solution
-test = ldn Nothing [([2,1,-1], 2)]
+test = ldn (Proxy @4) Nothing [([2,1,-1], 2)]
 
 -- | A puzzle: Five sailors and a monkey escape from a naufrage and reach an island with
 -- coconuts. Before dawn, they gather a few of them and decide to sleep first and share
@@ -131,13 +139,15 @@ test = ldn Nothing [([2,1,-1], 2)]
 -- solutions to avoid the all-sat pitfall.
 sailors :: IO [Integer]
 sailors = search 1
-  where search i = do soln <- ldn (Just i) [ ([1, -5,  0,  0,  0,  0,  0], 1)
-                                           , ([0,  4, -5 , 0,  0,  0,  0], 1)
-                                           , ([0,  0,  4, -5 , 0,  0,  0], 1)
-                                           , ([0,  0,  0,  4, -5,  0,  0], 1)
-                                           , ([0,  0,  0,  0,  4, -5,  0], 1)
-                                           , ([0,  0,  0,  0,  0,  4, -5], 1)
-                                           ]
+  where search i = do soln <- ldn (Proxy @8)
+                                  (Just i)
+                                  [ ([1, -5,  0,  0,  0,  0,  0], 1)
+                                  , ([0,  4, -5 , 0,  0,  0,  0], 1)
+                                  , ([0,  0,  4, -5 , 0,  0,  0], 1)
+                                  , ([0,  0,  0,  4, -5,  0,  0], 1)
+                                  , ([0,  0,  0,  0,  4, -5,  0], 1)
+                                  , ([0,  0,  0,  0,  0,  4, -5], 1)
+                                  ]
                       case soln of
                         NonHomogeneous (xs:_) _ -> return xs
                         _                       -> search (i+1)

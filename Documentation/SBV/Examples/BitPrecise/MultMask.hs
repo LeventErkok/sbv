@@ -55,8 +55,7 @@ maskAndMult = print =<< satWith z3{printBase=16} find
   where find = do -- Magic incantation to make the test go fast. See <http://github.com/Z3Prover/z3/issues/5660> for details.
                   setOption $ OptionKeyword ":smt.ematching" ["false"]
 
-                  mask <- sbvExists "mask"
-                  mult <- sbvExists "mult"
-                  inp  <- sbvForall "inp"
-                  let res = (mask .&. inp) * (mult :: SWord64)
-                  solve [inp `sExtractBits` [7, 15 .. 63] .== res `sExtractBits` [56 .. 63]]
+                  mask <- free "mask"
+                  mult <- free "mult"
+                  qConstrain $ \(Forall inp) -> let res = (mask .&. inp) * (mult :: SWord64)
+                                                in inp `sExtractBits` [7, 15 .. 63] .== res `sExtractBits` [56 .. 63]

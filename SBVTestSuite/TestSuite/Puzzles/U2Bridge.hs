@@ -30,7 +30,7 @@ tests =
     , testCase "U2Bridge_cnt6" (assert $ (0 ==) `fmap` count 6)
     , goldenVsStringShow "U2Bridge" (slv 5)
     ]
- where act     = do b <- sbvExists_; p1 <- sbvExists_; p2 <- sbvExists_; return (b, p1, p2)
+ where act     = do b <- free_; p1 <- free_; p2 <- free_; return (b, p1, p2)
        count n = numberOfModels $ isValid `fmap` mapM (const act) [1..(n::Int)]
        slv n   = rearrange `fmap` allSat (isValid `fmap` mapM (const act) [1..(n::Int)])
 

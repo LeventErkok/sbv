@@ -83,7 +83,7 @@ lf (zero, f) pl = zipPL (zipWith f (rsh lfpq) p) lfpq
 -- | Correctness theorem, for a powerlist of given size, an associative operator, and its left-unit element.
 flIsCorrect :: Int -> (forall a. (OrdSymbolic a, Num a, Bits a) => (a, a -> a -> a)) -> Symbolic SBool
 flIsCorrect n zf = do
-        args :: PowerList SWord32 <- mkForallVars n
+        args :: PowerList SWord32 <- mkFreeVars n
         return $ ps zf args .== lf zf args
 
 -- | Proves Ladner-Fischer is equivalent to reference specification for addition.

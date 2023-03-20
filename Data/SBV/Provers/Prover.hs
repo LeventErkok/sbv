@@ -46,9 +46,9 @@ import System.Exit (ExitCode(ExitSuccess))
 import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
 import System.Directory  (getCurrentDirectory)
-
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
 import Data.List (intercalate, isPrefixOf, nub)
+import Data.IORef (readIORef)
 
 import Data.Maybe (mapMaybe, listToMaybe)
 
@@ -641,13 +641,32 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
--- If we get a program producing nothing (i.e., Symbolic ()), pretend it simply returns True.
--- This is useful since min/max calls and constraints will provide the context
+-- If we get a program producing nothing (i.e., Symbolic ()), pretend it returns True if we're in a SAT-context,
+-- and it returns False in a proof-context. This is useful since min/max calls and constraints will provide the
+-- necessary constraints.
 instance ExtractIO m => MProvable m (SymbolicT m ()) where
-  universal_     a = universal_     ((a >> return sTrue) :: SymbolicT m SBool)
-  universal ns   a = universal ns   ((a >> return sTrue) :: SymbolicT m SBool)
-  existential_   a = existential_   ((a >> return sTrue) :: SymbolicT m SBool)
-  existential ns a = existential ns ((a >> return sTrue) :: SymbolicT m SBool)
+  universal_     a = finalizer >>= \b -> universal_     ((a >> pure b) :: SymbolicT m SBool)
+  universal ns   a = finalizer >>= \b -> universal ns   ((a >> pure b) :: SymbolicT m SBool)
+  existential_   a = finalizer >>= \b -> existential_   ((a >> pure b) :: SymbolicT m SBool)
+  existential ns a = finalizer >>= \b -> existential ns ((a >> pure b) :: SymbolicT m SBool)
+
+-- If we're in a proof mode, return sFalse. If SAT, return sTrue.
+finalizer :: MonadSymbolic m => m SBool
+finalizer = do st <- symbolicEnv
+               rm <- liftIO $ readIORef (runMode st)
+               case rm of
+                 SMTMode _ _ isSat _ -> pure $ if isSat then sTrue else sFalse
+                 CodeGen{}           -> nope rm
+                 LambdaGen{}         -> nope rm
+                 Concrete{}          -> nope rm
+  where nope rm = error $ unlines
+                          [ ""
+                          , "*** Data.SBV: Impossible happened. Unexpected call to finalizer in a non-proof context"
+                          , "***"
+                          , "***   Found mode: " ++ show rm
+                          , "***"
+                          , "*** Was expecting to be in a sat/prove call."
+                          ]
 
 instance ExtractIO m => MProvable m (SymbolicT m SBool) where
   universal_     = id
@@ -675,13 +694,23 @@ instance Provable Bool where
   existential s x = existential s (if x then true else false :: SBool)
 -}
 
+-- | Create a quantified named argument
+mkUArg, mkEArg :: (SymVal a, MonadSymbolic m) => String -> m (SBV a)
+mkUArg = mkSymVal (NonQueryVar (Just ALL)) . Just
+mkEArg = mkSymVal (NonQueryVar (Just EX))  . Just
+
+-- | Create a quantified unnamed argument
+mkUArg_, mkEArg_ :: (SymVal a, MonadSymbolic m) => m (SBV a)
+mkUArg_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
+mkEArg_ = mkSymVal (NonQueryVar (Just EX))  Nothing
+
 -- Functions
 instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ k a
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ k a
+  universal_         k = mkUArg_  >>= \a -> universal_   $ k a
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ k a
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ k a
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ k a
+  existential_       k = mkEArg_  >>= \a -> existential_   $ k a
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ k a
   existential []     k = existential_ k
 
 -- Arrays
@@ -695,56 +724,56 @@ instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) 
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b -> k (a, b)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b -> k (a, b)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b -> k (a, b)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b -> k (a, b)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b -> k (a, b)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b -> k (a, b)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b -> k (a, b)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b -> k (a, b)
   existential []     k = existential_ k
 
 -- 3 Tuple
 instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c -> k (a, b, c)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c -> k (a, b, c)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c -> k (a, b, c)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c -> k (a, b, c)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c -> k (a, b, c)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c -> k (a, b, c)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c -> k (a, b, c)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c -> k (a, b, c)
   existential []     k = existential_ k
 
 -- 4 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d -> k (a, b, c, d)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d -> k (a, b, c, d)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d -> k (a, b, c, d)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d -> k (a, b, c, d)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d -> k (a, b, c, d)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d -> k (a, b, c, d)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d -> k (a, b, c, d)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d -> k (a, b, c, d)
   existential []     k = existential_ k
 
 -- 5 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e -> k (a, b, c, d, e)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e -> k (a, b, c, d, e)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e -> k (a, b, c, d, e)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e -> k (a, b, c, d, e)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e -> k (a, b, c, d, e)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e -> k (a, b, c, d, e)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e -> k (a, b, c, d, e)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e -> k (a, b, c, d, e)
   existential []     k = existential_ k
 
 -- 6 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e f -> k (a, b, c, d, e, f)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e f -> k (a, b, c, d, e, f)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e f -> k (a, b, c, d, e, f)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e f -> k (a, b, c, d, e, f)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e f -> k (a, b, c, d, e, f)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e f -> k (a, b, c, d, e, f)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e f -> k (a, b, c, d, e, f)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e f -> k (a, b, c, d, e, f)
   existential []     k = existential_ k
 
 -- 7 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  universal_         k = sbvForall_  >>= \a -> universal_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  universal (s:ss)   k = sbvForall s >>= \a -> universal ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   universal []       k = universal_ k
-  existential_       k = sbvExists_  >>= \a -> existential_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  existential (s:ss) k = sbvExists s >>= \a -> existential ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   existential []     k = existential_ k
 
 -- | Generalization of 'Data.SBV.runSMT'
@@ -918,44 +947,44 @@ instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal 
 
 -- Functions
 instance (SymVal a, SExecutable m p) => SExecutable m (SBV a -> p) where
-   sName_        k = sbvExists_   >>= \a -> sName_   $ k a
-   sName (s:ss)  k = sbvExists s  >>= \a -> sName ss $ k a
+   sName_        k = mkEArg_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = mkEArg s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
 instance (SymVal a, SymVal b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
-  sName_        k = sbvExists_  >>= \a -> sName_   $ \b -> k (a, b)
-  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b -> k (a, b)
+  sName_        k = mkEArg_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
-  sName_       k  = sbvExists_  >>= \a -> sName_   $ \b c -> k (a, b, c)
-  sName (s:ss) k  = sbvExists s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName_       k  = mkEArg_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = mkEArg s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
-  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
-  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
-  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  sName_        k = sbvExists_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName (s:ss)  k = sbvExists s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

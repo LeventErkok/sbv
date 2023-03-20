@@ -51,15 +51,14 @@ crcGood hd poly sent received =
 -- | Generate good CRC polynomials for 48-bit words, given the hamming distance @hd@.
 genPoly :: SWord8 -> Int -> IO ()
 genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Just maxCnt} $ do
-                                p <- sbvExists "polynomial" -- the polynomial is existentially specified
-                                s <- sbvForall "sent"       -- sent word, universal
-                                r <- sbvForall "received"   -- received word, universal
-                                -- assert that the polynomial @p@ is good. Note
-                                -- that we also supply the extra information that
-                                -- the least significant bit must be set in the
-                                -- polynomial, as all CRC polynomials have the "+1"
-                                -- term in them set. This simplifies the query.
-                                return $ sTestBit p 0 .&& crcGood hd p s r
+                                poly <- free "polynomial" -- the polynomial is existentially specified
+                                qConstrain $ \(Forall sent) (Forall received) ->
+                                   -- assert that the polynomial @p@ is good. Note
+                                   -- that we also supply the extra information that
+                                   -- the least significant bit must be set in the
+                                   -- polynomial, as all CRC polynomials have the "+1"
+                                   -- term in them set. This simplifies the query.
+                                   sTestBit poly 0 .&& crcGood hd poly sent received
                        cnt <- displayModels id disp res
                        putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()

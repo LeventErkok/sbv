@@ -122,19 +122,8 @@ instance MonadIO m => SolverContext (QueryT m) where
    constrainWithAttribute = addQueryConstraint False
    contextState           = queryState
 
-   addAxiom nm f          = do
-      st <- queryState
-      ax <- liftIO $ constraint st nm f
-
-      let bad what = error $ unlines [ ""
-                                     , "*** Data.SBV.Control.addAxiom: impossible happened."
-                                     , "*** Got a " ++ what ++ " when expecing an axiom for: " ++ nm
-                                     ]
-      case ax of
-        SMTLam{}        -> bad "anonymous function"
-        SMTDef{}        -> bad "defined function"
-        SMTAxm _ deps s -> do send True $ "; -- user given axiom: " ++ nm ++ if null deps then "" else " [Refers to: " ++ intercalate ", " deps ++ "]"
-                              send True $ intercalate "\n" [s]
+   quantifiedBool f = do st <- queryState
+                         liftIO $ constraint st f
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""

@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ForallN(..), ExistsN(..), qConstrain
  ) where
 
 import GHC.TypeLits
@@ -68,7 +68,7 @@ import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
-import Control.Monad          (void)
+import Control.Monad          (void, replicateM)
 import Control.Monad.Trans    (liftIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
@@ -412,21 +412,42 @@ class MonadSymbolic m => Constraint m a where
 instance MonadSymbolic m => Constraint m SBool where
   mkConstraint _ out = void $ output out
 
--- | An existential symbolic variable, used in 'addAxiom'
+-- | An existential symbolic variable, used in building quantified constraints
 newtype Exists a = Exists (SBV a)
 
--- | A universal symbolic variable, used in 'addAxiom'
+-- | A universal symbolic variable, used in building quantified constraints
 newtype Forall a = Forall (SBV a)
 
--- | Functions
+-- | A fixed number of existential symbolic variables, used in building quantified constraints
+newtype ExistsN (n :: Nat) a = ExistsN [SBV a]
+
+-- | A fixed number of universal symbolic variables, used in in building quantified constraints
+newtype ForallN (n :: Nat) a = ForallN [SBV a]
+
+-- | Functions of a single existential
 instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
   mkConstraint st fn = mkArg >>= mkConstraint st . fn . Exists
     where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ quantVar EX  st k
+                     sv <- liftIO $ quantVar EX st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
+-- | Functions of a number of existentials
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n a -> r) where
+  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) mkArg >>= mkConstraint st . fn . ExistsN
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ quantVar EX st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
+-- | Functions of a single universal
 instance (SymVal a, Constraint m r) => Constraint m (Forall a -> r) where
   mkConstraint st fn = mkArg >>= mkConstraint st . fn . Forall
+    where mkArg = do let k = kindOf (Proxy @a)
+                     sv <- liftIO $ quantVar ALL st k
+                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
+-- | Functions of a number of universals
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN n a -> r) where
+  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) mkArg >>= mkConstraint st . fn . ForallN
     where mkArg = do let k = kindOf (Proxy @a)
                      sv <- liftIO $ quantVar ALL st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
@@ -472,8 +493,8 @@ class SolverContext m where
    -- | Set the logic.
    setLogic :: Logic -> m ()
 
-   -- | Add a user specified axiom to the generated SMT-Lib file. The first argument is for commenting purposes.
-   addAxiom :: Constraint Symbolic a => String -> a -> m ()
+   -- | Convert a quantified constraint to a boolean
+   quantifiedBool :: Constraint Symbolic a => a -> m SBool
 
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
@@ -485,12 +506,16 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, addAxiom, contextState #-}
+   {-# MINIMAL constrain, quantifiedBool, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
+
+-- | Assert a quantified constraint, which is like an axiom
+qConstrain :: (Monad m, SolverContext m, Constraint Symbolic a) => a -> m ()
+qConstrain c = constrain =<< quantifiedBool c
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where
@@ -536,10 +561,13 @@ instance (Outputtable a, Outputtable b, Outputtable c, Outputtable d, Outputtabl
 class (HasKind a, Typeable a) => SymVal a where
   -- | Generalization of 'Data.SBV.mkSymVal'
   mkSymVal :: MonadSymbolic m => VarContext -> Maybe String -> m (SBV a)
+
   -- | Turn a literal constant to symbolic
   literal :: a -> SBV a
+
   -- | Extract a literal, from a CV representation
   fromCV :: CV -> a
+
   -- | Does it concretely satisfy the given predicate?
   isConcretely :: SBV a -> (a -> Bool) -> Bool
 
@@ -573,30 +601,6 @@ class (HasKind a, Typeable a) => SymVal a where
   isConcretely s p
     | Just i <- unliteral s = p i
     | True                  = False
-
-  -- | Generalization of 'Data.SBV.sbvForall'
-  sbvForall :: MonadSymbolic m => String -> m (SBV a)
-  sbvForall = mkSymVal (NonQueryVar (Just ALL)) . Just
-
-  -- | Generalization of 'Data.SBV.sbvForall_'
-  sbvForall_ :: MonadSymbolic m => m (SBV a)
-  sbvForall_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
-
-  -- | Generalization of 'Data.SBV.mkForallVars'
-  mkForallVars :: MonadSymbolic m => Int -> m [SBV a]
-  mkForallVars n = mapM (const sbvForall_) [1 .. n]
-
-  -- | Generalization of 'Data.SBV.sbvExists'
-  sbvExists :: MonadSymbolic m => String -> m (SBV a)
-  sbvExists = mkSymVal (NonQueryVar (Just EX)) . Just
-
-  -- | Generalization of 'Data.SBV.sbvExists_'
-  sbvExists_ :: MonadSymbolic m => m (SBV a)
-  sbvExists_ = mkSymVal (NonQueryVar (Just EX)) Nothing
-
-  -- | Generalization of 'Data.SBV.mkExistVars'
-  mkExistVars :: MonadSymbolic m => Int -> m [SBV a]
-  mkExistVars n = mapM (const sbvExists_) [1 .. n]
 
   -- | Generalization of 'Data.SBV.free'
   free :: MonadSymbolic m => String -> m (SBV a)

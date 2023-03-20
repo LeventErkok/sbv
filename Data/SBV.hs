@@ -295,9 +295,9 @@ module Data.SBV (
   -- $enumerations
   , mkSymbolicEnumeration
 
-  -- * Uninterpreted sorts, axioms, constants, and functions
+  -- * Uninterpreted sorts, constants, and functions
   -- $uninterpreted
-  , mkUninterpretedSort, addAxiom
+  , mkUninterpretedSort
 
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..)
@@ -306,8 +306,7 @@ module Data.SBV (
   -- $proveIntro
   -- $noteOnNestedQuantifiers
   -- $multiIntro
-  , Predicate, Goal
-  , Provable, universal_, universal, existential_, existential
+  , Predicate, Goal, Provable
   , prove, proveWith
   , dprove, dproveWith
   , sat, satWith
@@ -323,7 +322,10 @@ module Data.SBV (
   -- $constrainIntro
   -- ** General constraints
   -- $generalConstraints
-  , constrain, softConstrain, Forall(..), Exists(..)
+  , constrain, qConstrain, softConstrain, Forall(..), Exists(..), ForallN(..), ExistsN(..)
+
+  -- * Quantified booleans
+  , quantifiedBool
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
@@ -393,8 +395,7 @@ module Data.SBV (
 
   -- * Abstract SBV type
   , SBV, HasKind(..), Kind(..)
-  , SymVal, sbvForall, sbvForall_, mkForallVars, sbvExists, sbvExists_, mkExistVars, free
-  , free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCV
+  , SymVal, free, free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCV
   , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
@@ -408,13 +409,10 @@ module Data.SBV (
   ) where
 
 import Data.SBV.Core.AlgReals
-import Data.SBV.Core.Data       hiding (sbvForall, sbvForall_,
-                                        mkForallVars, sbvExists, sbvExists_,
-                                        mkExistVars, free, free_, mkFreeVars,
+import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
                                         newArray, newArray_)
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
-                                        sbvForall, sbvForall_, sbvExists, sbvExists_,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
                                         sFloatingPoint, sFloatingPoint_, sFloatingPoints,
@@ -442,8 +440,7 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 
-import Data.SBV.Provers.Prover hiding (universal_, universal, existential_, existential,
-                                       prove, proveWith, sat, satWith, allSat,
+import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
                                        allSatWith, optimize, optimizeWith,
                                        isVacuous, isVacuousWith, isTheorem,
@@ -990,21 +987,6 @@ which would list all three elements of this domain as satisfying solutions.
 Note that the result is properly typed as @X@ elements; these are not mere strings.
 
 See "Documentation.SBV.Examples.Misc.Enumerate" for an extended example on how to use symbolic enumerations.
--}
-
-{- $noteOnNestedQuantifiers
-=== A note on reasoning in the presence of quantifiers #noteOnNested#
-
-Note that SBV allows reasoning with quantifiers: Inputs can be existentially or universally quantified. Predicates can be built
-with arbitrary nesting of such quantifiers as well. However, SBV always /assumes/ that the input is in
-prenex-normal form: <http://en.wikipedia.org/wiki/Prenex_normal_form>. That is,
-all the input declarations are treated as happening at the beginning of a predicate, followed by the actual formula. Unfortunately,
-the way predicates are written can be misleading at times, since symbolic inputs can be created at arbitrary points; interleaving them
-with other code. The rule is simple, however: All inputs are assumed at the top, in the order declared, regardless of their quantifiers.
-SBV will apply skolemization to get rid of existentials before sending predicates to backend solvers. However, if you do want nested
-quantification, you will manually have to first convert to prenex-normal form (which produces an equisatisfiable but not necessarily
-equivalent formula), and code that explicitly in SBV. See [Issue 256](http://github.com/LeventErkok/sbv/issues/256) and [Issue 623](https://github.com/LeventErkok/sbv/issues/623) for a detailed discussion
-of this issue.
 -}
 
 {- $cardIntro

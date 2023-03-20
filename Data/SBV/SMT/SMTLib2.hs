@@ -644,10 +644,10 @@ declFuncs ds = map declGroup sorted
                      SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
                      -- Uniquify names of axioms. Why? Because axioms are actually unnamed, but we want to put them after any function
                      -- definition they might refer to. So, give them a brand new name.
-                     SMTAxm n _ _     -> head [nm | i <- [(1::Int)..], let nm = n ++ " " ++ show i, nm `notElem` allNames]
+                     SMTAxm _ _       -> head [nm | i <- [(1::Int)..], let nm = "ax_" ++ show i, nm `notElem` allNames]
 
         getDeps (SMTDef _ _ d _ _) = d
-        getDeps (SMTAxm _   d   _) = d
+        getDeps (SMTAxm     d   _) = d
         getDeps l@SMTLam{}         = error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show l
 
         mkDecl Nothing  rt = "() "    ++ rt
@@ -663,11 +663,11 @@ declFuncs ds = map declGroup sorted
 
         declUserDef _ d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
 
-        declUserDef isRec a@(SMTAxm nm deps body)
+        declUserDef isRec a@(SMTAxm deps body)
             | isRec = error $ "Data.SBV.declFuns: Unexpected recursive axiom: " ++ show a
-            | True  = "; -- user given axiom: " ++ nm ++ frees ++ "\n" ++ body
+            | True  = "; -- user given axiom: " ++ frees ++ "\n" ++ body
            where frees | null deps = ""
-                       | True      = " [Refers to: " ++ intercalate ", " deps ++ "]"
+                       | True      = "[Refers to: " ++ intercalate ", " deps ++ "]"
 
         declUserDef isRec (SMTDef nm fk deps param body) = ("; -- user given definition: " ++ nm ++ recursive ++ frees ++ "\n") ++ s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")

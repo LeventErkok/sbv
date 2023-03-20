@@ -39,7 +39,6 @@
 module Documentation.SBV.Examples.Puzzles.Garden where
 
 import Data.SBV
-import Data.List(isSuffixOf)
 
 -- | Colors of the flowers
 data Color = Red | Yellow | Blue
@@ -71,31 +70,14 @@ puzzle = do n <- sInteger "N"
 
             let valid = validPick n
 
-            -- Declare three existential flowers. We declare these with
-            -- _modelIgnore suffix, because we don't care different assignments
-            -- to them to be a different model. See 'isNonModelVar' below.
-            ef1 <- sbvExists "ef1_modelIgnore"
-            ef2 <- sbvExists "ef2_modelIgnore"
-            ef3 <- sbvExists "ef3_modelIgnore"
-
-            -- Declare three universal flowers to aid in encoding the
-            -- statements made by students.
-            af1 <- sbvForall "af1"
-            af2 <- sbvForall "af2"
-            af3 <- sbvForall "af3"
-
             -- Each color is represented:
-            constrain $ valid ef1 ef2 ef3
-            constrain $ map col [ef1, ef2, ef3] .== [sRed, sYellow, sBlue]
+            qConstrain $ \(Exists ef1) (Exists ef2) (Exists ef3) ->
+               valid ef1 ef2 ef3 .&& map col [ef1, ef2, ef3] .== [sRed, sYellow, sBlue]
 
-            -- Pick any three, at least one is Red
-            constrain $ valid af1 af2 af3 .=> count Red    [af1, af2, af3] .>= 1
-
-            -- Pick any three, at least one is Yellow
-            constrain $ valid af1 af2 af3 .=> count Yellow [af1, af2, af3] .>= 1
-
-            -- Pick any three, at least one is Blue
-            constrain $ valid af1 af2 af3 .=> count Blue   [af1, af2, af3] .>= 1
+            -- Pick any three, at least one is Red, one is Yellow, one is Blue
+            qConstrain $ \(Forall af1) (Forall af2) (Forall af3) ->
+                let atLeastOne c = count c [af1, af2, af3] .>= 1
+                in valid af1 af2 af3 .=> atLeastOne Red .&& atLeastOne Yellow .&& atLeastOne Blue
 
 -- | Solve the puzzle. We have:
 --
@@ -104,8 +86,6 @@ puzzle = do n <- sInteger "N"
 --   N = 3 :: Integer
 -- This is the only solution. (Unique up to prefix existentials.)
 --
--- So, a garden with 3 flowers is the only solution. (Note that we simply skip
--- over the prefix existentials and the assignments to uninterpreted function 'col'
--- for model purposes here, as they don't represent a different solution.)
+-- So, a garden with 3 flowers is the only solution.
 flowerCount :: IO ()
-flowerCount = print =<< allSatWith z3{satTrackUFs = False, isNonModelVar = ("_modelIgnore" `isSuffixOf`)} puzzle
+flowerCount = print =<< allSat puzzle

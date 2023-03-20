@@ -48,7 +48,7 @@ type M = StateT (SArray String String) (WriterT [SString] Symbolic)
 eval :: SQLExpr -> M SString
 eval (Query q)         = do q' <- eval q
                             tell [q']
-                            lift $ lift sbvExists_
+                            lift $ lift free_
 eval (Const str)       = return $ literal str
 eval (Concat e1 e2)    = (++) <$> eval e1 <*> eval e2
 eval (ReadVar nm)      = do n   <- eval nm

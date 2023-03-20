@@ -264,7 +264,7 @@ svCgReturnArr vs
 
 -- | Creates an atomic input in the generated code.
 cgInput :: SymVal a => String -> SBVCodeGen (SBV a)
-cgInput nm = do r <- sbvForall_
+cgInput nm = do r  <- free_
                 sv <- sbvToSymSV r
                 modify' (\s -> s { cgInputs = (nm, CgAtomic sv) : cgInputs s })
                 return r
@@ -273,7 +273,7 @@ cgInput nm = do r <- sbvForall_
 cgInputArr :: SymVal a => Int -> String -> SBVCodeGen [SBV a]
 cgInputArr sz nm
   | sz < 1 = error $ "SBV.cgInputArr: Array inputs must have at least one element, given " ++ show sz ++ " for " ++ show nm
-  | True   = do rs <- mapM (const sbvForall_) [1..sz]
+  | True   = do rs <- mapM (const free_) [1..sz]
                 sws <- mapM sbvToSymSV rs
                 modify' (\s -> s { cgInputs = (nm, CgArray sws) : cgInputs s })
                 return rs

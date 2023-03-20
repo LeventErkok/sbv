@@ -55,5 +55,5 @@ t1 = sat $ do x <- free "x"
 -- Unsatisfiable
 t2 :: IO SatResult
 t2 = sat $ do x <- free "x"
-              addAxiom "Q" $ \(Forall a) (Forall b) -> a .== (b :: SQ)
+              qConstrain $ \(Forall a) (Forall b) -> a .== (b :: SQ)
               return $ f x ./= x

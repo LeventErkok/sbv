@@ -146,7 +146,7 @@ namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees (extractAllUniversals <$> params) body]
 
 -- | Generic constraint generator.
-constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => (Defn -> b) -> State -> a -> m b
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b
 constraintGen trans inState@State{rLambdaLevel} f = do
    -- make sure we're at the top
    ll <- liftIO $ readIORef rLambdaLevel
@@ -154,28 +154,30 @@ constraintGen trans inState@State{rLambdaLevel} f = do
            0 -> pure ()
            _ -> error "Data.SBV.constraintGen: Not supported: constraint calls that are not at the top-level."
 
-   inSubState inState $ \st -> trans <$> convert st KBool (mkConstraint st f >>= output >> pure ())
+   let mkDef (Defn deps Nothing       body) = trans deps body
+       mkDef (Defn deps (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
+                                                              ++ body (i + 2)
+                                                              ++ replicate (length params) ')'
+       mkGroup (ALL, s) = "(forall " ++ s
+       mkGroup (EX,  s) = "(exists " ++ s
+
+   inSubState inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
 
 -- | Generate a constraint.
-constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m SMTDef
-constraint inState nm = constraintGen mkAx inState
-   where mkAx (Defn deps Nothing       body) = SMTAxm nm deps $ "(assert " ++ body 0 ++ ")"
-         mkAx (Defn deps (Just params) body) = SMTAxm nm deps $ "(assert " ++ unwords (map mkGroup params) ++ "\n"
-                                                              ++ body 10
-                                                              ++ replicate (length params + 1) ')'
-         mkGroup (ALL, s) = "(forall " ++ s
-         mkGroup (EX,  s) = "(exists " ++ s
+constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SBool
+constraint inState = constraintGen mkBool inState
+   where mkBool _deps d = SBV $ SVal KBool $ Right $ cache r
+           where r st = newExpr st KBool (SBVApp (Uninterpreted (d 0)) [])
 
 -- | Generate a constraint, string version
-constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> String -> a -> m String
-constraintStr inState nm f = toStr <$> constraint inState nm f
-   where toStr (SMTAxm anm deps body) = intercalate "\n" [ "; user defined axiom: " ++ anm ++ depInfo deps
-                                                         , body
-                                                         ]
-         toStr d = error $ unlines ["Data.SBV.Lambda: Unexpected definition in constraintStr:", show d]
+constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
+constraintStr inState f = constraintGen toStr inState f
+   where toStr deps body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
+                                            , "(assert\n" ++ body 2 ++ ")"
+                                            ]
 
          depInfo [] = ""
-         depInfo ds = " [Refers to: " ++ intercalate ", " ds ++ "]"
+         depInfo ds = "[Refers to: " ++ intercalate ", " ds ++ "]"
 
 -- | Convert to an appropriate SMTLib representation.
 convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
