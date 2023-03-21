@@ -33,7 +33,7 @@ import Data.SBV
 import Data.List (sortOn)
 
 -- | We will assume each number can be represented by an 8-bit word, i.e., can be at most 128.
-type Count  = SWord8
+type Count = SWord8
 
 -- | Given a number, increment the count array depending on the digits of the number
 count :: Count -> [Count] -> [Count]
