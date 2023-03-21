@@ -26,7 +26,7 @@ testsABC = testGroup "Basics.ModelValidate.ABC" [
              goldenCapturedIO "validate_0" testABC
            ]
     where testABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True}
-                                        $ (qConstrain (\(Exists x) -> x .< (10::SWord8)) :: Goal)
+                                             (qConstrain (\(Exists x) -> x .< (10::SWord8)) :: Goal)
                                 appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 tests :: TestTree

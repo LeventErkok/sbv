@@ -1183,7 +1183,7 @@ instance Show SMTDef where
 -- The name of this definition
 smtDefGivenName :: SMTDef -> Maybe String
 smtDefGivenName (SMTDef n _ _ _ _) = Just n
-smtDefGivenName (SMTLam{})         = Nothing
+smtDefGivenName SMTLam{}           = Nothing
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where

@@ -734,7 +734,7 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
 
         topLevel = not quantified || case ctx of
                                        ArrayFree (Left mbi) -> maybe True (`elem` constNames) mbi
-                                       ArrayFree (Right{})  -> True
+                                       ArrayFree Right{}    -> True
                                        ArrayMutate _ a b    -> all (`elem` constNames) [a, b]
                                        ArrayMerge c _ _     -> c `elem` constNames
         (pre, post) = partition fst ctxInfo

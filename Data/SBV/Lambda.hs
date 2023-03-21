@@ -169,13 +169,13 @@ constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
 
 -- | Generate a constraint.
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SBool
-constraint inState = constraintGen mkBool inState
+constraint = constraintGen mkBool
    where mkBool _deps d = SBV $ SVal KBool $ Right $ cache r
            where r st = newExpr st KBool (SBVApp (QuantifiedBool (d 0)) [])
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
-constraintStr inState f = constraintGen toStr inState f
+constraintStr = constraintGen toStr
    where toStr deps body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
                                             , "(assert " ++ body 2 ++ ")"
                                             ]
