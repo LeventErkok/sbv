@@ -25,7 +25,7 @@ import qualified Control.Exception as C
 tests :: TestTree
 tests =
   testGroup "Optimization.Reals"
-    [ goldenString       "optQuant1" $ optE q1
+    [ goldenVsStringShow "optQuant1" $ opt  q1
     , goldenVsStringShow "optQuant2" $ opt  q2
     , goldenVsStringShow "optQuant3" $ opt  q3
     , goldenVsStringShow "optQuant4" $ opt  q4
@@ -38,47 +38,41 @@ tests =
 q1 :: Goal
 q1 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        x <- sbvForall "x" :: Symbolic SInteger
-        constrain $ 2 * (a * x + b1) .== 2
-        constrain $ 4 * (a * x + b2) .== 4
+        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                    .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
-        minimize "goal" $ 2*x
+        minimize "goal" $ 2*a
 
 q2 :: Goal
 q2 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        x <- sbvForall "x" :: Symbolic SInteger
-        constrain $ 2 * (a * x + b1) .== 2
-        constrain $ 4 * (a * x + b2) .== 4
-        constrain $ a .>= 0
+        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                    .&& 4 * (a * x + b2) .== 4
+                                    .&& a .>= 0
         minimize "goal" a
 
 q3 :: Goal
 q3 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" a
-        x <- sbvForall "x" :: Symbolic SInteger
-        constrain $ 2 * (a * x + b1) .== 2
-        constrain $ 4 * (a * x + b2) .== 4
+        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                    .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
 q4 :: Goal
 q4 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" $ 2*a
-        x <- sbvForall "x" :: Symbolic SInteger
-        constrain $ 2 * (a * x + b1) .== 2
-        constrain $ 4 * (a * x + b2) .== 4
+        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                    .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
 q5 :: Goal
 q5 = do a <- sInteger "a"
-        x <- sbvForall "x" :: Symbolic SInteger
-        y <- sbvForall "y" :: Symbolic SInteger
-        b <- sInteger "b"
+        qConstrain $ \(Forall x) (Forall y) -> x+y .>= (0 :: SInteger)
         constrain $ a .>= 0
+        b <- sInteger "b"
         constrain $ b .>= 0
-        constrain $ x+y .>= 0
         minimize "goal" $ a+b
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

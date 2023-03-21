@@ -25,7 +25,4 @@ tests = testGroup "Existentials.CRCPolynomial" [
  ]
 
 pgm :: Predicate
-pgm = do p <- sbvExists "poly"
-         s <- sbvForall "sent"
-         r <- sbvForall "received"
-         return $ sTestBit p 0 .&& crcGood 4 p s r
+pgm = quantifiedBool $ \(Exists poly) (Forall sent) (Forall received) -> sTestBit poly 0 .&& crcGood 4 poly sent received

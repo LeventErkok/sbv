@@ -30,10 +30,7 @@ tests =
     ]
 
 crcGoodE :: Symbolic SBool
-crcGoodE = do
-  x <- sbvExists_
-  y <- sbvExists_
-  return (crcGood 3 0 x y)
+crcGoodE = quantifiedBool $ \(Exists x) (Exists y) -> crcGood 3 0 x y
 
 extendData :: SWord 48 -> SWord 64
 extendData msg = msg # 0

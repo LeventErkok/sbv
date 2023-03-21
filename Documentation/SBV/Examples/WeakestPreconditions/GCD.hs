@@ -121,13 +121,7 @@ gcd x y
 -- | Constraints and axioms we need to state explicitly to tell
 -- the SMT solver about our specification for GCD.
 axiomatizeGCD :: Symbolic ()
-axiomatizeGCD = do -- Base case. Strictly speaking, we don't really need this case
-                   -- here, but it declares the presence of gcd as an uninterpreted
-                   -- function to SBV so it gets registered as such.
-                   e <- sInteger_
-                   constrain $ gcd e e .== e
-
-                   qConstrain $ \(Forall x)            -> x .> 0            .=> gcd x x     .== x
+axiomatizeGCD = do qConstrain $ \(Forall x)            -> x .> 0            .=> gcd x x     .== x
                    qConstrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
                    qConstrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
 
