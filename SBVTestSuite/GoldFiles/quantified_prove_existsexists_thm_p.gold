@@ -17,18 +17,18 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
+[GOOD] (define-fun s0 () Bool (exists ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)))
+         (let ((l1_s2 (bvsub l1_s1 l1_s0)))
+         (let ((l1_s3 (bvadd l1_s0 l1_s2)))
+         (let ((l1_s4 (= l1_s1 l1_s3)))
+         l1_s4)))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
-[GOOD] (assert (forall ((s0 (_ BitVec 8))
-                        (s1 (_ BitVec 8)))
-       ; --- postQuantifier assignments ---
-                   (let ((s2 (bvsub s1 s0)))
-                   (let ((s3 (bvadd s0 s2)))
-                   (let ((s4 (= s1 s3)))
-       ; --- delayedEqualities ---
-       ; -- finalAssert ---
-                   (not s4))))))
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
+[GOOD] (assert (not s0))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
