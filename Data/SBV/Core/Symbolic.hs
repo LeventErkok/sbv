@@ -203,6 +203,7 @@ data Op = Plus
         | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
+        | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         | NonLinear NROp                        -- Non-linear ops (mostly trigonometric), categorized separately
@@ -553,6 +554,7 @@ instance Show Op where
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
+  show (QuantifiedBool i)   = "[quantified boolean] " ++ i
 
   show (Label s)            = "[label] " ++ s
 

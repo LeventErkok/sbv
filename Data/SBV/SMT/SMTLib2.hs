@@ -1002,6 +1002,8 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
 
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (QuantifiedBool i) [])   = i
+        sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssv a ++ ")"
 

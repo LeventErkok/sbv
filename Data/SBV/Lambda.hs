@@ -171,7 +171,7 @@ constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SBool
 constraint inState = constraintGen mkBool inState
    where mkBool _deps d = SBV $ SVal KBool $ Right $ cache r
-           where r st = newExpr st KBool (SBVApp (Uninterpreted (d 0)) [])
+           where r st = newExpr st KBool (SBVApp (QuantifiedBool (d 0)) [])
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
