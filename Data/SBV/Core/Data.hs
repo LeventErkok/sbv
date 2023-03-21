@@ -738,5 +738,3 @@ instance SymArray SArray where
            mkNm (Just nm) _ = nm
            aknd = kindOf (Proxy @a)
            bknd = kindOf (Proxy @b)
-
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
