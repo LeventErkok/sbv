@@ -177,7 +177,7 @@ constraint inState = constraintGen mkBool inState
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
 constraintStr inState f = constraintGen toStr inState f
    where toStr deps body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
-                                            , "(assert\n" ++ body 2 ++ ")"
+                                            , "(assert " ++ body 2 ++ ")"
                                             ]
 
          depInfo [] = ""
