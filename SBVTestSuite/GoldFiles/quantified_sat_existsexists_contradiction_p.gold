@@ -5,30 +5,30 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic QF_BV)
+[GOOD] (set-logic BV)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "x"
-[GOOD] (declare-fun s1 () (_ BitVec 8)) ; tracks user variable "y"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
-[GOOD] (define-fun s3 () Bool (distinct s0 s1))
-[GOOD] (define-fun s4 () Bool (and s2 s3))
+[GOOD] (define-fun s0 () Bool (exists ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)))
+         (let ((l1_s2 (= l1_s0 l1_s1)))
+         (let ((l1_s3 (distinct l1_s0 l1_s1)))
+         (let ((l1_s4 (and l1_s2 l1_s3)))
+         l1_s4)))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert s4)
+[GOOD] (assert s0)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
