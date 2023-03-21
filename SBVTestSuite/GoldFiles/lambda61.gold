@@ -16,16 +16,16 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; -- user given axiom: t3
-[GOOD] (assert (forall ((l1_s0 (_ BitVec 8))) (exists ((l1_s1 (_ BitVec 8)))
-                 (bvugt l1_s1 l1_s0))))
 [GOOD] ; --- preQuantifier assignments ---
+[GOOD] (define-fun s0 () Bool (forall ((l1_s0 (_ BitVec 8))) (exists ((l1_s1 (_ BitVec 8)))
+         (bvugt l1_s1 l1_s0))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
+[GOOD] (assert s0)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
