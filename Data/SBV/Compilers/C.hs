@@ -445,7 +445,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
-genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins (_, preConsts) tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs ins (_, preConsts) tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
@@ -468,6 +468,8 @@ genCProg cfg fn proto (Result kindInfo _tvals _ovals cgs ins (_, preConsts) tbls
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
+  | quants
+  = error "SBV->C: Cannot compile in the presence of quantified booleans"
   | not (null cstrs)
   = tbd "Explicit constraints"
   | not (null arrs)

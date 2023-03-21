@@ -19,7 +19,7 @@ module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition, nub, sort)
-import Data.Maybe (listToMaybe, fromMaybe, mapMaybe, catMaybes)
+import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map.Strict      as M
@@ -28,7 +28,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..), smtDefGivenName)
+import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..))
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
@@ -46,7 +46,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
@@ -78,6 +78,8 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                              isFoldMap SeqFoldLeftI{} = True
                              isFoldMap _              = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
+
+        needsQuantifiers = not (null foralls) || hasLocalQuants
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
@@ -119,25 +121,6 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                                 , "*** Please report this as a feature request, either for SBV or the backend solver."
                                 ]
 
-           -- Are there user-defined axioms (quantified), and user-level forall's. We don't support that
-           -- since with a quantified formula we generate a full expression and there's no way to put
-           -- the axiom in there if it has a free variable. (This can be handled for the cases where
-           -- there's no free variable, but let's not complicate the code. This is easier and likely
-           -- covers 99.99% of all the use cases.)
-           | not (null foralls) && not (null defs)
-           = let pretty n = case userName n of
-                              Nothing -> show n
-                              Just x  -> show n ++ " (" ++ x ++ ")"
-             in error $ unlines [ ""
-                                , "*** SBV cannot currently handle function definitions and axioms in the presence of quantified variables."
-                                , "***"
-                                , "***    Found declaration: " ++ unwords (mapMaybe smtDefGivenName defs)
-                                , "***    Quantified args  : " ++ unwords (map pretty foralls)
-                                , "***"
-                                , "*** If you use smtFunction/addAxiom, you cannot have explicit quantifiers."
-                                , "*** Please report this as a feature request, if you cannot work around this limitation."
-                                ]
-
            -- Otherwise, we try to determine the most suitable logic.
            -- NB. This isn't really fool proof!
 
@@ -161,7 +144,7 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
            | hasOverflows          = setAll "has overflow checks"
 
            | hasFP || hasRounding
-           = if not (null foralls)
+           = if needsQuantifiers
              then ["(set-logic ALL)"]
              else if hasBVs
                   then ["(set-logic QF_FPBV)"]
@@ -176,12 +159,12 @@ cvt ctx kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, con
                QueryInternal -> if supportsBitVectors solverCaps
                                 then ["(set-logic " ++ qs ++ as ++ ufs ++ "BV)"]
                                 else ["(set-logic ALL)"] -- fall-thru
-          where qs  | null foralls && null defs = "QF_"  -- axioms are likely to contain quantifiers
-                    | True                      = ""
-                as  | null arrs                 = ""
-                    | True                      = "A"
-                ufs | null uis && null tbls     = ""     -- we represent tables as UFs
-                    | True                      = "UF"
+          where qs  | not needsQuantifiers  = "QF_"
+                    | True                  = ""
+                as  | null arrs             = ""
+                    | True                  = "A"
+                ufs | null uis && null tbls = ""     -- we represent tables as UFs
+                    | True                  = "UF"
 
         -- SBV always requires the production of models!
         getModels   = "(set-option :produce-models true)"

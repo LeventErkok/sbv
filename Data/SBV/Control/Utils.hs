@@ -1647,7 +1647,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
-runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is consts tbls arrs uis defns pgm cstrs _assertions outputs) =
+runProofOn rm context comments res@(Result hasQuantifiers ki _qcInfo _observables _codeSegs is consts tbls arrs uis defns pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
@@ -1677,7 +1677,7 @@ runProofOn rm context comments res@(Result ki _qcInfo _observables _codeSegs is 
                                                , "*** Check calls to \"output\", they are typically not needed!"
                                                ]
 
-     in SMTProblem { smtLibPgm = toSMTLib config context ki isSat comments is skolemMap consts tbls arrs uis defns pgm cstrs o }
+     in SMTProblem { smtLibPgm = toSMTLib config context hasQuantifiers ki isSat comments is skolemMap consts tbls arrs uis defns pgm cstrs o }
 
 -- | Generalization of 'Data.SBV.Control.executeQuery'
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a

@@ -42,6 +42,7 @@ import System.Exit (ExitCode(..))
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibConverter a =  QueryContext                                  -- ^ Internal or external query?
+                       -> Bool                                          -- ^ Do we have quantified booleans?
                        -> Set.Set Kind                                  -- ^ Kinds used in the problem
                        -> Bool                                          -- ^ is this a sat problem?
                        -> [String]                                      -- ^ extra comments to place on top

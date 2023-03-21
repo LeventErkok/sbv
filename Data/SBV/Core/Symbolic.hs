@@ -804,7 +804,8 @@ instance NFData a => NFData (Objective a) where
    rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p
 
 -- | Result of running a symbolic computation
-data Result = Result { reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
+data Result = Result { hasQuants      :: Bool                                         -- ^ Did the program use quantified booleans?
+                     , reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
                      , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
                      , resUISegs      :: [(String, [String])]                         -- ^ uninterpeted code segments
@@ -828,7 +829,7 @@ instance Show Result where
   show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result kinds _ _ cgs is (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
+  show (Result _ kinds _ _ cgs is (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ ["INPUTS"]
                 ++ map shn (fst is)
@@ -1191,6 +1192,7 @@ instance NFData SMTDef where
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
                     , stCfg        :: SMTConfig
                     , startTime    :: UTCTime
+                    , rHasQuants   :: IORef Bool
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CV)]
@@ -1771,6 +1773,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
 mkNewState cfg currentRunMode = liftIO $ do
      currTime  <- getCurrentTime
+     hasQuants <- newIORef False
      rm        <- newIORef currentRunMode
      ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
      lambda    <- newIORef $ case currentRunMode of
@@ -1804,6 +1807,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      pure $ State { runMode      = rm
                   , stCfg        = cfg
                   , startTime    = currTime
+                  , rHasQuants   = hasQuants
                   , pathCond     = SVal KBool (Left trueCV)
                   , rIncState    = istate
                   , rCInfo       = cInfo
@@ -1858,7 +1862,7 @@ runSymbolicInState st (SymbolicT c) = do
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, rDefns=defns
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rObservables=observes
+                                       , rObservables=observes, rHasQuants
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
    inpsO <- inputsToList <$> readIORef inps
@@ -1887,7 +1891,9 @@ extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblM
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
-   return $ Result knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
+   hasQuants   <- readIORef rHasQuants
+
+   return $ Result hasQuants knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
@@ -2047,12 +2053,12 @@ instance NFData NamedSymVar where
   rnf (NamedSymVar s n) = rnf s `seq` rnf n
 
 instance NFData Result where
-  rnf (Result kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
-        = rnf kindInfo `seq` rnf qcInfo  `seq` rnf obs    `seq` rnf cgs
-                       `seq` rnf inps    `seq` rnf consts `seq` rnf tbls
-                       `seq` rnf arrs    `seq` rnf uis    `seq` rnf axs
-                       `seq` rnf pgm     `seq` rnf cstr   `seq` rnf asserts
-                       `seq` rnf outs
+  rnf (Result hasQuants kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
+        = rnf hasQuants `seq` rnf kindInfo `seq` rnf qcInfo `seq` rnf obs    `seq` rnf cgs
+                        `seq` rnf inps     `seq` rnf consts `seq` rnf tbls
+                        `seq` rnf arrs     `seq` rnf uis    `seq` rnf axs
+                        `seq` rnf pgm      `seq` rnf cstr   `seq` rnf asserts
+                        `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
 instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SV           where rnf a          = seq a ()

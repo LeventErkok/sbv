@@ -34,7 +34,7 @@ import Data.SBV.Utils.PrettyNum
 import           Data.SBV.Core.Symbolic hiding   (mkNewState, fresh)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
-import Data.IORef (readIORef)
+import Data.IORef (readIORef, writeIORef)
 import Data.List
 
 import qualified Data.Foldable      as F
@@ -73,6 +73,7 @@ inSubState inState comp = do
                    , startTime    = share startTime
 
                    -- These are shared IORef's; and is shared, so they will be copied back to the parent state
+                   , rHasQuants   = share rHasQuants
                    , rIncState    = share rIncState
                    , rCInfo       = share rCInfo
                    , rUsedKinds   = share rUsedKinds
@@ -147,7 +148,10 @@ namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b
-constraintGen trans inState@State{rLambdaLevel} f = do
+constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
+   -- indicate we have quantifiers
+   liftIO $ writeIORef rHasQuants True
+
    -- make sure we're at the top
    ll <- liftIO $ readIORef rLambdaLevel
    () <- case ll of
@@ -193,7 +197,9 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
        bugReport = "Please report this at https://github.com/LeventErkok/sbv/issues"
 
-       sh (Result _ki           -- Kind info, we're assuming that all the kinds used are already available in the surrounding context.
+       sh (Result _hasQuants    -- Has quantified booleans? Does not apply
+
+                  _ki           -- Kind info, we're assuming that all the kinds used are already available in the surrounding context.
                                 -- There's no way to create a new kind in a lambda. If a new kind is used, it should be registered.
 
                   _qcInfo       -- Quickcheck info, does not apply, ignored
