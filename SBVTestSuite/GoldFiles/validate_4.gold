@@ -25,7 +25,6 @@
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
 [GOOD] (assert false)
-[GOOD] (assert false)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
