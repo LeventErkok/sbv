@@ -1,6 +1,6 @@
 INPUTS
-  s0 :: SWord 48
-  s1 :: SWord 48
+  s0 :: SWord 48, existential
+  s1 :: SWord 48, existential
 CONSTANTS
   s5 = 0 :: WordN 1
   s101 = 65536 :: Word64
