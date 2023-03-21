@@ -30,5 +30,5 @@ benchmarks = rGroup
   , S.run "U2Bridge_cnt6" (count 6) `using` runner satWith
   ]
   where
-    act     = do b <- sbvExists_; p1 <- sbvExists_; p2 <- sbvExists_; return (b, p1, p2)
+    act     = do b <- free_; p1 <- free_; p2 <- free_; return (b, p1, p2)
     count n = isValid `fmap` mapM (const act) [1..(n::Int)]

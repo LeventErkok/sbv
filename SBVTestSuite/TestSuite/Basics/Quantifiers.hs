@@ -19,6 +19,13 @@ import Control.Monad (void)
 
 import Utils.SBVTestFramework
 
+data Q = E  -- exists
+       | A  -- all
+
+instance Show Q where
+   show E = "exists"
+   show A = "forall"
+
 tests :: TestTree
 tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkPred preds
    where mkGoal (g, nm) = [ goldenCapturedIO ("quantified_sat"   ++ "_" ++ nm) $ \rf -> void $ satWith   z3{verbose=True, redirectVerbose=Just rf} g
@@ -28,25 +35,33 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} p
                           ]
 
-         qs   = [(sbvExists, "exists"), (sbvForall, "forall")]
+         qs   = [E, A]
 
          acts = [ (\x y -> x + (y - x) .== y  , "thm")
                 , (\x y -> x .== y .&& x ./= y, "contradiction")
                 , (\x y -> x .== y + 1        , "satisfiable")
                 ]
 
-         goals = [(t1 q1 q2 a, nq1 ++ nq2 ++ "_" ++ an ++ "_c") | (q1, nq1) <- qs
-                                                                , (q2, nq2) <- qs
-                                                                , (a,  an)  <- acts ]
+         goals = [(t1 q1 q2 a, show q1 ++ show q2 ++ "_" ++ an ++ "_c") | q1      <- qs
+                                                                        , q2      <- qs
+                                                                        , (a, an) <- acts
+                                                                        ]
 
-         preds = [(t2 q1 q2 a, nq1 ++ nq2 ++ "_" ++ an ++ "_p") | (q1, nq1) <- qs
-                                                                , (q2, nq2) <- qs
-                                                                , (a,  an)  <- acts ]
+         preds = [(t2 q1 q2 a, show q1 ++ show q2 ++ "_" ++ an ++ "_p") | q1       <- qs
+                                                                        , q2       <- qs
+                                                                        , (a, an)  <- acts
+                                                                        ]
 
-         t1 :: (String -> Symbolic SWord8) -> (String -> Symbolic SWord8) -> (SWord8 -> SWord8 -> SBool) -> Goal
-         t1 q1 q2 act = q1 "x" >>= \x -> q2 "y" >>= \y -> constrain $ act x y
+         t1 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Goal
+         t1 E E act = qConstrain $ \(Exists x) (Exists y) -> act x y
+         t1 E A act = qConstrain $ \(Exists x) (Forall y) -> act x y
+         t1 A E act = qConstrain $ \(Forall x) (Exists y) -> act x y
+         t1 A A act = qConstrain $ \(Forall x) (Forall y) -> act x y
 
-         t2 :: (String -> Symbolic SWord8) -> (String -> Symbolic SWord8) -> (SWord8 -> SWord8 -> SBool) -> Predicate
-         t2 q1 q2 act = q1 "x" >>= \x -> q2 "y" >>= \y -> return    $ act x y
+         t2 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Predicate
+         t2 E E act = quantifiedBool $ \(Exists x) (Exists y) -> act x y
+         t2 E A act = quantifiedBool $ \(Exists x) (Forall y) -> act x y
+         t2 A E act = quantifiedBool $ \(Forall x) (Exists y) -> act x y
+         t2 A A act = quantifiedBool $ \(Forall x) (Forall y) -> act x y
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

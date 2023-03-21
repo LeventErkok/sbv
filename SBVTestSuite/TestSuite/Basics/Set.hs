@@ -165,7 +165,7 @@ templateBEB ic is f = do a <- sInteger "a"
 setOfTuples :: SMTConfig -> IO SatResult
 setOfTuples cfg = satWith cfg $ do
     let x = tuple (empty :: SSet Bool, empty :: SSet Bool)
-    y <- sbvExists_
+    y <- free_
     return $ x ./= y
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

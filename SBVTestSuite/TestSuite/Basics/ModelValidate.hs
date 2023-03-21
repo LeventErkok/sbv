@@ -25,7 +25,8 @@ testsABC :: TestTree
 testsABC = testGroup "Basics.ModelValidate.ABC" [
              goldenCapturedIO "validate_0" testABC
            ]
-    where testABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True} $ existential ["x"] $ \x -> x .< (10::SWord8)
+    where testABC goldFile = do r <- satWith abc{verbose=True, redirectVerbose = Just goldFile, validateModel = True}
+                                        $ (qConstrain (\(Exists x) -> x .< (10::SWord8)) :: Goal)
                                 appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 tests :: TestTree
@@ -46,18 +47,20 @@ tests = testGroup "Basics.ModelValidate" [
                                `C.catch` (\(e::C.SomeException) -> appendFile goldFile ("\nEXCEPTION RAISED:\n" ++ pick (show e) ++ "\n"))
               where pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
-          t1 = existential ["x"] $ \x -> fpAdd sRTZ x x   .== (x::SFloat)
-          t2 = existential ["x"] $ \x -> fpFMA sRNE x x x .== (x::SFloat)
+          t1, t2 :: Predicate
+          t1 = quantifiedBool $ \(Forall x) -> fpAdd sRTZ x x   .== (x::SFloat)
+          t2 = quantifiedBool $ \(Forall x) -> fpFMA sRNE x x x .== (x::SFloat)
 
+          t3 :: Goal
           t3 = do x <- sInteger "x"
                   constrain $ x .> x
 
+          t4 :: Predicate
           t4 = do x <- sInteger "x"
                   y <- sInteger "y"
                   constrain $ x .> y
                   constrain $ x .> 12
                   return $ x .== y+3
 
-          t5 = do x <- sbvExists "x"
-                  y <- sbvForall "y"
-                  return $ fpIsPoint y .=> x .<= (y::SFloat)
+          t5 :: Predicate
+          t5 = quantifiedBool $ \(Exists x) (Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)

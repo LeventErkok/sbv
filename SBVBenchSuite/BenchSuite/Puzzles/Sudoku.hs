@@ -31,4 +31,4 @@ benchmarks = rGroup
 
 
 checkPuzzle :: Puzzle -> Symbolic SBool
-checkPuzzle (i, f) = (valid . f) `fmap` mkExistVars i
+checkPuzzle (i, f) = (valid . f) `fmap` mkFreeVars i

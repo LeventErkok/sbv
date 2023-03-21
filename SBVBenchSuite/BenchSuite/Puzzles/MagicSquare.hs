@@ -28,4 +28,4 @@ benchmarks = rGroup
   ]
 
 mkMagic :: Int -> Symbolic SBool
-mkMagic n = (isMagic . chunk n) `fmap` mkExistVars (n*n)
+mkMagic n = (isMagic . chunk n) `fmap` mkFreeVars (n*n)

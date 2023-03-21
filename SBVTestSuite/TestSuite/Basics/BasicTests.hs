@@ -16,7 +16,7 @@
 
 module TestSuite.Basics.BasicTests(tests) where
 
-import Data.SBV.Internals hiding (sbvForall, output)
+import Data.SBV.Internals hiding (free, output)
 import Utils.SBVTestFramework
 
 -- Test suite
@@ -62,16 +62,16 @@ test1 f = runSAT $ do let x = literal (3 :: Word8)
                           y = literal (2 :: Word8)
                       output $ f x y
 test2 f = runSAT $ do let x = literal (3 :: Word8)
-                      y :: SWord8 <- sbvForall "y"
+                      y :: SWord8 <- free "y"
                       output $ f x y
-test3 f = runSAT $ do x :: SWord8 <- sbvForall "x"
-                      y :: SWord8 <- sbvForall "y"
+test3 f = runSAT $ do x :: SWord8 <- free "x"
+                      y :: SWord8 <- free "y"
                       output $ f x y
-test4 f = runSAT $ do x :: SWord8 <- sbvForall "x"
+test4 f = runSAT $ do x :: SWord8 <- free "x"
                       output $ f x x
-test5 f = runSAT $ do x :: SWord8 <- sbvForall "x"
+test5 f = runSAT $ do x :: SWord8 <- free "x"
                       let r = f x x
-                      q :: SWord8 <- sbvForall "q"
+                      q :: SWord8 <- free "q"
                       _ <- output q
                       output r
 

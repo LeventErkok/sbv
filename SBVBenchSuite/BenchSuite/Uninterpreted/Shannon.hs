@@ -16,7 +16,7 @@
 module BenchSuite.Uninterpreted.Shannon(benchmarks) where
 
 import Documentation.SBV.Examples.Uninterpreted.Shannon
-import Data.SBV hiding (universal, existential)
+import Data.SBV
 
 import BenchSuite.Bench.Bench
 

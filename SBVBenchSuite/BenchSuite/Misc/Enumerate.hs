@@ -31,9 +31,7 @@ benchmarks = rGroup
              ]
   where _elts = \(x::SE) -> x .== x
         _four = \a b c (d::SE) -> distinct [a, b, c, d]
-        _maxE = do mx <- sbvExists "maxE"
-                   e  <- sbvForall "e"
-                   return $ mx .>= (e::SE)
-        _minE = do mx <- sbvExists "minE"
-                   e  <- sbvForall "e"
-                   return $ mx .<= (e::SE)
+        _maxE = do mx <- free "maxE"
+                   qConstrain $ \(Forall e) -> mx .>= (e::SE)
+        _minE = do mx <- free "minE"
+                   qConstrain $ \(Forall e) -> mx .<= (e::SE)
