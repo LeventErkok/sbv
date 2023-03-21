@@ -48,8 +48,8 @@ tests = testGroup "Basics.ModelValidate" [
               where pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
           t1, t2 :: Predicate
-          t1 = quantifiedBool $ \(Forall x) -> fpAdd sRTZ x x   .== (x::SFloat)
-          t2 = quantifiedBool $ \(Forall x) -> fpFMA sRNE x x x .== (x::SFloat)
+          t1 = free "x" >>= \x -> pure $ fpAdd sRTZ x x   .== (x::SFloat)
+          t2 = free "x" >>= \x -> pure $ fpFMA sRNE x x x .== (x::SFloat)
 
           t3 :: Goal
           t3 = do x <- sInteger "x"
@@ -63,4 +63,5 @@ tests = testGroup "Basics.ModelValidate" [
                   return $ x .== y+3
 
           t5 :: Predicate
-          t5 = quantifiedBool $ \(Exists x) (Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)
+          t5 = do x <- free "x"
+                  quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)

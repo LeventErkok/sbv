@@ -18,38 +18,46 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
 [GOOD] ; --- preQuantifier assignments ---
+[GOOD] (define-fun s1 () Bool (forall ((l1_s0 (_ FloatingPoint  8 24)))
+         (let ((l1_s1 (fp.isNaN l1_s0)))
+         (let ((l1_s2 (fp.isInfinite l1_s0)))
+         (let ((l1_s3 (or l1_s1 l1_s2)))
+         (let ((l1_s4 (not l1_s3)))
+         (let ((l1_s5 (not l1_s4)))
+         (let ((l1_s6 (fp.leq s0 l1_s0)))
+         (let ((l1_s7 (or l1_s5 l1_s6)))
+         l1_s7)))))))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
-[GOOD] (assert (forall ((s1 (_ FloatingPoint  8 24)))
-       ; --- postQuantifier assignments ---
-                   (let ((s2 (fp.isNaN s1)))
-                   (let ((s3 (fp.isInfinite s1)))
-                   (let ((s4 (or s2 s3)))
-                   (let ((s5 (not s4)))
-                   (let ((s6 (not s5)))
-                   (let ((s7 (fp.leq s0 s1)))
-                   (let ((s8 (or s6 s7)))
-       ; --- delayedEqualities ---
-       ; -- finalAssert ---
-                   s8)))))))))
+[GOOD] ; --- postQuantifier assignments ---
+[GOOD] ; --- delayedEqualities ---
+[GOOD] ; -- finalAssert ---
+[GOOD] (assert s1)
 [SEND] (check-sat)
 [RECV] sat
-*** In a quantified context, obvservables will not be printed.
 [SEND] (get-value (s0))
 [RECV] ((s0 (_ -oo 8 24)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 [VALIDATE] Validating the model. Assignment:
-[VALIDATE]       x =                -Infinity :: Float
-[VALIDATE]       y = <universally quantified> :: Float
-[VALIDATE] NB. The following variable(s) are universally quantified: y
-[VALIDATE]     We will assume that they are essentially zero for the purposes of validation.
-[VALIDATE]     Note that this is a gross simplification of the model validation with universals!
+[VALIDATE]       x = -Infinity :: Float
 [VALIDATE] There are no constraints to check.
 [VALIDATE] Validating outputs.
-[VALIDATE] All outputs are satisfied. Validation complete.
 
 FINAL OUTPUT:
-Satisfiable. Model:
-  x = -Infinity :: Float
+*** Data.SBV: Cannot validate the model, since s1 is not concretely computable.
+*** 
+*** Assignment:
+*** 
+***       x = -Infinity :: Float
+*** 
+*** The value depends on a quantified variable.
+*** 
+*** SBV's model validator is incomplete, and cannot handle this particular case.
+*** Please report this as a feature request or possibly a bug!
+***
+*** Alleged model:
+***
+*** Satisfiable. Model:
+***   x = -Infinity :: Float
