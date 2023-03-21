@@ -69,7 +69,7 @@ q4 = do a <- sInteger "a"
 
 q5 :: Goal
 q5 = do a <- sInteger "a"
-        qConstrain $ \(Forall x) (Forall y) -> x+y .>= (0 :: SInteger)
+        qConstrain $ \(Exists y) -> a .>= (y :: SInteger)
         constrain $ a .>= 0
         b <- sInteger "b"
         constrain $ b .>= 0
