@@ -13,8 +13,8 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s0 () Bitstring) ; tracks user variable "p"
-[GOOD] (declare-fun s1 () Bitstring) ; tracks user variable "k"
+[GOOD] (declare-fun s1 () Bitstring) ; tracks user variable "p"
+[GOOD] (declare-fun s2 () Bitstring) ; tracks user variable "k"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -22,30 +22,30 @@
 [GOOD] (declare-fun a (Bitstring) Bool)
 [GOOD] (declare-fun e (Bitstring Bitstring) Bitstring)
 [GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; -- user given axiom: axE [Refers to: a, e]
-[GOOD] (assert (forall ((l1_s0 Bitstring) (l1_s1 Bitstring))
-                 (let ((l1_s2 (a l1_s1)))
-                 (let ((l1_s3 (a l1_s0)))
-                 (let ((l1_s4 (and l1_s2 l1_s3)))
-                 (let ((l1_s5 (not l1_s4)))
-                 (let ((l1_s6 (e l1_s1 l1_s0)))
-                 (let ((l1_s7 (a l1_s6)))
-                 (let ((l1_s8 (or l1_s5 l1_s7)))
-                 l1_s8)))))))))
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s2 () Bool (a s0))
+[GOOD] (define-fun s0 () Bool (forall ((l1_s0 Bitstring) (l1_s1 Bitstring))
+         (let ((l1_s2 (a l1_s1)))
+         (let ((l1_s3 (a l1_s0)))
+         (let ((l1_s4 (and l1_s2 l1_s3)))
+         (let ((l1_s5 (not l1_s4)))
+         (let ((l1_s6 (e l1_s1 l1_s0)))
+         (let ((l1_s7 (a l1_s6)))
+         (let ((l1_s8 (or l1_s5 l1_s7)))
+         l1_s8)))))))))
 [GOOD] (define-fun s3 () Bool (a s1))
-[GOOD] (define-fun s4 () Bitstring (e s1 s0))
-[GOOD] (define-fun s5 () Bool (a s4))
+[GOOD] (define-fun s4 () Bool (a s2))
+[GOOD] (define-fun s5 () Bitstring (e s2 s1))
+[GOOD] (define-fun s6 () Bool (a s5))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert s2)
+[GOOD] (assert s0)
 [GOOD] (assert s3)
-[GOOD] (assert (not s5))
+[GOOD] (assert s4)
+[GOOD] (assert (not s6))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

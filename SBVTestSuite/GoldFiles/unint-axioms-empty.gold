@@ -12,10 +12,10 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s0 () Thing Thing_witness)
+[GOOD] (define-fun s2 () Thing Thing_witness)
 [GOOD] ; --- skolem constants ---
-[GOOD] (declare-fun s2 () Thing)
-[GOOD] (declare-fun s3 () Thing)
+[GOOD] (declare-fun s4 () Thing)
+[GOOD] (declare-fun s5 () Thing)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
@@ -23,27 +23,27 @@
 [GOOD] (declare-fun thingCompare (Thing Thing) Bool)
 [GOOD] (declare-fun thingMerge (Thing Thing) Thing)
 [GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; -- user given axiom: thingMerge produces a new, distinct thing [Refers to: thingMerge]
-[GOOD] (assert (forall ((l1_s0 Thing) (l1_s1 Thing))
-                 (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
-                 (let ((l1_s3 (distinct l1_s0 l1_s2)))
-                 l1_s3))))
-[GOOD] ; -- user given axiom: thingCompare is reflexive [Refers to: thingCompare]
-[GOOD] (assert (forall ((l1_s0 Thing))
-                 (thingCompare l1_s0 l1_s0)))
 [GOOD] ; --- preQuantifier assignments ---
-[GOOD] (define-fun s1 () Thing (thingMerge s0 s0))
-[GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] (define-fun s6 () Bool (thingCompare s2 s3))
-[GOOD] (define-fun s7 () Bool (or s5 s6))
+[GOOD] (define-fun s0 () Bool (forall ((l1_s0 Thing))
+         (thingCompare l1_s0 l1_s0)))
+[GOOD] (define-fun s1 () Bool (forall ((l1_s0 Thing) (l1_s1 Thing))
+         (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
+         (let ((l1_s3 (distinct l1_s0 l1_s2)))
+         l1_s3))))
+[GOOD] (define-fun s3 () Thing (thingMerge s2 s2))
+[GOOD] (define-fun s6 () Bool (= s4 s5))
+[GOOD] (define-fun s7 () Bool (not s6))
+[GOOD] (define-fun s8 () Bool (thingCompare s4 s5))
+[GOOD] (define-fun s9 () Bool (or s7 s8))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
 [GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; -- finalAssert ---
-[GOOD] (assert (not s7))
+[GOOD] (assert s0)
+[GOOD] (assert s1)
+[GOOD] (assert (not s9))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
