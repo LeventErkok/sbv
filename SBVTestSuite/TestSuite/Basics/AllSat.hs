@@ -34,8 +34,8 @@ tests =
     , goldenVsStringShow "allSat3" $            allSat $ \x -> x .== (0::SFloat)
     , goldenVsStringShow "allSat4" $            allSat $ \x -> x .<  (0::SWord8)
     , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y .&& y .< (4::SWord8)
-    , goldenVsStringShow "allSat6" $            allSat $ \x y -> (qConstrain (\(Forall z) -> x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8)) :: Goal)
-    , goldenCapturedIO   "allSat7" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t3)
+    , goldenVsStringShow "allSat6" $            allSat t3
+    , goldenCapturedIO   "allSat7" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t4)
     ]
 
 srt :: AllSatResult -> AllSatResult
@@ -53,7 +53,12 @@ t2 = allSat $ do x <- free "x"
                  return $ x .== (y :: SQ) .&& z .== (z :: SQ)
 
 t3 :: Goal
-t3 = do x <- sInteger "x"
+t3 = do x <- free "x"
+        y <- free "y"
+        qConstrain $ \(Forall z) -> x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8)
+
+t4 :: Goal
+t4 = do x <- sInteger "x"
         y <- sInteger "y"
         z <- sInteger "z"
 

@@ -7,4 +7,4 @@ Solution #2:
 Solution #3:
   x = 0 :: Word8
   y = 1 :: Word8
-Found 3 different solutions. (Unique up to prefix existentials.)
+Found 3 different solutions.
