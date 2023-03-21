@@ -22,4 +22,4 @@ tests :: TestTree
 tests = testGroup "Puzzles.Counts" [
   goldenVsStringShow "counts" countPgm
  ]
- where countPgm = runSAT $ puzzle <$> mkFreeVars 10
+ where countPgm = runSAT $ output . puzzle <$> mkFreeVars 10
