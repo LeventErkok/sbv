@@ -863,6 +863,7 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 class ExtractIO m => SExecutable m a where
    -- | Generalization of 'Data.SBV.sName_'
    sName_ :: a -> SymbolicT m ()
+
    -- | Generalization of 'Data.SBV.sName'
    sName  :: [String] -> a -> SymbolicT m ()
 
