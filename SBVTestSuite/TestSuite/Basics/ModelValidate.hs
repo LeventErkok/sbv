@@ -63,4 +63,4 @@ tests = testGroup "Basics.ModelValidate" [
 
           t5 :: Predicate
           t5 = do x <- free "x"
-                  quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)
+                  pure $ quantifiedBool $ \(Forall y) -> fpIsPoint y .=> x .<= (y::SFloat)

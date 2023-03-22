@@ -59,7 +59,7 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ForallN(..), ExistsN(..), qConstrain
+ , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ForallN(..), ExistsN(..)
  ) where
 
 import GHC.TypeLits
@@ -493,9 +493,6 @@ class SolverContext m where
    -- | Set the logic.
    setLogic :: Logic -> m ()
 
-   -- | Convert a quantified constraint to a boolean
-   quantifiedBool :: Constraint Symbolic a => a -> m SBool
-
    -- | Set a solver time-out value, in milli-seconds. This function
    -- essentially translates to the SMTLib call @(set-info :timeout val)@,
    -- and your backend solver may or may not support it! The amount given
@@ -506,16 +503,12 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, quantifiedBool, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
-
--- | Assert a quantified constraint, which is like an axiom
-qConstrain :: (Monad m, SolverContext m, Constraint Symbolic a) => a -> m ()
-qConstrain c = constrain =<< quantifiedBool c
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where

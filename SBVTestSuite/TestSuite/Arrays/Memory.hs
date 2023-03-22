@@ -50,12 +50,12 @@ wcommutesBad (a, x) (b, y) m i = readArray m0 i .== readArray m1 i
 
 -- | Extensionality
 extensionality :: Memory -> Memory -> Predicate
-extensionality m1 m2 = quantifiedBool $ \(Exists i) ->
+extensionality m1 m2 = pure $ quantifiedBool $ \(Exists i) ->
                           (readArray m1 i ./= readArray m2 i) .|| m1 .== m2
 
 -- | Extensionality, second variant. Expressible for both kinds of arrays.
 extensionality2 :: Memory -> Memory -> Address -> Predicate
-extensionality2 m1 m2 i = quantifiedBool $ \(Exists j) ->
+extensionality2 m1 m2 i = pure $ quantifiedBool $ \(Exists j) ->
                              (readArray m1 j ./= readArray m2 j) .|| readArray m1 i .== readArray m2 i
 
 -- | Merge, using memory equality to check result

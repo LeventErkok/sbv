@@ -41,13 +41,13 @@ f3 x y = (x+y)*(x+y)
 f4 x y = x*x + 2*x*y + y*y
 
 f1eqf2 :: Predicate
-f1eqf2 = quantifiedBool $ \(Forall x) (Forall y) -> f1 x y .== f2 x (y :: SWord8)
+f1eqf2 = pure $ quantifiedBool $ \(Forall x) (Forall y) -> f1 x y .== f2 x (y :: SWord8)
 
 f1eqf3 :: Predicate
-f1eqf3 = quantifiedBool $ \(Forall x) (Forall y) -> f1 x y .== f3 x (y :: SWord8)
+f1eqf3 = pure $ quantifiedBool $ \(Forall x) (Forall y) -> f1 x y .== f3 x (y :: SWord8)
 
 f3eqf4 :: Predicate
-f3eqf4 = quantifiedBool $ \(Forall x) (Forall y) -> f3 x y .== f4 x (y :: SWord8)
+f3eqf4 = pure $ quantifiedBool $ \(Forall x) (Forall y) -> f3 x y .== f4 x (y :: SWord8)
 
 f1Single :: Predicate
-f1Single = quantifiedBool $ \(Forall x) -> f1 x x .== (0 :: SWord16)
+f1Single = pure $ quantifiedBool $ \(Forall x) -> f1 x x .== (0 :: SWord16)

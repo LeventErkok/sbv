@@ -59,9 +59,9 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
          t1 A A act = qConstrain $ \(Forall x) (Forall y) -> act x y
 
          t2 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Predicate
-         t2 E E act = quantifiedBool $ \(Exists x) (Exists y) -> act x y
-         t2 E A act = quantifiedBool $ \(Exists x) (Forall y) -> act x y
-         t2 A E act = quantifiedBool $ \(Forall x) (Exists y) -> act x y
-         t2 A A act = quantifiedBool $ \(Forall x) (Forall y) -> act x y
+         t2 E E act = pure $ quantifiedBool $ \(Exists x) (Exists y) -> act x y
+         t2 E A act = pure $ quantifiedBool $ \(Exists x) (Forall y) -> act x y
+         t2 A E act = pure $ quantifiedBool $ \(Forall x) (Exists y) -> act x y
+         t2 A A act = pure $ quantifiedBool $ \(Forall x) (Forall y) -> act x y
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

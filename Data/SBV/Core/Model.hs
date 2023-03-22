@@ -2649,11 +2649,8 @@ instance MonadIO m => SolverContext (SymbolicT m) where
    namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
    constrainWithAttribute atts (SBV c) = imposeConstraint False atts             c
 
-   quantifiedBool f = do st  <- symbolicEnv
-                         liftIO $ constraint st f
-
-   contextState  = symbolicEnv
-   setOption o = addNewSMTOption  o
+   contextState = symbolicEnv
+   setOption o  = addNewSMTOption  o
 
 -- | Generalization of 'Data.SBV.assertWithPenalty'
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()

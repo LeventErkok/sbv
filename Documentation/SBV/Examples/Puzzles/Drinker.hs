@@ -46,4 +46,4 @@ d = uninterpret "D"
 drinker :: IO ThmResult
 drinker = prove p
   where p :: Predicate
-        p = quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
+        p = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y

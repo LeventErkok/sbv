@@ -26,4 +26,4 @@ tests = testGroup "Existentials.CRCPolynomial" [
 
 pgm :: Predicate
 pgm = do poly <- free "poly"
-         quantifiedBool $ \(Forall sent) (Forall received) -> sTestBit poly 0 .&& crcGood 4 poly sent received
+         pure $ quantifiedBool $ \(Forall sent) (Forall received) -> sTestBit poly 0 .&& crcGood 4 poly sent received

@@ -43,7 +43,7 @@ data P
 mkUninterpretedSort ''P
 
 drinker :: Predicate
-drinker = quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
+drinker = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
   where d :: SP -> SBool
         d = uninterpret "D"
 

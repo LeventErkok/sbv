@@ -121,9 +121,6 @@ instance MonadIO m => SolverContext (QueryT m) where
    constrainWithAttribute = addQueryConstraint False
    contextState           = queryState
 
-   quantifiedBool f = do st <- queryState
-                         liftIO $ constraint st f
-
    setOption o
      | isStartModeOption o = error $ unlines [ ""
                                              , "*** Data.SBV: '" ++ show o ++ "' can only be set at start-up time."
