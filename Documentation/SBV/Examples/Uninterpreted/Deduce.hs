@@ -61,7 +61,7 @@ not = uninterpret "NOT"
 -- following from the axioms we have specified above. We have:
 --
 -- >>> test
--- Q.E.D.mi_check_generated_output_to_ensure_correct_quantifier_translation
+-- Q.E.D.
 test :: IO ThmResult
 test = prove $ do qConstrain $ \(Forall p) (Forall q) (Forall r) -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
                   qConstrain $ \(Forall p) (Forall q)            -> not (p `or` q) .== not p `and` not q
