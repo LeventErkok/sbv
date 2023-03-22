@@ -149,8 +149,8 @@ complement ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `delete` (x `insert` s) .== s
 -- Falsifiable. Counter-example:
---   s0 =   2 :: Integer
---   s1 = {2} :: {Integer}
+--   s0 = 2 :: Integer
+--   s1 = U :: {Integer}
 --
 -- But the above is true if the element isn't in the set to start with:
 --
@@ -192,8 +192,8 @@ insert se ss
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `insert` (x `delete` s) .== s
 -- Falsifiable. Counter-example:
---   s0 =  2 :: Integer
---   s1 = {} :: {Integer}
+--   s0 =       2 :: Integer
+--   s1 = U - {2} :: {Integer}
 --
 -- But the above is true if the element is in the set to start with:
 --
