@@ -97,7 +97,6 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , isNonModelVar               = const False            -- i.e., everything is a model-variable by default
                                             , validateModel               = False
                                             , optimizeValidateConstraints = False
-                                            , allowQuantifiedQueries      = False
                                             , roundingMode                = RoundNearestTiesToEven
                                             , solverSetOptions            = startOpts
                                             , ignoreExitCode              = False

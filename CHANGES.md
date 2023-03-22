@@ -5,7 +5,7 @@
 
 ### Version 9.2.5, Not yet released
 
-  * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
+  * [TODO] Mention all the quantifier related changes
 
   * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
     Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
@@ -32,17 +32,20 @@
     this was a synonym for appending two lists, now it takes a list-of-lists and flattens it, matching the
     Haskell list function with the same name.
 
-  * [BACKWARDS COMPATIBILITY] The signature of addAxiom has changed: Instead of taking an SMTLib string, it
-    now takes an SBV lambda expression that evalues a boolean, and translates that to an SMTLib-axiom on the
-    fly. This is much safer both from a typing perspective, and also saves you from trying to figure out the
-    exact SMTLib syntax.
+  * [BACKWARDS COMPATIBILITY] The function addAxiom is removed. Instead use quantified-constraints, which
+    is a much better and safer way of handling such cases.
 
   * [BACKWARDS COMPATIBILITY] Renamed the Uninterpreted class to SMTDefinable, since its task has changed, handling
     both kinds of definitions. Unless you were referring to the name Uninterpreted in your code, this should not
     impact you. Otherwise, simply rename it to SMTDefinable.
 
+  * [BACKWARDS COMPATIBILITY] The configuration variable 'allowQuantifiedQueries' is removed. It is no
+    longer relevant with our new quantification strategy.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
+
+  * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
 
 ### Version 9.2, 2023-1-16
 

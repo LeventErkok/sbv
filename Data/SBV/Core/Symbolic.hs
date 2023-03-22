@@ -2147,7 +2147,6 @@ data SMTConfig = SMTConfig {
        , dsatPrecision               :: Maybe Double   -- ^ Delta-sat precision
        , solver                      :: SMTSolver      -- ^ The actual SMT solver.
        , extraArgs                   :: [String]       -- ^ Extra command line arguments to pass to the solver.
-       , allowQuantifiedQueries      :: Bool           -- ^ Should we permit use of quantifiers in the query mode? (Default: False. See <http://github.com/LeventErkok/sbv/issues/459> for why.)
        , roundingMode                :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
        , solverSetOptions            :: [SMTOption]    -- ^ Options to set as we start the solver
        , ignoreExitCode              :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
