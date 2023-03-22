@@ -60,20 +60,20 @@ test0 f = f (3 :: Word8) 2
 test1, test2, test3, test4, test5 :: (forall a. Num a => (a -> a -> a)) -> IO Result
 test1 f = runSAT $ do let x = literal (3 :: Word8)
                           y = literal (2 :: Word8)
-                      output $ f x y
+                      pure $ f x y
 test2 f = runSAT $ do let x = literal (3 :: Word8)
                       y :: SWord8 <- free "y"
-                      output $ f x y
+                      pure $ f x y
 test3 f = runSAT $ do x :: SWord8 <- free "x"
                       y :: SWord8 <- free "y"
-                      output $ f x y
+                      pure $ f x y
 test4 f = runSAT $ do x :: SWord8 <- free "x"
-                      output $ f x x
+                      pure $ f x x
 test5 f = runSAT $ do x :: SWord8 <- free "x"
                       let r = f x x
                       q :: SWord8 <- free "q"
                       _ <- output q
-                      output r
+                      pure r
 
 f1, f2, f3, f4, f5 :: Num a => a -> a -> a
 f1 x y = (x+y)*(x-y)

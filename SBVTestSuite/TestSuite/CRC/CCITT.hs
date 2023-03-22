@@ -29,7 +29,7 @@ tests = testGroup "CRC.CCITT"
   ]
   where crcPgm = runSAT $ do x <- free_
                              y <- free_
-                             output $ crcGood x y
+                             pure $ crcGood x y
 
 extendData :: SWord 48 -> SWord 64
 extendData msg = fromBitsBE $ blastBE msg ++ replicate 16 sFalse

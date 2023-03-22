@@ -32,7 +32,7 @@ tests = testGroup "BitPrecise.Legato" [
                        regA  <- free "regA"
                        flagC <- free "flagC"
                        flagZ <- free "flagZ"
-                       output $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
+                       pure $ legatoIsCorrect (x, y, lo, regX, regA, flagC, flagZ)
 
        thd (_, _, r) = r
 

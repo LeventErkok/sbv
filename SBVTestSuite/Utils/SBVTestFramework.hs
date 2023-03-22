@@ -54,7 +54,7 @@ import Data.Maybe (fromMaybe)
 
 import System.FilePath ((</>), (<.>))
 
-import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..))
+import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..), Outputtable)
 
 -- | Generic assertion. This is less safe than usual, but will do.
 assert :: AssertionPredicable t => t -> Assertion
@@ -99,8 +99,8 @@ numberOfModels p = do AllSatResult { allSatMaxModelCountReached  = maxHit
                         _              -> return l
 
 -- | Symbolically run a SAT instance using the default config
-runSAT :: Symbolic a -> IO Result
-runSAT cmp = snd <$> runSymbolic defaultSMTCfg (SMTMode QueryInternal ISetup True defaultSMTCfg) cmp
+runSAT :: Outputtable a => Symbolic a -> IO Result
+runSAT cmp = snd <$> runSymbolic defaultSMTCfg (SMTMode QueryInternal ISetup True defaultSMTCfg) (cmp >>= output >> pure ())
 
 -- | Turn provable to an assertion, theorem case
 assertIsThm :: Provable a => a -> Assertion
