@@ -48,10 +48,10 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- Satisfiable. Model:
 --   mul22_hi :: Bool -> Bool -> Bool -> Bool -> Bool
 --   mul22_hi False True  True  True  = True
---   mul22_hi True  True  False True  = True
 --   mul22_hi True  False False True  = True
---   mul22_hi False True  True  False = True
+--   mul22_hi True  True  False True  = True
 --   mul22_hi True  False True  True  = True
+--   mul22_hi False True  True  False = True
 --   mul22_hi True  True  True  False = True
 --   mul22_hi _     _     _     _     = False
 -- <BLANKLINE>
@@ -68,10 +68,10 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- >>> :{
 -- mul22_hi :: (SBool, SBool, SBool, SBool) -> SBool
 -- mul22_hi params = params `sElem` [ (sFalse, sTrue , sTrue , sTrue )
---                                  , (sTrue , sTrue , sFalse, sTrue )
 --                                  , (sTrue , sFalse, sFalse, sTrue )
---                                  , (sFalse, sTrue , sTrue , sFalse)
+--                                  , (sTrue , sTrue , sFalse, sTrue )
 --                                  , (sTrue , sFalse, sTrue , sTrue )
+--                                  , (sFalse, sTrue , sTrue , sFalse)
 --                                  , (sTrue , sTrue , sTrue , sFalse)
 --                                  ]
 -- :}
