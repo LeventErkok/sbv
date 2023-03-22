@@ -19,17 +19,15 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
+TESTHIDE   = --hide-successes
 ifdef TGT
-    TESTTARGET =-p ${TGT}
-    TESTHIDE   =
+    TESTTARGET = -p ${TGT}
 else
     TESTTARGET =
-    TESTHIDE   = --hide-successes
 endif
 
 ifdef ACCEPT
-    TESTACCEPT=--accept
-    TESTHIDE  =
+    TESTACCEPT= --accept
 else
     TESTACCEPT=--no-create
 endif
