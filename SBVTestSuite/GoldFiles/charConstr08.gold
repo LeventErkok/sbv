@@ -38,8 +38,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array String Bool)) true) "B" false) "A" true)))
+[RECV] ((s0 (lambda ((x!1 String))
+         (and (not (and (not (= x!1 "A")) (not (= x!1 "B")))) (not (= x!1 "B"))))))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",U - {'B'} :: {Char})], modelUIFuns = []}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",{'A'} :: {Char})], modelUIFuns = []}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess
