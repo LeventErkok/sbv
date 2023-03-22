@@ -21,10 +21,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests = testGroup "Existentials.CRCPolynomial" [
     goldenVsStringShow "crcPolyExist" (runSAT pgm)
-  , testCase "crcPolyGood" (assertIsSat pgm)
+  , testCase           "crcPolyGood"  (assertIsSat pgm)
  ]
 
 pgm :: Predicate
 pgm = do poly <- free "poly"
-         b <- quantifiedBool $ \(Forall sent) (Forall received) -> sTestBit poly 0 .&& crcGood 4 poly sent received
-         output b
+         quantifiedBool $ \(Forall sent) (Forall received) -> sTestBit poly 0 .&& crcGood 4 poly sent received
