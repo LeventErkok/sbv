@@ -39,6 +39,8 @@ mkUninterpretedSort ''P
 d :: SP -> SBool
 d = uninterpret "D"
 
+-- | Formulate the drinkers paradox, if some one is drinking, then everyone is!
+--
 -- >>> drinker
 -- Q.E.D.
 drinker :: IO ThmResult

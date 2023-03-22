@@ -304,7 +304,6 @@ module Data.SBV (
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
-  -- $noteOnNestedQuantifiers
   -- $multiIntro
   , Predicate, Goal, Provable
   , prove, proveWith
