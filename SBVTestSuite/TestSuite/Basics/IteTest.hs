@@ -13,8 +13,6 @@
 
 module TestSuite.Basics.IteTest(tests)  where
 
-import Data.SBV.Internals (Result)
-
 import Utils.SBVTestFramework
 
 chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool
@@ -30,12 +28,10 @@ chk3 cond x = fst (cond (x .== x) (sTrue, undefined::SBool) (undefined, undefine
 tests :: TestTree
 tests =
   testGroup "Basics.Ite"
-    [ goldenVsStringShow "iteTest1" (rs (chk1 ite))
-    , goldenVsStringShow "iteTest2" (rs (chk2 ite))
-    , goldenVsStringShow "iteTest3" (rs (chk3 ite))
+    [ testCase "iteTest1" (chk1 ite 0 `showsAs` "True")
+    , testCase "iteTest2" (chk2 ite 0 `showsAs` "True")
+    , testCase "iteTest3" (chk3 ite 0 `showsAs` "True")
     , testCase "iteTest4" (assertIsThm (chk1 iteLazy))
     , testCase "iteTest5" (assertIsThm (chk2 iteLazy))
     , testCase "iteTest6" (assertIsThm (chk3 iteLazy))
     ]
- where rs :: (SWord8 -> SBool) -> IO Result
-       rs f = runSAT $ quantifiedBool $ \(Forall x) -> f x
