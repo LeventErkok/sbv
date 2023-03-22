@@ -799,8 +799,8 @@ A constraint is a means for restricting the input domain of a formula. Here's a 
 example:
 
 @
-   do x <- 'sbvExists' \"x\"
-      y <- 'sbvExists' \"y\"
+   do x <- 'free' \"x\"
+      y <- 'free' \"y\"
       'constrain' $ x .> y
       'constrain' $ x + y .>= 12
       'constrain' $ y .>= 3
@@ -846,7 +846,7 @@ the presence of constraints, formulas that are /provable/ are not necessarily
 /satisfiable/. To wit, consider:
 
  @
-    do x <- 'sbvExists' \"x\"
+    do x <- 'free' \"x\"
        'constrain' $ x .< x
        return $ x .< (x :: 'SWord8')
  @

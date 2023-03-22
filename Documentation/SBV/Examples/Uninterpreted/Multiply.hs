@@ -83,10 +83,6 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 --
 -- and rest assured that we have a correctly synthesized circuit!
 synthMul22 :: Goal
-synthMul22 = do a :: SWord8 <- free "a"
-                b :: SWord8 <- free "b"
-
-                let lsb2 x = let [x1, x0] = reverse $ take 2 $ blastLE x
-                             in (x1, x0)
-
-                constrain $ mul22 (lsb2 a) (lsb2 b) .== lsb2 (a * b)
+synthMul22 = qConstrain $ \(Forall (a :: SWord8)) (Forall b) -> mul22 (lsb2 a) (lsb2 b) .== lsb2 (a * b)
+  where lsb2 x = let [x1, x0] = reverse $ take 2 $ blastLE x
+                 in (x1, x0)

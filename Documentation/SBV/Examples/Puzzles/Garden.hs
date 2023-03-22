@@ -84,8 +84,10 @@ puzzle = do n <- sInteger "N"
 -- >>> flowerCount
 -- Solution #1:
 --   N = 3 :: Integer
--- This is the only solution. (Unique up to prefix existentials.)
+-- This is the only solution.
 --
--- So, a garden with 3 flowers is the only solution.
+-- So, a garden with 3 flowers is the only solution. (Note that we simply skip
+-- over the prefix existentials and the assignments to uninterpreted function 'col'
+-- for model purposes here, as they don't represent a different solution.)
 flowerCount :: IO ()
-flowerCount = print =<< allSat puzzle
+flowerCount = print =<< allSatWith z3{satTrackUFs=False} puzzle

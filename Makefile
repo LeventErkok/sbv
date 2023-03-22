@@ -19,7 +19,7 @@ TIME        = /usr/bin/time
 NO_OF_CORES = `grep -c "^processor" /proc/cpuinfo`
 endif
 
-TESTHIDE   = --hide-successes
+TESTHIDE = --hide-successes
 ifdef TGT
     TESTTARGET = -p ${TGT}
 else
@@ -27,9 +27,9 @@ else
 endif
 
 ifdef ACCEPT
-    TESTACCEPT= --accept
+    TESTACCEPT = --accept
 else
-    TESTACCEPT=--no-create
+    TESTACCEPT = --no-create
 endif
 
 .PHONY: install docs testsuite release tags clean veryclean timeRelease
