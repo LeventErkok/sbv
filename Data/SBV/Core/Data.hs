@@ -60,6 +60,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ForallN(..), ExistsN(..)
+ , QuantifiedBool(..)
  ) where
 
 import GHC.TypeLits
@@ -467,22 +468,30 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
                      sv <- liftIO $ lambdaVar st k
                      pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
+-- | A value that can be used as a quantified boolean
+class QuantifiedBool a where
+  quantifiedBool :: a -> SBool
+
+-- | Base case of quantification, simple booleans
+instance {-# OVERLAPPING #-} QuantifiedBool SBool where
+  quantifiedBool = id
+
 -- | Actions we can do in a context: Either at problem description
 -- time or while we are dynamically querying. 'Symbolic' and 'Query' are
 -- two instances of this class. Note that we use this mechanism
 -- internally and do not export it from SBV.
 class SolverContext m where
    -- | Add a constraint, any satisfying instance must satisfy this condition.
-   constrain :: SBool -> m ()
+   constrain :: QuantifiedBool a => a -> m ()
 
    -- | Add a soft constraint. The solver will try to satisfy this condition if possible, but won't if it cannot.
-   softConstrain :: SBool -> m ()
+   softConstrain :: QuantifiedBool a => a -> m ()
 
    -- | Add a named constraint. The name is used in unsat-core extraction.
-   namedConstraint :: String -> SBool -> m ()
+   namedConstraint :: QuantifiedBool a => String -> a -> m ()
 
    -- | Add a constraint, with arbitrary attributes.
-   constrainWithAttribute :: [(String, String)] -> SBool -> m ()
+   constrainWithAttribute :: QuantifiedBool a => [(String, String)] -> a -> m ()
 
    -- | Set info. Example: @setInfo ":status" ["unsat"]@.
    setInfo :: String -> [String] -> m ()

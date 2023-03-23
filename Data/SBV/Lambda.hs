@@ -15,8 +15,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
 module Data.SBV.Lambda (
             lambda,      lambdaStr
@@ -167,6 +168,11 @@ constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
        mkGroup (EX,  s) = "(exists " ++ s
 
    inSubState inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
+
+-- | A constraint can be turned into a boolean
+instance Constraint Symbolic a => QuantifiedBool a where
+  quantifiedBool qb = SBV $ SVal KBool $ Right $ cache f
+    where f st = liftIO $ constraint st qb
 
 -- | Generate a constraint.
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SV

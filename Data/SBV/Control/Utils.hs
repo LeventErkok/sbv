@@ -76,7 +76,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
-                              , RCSet(..), Lambda(..)
+                              , RCSet(..), Lambda(..), QuantifiedBool(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -115,11 +115,12 @@ import GHC.Stack
 
 -- | 'Data.SBV.Trans.Control.QueryT' as a 'SolverContext'.
 instance MonadIO m => SolverContext (QueryT m) where
-   constrain              = addQueryConstraint False []
-   softConstrain          = addQueryConstraint True  []
-   namedConstraint nm     = addQueryConstraint False [(":named", nm)]
-   constrainWithAttribute = addQueryConstraint False
-   contextState           = queryState
+   constrain                   = addQueryConstraint False []                . quantifiedBool
+   softConstrain               = addQueryConstraint True  []                . quantifiedBool
+   namedConstraint nm          = addQueryConstraint False [(":named", nm)]  . quantifiedBool
+   constrainWithAttribute attr = addQueryConstraint False attr              . quantifiedBool
+
+   contextState = queryState
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""
@@ -1335,7 +1336,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                                            _               -> error $ "Data.SBV: Cannot uniquely determine " ++ show nm ++ " in " ++ show assocs
 
                                                        cstr :: Bool -> (SVal, CV) -> m ()
-                                                       cstr shouldReject (sv, cv) = constrain $ SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv))
+                                                       cstr shouldReject (sv, cv) = constrain $ (SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) :: SBool)
                                                          where mkEq :: Kind -> SVal -> SVal -> SVal
                                                                mkEq k a b
                                                                 | isDouble k || isFloat k || isFP k

@@ -2644,10 +2644,10 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
 
 -- | Symbolic computations provide a context for writing symbolic programs.
 instance MonadIO m => SolverContext (SymbolicT m) where
-   constrain                   (SBV c) = imposeConstraint False []               c
-   softConstrain               (SBV c) = imposeConstraint True  []               c
-   namedConstraint        nm   (SBV c) = imposeConstraint False [(":named", nm)] c
-   constrainWithAttribute atts (SBV c) = imposeConstraint False atts             c
+   constrain                   = imposeConstraint False []               . unSBV . quantifiedBool
+   softConstrain               = imposeConstraint True  []               . unSBV . quantifiedBool
+   namedConstraint        nm   = imposeConstraint False [(":named", nm)] . unSBV . quantifiedBool
+   constrainWithAttribute atts = imposeConstraint False atts             . unSBV . quantifiedBool
 
    contextState = symbolicEnv
    setOption o  = addNewSMTOption  o

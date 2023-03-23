@@ -322,7 +322,7 @@ module Data.SBV (
   -- $constrainIntro
   -- ** General constraints
   -- $generalConstraints
-  , constrain, qConstrain, softConstrain, Forall(..), Exists(..), ForallN(..), ExistsN(..)
+  , constrain, softConstrain, Forall(..), Exists(..), ForallN(..), ExistsN(..)
 
   -- * Quantified booleans
   , quantifiedBool
@@ -448,8 +448,6 @@ import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        isSatisfiableWith, runSMT, runSMTWith,
                                        sName_, sName, safe, safeWith)
 
-import Data.SBV.Lambda (constraint)
-
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO
 
@@ -467,8 +465,6 @@ import qualified Data.SBV.Utils.CrackNum as CN
 
 import Data.Proxy (Proxy(..))
 import GHC.TypeLits
-
-import Control.Monad.Trans (liftIO)
 
 import Prelude hiding((+), (-), (*)) -- to avoid the haddock ambiguity
 
@@ -1177,15 +1173,6 @@ integer value for all possible values:
 
 In this case the numerator is off by 7.
 -}
-
--- | Convert a quantified constraint to a boolean
-quantifiedBool :: Constraint Symbolic a => a -> SBool
-quantifiedBool qb = SBV $ SVal KBool $ Right $ cache f
-  where f st = liftIO $ constraint st qb
-
--- | Assert a quantified constraint, which is like an axiom
-qConstrain :: (Monad m, SolverContext m, Constraint Symbolic a) => a -> m ()
-qConstrain c = constrain (quantifiedBool c)
 
 -- | An implementation of rotate-left, using a barrel shifter like design. Only works when both
 -- arguments are finite bitvectors, and furthermore when the second argument is unsigned.
