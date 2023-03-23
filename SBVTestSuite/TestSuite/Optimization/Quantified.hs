@@ -38,38 +38,38 @@ tests =
 q1 :: Goal
 q1 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
-                                    .&& 4 * (a * x + b2) .== 4
+        constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                   .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
         minimize "goal" $ 2*a
 
 q2 :: Goal
 q2 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
-        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
-                                    .&& 4 * (a * x + b2) .== 4
-                                    .&& a .>= 0
+        constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                   .&& 4 * (a * x + b2) .== 4
+                                   .&& a .>= 0
         minimize "goal" a
 
 q3 :: Goal
 q3 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" a
-        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
-                                    .&& 4 * (a * x + b2) .== 4
+        constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                   .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
 q4 :: Goal
 q4 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" $ 2*a
-        qConstrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
-                                    .&& 4 * (a * x + b2) .== 4
+        constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
+                                   .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
 q5 :: Goal
 q5 = do a <- sInteger "a"
-        qConstrain $ \(Exists y) -> a .>= (y :: SInteger)
+        constrain $ \(Exists y) -> a .>= (y :: SInteger)
         constrain $ a .>= 0
         b <- sInteger "b"
         constrain $ b .>= 0

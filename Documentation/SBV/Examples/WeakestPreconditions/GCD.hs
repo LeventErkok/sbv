@@ -121,9 +121,9 @@ gcd x y
 -- | Constraints and axioms we need to state explicitly to tell
 -- the SMT solver about our specification for GCD.
 axiomatizeGCD :: Symbolic ()
-axiomatizeGCD = do qConstrain $ \(Forall x)            -> x .> 0            .=> gcd x x     .== x
-                   qConstrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
-                   qConstrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
+axiomatizeGCD = do constrain $ \(Forall x)            -> x .> 0            .=> gcd x x     .== x
+                   constrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd (x+y) y .== gcd x y
+                   constrain $ \(Forall x) (Forall y) -> x .> 0 .&& y .> 0 .=> gcd x (y+x) .== gcd x y
 
 -- | Precondition for our program: @x@ and @y@ must be strictly positive
 pre :: G -> SBool

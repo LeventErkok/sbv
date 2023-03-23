@@ -52,7 +52,7 @@ crcGood hd poly sent received =
 genPoly :: SWord8 -> Int -> IO ()
 genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Just maxCnt} $ do
                                 poly <- free "polynomial" -- the polynomial is existentially specified
-                                qConstrain $ \(Forall sent) (Forall received) ->
+                                constrain $ \(Forall sent) (Forall received) ->
                                    -- assert that the polynomial @p@ is good. Note
                                    -- that we also supply the extra information that
                                    -- the least significant bit must be set in the
@@ -60,29 +60,23 @@ genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Jus
                                    -- term in them set. This simplifies the query.
                                    sTestBit poly 0 .&& crcGood hd poly sent received
                        cnt <- displayModels id disp res
-                       putStrLn $ "Found: " ++ show cnt ++ " polynomail(s)."
+                       putStrLn $ "Found: " ++ show cnt ++ " polynomial(s)."
         where disp :: Int -> (Bool, Word16) -> IO ()
               disp n (_, s) = putStrLn $ "Polynomial #" ++ show n ++ ". x^16 + " ++ showPolynomial False s
 
 -- | Find and display all degree 16 polynomials with hamming distance at least 4, for 48 bit messages.
 --
--- When run, this function prints:
+-- We have:
 --
---  @
---    Polynomial #1. x^16 + x^3 + x^2 + 1
---    Polynomial #2. x^16 + x^3 + x^2 + x + 1
---    Polynomial #3. x^16 + x^3 + x + 1
---    Polynomial #4. x^16 + x^15 + x^2 + 1
---    Polynomial #5. x^16 + x^15 + x^2 + x + 1
---    Found: 5 polynomial(s).
---  @
+-- >>> findHD4Polynomials 2
+-- Polynomial #1. x^16 + x^3 + x^2 + 1
+-- Polynomial #2. x^16 + x^2 + x + 1
+-- Found: 2 polynomial(s).
 --
 -- Note that different runs can produce different results, depending on the random
 -- numbers used by the solver, solver version, etc. (Also, the solver will take some
--- time to generate these results. On my machine, the first five polynomials were
--- generated in about 5 minutes.)
-findHD4Polynomials :: IO ()
-findHD4Polynomials = genPoly 4 cnt
-  where cnt = 5 -- Generate at most this many polynomials
+-- time to generate these results, as the generation of these polynomials is rather slow.)
+findHD4Polynomials :: Int -> IO ()
+findHD4Polynomials = genPoly 4
 
 {-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}

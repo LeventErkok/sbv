@@ -55,7 +55,7 @@ t2 = allSat $ do x <- free "x"
 t3 :: Goal
 t3 = do x <- free "x"
         y <- free "y"
-        qConstrain $ \(Forall z) -> x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8)
+        constrain $ \(Forall z) -> x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8)
 
 t4 :: Goal
 t4 = do x <- sInteger "x"

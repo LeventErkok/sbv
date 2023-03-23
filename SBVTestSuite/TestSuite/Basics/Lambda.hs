@@ -178,8 +178,8 @@ tests =
       , goldenCapturedIO "lambda58" $ record $ \st -> constraintStr st $ \(Forall b) (Exists c) -> sNot b .|| c
       , goldenCapturedIO "lambda59" $ record $ \st -> constraintStr st $ \(Forall x) (Exists y) -> x .== (0 :: SInteger) .|| y
 
-      , goldenCapturedIO "lambda60" $ runAxSat   $ qConstrain $ \(Forall x) (Exists y) (Exists z) -> y .> (x+z :: SInteger)
-      , goldenCapturedIO "lambda61" $ runAxUnsat $ qConstrain $ \(Forall x) (Exists y) -> y .> (x :: SWord8)
+      , goldenCapturedIO "lambda60" $ runAxSat   $ constrain $ \(Forall x) (Exists y) (Exists z) -> y .> (x+z :: SInteger)
+      , goldenCapturedIO "lambda61" $ runAxUnsat $ constrain $ \(Forall x) (Exists y) -> y .> (x :: SWord8)
 
       -- Quantified booleans
       , goldenCapturedIO "lambda62" $ \rf -> do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} drinker

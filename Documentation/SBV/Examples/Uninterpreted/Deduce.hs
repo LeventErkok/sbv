@@ -63,9 +63,9 @@ not = uninterpret "NOT"
 -- >>> test
 -- Q.E.D.
 test :: IO ThmResult
-test = prove $ do qConstrain $ \(Forall p) (Forall q) (Forall r) -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
-                  qConstrain $ \(Forall p) (Forall q)            -> not (p `or` q) .== not p `and` not q
-                  qConstrain $ \(Forall p)                       -> not (not p) .== p
+test = prove $ do constrain $ \(Forall p) (Forall q) (Forall r) -> (p `or` q) `and` (p `or` r) .== p `or` (q `and` r)
+                  constrain $ \(Forall p) (Forall q)            -> not (p `or` q) .== not p `and` not q
+                  constrain $ \(Forall p)                       -> not (not p) .== p
                   p <- free "p"
                   q <- free "q"
                   r <- free "r"

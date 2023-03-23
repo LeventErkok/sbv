@@ -57,5 +57,5 @@ maskAndMult = print =<< satWith z3{printBase=16} find
 
                   mask <- free "mask"
                   mult <- free "mult"
-                  qConstrain $ \(Forall inp) -> let res = (mask .&. inp) * (mult :: SWord64)
+                  constrain $ \(Forall inp) -> let res = (mask .&. inp) * (mult :: SWord64)
                                                 in inp `sExtractBits` [7, 15 .. 63] .== res `sExtractBits` [56 .. 63]

@@ -71,11 +71,11 @@ puzzle = do n <- sInteger "N"
             let valid = validPick n
 
             -- Each color is represented:
-            qConstrain $ \(Exists ef1) (Exists ef2) (Exists ef3) ->
+            constrain $ \(Exists ef1) (Exists ef2) (Exists ef3) ->
                valid ef1 ef2 ef3 .&& map col [ef1, ef2, ef3] .== [sRed, sYellow, sBlue]
 
             -- Pick any three, at least one is Red, one is Yellow, one is Blue
-            qConstrain $ \(Forall af1) (Forall af2) (Forall af3) ->
+            constrain $ \(Forall af1) (Forall af2) (Forall af3) ->
                 let atLeastOne c = count c [af1, af2, af3] .>= 1
                 in valid af1 af2 af3 .=> atLeastOne Red .&& atLeastOne Yellow .&& atLeastOne Blue
 

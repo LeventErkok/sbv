@@ -46,7 +46,7 @@ e = uninterpret "e"
 
 p0 :: Symbolic SBool
 p0 = do
-    qConstrain $ \(Forall p) (Forall k) -> a k .&& a p .=> a (e k p)
+    constrain $ \(Forall p) (Forall k) -> a k .&& a p .=> a (e k p)
     p <- free "p" :: Symbolic SBitstring
     k <- free "k" :: Symbolic SBitstring
     constrain $ a p
@@ -60,8 +60,8 @@ thingMerge :: SThing -> SThing -> SThing
 thingMerge = uninterpret "thingMerge"
 
 p1 :: Symbolic SBool
-p1 = do qConstrain $ \(Forall x) -> thingCompare x x
-        qConstrain $ \(Forall k1) (Forall k2) -> k1 ./= thingMerge k1 k2
+p1 = do constrain $ \(Forall x) -> thingCompare x x
+        constrain $ \(Forall k1) (Forall k2) -> k1 ./= thingMerge k1 k2
         registerUISMTFunction thingMerge
         k1 <- free_
         k2 <- free_
@@ -79,7 +79,7 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
                              nOT :: SB -> SB
                              nOT = uninterpret "NOT"
                          constrain  $ nOT (vp `oR` (vq `aND` vr)) ./= (nOT vp `aND` nOT vq) `oR` (nOT vp `aND` nOT vr)
-                         qConstrain $ \(Forall p) (Forall q) (Forall r) -> (p `oR` q) `aND` (p `oR` r) .== p `oR` (q `aND` r)
-                         qConstrain $ \(Forall p) (Forall q)            -> nOT (p `oR` q) .== nOT p `aND` nOT q
-                         qConstrain $ \(Forall p)                       -> nOT (nOT p) .== p
+                         constrain $ \(Forall p) (Forall q) (Forall r) -> (p `oR` q) `aND` (p `oR` r) .== p `oR` (q `aND` r)
+                         constrain $ \(Forall p) (Forall q)            -> nOT (p `oR` q) .== nOT p `aND` nOT q
+                         constrain $ \(Forall p)                       -> nOT (nOT p) .== p
                          checkSat

@@ -53,10 +53,10 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                                                                         ]
 
          t1 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Goal
-         t1 E E act = qConstrain $ \(Exists x) (Exists y) -> act x y
-         t1 E A act = qConstrain $ \(Exists x) (Forall y) -> act x y
-         t1 A E act = qConstrain $ \(Forall x) (Exists y) -> act x y
-         t1 A A act = qConstrain $ \(Forall x) (Forall y) -> act x y
+         t1 E E act = constrain $ \(Exists x) (Exists y) -> act x y
+         t1 E A act = constrain $ \(Exists x) (Forall y) -> act x y
+         t1 A E act = constrain $ \(Forall x) (Exists y) -> act x y
+         t1 A A act = constrain $ \(Forall x) (Forall y) -> act x y
 
          t2 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Predicate
          t2 E E act = pure $ quantifiedBool $ \(Exists x) (Exists y) -> act x y

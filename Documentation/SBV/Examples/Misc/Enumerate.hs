@@ -65,7 +65,7 @@ four = sat $ \a b c (d::SE) -> distinct [a, b, c, d]
 --   maxE = C :: E
 maxE :: IO SatResult
 maxE = sat $ do mx :: SE <- free "maxE"
-                qConstrain $ \(Forall e) -> mx .>= e
+                constrain $ \(Forall e) -> mx .>= e
 
 -- | Similarly, we get the minimum element. We have:
 --
@@ -74,4 +74,4 @@ maxE = sat $ do mx :: SE <- free "maxE"
 --   minE = A :: E
 minE :: IO SatResult
 minE = sat $ do mn :: SE <- free "minE"
-                qConstrain $ \(Forall e) -> mn .<= e
+                constrain $ \(Forall e) -> mn .<= e
