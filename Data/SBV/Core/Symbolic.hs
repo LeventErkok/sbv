@@ -46,14 +46,13 @@ module Data.SBV.Core.Symbolic
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
   , ArrayIndex(..), uncacheAI
-  , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId, getUniversals
-  , prefixExistentials, prefixUniversals, onUserInputs, onInternInputs, onAllInputs
-  , addInternInput, addUserInput, getInputs, inputsFromListWith, userInputsToList
-  , getUserName', internInputsToList, inputsToList, quantifier, namedSymVar, getUserName
+  , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId
+  , addInternInput, addUserInput
+  , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
-  , inSMTMode, SBVRunMode(..), IStage(..), Result(..), UICodeKind(..)
+  , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
@@ -65,7 +64,6 @@ module Data.SBV.Core.Symbolic
   , validationRequested, outputSVal
   ) where
 
-import Control.Arrow               ((***))
 import Control.DeepSeq             (NFData(..))
 import Control.Monad               (when)
 import Control.Monad.Except        (MonadError, ExceptT)
@@ -96,7 +94,7 @@ import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, 
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
-import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), filter, takeWhileL, fromList, lookup, elemIndexL)
+import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
@@ -805,13 +803,21 @@ instance NFData a => NFData (Objective a) where
    rnf (Maximize          s a)   = rnf s `seq` rnf a
    rnf (AssertWithPenalty s a p) = rnf s `seq` rnf a `seq` rnf p
 
+-- | A result can either produce something at the top or as a lambda/constraint. Distinguish by inputs
+data ResultInp = ResultTopInps ([NamedSymVar], [NamedSymVar])  -- user inputs -- trackers
+               | ResultLamInps [(Quantifier, NamedSymVar)]     -- for constraints, we can have quantifiers
+
+instance NFData ResultInp where
+   rnf (ResultTopInps xs) = rnf xs
+   rnf (ResultLamInps xs) = rnf xs
+
 -- | Result of running a symbolic computation
 data Result = Result { hasQuants      :: Bool                                         -- ^ Did the program use quantified booleans?
                      , reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
                      , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
                      , resUISegs      :: [(String, [String])]                         -- ^ uninterpeted code segments
-                     , resInputs      :: ([(Quantifier, NamedSymVar)], [NamedSymVar]) -- ^ inputs (possibly existential) + tracker vars
+                     , resParams      :: ResultInp                                    -- ^ top-inputs or lambda params
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
@@ -831,11 +837,15 @@ instance Show Result where
   show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ kinds _ _ cgs is (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
+  show (Result _ kinds _ _ cgs params (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
-                ++ ["INPUTS"]
-                ++ map shn (fst is)
-                ++ (if null (snd is) then [] else "TRACKER VARS" : map (shn . (EX,)) (snd is))
+                ++ (case params of
+                      ResultTopInps (i, t) ->   ["INPUTS"]
+                                             ++ map shn i
+                                             ++ (if null t then [] else "TRACKER VARS" : map shn t)
+                      ResultLamInps qs     ->   ["LAMBDA-CONSTRAINT PARAMS"]
+                                             ++ map shq qs
+                   )
                 ++ ["CONSTANTS"]
                 ++ concatMap shc cs
                 ++ ["TABLES"]
@@ -875,13 +885,13 @@ instance Show Result where
 
           shcg (s, ss) = ("Variable: " ++ s) : map ("  " ++) ss
 
-          shn (q, NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ ex ++ alias
+          shn (NamedSymVar sv nm) = "  " <> ni <> " :: " ++ show (swKind sv) ++ alias
             where ni = show sv
-                  ex    | q == ALL          = ""
-                        | True              = ", existential"
 
                   alias | ni == T.unpack nm = ""
                         | True              = ", aliasing " ++ show nm
+
+          shq (q, v) = shn v ++ ", " ++ if q == ALL then "universal" else "existential"
 
           sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ show ai ++ " -> " ++ show bi ++ alias
                                        ++ "\n     Context: "     ++ show ctx
@@ -972,10 +982,10 @@ isRunIStage s = case s of
                   IRun   -> True
 
 -- | Different means of running a symbolic piece of code
-data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig                        -- ^ In regular mode, with a stage. Bool is True if this is SAT.
-                | CodeGen                                                           -- ^ Code generation mode.
-                | LambdaGen Int                                                     -- ^ Inside a lambda-expression at level
-                | Concrete (Maybe (Bool, [((Quantifier, NamedSymVar), Maybe CV)]))  -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
+data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig   -- ^ In regular mode, with a stage. Bool is True if this is SAT.
+                | CodeGen                                      -- ^ Code generation mode.
+                | LambdaGen Int                                -- ^ Inside a lambda-expression at level
+                | Concrete (Maybe (Bool, [(NamedSymVar, CV)])) -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
 instance Show SBVRunMode where
@@ -1041,10 +1051,10 @@ withNewIncState st cont = do
         finalIncState <- readIORef (rIncState st)
         return (finalIncState, r)
 
--- | User defined, with proper quantifiers
-type UserInputs = S.Seq (Quantifier, NamedSymVar)
+-- | User defined inputs
+type UserInputs = S.Seq NamedSymVar
 
--- | Internally declared, always existential
+-- | Internally declared
 type InternInps = S.Seq NamedSymVar
 
 -- | Entire set of names, for faster lookup
@@ -1056,6 +1066,9 @@ data Inputs = Inputs { userInputs   :: !UserInputs
                      , allInputs    :: !AllInps
                      } deriving (Eq,Show)
 
+-- | Inputs to a lambda-abstraction. These are quantified to handle constraints
+type LambdaInputs = S.Seq (Quantifier, NamedSymVar)
+
 -- | Semigroup instance; combining according to indexes.
 instance Semigroup Inputs where
   (Inputs lui lii lai) <> (Inputs rui rii rai) = Inputs (lui <> rui) (lii <> rii) (lai <> rai)
@@ -1066,14 +1079,6 @@ instance Monoid Inputs where
                   , internInputs = mempty
                   , allInputs    = mempty
                   }
-
--- | Get the quantifier
-quantifier :: (Quantifier, NamedSymVar) -> Quantifier
-quantifier = fst
-
--- | Get the named symbolic variable
-namedSymVar :: (Quantifier, NamedSymVar) -> NamedSymVar
-namedSymVar = snd
 
 -- | Modify the user-inputs field
 onUserInputs :: (UserInputs -> UserInputs) -> Inputs -> Inputs
@@ -1095,15 +1100,11 @@ addInternInput sv nm = goAll . goIntern
         goAll    = onAllInputs    (Set.insert nm)
 
 -- | Add a new user input
-addUserInput :: Quantifier -> SV -> Name -> Inputs -> Inputs
-addUserInput q sv nm = goAll . goUser
-  where new = toNamedSV sv nm
-        goUser = onUserInputs (S.|> (q, new)) -- add to the end of the sequence
+addUserInput :: SV -> Name -> Inputs -> Inputs
+addUserInput sv nm = goAll . goUser
+  where new    = toNamedSV sv nm
+        goUser = onUserInputs (S.|> new)        -- add to the end of the sequence
         goAll  = onAllInputs  (Set.insert nm)
-
--- | Return user and internal inputs
-getInputs :: Inputs -> (UserInputs, InternInps)
-getInputs Inputs{userInputs, internInputs} = (userInputs, internInputs)
 
 -- | Find a user-input from its SV. Note that only level-0 vars
 -- can be found this way.
@@ -1120,41 +1121,6 @@ lookupInput f sv ns
                  -- we try the fast lookup first, if the node ids don't match then
                  -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
-
--- | Extract universals
-getUniversals :: UserInputs -> S.Seq NamedSymVar
-getUniversals = fmap namedSymVar . S.filter ((== ALL) . quantifier)
-
--- | Get a prefix of the user inputs by a predicate. Note that we could not rely
--- on fusion here but this is cheap and easy until there is an observable slow down from not fusing.
-userInpsPrefixBy :: ((Quantifier, NamedSymVar) -> Bool) -> UserInputs -> UserInputs
-userInpsPrefixBy = S.takeWhileL
-
--- | Find prefix existentials, i.e., those that are at skolem positions and have valid model values.
-prefixExistentials :: UserInputs -> UserInputs
-prefixExistentials = userInpsPrefixBy ((/= ALL) . quantifier)
-
--- | Find prefix universals. Corresponds to the above in a proof context.
-prefixUniversals :: UserInputs -> UserInputs
-prefixUniversals = userInpsPrefixBy ((== ALL) . quantifier)
-
--- | Conversion from named-symvars to user-inputs
-inputsFromListWith :: (NamedSymVar -> Quantifier) -> [NamedSymVar] -> UserInputs
-inputsFromListWith f = S.fromList . fmap go
-  where go n = (f n, n)
-
--- | Helper functions around inputs.
--- TODO: remove these functions once lists have been pushed to edges of code base.
-userInputsToList :: UserInputs -> [(Quantifier, NamedSymVar)]
-userInputsToList = F.toList
-
--- | Conversion from internal-inputs to list of named sym vars
-internInputsToList :: InternInps -> [NamedSymVar]
-internInputsToList = F.toList
-
--- | Convert to regular lists
-inputsToList :: Inputs -> ([(Quantifier, NamedSymVar)], [NamedSymVar])
-inputsToList =  (userInputsToList *** internInputsToList) . getInputs
 
 -- | A defined function/value
 data SMTDef = SMTDef String           -- ^ Defined functions -- name
@@ -1204,6 +1170,7 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rUsedKinds   :: IORef KindSet
                     , rUsedLbls    :: IORef (Set.Set String)
                     , rinps        :: IORef Inputs
+                    , rlambdaInps  :: IORef LambdaInputs
                     , rConstraints :: IORef (S.Seq (Bool, [(String, String)], SV))
                     , routs        :: IORef [SV]
                     , rtblMap      :: IORef TableMap
@@ -1395,30 +1362,16 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 -- in a proof context.
 internalVariable :: State -> Kind -> IO SV
 internalVariable st k = do NamedSymVar sv nm <- newSV st k
-                           rm <- readIORef (runMode st)
-                           let q = case rm of
-                                     SMTMode  _ _ True  _ -> EX
-                                     SMTMode  _ _ False _ -> ALL
-                                     LambdaGen{}          -> ALL
-                                     CodeGen              -> ALL
-                                     Concrete{}           -> ALL
-                               n = "__internal_sbv_" <> nm
+                           let n = "__internal_sbv_" <> nm
                                v = NamedSymVar sv n
-                           modifyState st rinps (addUserInput q sv n)
-                                     $ modifyIncState st rNewInps (\newInps -> case q of
-                                                                                 EX -> v : newInps
-                                                                                 -- I don't think the following can actually happen
-                                                                                 -- but just be safe:
-                                                                                 ALL  -> noInteractive [ "Internal universally quantified variable creation:"
-                                                                                                       , "  Named: " <> T.unpack nm
-                                                                                                       ])
+                           modifyState st rinps (addUserInput sv n) $ modifyIncState st rNewInps (v :)
                            return sv
 {-# INLINE internalVariable #-}
 
 -- | Create a variable to be used in a constraint-expression
 quantVar :: Quantifier -> State -> Kind -> IO SV
-quantVar q st k = do v@(NamedSymVar sv nm) <- newSV st k
-                     modifyState st rinps (addUserInput q sv nm) $ modifyIncState st rNewInps (v :)
+quantVar q st k = do v@(NamedSymVar sv _) <- newSV st k
+                     modifyState st rlambdaInps (S.|> (q, v)) (return ())
                      return sv
 {-# INLINE quantVar #-}
 
@@ -1706,23 +1659,18 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                    let nm = fromMaybe (T.unpack internalName) mbNm
                                        nsv = toNamedSV' sv nm
 
-                                       cv = case [(q, v) | ((q, nsv'), v) <- env, nsv == nsv'] of
-                                              []              -> if isTracker
-                                                                 then  -- The sole purpose of a tracker variable is to send the optimization
-                                                                       -- directive to the solver, so we can name "expressions" that are minimized
-                                                                       -- or maximized. There will be no constraints on these when we are doing
-                                                                       -- the validation; in fact they will not even be used anywhere during a
-                                                                       -- validation run. So, simply push a zero value that inhabits all metrics.
-                                                                       mkConstCV k (0::Integer)
-                                                                 else bad ("Cannot locate variable: " ++ show (nsv, k)) report
-                                              [(ALL, _)]      -> -- We can stop here, as we can't really validate in the presence of a universal quantifier:
-                                                                 -- we'd have to validate for each possible value. But that's more or less useless. Instead,
-                                                                 -- just issue a warning and use 0 for this value.
-                                                                 mkConstCV k (0::Integer)
-                                              [(EX, Nothing)] -> bad ("Cannot locate model value of variable: " ++ show (getUserName' nsv)) report
-                                              [(EX, Just c)]  -> c
-                                              r               -> bad (   "Found multiple matching values for variable: " ++ show nsv
-                                                                      ++ "\n*** " ++ show r) report
+                                       cv = case [v | (nsv', v) <- env, nsv == nsv'] of
+                                              []    -> if isTracker
+                                                       then  -- The sole purpose of a tracker variable is to send the optimization
+                                                             -- directive to the solver, so we can name "expressions" that are minimized
+                                                             -- or maximized. There will be no constraints on these when we are doing
+                                                             -- the validation; in fact they will not even be used anywhere during a
+                                                             -- validation run. So, simply push a zero value that inhabits all metrics.
+                                                             mkConstCV k (0::Integer)
+                                                       else bad ("Cannot locate variable: " ++ show (nsv, k)) report
+                                              [c]  -> c
+                                              r    -> bad (   "Found multiple matching values for variable: " ++ show nsv
+                                                           ++ "\n*** " ++ show r) report
 
                                    mkC cv
 
@@ -1761,7 +1709,7 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
                    if isTracker
                       then modifyState st rinps (addInternInput sv nm)
                                      $ noInteractive ["Adding a new tracker variable in interactive mode: " ++ show nm]
-                      else modifyState st rinps (addUserInput q sv nm)
+                      else modifyState st rinps (addUserInput sv nm)
                                      $ modifyIncState st rNewInps newInp
                    return $ SVal k $ Right $ cache (const (return sv))
 
@@ -1774,38 +1722,39 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
 -- | Create a new state
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
 mkNewState cfg currentRunMode = liftIO $ do
-     currTime  <- getCurrentTime
-     hasQuants <- newIORef False
-     rm        <- newIORef currentRunMode
-     ctr       <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-     lambda    <- newIORef $ case currentRunMode of
-                               SMTMode{}   -> 0
-                               CodeGen{}   -> 0
-                               Concrete{}  -> 0
-                               LambdaGen i -> i
-     cInfo     <- newIORef []
-     observes  <- newIORef mempty
-     pgm       <- newIORef (SBVPgm S.empty)
-     emap      <- newIORef Map.empty
-     cmap      <- newIORef Map.empty
-     inps      <- newIORef mempty
-     outs      <- newIORef []
-     tables    <- newIORef Map.empty
-     arrays    <- newIORef IMap.empty
-     userFuncs <- newIORef Set.empty
-     uis       <- newIORef Map.empty
-     cgs       <- newIORef Map.empty
-     defns     <- newIORef []
-     swCache   <- newIORef IMap.empty
-     aiCache   <- newIORef IMap.empty
-     usedKinds <- newIORef Set.empty
-     usedLbls  <- newIORef Set.empty
-     cstrs     <- newIORef S.empty
-     smtOpts   <- newIORef []
-     optGoals  <- newIORef []
-     asserts   <- newIORef []
-     istate    <- newIORef =<< newIncState
-     qstate    <- newIORef Nothing
+     currTime   <- getCurrentTime
+     hasQuants  <- newIORef False
+     rm         <- newIORef currentRunMode
+     ctr        <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     lambda     <- newIORef $ case currentRunMode of
+                                SMTMode{}   -> 0
+                                CodeGen{}   -> 0
+                                Concrete{}  -> 0
+                                LambdaGen i -> i
+     cInfo      <- newIORef []
+     observes   <- newIORef mempty
+     pgm        <- newIORef (SBVPgm S.empty)
+     emap       <- newIORef Map.empty
+     cmap       <- newIORef Map.empty
+     inps       <- newIORef mempty
+     lambdaInps <- newIORef mempty
+     outs       <- newIORef []
+     tables     <- newIORef Map.empty
+     arrays     <- newIORef IMap.empty
+     userFuncs  <- newIORef Set.empty
+     uis        <- newIORef Map.empty
+     cgs        <- newIORef Map.empty
+     defns      <- newIORef []
+     swCache    <- newIORef IMap.empty
+     aiCache    <- newIORef IMap.empty
+     usedKinds  <- newIORef Set.empty
+     usedLbls   <- newIORef Set.empty
+     cstrs      <- newIORef S.empty
+     smtOpts    <- newIORef []
+     optGoals   <- newIORef []
+     asserts    <- newIORef []
+     istate     <- newIORef =<< newIncState
+     qstate     <- newIORef Nothing
      pure $ State { runMode      = rm
                   , stCfg        = cfg
                   , startTime    = currTime
@@ -1819,6 +1768,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rUsedKinds   = usedKinds
                   , rUsedLbls    = usedLbls
                   , rinps        = inps
+                  , rlambdaInps  = lambdaInps
                   , routs        = outs
                   , rtblMap      = tables
                   , spgm         = pgm
@@ -1862,12 +1812,44 @@ runSymbolicInState st (SymbolicT c) = do
 
 -- | Grab the program from a running symbolic simulation state.
 extractSymbolicSimulationState :: State -> IO Result
-extractSymbolicSimulationState st@State{ spgm=pgm, rinps=inps, routs=outs, rtblMap=tables, rArrayMap=arrays, rUIMap=uis, rDefns=defns
+extractSymbolicSimulationState st@State{ runMode=rrm
+                                       , spgm=pgm, rinps=inps, rlambdaInps=linps, routs=outs, rtblMap=tables, rArrayMap=arrays
+                                       , rUIMap=uis, rDefns=defns
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
                                        , rObservables=observes, rHasQuants
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
-   inpsO <- inputsToList <$> readIORef inps
+
+   rm <- readIORef rrm
+
+   inpsO <- do Inputs{userInputs, internInputs} <- readIORef inps
+               ls <- readIORef linps
+
+               let lambdaOnly = case rm of
+                                  SMTMode{}   -> False
+                                  CodeGen{}   -> False
+                                  Concrete{}  -> False
+                                  LambdaGen{} -> True
+                   topInps = (F.toList userInputs, F.toList internInputs)
+                   lamInps = F.toList ls
+
+               if lambdaOnly
+                  then case topInps of
+                          ([], []) -> pure $ ResultLamInps (F.toList ls)
+                          (xs, ys) -> error $ unlines $ [ ""
+                                                        , "*** Data.SBV: Impossible happened; saw inputs in lambda mode."
+                                                        , "***"
+                                                        , "***   Inps    : " ++ show xs
+                                                        , "***   Trackers: " ++ show ys
+                                                        ]
+                  else case lamInps of
+                          [] -> pure $ ResultTopInps topInps
+                          _  -> error $ unlines $ [ ""
+                                                  , "*** Data.SBV: Impossible happened; saw lambda inputs in regular mode."
+                                                  , "***"
+                                                  , "***   Params: " ++ show lamInps
+                                                  ]
+
    outsO <- reverse <$> readIORef outs
 
    let swap  (a, b)              = (b, a)
@@ -2167,12 +2149,12 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]                     -- ^ Mapping of symbolic values to objective values.
-     , modelBindings   :: Maybe [((Quantifier, NamedSymVar), Maybe CV)] -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
-     , modelAssocs     :: [(String, CV)]                                -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))]     -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                                        -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                                        -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                 -- ^ Mapping of symbolic values to objective values.
+     , modelBindings   :: Maybe [(NamedSymVar, CV)]                 -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
+     , modelAssocs     :: [(String, CV)]                            -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                    -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                    -- in the 'modelAssocs' field.
      }
      deriving Show
 

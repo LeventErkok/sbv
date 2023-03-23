@@ -18,8 +18,8 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, nub, sort)
-import Data.Maybe (listToMaybe, fromMaybe, catMaybes)
+import Data.List  (intercalate, partition, nub)
+import Data.Maybe (listToMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
 import qualified Data.Map.Strict      as M
@@ -28,16 +28,17 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString, SMTDef(..))
 import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
+import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString
+                              , SMTDef(..), ResultInp(..)
+                              )
+
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
 
 import qualified Data.Generics.Uniplate.Data as G
-
-import Data.Either(lefts)
 
 import qualified Data.Graph as DG
 
@@ -46,7 +47,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
@@ -78,8 +79,6 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
                              isFoldMap SeqFoldLeftI{} = True
                              isFoldMap _              = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
-
-        needsQuantifiers = not (null foralls) || hasLocalQuants
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
@@ -189,6 +188,10 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
                  ++ getModels
                  ++ logic
 
+        trackerVars = case allInputs of
+                        ResultTopInps (_, ts) -> ts
+                        ResultLamInps _       -> []
+
         pgm  =  map ("; " ++) comments
              ++ settings
              ++ [ "; --- uninterpreted sorts ---" ]
@@ -201,14 +204,10 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
-             ++ [ "; --- skolem constants ---" ]
-             ++ concat [declareFun s (SBVType (map kindOf (ss ++ [s]))) (userName s) | Right (s, ss) <- skolemInps]
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> nm)) | var <- trackerVars, let s = getSV var, let nm = getUserName' var]
              ++ [ "; --- constant tables ---" ]
-             ++ concatMap (uncurry (:) . constTable) constTables
-             ++ [ "; --- skolemized tables ---" ]
-             ++ map (skolemTable (unwords (map svType foralls))) skolemTables
+             ++ concatMap (uncurry (:) . mkTable) allTables
              ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
@@ -217,100 +216,30 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
              ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
              ++ [ "; --- user given axioms and definitions ---" ]
              ++ declUserFuns defs
-             ++ [ "; --- preQuantifier assignments ---" ]
-             ++ concatMap (declDef cfg skolemMap tableMap funcMap) preQuantifierAssigns
+             ++ [ "; --- assignments ---" ]
+             ++ concatMap (declDef cfg tableMap funcMap) asgns
              ++ [ "; --- arrayDelayeds ---" ]
              ++ concat arrayDelayeds
              ++ [ "; --- arraySetups ---" ]
              ++ concat arraySetups
              ++ [ "; --- formula ---" ]
-             ++ ["(assert (forall (" ++ intercalate "\n                 "
-                                        ["(" ++ show s ++ " " ++ svType s ++ ")" | s <- foralls] ++ ")"
-                | not (null foralls)
-                ]
-             ++ [ "; --- postQuantifier assignments ---" ]
-             ++ concatMap mkAssign postQuantifierAssigns
-             ++ [ "; --- delayedEqualities ---" ]
-             ++ delayedAsserts delayedEqualities
-             ++ [ "; -- finalAssert ---" ]
              ++ finalAssert
 
-        -- identify the assignments that can come before the first quantifier
-        (preQuantifierAssigns, postQuantifierAssigns)
-           | null foralls
-           = (asgns, [])
-           | True
-           = span pre asgns
-           where first      = nodeId (minimum foralls)
-                 pre (s, _) = nodeId s < first
-
-                 nodeId (SV _ n) = n
-
-        noOfCloseParens
-          | null foralls = 0
-          | True         = length postQuantifierAssigns + 2 + (if null delayedEqualities then 0 else 1)
-
-        foralls    = lefts skolemInps
-        forallArgs = concatMap ((" " ++) . show) foralls
-
-        (constTables, skolemTables) = ([(t, d) | (t, Left d) <- allTables], [(t, d) | (t, Right d) <- allTables])
-        allTables = [(t, genTableData rm skolemMap (not (null foralls), forallArgs) (map fst consts) t) | t <- tbls]
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg (not (null foralls)) allConsts skolemMap) arrs
-        delayedEqualities = concatMap snd skolemTables
-
-        delayedAsserts []              = []
-        delayedAsserts ds@(deH : deTs)
-          | null foralls = map (\s -> "(assert " ++ s ++ ")") ds
-          | True         = map letShift (("(and " ++ deH) : map (align 5) deTs)
-
-        letShift = align 12
+        allTables   = [(t, genTableData rm (map fst consts) t) | t <- tbls]
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
 
         finalAssert
-          | null foralls && noConstraints
-          = []
-          | null foralls
-          =    map (\(attr, v) -> "(assert "      ++ addAnnotations attr (mkLiteral v) ++ ")") hardAsserts
-            ++ map (\(attr, v) -> "(assert-soft " ++ addAnnotations attr (mkLiteral v) ++ ")") softAsserts
-          | not (null namedAsserts)
-          = error $ intercalate "\n" [ "SBV: Constraints with attributes and quantifiers cannot be mixed!"
-                                     , "   Quantified variables: " ++ unwords (map show foralls)
-                                     , "   Named constraints   : " ++ intercalate ", " (map show namedAsserts)
-                                     ]
-          | not (null softAsserts)
-          = error $ intercalate "\n" [ "SBV: Soft constraints and quantifiers cannot be mixed!"
-                                     , "   Quantified variables: " ++ unwords (map show foralls)
-                                     , "   Soft constraints    : " ++ intercalate ", " (map show softAsserts)
-                                     ]
-          | True
-          = [impAlign (letShift combined) ++ replicate noOfCloseParens ')']
-          where mkLiteral (Left  v) =            cvtSV skolemMap v
-                mkLiteral (Right v) = "(not " ++ cvtSV skolemMap v ++ ")"
+          | noConstraints = []
+          | True          =    map (\(attr, v) -> "(assert "      ++ addAnnotations attr (mkLiteral v) ++ ")") hardAsserts
+                            ++ map (\(attr, v) -> "(assert-soft " ++ addAnnotations attr (mkLiteral v) ++ ")") softAsserts
+          where mkLiteral (Left  v) =            cvtSV v
+                mkLiteral (Right v) = "(not " ++ cvtSV v ++ ")"
 
                 (noConstraints, assertions) = finalAssertions
-
-                namedAsserts = [findName attrs | (_, attrs, _) <- assertions, not (null attrs)]
-                 where findName attrs = fromMaybe "<anonymous>" (listToMaybe [nm | (":named", nm) <- attrs])
 
                 hardAsserts, softAsserts :: [([(String, String)], Either SV SV)]
                 hardAsserts = [(attr, v) | (False, attr, v) <- assertions]
                 softAsserts = [(attr, v) | (True,  attr, v) <- assertions]
-
-                combined = case lits of
-                             []               -> "true"
-                             [x]              -> mkLiteral x
-                             xs  | any bad xs -> "false"
-                                 | True       -> "(and " ++ unwords (map mkLiteral xs) ++ ")"
-                  where lits = filter (not . redundant) $ nub (sort (map snd hardAsserts))
-                        redundant (Left v)  = v == trueSV
-                        redundant (Right v) = v == falseSV
-                        bad (Left  v) = v == falseSV
-                        bad (Right v) = v == trueSV
-
-        impAlign s
-          | null delayedEqualities = s
-          | True                   = "     " ++ s
-
-        align n s = replicate n ' ' ++ s
 
         finalAssertions :: (Bool, [(Bool, [(String, String)], Either SV SV)])  -- If Left: positive, Right: negative
         finalAssertions
@@ -334,10 +263,8 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
                   | s == falseSV = Just $ Left falseSV
                   | True         = Just $ Left s
 
-        skolemMap = M.fromList [(s, ss) | Right (s, ss) <- skolemInps, not (null ss)]
-        tableMap  = IM.fromList $ map mkConstTable constTables ++ map mkSkTable skolemTables
-          where mkConstTable (((t, _, _), _), _) = (t, "table" ++ show t)
-                mkSkTable    (((t, _, _), _), _) = (t, "table" ++ show t ++ forallArgs)
+        tableMap  = IM.fromList $ map grab allTables
+          where grab (((t, _, _), _), _) = (t, "table" ++ show t)
 
         -- SBV only functions.
         funcMap = M.fromList reverses
@@ -345,18 +272,6 @@ cvt ctx hasLocalQuants kindInfo isSat comments (inputs, trackerVars) skolemInps 
                                ["sbv.reverse_" ++ show i | i <- [(0::Int)..]]
 
         asgns = F.toList asgnsSeq
-
-        mkAssign a
-          | null foralls = declDef cfg skolemMap tableMap funcMap a
-          | True         = [letShift (mkLet a)]
-
-        mkLet (s, SBVApp (Label m) [e]) = "(let ((" ++ show s ++ " " ++ cvtSV                skolemMap                  e ++ ")) ; " ++ m
-        mkLet (s, e)                    = "(let ((" ++ show s ++ " " ++ cvtExp solverCaps rm skolemMap tableMap funcMap e ++ "))"
-
-        userNameMap = M.fromList $ map ((\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) . snd) inputs
-        userName s = case M.lookup s userNameMap of
-                        Just u  | show s /= u -> Just $ "tracks user variable " ++ show u
-                        _ -> Nothing
 
 -- Declare "known" SBV functions here
 declSBVFunc :: Op -> String -> [String]
@@ -532,7 +447,7 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef cfg skolemMap tableMap funcMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef cfg tableMap funcMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- table setups
@@ -540,12 +455,8 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
             -- array setups
             ++ concat arraySetups
             -- extra constraints
-            ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV skolemMap v) ++ ")") (F.toList cstrs)
-  where -- NB. The below setting of skolemMap to empty is OK, since we do
-        -- not support queries in the context of skolemized variables
-        skolemMap = M.empty
-
-        -- The following is not really kosher; if it happens that a "new" variant of a function is used only incrementally.
+            ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV v) ++ ")") (F.toList cstrs)
+  where -- The following is not really kosher; if it happens that a "new" variant of a function is used only incrementally.
         -- But we'll punt on this for now, as it should be rare and can be "worked-around" if necessary.
         funcMap = M.empty
 
@@ -555,13 +466,13 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
 
         declInp (getSV -> s) = declareFun s (SBVType [kindOf s]) Nothing
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg False allConsts skolemMap) arrs
+        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
 
-        allTables = [(t, either id id (genTableData rm skolemMap (False, []) (map fst consts) t)) | t <- tbls]
-        (tableDecls, tableAssigns) = unzip $ map constTable allTables
+        allTables = [(t, genTableData rm (map fst consts) t) | t <- tbls]
+        (tableDecls, tableAssigns) = unzip $ map mkTable allTables
 
-        tableMap  = IM.fromList $ map mkTable allTables
-          where mkTable (((t, _, _), _), _) = (t, "table" ++ show t)
+        tableMap  = IM.fromList $ map mkIdx allTables
+          where mkIdx (((t, _, _), _), _) = (t, "table" ++ show t)
 
         -- If we need flattening in models, do emit the required lines if preset
         settings
@@ -571,11 +482,11 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: SMTConfig -> SkolemMap -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
-declDef cfg skolemMap tableMap funcMap (s, expr) =
+declDef :: SMTConfig -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
+declDef cfg tableMap funcMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV          skolemMap                  e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp caps rm skolemMap tableMap funcMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                           e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp caps rm tableMap funcMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -676,8 +587,8 @@ declFuncs ds = map declGroup sorted
                            close1 n = if n == ld then ")"  else ""
                            close2 n = if n == ld then "))" else ""
 
-constTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
-constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)
+mkTable :: (((Int, Kind, Kind), [SV]), [String]) -> (String, [String])
+mkTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setup)
   where t       = "table" ++ show i
         decl    = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
@@ -699,27 +610,17 @@ constTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ s
                              , "(assert " ++ initializer ++ ")"
                              ]
 
-skolemTable :: String -> (((Int, Kind, Kind), [SV]), [String]) -> String
-skolemTable qsIn (((i, ak, rk), _elts), _) = decl
-  where qs   = if null qsIn then "" else qsIn ++ " "
-        t    = "table" ++ show i
-        decl = "(declare-fun " ++ t ++ " (" ++ qs ++ smtType ak ++ ") " ++ smtType rk ++ ")"
-
 -- Left if all constants, Right if otherwise
-genTableData :: RoundingMode -> SkolemMap -> (Bool, String) -> [SV] -> ((Int, Kind, Kind), [SV]) -> Either [String] [String]
-genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
-  | null post = Left  (map (topLevel . snd) pre)
-  | True      = Right (map (nested   . snd) (pre ++ post))
-  where ssv = cvtSV skolemMap
-        (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
-        t           = "table" ++ show i
+genTableData :: RoundingMode -> [SV] -> ((Int, Kind, Kind), [SV]) -> [String]
+genTableData rm consts ((i, aknd, _), elts) = map (topLevel . snd) tElts
+  where tElts = zipWith mkElt elts [(0::Int)..]
+        t     = "table" ++ show i
 
-        mkElt x k   = (isReady, (idx, ssv x))
+        mkElt x k   = (isReady, (idx, cvtSV x))
           where idx = cvtCV rm (mkConstCV aknd k)
                 isReady = x `Set.member` constsSet
 
         topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
-        nested   (idx, v) = "(= (" ++ t ++ args ++ " " ++ idx ++ ") " ++ v ++ ")"
 
         constsSet = Set.fromList consts
 
@@ -727,24 +628,12 @@ genTableData rm skolemMap (_quantified, args) consts ((i, aknd, _), elts)
 -- we might have to skolemize those. Implement this properly.
 -- The difficulty is with the Mutate/Merge: We have to postpone an init if
 -- the components are themselves postponed, so this cannot be implemented as a simple map.
-declArray :: SMTConfig -> Bool -> CnstMap -> SkolemMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
+declArray :: SMTConfig -> CnstMap -> (Int, ArrayInfo) -> ([String], [String], [String])
+declArray cfg consts (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
   where constMapping = M.fromList [(s, c) | (c, s) <- M.assocs consts]
         constNames   = M.keys constMapping
-
-        topLevel = not quantified || case ctx of
-                                       ArrayFree (Left mbi) -> maybe True (`elem` constNames) mbi
-                                       ArrayFree Right{}    -> True
-                                       ArrayMutate _ a b    -> all (`elem` constNames) [a, b]
-                                       ArrayMerge c _ _     -> c `elem` constNames
         (pre, post) = partition fst ctxInfo
         nm = "array_" ++ show i
-
-        ssv sv
-         | topLevel || sv `elem` constNames
-         = cvtSV skolemMap sv
-         | True
-         = tbd "Non-constant array initializer in a quantified context"
 
         atyp  = "(Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ ")"
 
@@ -759,13 +648,13 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         -- CVC4 chokes if the initializer is not a constant. (Z3 is ok with it.) So, print it as
         -- a constant if we have it in the constants; otherwise, we merely print it and hope for the best.
         constInit v = case v `M.lookup` constMapping of
-                        Nothing -> ssv v                      -- Z3 will work, CVC4 will choke. Others don't even support this.
+                        Nothing -> cvtSV v                    -- Z3 will work, CVC4 will choke. Others don't even support this.
                         Just c  -> cvtCV (roundingMode cfg) c -- Z3 and CVC4 will work. Other's don't support this.
 
         ctxInfo = case ctx of
                     ArrayFree _       -> []
-                    ArrayMutate j a b -> [(all (`elem` constNames) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ ssv a ++ " " ++ ssv b ++ "))")]
-                    ArrayMerge  t j k -> [(t `elem` constNames,            "(= " ++ nm ++ " (ite " ++ ssv t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
+                    ArrayMutate j a b -> [(all (`elem` constNames) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ cvtSV a ++ " " ++ cvtSV b ++ "))")]
+                    ArrayMerge  t j k -> [(t `elem` constNames,            "(= " ++ nm ++ " (ite " ++ cvtSV t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
 
         -- Arrange for initializers
         mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)
@@ -777,13 +666,13 @@ declArray cfg quantified consts skolemMap (i, (_, (aKnd, bKnd), ctx)) = (adecl :
         lAll          = lpre + length post
 
         setup
-          | lAll == 0      = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initialization needed" | not quantified]
-          | lAll == 1      = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
-                             , "(assert " ++ initializer ++ ")"
-                             ]
-          | True           = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lAll - 1]) ++ "))"
-                             , "(assert " ++ initializer ++ ")"
-                             ]
+          | lAll == 0 = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initialization needed" ]
+          | lAll == 1 = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
+                        , "(assert " ++ initializer ++ ")"
+                        ]
+          | True      = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lAll - 1]) ++ "))"
+                        , "(assert " ++ initializer ++ ")"
+                        ]
 
 svType :: SV -> String
 svType s = smtType (kindOf s)
@@ -796,17 +685,12 @@ cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an emp
 cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
   where (body, ret) = (init xs, last xs)
 
-type SkolemMap   = M.Map SV [SV]
 type TableMap    = IM.IntMap String
 type FunctionMap = M.Map Op String
 
--- Present an SV; inline true/false as needed
-cvtSV :: SkolemMap -> SV -> String
-cvtSV skolemMap s
-  | Just ss <- s `M.lookup` skolemMap
-  = "(" ++ show s ++ concatMap ((" " ++) . show) ss ++ ")"
-  | True
-  = show s
+-- Present an SV, simply show
+cvtSV :: SV -> String
+cvtSV s = show s
 
 cvtCV :: RoundingMode -> CV -> String
 cvtCV = cvToSMTLib
@@ -816,11 +700,9 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: SolverCapabilities -> RoundingMode -> SkolemMap -> TableMap -> FunctionMap -> SBVExpr -> String
-cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh expr
-  where ssv = cvtSV skolemMap
-
-        hasPB       = supportsPseudoBooleans caps
+cvtExp :: SolverCapabilities -> RoundingMode -> TableMap -> FunctionMap -> SBVExpr -> String
+cvtExp caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
+  where hasPB       = supportsPseudoBooleans caps
         hasInt2bv   = supportsInt2bv caps
         hasDistinct = supportsDistinct caps
 
@@ -933,7 +815,7 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
         --
         -- I wish it was the full type here not just the result, but we go with the spec. Also see: <http://github.com/Z3Prover/z3/issues/2135>
         -- and in particular <http://github.com/Z3Prover/z3/issues/2135#issuecomment-477636435>
-        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map ssv args) ++ ")"
+        dtConstructor fld args res = "((as " ++ fld ++ " " ++ smtType res ++ ") " ++ unwords (map cvtSV args) ++ ")"
 
         -- Similarly, we fully qualify the accessors with their types to work around type checking issues
         -- Unfortunately, z3 and CVC4 are behaving differently, so we tie this ascription to a solver capability.
@@ -944,10 +826,10 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
                 ps      = " (" ++ unwords (map smtType params) ++ ") "
                 aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
 
-        sh (SBVApp Ite [a, b, c]) = "(ite " ++ ssv a ++ " " ++ ssv b ++ " " ++ ssv c ++ ")"
+        sh (SBVApp Ite [a, b, c]) = "(ite " ++ cvtSV a ++ " " ++ cvtSV b ++ " " ++ cvtSV c ++ ")"
 
         sh (SBVApp (LkUp (t, aKnd, _, l) i e) [])
-          | needsCheck = "(ite " ++ cond ++ ssv e ++ " " ++ lkUp ++ ")"
+          | needsCheck = "(ite " ++ cond ++ cvtSV e ++ " " ++ lkUp ++ ")"
           | True       = lkUp
           where needsCheck = case aKnd of
                               KBool         -> (2::Integer) > fromIntegral l
@@ -967,7 +849,7 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
                               KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
                               KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
-                lkUp = "(" ++ getTable tableMap t ++ " " ++ ssv i ++ ")"
+                lkUp = "(" ++ getTable tableMap t ++ " " ++ cvtSV i ++ ")"
 
                 cond
                  | hasSign i = "(or " ++ le0 ++ " " ++ gtl ++ ") "
@@ -992,48 +874,48 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
                                 KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
-                le0  = "(" ++ less ++ " " ++ ssv i ++ " " ++ mkCnst 0 ++ ")"
-                gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ ssv i ++ ")"
+                le0  = "(" ++ less ++ " " ++ cvtSV i ++ " " ++ mkCnst 0 ++ ")"
+                gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ cvtSV i ++ ")"
 
-        sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (ssv a)
+        sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (cvtSV a)
 
         sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
-        sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ ssv a ++ ")"
+        sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ cvtSV a ++ ")"
 
         sh (SBVApp (Uninterpreted nm) [])   = nm
-        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (QuantifiedBool i) [])   = i
         sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
-        sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ ssv a ++ ")"
+        sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ cvtSV a ++ ")"
 
         sh (SBVApp (Rol i) [a])
-           | bvOp  = rot ssv "rotate_left"  i a
+           | bvOp  = rot "rotate_left"  i a
            | True  = bad
 
         sh (SBVApp (Ror i) [a])
-           | bvOp  = rot  ssv "rotate_right" i a
+           | bvOp  = rot  "rotate_right" i a
            | True  = bad
 
         sh (SBVApp Shl [a, i])
-           | bvOp   = shft ssv "bvshl"  "bvshl" a i
+           | bvOp   = shft "bvshl"  "bvshl" a i
            | True   = bad
 
         sh (SBVApp Shr [a, i])
-           | bvOp  = shft ssv "bvlshr" "bvashr" a i
+           | bvOp  = shft "bvlshr" "bvashr" a i
            | True  = bad
 
         sh (SBVApp (ZeroExtend i) [a])
-          | bvOp = "((_ zero_extend " ++ show i ++ ") " ++ ssv a ++ ")"
+          | bvOp = "((_ zero_extend " ++ show i ++ ") " ++ cvtSV a ++ ")"
           | True = bad
 
         sh (SBVApp (SignExtend i) [a])
-          | bvOp = "((_ sign_extend " ++ show i ++ ") " ++ ssv a ++ ")"
+          | bvOp = "((_ sign_extend " ++ show i ++ ") " ++ cvtSV a ++ ")"
           | True = bad
 
         sh (SBVApp op args)
           | Just f <- lookup op smtBVOpTable, ensureBVOrBool
-          = f (any hasSign args) (map ssv args)
+          = f (any hasSign args) (map cvtSV args)
           where -- The first 4 operators below do make sense for Integer's in Haskell, but there's
                 -- no obvious counterpart for them in the SMTLib translation.
                 -- TODO: provide support for these.
@@ -1044,87 +926,87 @@ cvtExp caps rm skolemMap tableMap functionMap expr@(SBVApp _ arguments) = sh exp
                                , (Join, lift2 "concat")
                                ]
 
-        sh (SBVApp (Label _) [a]) = cvtSV skolemMap a  -- This won't be reached; but just in case!
+        sh (SBVApp (Label _) [a]) = cvtSV a  -- This won't be reached; but just in case!
 
-        sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (ssv m) (unwords (map ssv args))
-        sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (cvtSV m) (unwords (map cvtSV args))
+        sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (NonLinear w) args) = "(" ++ show w ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (NonLinear w) args) = "(" ++ show w ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (PseudoBoolean pb) args)
           | hasPB = handlePB pb args'
           | True  = reducePB pb args'
-          where args' = map ssv args
+          where args' = map cvtSV args
 
         -- NB: Z3 semantics have the predicates reversed: i.e., it returns true if overflow isn't possible. Hence the not.
-        sh (SBVApp (OverflowOp op) args) = "(not (" ++ show op ++ " " ++ unwords (map ssv args) ++ "))"
+        sh (SBVApp (OverflowOp op) args) = "(not (" ++ show op ++ " " ++ unwords (map cvtSV args) ++ "))"
 
         -- Note the unfortunate reversal in StrInRe..
-        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map ssv args) ++ " " ++ regExpToSMTString r ++ ")"
+        sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map cvtSV args) ++ " " ++ regExpToSMTString r ++ ")"
         -- StrUnit is no-op, since a character in SMTLib is the same as a string
-        sh (SBVApp (StrOp StrUnit)     [a])  = ssv a
-        sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (StrOp StrUnit)     [a])  = cvtSV a
+        sh (SBVApp (StrOp op)          args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse is special, since we need to generate call to the internally generated function
-        sh inp@(SBVApp op@(SeqOp SBVReverse{}) args) = "(" ++ ops ++ " " ++ unwords (map ssv args) ++ ")"
+        sh inp@(SBVApp op@(SeqOp SBVReverse{}) args) = "(" ++ ops ++ " " ++ unwords (map cvtSV args) ++ ")"
           where ops = case op `M.lookup` functionMap of
                         Just s  -> s
                         Nothing -> error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
 
-        sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ ssv s ++ " " ++ ssv e ++ ")"
-        sh (SBVApp (SetOp SetInsert)     [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " true)"
-        sh (SBVApp (SetOp SetDelete)     [e, s]) = "(store "  ++ ssv s ++ " " ++ ssv e ++ " false)"
-        sh (SBVApp (SetOp SetIntersect)  args)   = "(intersection " ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetUnion)      args)   = "(union "        ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetSubset)     args)   = "(subset "       ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetDifference) args)   = "(setminus "     ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetComplement) args)   = "(complement "   ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (SetOp SetHasSize)    args)   = "(set-has-size " ++ unwords (map ssv args) ++ ")"
+        sh (SBVApp (SetOp SetEqual)      args)   = "(= "      ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetMember)     [e, s]) = "(select " ++ cvtSV s ++ " " ++ cvtSV e ++ ")"
+        sh (SBVApp (SetOp SetInsert)     [e, s]) = "(store "  ++ cvtSV s ++ " " ++ cvtSV e ++ " true)"
+        sh (SBVApp (SetOp SetDelete)     [e, s]) = "(store "  ++ cvtSV s ++ " " ++ cvtSV e ++ " false)"
+        sh (SBVApp (SetOp SetIntersect)  args)   = "(intersection " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetUnion)      args)   = "(union "        ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetSubset)     args)   = "(subset "       ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetDifference) args)   = "(setminus "     ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetComplement) args)   = "(complement "   ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (SetOp SetHasSize)    args)   = "(set-has-size " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
-        sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" ++ show n ++ " " ++ smtType (KTuple (map kindOf args)) ++ ") " ++ unwords (map ssv args) ++ ")"
-        sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ ssv tup ++ ")"
+        sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" ++ show n ++ " " ++ smtType (KTuple (map kindOf args)) ++ ") " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp (TupleAccess      i n) [tup]) = "(proj_" ++ show i ++ "_SBVTuple" ++ show n ++ " " ++ cvtSV tup ++ ")"
 
         sh (SBVApp (EitherConstructor k1 k2 False) [arg]) =       dtConstructor "left_SBVEither"  [arg] (KEither k1 k2)
         sh (SBVApp (EitherConstructor k1 k2 True ) [arg]) =       dtConstructor "right_SBVEither" [arg] (KEither k1 k2)
-        sh (SBVApp (EitherIs          k1 k2 False) [arg]) = '(' : dtAccessor    "left_SBVEither"  [k1]  (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (EitherIs          k1 k2 True ) [arg]) = '(' : dtAccessor    "right_SBVEither" [k2]  (KEither k1 k2) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess            False) [arg]) = "(get_left_SBVEither "  ++ ssv arg ++ ")"
-        sh (SBVApp (EitherAccess            True ) [arg]) = "(get_right_SBVEither " ++ ssv arg ++ ")"
+        sh (SBVApp (EitherIs          k1 k2 False) [arg]) = '(' : dtAccessor    "left_SBVEither"  [k1]  (KEither k1 k2) ++ " " ++ cvtSV arg ++ ")"
+        sh (SBVApp (EitherIs          k1 k2 True ) [arg]) = '(' : dtAccessor    "right_SBVEither" [k2]  (KEither k1 k2) ++ " " ++ cvtSV arg ++ ")"
+        sh (SBVApp (EitherAccess            False) [arg]) = "(get_left_SBVEither "  ++ cvtSV arg ++ ")"
+        sh (SBVApp (EitherAccess            True ) [arg]) = "(get_right_SBVEither " ++ cvtSV arg ++ ")"
 
-        sh (SBVApp  RationalConstructor    [t, b]) = "(SBV.Rational " ++ ssv t ++ " " ++ ssv b ++ ")"
+        sh (SBVApp  RationalConstructor    [t, b]) = "(SBV.Rational " ++ cvtSV t ++ " " ++ cvtSV b ++ ")"
 
         sh (SBVApp (MaybeConstructor k False) [])    =       dtConstructor "nothing_SBVMaybe" []    (KMaybe k)
         sh (SBVApp (MaybeConstructor k True)  [arg]) =       dtConstructor "just_SBVMaybe"    [arg] (KMaybe k)
-        sh (SBVApp (MaybeIs          k False) [arg]) = '(' : dtAccessor    "nothing_SBVMaybe" []    (KMaybe k) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp (MaybeIs          k True ) [arg]) = '(' : dtAccessor    "just_SBVMaybe"    [k]   (KMaybe k) ++ " " ++ ssv arg ++ ")"
-        sh (SBVApp MaybeAccess                [arg]) = "(get_just_SBVMaybe " ++ ssv arg ++ ")"
+        sh (SBVApp (MaybeIs          k False) [arg]) = '(' : dtAccessor    "nothing_SBVMaybe" []    (KMaybe k) ++ " " ++ cvtSV arg ++ ")"
+        sh (SBVApp (MaybeIs          k True ) [arg]) = '(' : dtAccessor    "just_SBVMaybe"    [k]   (KMaybe k) ++ " " ++ cvtSV arg ++ ")"
+        sh (SBVApp MaybeAccess                [arg]) = "(get_just_SBVMaybe " ++ cvtSV arg ++ ")"
 
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
-          = f True (map ssv args)
+          = f True (map cvtSV args)
           | boolOp, Just f <- lookup op boolComps
-          = f (map ssv args)
+          = f (map cvtSV args)
           | bvOp, Just f <- lookup op smtOpBVTable
-          = f (any hasSign args) (map ssv args)
+          = f (any hasSign args) (map cvtSV args)
           | realOp, Just f <- lookup op smtOpRealTable
-          = f (any hasSign args) (map ssv args)
+          = f (any hasSign args) (map cvtSV args)
           | ratOp, Just f <- lookup op ratOpTable
-          = f (map ssv args)
+          = f (map cvtSV args)
           | fpOp, Just f <- lookup op smtOpFloatDoubleTable
-          = f (any hasSign args) (map ssv args)
+          = f (any hasSign args) (map cvtSV args)
           | charOp || stringOp, Just f <- lookup op smtStringTable
-          = f (map ssv args)
+          = f (map cvtSV args)
           | listOp, Just f <- lookup op smtListTable
-          = f (map ssv args)
+          = f (map cvtSV args)
           | Just f <- lookup op uninterpretedTable
-          = f (map ssv args)
+          = f (map cvtSV args)
           | True
           = if not (null args) && isUserSort (head args)
             then error $ unlines [ ""
@@ -1384,11 +1266,11 @@ handleFPCast kFromIn kToIn rm input
         -- Nothing else should come up:
         cast f  d  _ = error $ "SBV.SMTLib2: Unexpected FPCast from: " ++ show f ++ " to " ++ show d
 
-rot :: (SV -> String) -> String -> Int -> SV -> String
-rot ssv o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ ssv x ++ ")"
+rot :: String -> Int -> SV -> String
+rot o c x = "((_ " ++ o ++ " " ++ show c ++ ") " ++ cvtSV x ++ ")"
 
-shft :: (SV -> String) -> String -> String -> SV -> SV -> String
-shft ssv oW oS x c = "(" ++ o ++ " " ++ ssv x ++ " " ++ ssv c ++ ")"
+shft :: String -> String -> SV -> SV -> String
+shft oW oS x c = "(" ++ o ++ " " ++ cvtSV x ++ " " ++ cvtSV c ++ ")"
    where o = if hasSign x then oS else oW
 
 -- Various casts

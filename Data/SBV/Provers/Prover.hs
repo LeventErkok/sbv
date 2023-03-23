@@ -47,12 +47,11 @@ import System.IO.Unsafe (unsafeInterleaveIO)             -- only used safely!
 
 import System.Directory  (getCurrentDirectory)
 import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUTCTime)
-import Data.List (intercalate, isPrefixOf, nub)
+import Data.List (intercalate, isPrefixOf)
 import Data.IORef (readIORef)
 
 import Data.Maybe (mapMaybe, listToMaybe)
 
-import qualified Data.Map.Strict as M
 import qualified Data.Foldable   as S (toList)
 import qualified Data.Text       as T
 
@@ -256,8 +255,6 @@ class ExtractIO m => MProvable m a where
                                 ParetoResult (b, rs)  -> ParetoResult . (b, ) <$> mapM v rs
 
     where opt = do objectives <- Control.getObjectives
-                   qinps      <- Control.getQuantifiedInputs
-                   spgm       <- Control.getSBVPgm
 
                    when (null objectives) $
                           error $ unlines [ ""
@@ -281,48 +278,6 @@ class ExtractIO m => MProvable m a where
                                           , "*** NOT ensure that they are optimal."
                                           ]
 
-
-                   let universals = S.toList $ getUniversals qinps
-
-                       firstUniversal
-                         | null universals = error "Data.SBV: Impossible happened! Universal optimization with no universals!"
-                         | True            = minimum $ fmap (swNodeId . getSV) universals
-
-                       mappings :: M.Map SV SBVExpr
-                       mappings = M.fromList (S.toList (pgmAssignments spgm))
-
-                       chaseUniversal entry = go entry []
-                         where go x sofar
-                                | nx >= firstUniversal
-                                = nub $ [unm | unm <- universals, nx >= swNodeId (getSV unm)] ++ sofar
-                                | True
-                                = let oVars (LkUp _ a b)             = [a, b]
-                                      oVars (IEEEFP (FP_Cast _ _ o)) = [o]
-                                      oVars _                        = []
-                                      vars = case x `M.lookup` mappings of
-                                               Nothing            -> []
-                                               Just (SBVApp o ss) -> nub (oVars o ++ ss)
-                                  in foldr go sofar vars
-                                where nx = swNodeId x
-
-                   let needsUniversalOpt = let tag _  [] = Nothing
-                                               tag nm xs = Just (nm, xs)
-                                               needsUniversal (Maximize          nm (x, _))   = tag nm (chaseUniversal x)
-                                               needsUniversal (Minimize          nm (x, _))   = tag nm (chaseUniversal x)
-                                               needsUniversal (AssertWithPenalty nm (x, _) _) = tag nm (chaseUniversal x)
-                                           in mapMaybe needsUniversal objectives
-
-                   unless (null universals || null needsUniversalOpt) $
-                          let len = maximum $ 0 : [length nm | (nm, _) <- needsUniversalOpt]
-                              pad n = n ++ replicate (len - length n) ' '
-                          in error $ unlines $ [ ""
-                                               , "*** Data.SBV: Problem needs optimization of metric in the scope of universally quantified variable(s):"
-                                               , "***"
-                                               ]
-                                           ++  [ "***          " ++  pad s ++ " [Depends on: " ++ intercalate ", " (getUserName' <$> xs) ++ "]"  | (s, xs) <- needsUniversalOpt ]
-                                           ++  [ "***"
-                                               , "*** Optimization is only meaningful with existentially quantified metrics."
-                                               ]
 
                    let optimizerDirectives = concatMap minmax objectives ++ priority style
                          where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
@@ -421,15 +376,8 @@ class ExtractIO m => MProvable m a where
                                                      , "Unable to validate the produced model."
                                                      ]) (Just res)
 
-          check env = do let univs    = [T.unpack n | ((ALL, NamedSymVar _ n), _) <- env]
-                             envShown = showModelDictionary True True cfg modelBinds
-                                where modelBinds = [(T.unpack n, fake q s v) | ((q, NamedSymVar s n), v) <- env]
-                                      fake q s Nothing
-                                        | q == ALL
-                                        = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<universally quantified>")
-                                        | True
-                                        = RegularCV $ CV (kindOf s) $ CUserSort (Nothing, "<no binding found>")
-                                      fake _ _ (Just v) = RegularCV v
+          check env = do let envShown = showModelDictionary True True cfg modelBinds
+                                where modelBinds = [(T.unpack n, RegularCV v) | (NamedSymVar _ n, v) <- env]
 
                              notify s
                                | not (verbose cfg) = return ()
@@ -437,11 +385,6 @@ class ExtractIO m => MProvable m a where
 
                          notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
                          mapM_ notify ["    " ++ l | l <- lines envShown]
-
-                         unless (null univs) $ do
-                                notify $ "NB. The following variable(s) are universally quantified: " ++ intercalate ", " univs
-                                notify   "    We will assume that they are essentially zero for the purposes of validation."
-                                notify   "    Note that this is a gross simplification of the model validation with universals!"
 
                          result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) (argReduce_ p >>= output)
 

@@ -26,6 +26,8 @@ import qualified Data.Set      as Set (member, union, unions, empty, toList, sin
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
+import Data.SBV.Core.Symbolic (ResultInp(..))
+
 -- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
 import Text.PrettyPrint.HughesPJ
 import qualified Text.PrettyPrint.HughesPJ as P ((<>))
@@ -445,7 +447,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
-genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs ins (_, preConsts) tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls arrs _uis _axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
@@ -469,13 +471,11 @@ genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs ins (_, preConst
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | quants
-  = error "SBV->C: Cannot compile in the presence of quantified booleans"
+  = error "SBV->C: Cannot compile in the presence of quantified variables."
   | not (null cstrs)
   = tbd "Explicit constraints"
   | not (null arrs)
   = tbd "User specified arrays"
-  | needsExistentials (map fst (fst ins))
-  = error "SBV->C: Cannot compile functions with existentially quantified variables."
   | True
   = ([pre, header, post], flagsNeeded)
  where asserts | cgIgnoreAsserts cfg = []
@@ -515,7 +515,12 @@ genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs ins (_, preConst
                          $$ vcat (map text ls)
                          $$ text ""
 
-       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | (_, NamedSymVar s _) <- fst ins]
+       ins = case topInps of
+               ResultTopInps (is, []) -> is
+               ResultTopInps is       -> die $ "Unexpected trackers: " ++ show is
+               ResultLamInps is       -> die $ "Unexpected inputs  : " ++ show is
+
+       typeWidth = getMax 0 $ [len (kindOf s) | (s, _) <- assignments] ++ [len (kindOf s) | NamedSymVar s _ <- ins]
                 where len KReal{}            = 5
                       len KFloat{}           = 6 -- SFloat
                       len KDouble{}          = 7 -- SDouble

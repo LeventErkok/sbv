@@ -44,6 +44,7 @@ import qualified Data.Map.Strict    as M
 import qualified Data.IntMap.Strict as IM
 import qualified Data.Sequence      as S
 import qualified Data.Text          as T
+import qualified Data.Foldable      as F
 
 
 import Data.Char      (toLower)
@@ -55,11 +56,7 @@ import Data.Foldable  (toList)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic   ( MonadQuery(..), State(..)
-                                , incrementInternalCounter, validationRequested
-                                , prefixExistentials, prefixUniversals
-                                , namedSymVar, getSV, lookupInput, userInputsToList
-                                )
+import Data.SBV.Core.Symbolic (MonadQuery(..), State(..), incrementInternalCounter, validationRequested, getSV, lookupInput)
 
 import Data.SBV.Utils.SExpr
 
@@ -314,31 +311,19 @@ getModelAtIndex mbi = do
     State{runMode} <- queryState
     rm <- io $ readIORef runMode
     case rm of
-      m@CodeGen           -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      m@LambdaGen{}       -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      m@Concrete{}        -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
-      SMTMode _ _ isSAT _ -> do
-          cfg   <- getConfig
-          qinps <- getQuantifiedInputs
-          uis   <- getUIs
+      m@CodeGen     -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@LambdaGen{} -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      m@Concrete{}  -> error $ "SBV.getModel: Model is not available in mode: " ++ show m
+      SMTMode{}     -> do
+          cfg <- getConfig
+          uis <- getUIs
 
-           -- for "sat", display the prefix existentials. for "proof", display the prefix universals
-          let allModelInputs = if isSAT then prefixExistentials qinps
-                                        else prefixUniversals   qinps
+          allModelInputs <- getTopLevelInputs
+          obsvs          <- getObservables
 
-              -- Add on observables only if we're not in a quantified context
-              grabObservables = S.length allModelInputs == S.length qinps -- i.e., we didn't drop anything
 
-          obsvs <- if grabObservables
-                      then getObservables
-                      else do queryDebug ["*** In a quantified context, obvservables will not be printed."]
-                              return mempty
-
-          let grab (NamedSymVar sv nm) = wrap <$> getValueCV mbi sv
-                where
-                  wrap !c = (sv, (nm, c))
-
-          inputAssocs <- mapM (grab . namedSymVar) allModelInputs
+          inputAssocs <- let grab (NamedSymVar sv nm) = let wrap !c = (sv, (nm, c)) in wrap <$> getValueCV mbi sv
+                         in mapM grab allModelInputs
 
           let name     = fst . snd
               removeSV = snd
@@ -357,19 +342,13 @@ getModelAtIndex mbi = do
                   Nothing   -> return ()
                   Just cmds -> mapM_ (send True) cmds
 
-          bindings <- let get i@(ALL, _)      = return (i, Nothing)
-                          get i@(EX, getSV -> sv) = case lookupInput fst sv inputAssocs of
-                                                      Just (_, (_, cv)) -> return (i, Just cv)
-                                                      Nothing           -> do cv <- getValueCV mbi sv
-                                                                              return (i, Just cv)
-
-                          flipQ i@(q, sv) = case (isSAT, q) of
-                                             (True,  _ )  -> i
-                                             (False, EX)  -> (ALL, sv)
-                                             (False, ALL) -> (EX,  sv)
+          bindings <- let get i@(getSV -> sv) = case lookupInput fst sv inputAssocs of
+                                                  Just (_, (_, cv)) -> return (i, cv)
+                                                  Nothing           -> do cv <- getValueCV mbi sv
+                                                                          return (i, cv)
 
                       in if validationRequested cfg
-                         then Just <$> mapM (get . flipQ) qinps
+                         then Just <$> mapM get allModelInputs
                          else return Nothing
 
           uiFunVals <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
@@ -391,7 +370,7 @@ getObjectiveValues = do let cmd = "(get-objectives)"
 
                         r <- ask cmd
 
-                        inputs <- toList . fmap namedSymVar <$> getQuantifiedInputs
+                        inputs <- F.toList <$> getTopLevelInputs
 
                         parse r bad $ \case EApp (ECon "objectives" : es) -> catMaybes <$> mapM (getObjValue (bad r) inputs) es
                                             _                             -> bad r Nothing
@@ -772,7 +751,7 @@ SBV a |-> v = case literal v of
 mkSMTResult :: (MonadIO m, MonadQuery m) => [Assignment] -> m SMTResult
 mkSMTResult asgns = do
              QueryState{queryConfig} <- getQueryState
-             inps <- userInputsToList <$> getQuantifiedInputs
+             inps <- F.toList <$> getTopLevelInputs
 
              let grabValues st = do let extract (Assign s n) = sbvToSV st (SBV s) >>= \sv -> return (sv, n)
 
@@ -785,8 +764,8 @@ mkSMTResult asgns = do
                                     let userSS = map fst modelAssignment
 
                                         missing, extra, dup :: [String]
-                                        missing = [T.unpack n | (EX, NamedSymVar s n) <- inps, s `notElem` userSS]
-                                        extra   = [show s | s <- userSS, s `notElem` map (getSV . namedSymVar) inps]
+                                        missing = [T.unpack n | NamedSymVar s n <- inps, s `notElem` userSS]
+                                        extra   = [show s | s <- userSS, s `notElem` map getSV inps]
                                         dup     = let walk []     = []
                                                       walk (n:ns)
                                                         | n `elem` ns = show n : walk (filter (/= n) ns)
@@ -817,7 +796,7 @@ mkSMTResult asgns = do
                                                             , "*** Data.SBV: Check your query result construction!"
                                                             ]
 
-                                    let findName s = case [T.unpack nm | (_, NamedSymVar i nm) <- inps, s == i] of
+                                    let findName s = case [T.unpack nm | NamedSymVar i nm <- inps, s == i] of
                                                         [nm] -> nm
                                                         []   -> error "*** Data.SBV: Impossible happened: Cannot find " ++ show s ++ " in the input list"
                                                         nms  -> error $ unlines [ ""

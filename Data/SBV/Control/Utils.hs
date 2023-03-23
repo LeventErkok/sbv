@@ -29,17 +29,11 @@ module Data.SBV.Control.Utils (
      , getValueCV, getUICVal, getUIFunCVAssoc, getUnsatAssumptions
      , SMTFunction(..), registerUISMTFunction
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
-     , getSBVAssertions, getSBVPgm, getQuantifiedInputs, getObservables
+     , getSBVAssertions, getSBVPgm, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
-     , parse
-     , unexpected
-     , timeout
-     , queryDebug
-     , retrieveResponse
-     , recoverKindedValue
-     , runProofOn
-     , executeQuery
+     , getTopLevelInputs, parse, unexpected
+     , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
@@ -71,7 +65,7 @@ import Data.Ratio
 import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV, SBV, sbvToSV, kindOf, Kind(..)
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), SMTModel(..)
-                              , QueryState(..), SVal(..), Quantifier(..), cache
+                              , QueryState(..), SVal(..), cache
                               , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
@@ -84,9 +78,8 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
-                              , UserInputs, getInputs, prefixExistentials, getSV, quantifier, getUserName
-                              , namedSymVar, NamedSymVar(..), lookupInput
-                              , Name, CnstMap, UICodeKind(UINone), smtDefGivenName
+                              , UserInputs, getSV, getUserName, NamedSymVar(..), lookupInput, getUserName'
+                              , Name, CnstMap, UICodeKind(UINone), smtDefGivenName, Inputs(..)
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -1082,15 +1075,11 @@ checkSatUsing cmd = do let bad = unexpected "checkSat" cmd "one of sat/unsat/unk
                                            _                -> bad r Nothing
 
 -- | What are the top level inputs? Trackers are returned as top level existentials
-getQuantifiedInputs :: (MonadIO m, MonadQuery m) => m UserInputs
-getQuantifiedInputs = do State{rinps} <- queryState
-                         (rQinps, rTrackers) <- liftIO $ getInputs <$> readIORef rinps
+getTopLevelInputs :: (MonadIO m, MonadQuery m) => m UserInputs
+getTopLevelInputs = do State{rinps}                     <- queryState
+                       Inputs{userInputs, internInputs} <- liftIO $ readIORef rinps
 
-                         let trackers = (EX,) <$> rTrackers
-                             -- separate the existential prefix, which will go first
-                             (preQs, postQs) = S.spanl (\(q, _) -> q == EX) rQinps
-
-                         return $ preQs <> trackers <> postQs
+                       pure $ userInputs <> internInputs
 
 -- | Get observables, i.e., those explicitly labeled by the user with a call to 'Data.SBV.observe'.
 getObservables :: (MonadIO m, MonadQuery m) => m [(Name, CV)]
@@ -1134,9 +1123,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                      topState@State{rUsedKinds} <- queryState
 
-                     ki    <- liftIO $ readIORef rUsedKinds
-                     qinps <- getQuantifiedInputs
+                     ki   <- liftIO $ readIORef rUsedKinds
 
+                     allModelInputs    <- getTopLevelInputs
                      allUninterpreteds <- getUIs
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
@@ -1179,27 +1168,16 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        , "***             SBV will use equivalence classes to generate all-satisfying instances."
                                                        ]
 
-                     let allModelInputs  = prefixExistentials qinps
-                         -- Add on observables only if we're not in a quantified context:
-                         hasQuantifiers  = S.length allModelInputs /= S.length qinps -- i.e., we dropped something
-                         grabObservables = not hasQuantifiers
+                     -- Drop the things that are not model vars or internal
+                     let vars :: S.Seq (SVal, NamedSymVar)
+                         vars = let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
 
-                         vars :: S.Seq (SVal, NamedSymVar)
-                         vars = let mkSVal :: NamedSymVar -> (SVal, NamedSymVar)
-                                    mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
+                                    ignored k = isNonModelVar cfg (getUserName' k)
+                                              || "__internal_sbv" `T.isPrefixOf` (getUserName k)
 
-                                    ignored n = isNonModelVar cfg (T.unpack n) || "__internal_sbv" `T.isPrefixOf` n
-
-                                in fmap (mkSVal . namedSymVar)
-                                   . S.filter (not . ignored . getUserName . namedSymVar)
-                                   $ allModelInputs
-
-                         -- If we have any universals, then the solutions are unique upto prefix existentials.
-                         w = ALL `elem` F.toList (quantifier <$> qinps)
-
+                                in mkSVal <$> S.filter (not . ignored) allModelInputs
 
                      -- We can go fast using the disjoint model trick if things are simple enough:
-                     --     - No quantifiers
                      --     - No uninterpreted functions (uninterpreted values are OK)
                      --     - No uninterpreted sorts
                      --
@@ -1212,10 +1190,9 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- previous model and asking for a new one. If they don't exist (which is the common case anyhow)
                      -- we use an idea due to z3 folks <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      -- which splits the search space into disjoint models and can produce results much more quickly.
-                     let isSimple = null allUiFuns && null usorts && not hasQuantifiers
+                     let isSimple = null allUiFuns && null usorts
 
                          start = AllSatResult { allSatMaxModelCountReached  = False
-                                              , allSatHasPrefixExistentials = w
                                               , allSatSolverReturnedUnknown = False
                                               , allSatSolverReturnedDSat    = False
                                               , allSatResults               = []
@@ -1229,8 +1206,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                  pure (sval, nsv)
                                     mkVar nmt = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected: " ++ show nmt
                                 uiVars <- io $ S.fromList <$> mapM mkVar allUiRegs
-                                fastAllSat grabObservables                                        qinps (uiVars S.>< vars) cfg start
-                        else    loop       grabObservables topState (allUiFuns, uiFuns) allUiRegs qinps              vars  cfg start
+                                fastAllSat                                        allModelInputs (uiVars S.>< vars) cfg start
+                        else    loop       topState (allUiFuns, uiFuns) allUiRegs allModelInputs              vars  cfg start
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
@@ -1245,8 +1222,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing -> pure ()
                              Just m  -> io $ putStrLn m
 
-         fastAllSat :: Bool -> S.Seq (Quantifier, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
-         fastAllSat grabObservables qinps vars cfg start = do
+         fastAllSat :: S.Seq NamedSymVar -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
+         fastAllSat allInputs vars cfg start = do
                 result <- io $ newIORef (0, start, False, Nothing)
                 go result vars
                 (found, sofar, _, extra) <- io $ readIORef result
@@ -1300,20 +1277,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                       Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
                                                                                                    return (sv, (n, (sval, cv)))) vars
 
-                                                   bindings <- let grab i@(ALL, _)          = return (i, Nothing)
-                                                                   grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
-                                                                                                Just (_, (_, (_, cv))) -> return (i, Just cv)
-                                                                                                Nothing                -> do !cv <- getValueCV Nothing sv
-                                                                                                                             return (i, Just cv)
+                                                   bindings <- let grab i@(getSV -> sv) = case lookupInput fst sv assocs of
+                                                                                            Just (_, (_, (_, cv))) -> return (i, cv)
+                                                                                            Nothing                -> do !cv <- getValueCV Nothing sv
+                                                                                                                         return (i, cv)
                                                                in if validationRequested cfg
-                                                                  then Just <$> mapM grab qinps
+                                                                  then Just <$> mapM grab allInputs
                                                                   else return Nothing
 
-                                                   -- Add on observables if we're asked to do so:
-                                                   obsvs <- if grabObservables
-                                                               then getObservables
-                                                               else do queryDebug ["*** In a quantified context, observables will not be printed."]
-                                                                       return mempty
+                                                   obsvs <- getObservables
 
                                                    let lassocs = F.toList assocs
                                                        model   = SMTModel { modelObjectives = []
@@ -1374,7 +1346,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
          -- All sat loop. This is slower, as it implements the reject-the-previous model and loop around logic. But
          -- it can handle uninterpreted sorts; so we keep it here as a fall-back.
-         loop grabObservables topState (allUiFuns, uiFunsToReject) allUiRegs qinps vars cfg = go (1::Int)
+         loop topState (allUiFuns, uiFunsToReject) allUiRegs allInputs vars cfg = go (1::Int)
            where go :: Int -> AllSatResult -> m AllSatResult
                  go !cnt !sofar
                    | Just maxModels <- allSatMaxModelCount cfg, cnt > maxModels
@@ -1411,19 +1383,14 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                        uiRegVals <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal Nothing ui) allUiRegs
 
-                                       -- Add on observables if we're asked to do so:
-                                       obsvs <- if grabObservables
-                                                   then getObservables
-                                                   else do queryDebug ["*** In a quantified context, observables will not be printed."]
-                                                           return mempty
+                                       obsvs <- getObservables
 
-                                       bindings <- let grab i@(ALL, _)          = return (i, Nothing)
-                                                       grab i@(EX, getSV -> sv) = case lookupInput fst sv assocs of
-                                                                                Just (_, (_, (_, cv))) -> return (i, Just cv)
+                                       bindings <- let grab i@(getSV -> sv) = case lookupInput fst sv assocs of
+                                                                                Just (_, (_, (_, cv))) -> return (i, cv)
                                                                                 Nothing                -> do !cv <- getValueCV Nothing sv
-                                                                                                             return (i, Just cv)
+                                                                                                             return (i, cv)
                                                    in if validationRequested cfg
-                                                         then Just <$> mapM grab qinps
+                                                         then Just <$> mapM grab allInputs
                                                          else return Nothing
 
                                        let model = SMTModel { modelObjectives = []
@@ -1650,18 +1617,6 @@ runProofOn rm context comments res@(Result hasQuantifiers ki _qcInfo _observable
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
 
-         flipQ (ALL, x) = (EX,  x)
-         flipQ (EX,  x) = (ALL, x)
-
-         skolemize :: [(Quantifier, NamedSymVar)] -> [Either SV (SV, [SV])]
-         skolemize quants = go quants ([], [])
-           where go []                        (_,  sofar) = reverse sofar
-                 go ((ALL, getSV -> v) :rest) (us, sofar) = go rest (v:us, Left v : sofar)
-                 go ((EX,  getSV -> v) :rest) (us, sofar) = go rest (us,   Right (v, reverse us) : sofar)
-
-         qinps      = if isSat then fst is else map flipQ (fst is)
-         skolemMap  = skolemize qinps
-
          o | isSafe = trueSV
            | True   = case outputs of
                         []  | isSetup -> trueSV
@@ -1675,7 +1630,7 @@ runProofOn rm context comments res@(Result hasQuantifiers ki _qcInfo _observable
                                                , "*** Check calls to \"output\", they are typically not needed!"
                                                ]
 
-     in SMTProblem { smtLibPgm = toSMTLib config context hasQuantifiers ki isSat comments is skolemMap consts tbls arrs uis defns pgm cstrs o }
+     in SMTProblem { smtLibPgm = toSMTLib config context hasQuantifiers ki isSat comments is consts tbls arrs uis defns pgm cstrs o }
 
 -- | Generalization of 'Data.SBV.Control.executeQuery'
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a

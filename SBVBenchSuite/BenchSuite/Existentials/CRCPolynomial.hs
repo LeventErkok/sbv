@@ -20,4 +20,4 @@ import BenchSuite.Bench.Bench
 
 -- benchmark suite
 benchmarks :: Runner
-benchmarks =  runIO "FindPolynomials" findHD4Polynomials
+benchmarks =  runIO "FindPolynomials" (findHD4Polynomials 5)

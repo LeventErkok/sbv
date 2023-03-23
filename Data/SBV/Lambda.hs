@@ -97,6 +97,7 @@ inSubState inState comp = do
                    , rctr         = fresh rctr
                    , rLambdaLevel = fresh rLambdaLevel
                    , rinps        = fresh rinps
+                   , rlambdaInps  = fresh rlambdaInps
                    , rConstraints = fresh rConstraints
                    , rObservables = fresh rObservables
                    , routs        = fresh routs
@@ -256,12 +257,10 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                           (intercalate "\n" . body)
 
                params = case is of
-                          (inps, trackers) | not (null trackers)
-                                           -> tbd [ "Tracker variables"
-                                                  , "   Saw: " ++ intercalate ", " (map getUserName' trackers)
+                          ResultTopInps as -> bad [ "Top inputs"
+                                                  , "   Saw: " ++ show as
                                                   ]
-                                           | True
-                                           -> map (\(q, v) -> (q, getSV v)) inps
+                          ResultLamInps xs -> map (\(q, v) -> (q, getSV v)) xs
 
                mbParam
                  | null params = Nothing
@@ -300,10 +299,9 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                                   ]
 
                mkAsgn (sv, e) = (sv, converter e)
-               converter = cvtExp solverCaps rm skolemMap tableMap funcMap
+               converter = cvtExp solverCaps rm tableMap funcMap
                  where solverCaps = capabilities (solver cfg)
                        rm         = roundingMode cfg
-                       skolemMap  = M.empty
                        tableMap   = IM.empty
                        funcMap    = M.empty
 

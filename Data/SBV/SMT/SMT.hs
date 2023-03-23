@@ -111,7 +111,6 @@ newtype SatResult = SatResult SMTResult
 
 -- | An 'Data.SBV.allSat' call results in a 'AllSatResult'
 data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: Bool          -- ^ Did we reach the user given model count limit?
-                                 , allSatHasPrefixExistentials :: Bool          -- ^ Were there quantifiers in the problem (unique upto prefix existentials)
                                  , allSatSolverReturnedUnknown :: Bool          -- ^ Did the solver report unknown at the end?
                                  , allSatSolverReturnedDSat    :: Bool          -- ^ Did the solver report delta-satisfiable at the end?
                                  , allSatResults               :: [SMTResult]   -- ^ All satisfying models
@@ -169,16 +168,12 @@ instance Show SafeResult where
 -- The Show instance of AllSatResults.
 instance Show AllSatResult where
   show AllSatResult { allSatMaxModelCountReached  = l
-                    , allSatHasPrefixExistentials = e
                     , allSatSolverReturnedUnknown = u
                     , allSatSolverReturnedDSat    = d
                     , allSatResults               = xs
                     } = go (0::Int) xs
-    where warnings = case (e, u) of
-                       (False, False) -> ""
-                       (False, True)  -> " (Search stopped since solver has returned unknown.)"
-                       (True,  False) -> " (Unique up to prefix existentials.)"
-                       (True,  True)  -> " (Search stopped because solver has returned unknown, only prefix existentials were considered.)"
+    where warnings | u    = " (Search stopped since solver has returned unknown.)"
+                   | True = ""
 
           go c (s:ss) = let c'      = c+1
                             (ok, o) = sh c' s
