@@ -470,6 +470,15 @@ instance (SymVal a, Lambda m r) => Lambda m (SBV a -> r) where
 
 -- | A value that can be used as a quantified boolean
 class QuantifiedBool a where
+  -- | Turn a quantified boolean into a regular boolean. That is, this function turns an exists/forall quantified
+  -- formula to a simple boolean that can be used as a regular boolean value. An example is:
+  --
+  -- @
+  --   quantifiedBool $ \\(Forall x) (Exists y) -> y .> (x :: SInteger)
+  -- @
+  --
+  -- is equivalent to `sTrue`. You can think of this function as performing quantifier-elimination: It takes
+  -- a quantified formula, and reduces it to a simple boolean that is equivalent to it, but has no quantifiers.
   quantifiedBool :: a -> SBool
 
 -- | Base case of quantification, simple booleans
