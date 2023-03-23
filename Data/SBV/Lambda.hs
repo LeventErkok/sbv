@@ -24,7 +24,8 @@ module Data.SBV.Lambda (
           , constraint,  constraintStr
         ) where
 
-import Control.Monad.Trans
+import Control.Monad       (join)
+import Control.Monad.Trans (liftIO, MonadIO)
 
 import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
@@ -168,10 +169,9 @@ constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
    inSubState inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
 
 -- | Generate a constraint.
-constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SBool
-constraint = constraintGen mkBool
-   where mkBool _deps d = SBV $ SVal KBool $ Right $ cache r
-           where r st = newExpr st KBool (SBVApp (QuantifiedBool (d 0)) [])
+constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SV
+constraint st = join . constraintGen mkSV st
+   where mkSV _deps d = liftIO $ newExpr st KBool (SBVApp (QuantifiedBool (d 0)) [])
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String

@@ -368,11 +368,9 @@ freshVar_ = Trans.freshVar_
 
 -- | Create a fresh variable in query mode. You should prefer
 -- creating input variables using 'Data.SBV.sBool', 'Data.SBV.sInt32', etc., which act
--- as primary inputs to the model and can be existential or universal.
--- Use 'freshVar' only in query mode for anonymous temporary variables.
--- Such variables are always existential. Note that 'freshVar' should hardly be
--- needed: Your input variables and symbolic expressions should suffice for
--- most major use cases.
+-- as primary inputs to the model. Use 'freshVar' only in query mode for anonymous temporary variables.
+-- Note that 'freshVar' should hardly be needed: Your input variables and symbolic expressions
+-- should suffice for -- most major use cases.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshVar'
 freshVar :: SymVal a => String -> Query (SBV a)

@@ -173,17 +173,12 @@ type Goal = Symbolic ()
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
 class ExtractIO m => MProvable m a where
-  -- | Generalization of 'Data.SBV.universal_'
-  universal_ :: a -> SymbolicT m SBool
+  -- | Turn a value into a predicate, by providing an unnamed parameter as argument.
+  argReduce_ :: a -> SymbolicT m SBool
 
-  -- | Generalization of 'Data.SBV.universal'
-  universal  :: [String] -> a -> SymbolicT m SBool
-
-  -- | Generalization of 'Data.SBV.existential_'
-  existential_ :: a -> SymbolicT m SBool
-
-  -- | Generalization of 'Data.SBV.existential'
-  existential :: [String] -> a -> SymbolicT m SBool
+  -- | Turn a value into a predicate, by providing a named parameter as argument. The name supply is taken from the first list,
+  -- ignoring any excess elements. If there isn't enough names, the remainings will go unnamed.
+  argReduce :: [String] -> a -> SymbolicT m SBool
 
   -- | Generalization of 'Data.SBV.prove'
   prove :: a -> m ThmResult
@@ -363,7 +358,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (existential_ a >> Control.executeQuery QueryInternal check)
+       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (argReduce_ a >> Control.executeQuery QueryInternal check)
      where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
@@ -448,7 +443,7 @@ class ExtractIO m => MProvable m a where
                                 notify   "    We will assume that they are essentially zero for the purposes of validation."
                                 notify   "    Note that this is a gross simplification of the model validation with universals!"
 
-                         result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) ((if isSAT then existential_ p else universal_ p) >>= output)
+                         result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) (argReduce_ p >>= output)
 
                          let explain  = [ ""
                                         , "Assignment:"  ++ if null env then " <none>" else ""
@@ -625,7 +620,7 @@ generateSMTBenchmark isSat a = do
       let comments = ["Automatically created by SBV on " ++ show t]
           cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-      (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ (if isSat then existential_ else universal_) a >>= output
+      (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ argReduce_ a >>= output
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
@@ -645,10 +640,8 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 -- and it returns False in a proof-context. This is useful since min/max calls and constraints will provide the
 -- necessary constraints.
 instance ExtractIO m => MProvable m (SymbolicT m ()) where
-  universal_     a = finalizer >>= \b -> universal_     ((a >> pure b) :: SymbolicT m SBool)
-  universal ns   a = finalizer >>= \b -> universal ns   ((a >> pure b) :: SymbolicT m SBool)
-  existential_   a = finalizer >>= \b -> existential_   ((a >> pure b) :: SymbolicT m SBool)
-  existential ns a = finalizer >>= \b -> existential ns ((a >> pure b) :: SymbolicT m SBool)
+  argReduce_    a = finalizer >>= \b -> argReduce_    ((a >> pure b) :: SymbolicT m SBool)
+  argReduce  ns a = finalizer >>= \b -> argReduce  ns ((a >> pure b) :: SymbolicT m SBool)
 
 -- If we're in a proof mode, return sFalse. If SAT, return sTrue.
 finalizer :: MonadSymbolic m => m SBool
@@ -669,18 +662,13 @@ finalizer = do st <- symbolicEnv
                           ]
 
 instance ExtractIO m => MProvable m (SymbolicT m SBool) where
-  universal_     = id
-  universal []   = id
-  universal xs   = error $ "SBV.universal: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
-  existential_   = id
-  existential [] = id
-  existential xs = error $ "SBV.existential: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
+  argReduce_     = id
+  argReduce []   = id
+  argReduce xs   = error $ "SBV.argReduce: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
 
 instance ExtractIO m => MProvable m SBool where
-  universal_    = return
-  universal _   = return
-  existential_  = return
-  existential _ = return
+  argReduce_  = return
+  argReduce _ = return
 
 {-
 -- The following works, but it lets us write properties that
@@ -688,93 +676,65 @@ instance ExtractIO m => MProvable m SBool where
 -- Running that will throw an exception since Haskell's equality
 -- is not be supported by symbolic things. (Needs .==).
 instance Provable Bool where
-  universal_  x  = universal_     (if x then true else false :: SBool)
-  universal s x  = universal s    (if x then true else false :: SBool)
-  existential_  x = existential_  (if x then true else false :: SBool)
-  existential s x = existential s (if x then true else false :: SBool)
+  argReduce_  x  = argReduce_  (if x then true else false :: SBool)
+  argReduce s x  = argReduce s (if x then true else false :: SBool)
 -}
 
--- | Create a quantified named argument
-mkUArg, mkEArg :: (SymVal a, MonadSymbolic m) => String -> m (SBV a)
-mkUArg = mkSymVal (NonQueryVar (Just ALL)) . Just
-mkEArg = mkSymVal (NonQueryVar (Just EX))  . Just
+-- | Create a named argument
+mkArg :: (SymVal a, MonadSymbolic m) => String -> m (SBV a)
+mkArg = mkSymVal (NonQueryVar Nothing) . Just
 
--- | Create a quantified unnamed argument
-mkUArg_, mkEArg_ :: (SymVal a, MonadSymbolic m) => m (SBV a)
-mkUArg_ = mkSymVal (NonQueryVar (Just ALL)) Nothing
-mkEArg_ = mkSymVal (NonQueryVar (Just EX))  Nothing
+-- | Create an unnamed argument
+mkArg_ :: (SymVal a, MonadSymbolic m) => m (SBV a)
+mkArg_ = mkSymVal (NonQueryVar Nothing) Nothing
 
 -- Functions
 instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ k a
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ k a
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ k a
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ k a
-  existential []     k = existential_ k
+  argReduce_       k = mkArg_  >>= \a -> argReduce_   $ k a
+  argReduce (s:ss) k = mkArg s >>= \a -> argReduce ss $ k a
+  argReduce []     k = argReduce_ k
 
 -- Arrays
 instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
-  universal_         k = newArray_  Nothing >>= \a -> universal_   $ k a
-  universal  (s:ss)  k = newArray s Nothing >>= \a -> universal ss $ k a
-  universal  []      k = universal_ k
-  existential_       k = newArray_  Nothing >>= \a -> existential_   $ k a
-  existential (s:ss) k = newArray s Nothing >>= \a -> existential ss $ k a
-  existential []     k = existential_ k
+  argReduce_         k = newArray_  Nothing >>= \a -> argReduce_   $ k a
+  argReduce  (s:ss)  k = newArray s Nothing >>= \a -> argReduce ss $ k a
+  argReduce  []      k = argReduce_ k
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b -> k (a, b)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b -> k (a, b)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b -> k (a, b)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b -> k (a, b)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b -> k (a, b)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b -> k (a, b)
+  argReduce []       k = argReduce_ k
 
 -- 3 Tuple
 instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c -> k (a, b, c)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c -> k (a, b, c)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c -> k (a, b, c)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c -> k (a, b, c)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c -> k (a, b, c)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c -> k (a, b, c)
+  argReduce []       k = argReduce_ k
 
 -- 4 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d -> k (a, b, c, d)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d -> k (a, b, c, d)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d -> k (a, b, c, d)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d -> k (a, b, c, d)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d -> k (a, b, c, d)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d -> k (a, b, c, d)
+  argReduce []       k = argReduce_ k
 
 -- 5 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e -> k (a, b, c, d, e)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e -> k (a, b, c, d, e)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e -> k (a, b, c, d, e)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e -> k (a, b, c, d, e)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e -> k (a, b, c, d, e)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e -> k (a, b, c, d, e)
+  argReduce []       k = argReduce_ k
 
 -- 6 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e f -> k (a, b, c, d, e, f)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e f -> k (a, b, c, d, e, f)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e f -> k (a, b, c, d, e, f)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e f -> k (a, b, c, d, e, f)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e f -> k (a, b, c, d, e, f)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e f -> k (a, b, c, d, e, f)
+  argReduce []       k = argReduce_ k
 
 -- 7 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  universal_         k = mkUArg_  >>= \a -> universal_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  universal (s:ss)   k = mkUArg s >>= \a -> universal ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  universal []       k = universal_ k
-  existential_       k = mkEArg_  >>= \a -> existential_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  existential (s:ss) k = mkEArg s >>= \a -> existential ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  existential []     k = existential_ k
+  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  argReduce []       k = argReduce_ k
 
 -- | Generalization of 'Data.SBV.runSMT'
 runSMT :: MonadIO m => SymbolicT m a -> m a
@@ -787,7 +747,7 @@ runSMTWith cfg a = fst <$> runSymbolic cfg (SMTMode QueryExternal ISetup True cf
 -- | Runs with a query.
 runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup isSAT cfg) comp
-  where comp =  do _ <- (if isSAT then existential_ else universal_) a >>= output
+  where comp =  do _ <- argReduce_ a >>= output
                    Control.executeQuery QueryInternal q
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
@@ -948,44 +908,44 @@ instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal 
 
 -- Functions
 instance (SymVal a, SExecutable m p) => SExecutable m (SBV a -> p) where
-   sName_        k = mkEArg_   >>= \a -> sName_   $ k a
-   sName (s:ss)  k = mkEArg s  >>= \a -> sName ss $ k a
+   sName_        k = mkArg_   >>= \a -> sName_   $ k a
+   sName (s:ss)  k = mkArg s  >>= \a -> sName ss $ k a
    sName []      k = sName_ k
 
 -- 2 Tuple input
 instance (SymVal a, SymVal b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
-  sName_        k = mkEArg_  >>= \a -> sName_   $ \b -> k (a, b)
-  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b -> k (a, b)
+  sName_        k = mkArg_  >>= \a -> sName_   $ \b -> k (a, b)
+  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b -> k (a, b)
   sName []      k = sName_ k
 
 -- 3 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
-  sName_       k  = mkEArg_  >>= \a -> sName_   $ \b c -> k (a, b, c)
-  sName (s:ss) k  = mkEArg s >>= \a -> sName ss $ \b c -> k (a, b, c)
+  sName_       k  = mkArg_  >>= \a -> sName_   $ \b c -> k (a, b, c)
+  sName (s:ss) k  = mkArg s >>= \a -> sName ss $ \b c -> k (a, b, c)
   sName []     k  = sName_ k
 
 -- 4 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
-  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
+  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
+  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
   sName []      k = sName_ k
 
 -- 5 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
-  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
+  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
+  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
   sName []      k = sName_ k
 
 -- 6 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
-  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
+  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
+  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
   sName []      k = sName_ k
 
 -- 7 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  sName_        k = mkEArg_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName (s:ss)  k = mkEArg s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
   sName []      k = sName_ k
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

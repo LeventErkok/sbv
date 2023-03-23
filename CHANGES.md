@@ -7,6 +7,9 @@
 
   * [TODO] Mention all the quantifier related changes
 
+  * All of the previous ways of creating quantified variables (i.e., the functions sbvForall, sbvExists, universal, existential)
+    are removed. The new mechanism described above should be used in their place, simplifying the programming task.
+
   * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
     Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
     usual SBV interpretation. These functions map to the underlying solver's fold and map functions,

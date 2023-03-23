@@ -1181,8 +1181,7 @@ In this case the numerator is off by 7.
 -- | Convert a quantified constraint to a boolean
 quantifiedBool :: Constraint Symbolic a => a -> SBool
 quantifiedBool qb = SBV $ SVal KBool $ Right $ cache f
-  where f st = do b <- liftIO $ constraint st qb
-                  sbvToSV st b
+  where f st = liftIO $ constraint st qb
 
 -- | Assert a quantified constraint, which is like an axiom
 qConstrain :: (Monad m, SolverContext m, Constraint Symbolic a) => a -> m ()
