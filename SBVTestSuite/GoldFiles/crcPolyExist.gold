@@ -1,5 +1,5 @@
 INPUTS
-  s0 :: SWord16, existential, aliasing "poly"
+  s0 :: SWord16, aliasing "poly"
 CONSTANTS
 TABLES
 ARRAYS

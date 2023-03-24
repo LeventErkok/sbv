@@ -17,23 +17,21 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 1)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq (SBVTuple2 (SBVTuple2 String String) (Seq Int)))) ; tracks user variable "x"
 [GOOD] (assert (forall ((seq0 Int)) (=> (and (>= seq0 0) (< seq0 (seq.len s0))) (and (= 1 (str.len (proj_1_SBVTuple2 (proj_1_SBVTuple2 (seq.nth s0 seq0))))) (= 1 (str.len (proj_2_SBVTuple2 (proj_1_SBVTuple2 (seq.nth s0 seq0)))))))))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (seq.len s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s3)
 [SEND] (check-sat)
 [RECV] sat

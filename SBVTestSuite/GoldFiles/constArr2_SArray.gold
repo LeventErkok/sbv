@@ -21,6 +21,7 @@
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
 [GOOD] (declare-fun s1 () Int) ; tracks user variable "j"
 [GOOD] ; --- constant tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] (define-fun array_0 () (Array Int Int) ((as const (Array Int Int)) 2))
 [GOOD] (declare-fun array_1 () (Array Int Int))
@@ -32,7 +33,7 @@
 [GOOD] (declare-fun array_4 () (Array Int Int))
 [GOOD] (define-fun array_4_initializer_0 () Bool (= array_4 (store array_3 s9 s15)))
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Bool (< s0 s1))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
@@ -56,6 +57,7 @@
 [GOOD] (assert array_3_initializer)
 [GOOD] (define-fun array_4_initializer () Bool array_4_initializer_0)
 [GOOD] (assert array_4_initializer)
+[GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)
 [GOOD] (assert s13)

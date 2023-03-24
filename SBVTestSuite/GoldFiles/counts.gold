@@ -1,14 +1,14 @@
 INPUTS
-  s0 :: SWord8, existential
-  s1 :: SWord8, existential
-  s2 :: SWord8, existential
-  s3 :: SWord8, existential
-  s4 :: SWord8, existential
-  s5 :: SWord8, existential
-  s6 :: SWord8, existential
-  s7 :: SWord8, existential
-  s8 :: SWord8, existential
-  s9 :: SWord8, existential
+  s0 :: SWord8
+  s1 :: SWord8
+  s2 :: SWord8
+  s3 :: SWord8
+  s4 :: SWord8
+  s5 :: SWord8
+  s6 :: SWord8
+  s7 :: SWord8
+  s8 :: SWord8
+  s9 :: SWord8
 CONSTANTS
   s10 = 10 :: Word8
   s12 = 0 :: Word8

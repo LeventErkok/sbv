@@ -10,14 +10,14 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (_ BitVec 1) #b0)
 [GOOD] (define-fun s68 () (_ BitVec 32) #x00000001)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (_ BitVec 32)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () (_ BitVec 1) ((_ extract 0 0) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
 [GOOD] (define-fun s4 () Bool (not s3))

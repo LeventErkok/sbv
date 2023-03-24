@@ -11,7 +11,7 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () Real (/ 2.0 1.0))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [FAIL] (declare-fun s0 () Real) ; tracks user variable "x"
 CAUGHT SMT EXCEPTION
 *** Data.SBV: Unexpected non-success response from Z3:

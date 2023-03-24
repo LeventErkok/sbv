@@ -1,10 +1,10 @@
 INPUTS
-  s0 :: SWord16, existential, aliasing "c1"
-  s18 :: SWord16, existential, aliasing "c2"
-  s30 :: SWord16, existential, aliasing "c3"
-  s42 :: SWord16, existential, aliasing "c4"
-  s54 :: SWord16, existential, aliasing "c5"
-  s66 :: SWord16, existential, aliasing "c6"
+  s0 :: SWord16, aliasing "c1"
+  s18 :: SWord16, aliasing "c2"
+  s30 :: SWord16, aliasing "c3"
+  s42 :: SWord16, aliasing "c4"
+  s54 :: SWord16, aliasing "c5"
+  s66 :: SWord16, aliasing "c6"
 CONSTANTS
   s1 = 1 :: Word16
   s3 = 5 :: Word16
