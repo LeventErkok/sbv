@@ -177,6 +177,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.SendMoreMoney
                   , Documentation.SBV.Examples.Puzzles.Sudoku
                   , Documentation.SBV.Examples.Puzzles.U2Bridge
+                  , Documentation.SBV.Examples.Queries.Abducts
                   , Documentation.SBV.Examples.Queries.AllSat
                   , Documentation.SBV.Examples.Queries.UnsatCore
                   , Documentation.SBV.Examples.Queries.FourFours

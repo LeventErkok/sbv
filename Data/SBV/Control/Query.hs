@@ -22,7 +22,7 @@
 module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
-     , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAssignment, getOption
+     , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAbduct, getAbductNext, getAssignment, getOption
      , freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
      , push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
@@ -49,7 +49,7 @@ import qualified Data.Foldable      as F
 
 import Data.Char      (toLower)
 import Data.List      (intercalate, nubBy, sortOn)
-import Data.Maybe     (listToMaybe, catMaybes)
+import Data.Maybe     (listToMaybe, catMaybes, fromMaybe)
 import Data.Function  (on)
 import Data.Bifunctor (first)
 import Data.Foldable  (toList)
@@ -170,6 +170,7 @@ getOption f = case f undefined of
                  ProduceInterpolants{}       -> askFor "ProduceInterpolants"       ":produce-interpolants"        $ bool       ProduceInterpolants
                  ProduceUnsatAssumptions{}   -> askFor "ProduceUnsatAssumptions"   ":produce-unsat-assumptions"   $ bool       ProduceUnsatAssumptions
                  ProduceUnsatCores{}         -> askFor "ProduceUnsatCores"         ":produce-unsat-cores"         $ bool       ProduceUnsatCores
+                 ProduceAbducts{}            -> askFor "ProduceAbducts"            ":produce-abducts"             $ bool       ProduceAbducts
                  RandomSeed{}                -> askFor "RandomSeed"                ":random-seed"                 $ integer    RandomSeed
                  ReproducibleResourceLimit{} -> askFor "ReproducibleResourceLimit" ":reproducible-resource-limit" $ integer    ReproducibleResourceLimit
                  SMTVerbosity{}              -> askFor "SMTVerbosity"              ":verbosity"                   $ integer    SMTVerbosity
@@ -664,6 +665,27 @@ getInterpolantMathSAT fs
 
        parse r bad $ \e -> return $ serialize False e
 
+
+-- | Generalization of 'Data.SBV.Control.getAbduct'.
+getAbduct :: (SolverContext m, MonadIO m, MonadQuery m) => Maybe String -> String -> SBool -> m String
+getAbduct mbGrammar defName b = do
+   s <- inNewContext (`sbvToSV` b)
+   let cmd = "(get-abduct " ++ defName ++ " " ++ show s ++ fromMaybe "" mbGrammar ++ ")"
+       bad = unexpected "getAbduct" cmd "a get-abduct response" Nothing
+
+   r <- ask cmd
+
+   parse r bad $ \e -> return $ serialize False e
+
+-- | Generalization of 'Data.SBV.Control.getAbductNext'.
+getAbductNext :: (MonadIO m, MonadQuery m) => m String
+getAbductNext = do
+   let cmd = "(get-abduct-next)"
+       bad = unexpected "getAbductNext" cmd "a get-abduct-next response" Nothing
+
+   r <- ask cmd
+
+   parse r bad $ \e -> return $ serialize False e
 
 -- | Generalization of 'Data.SBV.Control.getInterpolantZ3'. Use this version with Z3.
 getInterpolantZ3 :: (MonadIO m, MonadQuery m) => [SBool] -> m String

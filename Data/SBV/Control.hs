@@ -41,6 +41,9 @@ module Data.SBV.Control (
      -- ** Extracting interpolants
      , getInterpolantMathSAT, getInterpolantZ3
 
+     -- ** Getting abducts
+     , getAbduct, getAbductNext
+
      -- ** Extracting assertions
      , getAssertions
 
@@ -89,6 +92,7 @@ import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, ge
                                       , inNewAssertionStack, push, pop
                                       , caseSplit, resetAssertions, echo, exit
                                       , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3
+                                      , getAbduct, getAbductNext
                                       , getAssertions, getAssignment
                                       , mkSMTResult, freshVar_, freshVar
                                       , freshArray, freshArray_, checkSat, ensureSat

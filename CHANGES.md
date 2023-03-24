@@ -43,6 +43,9 @@
     "Documentation/SBV/Examples/Misc/LambdaArray.hs" for an example use. This adds expressive power,
     as we can now specify arrays with index dependent contents much more easily.
 
+  * Added support for abduct-generation, as supported by CVC5. See "Documentation/SBV/Examples/Queries/Abducts.hs"
+    for a basic example.
+
   * [BACKWARDS COMPATIBILITY] The signature of Data.SBV.List's concat has changed. In previous releases
     this was a synonym for appending two lists, now it takes a list-of-lists and flattens it, matching the
     Haskell list function with the same name.

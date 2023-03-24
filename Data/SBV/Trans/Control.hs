@@ -39,6 +39,9 @@ module Data.SBV.Trans.Control (
      -- ** Extracting interpolants
      , getInterpolantMathSAT, getInterpolantZ3
 
+     -- ** Getting abducts
+     , getAbduct, getAbductNext
+
      -- ** Extracting assertions
      , getAssertions
 

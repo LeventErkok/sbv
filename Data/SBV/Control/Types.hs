@@ -105,6 +105,7 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | ProduceInterpolants       Bool
                | ProduceUnsatAssumptions   Bool
                | ProduceUnsatCores         Bool
+               | ProduceAbducts            Bool
                | RandomSeed                Integer
                | ReproducibleResourceLimit Integer
                | SMTVerbosity              Integer
@@ -124,6 +125,7 @@ isStartModeOption ProduceProofs{}             = True
 isStartModeOption ProduceInterpolants{}       = True
 isStartModeOption ProduceUnsatAssumptions{}   = True
 isStartModeOption ProduceUnsatCores{}         = True
+isStartModeOption ProduceAbducts{}            = True
 isStartModeOption RandomSeed{}                = True
 isStartModeOption ReproducibleResourceLimit{} = False
 isStartModeOption SMTVerbosity{}              = False
@@ -141,6 +143,7 @@ isOnlyOnceOption ProduceAssignments{}        = True
 isOnlyOnceOption ProduceProofs{}             = True
 isOnlyOnceOption ProduceInterpolants{}       = True
 isOnlyOnceOption ProduceUnsatAssumptions{}   = True
+isOnlyOnceOption ProduceAbducts{}            = False
 isOnlyOnceOption ProduceUnsatCores{}         = True
 isOnlyOnceOption RandomSeed{}                = False
 isOnlyOnceOption ReproducibleResourceLimit{} = False
@@ -164,6 +167,7 @@ setSMTOption = cvt
         cvt (ProduceInterpolants       b) = opt   [":produce-interpolants",        smtBool b]
         cvt (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
         cvt (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
+        cvt (ProduceAbducts            b) = opt   [":produce-abducts",             smtBool b]
         cvt (RandomSeed                i) = opt   [":random-seed",                 show i]
         cvt (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", show i]
         cvt (SMTVerbosity              i) = opt   [":verbosity",                   show i]

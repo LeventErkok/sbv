@@ -301,6 +301,27 @@ getInterpolantMathSAT = Trans.getInterpolantMathSAT
 getInterpolantZ3 :: [SBool] -> Query String
 getInterpolantZ3 = Trans.getInterpolantZ3
 
+-- | Get an abduct. The first argument is a conjecture. The return value will be an assertion
+-- such that in addition with the existing assertions you have, will imply this conjecture.
+-- The second argument is the grammar which guides the synthesis of this abduct, if given.
+-- Note that SBV doesn't do any checking on the grammar. See the relevant documentation on CVC5
+-- for details.
+--
+-- NB. Before you use this function, make sure to call
+--
+-- @
+--      setOption $ ProduceAbducts True
+-- @
+--
+-- to enable abduct generation.
+getAbduct :: Maybe String -> String -> SBool -> Query String
+getAbduct = Trans.getAbduct
+
+-- | Get the next abduct. Only call this after the first call to 'getAbduct' goes through. You can call
+-- it repeatedly to get a different abduct.
+getAbductNext :: Query String
+getAbductNext = Trans.getAbductNext
+
 -- | Retrieve assertions. Note you must have arranged for
 -- assertions to be available first via
 --
