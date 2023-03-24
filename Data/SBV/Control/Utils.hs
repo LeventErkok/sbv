@@ -1308,7 +1308,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                                            _               -> error $ "Data.SBV: Cannot uniquely determine " ++ show nm ++ " in " ++ show assocs
 
                                                        cstr :: Bool -> (SVal, CV) -> m ()
-                                                       cstr shouldReject (sv, cv) = constrain $ (SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) :: SBool)
+                                                       cstr shouldReject (sv, cv) = constrain (SBV $ mkEq (kindOf sv) sv (SVal (kindOf sv) (Left cv)) :: SBool)
                                                          where mkEq :: Kind -> SVal -> SVal -> SVal
                                                                mkEq k a b
                                                                 | isDouble k || isFloat k || isFP k
