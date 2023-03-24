@@ -690,7 +690,7 @@ type FunctionMap = M.Map Op String
 
 -- Present an SV, simply show
 cvtSV :: SV -> String
-cvtSV s = show s
+cvtSV = show
 
 cvtCV :: RoundingMode -> CV -> String
 cvtCV = cvToSMTLib

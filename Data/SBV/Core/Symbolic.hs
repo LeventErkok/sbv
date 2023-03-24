@@ -24,9 +24,8 @@
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE UndecidableInstances       #-} -- for undetermined s in MonadState
+{-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -840,11 +839,8 @@ instance Show Result where
   show (Result _ kinds _ _ cgs params (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ (case params of
-                      ResultTopInps (i, t) ->   ["INPUTS"]
-                                             ++ map shn i
-                                             ++ (if null t then [] else "TRACKER VARS" : map shn t)
-                      ResultLamInps qs     ->   ["LAMBDA-CONSTRAINT PARAMS"]
-                                             ++ map shq qs
+                      ResultTopInps (i, t) -> "INPUTS" : map shn i ++ (if null t then [] else "TRACKER VARS" : map shn t)
+                      ResultLamInps qs     -> "LAMBDA-CONSTRAINT PARAMS" : map shq qs
                    )
                 ++ ["CONSTANTS"]
                 ++ concatMap shc cs
@@ -1836,19 +1832,19 @@ extractSymbolicSimulationState st@State{ runMode=rrm
                if lambdaOnly
                   then case topInps of
                           ([], []) -> pure $ ResultLamInps (F.toList ls)
-                          (xs, ys) -> error $ unlines $ [ ""
-                                                        , "*** Data.SBV: Impossible happened; saw inputs in lambda mode."
-                                                        , "***"
-                                                        , "***   Inps    : " ++ show xs
-                                                        , "***   Trackers: " ++ show ys
-                                                        ]
+                          (xs, ys) -> error $ unlines [ ""
+                                                      , "*** Data.SBV: Impossible happened; saw inputs in lambda mode."
+                                                      , "***"
+                                                      , "***   Inps    : " ++ show xs
+                                                      , "***   Trackers: " ++ show ys
+                                                      ]
                   else case lamInps of
                           [] -> pure $ ResultTopInps topInps
-                          _  -> error $ unlines $ [ ""
-                                                  , "*** Data.SBV: Impossible happened; saw lambda inputs in regular mode."
-                                                  , "***"
-                                                  , "***   Params: " ++ show lamInps
-                                                  ]
+                          _  -> error $ unlines [ ""
+                                                , "*** Data.SBV: Impossible happened; saw lambda inputs in regular mode."
+                                                , "***"
+                                                , "***   Params: " ++ show lamInps
+                                                ]
 
    outsO <- reverse <$> readIORef outs
 

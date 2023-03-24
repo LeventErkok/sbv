@@ -1173,7 +1173,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                          vars = let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
 
                                     ignored k = isNonModelVar cfg (getUserName' k)
-                                              || "__internal_sbv" `T.isPrefixOf` (getUserName k)
+                                              || "__internal_sbv" `T.isPrefixOf` getUserName k
 
                                 in mkSVal <$> S.filter (not . ignored) allModelInputs
 
