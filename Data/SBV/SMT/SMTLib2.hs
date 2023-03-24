@@ -232,7 +232,7 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
              ++ [ "; --- arraySetups ---" ]
              ++ concat arraySetups
              ++ [ "; --- delayedEqualities ---" ]
-             ++ delayedAsserts delayedEqualities
+             ++ map (\s -> "(assert ++ " s ++ ")") delayedEqualities
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
@@ -242,8 +242,6 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
 
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
         delayedEqualities = concatMap snd nonConstTables
-
-        delayedAsserts ds = map (\s -> "(assert " ++ s ++ ")") ds
 
         finalAssert
           | noConstraints = []
