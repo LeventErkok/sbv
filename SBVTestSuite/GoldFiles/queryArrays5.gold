@@ -10,23 +10,19 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () (_ BitVec 8)) ; tracks user variable "v"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] (declare-fun array_0 () (Array (_ BitVec 8) (_ BitVec 8)))
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- assignments ---
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
 [GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
-[GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
 [GOOD] (define-fun s2 () (_ BitVec 8) #x01)
 [GOOD] (define-fun s4 () (_ BitVec 8) #x01)
 [GOOD] (declare-fun array_1 () (Array (_ BitVec 8) (_ BitVec 8)))

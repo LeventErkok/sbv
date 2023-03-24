@@ -10,19 +10,15 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- assignments ---
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
-[GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
 [GOOD] (declare-fun array_0 () (Array Int Int))
 [GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
 [GOOD] (define-fun s0 () Int 0)
