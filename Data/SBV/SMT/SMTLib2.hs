@@ -232,7 +232,7 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
              ++ [ "; --- arraySetups ---" ]
              ++ concat arraySetups
              ++ [ "; --- delayedEqualities ---" ]
-             ++ map (\s -> "(assert ++ " s ++ ")") delayedEqualities
+             ++ map (\s -> "(assert " ++ s ++ ")") delayedEqualities
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
