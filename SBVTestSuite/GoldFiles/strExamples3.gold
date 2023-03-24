@@ -13,16 +13,16 @@
 [GOOD] (define-fun s4 () String "abcd")
 [GOOD] (define-fun s7 () String "cdef")
 [GOOD] (define-fun s9 () String "")
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () String) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () String) ; tracks user variable "b"
 [GOOD] (declare-fun s2 () String) ; tracks user variable "c"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () String (str.++ s0 s1))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
 [GOOD] (define-fun s6 () String (str.++ s1 s2))
@@ -31,10 +31,8 @@
 [GOOD] (define-fun s11 () Bool (not s10))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s5)
 [GOOD] (assert s8)
 [GOOD] (assert s11)

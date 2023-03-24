@@ -12,14 +12,16 @@
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] (declare-fun array_0 () (Array Int Int))
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] (define-fun array_0_initializer () Bool true) ; no initialization needed
+[GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (push 1)
 [GOOD] (define-fun s0 () Int 1)

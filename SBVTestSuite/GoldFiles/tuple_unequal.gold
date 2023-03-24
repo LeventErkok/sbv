@@ -16,15 +16,15 @@
                                                          (proj_2_SBVTuple2 T2))))))
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (SBVTuple2 Int Int))
 [GOOD] (declare-fun s1 () (SBVTuple2 Int Int))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Int (proj_1_SBVTuple2 s0))
 [GOOD] (define-fun s3 () Int (proj_1_SBVTuple2 s1))
 [GOOD] (define-fun s4 () Bool (< s2 s3))
@@ -40,10 +40,8 @@
 [GOOD] (define-fun s14 () Bool (or s11 s13))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s10)
 [GOOD] (assert s14)
 [SEND] (check-sat)

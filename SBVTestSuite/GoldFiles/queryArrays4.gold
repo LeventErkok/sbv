@@ -14,12 +14,14 @@
 [GOOD] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "i"
 [GOOD] (declare-fun s1 () (_ BitVec 8)) ; tracks user variable "j"
 [GOOD] ; --- constant tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
+[GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (define-fun s2 () (_ BitVec 8) #x00)
 [GOOD] (define-fun s3 () (_ BitVec 8) #x01)

@@ -13,17 +13,17 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Thing Thing_witness)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s4 () Thing)
 [GOOD] (declare-fun s5 () Thing)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun thingCompare (Thing Thing) Bool)
 [GOOD] (declare-fun thingMerge (Thing Thing) Thing)
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Thing))
          (thingCompare l1_s0 l1_s0)))
 [GOOD] (define-fun s1 () Bool (forall ((l1_s0 Thing) (l1_s1 Thing))
@@ -37,10 +37,8 @@
 [GOOD] (define-fun s9 () Bool (or s7 s8))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s0)
 [GOOD] (assert s1)
 [GOOD] (assert (not s9))

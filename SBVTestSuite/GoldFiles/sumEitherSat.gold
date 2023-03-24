@@ -17,14 +17,14 @@
                                             (right_SBVEither (get_right_SBVEither T2))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 0)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (SBVEither Int Bool)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (get_left_SBVEither s0))
 [GOOD] (define-fun s3 () Bool (> s1 s2))
 [GOOD] (define-fun s4 () Bool (get_right_SBVEither s0))
@@ -33,10 +33,8 @@
 [GOOD] (define-fun s7 () Bool (ite s6 s3 s5))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s7)
 [SEND] (check-sat)
 [RECV] sat

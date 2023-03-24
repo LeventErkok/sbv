@@ -16,16 +16,16 @@
 [GOOD] (define-fun s3 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2)))
 [GOOD] (define-fun s6 () (Seq Int) (seq.++ (seq.unit 2) (seq.unit 1)))
 [GOOD] (define-fun s12 () (Seq Int) (seq.unit 1))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq Int)) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () (Seq Int)) ; tracks user variable "b"
 [GOOD] (declare-fun s2 () (Seq Int)) ; tracks user variable "c"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () (Seq Int) (seq.++ s3 s1))
 [GOOD] (define-fun s5 () (Seq Int) (seq.++ s0 s4))
 [GOOD] (define-fun s7 () (Seq Int) (seq.++ s6 s2))
@@ -39,10 +39,8 @@
 [GOOD] (define-fun s16 () Bool (not s15))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s9)
 [GOOD] (assert s11)
 [GOOD] (assert s16)

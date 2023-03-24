@@ -19,14 +19,14 @@
 [GOOD] (define-fun s3 () (SBVMaybe Int) (as nothing_SBVMaybe (SBVMaybe Int)))
 [GOOD] (define-fun s5 () Int 1)
 [GOOD] (define-fun s15 () Int 0)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (SBVMaybe Int)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool ((_ is (nothing_SBVMaybe () (SBVMaybe Int))) s0))
 [GOOD] (define-fun s2 () Bool (ite s1 true false))
 [GOOD] (define-fun s4 () Int (get_just_SBVMaybe s0))
@@ -46,10 +46,8 @@
 [GOOD] (define-fun s20 () Bool (= s16 s19))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s11)
 [GOOD] (assert s14)
 [GOOD] (assert s20)

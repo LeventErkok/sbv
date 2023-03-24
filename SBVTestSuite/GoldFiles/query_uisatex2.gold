@@ -45,10 +45,10 @@
 [GOOD] (define-fun s64 () (Seq Int) (seq.unit 5))
 [GOOD] (define-fun s65 () (Seq (_ FloatingPoint  8 24)) (seq.++ (seq.unit ((_ to_fp 8 24) roundNearestTiesToEven (/ 8598323.0 1048576.0))) (seq.unit (_ +zero 8 24))))
 [GOOD] (define-fun s67 () Int 210)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun q1 (Int) Int)
@@ -57,8 +57,8 @@
 [GOOD] (declare-fun q4 (String String) (_ FloatingPoint  8 24))
 [GOOD] (declare-fun q5 ((Seq Int) (Seq (_ FloatingPoint  8 24))) Int)
 [GOOD] (declare-fun q6 (Int) Bool)
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Int (q1 s1))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
 [GOOD] (define-fun s6 () Int (q1 s5))
@@ -100,10 +100,8 @@
 [GOOD] (define-fun s71 () Bool (or s69 s70))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (assert s8)
 [GOOD] (assert s12)

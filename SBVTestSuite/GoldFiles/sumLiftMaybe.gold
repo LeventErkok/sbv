@@ -17,22 +17,20 @@
                                             (just_SBVMaybe (get_just_SBVMaybe T))))))
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (SBVMaybe Int) (as nothing_SBVMaybe (SBVMaybe Int)))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "i"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () (SBVMaybe Int) ((as just_SBVMaybe (SBVMaybe Int)) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s3)
 [SEND] (check-sat)
 [RECV] sat

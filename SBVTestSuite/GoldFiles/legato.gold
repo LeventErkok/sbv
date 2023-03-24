@@ -1,11 +1,11 @@
 INPUTS
-  s0 :: SWord8, existential, aliasing "x"
-  s1 :: SWord8, existential, aliasing "y"
-  s2 :: SWord8, existential, aliasing "lo"
-  s3 :: SWord8, existential, aliasing "regX"
-  s4 :: SWord8, existential, aliasing "regA"
-  s5 :: SBool, existential, aliasing "flagC"
-  s6 :: SBool, existential, aliasing "flagZ"
+  s0 :: SWord8, aliasing "x"
+  s1 :: SWord8, aliasing "y"
+  s2 :: SWord8, aliasing "lo"
+  s3 :: SWord8, aliasing "regX"
+  s4 :: SWord8, aliasing "regA"
+  s5 :: SBool, aliasing "flagC"
+  s6 :: SBool, aliasing "flagZ"
 CONSTANTS
   s7 = 256 :: Word16
   s8 = 0 :: Word8

@@ -11,21 +11,19 @@
 [ISSUE] ; --- sums ---
 [ISSUE] ; --- literal constants ---
 [ISSUE] (define-fun s1 () (_ BitVec 8) #x0a)
-[ISSUE] ; --- skolem constants ---
+[ISSUE] ; --- top level inputs ---
 [ISSUE] (declare-fun s0 () (_ BitVec 8)) ; tracks user variable "x"
 [ISSUE] ; --- constant tables ---
-[ISSUE] ; --- skolemized tables ---
+[ISSUE] ; --- non-constant tables ---
 [ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
-[ISSUE] ; --- user given axioms and definitions ---
-[ISSUE] ; --- preQuantifier assignments ---
+[ISSUE] ; --- user defined functions ---
+[ISSUE] ; --- assignments ---
 [ISSUE] (define-fun s2 () Bool (bvult s0 s1))
 [ISSUE] ; --- arrayDelayeds ---
 [ISSUE] ; --- arraySetups ---
-[ISSUE] ; --- formula ---
-[ISSUE] ; --- postQuantifier assignments ---
 [ISSUE] ; --- delayedEqualities ---
-[ISSUE] ; -- finalAssert ---
+[ISSUE] ; --- formula ---
 [ISSUE] (assert s2)
 [SEND] (check-sat)
 [RECV] sat

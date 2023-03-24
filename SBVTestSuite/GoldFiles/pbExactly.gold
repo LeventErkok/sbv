@@ -13,7 +13,7 @@
 [GOOD] (define-fun s11 () (_ BitVec 32) #x00000001)
 [GOOD] (define-fun s12 () (_ BitVec 32) #x00000000)
 [GOOD] (define-fun s32 () (_ BitVec 32) #x00000005)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Bool) ; tracks user variable "b0"
 [GOOD] (declare-fun s1 () Bool) ; tracks user variable "b1"
 [GOOD] (declare-fun s2 () Bool) ; tracks user variable "b2"
@@ -25,11 +25,11 @@
 [GOOD] (declare-fun s8 () Bool) ; tracks user variable "b8"
 [GOOD] (declare-fun s9 () Bool) ; tracks user variable "b9"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s10 () Bool ((_ pbeq 5 1 1 1 1 1 1 1 1 1 1) s0 s1 s2 s3 s4 s5 s6 s7 s8 s9))
 [GOOD] (define-fun s13 () (_ BitVec 32) (ite s0 s11 s12))
 [GOOD] (define-fun s14 () (_ BitVec 32) (ite s1 s11 s12))
@@ -55,10 +55,8 @@
 [GOOD] (define-fun s35 () Bool (not s34))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s35)
 [SEND] (check-sat)
 [RECV] unsat

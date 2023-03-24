@@ -23,14 +23,14 @@
 [GOOD] (define-fun s14 () Int 4)
 [GOOD] (define-fun s17 () Int 5)
 [GOOD] (define-fun s23 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String)))) (seq.++ (seq.unit (mkSBVTuple2 2 (as seq.empty (Seq (SBVTuple2 Int String))))) (seq.unit (mkSBVTuple2 1 (seq.++ (seq.unit (mkSBVTuple2 3 "foo")) (seq.unit (mkSBVTuple2 0 "bar")) (seq.unit (mkSBVTuple2 (- 1) "baz")) (seq.unit (mkSBVTuple2 (- 2) "quux")) (seq.unit (mkSBVTuple2 (- 3) "enough"))))) (seq.unit (mkSBVTuple2 (- 4) (as seq.empty (Seq (SBVTuple2 Int String))))) (seq.unit (mkSBVTuple2 (- 5) (as seq.empty (Seq (SBVTuple2 Int String)))))))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq (SBVTuple2 Int (Seq (SBVTuple2 Int String))))) ; tracks user variable "lst"
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () (SBVTuple2 Int (Seq (SBVTuple2 Int String))) (seq.nth s0 s1))
 [GOOD] (define-fun s3 () Int (proj_1_SBVTuple2 s2))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
@@ -50,10 +50,8 @@
 [GOOD] (define-fun s24 () Bool (= s0 s23))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s5)
 [GOOD] (assert s12)
 [GOOD] (assert s15)

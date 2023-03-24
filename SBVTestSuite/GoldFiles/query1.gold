@@ -20,7 +20,7 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s6 () Int 0)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int) ; tracks user variable "a"
 [GOOD] (declare-fun s1 () Int) ; tracks user variable "b"
 [GOOD] (declare-fun s2 () (_ FloatingPoint  8 24)) ; tracks user variable "c"
@@ -28,19 +28,17 @@
 [GOOD] (declare-fun s4 () Real) ; tracks user variable "e"
 [GOOD] (declare-fun s5 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s7 () Bool (> s0 s6))
 [GOOD] (define-fun s8 () Bool (> s1 s6))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert (! s7 :named |a > 0|))
 [GOOD] (assert s8)
 [GOOD] (define-fun s9 () Int 2)

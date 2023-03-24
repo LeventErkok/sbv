@@ -12,23 +12,21 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s1 () Int 12)
 [GOOD] (define-fun s3 () Int 2)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] (define-fun s4 () Bool (> s0 s3))
 [GOOD] (define-fun s5 () Bool (not s4))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (push 1)
 [GOOD] (assert s5)
 [SEND] (check-sat)
