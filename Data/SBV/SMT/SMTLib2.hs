@@ -214,14 +214,16 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> nm)) | var <- trackerVars, let s = getSV var, let nm = getUserName' var]
              ++ [ "; --- constant tables ---" ]
-             ++ concatMap (uncurry (:) . mkTable) allTables
+             ++ concatMap (uncurry (:) . mkTable) constTables
+             ++ [ "; --- non-constant tables ---" ]
+             ++ map nonConstTable nonConstTables
              ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap declUI uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
              ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
-             ++ [ "; --- user given axioms and definitions ---" ]
+             ++ [ "; --- user defined functions ---"]
              ++ declUserFuns defs
              ++ [ "; --- assignments ---" ]
              ++ concatMap (declDef cfg tableMap funcMap) asgns
@@ -229,11 +231,19 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
              ++ concat arrayDelayeds
              ++ [ "; --- arraySetups ---" ]
              ++ concat arraySetups
+             ++ [ "; --- delayedEqualities ---" ]
+             ++ delayedAsserts delayedEqualities
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
-        allTables   = [(t, genTableData rm (map fst consts) t) | t <- tbls]
+        allTables      = [(t, genTableData rm (map fst consts) t) | t <- tbls]
+        constTables    = [(t, d) | (t, Left  d) <- allTables]
+        nonConstTables = [(t, d) | (t, Right d) <- allTables]
+
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
+        delayedEqualities = concatMap snd nonConstTables
+
+        delayedAsserts ds = map (\s -> "(assert " ++ s ++ ")") ds
 
         finalAssert
           | noConstraints = []
@@ -480,7 +490,7 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
 
         (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
 
-        allTables = [(t, genTableData rm (map fst consts) t) | t <- tbls]
+        allTables = [(t, either id id (genTableData rm (map fst consts) t)) | t <- tbls]
         (tableDecls, tableAssigns) = unzip $ map mkTable allTables
 
         tableMap  = IM.fromList $ map mkIdx allTables
@@ -621,27 +631,33 @@ mkTable (((i, ak, rk), _elts), is) = (decl, zipWith wrap [(0::Int)..] is ++ setu
           | True           = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lis - 1]) ++ "))"
                              , "(assert " ++ initializer ++ ")"
                              ]
+nonConstTable :: (((Int, Kind, Kind), [SV]), [String]) -> String
+nonConstTable (((i, ak, rk), _elts), _) = decl
+  where t    = "table" ++ show i
+        decl = "(declare-fun " ++ t ++ " (" ++ smtType ak ++ ") " ++ smtType rk ++ ")"
 
 -- Left if all constants, Right if otherwise
-genTableData :: RoundingMode -> [SV] -> ((Int, Kind, Kind), [SV]) -> [String]
-genTableData rm consts ((i, aknd, _), elts) = map (topLevel . snd) tElts
-  where tElts = zipWith mkElt elts [(0::Int)..]
-        t     = "table" ++ show i
+genTableData :: RoundingMode -> [SV] -> ((Int, Kind, Kind), [SV]) -> Either [String] [String]
+genTableData rm consts ((i, aknd, _), elts)
+  | null post = Left  (map (mkEntry . snd) pre)
+  | True      = Right (map (mkEntry . snd) (pre ++ post))
+  where (pre, post) = partition fst (zipWith mkElt elts [(0::Int)..])
+        t           = "table" ++ show i
 
         mkElt x k   = (isReady, (idx, cvtSV x))
           where idx = cvtCV rm (mkConstCV aknd k)
                 isReady = x `Set.member` constsSet
 
-        topLevel (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
+        mkEntry (idx, v) = "(= (" ++ t ++ " " ++ idx ++ ") " ++ v ++ ")"
 
         constsSet = Set.fromList consts
 
--- TODO: We currently do not support non-constant arrays when quantifiers are present, as
--- we might have to skolemize those. Implement this properly.
--- The difficulty is with the Mutate/Merge: We have to postpone an init if
--- the components are themselves postponed, so this cannot be implemented as a simple map.
+-- Declare arrays
 declArray :: SMTConfig -> CnstMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg consts (i, (_, (aKnd, bKnd), ctx)) = (adecl : zipWith wrap [(0::Int)..] (map snd pre), zipWith wrap [lpre..] (map snd post), setup)
+declArray cfg consts (i, (_, (aKnd, bKnd), ctx)) = ( adecl : zipWith wrap [(0::Int)..] (map snd pre)
+                                                   , zipWith wrap [lpre..] (map snd post)
+                                                   , setup
+                                                   )
   where constMapping = M.fromList [(s, c) | (c, s) <- M.assocs consts]
         constNames   = M.keys constMapping
         (pre, post) = partition fst ctxInfo
