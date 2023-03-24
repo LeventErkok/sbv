@@ -5,18 +5,21 @@
 
 ### Version 9.2.5, Not yet released
 
-  * [TODO] Mention all the quantifier related changes
+  * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
+    ways of creating quantified variables (i.e., the functions sbvForall, sbvExists, universal, existential) are
+    removed. Instead, we can now express quantifiers in a much straightforward way, by passing them to
+    'constrain' directly. A simple example is:
 
-  * All of the previous ways of creating quantified variables (i.e., the functions sbvForall, sbvExists, universal, existential)
-    are removed. The new mechanism described above should be used in their place, simplifying the programming task.
+        constrain $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
 
-  * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
-    Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
-    usual SBV interpretation. These functions map to the underlying solver's fold and map functions,
-    via lambda-abtractions. Note that the SMT engines remain incomplete with respect to sequence
-    theories. (That is, any property that requires induction for its proof will cause unknown
-    answers, or will not terminate.) However, basic properties, especially when the solver can determine the
-    shape of the sequence arguments (i.e., number of elements), should go through.
+    You can nest quantifiers as you wish, and the quantified parameters can be of arbitrary symbolic type.
+    Additionally, you can convert such a quantified formula to a regular boolean, via a call to 'quantifiedBool'
+    function, essentially performing quantifier elimination:
+
+        other_condition .&& quantifiedBool (\(Forall x) (Exists y) -> y .> (x :: SInteger))
+
+    This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
+    your other symbolic computations.
 
   * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
     unroll all definitions, but there are certain cases where we would like the functions
@@ -27,6 +30,14 @@
     can handle both recursive and non-recursive functions. See "Documentation/SBV/Examples/Misc/Definitions.hs"
     for examples.
 
+  * Added new SList functions: map, mapi, foldl, foldr, foldli, foldri, zip, zipWith, filter, all, any.
+    Note that these work on arbitrary--but finite--length lists, with all terminating elements, per
+    usual SBV interpretation. These functions map to the underlying solver's fold and map functions,
+    via lambda-abtractions. Note that the SMT engines remain incomplete with respect to sequence
+    theories. (That is, any property that requires induction for its proof will cause unknown
+    answers, or will not terminate.) However, basic properties, especially when the solver can determine the
+    shape of the sequence arguments (i.e., number of elements), should go through.
+
   * New function 'lambdaAsArray' allows creation of array values out of lambda-expressions. See
     "Documentation/SBV/Examples/Misc/LambdaArray.hs" for an example use. This adds expressive power,
     as we can now specify arrays with index dependent contents much more easily.
@@ -35,15 +46,15 @@
     this was a synonym for appending two lists, now it takes a list-of-lists and flattens it, matching the
     Haskell list function with the same name.
 
-  * [BACKWARDS COMPATIBILITY] The function addAxiom is removed. Instead use quantified-constraints, which
-    is a much better and safer way of handling such cases.
+  * [BACKWARDS COMPATIBILITY] The function addAxiom is removed. Instead use quantified-constraints, as described
+    above.
 
   * [BACKWARDS COMPATIBILITY] Renamed the Uninterpreted class to SMTDefinable, since its task has changed, handling
     both kinds of definitions. Unless you were referring to the name Uninterpreted in your code, this should not
     impact you. Otherwise, simply rename it to SMTDefinable.
 
   * [BACKWARDS COMPATIBILITY] The configuration variable 'allowQuantifiedQueries' is removed. It is no
-    longer relevant with our new quantification strategy.
+    longer relevant with our new quantification strategy described above.
 
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
