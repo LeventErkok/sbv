@@ -1,5 +1,5 @@
 INPUTS
-  s0 :: SWord8, existential, aliasing "x"
+  s0 :: SWord8, aliasing "x"
 CONSTANTS
   s1 = 1 :: Word8
 TABLES

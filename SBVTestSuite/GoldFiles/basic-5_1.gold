@@ -1,6 +1,6 @@
 INPUTS
-  s0 :: SWord8, existential, aliasing "x"
-  s1 :: SWord8, existential, aliasing "q"
+  s0 :: SWord8, aliasing "x"
+  s1 :: SWord8, aliasing "q"
 CONSTANTS
 TABLES
 ARRAYS

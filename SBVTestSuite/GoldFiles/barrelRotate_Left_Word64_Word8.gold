@@ -12,16 +12,16 @@
 [GOOD] (define-fun s2 () (_ BitVec 8) #x40)
 [GOOD] (define-fun s5 () (_ BitVec 1) #b0)
 [GOOD] (define-fun s91 () (_ BitVec 64) #x0000000000000000)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (_ BitVec 64))
 [GOOD] (declare-fun s1 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] (declare-fun table0 ((_ BitVec 8)) (_ BitVec 64))
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () (_ BitVec 8) (bvurem s1 s2))
 [GOOD] (define-fun s4 () (_ BitVec 1) ((_ extract 5 5) s3))
 [GOOD] (define-fun s6 () Bool (distinct s4 s5))
@@ -113,8 +113,6 @@
 [GOOD] (define-fun s93 () Bool (= s28 s92))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] (assert (= (table0 #x00) s0))
 [GOOD] (assert (= (table0 #x01) s17))
@@ -180,7 +178,7 @@
 [GOOD] (assert (= (table0 #x3d) s88))
 [GOOD] (assert (= (table0 #x3e) s89))
 [GOOD] (assert (= (table0 #x3f) s90))
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert (not s93))
 [SEND] (check-sat)
 [RECV] unsat
