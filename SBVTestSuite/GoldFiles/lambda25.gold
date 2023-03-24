@@ -20,12 +20,12 @@
 [GOOD] (define-fun s5 () (Seq Int) (seq.++ (seq.unit 10) (seq.unit 9) (seq.unit 8) (seq.unit 7) (seq.unit 6) (seq.unit 5) (seq.unit 4) (seq.unit 3) (seq.unit 2) (seq.unit 1)))
 [GOOD] (define-fun s7 () Int 0)
 [GOOD] (define-fun s10 () (Seq Int) (as seq.empty (Seq Int)))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq Int))
 [GOOD] (declare-fun s1 () (Seq Int))
 [GOOD] (declare-fun s2 () Int)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- SBV Function definitions
@@ -33,8 +33,8 @@
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
                             (seq.++ (sbv.reverse_0 (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] (define-fun s8 () Int (seq.len s1))
@@ -58,10 +58,8 @@
 [GOOD] (define-fun s20 () Bool (= s2 s19))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (assert s6)
 [GOOD] (assert s20)

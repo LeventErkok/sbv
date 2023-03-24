@@ -10,13 +10,13 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; -- user given mutually-recursive definitions: bar, foo
 [GOOD] (define-funs-rec
          ((bar ((l2_s0 Int)) Int)
@@ -31,17 +31,15 @@
           (let ((l1_s1 (bar l1_s0)))
           (let ((l1_s3 (+ l1_s1 l1_s2)))
           l1_s3)))))
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (foo s0))
 [GOOD] (define-fun s2 () Int (bar s0))
 [GOOD] (define-fun s3 () Int (+ s1 s2))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (declare-fun s5 () Int)
 [GOOD] (define-fun s6 () Int (foo s5))

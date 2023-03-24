@@ -17,14 +17,14 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () Int 20)
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int)
 [GOOD] (declare-fun s1 () Bool)
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; -- user given definition: isEvenOdd [Recursive]
 [GOOD] (define-fun-rec isEvenOdd ((l1_s0 Int)) (SBVTuple2 Bool Bool)
          (let ((l1_s1 0))
@@ -42,7 +42,7 @@
          (let ((l1_s13 (ite l1_s5 l1_s6 l1_s12)))
          (let ((l1_s14 (ite l1_s2 l1_s4 l1_s13)))
          l1_s14)))))))))))))))
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () (SBVTuple2 Bool Bool) (isEvenOdd s0))
 [GOOD] (define-fun s5 () Bool (proj_2_SBVTuple2 s4))
@@ -50,10 +50,8 @@
 [GOOD] (define-fun s7 () Bool (and s3 s6))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s7)
 [GOOD] (declare-fun s8 () Int)
 [GOOD] (declare-fun s9 () Bool)

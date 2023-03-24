@@ -14,15 +14,15 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5)))
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq Int))
 [GOOD] (declare-fun s1 () (Seq Int))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () (Seq Int) (seq.map (lambda ((l1_s0 Int))
          (let ((l1_s1 1))
@@ -31,10 +31,8 @@
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s3)
 [GOOD] (assert s5)
 [SEND] (check-sat)

@@ -7,21 +7,19 @@
 ; --- sums ---
 ; --- literal constants ---
 (define-fun s1 () (_ BitVec 8) #x01)
-; --- skolem constants ---
+; --- top level inputs ---
 (declare-fun s0 () (_ BitVec 8))
 ; --- constant tables ---
-; --- skolemized tables ---
+; --- non-constant tables ---
 ; --- arrays ---
 ; --- uninterpreted constants ---
-; --- user given axioms and definitions ---
-; --- preQuantifier assignments ---
+; --- user defined functions ---
+; --- assignments ---
 (define-fun s2 () (_ BitVec 8) (bvadd s0 s1))
 (define-fun s3 () Bool (= s0 s2))
 ; --- arrayDelayeds ---
 ; --- arraySetups ---
-; --- formula ---
-; --- postQuantifier assignments ---
 ; --- delayedEqualities ---
-; -- finalAssert ---
+; --- formula ---
 (assert (not s3))
 (check-sat)

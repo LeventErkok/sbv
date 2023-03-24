@@ -10,13 +10,13 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] ; --- skolem constants ---
+[GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
-[GOOD] ; --- skolemized tables ---
+[GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user given axioms and definitions ---
+[GOOD] ; --- user defined functions ---
 [GOOD] ; -- user given mutually-recursive definitions: f1, f2, f3, f4
 [GOOD] (define-funs-rec
          ((f1 ((l1_s0 (_ BitVec 8))) (_ BitVec 8))
@@ -75,15 +75,13 @@
           (let ((l4_s10 (bvadd l4_s3 l4_s9)))
           (let ((l4_s11 (ite l4_s2 l4_s1 l4_s10)))
           l4_s11)))))))))))))
-[GOOD] ; --- preQuantifier assignments ---
+[GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () (_ BitVec 8) (f1 s0))
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
-[GOOD] ; --- formula ---
-[GOOD] ; --- postQuantifier assignments ---
 [GOOD] ; --- delayedEqualities ---
-[GOOD] ; -- finalAssert ---
+[GOOD] ; --- formula ---
 [GOOD] (assert s2)
 [GOOD] (declare-fun s3 () (_ BitVec 8))
 [GOOD] (define-fun s4 () (_ BitVec 8) (f1 s3))
