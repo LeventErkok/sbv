@@ -188,9 +188,14 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
                  ++ getModels
                  ++ logic
 
-        trackerVars = case allInputs of
-                        ResultTopInps (_, ts) -> ts
-                        ResultLamInps _       -> []
+        (inputs, trackerVars)
+            = case allInputs of
+                ResultTopInps ists -> ists
+                ResultLamInps ps   -> error $ unlines [ ""
+                                                      , "*** Data.SBV.smtLib2: Unexpected lambda inputs in conversion"
+                                                      , "***"
+                                                      , "*** Saw: " ++ show ps
+                                                      ]
 
         pgm  =  map ("; " ++) comments
              ++ settings
@@ -204,6 +209,8 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
              ++ (if containsRationals kindInfo then declRationals else [])
              ++ [ "; --- literal constants ---" ]
              ++ concatMap (declConst cfg) consts
+             ++ [ "; --- top level inputs ---"]
+             ++ concat [declareFun s (SBVType [kindOf s]) (userName s) | var <- inputs, let s = getSV var]
              ++ [ "; --- optimization tracker variables ---" | not (null trackerVars) ]
              ++ concat [declareFun s (SBVType [kindOf s]) (Just ("tracks " <> nm)) | var <- trackerVars, let s = getSV var, let nm = getUserName' var]
              ++ [ "; --- constant tables ---" ]
@@ -272,6 +279,11 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
                                ["sbv.reverse_" ++ show i | i <- [(0::Int)..]]
 
         asgns = F.toList asgnsSeq
+
+        userNameMap = M.fromList $ map (\nSymVar -> (getSV nSymVar, getUserName' nSymVar)) inputs
+        userName s = case M.lookup s userNameMap of
+                        Just u  | show s /= u -> Just $ "tracks user variable " ++ show u
+                        _                     -> Nothing
 
 -- Declare "known" SBV functions here
 declSBVFunc :: Op -> String -> [String]
