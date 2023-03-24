@@ -173,6 +173,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.Murder
                   , Documentation.SBV.Examples.Puzzles.NQueens
                   , Documentation.SBV.Examples.Puzzles.Orangutans
+                  , Documentation.SBV.Examples.Puzzles.Rabbits
                   , Documentation.SBV.Examples.Puzzles.SendMoreMoney
                   , Documentation.SBV.Examples.Puzzles.Sudoku
                   , Documentation.SBV.Examples.Puzzles.U2Bridge
