@@ -3,7 +3,7 @@
 
 * Latest Hackage released version: 9.2, 2023-01-16
 
-### Version 9.2.5, Not yet released
+### Version 10.0, Not yet released
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
     ways of creating quantified variables (i.e., the functions sbvForall, sbvExists, universal, existential) are
