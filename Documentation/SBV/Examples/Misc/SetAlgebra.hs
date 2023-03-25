@@ -15,7 +15,6 @@
 module Documentation.SBV.Examples.Misc.SetAlgebra where
 
 import Data.SBV hiding (complement)
-import Data.SBV.Set ()   -- This import shouldn't be necessary, but I can't get doctest to work otherwise. Sigh.
 
 -- $setup
 -- >>> -- For doctest purposes only:
@@ -27,7 +26,6 @@ import Data.SBV.Set ()   -- This import shouldn't be necessary, but I can't get 
 type SI = SSet Integer
 
 -- * Commutativity
--- $commutativity
 {- $commutativity
 \(A\cup B=B\cup A\)
 
@@ -41,7 +39,6 @@ Q.E.D.
 -}
 
 -- * Associativity
--- $associativity
 {- $associativity
 
 \((A\cup B)\cup C=A\cup (B\cup C)\)
@@ -56,7 +53,6 @@ Q.E.D.
 -}
 
 -- * Distributivity
--- $distributivity
 {- $distributivity
 \(A\cup (B\cap C)=(A\cup B)\cap (A\cup C)\)
 
@@ -70,7 +66,6 @@ Q.E.D.
 -}
 
 -- * Identity properties
--- $identity
 {- $identity
 
 \(A\cup \varnothing = A\)
@@ -85,7 +80,6 @@ Q.E.D.
 -}
 
 -- * Complement properties
--- $complement
 {- $complement
 
 \( A\cup A^{C}=U \)
@@ -116,7 +110,6 @@ Q.E.D.
 
 -- * Uniqueness of the complement
 --
--- $compUnique
 {- $compUnique
 The complement of a set is the only set that satisfies the first two complement properties above. That
 is complementation is characterized by those two laws, as we can formally establish:
@@ -128,7 +121,6 @@ Q.E.D.
 -}
 
 -- * Idempotency
--- $idempotent
 {- $idempotent
 
 \( A\cup A=A \)
@@ -143,7 +135,6 @@ Q.E.D.
 -}
 
 -- * Domination properties
--- $domination
 {- $domination
 
 \( A\cup U=U \)
@@ -158,7 +149,6 @@ Q.E.D.
 -}
 
 -- * Absorption properties
--- $absorption
 {- $absorption
 
 \( A\cup (A\cap B)=A \)
@@ -173,7 +163,6 @@ Q.E.D.
 -}
 
 -- * Intersection and set difference
--- $intdiff
 {- $intdiff
 
 \( A\cap B=A\setminus (A\setminus B) \)
@@ -183,7 +172,6 @@ Q.E.D.
 -}
 
 -- * De Morgan's laws
--- $deMorgan
 {- $deMorgan
 
 \( (A\cup B)^{C}=A^{C}\cap B^{C} \)
@@ -198,7 +186,6 @@ Q.E.D.
 -}
 
 -- * Inclusion is a partial order
--- $incPO
 {- $incPO
 Subset inclusion is a partial order, i.e., it is reflexive, antisymmetric, and transitive:
 
@@ -219,7 +206,6 @@ Q.E.D.
 -}
 
 -- * Joins and meets
--- $joinMeet
 {- $joinMeet
 
 \( A\subseteq A\cup B \)
@@ -250,7 +236,6 @@ Q.E.D.
 -}
 
 -- * Subset characterization
--- $subsetChar
 {- $subsetChar
 There are multiple equivalent ways of characterizing the subset relationship:
 
@@ -277,7 +262,6 @@ Q.E.D.
 -}
 
 -- * Relative complements
--- $relComp
 {- $relComp
 
 \( C\setminus (A\cap B)=(C\setminus A)\cup (C\setminus B) \)
@@ -350,7 +334,6 @@ Q.E.D.
 -}
 
 -- * Distributing subset relation
--- $distSubset
 {- $distSubset
 
 A common mistake newcomers to set theory make is to distribute the subset relationship over intersection
