@@ -19,8 +19,11 @@
         other_condition .&& quantifiedBool (\(Forall x) (Exists y) -> y .> (x :: SInteger))
 
     This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
-    your other symbolic computations. A simple example is available at "Documentation/SBV/Examples/Puzzles/Rabbits.hs"
-    to illustrate the use of quantifiers.
+    your other symbolic computations.
+
+    Two new examples are available to demonstrate reasoning with quantifiers. See:
+         - Documentation/SBV/Examples/Puzzles/Rabbits.hs
+         - Documentation/SBV/Examples/Puzzles/KnightsAndKnaves.hs
 
   * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
     unroll all definitions, but there are certain cases where we would like the functions
