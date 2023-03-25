@@ -25,10 +25,11 @@
     This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
     your other symbolic computations.
 
-    Two new examples are available to demonstrate reasoning with quantifiers. See:
+    For examples to demonstrate reasoning with quantifiers, see:
     
        * Documentation/SBV/Examples/Puzzles/Rabbits.hs
        * Documentation/SBV/Examples/Puzzles/KnightsAndKnaves.hs
+       * Documentation/SBV/Examples/Misc/FirstOrderLogic.hs
 
   * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
     unroll all definitions, but there are certain cases where we would like the functions
