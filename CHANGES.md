@@ -25,7 +25,7 @@
     This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
     your other symbolic computations.
 
-    For examples to demonstrate reasoning with quantifiers, see:
+    See the following files demonstrating reasoning with quantifiers:
     
        * Documentation/SBV/Examples/Puzzles/Rabbits.hs
        * Documentation/SBV/Examples/Puzzles/KnightsAndKnaves.hs
