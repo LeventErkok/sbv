@@ -17,7 +17,7 @@
 module Data.SBV.Utils.PrettyNum (
         PrettyNum(..), readBin, shex, chex, shexI, sbin, sbinI
       , showCFloat, showCDouble, showHFloat, showHDouble, showBFloat, showFloatAtBase
-      , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib, mkSkolemZero
+      , showSMTFloat, showSMTDouble, smtRoundingMode, cvToSMTLib
       , showNegativeNumber
       ) where
 
@@ -494,12 +494,6 @@ cvToSMTLib rm x
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
         mkMinBound :: Int -> String
         mkMinBound i = "#b1" ++ replicate (i-1) '0'
-
--- | Create a skolem 0 for the kind
-mkSkolemZero :: RoundingMode -> Kind -> String
-mkSkolemZero _ (KUserSort _ (Just (f:_))) = f
-mkSkolemZero _ (KUserSort s _)            = error $ "SBV.mkSkolemZero: Unexpected user sort: " ++ s
-mkSkolemZero rm k                         = cvToSMTLib rm (mkConstCV k (0::Integer))
 
 -- | Show a float as a binary
 showBFloat :: (Show a, RealFloat a) => a -> ShowS
