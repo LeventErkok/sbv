@@ -325,7 +325,7 @@ module Data.SBV (
   , constrain, softConstrain, Forall(..), Exists(..), ForallN(..), ExistsN(..)
 
   -- * Quantified booleans and quantifier elimination
-  , quantifiedBool
+  , QuantifiedBool, quantifiedBool
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
