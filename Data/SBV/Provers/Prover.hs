@@ -613,6 +613,14 @@ instance ExtractIO m => MProvable m SBool where
   argReduce_  = return
   argReduce _ = return
 
+instance (SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (Forall a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
+
+instance (SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (Exists a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
+
 {-
 -- The following works, but it lets us write properties that
 -- are not useful.. Such as: prove $ \x y -> (x::SInt8) == y

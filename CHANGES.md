@@ -18,6 +18,10 @@
 
         other_condition .&& quantifiedBool (\(Forall x) (Exists y) -> y .> (x :: SInteger))
 
+    Or you can prove/sat quantified formulas directly:
+
+        prove $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
+
     This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
     your other symbolic computations.
 
