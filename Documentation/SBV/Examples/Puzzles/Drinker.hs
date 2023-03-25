@@ -44,6 +44,4 @@ d = uninterpret "D"
 -- >>> drinker
 -- Q.E.D.
 drinker :: IO ThmResult
-drinker = prove p
-  where p :: Predicate
-        p = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
+drinker = prove $ \(Exists x) (Forall y) -> d x .=> d y

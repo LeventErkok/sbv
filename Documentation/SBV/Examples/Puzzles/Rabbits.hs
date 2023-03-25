@@ -63,4 +63,3 @@ rabbits = do -- All rabbits that are not greedy are black
 -- Q.E.D.
 rabbitsAreOK :: IO ThmResult
 rabbitsAreOK = prove rabbits
-
