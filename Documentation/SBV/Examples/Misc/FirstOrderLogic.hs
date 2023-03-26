@@ -101,3 +101,42 @@ Provided \(x\) is not free in \(P\): \(P\lor \forall x\,Q(x)\Leftrightarrow \for
 >>> prove $ (p .|| qe (\(Forall x) -> q x)) .<=> qe (\(Forall x) -> p .|| q x)
 Q.E.D.
 -}
+
+-- * A non-identity
+{- $nonIdentity
+It's instructive to look at an example where the proof actually fails. Consider, for instance, an
+example of a merging quantifiers like we did above, except when the equality doesn't hold. That
+is, we try to prove the "correct" sounding, but incorrect conjecture:
+
+\(\forall x\,P(x)\lor \forall x\,Q(x)\Leftrightarrow \forall x\,(P(x)\lor Q(x))\)
+
+We have:
+
+>>> let p = uninterpret "P" :: SU -> SBool
+>>> let q = uninterpret "Q" :: SU -> SBool
+>>> prove $ (qe (\(Forall x) -> p x) .|| qe (\(Forall x) -> q x)) .<=> qe (\(Forall x) -> p x .|| q x)
+Falsifiable. Counter-example:
+  P :: U -> Bool
+  P U!val!2 = True
+  P U!val!0 = True
+  P _       = False
+<BLANKLINE>
+  Q :: U -> Bool
+  Q U!val!2 = False
+  Q U!val!0 = False
+  Q _       = True
+
+The solver found us a falsifying instance: Pick a domain with at least three elements. We'll call
+the first element @U!val!2@, and the second element @U!val!0@, without naming the others. (Unfortunately the solver picks nonintuitive names, but you can substitute better names if you like. They're just names of two distinct
+objects that belong to the domain \(U\) with no other meaning.)
+
+Arrange so that \(P\) is true on @U!val!2@ and @U!val!0@, but false for everything else.
+Also arrange so that \(Q\) is false on these two elements, but true for everything else.
+
+With this
+assignment, the right hand side of our conjecture
+is true no matter which element you pick, because either \(P\) or \(Q\) is true on any
+given element. (Actually, only one will be true on any element, but that is tangential.)
+But left-hand-side is not a tautology: Clearly neither \(P\) nor \(Q\) are true for all elements, and
+hence both disjuncts are false. Thus, the alleged conjecture is not an equivalence in first order logic.
+-}
