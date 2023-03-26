@@ -41,6 +41,7 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
          others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @4 xs)   -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
                   , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @4 xs)   -> sum xs .== (0::SWord8)
                   , goldenCapturedIO "quantifiedB_2" $ check $ \k (ForallN @4 xs) -> sum xs .== (k::SWord8)
+                  , goldenCapturedIO "quantifiedB_3" $ check $ \k (ExistsN @4 xs) -> sum xs .== (k::SWord8)
                   ]
            where check p rf = do res <- satWith z3{verbose=True, redirectVerbose=Just rf} p
                                  appendFile rf $ "\nRESULT: "  ++ show res
