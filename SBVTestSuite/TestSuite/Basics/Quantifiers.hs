@@ -9,7 +9,10 @@
 -- Various combinations of quantifiers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -17,6 +20,7 @@ module TestSuite.Basics.Quantifiers(tests) where
 
 import Control.Monad (void)
 
+import Data.SBV.Control
 import Utils.SBVTestFramework
 
 data Q = E  -- exists
@@ -27,13 +31,26 @@ instance Show Q where
    show A = "forall"
 
 tests :: TestTree
-tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkPred preds
+tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkPred preds ++ others
    where mkGoal (g, nm) = [ goldenCapturedIO ("quantified_sat"   ++ "_" ++ nm) $ \rf -> void $ satWith   z3{verbose=True, redirectVerbose=Just rf} g
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} g
                           ]
          mkPred (p, nm) = [ goldenCapturedIO ("quantified_sat"   ++ "_" ++ nm) $ \rf -> void $ satWith   z3{verbose=True, redirectVerbose=Just rf} p
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} p
                           ]
+
+         others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @4 xs) -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
+                  , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @4 xs) -> sum xs .== (0::SWord8)
+                  ]
+           where check p rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
+                                   constrain p
+                                   query $ do cs <- checkSat
+                                              io $ appendFile rf $ "CHECKSAT: " ++ show cs ++ "\n"
+                                              case cs of
+                                                Sat -> do m <- getModel
+                                                          io $ appendFile rf $ "\nMODEL: " ++ show m ++ "\nDONE.\n"
+                                                _   -> pure ()
+
 
          qs   = [E, A]
 
