@@ -151,15 +151,9 @@ namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b
-constraintGen trans inState@State{rHasQuants, rLambdaLevel} f = do
+constraintGen trans inState@State{rHasQuants} f = do
    -- indicate we have quantifiers
    liftIO $ writeIORef rHasQuants True
-
-   -- make sure we're at the top
-   ll <- liftIO $ readIORef rLambdaLevel
-   () <- case ll of
-           0 -> pure ()
-           _ -> error "Data.SBV.constraintGen: Not supported: constraint calls that are not at the top-level."
 
    let mkDef (Defn deps Nothing       body) = trans deps body
        mkDef (Defn deps (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
