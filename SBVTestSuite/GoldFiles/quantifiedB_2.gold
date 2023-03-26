@@ -11,27 +11,27 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
+[GOOD] (declare-fun s0 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s0 () Bool (exists ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)) (l1_s2 (_ BitVec 8)) (l1_s3 (_ BitVec 8)))
-         (let ((l1_s7 #x00))
+[GOOD] (define-fun s1 () Bool (forall ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)) (l1_s2 (_ BitVec 8)) (l1_s3 (_ BitVec 8)))
          (let ((l1_s4 (bvadd l1_s0 l1_s1)))
          (let ((l1_s5 (bvadd l1_s2 l1_s4)))
          (let ((l1_s6 (bvadd l1_s3 l1_s5)))
-         (let ((l1_s8 (= l1_s6 l1_s7)))
-         l1_s8)))))))
+         (let ((l1_s7 (= s0 l1_s6)))
+         l1_s7))))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s0)
+[GOOD] (assert s1)
 [SEND] (check-sat)
-[RECV] sat
+[RECV] unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
-RESULT: Satisfiable
+RESULT: Unsatisfiable

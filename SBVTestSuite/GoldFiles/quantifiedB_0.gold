@@ -5,7 +5,7 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic ALL) ; external query, using all logics.
+[GOOD] (set-logic BV)
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -42,6 +42,7 @@
 [GOOD] (assert s0)
 [SEND] (check-sat)
 [RECV] unsat
-CHECKSAT: Unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
+
+RESULT: Unsatisfiable

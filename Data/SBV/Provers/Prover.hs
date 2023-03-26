@@ -36,7 +36,7 @@ module Data.SBV.Provers.Prover (
        ) where
 
 
-import Control.Monad          (when, unless, replicateM)
+import Control.Monad          (when, unless)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.DeepSeq        (rnf, NFData(..))
 
@@ -51,15 +51,12 @@ import Data.Time (getZonedTime, NominalDiffTime, UTCTime, getCurrentTime, diffUT
 import Data.List (intercalate, isPrefixOf)
 import Data.IORef (readIORef)
 
-import Data.Proxy
-
 import Data.Maybe (mapMaybe, listToMaybe)
 
 import qualified Data.Foldable   as S (toList)
 import qualified Data.Text       as T
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (intOfProxy)
 import Data.SBV.Core.Symbolic
 import Data.SBV.SMT.SMT
 import Data.SBV.SMT.Utils (debug, alignPlain)
@@ -619,21 +616,21 @@ instance ExtractIO m => MProvable m SBool where
   argReduce_  = return
   argReduce _ = return
 
-instance (SymVal a, MProvable m r) => MProvable m (Forall a -> r) where
-  argReduce_   k = mkSymVal (NonQueryVar (Just ALL)) Nothing >>= \a -> argReduce_   $ k (Forall a)
-  argReduce xs k = mkSymVal (NonQueryVar (Just ALL)) Nothing >>= \a -> argReduce xs $ k (Forall a)
+instance (ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (Forall a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
 
-instance (SymVal a, MProvable m r) => MProvable m (Exists a -> r) where
-  argReduce_   k = mkSymVal (NonQueryVar (Just EX)) Nothing >>= \a -> argReduce_   $ k (Exists a)
-  argReduce xs k = mkSymVal (NonQueryVar (Just EX)) Nothing >>= \a -> argReduce xs $ k (Exists a)
+instance (ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (Exists a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
 
-instance (KnownNat n, SymVal a, MProvable m r) => MProvable m (ForallN n a -> r) where
-  argReduce_   k = replicateM (intOfProxy (Proxy @n)) (mkSymVal (NonQueryVar (Just ALL)) Nothing) >>= \as -> argReduce_   $ k (ForallN as)
-  argReduce xs k = replicateM (intOfProxy (Proxy @n)) (mkSymVal (NonQueryVar (Just ALL)) Nothing) >>= \as -> argReduce xs $ k (ForallN as)
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (ForallN n a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
 
-instance (KnownNat n, SymVal a, MProvable m r) => MProvable m (ExistsN n a -> r) where
-  argReduce_   k = replicateM (intOfProxy (Proxy @n)) (mkSymVal (NonQueryVar (Just EX)) Nothing) >>= \as -> argReduce_   $ k (ExistsN as)
-  argReduce xs k = replicateM (intOfProxy (Proxy @n)) (mkSymVal (NonQueryVar (Just EX)) Nothing) >>= \as -> argReduce xs $ k (ExistsN as)
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (ExistsN n a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
 
 {-
 -- The following works, but it lets us write properties that
