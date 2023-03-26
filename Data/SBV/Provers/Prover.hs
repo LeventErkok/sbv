@@ -78,6 +78,8 @@ import qualified Data.SBV.Provers.MathSAT   as MathSAT
 import qualified Data.SBV.Provers.Yices     as Yices
 import qualified Data.SBV.Provers.Z3        as Z3
 
+import GHC.TypeLits
+
 mkConfig :: SMTSolver -> SMTLibVersion -> [Control.SMTOption] -> SMTConfig
 mkConfig s smtVersion startOpts = SMTConfig { verbose                     = False
                                             , timing                      = NoTiming
@@ -618,6 +620,14 @@ instance (SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (
   argReduce xs = argReduce xs . quantifiedBool
 
 instance (SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (Exists a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
+
+instance (KnownNat n, SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (ForallN n a -> r) where
+  argReduce_   = argReduce_   . quantifiedBool
+  argReduce xs = argReduce xs . quantifiedBool
+
+instance (KnownNat n, SymVal a, Constraint (SymbolicT IO) r, MProvable m r) => MProvable m (ExistsN n a -> r) where
   argReduce_   = argReduce_   . quantifiedBool
   argReduce xs = argReduce xs . quantifiedBool
 
