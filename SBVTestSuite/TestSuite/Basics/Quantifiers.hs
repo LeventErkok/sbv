@@ -20,7 +20,6 @@ module TestSuite.Basics.Quantifiers(tests) where
 
 import Control.Monad (void)
 
-import Data.SBV.Control
 import Utils.SBVTestFramework
 
 data Q = E  -- exists
@@ -39,18 +38,12 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} p
                           ]
 
-         others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @4 xs) -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
-                  , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @4 xs) -> sum xs .== (0::SWord8)
+         others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @4 xs)   -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
+                  , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @4 xs)   -> sum xs .== (0::SWord8)
+                  , goldenCapturedIO "quantifiedB_2" $ check $ \(ForallN @4 xs) k -> sum xs .== (k::SWord8)
                   ]
-           where check p rf = runSMTWith z3{verbose=True, redirectVerbose=Just rf} $ do
-                                   constrain p
-                                   query $ do cs <- checkSat
-                                              io $ appendFile rf $ "CHECKSAT: " ++ show cs ++ "\n"
-                                              case cs of
-                                                Sat -> do m <- getModel
-                                                          io $ appendFile rf $ "\nMODEL: " ++ show m ++ "\nDONE.\n"
-                                                _   -> pure ()
-
+           where check p rf = do res <- satWith z3{verbose=True, redirectVerbose=Just rf} p
+                                 appendFile rf $ "\nRESULT: "  ++ show res
 
          qs   = [E, A]
 
