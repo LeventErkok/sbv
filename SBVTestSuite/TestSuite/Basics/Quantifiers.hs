@@ -48,6 +48,8 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                   , goldenCapturedIO "quantifiedB_7" $ check $ \(Exists (x :: SBool)) -> quantifiedBool (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
                   , goldenCapturedIO "quantifiedB_8" $ check $ \(Exists (x :: SBool)) -> (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
                   , goldenCapturedIO "quantifiedB_9" $ check $ quantifiedBool $ \(Exists (x :: SBool)) -> (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
+                  , goldenCapturedIO "quantifiedB_A" $ check $ \(Exists a) (Forall b) (Exists c) (Forall d) ->  a + b + c + d .== (0::SInteger)
+                  , goldenCapturedIO "quantifiedB_B" $ check $ \(Forall a) (Exists b) (Forall c) (Exists d) ->  a + b + c + d .== (0::SInteger)
                   ]
            where check p rf = do res <- satWith z3{verbose=True, redirectVerbose=Just rf} p
                                  appendFile rf $ "\nRESULT: "  ++ show res ++ "\n"
