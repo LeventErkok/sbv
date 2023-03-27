@@ -11,10 +11,10 @@
 -- to perform push's and pop's. However performing a push and a pop is still
 -- single threaded and so each solution will need to wait for the previous
 -- solution to be found. In this example we show a class of functions
--- 'Data.SBV.satConcurrentAll' and 'Data.SBV.satConcurrentAny' which spin up
+-- 'Data.SBV.satConcurrentWithAll' and 'Data.SBV.satConcurrentWithAny' which spin up
 -- independent solver instances and runs query computations concurrently. The
 -- children query computations are allowed to communicate with one another as
--- demonstrated in the second demo
+-- demonstrated in the second demo.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
