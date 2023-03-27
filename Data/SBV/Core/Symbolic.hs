@@ -821,7 +821,7 @@ data Result = Result { hasQuants      :: Bool                                   
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
-                     , resAxioms      :: [SMTDef]                                     -- ^ axioms/definitions
+                     , resDefinitions :: [SMTDef]                                     -- ^ definitions created via smtFunction or lambda
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions

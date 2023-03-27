@@ -16,6 +16,8 @@ module Data.SBV.Tools.GenTest (
         genTest, TestVectors, getTestValues, renderTest, TestStyle(..)
         ) where
 
+import Control.Monad (unless)
+
 import Data.Bits     (testBit)
 import Data.Char     (isAlpha, toUpper)
 import Data.Function (on)
@@ -49,9 +51,10 @@ genTest n m = gen 0 []
          | i == n = return $ TV $ reverse sofar
          | True   = do t <- tc
                        gen (i+1) (t:sofar)
-        tc = do (_, Result {resTraces=tvals, resConsts=(_, cs), resConstraints=cstrs, resOutputs=os}) <- runSymbolic defaultSMTCfg (Concrete Nothing) (m >>= output)
+        tc = do (_, Result {resTraces=tvals, resConsts=(_, cs), resDefinitions=definitions, resConstraints=cstrs, resOutputs=os}) <- runSymbolic defaultSMTCfg (Concrete Nothing) (m >>= output)
                 let cval = fromMaybe (error "Cannot generate tests in the presence of uninterpeted constants!") . (`lookup` cs)
                     cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
+                unless (null definitions) $ error "Cannot generate tests in the presence of 'smtFunction' calls!"
                 if cond
                    then return (map snd tvals, map cval os)
                    else tc   -- try again, with the same set of constraints
