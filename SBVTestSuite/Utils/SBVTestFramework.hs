@@ -50,8 +50,6 @@ import Test.Tasty.Runners hiding (Result)
 import Data.SBV
 import Data.SBV.Control
 
-import Data.Maybe (fromMaybe)
-
 import System.FilePath ((</>), (<.>))
 
 import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..), Outputtable)
@@ -165,21 +163,10 @@ qc1 nm opC opS = [cf, sm]
 -- | Quick-check a binary function, creating one version for constant folding, and another for solver
 qc2 :: (Eq a, Eq b, SymVal a, SymVal b, SymVal c, Show a, Show b, QC.Arbitrary a, QC.Arbitrary b, Eq c) => String -> (a -> b -> c) -> (SBV a -> SBV b -> SBV c) -> [TestTree]
 qc2 nm opC opS = [cf, sm]
-   where cf = QC.testProperty (nm ++ ".constantFold") $ do
-                        i1 <- free "i1"
-                        i2 <- free "i2"
-
-                        let grab n = fromMaybe (error $ "qc2." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
-
-                            v1 = grab "i1" i1
-                            v2 = grab "i2" i2
-
-                            expected = literal $ opC v1 v2
-                            result   = opS i1 i2
-
-                        case (unliteral expected, unliteral result) of
-                           (Just _, Just _) -> return $ expected .== result
-                           _                -> return sFalse
+   where cf = QC.testProperty (nm ++ ".constantFold") $ \i j ->
+                         case unliteral (opS (literal i) (literal j)) of
+                             Just r -> opC i j == r
+                             _      -> False
 
          sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
                         ((i1, i2, expected), result) <- QC.run $ runSMT $ do v1  <- liftIO $ QC.generate QC.arbitrary

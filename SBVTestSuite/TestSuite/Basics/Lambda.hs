@@ -186,8 +186,9 @@ tests =
                                                 appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
                                                 `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
       ]
-   P.++ qc1 "lambdaQC"  P.sum (foldr (+) (0::SInteger))
-   P.++ qc1 "lambdaQC2" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
+   P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
+   P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
+   P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
   where record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
