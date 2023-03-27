@@ -839,7 +839,7 @@ depends on the context:
 
 {- $generalConstraints
 A good use case (in fact the motivating use case) for 'constrain' is attaching a
-constraint to a universally or existentially quantified variable at the time of its creation.
+constraint to a variable at the time of its creation.
 Also, the conjunctive semantics for 'sat' and the implicative
 semantics for 'prove' simplify programming by choosing the correct interpretation
 automatically. However, one should be aware of the semantic difference. For instance, in
