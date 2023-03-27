@@ -63,7 +63,7 @@ module Data.SBV.Core.Data
  , QuantifiedBool(..)
  ) where
 
-import GHC.TypeLits
+import GHC.TypeLits (Nat)
 
 import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
