@@ -121,19 +121,10 @@ assertIsntSat p = assert (fmap not (isSatisfiable p))
 -- | Quick-check a unary function, creating one version for constant folding, and another for solver
 qc1 :: (Eq a, SymVal a, SymVal b, Show a, QC.Arbitrary a, Eq b) => String -> (a -> b) -> (SBV a -> SBV b) -> [TestTree]
 qc1 nm opC opS = [cf, sm]
-   where cf = QC.testProperty (nm ++ ".constantFold") $ do
-                        i <- free "i"
-
-                        let grab n = fromMaybe (error $ "qc1." ++ nm ++ ": Cannot extract value for: " ++ n) . unliteral
-
-                            v = grab "i" i
-
-                            expected = literal $ opC v
-                            result   = opS i
-
-                        case (unliteral expected, unliteral result) of
-                           (Just _, Just _) -> return $ expected .== result
-                           _                -> return sFalse
+   where cf = QC.testProperty (nm ++ ".constantFold") $ \i ->
+                         case unliteral (opS (literal i)) of
+                             Just r -> opC i == r
+                             _      -> False
 
          sm = QC.testProperty (nm ++ ".symbolic") $ QC.monadicIO $ do
                         ((i, expected), result) <- QC.run $ runSMT $ do v   <- liftIO $ QC.generate QC.arbitrary
