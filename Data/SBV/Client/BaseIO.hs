@@ -39,7 +39,7 @@ import Data.SBV.Provers.Prover (Provable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
                                 OptimizeResult)
 
-import GHC.TypeLits
+import GHC.TypeLits (KnownNat, TypeError, ErrorMessage(..))
 import Data.Kind
 
 import Data.Int
