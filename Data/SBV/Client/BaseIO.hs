@@ -182,12 +182,10 @@ runSMT = Trans.runSMT
 runSMTWith :: SMTConfig -> Symbolic a -> IO a
 runSMTWith = Trans.runSMTWith
 
--- | NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sName_'
-sName_ :: SExecutable IO a => a -> Symbolic ()
-sName_ = Trans.sName_
-
--- | NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sName'
-sName :: SExecutable IO a => [String] -> a -> Symbolic ()
+-- | Create an argument for a name used in a safety-checking call.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sName_'
+sName :: SExecutable IO a => a -> Symbolic ()
 sName = Trans.sName
 
 -- | Check safety using the default solver.

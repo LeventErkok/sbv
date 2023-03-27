@@ -509,8 +509,8 @@ pointWiseExtract nm typ
 -- | For saturation purposes, get a proper argument. The forall quantification
 -- is safe here since we only use in smtFunSaturate calls, which looks at the
 -- kind stored inside only.
-mkArg :: forall a. Kind -> SBV a
-mkArg k = SBV $ SVal k (Left (defaultKindedValue k))
+mkSaturatingArg :: forall a. Kind -> SBV a
+mkSaturatingArg k = SBV $ SVal k (Left (defaultKindedValue k))
 
 -- | Functions of arity 1
 instance ( SymVal a, HasKind a
@@ -522,7 +522,7 @@ instance ( SymVal a, HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f $ mkArg (kindOf (Proxy @a))
+  smtFunSaturate f = f $ mkSaturatingArg (kindOf (Proxy @a))
 
 -- | Functions of arity 2
 instance ( SymVal a,  HasKind a
@@ -535,8 +535,8 @@ instance ( SymVal a,  HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
 
 -- | Functions of arity 3
 instance ( SymVal a,   HasKind a
@@ -550,9 +550,9 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
 
 -- | Functions of arity 4
 instance ( SymVal a,   HasKind a
@@ -567,10 +567,10 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
-                       (mkArg (kindOf (Proxy @d)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
+                       (mkSaturatingArg (kindOf (Proxy @d)))
 
 -- | Functions of arity 5
 instance ( SymVal a,   HasKind a
@@ -586,11 +586,11 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
-                       (mkArg (kindOf (Proxy @d)))
-                       (mkArg (kindOf (Proxy @e)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
+                       (mkSaturatingArg (kindOf (Proxy @d)))
+                       (mkSaturatingArg (kindOf (Proxy @e)))
 
 -- | Functions of arity 6
 instance ( SymVal a,   HasKind a
@@ -607,12 +607,12 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
-                       (mkArg (kindOf (Proxy @d)))
-                       (mkArg (kindOf (Proxy @e)))
-                       (mkArg (kindOf (Proxy @f)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
+                       (mkSaturatingArg (kindOf (Proxy @d)))
+                       (mkSaturatingArg (kindOf (Proxy @e)))
+                       (mkSaturatingArg (kindOf (Proxy @f)))
 
 -- | Functions of arity 7
 instance ( SymVal a,   HasKind a
@@ -630,13 +630,13 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
-                       (mkArg (kindOf (Proxy @d)))
-                       (mkArg (kindOf (Proxy @e)))
-                       (mkArg (kindOf (Proxy @f)))
-                       (mkArg (kindOf (Proxy @g)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
+                       (mkSaturatingArg (kindOf (Proxy @d)))
+                       (mkSaturatingArg (kindOf (Proxy @e)))
+                       (mkSaturatingArg (kindOf (Proxy @f)))
+                       (mkSaturatingArg (kindOf (Proxy @g)))
 
 -- | Functions of arity 8
 instance ( SymVal a,   HasKind a
@@ -655,14 +655,14 @@ instance ( SymVal a,   HasKind a
 
   smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
 
-  smtFunSaturate f = f (mkArg (kindOf (Proxy @a)))
-                       (mkArg (kindOf (Proxy @b)))
-                       (mkArg (kindOf (Proxy @c)))
-                       (mkArg (kindOf (Proxy @d)))
-                       (mkArg (kindOf (Proxy @e)))
-                       (mkArg (kindOf (Proxy @f)))
-                       (mkArg (kindOf (Proxy @g)))
-                       (mkArg (kindOf (Proxy @h)))
+  smtFunSaturate f = f (mkSaturatingArg (kindOf (Proxy @a)))
+                       (mkSaturatingArg (kindOf (Proxy @b)))
+                       (mkSaturatingArg (kindOf (Proxy @c)))
+                       (mkSaturatingArg (kindOf (Proxy @d)))
+                       (mkSaturatingArg (kindOf (Proxy @e)))
+                       (mkSaturatingArg (kindOf (Proxy @f)))
+                       (mkSaturatingArg (kindOf (Proxy @g)))
+                       (mkSaturatingArg (kindOf (Proxy @h)))
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r) => fun -> m ([(a, r)], r)

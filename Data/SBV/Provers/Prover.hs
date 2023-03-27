@@ -16,7 +16,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TupleSections         #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -175,12 +174,8 @@ type Goal = Symbolic ()
 -- predicates can be constructed from almost arbitrary Haskell functions that have arbitrary
 -- shapes. (See the instance declarations below.)
 class ExtractIO m => MProvable m a where
-  -- | Turn a value into a predicate, by providing an unnamed parameter as argument.
-  argReduce_ :: a -> SymbolicT m SBool
-
-  -- | Turn a value into a predicate, by providing a named parameter as argument. The name supply is taken from the first list,
-  -- ignoring any excess elements. If there isn't enough names, the remainings will go unnamed.
-  argReduce :: [String] -> a -> SymbolicT m SBool
+  -- | Turn a value into a predicate, by providing an parameter as argument.
+  argReduce :: a -> SymbolicT m SBool
 
   -- | Generalization of 'Data.SBV.prove'
   prove :: a -> m ThmResult
@@ -316,7 +311,7 @@ class ExtractIO m => MProvable m a where
   -- | Generalization of 'Data.SBV.isVacuousWith'
   isVacuousWith :: SMTConfig -> a -> m Bool
   isVacuousWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (argReduce_ a >> Control.executeQuery QueryInternal check)
+       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (argReduce a >> Control.executeQuery QueryInternal check)
      where
        check :: QueryT m Bool
        check = do cs <- Control.checkSat
@@ -389,7 +384,7 @@ class ExtractIO m => MProvable m a where
                          notify $ "Validating the model. " ++ if null env then "There are no assignments." else "Assignment:"
                          mapM_ notify ["    " ++ l | l <- lines envShown]
 
-                         result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) (argReduce_ p >>= output)
+                         result <- snd <$> runSymbolic cfg (Concrete (Just (isSAT, env))) (argReduce p >>= output)
 
                          let explain  = [ ""
                                         , "Assignment:"  ++ if null env then " <none>" else ""
@@ -566,7 +561,7 @@ generateSMTBenchmark isSat a = do
       let comments = ["Automatically created by SBV on " ++ show t]
           cfg      = defaultSMTCfg { smtLibVersion = SMTLib2 }
 
-      (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ argReduce_ a >>= output
+      (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ argReduce a >>= output
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
           out                   = show (smtLibPgm cfg)
@@ -586,8 +581,7 @@ checkNoOptimizations = do objectives <- Control.getObjectives
 -- and it returns False in a proof-context. This is useful since min/max calls and constraints will provide the
 -- necessary constraints.
 instance ExtractIO m => MProvable m (SymbolicT m ()) where
-  argReduce_    a = finalizer >>= \b -> argReduce_    ((a >> pure b) :: SymbolicT m SBool)
-  argReduce  ns a = finalizer >>= \b -> argReduce  ns ((a >> pure b) :: SymbolicT m SBool)
+  argReduce a = finalizer >>= \b -> argReduce ((a >> pure b) :: SymbolicT m SBool)
 
 -- If we're in a proof mode, return sFalse. If SAT, return sTrue.
 finalizer :: MonadSymbolic m => m SBool
@@ -608,29 +602,22 @@ finalizer = do st <- symbolicEnv
                           ]
 
 instance ExtractIO m => MProvable m (SymbolicT m SBool) where
-  argReduce_     = id
-  argReduce []   = id
-  argReduce xs   = error $ "SBV.argReduce: Extra unmapped name(s) in predicate construction: " ++ intercalate ", " xs
+  argReduce = id
 
 instance ExtractIO m => MProvable m SBool where
-  argReduce_  = return
-  argReduce _ = return
+  argReduce = return
 
 instance (ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (Forall a -> r) where
-  argReduce_   = argReduce_   . quantifiedBool
-  argReduce xs = argReduce xs . quantifiedBool
+  argReduce = argReduce . quantifiedBool
 
 instance (ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (Exists a -> r) where
-  argReduce_   = argReduce_   . quantifiedBool
-  argReduce xs = argReduce xs . quantifiedBool
+  argReduce = argReduce . quantifiedBool
 
 instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (ForallN n a -> r) where
-  argReduce_   = argReduce_   . quantifiedBool
-  argReduce xs = argReduce xs . quantifiedBool
+  argReduce = argReduce . quantifiedBool
 
 instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable m (ExistsN n a -> r) where
-  argReduce_   = argReduce_   . quantifiedBool
-  argReduce xs = argReduce xs . quantifiedBool
+  argReduce = argReduce . quantifiedBool
 
 {-
 -- The following works, but it lets us write properties that
@@ -638,65 +625,45 @@ instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r) => MProvable
 -- Running that will throw an exception since Haskell's equality
 -- is not be supported by symbolic things. (Needs .==).
 instance Provable Bool where
-  argReduce_  x  = argReduce_  (if x then true else false :: SBool)
+  argReduce  x  = argReduce  (if x then true else false :: SBool)
   argReduce s x  = argReduce s (if x then true else false :: SBool)
 -}
 
--- | Create a named argument
-mkArg :: (SymVal a, MonadSymbolic m) => String -> m (SBV a)
-mkArg = mkSymVal (NonQueryVar Nothing) . Just
-
--- | Create an unnamed argument
-mkArg_ :: (SymVal a, MonadSymbolic m) => m (SBV a)
-mkArg_ = mkSymVal (NonQueryVar Nothing) Nothing
+-- | Create an argument
+mkArg :: (SymVal a, MonadSymbolic m) => m (SBV a)
+mkArg = mkSymVal (NonQueryVar Nothing) Nothing
 
 -- Functions
 instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
-  argReduce_       k = mkArg_  >>= \a -> argReduce_   $ k a
-  argReduce (s:ss) k = mkArg s >>= \a -> argReduce ss $ k a
-  argReduce []     k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ k a
 
 -- Arrays
 instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
-  argReduce_         k = newArray_  Nothing >>= \a -> argReduce_   $ k a
-  argReduce  (s:ss)  k = newArray s Nothing >>= \a -> argReduce ss $ k a
-  argReduce  []      k = argReduce_ k
+  argReduce k = newArray_ Nothing >>= \a -> argReduce $ k a
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b -> k (a, b)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b -> k (a, b)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ \b -> k (a, b)
 
 -- 3 Tuple
 instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c -> k (a, b, c)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c -> k (a, b, c)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ \b c -> k (a, b, c)
 
 -- 4 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d -> k (a, b, c, d)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d -> k (a, b, c, d)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg  >>= \a -> argReduce $ \b c d -> k (a, b, c, d)
 
 -- 5 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e -> k (a, b, c, d, e)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e -> k (a, b, c, d, e)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ \b c d e -> k (a, b, c, d, e)
 
 -- 6 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e f -> k (a, b, c, d, e, f)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e f -> k (a, b, c, d, e, f)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ \b c d e f -> k (a, b, c, d, e, f)
 
 -- 7 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  argReduce_         k = mkArg_  >>= \a -> argReduce_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  argReduce (s:ss)   k = mkArg s >>= \a -> argReduce ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  argReduce []       k = argReduce_ k
+  argReduce k = mkArg >>= \a -> argReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
 -- | Generalization of 'Data.SBV.runSMT'
 runSMT :: MonadIO m => SymbolicT m a -> m a
@@ -709,7 +676,7 @@ runSMTWith cfg a = fst <$> runSymbolic cfg (SMTMode QueryExternal ISetup True cf
 -- | Runs with a query.
 runWithQuery :: MProvable m a => Bool -> QueryT m b -> SMTConfig -> a -> m b
 runWithQuery isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup isSAT cfg) comp
-  where comp =  do _ <- argReduce_ a >>= output
+  where comp =  do _ <- argReduce a >>= output
                    Control.executeQuery QueryInternal q
 
 -- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
@@ -783,11 +750,8 @@ sbvWithAll solvers what a = do beginTime <- getCurrentTime
 -- | Symbolically executable program fragments. This class is mainly used for 'safe' calls, and is sufficiently populated internally to cover most use
 -- cases. Users can extend it as they wish to allow 'safe' checks for SBV programs that return/take types that are user-defined.
 class ExtractIO m => SExecutable m a where
-   -- | Generalization of 'Data.SBV.sName_'
-   sName_ :: a -> SymbolicT m ()
-
    -- | Generalization of 'Data.SBV.sName'
-   sName  :: [String] -> a -> SymbolicT m ()
+   sName :: a -> SymbolicT m ()
 
    -- | Generalization of 'Data.SBV.safe'
    safe :: a -> m [SafeResult]
@@ -799,7 +763,7 @@ class ExtractIO m => SExecutable m a where
                        let mkRelative path
                               | cwd `isPrefixOf` path = drop (length cwd) path
                               | True                  = path
-                       fst <$> runSymbolic cfg (SMTMode QueryInternal ISafe True cfg) (sName_ a >> check mkRelative)
+                       fst <$> runSymbolic cfg (SMTMode QueryInternal ISafe True cfg) (sName a >> check mkRelative)
      where check :: (FilePath -> FilePath) -> SymbolicT m [SafeResult]
            check mkRelative = Control.executeQuery QueryInternal $ Control.getSBVAssertions >>= mapM (verify mkRelative)
 
@@ -820,94 +784,69 @@ class ExtractIO m => SExecutable m a where
                    return $ SafeResult (location, msg, result)
 
 instance (ExtractIO m, NFData a) => SExecutable m (SymbolicT m a) where
-   sName_   a = a >>= \r -> rnf r `seq` return ()
-   sName []   = sName_
-   sName xs   = error $ "SBV.SExecutable.sName: Extra unmapped name(s): " ++ intercalate ", " xs
+   sName a = a >>= \r -> rnf r `seq` return ()
 
 instance ExtractIO m => SExecutable m (SBV a) where
-   sName_   v = sName_   (output v :: SymbolicT m (SBV a))
-   sName xs v = sName xs (output v :: SymbolicT m (SBV a))
+   sName v = sName (output v :: SymbolicT m (SBV a))
 
 -- Unit output
 instance ExtractIO m => SExecutable m () where
-   sName_   () = sName_   (output () :: SymbolicT m ())
-   sName xs () = sName xs (output () :: SymbolicT m ())
+   sName () = sName (output () :: SymbolicT m ())
 
 -- List output
 instance ExtractIO m => SExecutable m [SBV a] where
-   sName_   vs = sName_   (output vs :: SymbolicT m [SBV a])
-   sName xs vs = sName xs (output vs :: SymbolicT m [SBV a])
+   sName vs = sName (output vs :: SymbolicT m [SBV a])
 
 -- 2 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b) => SExecutable m (SBV a, SBV b) where
-  sName_ (a, b) = sName_ (output a >> output b :: SymbolicT m (SBV b))
-  sName _       = sName_
+  sName (a, b) = sName (output a >> output b :: SymbolicT m (SBV b))
 
 -- 3 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c) => SExecutable m (SBV a, SBV b, SBV c) where
-  sName_ (a, b, c) = sName_ (output a >> output b >> output c :: SymbolicT m (SBV c))
-  sName _          = sName_
+  sName (a, b, c) = sName (output a >> output b >> output c :: SymbolicT m (SBV c))
 
 -- 4 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d) => SExecutable m (SBV a, SBV b, SBV c, SBV d) where
-  sName_ (a, b, c, d) = sName_ (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
-  sName _             = sName_
+  sName (a, b, c, d) = sName (output a >> output b >> output c >> output c >> output d :: SymbolicT m (SBV d))
 
 -- 5 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e) where
-  sName_ (a, b, c, d, e) = sName_ (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
-  sName _                = sName_
+  sName (a, b, c, d, e) = sName (output a >> output b >> output c >> output d >> output e :: SymbolicT m (SBV e))
 
 -- 6 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e, NFData f, SymVal f) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) where
-  sName_ (a, b, c, d, e, f) = sName_ (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
-  sName _                   = sName_
+  sName (a, b, c, d, e, f) = sName (output a >> output b >> output c >> output d >> output e >> output f :: SymbolicT m (SBV f))
 
 -- 7 Tuple output
 instance (ExtractIO m, NFData a, SymVal a, NFData b, SymVal b, NFData c, SymVal c, NFData d, SymVal d, NFData e, SymVal e, NFData f, SymVal f, NFData g, SymVal g) => SExecutable m (SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) where
-  sName_ (a, b, c, d, e, f, g) = sName_ (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
-  sName _                      = sName_
+  sName (a, b, c, d, e, f, g) = sName (output a >> output b >> output c >> output d >> output e >> output f >> output g :: SymbolicT m (SBV g))
 
 -- Functions
 instance (SymVal a, SExecutable m p) => SExecutable m (SBV a -> p) where
-   sName_        k = mkArg_   >>= \a -> sName_   $ k a
-   sName (s:ss)  k = mkArg s  >>= \a -> sName ss $ k a
-   sName []      k = sName_ k
+   sName k = mkArg >>= \a -> sName $ k a
 
 -- 2 Tuple input
 instance (SymVal a, SymVal b, SExecutable m p) => SExecutable m ((SBV a, SBV b) -> p) where
-  sName_        k = mkArg_  >>= \a -> sName_   $ \b -> k (a, b)
-  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b -> k (a, b)
-  sName []      k = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b -> k (a, b)
 
 -- 3 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c) -> p) where
-  sName_       k  = mkArg_  >>= \a -> sName_   $ \b c -> k (a, b, c)
-  sName (s:ss) k  = mkArg s >>= \a -> sName ss $ \b c -> k (a, b, c)
-  sName []     k  = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b c -> k (a, b, c)
 
 -- 4 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d -> k (a, b, c, d)
-  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d -> k (a, b, c, d)
-  sName []      k = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b c d -> k (a, b, c, d)
 
 -- 5 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e -> k (a, b, c, d, e)
-  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e -> k (a, b, c, d, e)
-  sName []      k = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b c d e -> k (a, b, c, d, e)
 
 -- 6 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e f -> k (a, b, c, d, e, f)
-  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e f -> k (a, b, c, d, e, f)
-  sName []      k = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b c d e f -> k (a, b, c, d, e, f)
 
 -- 7 Tuple input
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  sName_        k = mkArg_  >>= \a -> sName_   $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName (s:ss)  k = mkArg s >>= \a -> sName ss $ \b c d e f g -> k (a, b, c, d, e, f, g)
-  sName []      k = sName_ k
+  sName k = mkArg >>= \a -> sName $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

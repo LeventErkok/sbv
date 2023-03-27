@@ -343,7 +343,7 @@ module Data.SBV (
 
   -- * Checking safety
   -- $safeIntro
-  , sAssert, isSafe, SExecutable, sName_, sName, safe, safeWith
+  , sAssert, isSafe, SExecutable, sName, safe, safeWith
 
   -- * Quick-checking
   , sbvQuickCheck
@@ -446,7 +446,7 @@ import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        isVacuous, isVacuousWith, isTheorem,
                                        isTheoremWith, isSatisfiable,
                                        isSatisfiableWith, runSMT, runSMTWith,
-                                       sName_, sName, safe, safeWith)
+                                       sName, safe, safeWith)
 
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO

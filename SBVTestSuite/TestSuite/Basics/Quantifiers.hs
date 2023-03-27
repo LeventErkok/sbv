@@ -46,8 +46,8 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                   , goldenCapturedIO "quantifiedB_5" $ check $ \(ExistsN @4 xs) (Forall k) -> sum xs .== (k::SWord8)
                   , goldenCapturedIO "quantifiedB_6" $ check $ quantifiedBool (quantifiedBool (\(Exists (x::SBool)) -> x) )
                   , goldenCapturedIO "quantifiedB_7" $ check $ \(Exists (x :: SBool)) -> quantifiedBool (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
-                  , goldenCapturedIO "quantifiedB_8" $ check $ \(Exists (x :: SBool)) -> (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
-                  , goldenCapturedIO "quantifiedB_9" $ check $ quantifiedBool $ \(Exists (x :: SBool)) -> (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
+                  , goldenCapturedIO "quantifiedB_8" $ check $ \(Exists (x :: SBool)) -> quantifiedBool (\(Exists (y::SBool)) -> x .|| y)
+                  , goldenCapturedIO "quantifiedB_9" $ check $ quantifiedBool $ \(Exists (x :: SBool)) -> quantifiedBool (\(Exists (y::SBool)) -> x .|| y)
                   , goldenCapturedIO "quantifiedB_A" $ check $ \(Exists a) (Forall b) (Exists c) (Forall d) ->  a + b + c + d .== (0::SInteger)
                   , goldenCapturedIO "quantifiedB_B" $ check $ \(Forall a) (Exists b) (Forall c) (Exists d) ->  a + b + c + d .== (0::SInteger)
                   ]
@@ -83,4 +83,5 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
          t2 A E act = pure $ quantifiedBool $ \(Forall x) (Exists y) -> act x y
          t2 A A act = pure $ quantifiedBool $ \(Forall x) (Forall y) -> act x y
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{-# ANN module ("HLint: ignore Reduce duplication"     :: String) #-}
+{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
