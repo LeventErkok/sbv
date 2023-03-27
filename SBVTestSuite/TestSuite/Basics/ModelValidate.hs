@@ -52,7 +52,7 @@ tests = testGroup "Basics.ModelValidate" [
 
           t3 :: Goal
           t3 = do x <- sInteger "x"
-                  constrain $ x .> x
+                  constrain $ x .> x   -- Constraining with False! i.e., any theorem will follow, and will be trivially unsat
 
           t4 :: Predicate
           t4 = do x <- sInteger "x"
