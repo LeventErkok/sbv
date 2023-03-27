@@ -2742,7 +2742,7 @@ instance Metric Int64 where
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where
   property (SBV (SVal _ (Left b))) = property (cvToBool b)
-  property _                       = error "Quick-check: Constant folding produced a symbolic value! Perhaps used a non-reducible expression? Please report!"
+  property _                       = cantQuickCheck
 
 instance Testable (Symbolic SBool) where
    property prop = QC.monadicIO $ do (cond, r, modelVals) <- QC.run test
@@ -2751,22 +2751,38 @@ instance Testable (Symbolic SBool) where
                                      QC.assert r
      where test = do (r, Result{resTraces=tvals, resObservables=ovals, resConsts=(_, cs), resConstraints=cstrs, resUIConsts=unints}) <- runSymbolic defaultSMTCfg (Concrete Nothing) prop
 
-                     let cval = fromMaybe (error "Cannot quick-check in the presence of uninterpeted constants!") . (`lookup` cs)
-                         cond = and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs] -- Only pick-up "hard" constraints, as indicated by False in the fist component
+                     let cval = fromMaybe cantQuickCheck . (`lookup` cs)
+                         cond = -- Only pick-up "hard" constraints, as indicated by False in the fist component
+                                and [cvToBool (cval v) | (False, _, v) <- F.toList cstrs]
 
                          getObservable (nm, f, v) = case v `lookup` cs of
                                                       Just cv -> if f cv then Just (nm, cv) else Nothing
-                                                      Nothing -> error $ "Quick-check: Observable " ++ nm ++ " did not reduce to a constant!"
+                                                      Nothing -> cantQuickCheck
 
                      case map fst unints of
                        [] -> case unliteral r of
-                               Nothing -> error $ intercalate "\n" [ "Quick-check: Calls to 'observe' not supported in quick-check mode. Please use 'sObserve' for full support."
-                                                                   , "             (If you haven't used 'observe', please report this as a bug!)"
-                                                                   ]
+                               Nothing -> cantQuickCheck
                                Just b  -> return (cond, b, tvals ++ mapMaybe getObservable ovals)
-                       us -> error $ "Cannot quick-check in the presence of uninterpreted constants: " ++ intercalate ", " us
+                       _  -> cantQuickCheck
 
            complain qcInfo = showModel defaultSMTCfg (SMTModel [] Nothing qcInfo [])
+
+-- Complain if what we got isn't something we can quick-check
+cantQuickCheck :: a
+cantQuickCheck = error $ unlines [ "*** Data.SBV: Cannot quickcheck the given property."
+                                 , "***"
+                                 , "*** Certain SBV properties cannot be quick-checked. In particular,"
+                                 , "*** SBV can't quick-check in the presence of:"
+                                 , "***"
+                                 , "***   - Uninterpreted constants."
+                                 , "***   - Floating point operations with rounding modes other than RNE."
+                                 , "***   - Floating point FMA operation, regardless of rounding mode."
+                                 , "***   - Quantified booleans, i.e., uses of Forall/Exists."
+                                 , "***   - Calls to 'observe' (use 'sObserve' instead)"
+                                 , "***"
+                                 , "*** If you can't avoid the above features or run into an issue with"
+                                 , "*** quickcheck even though you haven't used these features, please report this as a bug!"
+                                 ]
 
 -- | Quick check an SBV property. Note that a regular @quickCheck@ call will work just as
 -- well. Use this variant if you want to receive the boolean result.
