@@ -656,8 +656,22 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
-instance SatArgReduce   IO a => MSatisfiable IO a
-instance ProofArgReduce IO a => MProvable    IO a
+instance {-# OVERLAPPING #-} SatArgReduce   IO a => MSatisfiable IO a
+instance {-# OVERLAPPING #-} ProofArgReduce IO a => MProvable    IO a
+
+-- The concurrent stuff needs base type of IO. So punt on other monads.
+instance (ExtractIO m, SatArgReduce   m a) => MSatisfiable m a where
+  satWithAll           = error "satWithAll is only available over the base Satisfable types."
+  satWithAny           = error "satWithAny is only available over the base Satisfable types."
+  satConcurrentWithAny = error "satConcurrentWithAny is only available over the base Satisfable types."
+  satConcurrentWithAll = error "satConcurrentWithAll is only available over the base Satisfable types."
+
+-- The concurrent stuff needs base type of IO. So punt on other monads.
+instance (ExtractIO m, ProofArgReduce m a) => MProvable m a where
+  proveWithAll           = error "proveWithAll is only available over the base Provable types."
+  proveWithAny           = error "proveWithAny is only available over the base Provable types."
+  proveConcurrentWithAny = error "proveConcurrentWithAny is only available over the base Provable types."
+  proveConcurrentWithAll = error "proveConcurrentWithAll is only available over the base Provable types."
 
 instance ExtractIO m => SatArgReduce m (SymbolicT m ()) where satArgReduce a = satArgReduce ((a >> pure sTrue) :: SymbolicT m SBool)
 -- instance ExtractIO m => ProofArgReduce m (SymbolicT m ())  -- NO INSTANCE ON PURPOSE; don't want to prove goals
