@@ -134,29 +134,17 @@ optimize = Trans.optimize
 optimizeWith :: Satisfiable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
 optimizeWith = Trans.optimizeWith
 
--- | Check if the constraints given are consistent in a SAT call using the default solver.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuous'
-satIsVacuous :: Satisfiable a => a -> IO Bool
-satIsVacuous = Trans.satIsVacuous
-
--- | Determine if the constraints are vacuous in a SAT call using the given SMT-solver.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuousWith'
-satIsVacuousWith :: Satisfiable a => SMTConfig -> a -> IO Bool
-satIsVacuousWith = Trans.satIsVacuousWith
-
 -- | Check if the constraints given are consistent in a prove call using the default solver.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.proofIsVacuous'
-proofIsVacuous :: Provable a => a -> IO Bool
-proofIsVacuous = Trans.proofIsVacuous
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isVacuousProof'
+isVacuousProof :: Provable a => a -> IO Bool
+isVacuousProof = Trans.isVacuousProof
 
 -- | Determine if the constraints are vacuous in a SAT call using the given SMT-solver.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuousWith'
-proofIsVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
-proofIsVacuousWith = Trans.proofIsVacuousWith
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isVacuousProofWith'
+isVacuousProofWith :: Provable a => SMTConfig -> a -> IO Bool
+isVacuousProofWith = Trans.isVacuousProofWith
 
 -- | Checks theoremhood using the default solver.
 --

@@ -69,6 +69,9 @@
   * [BACKWARDS COMPATIBILITY] The configuration variable 'allowQuantifiedQueries' is removed. It is no
     longer relevant with our new quantification strategy described above.
 
+  * [BACKWARDS COMPATIBILITY] The function 'isVacuous' is renamed to 'isVacuousProof' (and 'isVacuousWith'
+    became 'isVacuousProofWith') to better reflect this function applies to checking vacuity in a proof context.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 

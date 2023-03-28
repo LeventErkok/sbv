@@ -314,7 +314,7 @@ module Data.SBV (
   , dsat, dsatWith
   , allSat, allSatWith
   , optimize, optimizeWith
-  , satIsVacuous, proofIsVacuous, satIsVacuousWith, proofIsVacuousWith
+  , isVacuousProof, isVacuousProofWith
   , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
   , proveWithAll, proveWithAny, satWithAll
   , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
@@ -448,10 +448,8 @@ import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
                                        allSatWith, optimize, optimizeWith,
-                                       satIsVacuous, satIsVacuousWith,
-                                       proofIsVacuous, proofIsVacuousWith, 
-                                       isTheorem,
-                                       isTheoremWith, isSatisfiable,
+                                       isVacuousProof, isVacuousProofWith,
+                                       isTheorem, isTheoremWith, isSatisfiable,
                                        isSatisfiableWith, runSMT, runSMTWith,
                                        sName, safe, safeWith)
 
@@ -862,8 +860,7 @@ the presence of constraints, formulas that are /provable/ are not necessarily
 This predicate is unsatisfiable since no element of 'SWord8' is less than itself. But
 it's (vacuously) true, since it excludes the entire domain of values, thus making the proof
 trivial. Hence, this predicate is provable, but is not satisfiable. To make sure the given
-constraints are not vacuous, the functions 'proofIsVacuous' (and 'proofIsVacuousWith') can be used
-in proof contexts, and 'satIsVacuous' (and 'satIsVacuousWith') in sat contexts.
+constraints are not vacuous, the functions 'isVacuousProof' (and 'isVacuousProofWith') can be used.
 
 Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
 quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
@@ -873,7 +870,7 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFal
 {- $constraintVacuity
 
 When adding constraints, one has to be careful about
-making sure they are not inconsistent. The function 'proofIsVacuous' nd 'satIsVacuous' can be used for this purpose.
+making sure they are not inconsistent. The function 'isVacuousProof' can be used for this purpose.
 Here is an example. Consider the following predicate:
 
     >>> let pred = do { x <- free "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
@@ -885,9 +882,9 @@ satisfy this constraint, the proof will pass vacuously:
     >>> prove pred
     Q.E.D.
 
-We can use 'proofIsVacuous' to make sure to see that the pass was vacuous:
+We can use 'isVacuousProof' to make sure to see that the pass was vacuous:
 
-    >>> proofIsVacuous pred
+    >>> isVacuousProof pred
     True
 
 While the above example is trivial, things can get complicated if there are multiple constraints with
@@ -903,7 +900,7 @@ This time the proof passes as expected:
 
 And the proof is not vacuous:
 
-     >>> proofIsVacuous pred'
+     >>> isVacuousProof pred'
      False
 -}
 

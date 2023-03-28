@@ -234,18 +234,6 @@ class ExtractIO m => MSatisfiable m a where
                                    return asr{allSatResults = rs'}
                            else return asr
 
-  -- | Generalization of 'Data.SBV.satIsVacuous'
-  satIsVacuous :: a -> m Bool
-
-  default satIsVacuous :: SatArgReduce m a => a -> m Bool
-  satIsVacuous = isVacuousGen satArgReduce
-
-  -- | Generalization of 'Data.SBV.satIsVacuousWith'
-  satIsVacuousWith :: SMTConfig -> a -> m Bool
-
-  default satIsVacuousWith :: SatArgReduce m a => SMTConfig -> a -> m Bool
-  satIsVacuousWith = isVacuousWithGen satArgReduce
-
   -- | Generalization of 'Data.SBV.isSatisfiable'
   isSatisfiable :: a -> m Bool
   isSatisfiable = isSatisfiableWith defaultSMTCfg
@@ -404,17 +392,25 @@ class ExtractIO m => MProvable m a where
                                       then validate proofArgReduce False cfg a r
                                       else return r
 
-  -- | Generalization of 'Data.SBV.proofIsVacuous'
-  proofIsVacuous :: a -> m Bool
+  -- | Generalization of 'Data.SBV.isVacuousProof'
+  isVacuousProof :: a -> m Bool
 
-  default proofIsVacuous :: ProofArgReduce m a => a -> m Bool
-  proofIsVacuous = isVacuousGen proofArgReduce
+  default isVacuousProof :: ProofArgReduce m a => a -> m Bool
+  isVacuousProof = isVacuousProofWith defaultSMTCfg
 
-  -- | Generalization of 'Data.SBV.proofIsVacuousWith'
-  proofIsVacuousWith :: SMTConfig -> a -> m Bool
+  -- | Generalization of 'Data.SBV.isVacuousProofWith'
+  isVacuousProofWith :: SMTConfig -> a -> m Bool
 
-  default proofIsVacuousWith :: ProofArgReduce m a => SMTConfig -> a -> m Bool
-  proofIsVacuousWith = isVacuousWithGen proofArgReduce
+  default isVacuousProofWith :: ProofArgReduce m a => SMTConfig -> a -> m Bool
+  isVacuousProofWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
+       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (proofArgReduce a >> Control.executeQuery QueryInternal check)
+     where
+       check = do cs <- Control.checkSat
+                  case cs of
+                    Control.Unsat  -> return True
+                    Control.Sat    -> return False
+                    Control.DSat{} -> return False
+                    Control.Unk    -> error "SBV: isVacuous: Solver returned unknown!"
 
   -- | Generalization of 'Data.SBV.isTheorem'
   isTheorem :: a -> m Bool
@@ -607,22 +603,6 @@ validate reducer isSAT cfg p res =
                                 else "Validating " ++ show (length cstrs) ++ " constraint(s)."
 
                        walkConstraints cstrs (checkOutputs (resOutputs result))
-
--- | Check vacuity helper
-isVacuousGen :: ExtractIO m => (a -> SymbolicT m SBool) -> a -> m Bool
-isVacuousGen reducer = isVacuousWithGen reducer defaultSMTCfg
-
--- | Check vacuity helper with config
-isVacuousWithGen :: ExtractIO m => (a -> SymbolicT m SBool) -> SMTConfig -> a -> m Bool
-isVacuousWithGen reducer cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
-       fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (reducer a >> Control.executeQuery QueryInternal check)
-     where
-       check = do cs <- Control.checkSat
-                  case cs of
-                    Control.Unsat  -> return True
-                    Control.Sat    -> return False
-                    Control.DSat{} -> return False
-                    Control.Unk    -> error "SBV: isVacuous: Solver returned unknown!"
 
 -- | Create an SMT-Lib2 benchmark, for a SAT query.
 generateSMTBenchmarkSat :: SatArgReduce m a => a -> m String
