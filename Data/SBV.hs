@@ -24,11 +24,11 @@
 -- And similarly, 'sat' finds a satisfying instance. The types involved are:
 --
 -- @
---     'prove' :: 'Provable'    a => a -> 'IO' 'ThmResult'
---     'sat'   :: 'Satisfiable' a => a -> 'IO' 'SatResult'
+--     'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
+--     'sat'   :: 'Data.SBV.Provers.Satisfiable' a => a -> 'IO' 'SatResult'
 -- @
 --
--- The classes 'Provable' and 'Satisfiable' come with instances for n-ary predicates, for arbitrary n.
+-- The classes 'Provable' and 'Data.SBV.Provers.Satisfiable' come with instances for n-ary predicates, for arbitrary n.
 -- The predicates are just regular Haskell functions over symbolic types listed below.
 -- Functions for checking satisfiability ('sat' and 'allSat') are also
 -- provided.
@@ -862,7 +862,8 @@ the presence of constraints, formulas that are /provable/ are not necessarily
 This predicate is unsatisfiable since no element of 'SWord8' is less than itself. But
 it's (vacuously) true, since it excludes the entire domain of values, thus making the proof
 trivial. Hence, this predicate is provable, but is not satisfiable. To make sure the given
-constraints are not vacuous, the functions 'isVacuous' (and 'isVacuousWith') can be used.
+constraints are not vacuous, the functions 'proofIsVacuous' (and 'proofIsVacuousWith') can be used
+in proof contexts, and 'satIsVacuous' (and 'satIsVacuousWith') in sat contexts.
 
 Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
 quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
@@ -872,7 +873,7 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFal
 {- $constraintVacuity
 
 When adding constraints, one has to be careful about
-making sure they are not inconsistent. The function 'isVacuous' can be use for this purpose.
+making sure they are not inconsistent. The function 'proofIsVacuous' nd 'satIsVacuous' can be used for this purpose.
 Here is an example. Consider the following predicate:
 
     >>> let pred = do { x <- free "x"; constrain $ x .< x; return $ x .>= (5 :: SWord8) }
@@ -884,9 +885,9 @@ satisfy this constraint, the proof will pass vacuously:
     >>> prove pred
     Q.E.D.
 
-We can use 'isVacuous' to make sure to see that the pass was vacuous:
+We can use 'proofIsVacuous' to make sure to see that the pass was vacuous:
 
-    >>> isVacuous pred
+    >>> proofIsVacuous pred
     True
 
 While the above example is trivial, things can get complicated if there are multiple constraints with
@@ -902,7 +903,7 @@ This time the proof passes as expected:
 
 And the proof is not vacuous:
 
-     >>> isVacuous pred'
+     >>> proofIsVacuous pred'
      False
 -}
 

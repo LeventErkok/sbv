@@ -173,7 +173,7 @@ type Goal = Symbolic ()
 -- transformers explicitly, this is the type you should prefer.
 type Provable = MProvable IO
 
--- | `Satisfiable` is specialization of `MSatisfiable` to the `IO` monad. Unless you are using
+-- | `Data.SBV.Provers.Satisfiable` is specialization of `MSatisfiable` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
 type Satisfiable = MSatisfiable IO
 
