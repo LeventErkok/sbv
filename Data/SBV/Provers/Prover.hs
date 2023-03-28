@@ -11,14 +11,12 @@
 
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE ConstraintKinds       #-}
-{-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TupleSections         #-}
-{-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -33,7 +31,8 @@ module Data.SBV.Provers.Prover (
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
        , abc, boolector, bitwuzla, cvc4, cvc5, dReal, mathSAT, yices, z3, defaultSMTCfg, defaultDeltaSMTCfg
-       , SatArgReduce, ProofArgReduce
+       , proveWithAny, proveWithAll, proveConcurrentWithAny, proveConcurrentWithAll
+       , satWithAny,   satWithAll,   satConcurrentWithAny,   satConcurrentWithAll
        ) where
 
 
@@ -177,31 +176,18 @@ type Provable = MProvable IO
 -- transformers explicitly, this is the type you should prefer.
 type Satisfiable = MSatisfiable IO
 
--- | A class for capturing satisfiable arguments
-class ExtractIO m => SatArgReduce m a where
-   -- | Reduce an arg, for sat purposes. Typically not needed by end-users, unless you are
-   -- writing a library on top of SBV that can manipulate properties.
-  satArgReduce :: a -> SymbolicT m SBool
-
--- | A class for capturing provable arguments
-class ExtractIO m => ProofArgReduce m a where
-   -- | Reduce an arg, for proof purposes. Typically not needed by end-users, unless you are
-   -- writing a library on top of SBV that can manipulate properties.
-  proofArgReduce :: a -> SymbolicT m SBool
-
 -- | A type @a@ is satisfiable if it has constraints, potentially returning a boolean. This class
 -- captures essentially sat and optimize calls.
 class ExtractIO m => MSatisfiable m a where
+  -- | Reduce an arg, for sat purposes.
+  satArgReduce :: a -> SymbolicT m SBool
+
   -- | Generalization of 'Data.SBV.sat'
   sat :: a -> m SatResult
-
-  default sat :: SatArgReduce m a => a -> m SatResult
   sat = satWith defaultSMTCfg
 
   -- | Generalization of 'Data.SBV.satWith'
   satWith :: SMTConfig -> a -> m SatResult
-
-  default satWith :: SatArgReduce m a => SMTConfig -> a -> m SatResult
   satWith cfg a = do r <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getSMTResult) cfg a
                      SatResult <$> if validationRequested cfg
                                    then validate satArgReduce True cfg a r
@@ -213,8 +199,6 @@ class ExtractIO m => MSatisfiable m a where
 
   -- | Generalization of 'Data.SBV.satWith'
   dsatWith :: SMTConfig -> a -> m SatResult
-
-  default dsatWith :: SatArgReduce m a => SMTConfig -> a -> m SatResult
   dsatWith cfg a = do r <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getSMTResult) cfg a
                       SatResult <$> if validationRequested cfg
                                     then validate satArgReduce True cfg a r
@@ -226,8 +210,6 @@ class ExtractIO m => MSatisfiable m a where
 
   -- | Generalization of 'Data.SBV.allSatWith'
   allSatWith :: SMTConfig -> a -> m AllSatResult
-
-  default allSatWith :: SatArgReduce m a => SMTConfig -> a -> m AllSatResult
   allSatWith cfg a = do asr <- runWithQuery satArgReduce True (checkNoOptimizations >> Control.getAllSatResult) cfg a
                         if validationRequested cfg
                            then do rs' <- mapM (validate satArgReduce True cfg a) (allSatResults asr)
@@ -246,55 +228,12 @@ class ExtractIO m => MSatisfiable m a where
                                  SatResult Unsatisfiable{} -> return False
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  satWithAll :: [SMTConfig] -> a -> m [(Solver, NominalDiffTime, SatResult)]
-
-  default satWithAll :: (m ~ IO) => [SMTConfig] -> a -> m [(Solver, NominalDiffTime, SatResult)]
-  satWithAll = (`sbvWithAll` satWith)
-
-  -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send an exception to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  satWithAny :: [SMTConfig] -> a -> m (Solver, NominalDiffTime, SatResult)
-
-  default satWithAny :: (m ~ IO) => [SMTConfig] -> a -> m (Solver, NominalDiffTime, SatResult)
-  satWithAny = (`sbvWithAny` satWith)
-
-  -- | Find a satisfying assignment to a property using a single solver, but
-  -- providing several query problems of interest, with each query running in a
-  -- separate thread and return the first one that returns. This can be useful to
-  -- use symbolic mode to drive to a location in the search space of the solver
-  -- and then refine the problem in query mode. If the computation is very hard to
-  -- solve for the solver than running in concurrent mode may provide a large
-  -- performance benefit.
-  satConcurrentWithAny :: SMTConfig -> [QueryT m b] -> a -> m (Solver, NominalDiffTime, SatResult)
-
-  default satConcurrentWithAny :: (m ~ IO, SatArgReduce m a) => SMTConfig -> [QueryT m b] -> a -> m (Solver, NominalDiffTime, SatResult)
-  satConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
-                                        return (slvr, time, SatResult result)
-    where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
-
-  -- | Find a satisfying assignment to a property using a single solver, but run
-  -- each query problem in a separate isolated thread and wait for each thread to
-  -- finish. See 'satConcurrentWithAny' for more details.
-  satConcurrentWithAll :: SMTConfig -> [QueryT m b] -> a -> m [(Solver, NominalDiffTime, SatResult)]
-
-  default satConcurrentWithAll :: (m ~ IO, SatArgReduce m a) => SMTConfig -> [QueryT m b] -> a -> m [(Solver, NominalDiffTime, SatResult)]
-  satConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
-                                        return $ (\(a',b,c) -> (a',b,SatResult c)) <$> results
-    where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
-
   -- | Generalization of 'Data.SBV.optimize'
   optimize :: OptimizeStyle -> a -> m OptimizeResult
   optimize = optimizeWith defaultSMTCfg
 
   -- | Generalization of 'Data.SBV.optimizeWith'
   optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
-
-  default optimizeWith :: SatArgReduce m a => SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
   optimizeWith config style optGoal = do
                    res <- runWithQuery satArgReduce True opt config optGoal
                    if not (optimizeValidateConstraints config)
@@ -360,20 +299,51 @@ class ExtractIO m => MSatisfiable m a where
                      Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
                      Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
 
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+satWithAll :: Satisfiable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satWithAll = (`sbvWithAll` satWith)
+
+-- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send an exception to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+satWithAny :: Satisfiable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satWithAny = (`sbvWithAny` satWith)
+
+-- | Find a satisfying assignment to a property using a single solver, but
+-- providing several query problems of interest, with each query running in a
+-- separate thread and return the first one that returns. This can be useful to
+-- use symbolic mode to drive to a location in the search space of the solver
+-- and then refine the problem in query mode. If the computation is very hard to
+-- solve for the solver than running in concurrent mode may provide a large
+-- performance benefit.
+satConcurrentWithAny :: Satisfiable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, SatResult)
+satConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
+                                      return (slvr, time, SatResult result)
+  where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
+
+-- | Find a satisfying assignment to a property using a single solver, but run
+-- each query problem in a separate isolated thread and wait for each thread to
+-- finish. See 'satConcurrentWithAny' for more details.
+satConcurrentWithAll :: Satisfiable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, SatResult)]
+satConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
+                                      return $ (\(a',b,c) -> (a',b,SatResult c)) <$> results
+  where go cfg a' q = runWithQuery satArgReduce True (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | A type @a@ is provable if we can turn it into a predicate, i.e., it has to return a boolean.
 -- This class captures essentially prove calls.
 class ExtractIO m => MProvable m a where
+  -- | Reduce an arg, for proof purposes.
+  proofArgReduce :: a -> SymbolicT m SBool
+
   -- | Generalization of 'Data.SBV.prove'
   prove :: a -> m ThmResult
-
-  default prove :: ProofArgReduce m a => a -> m ThmResult
   prove = proveWith defaultSMTCfg
 
   -- | Generalization of 'Data.SBV.proveWith'
   proveWith :: SMTConfig -> a -> m ThmResult
-
-  default proveWith :: ProofArgReduce m a => SMTConfig -> a -> m ThmResult
   proveWith cfg a = do r <- runWithQuery proofArgReduce False (checkNoOptimizations >> Control.getSMTResult) cfg a
                        ThmResult <$> if validationRequested cfg
                                      then validate proofArgReduce False cfg a r
@@ -385,8 +355,6 @@ class ExtractIO m => MProvable m a where
 
   -- | Generalization of 'Data.SBV.dproveWith'
   dproveWith :: SMTConfig -> a -> m ThmResult
-
-  default dproveWith :: ProofArgReduce m a => SMTConfig -> a -> m ThmResult
   dproveWith cfg a = do r <- runWithQuery proofArgReduce False (checkNoOptimizations >> Control.getSMTResult) cfg a
                         ThmResult <$> if validationRequested cfg
                                       then validate proofArgReduce False cfg a r
@@ -394,14 +362,10 @@ class ExtractIO m => MProvable m a where
 
   -- | Generalization of 'Data.SBV.isVacuousProof'
   isVacuousProof :: a -> m Bool
-
-  default isVacuousProof :: ProofArgReduce m a => a -> m Bool
   isVacuousProof = isVacuousProofWith defaultSMTCfg
 
   -- | Generalization of 'Data.SBV.isVacuousProofWith'
   isVacuousProofWith :: SMTConfig -> a -> m Bool
-
-  default isVacuousProofWith :: ProofArgReduce m a => SMTConfig -> a -> m Bool
   isVacuousProofWith cfg a = -- NB. Can't call runWithQuery since last constraint would become the implication!
        fst <$> runSymbolic cfg (SMTMode QueryInternal ISetup True cfg) (proofArgReduce a >> Control.executeQuery QueryInternal check)
      where
@@ -428,41 +392,32 @@ class ExtractIO m => MProvable m a where
                              ThmResult Unknown{}       -> bad
                              ThmResult ProofError{}    -> bad
 
-  -- | Prove a property with multiple solvers, running them in separate threads. The
-  -- results will be returned in the order produced.
-  proveWithAll :: [SMTConfig] -> a -> m [(Solver, NominalDiffTime, ThmResult)]
+-- | Prove a property with multiple solvers, running them in separate threads. Only
+-- the result of the first one to finish will be returned, remaining threads will be killed.
+-- Note that we send an exception to the losing processes, but we do *not* actually wait for them
+-- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
+-- that some processes take their time to terminate. So, this solution favors quick turnaround.
+proveWithAny :: Provable a => [SMTConfig] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveWithAny  = (`sbvWithAny` proveWith)
 
-  default proveWithAll :: (m ~ IO) => [SMTConfig] -> a -> m [(Solver, NominalDiffTime, ThmResult)]
-  proveWithAll  = (`sbvWithAll` proveWith)
+-- | Prove a property with multiple solvers, running them in separate threads. The
+-- results will be returned in the order produced.
+proveWithAll :: Provable a => [SMTConfig] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveWithAll  = (`sbvWithAll` proveWith)
 
-  -- | Prove a property with multiple solvers, running them in separate threads. Only
-  -- the result of the first one to finish will be returned, remaining threads will be killed.
-  -- Note that we send an exception to the losing processes, but we do *not* actually wait for them
-  -- to finish. In rare cases this can lead to zombie processes. In previous experiments, we found
-  -- that some processes take their time to terminate. So, this solution favors quick turnaround.
-  proveWithAny :: [SMTConfig] -> a -> m (Solver, NominalDiffTime, ThmResult)
+-- | Prove a property by running many queries each isolated to their own thread
+-- concurrently and return the first that finishes, killing the others
+proveConcurrentWithAny :: Provable a => SMTConfig -> [Query b] -> a -> IO (Solver, NominalDiffTime, ThmResult)
+proveConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
+                                        return (slvr, time, ThmResult result)
+  where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q;  checkNoOptimizations >> Control.getSMTResult) cfg a'
 
-  default proveWithAny :: (m ~ IO) => [SMTConfig] -> a -> m (Solver, NominalDiffTime, ThmResult)
-  proveWithAny  = (`sbvWithAny` proveWith)
-
-  -- | Prove a property by running many queries each isolated to their own thread
-  -- concurrently and return the first that finishes, killing the others
-  proveConcurrentWithAny :: SMTConfig -> [QueryT m b] -> a -> m (Solver, NominalDiffTime, ThmResult)
-
-  default proveConcurrentWithAny :: (m ~ IO) => ProofArgReduce m a => SMTConfig -> [QueryT m b] -> a -> m (Solver, NominalDiffTime, ThmResult)
-  proveConcurrentWithAny solver qs a = do (slvr,time,result) <- sbvConcurrentWithAny solver go qs a
-                                          return (slvr, time, ThmResult result)
-    where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q;  checkNoOptimizations >> Control.getSMTResult) cfg a'
-
-  -- | Prove a property by running many queries each isolated to their own thread
-  -- concurrently and wait for each to finish returning all results
-  proveConcurrentWithAll :: SMTConfig -> [QueryT m b] -> a -> m [(Solver, NominalDiffTime, ThmResult)]
-
-  default proveConcurrentWithAll :: (m ~ IO, ProofArgReduce m a) => SMTConfig -> [QueryT m b] -> a -> m [(Solver, NominalDiffTime, ThmResult)]
-  proveConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
-                                          return $ (\(a',b,c) -> (a',b,ThmResult c)) <$> results
-    where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
-
+-- | Prove a property by running many queries each isolated to their own thread
+-- concurrently and wait for each to finish returning all results
+proveConcurrentWithAll :: Provable a => SMTConfig -> [Query b] -> a -> IO [(Solver, NominalDiffTime, ThmResult)]
+proveConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go qs a
+                                        return $ (\(a',b,c) -> (a',b,ThmResult c)) <$> results
+  where go cfg a' q = runWithQuery proofArgReduce False (do _ <- q; checkNoOptimizations >> Control.getSMTResult) cfg a'
 
 -- | Validate a model obtained from the solver
 validate :: MonadIO m => (a -> SymbolicT m SBool) -> Bool -> SMTConfig -> a -> SMTResult -> m SMTResult
@@ -605,11 +560,11 @@ validate reducer isSAT cfg p res =
                        walkConstraints cstrs (checkOutputs (resOutputs result))
 
 -- | Create an SMT-Lib2 benchmark, for a SAT query.
-generateSMTBenchmarkSat :: SatArgReduce m a => a -> m String
+generateSMTBenchmarkSat :: MSatisfiable m a => a -> m String
 generateSMTBenchmarkSat = generateSMTBenchMarkGen True satArgReduce
 
 -- | Create an SMT-Lib2 benchmark, for a Proof query.
-generateSMTBenchmarkProof :: ProofArgReduce m a => a -> m String
+generateSMTBenchmarkProof :: MProvable m a => a -> m String
 generateSMTBenchmarkProof = generateSMTBenchMarkGen False proofArgReduce
 
 -- | Generic benchmark creator
@@ -636,54 +591,37 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
-instance {-# OVERLAPPING #-} SatArgReduce   IO a => MSatisfiable IO a
-instance {-# OVERLAPPING #-} ProofArgReduce IO a => MProvable    IO a
+instance ExtractIO m => MSatisfiable m (SymbolicT m ()) where satArgReduce a = satArgReduce ((a >> pure sTrue) :: SymbolicT m SBool)
+-- instance ExtractIO m => MProvable m (SymbolicT m ())  -- NO INSTANCE ON PURPOSE; don't want to prove goals
 
--- The concurrent stuff needs base type of IO. So punt on other monads.
-instance (ExtractIO m, SatArgReduce   m a) => MSatisfiable m a where
-  satWithAll           = error "satWithAll is only available over the base Satisfable types."
-  satWithAny           = error "satWithAny is only available over the base Satisfable types."
-  satConcurrentWithAny = error "satConcurrentWithAny is only available over the base Satisfable types."
-  satConcurrentWithAll = error "satConcurrentWithAll is only available over the base Satisfable types."
+instance ExtractIO m => MSatisfiable m (SymbolicT m SBool) where satArgReduce   = id
+instance ExtractIO m => MProvable    m (SymbolicT m SBool) where proofArgReduce = id
 
--- The concurrent stuff needs base type of IO. So punt on other monads.
-instance (ExtractIO m, ProofArgReduce m a) => MProvable m a where
-  proveWithAll           = error "proveWithAll is only available over the base Provable types."
-  proveWithAny           = error "proveWithAny is only available over the base Provable types."
-  proveConcurrentWithAny = error "proveConcurrentWithAny is only available over the base Provable types."
-  proveConcurrentWithAll = error "proveConcurrentWithAll is only available over the base Provable types."
+instance ExtractIO m => MSatisfiable m SBool where satArgReduce   = return
+instance ExtractIO m => MProvable    m SBool where proofArgReduce = return
 
-instance ExtractIO m => SatArgReduce m (SymbolicT m ()) where satArgReduce a = satArgReduce ((a >> pure sTrue) :: SymbolicT m SBool)
--- instance ExtractIO m => ProofArgReduce m (SymbolicT m ())  -- NO INSTANCE ON PURPOSE; don't want to prove goals
-
-instance ExtractIO m => SatArgReduce   m (SymbolicT m SBool) where satArgReduce   = id
-instance ExtractIO m => ProofArgReduce m (SymbolicT m SBool) where proofArgReduce = id
-
-instance ExtractIO m => SatArgReduce   m SBool where satArgReduce   = return
-instance ExtractIO m => ProofArgReduce m SBool where proofArgReduce = return
-
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatArgReduce m r) => SatArgReduce m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (Forall a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProofArgReduce m r) => ProofArgReduce m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (Forall a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatArgReduce m r) => SatArgReduce m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (Exists a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProofArgReduce m r) => ProofArgReduce m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (ForallN n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatArgReduce m r) => SatArgReduce m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (ExistsN n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProofArgReduce m r) => ProofArgReduce m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (Exists a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatArgReduce m r) => SatArgReduce m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (ForallN n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProofArgReduce m r) => ProofArgReduce m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (ExistsN n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
 {-
@@ -701,59 +639,59 @@ mkArg :: (SymVal a, MonadSymbolic m) => m (SBV a)
 mkArg = mkSymVal (NonQueryVar Nothing) Nothing
 
 -- Functions
-instance (SymVal a, SatArgReduce m p) => SatArgReduce m (SBV a -> p) where
+instance (SymVal a, MSatisfiable m p) => MSatisfiable m (SBV a -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ k a
 
-instance (SymVal a, ProofArgReduce m p) => ProofArgReduce m (SBV a -> p) where
+instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ k a
 
 -- Arrays
-instance (HasKind a, HasKind b, SatArgReduce m p) => SatArgReduce m (SArray a b -> p) where
+instance (HasKind a, HasKind b, MSatisfiable m p) => MSatisfiable m (SArray a b -> p) where
   satArgReduce k = newArray_ Nothing >>= \a -> satArgReduce $ k a
 
-instance (HasKind a, HasKind b, ProofArgReduce m p) => ProofArgReduce m (SArray a b -> p) where
+instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
   proofArgReduce k = newArray_ Nothing >>= \a -> proofArgReduce $ k a
 
 -- 2 Tuple
-instance (SymVal a, SymVal b, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b -> k (a, b)
 
-instance (SymVal a, SymVal b, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b -> k (a, b)
 
 -- 3 Tuple
-instance (SymVal a, SymVal b, SymVal c, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c -> k (a, b, c)
 
-instance (SymVal a, SymVal b, SymVal c, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c -> k (a, b, c)
 
 -- 4 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   satArgReduce k = mkArg  >>= \a -> satArgReduce $ \b c d -> k (a, b, c, d)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   proofArgReduce k = mkArg  >>= \a -> proofArgReduce $ \b c d -> k (a, b, c, d)
 
 -- 5 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e -> k (a, b, c, d, e)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e -> k (a, b, c, d, e)
 
 -- 6 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
 
 -- 7 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SatArgReduce m p) => SatArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, ProofArgReduce m p) => ProofArgReduce m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
 -- | Generalization of 'Data.SBV.runSMT'

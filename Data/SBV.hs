@@ -316,12 +316,10 @@ module Data.SBV (
   , optimize, optimizeWith
   , isVacuousProof, isVacuousProofWith
   , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
-  , proveWithAll, proveWithAny, satWithAll
-  , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
-  , satWithAny, generateSMTBenchmarkSat, generateSMTBenchmarkProof
+  , proveWithAny, proveWithAll, proveConcurrentWithAny, proveConcurrentWithAll
+  , satWithAny,   satWithAll,   satConcurrentWithAny,   satConcurrentWithAll
+  , generateSMTBenchmarkSat, generateSMTBenchmarkProof
   , solve
-  -- ** Reducable args
-  , SatArgReduce, ProofArgReduce
 
   -- * Constraints
   -- $constrainIntro
