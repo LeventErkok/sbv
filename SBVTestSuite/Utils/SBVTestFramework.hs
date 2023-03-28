@@ -12,6 +12,7 @@
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeOperators   #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -23,6 +24,7 @@ module Utils.SBVTestFramework (
         , goldenVsStringShow
         , goldenCapturedIO
         , qc1, qc2
+        , shouldNotTypeCheck
         -- module exports to simplify life
         , module Test.Tasty
         , module Test.Tasty.HUnit
@@ -31,6 +33,8 @@ module Utils.SBVTestFramework (
 
 import qualified Control.Exception as C
 
+import Control.DeepSeq     (force, NFData)
+import Control.Exception   (evaluate, try, throwIO, TypeError(..))
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
@@ -45,12 +49,15 @@ import Test.Tasty.Golden     (goldenVsString, goldenVsFileDiff)
 import qualified Test.Tasty.QuickCheck   as QC
 import qualified Test.QuickCheck.Monadic as QC
 
+import Test.Tasty.HUnit  (assertFailure)
 import Test.Tasty.Runners hiding (Result)
 
 import Data.SBV
 import Data.SBV.Control
 
 import System.FilePath ((</>), (<.>))
+import Data.List       (isInfixOf, isSuffixOf)
+
 
 import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..), Outputtable)
 
@@ -206,5 +213,24 @@ qc2 nm opC opS = [cf, sm]
                         case result of
                            Right a -> QC.assert $ expected == a
                            _       -> QC.assert False
+
+
+-- Adapted from https://github.com/CRogers/should-not-typecheck/blob/2929b8303634fcfe200e8e37b744171aed3a757b/src/Test/ShouldNotTypecheck.hs#L1
+shouldNotTypeCheck :: NFData a => (() ~ () => a) -> Assertion
+shouldNotTypeCheck a = do
+  result <- try (evaluate $ force a)
+  case result of
+    Right _ -> assertFailure "Expected to not compile but it did compile."
+
+    Left e@(TypeError msg)
+      | "(deferred type error)" `isSuffixOf` msg
+      -> case () of
+           () |     "No instance for" `isInfixOf` msg
+                 && "NFData"          `isInfixOf` msg
+              -> assertFailure $ "Make sure the expression has an NFData instance! Full error:\n" ++ msg
+              | True
+              -> pure ()
+      | True
+      -> throwIO e
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}

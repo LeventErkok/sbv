@@ -57,6 +57,7 @@ import qualified TestSuite.BitPrecise.BitTricks
 import qualified TestSuite.BitPrecise.Legato
 import qualified TestSuite.BitPrecise.MergeSort
 import qualified TestSuite.BitPrecise.PrefixSum
+import qualified TestSuite.CantTypeCheck.Misc
 import qualified TestSuite.Char.Char
 import qualified TestSuite.CodeGeneration.AddSub
 import qualified TestSuite.CodeGeneration.CgTests
@@ -170,6 +171,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.BitPrecise.Legato.tests
                       , TestSuite.BitPrecise.MergeSort.tests
                       , TestSuite.BitPrecise.PrefixSum.tests
+                      , TestSuite.CantTypeCheck.Misc.tests
                       , TestSuite.Char.Char.tests
                       , TestSuite.CodeGeneration.AddSub.tests
                       , TestSuite.CodeGeneration.CgTests.tests

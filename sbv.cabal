@@ -259,7 +259,7 @@ Test-Suite SBVTest
                     TemplateHaskell
                     TupleSections
                     TypeApplications
-  build-depends   : filepath, sbv, directory, random, mtl, containers
+  build-depends   : filepath, sbv, directory, random, mtl, containers, deepseq
                   , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
@@ -372,6 +372,7 @@ Test-Suite SBVTest
                   , TestSuite.Uninterpreted.Function
                   , TestSuite.Uninterpreted.Sort
                   , TestSuite.Uninterpreted.Uninterpreted
+                  , TestSuite.CantTypeCheck.Misc
 
 Test-Suite SBVConnections
     import          : common-settings
