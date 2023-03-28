@@ -42,14 +42,13 @@ import qualified Data.ByteString.Lazy.Char8 as LBC
 import System.Directory   (removeFile)
 
 import Test.Tasty            (testGroup, TestTree, TestName)
-import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable)
+import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable, assertFailure)
 
 import Test.Tasty.Golden     (goldenVsString, goldenVsFileDiff)
 
 import qualified Test.Tasty.QuickCheck   as QC
 import qualified Test.QuickCheck.Monadic as QC
 
-import Test.Tasty.HUnit  (assertFailure)
 import Test.Tasty.Runners hiding (Result)
 
 import Data.SBV

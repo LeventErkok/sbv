@@ -34,5 +34,8 @@ tests = testGroup "CantTypeCheck.Misc" [
          -- Just so we got something other than our stuff..
          , testCase "noTypeCheck05"     $ shouldNotTypeCheck (1 :: String)
          ]
-  where t1 = \x -> (do { constrain ( x .> (5::SInteger)) } :: Goal)
-        t2 = pure () :: Goal
+  where t1 :: SInteger -> Goal
+        t1 x = do { constrain ( x .> (5::SInteger)) }
+
+        t2 :: Goal
+        t2 = pure ()
