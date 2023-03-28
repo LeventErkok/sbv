@@ -23,6 +23,7 @@
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert false)
+[GOOD] (assert false)
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
