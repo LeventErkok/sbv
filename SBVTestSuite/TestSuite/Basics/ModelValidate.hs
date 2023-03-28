@@ -50,9 +50,10 @@ tests = testGroup "Basics.ModelValidate" [
           t1 = free "x" >>= \x -> pure $ fpAdd sRTZ x x   .== (x::SFloat)
           t2 = free "x" >>= \x -> pure $ fpFMA sRNE x x x .== (x::SFloat)
 
-          t3 :: Goal
+          t3 :: Predicate
           t3 = do x <- sInteger "x"
                   constrain $ x .> x   -- Constraining with False! i.e., any theorem will follow, and will be trivially unsat
+                  pure sFalse
 
           t4 :: Predicate
           t4 = do x <- sInteger "x"

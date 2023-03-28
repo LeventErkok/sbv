@@ -35,7 +35,7 @@ import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext,
                                 Symbolic, SBVRunMode, SMTConfig, SVal)
 import Data.SBV.Control.Types  (SMTOption)
-import Data.SBV.Provers.Prover (Provable, SExecutable, ThmResult)
+import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
                                 OptimizeResult)
 
@@ -78,32 +78,32 @@ dproveWith = Trans.dproveWith
 -- | Find a satisfying assignment for a predicate, using the default solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sat'
-sat :: Provable a => a -> IO SatResult
+sat :: Satisfiable a => a -> IO SatResult
 sat = Trans.sat
 
 -- | Find a satisfying assignment using the given SMT-solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satWith'
-satWith :: Provable a => SMTConfig -> a -> IO SatResult
+satWith :: Satisfiable a => SMTConfig -> a -> IO SatResult
 satWith = Trans.satWith
 
 -- | Find a delta-satisfying assignment for a predicate, using the default solver for delta-satisfiability.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.dsat'
-dsat :: Provable a => a -> IO SatResult
+dsat :: Satisfiable a => a -> IO SatResult
 dsat = Trans.dsat
 
 -- | Find a satisfying assignment using the given SMT-solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satWith'
-dsatWith :: Provable a => SMTConfig -> a -> IO SatResult
+dsatWith :: Satisfiable a => SMTConfig -> a -> IO SatResult
 dsatWith = Trans.dsatWith
 
 -- | Find all satisfying assignments, using the default solver.
 -- Equivalent to @'allSatWith' 'Data.SBV.defaultSMTCfg'@. See 'allSatWith' for details.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.allSat'
-allSat :: Provable a => a -> IO AllSatResult
+allSat :: Satisfiable a => a -> IO AllSatResult
 allSat = Trans.allSat
 
 -- | Return all satisfying assignments for a predicate.
@@ -119,32 +119,44 @@ allSat = Trans.allSat
 --  Find all satisfying assignments using the given SMT-solver
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.allSatWith'
-allSatWith :: Provable a => SMTConfig -> a -> IO AllSatResult
+allSatWith :: Satisfiable a => SMTConfig -> a -> IO AllSatResult
 allSatWith = Trans.allSatWith
 
 -- | Optimize a given collection of `Objective`s.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.optimize'
-optimize :: Provable a => OptimizeStyle -> a -> IO OptimizeResult
+optimize :: Satisfiable a => OptimizeStyle -> a -> IO OptimizeResult
 optimize = Trans.optimize
 
 -- | Optimizes the objectives using the given SMT-solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.optimizeWith'
-optimizeWith :: Provable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+optimizeWith :: Satisfiable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
 optimizeWith = Trans.optimizeWith
 
--- | Check if the constraints given are consistent, using the default solver.
+-- | Check if the constraints given are consistent in a SAT call using the default solver.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isVacuous'
-isVacuous :: Provable a => a -> IO Bool
-isVacuous = Trans.isVacuous
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuous'
+satIsVacuous :: Satisfiable a => a -> IO Bool
+satIsVacuous = Trans.satIsVacuous
 
--- | Determine if the constraints are vacuous using the given SMT-solver.
+-- | Determine if the constraints are vacuous in a SAT call using the given SMT-solver.
 --
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isVacuousWith'
-isVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
-isVacuousWith = Trans.isVacuousWith
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuousWith'
+satIsVacuousWith :: Satisfiable a => SMTConfig -> a -> IO Bool
+satIsVacuousWith = Trans.satIsVacuousWith
+
+-- | Check if the constraints given are consistent in a prove call using the default solver.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.proofIsVacuous'
+proofIsVacuous :: Provable a => a -> IO Bool
+proofIsVacuous = Trans.proofIsVacuous
+
+-- | Determine if the constraints are vacuous in a SAT call using the given SMT-solver.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.satIsVacuousWith'
+proofIsVacuousWith :: Provable a => SMTConfig -> a -> IO Bool
+proofIsVacuousWith = Trans.proofIsVacuousWith
 
 -- | Checks theoremhood using the default solver.
 --
@@ -161,13 +173,13 @@ isTheoremWith = Trans.isTheoremWith
 -- | Checks satisfiability using the default solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isSatisfiable'
-isSatisfiable :: Provable a => a -> IO Bool
+isSatisfiable :: Satisfiable a => a -> IO Bool
 isSatisfiable = Trans.isSatisfiable
 
 -- | Check whether a given property is satisfiable.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.isSatisfiableWith'
-isSatisfiableWith :: Provable a => SMTConfig -> a -> IO Bool
+isSatisfiableWith :: Satisfiable a => SMTConfig -> a -> IO Bool
 isSatisfiableWith = Trans.isSatisfiableWith
 
 -- | Run an arbitrary symbolic computation, equivalent to @'runSMTWith' 'Data.SBV.defaultSMTCfg'@

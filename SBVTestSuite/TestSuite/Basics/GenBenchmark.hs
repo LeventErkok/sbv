@@ -19,8 +19,9 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Basics.genBenchmark"
-    [ goldenString "genBenchMark1" $ gen False (\x -> x .== (x+1::SWord8))
-    , goldenString "genBenchMark2" $ gen True  (\x -> x .== (x+1::SWord8))
+    [ goldenString "genBenchMark1" $ gen generateSMTBenchmarkProof (\x -> x .== (x+1::SWord8))
+    , goldenString "genBenchMark2" $ gen generateSMTBenchmarkSat   (\x -> x .== (x+1::SWord8))
     ]
-    where gen b f = -- the first line is time-stamp, get rid of it so test is repeatable
-                    unlines . tail . lines <$> generateSMTBenchmark b f
+    where gen generator f =
+                -- the first line is time-stamp, get rid of it so test is repeatable
+                unlines . tail . lines <$> generator f

@@ -21,13 +21,14 @@
 -- Falsifiable. Counter-example:
 --   s0 = 64 :: Word8
 --
--- The function 'prove' has the following type:
+-- And similarly, 'sat' finds a satisfying instance. The types involved are:
 --
 -- @
---     'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
+--     'prove' :: 'Provable'    a => a -> 'IO' 'ThmResult'
+--     'sat'   :: 'Satisfiable' a => a -> 'IO' 'SatResult'
 -- @
 --
--- The class 'Provable' comes with instances for n-ary predicates, for arbitrary n.
+-- The classes 'Provable' and 'Satisfiable' come with instances for n-ary predicates, for arbitrary n.
 -- The predicates are just regular Haskell functions over symbolic types listed below.
 -- Functions for checking satisfiability ('sat' and 'allSat') are also
 -- provided.
@@ -306,18 +307,22 @@ module Data.SBV (
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
   -- $multiIntro
-  , Predicate, Goal, Provable
+  , Predicate, Goal, Provable, Satisfiable
   , prove, proveWith
   , dprove, dproveWith
   , sat, satWith
   , dsat, dsatWith
   , allSat, allSatWith
-  , optimize, optimizeWith, isVacuous
-  , isVacuousWith, isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
+  , optimize, optimizeWith
+  , satIsVacuous, proofIsVacuous, satIsVacuousWith, proofIsVacuousWith
+  , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
   , proveWithAll, proveWithAny, satWithAll
   , proveConcurrentWithAny, proveConcurrentWithAll, satConcurrentWithAny, satConcurrentWithAll
-  , satWithAny, generateSMTBenchmark
+  , satWithAny, generateSMTBenchmarkSat, generateSMTBenchmarkProof
   , solve
+  -- ** Reducable args
+  , SatArgReduce, ProofArgReduce
+
   -- * Constraints
   -- $constrainIntro
   -- ** General constraints
@@ -443,7 +448,9 @@ import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
 import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
                                        allSatWith, optimize, optimizeWith,
-                                       isVacuous, isVacuousWith, isTheorem,
+                                       satIsVacuous, satIsVacuousWith,
+                                       proofIsVacuous, proofIsVacuousWith, 
+                                       isTheorem,
                                        isTheoremWith, isSatisfiable,
                                        isSatisfiableWith, runSMT, runSMTWith,
                                        sName, safe, safeWith)

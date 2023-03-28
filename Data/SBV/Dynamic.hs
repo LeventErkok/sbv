@@ -122,7 +122,7 @@ module Data.SBV.Dynamic
   , compileToC, compileToCLib
 
   -- ** Compilation to SMTLib
-  , generateSMTBenchmark
+  , generateSMTBenchmarkSat, generateSMTBenchmarkProof
   ) where
 
 import Control.Monad.Trans (liftIO)
@@ -154,7 +154,7 @@ import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithA
                                                 )
 import qualified Data.SBV.Core.Data      as SBV (SBV(..))
 import qualified Data.SBV.Core.Model     as SBV (sbvQuickCheck)
-import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmark)
+import qualified Data.SBV.Provers.Prover as SBV (proveWith, satWith, safeWith, allSatWith, generateSMTBenchmarkSat, generateSMTBenchmarkProof)
 import qualified Data.SBV.SMT.SMT        as SBV (Modelable(getModelAssignment, getModelDictionary))
 
 import Data.Time (NominalDiffTime)
@@ -166,11 +166,13 @@ svQuickCheck = SBV.sbvQuickCheck . fmap toSBool
 toSBool :: SVal -> SBV.SBool
 toSBool = SBV.SBV
 
--- | Create SMT-Lib benchmarks. The first argument is the basename of the file, we will automatically
--- add ".smt2" per SMT-Lib2 convention. The 'Bool' argument controls whether this is a SAT instance, i.e.,
--- translate the query directly, or a PROVE instance, i.e., translate the negated query.
-generateSMTBenchmark :: Bool -> Symbolic SVal -> IO String
-generateSMTBenchmark isSat s = SBV.generateSMTBenchmark isSat (fmap toSBool s)
+-- | Create SMT-Lib benchmark for a sat call
+generateSMTBenchmarkSat :: Symbolic SVal -> IO String
+generateSMTBenchmarkSat s = SBV.generateSMTBenchmarkSat (fmap toSBool s)
+
+-- | Create SMT-Lib benchmark for a proof call
+generateSMTBenchmarkProof :: Symbolic SVal -> IO String
+generateSMTBenchmarkProof s = SBV.generateSMTBenchmarkProof (fmap toSBool s)
 
 -- | Proves the predicate using the given SMT-solver
 proveWith :: SMTConfig -> Symbolic SVal -> IO ThmResult

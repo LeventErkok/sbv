@@ -53,8 +53,7 @@ powerOfTwoCorrect v = f .== s
 -- | Collection of queries
 queries :: IO ()
 queries =
-  let check :: Provable a => String -> a -> IO ()
-      check w t = do putStr $ "Proving " ++ show w ++ ": "
+  let check w t = do putStr $ "Proving " ++ show w ++ ": "
                      print =<< prove t
   in do check "Fast min             " fastMinCorrect
         check "Fast max             " fastMaxCorrect

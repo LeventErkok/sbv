@@ -402,7 +402,7 @@ genIEEE754 origin vs =  [tst1 ("pred_"   ++ nm, x, y)    | (nm, x, y)    <- pred
         fpProver :: SMTConfig
         fpProver = z3 -- mathSAT
 
-        fpThm :: Provable a => a -> IO Bool
+        fpThm :: ProofArgReduce IO a => a -> IO Bool
         fpThm = isTheoremWith fpProver
 
         mkThmP op x r = fpThm $ do a <- free "x"
@@ -523,7 +523,7 @@ genFPConverts = [tst1 ("fpCast_" ++ nm, x, y) | (nm, x, y) <- converts]
         fpProver :: SMTConfig
         fpProver = z3 -- mathSAT
 
-        fpThm :: Provable a => a -> IO Bool
+        fpThm :: ProofArgReduce IO a => a -> IO Bool
         fpThm = isTheoremWith fpProver
 
         mkThmP op x r = fpThm $ do a <- free "x"

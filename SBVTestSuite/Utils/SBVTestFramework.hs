@@ -83,7 +83,7 @@ goldenCapturedIO n res = goldenVsFileDiff n diff gf gfTmp (rm gfTmp >> res gfTmp
 -- call this function if you provided a max-model count
 -- that was hit, or the search was stopped because the
 -- solver said 'Unknown' at some point.
-numberOfModels :: Provable a => a -> IO Int
+numberOfModels :: SatArgReduce IO a => a -> IO Int
 numberOfModels p = do AllSatResult { allSatMaxModelCountReached  = maxHit
                                    , allSatSolverReturnedUnknown = unk
                                    , allSatSolverReturnedDSat    = ds
@@ -101,19 +101,19 @@ runSAT :: Outputtable a => Symbolic a -> IO Result
 runSAT cmp = snd <$> runSymbolic defaultSMTCfg (SMTMode QueryInternal ISetup True defaultSMTCfg) (cmp >>= output >> pure ())
 
 -- | Turn provable to an assertion, theorem case
-assertIsThm :: Provable a => a -> Assertion
+assertIsThm :: ProofArgReduce IO a => a -> Assertion
 assertIsThm t = assert (isTheorem t)
 
 -- | Turn provable to a negative assertion, theorem case
-assertIsntThm :: Provable a => a -> Assertion
+assertIsntThm :: ProofArgReduce IO a => a -> Assertion
 assertIsntThm t = assert (fmap not (isTheorem t))
 
 -- | Turn provable to an assertion, satisfiability case
-assertIsSat :: Provable a => a -> Assertion
+assertIsSat :: SatArgReduce IO a => a -> Assertion
 assertIsSat p = assert (isSatisfiable p)
 
 -- | Turn provable to a negative assertion, satisfiability case
-assertIsntSat :: Provable a => a -> Assertion
+assertIsntSat :: SatArgReduce IO a => a -> Assertion
 assertIsntSat p = assert (fmap not (isSatisfiable p))
 
 -- | Quick-check a unary function, creating one version for constant folding, and another for solver
