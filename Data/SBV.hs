@@ -304,6 +304,10 @@ module Data.SBV (
   -- * Stopping unrolling: Defined functions
   , SMTDefinable(..)
 
+  -- * Special relations
+  , mkPartialOrder, mkLinearOrder, mkTreeOrder, mkPiecewiseLinearOrder
+  , transitiveClosure
+
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
   -- $multiIntro
@@ -1452,5 +1456,37 @@ instance ByteConverter (SWord 1024) where
      | True
      = error $ "fromBytes:SWord 1024: Incorrect number of bytes: " ++ show l
      where l = length as
+
+-- | Make a partial order. The integer argument uniquely identifies this order.
+mkPartialOrder :: Int -> SBV a -> SBV a -> SBool
+mkPartialOrder = mkSpecialRelation "partial-order" . Left
+
+-- | Make a linear order. The integer argument uniquely identifies this order.
+mkLinearOrder :: Int -> SBV a -> SBV a -> SBool
+mkLinearOrder = mkSpecialRelation "linear-order" . Left
+
+-- | Make a tree order. The integer argument uniquely identifies this order.
+mkTreeOrder :: Int -> SBV a -> SBV a -> SBool
+mkTreeOrder = mkSpecialRelation "tree-order" . Left
+
+-- | Make a piece-wise linear order.
+mkPiecewiseLinearOrder :: Int -> SBV a -> SBV a -> SBool
+mkPiecewiseLinearOrder = mkSpecialRelation "piecewise-linear-order" . Left
+
+-- | Create a named relation and its transitive closure.
+transitiveClosure :: SymVal a => String -> (SBV a -> SBV a -> SBool, SBV a -> SBV a -> SBool)
+transitiveClosure nm = (uninterpret nm, mkSpecialRelation "transitive-closure" (Right nm))
+
+-- | Create special relations of given type
+mkSpecialRelation :: String -> Either Int String -> SBV a -> SBV a -> SBool
+mkSpecialRelation nm is
+  | Left i <- is, i < 0
+  = error $ "Data.SBV.mkSpecialRelation: Index to " ++ nm ++ " must be non-negative, received: " ++ show i
+  | True
+  = \a b -> let result st = do sa <- sbvToSV st a
+                               sb <- sbvToSV st b
+                               let tag = "(_ " ++ nm ++ " " ++ show is ++ ")"
+                               newExpr st KBool $ SBVApp (Uninterpreted tag) [sa, sb]
+            in SBV $ SVal KBool $ Right $ cache result
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
