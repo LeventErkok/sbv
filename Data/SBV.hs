@@ -312,7 +312,7 @@ module Data.SBV (
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
   -- $multiIntro
-  , Predicate, Goal, Provable, Satisfiable
+  , Predicate, ConstraintSet, Provable, Satisfiable
   , prove, proveWith
   , dprove, dproveWith
   , sat, satWith

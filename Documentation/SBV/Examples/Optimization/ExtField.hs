@@ -38,7 +38,7 @@ import Data.SBV
 --   one-x =  oo :: Integer
 --   min_y = 7.0 :: Real
 --   min_z = 5.0 :: Real
-problem :: Goal
+problem :: ConstraintSet
 problem = do x <- sInteger "x"
              y <- sReal "y"
              z <- sReal "z"

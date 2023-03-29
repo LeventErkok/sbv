@@ -65,7 +65,7 @@ count :: Color -> [Flower] -> SInteger
 count c fs = sum [ite (col f .== literal c) 1 0 | f <- fs]
 
 -- | Smullyan's puzzle.
-puzzle :: Goal
+puzzle :: ConstraintSet
 puzzle = do n <- sInteger "N"
 
             let valid = validPick n

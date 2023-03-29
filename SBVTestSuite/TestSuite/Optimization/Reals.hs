@@ -22,7 +22,7 @@ tests =
     [ goldenVsStringShow "optReal1" (optimize Lexicographic p)
     ]
 
-p :: Goal
+p :: ConstraintSet
 p = do x <- sReal "x"
        y <- sReal "y"
        z <- sReal "z"

@@ -35,7 +35,7 @@ import Data.SBV
 --   x1   =  47 % 9 :: Real
 --   x2   =  20 % 9 :: Real
 --   goal = 355 % 9 :: Real
-problem :: Goal
+problem :: ConstraintSet
 problem = do [x1, x2] <- mapM sReal ["x1", "x2"]
 
              constrain $ x1 + x2 .<= 10

@@ -75,7 +75,7 @@ mkSym o = do let h = show o ++ ".handler"
 --   Shamir.location  =  Ambalat :: Location
 --   Shamir.age       =        7 :: Integer
 -- This is the only solution.
-puzzle :: Goal
+puzzle :: ConstraintSet
 puzzle = do
    solution@[_merah, ofallo, quirrel, shamir] <- mapM mkSym [minBound .. maxBound]
 

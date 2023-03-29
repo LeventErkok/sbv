@@ -50,7 +50,7 @@ import Data.SBV
 --   stock =  1 :: Integer
 --
 -- That is, we should produce 45 X's and 6 Y's, with the final maximum stock of just 1 expected!
-production :: Goal
+production :: ConstraintSet
 production = do x <- sInteger "X" -- Units of X produced
                 y <- sInteger "Y" -- Units of X produced
 

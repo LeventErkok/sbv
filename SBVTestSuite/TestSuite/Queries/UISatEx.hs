@@ -64,7 +64,7 @@ q4 = uninterpret "q4"
 q5 :: SList Integer -> SList Float -> SInteger
 q5 = uninterpret "q5"
 
-core :: Goal
+core :: ConstraintSet
 core = do x <- sInteger_
           constrain $ q1 2    .== 12
           constrain $ q1 3    .== 75

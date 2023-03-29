@@ -23,7 +23,7 @@ tests =
     , goldenVsStringShow "assertWithPenalty2" (optimize Lexicographic assertWithPenalty2)
     ]
 
-assertWithPenalty1 :: Goal
+assertWithPenalty1 :: ConstraintSet
 assertWithPenalty1 = do
                  x <- sInteger "x"
                  y <- sInteger "y"
@@ -40,7 +40,7 @@ assertWithPenalty1 = do
                  assertWithPenalty "as3" (sNot a1) (Penalty 10 Nothing)
                  assertWithPenalty "as4" (sNot a2) (Penalty  3 Nothing)
 
-assertWithPenalty2 :: Goal
+assertWithPenalty2 :: ConstraintSet
 assertWithPenalty2 = do
                  a1 <- sBool "a1"
                  a2 <- sBool "a2"

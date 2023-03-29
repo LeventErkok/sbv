@@ -25,7 +25,7 @@ tests =
     [ goldenVsStringShow "optTuple1" $ optimize Lexicographic t1
     ]
 
-t1 :: Goal
+t1 :: ConstraintSet
 t1 = do p :: STuple Integer Integer <- sTuple "p"
 
         constrain $ (p^._1) `inRange` (0, 100)

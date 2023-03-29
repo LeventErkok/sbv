@@ -48,7 +48,7 @@ import Data.SBV
 --   cost        =    20 :: Integer
 --
 -- That is, we should put all the jobs on the third server, for a total cost of 20.
-allocate :: Goal
+allocate :: ConstraintSet
 allocate = do
     -- xij means VM i is running on server j
     x1@[x11, x12, x13] <- sBools ["x11", "x12", "x13"]

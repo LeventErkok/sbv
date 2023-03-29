@@ -33,21 +33,21 @@ tests =
     , goldenVsStringShow "optFloat4"  $ optimizeWith z3{crackNum=True} Lexicographic r
     ]
 
-floatMinMax :: (SFloat -> Symbolic ()) -> Bool -> Goal
+floatMinMax :: (SFloat -> Symbolic ()) -> Bool -> ConstraintSet
 floatMinMax opt reqPoint = do x <- sFloat "x"
 
                               when reqPoint $ constrain $ fpIsPoint x
 
                               opt x
 
-doubleMinMax :: (SDouble -> Symbolic ()) -> Bool -> Goal
+doubleMinMax :: (SDouble -> Symbolic ()) -> Bool -> ConstraintSet
 doubleMinMax opt reqPoint = do x <- sDouble "x"
 
                                when reqPoint $ constrain $ fpIsPoint x
 
                                opt x
 
-q :: Goal
+q :: ConstraintSet
 q = do x <- sFloat "x"
        y <- sFloat "y"
 
@@ -59,7 +59,7 @@ q = do x <- sFloat "x"
 
        maximize "metric-max-x+y" $ observe "max-x+y" (x+y)
 
-r :: Goal
+r :: ConstraintSet
 r = do x <- sFloat "x"
        y <- sFloat "y"
 

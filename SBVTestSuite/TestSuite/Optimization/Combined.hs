@@ -26,7 +26,7 @@ tests =
     , goldenVsStringShow "pareto3"   (optimize (Pareto Nothing)   pareto3)
     ]
 
-combined1 :: Goal
+combined1 :: ConstraintSet
 combined1 = do x <- sInteger "x"
                y <- sInteger "y"
                z <- sInteger "z"
@@ -39,7 +39,7 @@ combined1 = do x <- sInteger "x"
                maximize "max_x" x
                maximize "max_y" y
 
-combined2 :: Goal
+combined2 :: ConstraintSet
 combined2 = do a <- sBool "a"
                b <- sBool "b"
                c <- sBool "c"
@@ -51,7 +51,7 @@ combined2 = do a <- sBool "a"
                constrain $ a .== c
                constrain $ sNot (a .&& b)
 
-pareto1 :: Goal
+pareto1 :: ConstraintSet
 pareto1 = do x <- sInteger "x"
              y <- sInteger "y"
 
@@ -64,7 +64,7 @@ pareto1 = do x <- sInteger "x"
              maximize "max_x_plus_y"   $ x + y
              minimize "min_y"            y
 
-pareto2 :: Goal
+pareto2 :: ConstraintSet
 pareto2 = do x <- sInteger "x"
              y <- sInteger "y"
 
@@ -75,7 +75,7 @@ pareto2 = do x <- sInteger "x"
              maximize "max_y"            y
              minimize "max_x_plus_y"   $ x + y
 
-pareto3 :: Goal
+pareto3 :: ConstraintSet
 pareto3 = do x <- sInteger "x"
 
              constrain $ 1 .>= x

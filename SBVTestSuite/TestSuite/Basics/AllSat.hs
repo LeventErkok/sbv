@@ -52,12 +52,12 @@ t2 = allSat $ do x <- free "x"
                  z <- free "z"
                  return $ x .== (y :: SQ) .&& z .== (z :: SQ)
 
-t3 :: Goal
+t3 :: ConstraintSet
 t3 = do x <- free "x"
         y <- free "y"
         constrain $ \(Forall z) -> x .< (y::SWord8) .&& y .< 3 .&& z .== (z::SWord8)
 
-t4 :: Goal
+t4 :: ConstraintSet
 t4 = do x <- sInteger "x"
         y <- sInteger "y"
         z <- sInteger "z"

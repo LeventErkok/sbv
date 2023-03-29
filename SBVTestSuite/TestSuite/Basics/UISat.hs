@@ -33,7 +33,7 @@ cfg rf = z3 { verbose             = True
             , isNonModelVar       = (`elem` ["nx", "ny", "nz"])
             }
 
-checkWith :: FilePath -> Goal -> IO ()
+checkWith :: FilePath -> ConstraintSet -> IO ()
 checkWith rf prop = do r <- allSatWith (cfg rf) prop
                        appendFile rf $ "\nRESULT: " ++ show r
 
@@ -43,15 +43,15 @@ q1 = uninterpret "q1"
 q2 :: SBool -> SBool -> SBool
 q2 = uninterpret "q2"
 
-test1 :: Goal
+test1 :: ConstraintSet
 test1 = do setLogic Logic_ALL
            registerUISMTFunction q1
 
-test2 :: Goal
+test2 :: ConstraintSet
 test2 = do setLogic Logic_ALL
            registerUISMTFunction q2
 
-test3 :: Goal
+test3 :: ConstraintSet
 test3 = do setLogic Logic_ALL
            registerUISMTFunction q1
            registerUISMTFunction q2

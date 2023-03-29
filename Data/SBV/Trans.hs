@@ -92,7 +92,7 @@ module Data.SBV.Trans (
   , mkUninterpretedSort, SMTDefinable(..)
 
   -- * Properties, proofs, and satisfiability
-  , Predicate, Goal, ProvableM(..), Provable, SatisfiableM(..), Satisfiable
+  , Predicate, ConstraintSet, ProvableM(..), Provable, SatisfiableM(..), Satisfiable
   , generateSMTBenchmarkSat, generateSMTBenchmarkProof
   , solve
   -- * Constraints

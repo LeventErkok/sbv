@@ -24,7 +24,7 @@
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
        , ProvableM(..), Provable, SatisfiableM(..), Satisfiable
-       , generateSMTBenchmarkSat, generateSMTBenchmarkProof, Goal
+       , generateSMTBenchmarkSat, generateSMTBenchmarkProof, ConstraintSet
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
@@ -164,9 +164,9 @@ defaultDeltaSMTCfg = dReal
 -- type when necessary.
 type Predicate = Symbolic SBool
 
--- | A goal is a symbolic program that returns no values. The idea is that the constraints/min-max
--- goals will serve as appropriate directives for sat/prove calls.
-type Goal = Symbolic ()
+-- | A constraint set is a symbolic program that returns no values. The idea is that the constraints/min-max
+-- goals will serve as the collection of constraints that will be used for sat/optimize calls.
+type ConstraintSet = Symbolic ()
 
 -- | `Provable` is specialization of `ProvableM` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.

@@ -81,6 +81,10 @@
     the same class. This should not have any impact on user-level code, unless you were building libraries
     on top of SBV. See the 'ProvableM' and 'SatisfiableM' classes.
 
+  * [BACKWARDS COMPATIBILITY] Renamed 'Goal' to 'ConstraintSet' which is more indicative of its purpose. A set
+    of constraints can be satisfied, but proving them does not make sense. The name goal, however, suggested
+    something we can prove.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 

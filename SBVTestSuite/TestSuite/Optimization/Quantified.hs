@@ -35,7 +35,7 @@ tests =
           optE q = (show <$> optimize Lexicographic q) `C.catch` (\(e::C.SomeException) -> return (pick (show e)))
           pick s = unlines [l | l <- lines s, "***" `isPrefixOf` l]
 
-q1 :: Goal
+q1 :: ConstraintSet
 q1 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
@@ -43,7 +43,7 @@ q1 = do a <- sInteger "a"
         constrain $ a .>= 0
         minimize "goal" $ 2*a
 
-q2 :: Goal
+q2 :: ConstraintSet
 q2 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         constrain $ \(Forall x) ->     2 * (a * x + b1) .== 2
@@ -51,7 +51,7 @@ q2 = do a <- sInteger "a"
                                    .&& a .>= 0
         minimize "goal" a
 
-q3 :: Goal
+q3 :: ConstraintSet
 q3 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" a
@@ -59,7 +59,7 @@ q3 = do a <- sInteger "a"
                                    .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
-q4 :: Goal
+q4 :: ConstraintSet
 q4 = do a <- sInteger "a"
         [b1, b2] <- sIntegers ["b1", "b2"]
         minimize "goal" $ 2*a
@@ -67,7 +67,7 @@ q4 = do a <- sInteger "a"
                                    .&& 4 * (a * x + b2) .== 4
         constrain $ a .>= 0
 
-q5 :: Goal
+q5 :: ConstraintSet
 q5 = do a <- sInteger "a"
         constrain $ \(Exists y) -> a .>= (y :: SInteger)
         constrain $ a .>= 0

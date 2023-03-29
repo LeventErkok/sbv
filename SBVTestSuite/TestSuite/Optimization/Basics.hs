@@ -42,7 +42,7 @@ tests =
                    ]
        ]
 
-optBasics1 :: Goal
+optBasics1 :: ConstraintSet
 optBasics1 = do x <- sInteger "x"
                 y <- sInteger "y"
 
@@ -51,7 +51,7 @@ optBasics1 = do x <- sInteger "x"
 
                 maximize "x_plus_y" $ x+y
 
-optBasics2 :: Goal
+optBasics2 :: ConstraintSet
 optBasics2 = do x <- sInteger "x"
                 y <- sInteger "y"
 

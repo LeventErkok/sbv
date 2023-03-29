@@ -70,7 +70,7 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                                                                         , (a, an)  <- acts
                                                                         ]
 
-         t1 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> Goal
+         t1 :: Q -> Q -> (SWord8 -> SWord8 -> SBool) -> ConstraintSet
          t1 E E act = constrain $ \(Exists x) (Exists y) -> act x y
          t1 E A act = constrain $ \(Exists x) (Forall y) -> act x y
          t1 A E act = constrain $ \(Forall x) (Exists y) -> act x y

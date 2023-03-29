@@ -24,7 +24,7 @@ tests =
     , goldenVsStringShow "optExtField3" (optimize Lexicographic optExtField3)
     ]
 
-optExtField1 :: Goal
+optExtField1 :: ConstraintSet
 optExtField1 = do x <- sInteger "x"
                   y <- sInteger "y"
 
@@ -33,7 +33,7 @@ optExtField1 = do x <- sInteger "x"
 
                   maximize "x_plus_y" $ x+y
 
-optExtField2 :: Goal
+optExtField2 :: ConstraintSet
 optExtField2 = do x <- sInteger "x"
                   y <- sInteger "y"
 
@@ -43,7 +43,7 @@ optExtField2 = do x <- sInteger "x"
 
                   minimize "x_plus_y" $ x+y
 
-optExtField3 :: Goal
+optExtField3 :: ConstraintSet
 optExtField3 = do x <- sReal "x"
                   y <- sReal "y"
 
