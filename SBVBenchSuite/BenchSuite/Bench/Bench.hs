@@ -44,7 +44,7 @@ import qualified Utils.SBVBenchFramework as U
 
 -- | The type of the problem to benchmark. This allows us to operate on Runners
 -- as values themselves yet still have a unified interface with gauge.
-data Problem = forall a . U.Provable a => Problem a
+data Problem = forall a . (U.Provable a, U.Satisfiable a) => Problem a
 
 -- | Similarly to Problem, BenchResult is boilerplate for a nice api
 data BenchResult = forall a . (Show a, NFData a) => BenchResult a
@@ -80,14 +80,14 @@ using = flip ($)
 
 -- | Set the runner function
 runner :: (Show c, NFData c) =>
-  (forall a. U.Provable a => U.SMTConfig -> a -> IO c) -> Runner -> Runner
+  (forall a. (U.Provable a, U.Satisfiable a) => U.SMTConfig -> a -> IO c) -> Runner -> Runner
 runner r' (Runner r@RunnerI{}) = Runner $ r{runI = toRun r'}
 runner r' (RunnerGroup rs)     = RunnerGroup $ runner r' <$> rs
 runner _  x                    = x
 {-# INLINE runner #-}
 
 toRun :: (Show c, NFData c) =>
-  (forall a. U.Provable a => U.SMTConfig -> a -> IO c)
+  (forall a. (U.Provable a, U.Satisfiable a) => U.SMTConfig -> a -> IO c)
   -> U.SMTConfig
   -> Problem
   -> IO BenchResult
@@ -133,7 +133,7 @@ runBenchmark (RBenchmark b)       = b
 -- | This is just a wrapper around the RunnerI constructor and serves as the main
 -- entry point to make a runner for a user in case they need something custom.
 run' :: (NFData b, Show b) =>
-  (forall a. U.Provable a => U.SMTConfig -> a -> IO b)
+  (forall a. (U.Provable a, U.Satisfiable a) => U.SMTConfig -> a -> IO b)
   -> U.SMTConfig
   -> String
   -> Problem
@@ -143,14 +143,14 @@ run' r config description problem = Runner $ RunnerI{..}
 {-# INLINE run' #-}
 
 -- | Convenience function for creating benchmarks that exposes a configuration
-runWith :: U.Provable a => U.SMTConfig -> String -> a -> Runner
+runWith :: (U.Provable a, U.Satisfiable a) => U.SMTConfig -> String -> a -> Runner
 runWith c d p = run' U.satWith c d (Problem p)
 {-# INLINE runWith #-}
 
 -- | Main entry point for simple benchmarks. See 'mkRunner'' or 'mkRunnerWith'
 -- for versions of this function that allows custom inputs. If you have some use
 -- case that is not considered then you can simply overload the record fields.
-run :: U.Provable a => String -> a -> Runner
+run :: (U.Provable a, U.Satisfiable a) => String -> a -> Runner
 run d p = runWith U.z3 d p `using` runner U.satWith
 {-# INLINE run #-}
 
