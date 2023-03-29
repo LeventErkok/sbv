@@ -33,6 +33,10 @@ mkUninterpretedSort ''U
 data V
 mkUninterpretedSort ''V
 
+-- | An enumerated type for demo purposes, named 'E'
+data E = A | B | C
+mkSymbolicEnumeration ''E
+
 -- | Helper to turn quantified formula to a regular boolean. We
 -- can think of this as quantifier elimination, hence the name 'qe'.
 qe :: QuantifiedBool a => a -> SBool
@@ -253,3 +257,49 @@ Q.E.D.
 What's missing here is the check that if the transitive closure relates two elements, then they are
 connected transitively in the original relation. This requirement is not axiomatizable in first order logic.
 -}
+
+-- | Create a transitive relation of a simple relation and show that transitive connections are respected.
+-- We have:
+--
+-- >>> tcExample1
+-- Q.E.D.
+tcExample1 :: IO ThmResult
+tcExample1 = prove $ do
+  a <- free "a"
+  b <- free "b"
+  c <- free "c"
+
+  let (cr, ctcR) = transitiveClosure "R"
+
+      r, tcR :: (SU, SU) -> SBool
+      r   = uncurry cr
+      tcR = uncurry ctcR
+
+  -- Add R(a, b), R(b, c), but explicitly state ~R(a, c)
+  constrain $ r (a, b)
+  constrain $ r (b, c)
+  constrain $ sNot $ r (a, c)
+
+  -- Show that in tcR, a and c are connected
+  pure $ tcR (a, c)
+
+-- | Another transitive-closure example, this time we show the transitive closure is the smallest
+-- relation, i.e., doesn't have extra connections. We have:
+--
+-- >>> tcExample2
+-- Q.E.D.
+tcExample2 :: IO ThmResult
+tcExample2 = prove $ do
+  let (cr, ctcR) = transitiveClosure "R"
+
+      r, tcR :: (SE, SE) -> SBool
+      r   = uncurry cr
+      tcR = uncurry ctcR
+
+  -- Add R(A, B), ~R(A, C), ~R(B, C) then it shouldn't be the case that R(a, c)
+  constrain $ r (sA, sB)
+  constrain $ sNot $ r (sA, sC)
+  constrain $ sNot $ r (sB, sC)
+
+  -- Show that in tcR, a and c cannot be connected
+  pure $ sNot $ tcR (sA, sC) :: Predicate
