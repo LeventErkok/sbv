@@ -162,3 +162,26 @@ Q.E.D.
 >>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
 Q.E.D.
 -}
+
+-- ** Linear orders
+{- $linearOrder
+A linear order, created by 'mkLinearOrder',  satisfies the following axioms:
+
+\(\forall x\,R(x,x)\)
+
+\(\forall x\,\forall y\, R(x, y) \land R(y, x) \Rightarrow x = y\)
+
+\(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
+
+\(\forall x\,\forall y\, R(x, y) \lor R(y, x)\)
+
+>>> let r = uncurry (mkLinearOrder 0) :: (SU, SU) -> SBool
+>>> prove $ \(Forall x) -> r (x, x)
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) -> r (x, y) .|| r (y, x)
+Q.E.D.
+-}
