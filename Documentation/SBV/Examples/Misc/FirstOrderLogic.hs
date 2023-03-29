@@ -165,7 +165,7 @@ Q.E.D.
 
 -- ** Linear orders
 {- $linearOrder
-A linear order, created by 'mkLinearOrder',  satisfies the following axioms:
+A linear order, created by 'mkLinearOrder', satisfies the following axioms:
 
 \(\forall x\,R(x,x)\)
 
@@ -188,7 +188,7 @@ Q.E.D.
 
 -- ** Tree orders
 {- $treeOrder
-A tree order, created by 'mkTreeOrder',  satisfies the following axioms:
+A tree order, created by 'mkTreeOrder', satisfies the following axioms:
 
 \(\forall x\,R(x,x)\)
 
@@ -207,4 +207,31 @@ Q.E.D.
 Q.E.D.
 >>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y))
 Falsifiable
+-}
+
+-- ** Piecewise linear orders
+{- $piecewiseLinear
+A piecewise linear order, created by 'mkPiecewiseLinearOrder', satisfies the following axioms:
+
+\(\forall x\,R(x,x)\)
+
+\(\forall x\,\forall y\, R(x, y) \land R(y, x) \Rightarrow x = y\)
+
+\(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
+
+\(\forall x\,\forall y\,\forall z\, (R(x, y) \land R(x, z)) \Rightarrow (R (y, z) \lor R (z, y))\)
+
+\(\forall x\,\forall y\,\forall z\, (R(y, x) \land R(z, x)) \Rightarrow (R (y, z) \lor R (z, y))\)
+
+>>> let r = uncurry (mkPiecewiseLinearOrder 0) :: (SU, SU) -> SBool
+>>> prove $ \(Forall x) -> r (x, x)
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y))
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (y, x) .&& r (z, x)) .=> (r (y, z) .|| r (z, y))
+Q.E.D.
 -}
