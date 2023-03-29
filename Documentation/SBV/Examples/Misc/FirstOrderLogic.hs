@@ -196,7 +196,7 @@ A tree order, created by 'mkTreeOrder',  satisfies the following axioms:
 
 \(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
 
-\(\forall x\,\forall y\,\forall z\, (R(x, y) \land R(x z)) \Rightarrow (R (y, z) \lor R (z, y))\)
+\(\forall x\,\forall y\,\forall z\, (R(x, y) \land R(x, z)) \Rightarrow (R (y, z) \lor R (z, y))\)
 
 >>> let r = uncurry (mkTreeOrder 0) :: (SU, SU) -> SBool
 >>> prove $ \(Forall x) -> r (x, x)
@@ -205,6 +205,6 @@ Falsifiable
 Q.E.D.
 >>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (y, z)) .=> (r (x, y) .|| r (y, z))
-Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y))
+Falsifiable
 -}
