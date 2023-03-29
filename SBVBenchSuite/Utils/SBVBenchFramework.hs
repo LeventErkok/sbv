@@ -11,6 +11,10 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-missing-methods #-} -- for MProvable orphan
 
 module Utils.SBVBenchFramework
   ( mkExecString
@@ -34,6 +38,7 @@ import           Data.Time.Clock
 import           Data.Time.Calendar
 
 import           Data.SBV
+import           Data.SBV.Internals
 
 -- | make the string to call executable from the command line. All the heavy
 -- lifting is done by 'System.Process.showCommandForUser', the rest is just
@@ -112,3 +117,10 @@ filterOverhead e fp = do (header:file) <- L.lines <$> readFile fp
                              filteredFilePath  = fp ++ "_filtered"
                          writeFile  filteredFilePath (concat $ header:filteredContent)
                          return filteredFilePath
+
+-- NO INSTANCE ON PURPOSE; don't want to prove goals. We provide this instance
+-- just to allow the testsuite to run tests with try to Prove Goals. In general,
+-- this violates the invariants promised by the @MProvable@ and @MSatisfiable@
+-- type classes. Thus, this should not be publicly exposed under any
+-- circumstances.
+instance MProvable IO (SymbolicT IO ())
