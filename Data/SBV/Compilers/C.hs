@@ -26,7 +26,7 @@ import qualified Data.Set      as Set (member, union, unions, empty, toList, sin
 import System.FilePath                (takeBaseName, replaceExtension)
 import System.Random
 
-import Data.SBV.Core.Symbolic (ResultInp(..))
+import Data.SBV.Core.Symbolic (ResultInp(..), ProgInfo(..))
 
 -- Work around the fact that GHC 8.4.1 started exporting <>.. Hmm..
 import Text.PrettyPrint.HughesPJ
@@ -447,7 +447,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
-genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls arrs _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls arrs _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
@@ -470,8 +470,10 @@ genCProg cfg fn proto (Result quants kindInfo _tvals _ovals cgs topInps (_, preC
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
-  | quants
+  | hasQuants pinfo
   = error "SBV->C: Cannot compile in the presence of quantified variables."
+  | hasSpecialRels pinfo
+  = error "SBV->C: Cannot compile in the presence of special relations."
   | not (null axioms)
   = error "SBV->C: Cannot compile in the presence of 'smtFunction' definitions, use 'compileToCLib' instead."
   | not (null cstrs)

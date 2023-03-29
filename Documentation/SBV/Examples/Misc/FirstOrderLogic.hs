@@ -140,3 +140,21 @@ given element. (Actually, only one will be true on any element, but that is tang
 But left-hand-side is not a tautology: Clearly neither \(P\) nor \(Q\) are true for all elements, and
 hence both disjuncts are false. Thus, the alleged conjecture is not an equivalence in first order logic.
 -}
+
+-- * Special relations
+
+-- ** Partial orders
+{- $partialOrder
+A partial order is a reflexive, antisymmetic, and a transitive relation. We can prove these properties
+for relations created by 'mkPartialOrder' in SBV:
+
+\(\forall x\,R(x,x)\)
+
+\(\forall x\,\forall y\, R(x, y) \land R(y, x) \Rightarrow x = y\)
+
+\(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
+
+>>> let r = uncurry (mkPartialOrder 0) :: (SU, SU) -> SBool
+>>> prove $ \(Forall x) -> r (x, x)
+Q.E.D.
+-}

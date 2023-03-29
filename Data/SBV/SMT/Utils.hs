@@ -31,7 +31,7 @@ import qualified Control.Exception as C
 import Control.Monad.Trans (MonadIO, liftIO)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef, ResultInp(..))
+import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef, ResultInp(..), ProgInfo(..))
 import Data.SBV.Utils.Lib (joinArgs)
 
 import Data.List (intercalate)
@@ -42,7 +42,7 @@ import System.Exit (ExitCode(..))
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibConverter a =  QueryContext                                  -- ^ Internal or external query?
-                       -> Bool                                          -- ^ Do we have quantified booleans?
+                       -> ProgInfo                                      -- ^ Various program info
                        -> Set.Set Kind                                  -- ^ Kinds used in the problem
                        -> Bool                                          -- ^ is this a sat problem?
                        -> [String]                                      -- ^ extra comments to place on top
@@ -61,7 +61,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibIncConverter a =  [NamedSymVar]                         -- ^ inputs
                           -> Set.Set Kind                          -- ^ new kinds
-                          -> (CnstMap, [(SV, CV)])                  -- ^ all constants sofar, and new constants
+                          -> (CnstMap, [(SV, CV)])                 -- ^ all constants sofar, and new constants
                           -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
                           -> [(String, SBVType)]                   -- ^ newly created uninterpreted functions/constants

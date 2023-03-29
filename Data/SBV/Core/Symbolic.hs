@@ -33,7 +33,7 @@
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV
-  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..)
+  , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
   , RegExp(..), regExpToSMTString
   , Quantifier(..), needsExistentials, VarContext(..)
   , RoundingMode(..)
@@ -60,7 +60,7 @@ module Data.SBV.Core.Symbolic
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
-  , validationRequested, outputSVal
+  , validationRequested, outputSVal, ProgInfo(..)
   ) where
 
 import Control.DeepSeq             (NFData(..))
@@ -200,6 +200,7 @@ data Op = Plus
         | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
+        | SpecialRelOp  SpecialRelOp
         | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
@@ -220,6 +221,22 @@ data Op = Plus
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
         deriving (Eq, Ord, G.Data)
+
+-- | Special relations supported by z3
+data SpecialRelOp = PartialOrder         Int
+                  | LinearOrder          Int
+                  | TreeOrder            Int
+                  | PiecewiseLinearOrder Int
+                  | TransitiveClosure    String
+                  deriving (Eq, Ord, G.Data)
+
+-- | The print out matches z3's internal names
+instance Show SpecialRelOp where
+  show (PartialOrder         i) = "(_ partial-order "          ++ show i ++ ")"
+  show (LinearOrder          i) = "(_ linear-order "           ++ show i ++ ")"
+  show (TreeOrder            i) = "(_ tree-order "             ++ show i ++ ")"
+  show (PiecewiseLinearOrder i) = "(_ piecewise-linear-order " ++ show i ++ ")"
+  show (TransitiveClosure    n) = "(_ transitive-closure "     ++      n ++ ")"
 
 -- | Floating point operations
 data FPOp = FP_Cast        Kind Kind SV   -- From-Kind, To-Kind, RoundingMode. This is "value" conversion
@@ -553,6 +570,8 @@ instance Show Op where
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
   show (QuantifiedBool i)   = "[quantified boolean] " ++ i
 
+  show (SpecialRelOp o)     = show o
+
   show (Label s)            = "[label] " ++ s
 
   show (IEEEFP w)           = show w
@@ -810,8 +829,16 @@ instance NFData ResultInp where
    rnf (ResultTopInps xs) = rnf xs
    rnf (ResultLamInps xs) = rnf xs
 
+-- | Several data about the program
+data ProgInfo = ProgInfo { hasQuants      :: Bool
+                         , hasSpecialRels :: Bool
+                         }
+
+instance NFData ProgInfo where
+   rnf (ProgInfo hasQuants hasSpecialRels) = rnf hasQuants `seq` rnf hasSpecialRels
+
 -- | Result of running a symbolic computation
-data Result = Result { hasQuants      :: Bool                                         -- ^ Did the program use quantified booleans?
+data Result = Result { progInfo       :: ProgInfo                                     -- ^ various info we collect about the program
                      , reskinds       :: Set.Set Kind                                 -- ^ kinds used in the program
                      , resTraces      :: [(String, CV)]                               -- ^ quick-check counter-example information (if any)
                      , resObservables :: [(String, CV -> Bool, SV)]                   -- ^ observable expressions (part of the model)
@@ -1156,7 +1183,7 @@ instance NFData SMTDef where
 data State  = State { pathCond     :: SVal                             -- ^ kind KBool
                     , stCfg        :: SMTConfig
                     , startTime    :: UTCTime
-                    , rHasQuants   :: IORef Bool
+                    , rProgInfo    :: IORef ProgInfo
                     , runMode      :: IORef SBVRunMode
                     , rIncState    :: IORef IncState
                     , rCInfo       :: IORef [(String, CV)]
@@ -1719,7 +1746,9 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
 mkNewState cfg currentRunMode = liftIO $ do
      currTime   <- getCurrentTime
-     hasQuants  <- newIORef False
+     progInfo   <- newIORef ProgInfo { hasQuants      = False
+                                     , hasSpecialRels = False
+                                     }
      rm         <- newIORef currentRunMode
      ctr        <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
      lambda     <- newIORef $ case currentRunMode of
@@ -1754,7 +1783,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      pure $ State { runMode      = rm
                   , stCfg        = cfg
                   , startTime    = currTime
-                  , rHasQuants   = hasQuants
+                  , rProgInfo    = progInfo
                   , pathCond     = SVal KBool (Left trueCV)
                   , rIncState    = istate
                   , rCInfo       = cInfo
@@ -1812,7 +1841,7 @@ extractSymbolicSimulationState st@State{ runMode=rrm
                                        , spgm=pgm, rinps=inps, rlambdaInps=linps, routs=outs, rtblMap=tables, rArrayMap=arrays
                                        , rUIMap=uis, rDefns=defns
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
-                                       , rObservables=observes, rHasQuants
+                                       , rObservables=observes, rProgInfo=progInfo
                                        } = do
    SBVPgm rpgm  <- readIORef pgm
 
@@ -1871,9 +1900,9 @@ extractSymbolicSimulationState st@State{ runMode=rrm
    extraCstrs  <- readIORef cstrs
    assertions  <- reverse <$> readIORef asserts
 
-   hasQuants   <- readIORef rHasQuants
+   pinfo <- readIORef progInfo
 
-   return $ Result hasQuants knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result pinfo knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
@@ -2083,6 +2112,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
        , supportsFoldAndMap         :: Bool           -- ^ Does it support fold and map?
+       , supportsSpecialRels        :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
        , supportsDirectAccessors    :: Bool           -- ^ Supports data-type accessors without full ascription?
        , supportsFlattenedModels    :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
        }

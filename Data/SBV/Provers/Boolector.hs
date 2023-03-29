@@ -45,6 +45,7 @@ boolector = SMTSolver {
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = False
                               , supportsFoldAndMap         = False
+                              , supportsSpecialRels        = False
                               , supportsDirectAccessors    = False
                               , supportsFlattenedModels    = Nothing
                               }

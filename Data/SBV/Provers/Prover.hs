@@ -491,6 +491,7 @@ validate reducer isSAT cfg p res =
                                                 Just (SBVApp o as) -> case o of
                                                                         Uninterpreted v   -> Just $ "The value depends on the uninterpreted constant " ++ show v ++ "."
                                                                         QuantifiedBool _  -> Just "The value depends on a quantified variable."
+                                                                        SpecialRelOp op   -> Just $ "The value depends on special-relation: " ++ show op
                                                                         IEEEFP FP_FMA     -> Just "Floating point FMA operation is not supported concretely."
                                                                         IEEEFP _          -> Just "Not all floating point operations are supported concretely."
                                                                         OverflowOp _      -> Just "Overflow-checking is not done concretely."

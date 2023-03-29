@@ -33,7 +33,7 @@ import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString
-                              , SMTDef(..), ResultInp(..)
+                              , SMTDef(..), ResultInp(..), ProgInfo(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
@@ -47,7 +47,7 @@ tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter [String]
-cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
+cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = pgm
   where hasInteger     = KUnbounded `Set.member` kindInfo
         hasReal        = KReal      `Set.member` kindInfo
         hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
@@ -79,21 +79,34 @@ cvt ctx needsQuantifiers kindInfo isSat comments allInputs (allConsts, consts) t
                              isFoldMap SeqFoldLeftI{} = True
                              isFoldMap _              = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
+        needsSpecialRels = hasSpecialRels curProgInfo
+        needsQuantifiers = hasQuants      curProgInfo
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
-        doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not have]
-           where checks = [ ("data types",     supportsDataTypes  solverCaps, hasTuples || hasEither || hasMaybe)
-                          , ("folds and maps", supportsFoldAndMap solverCaps, hasFoldMap)
-                          , ("set operations", supportsSets       solverCaps, hasSets)
-                          , ("bit vectors",    supportsBitVectors solverCaps, hasBVs)
+        doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
+           where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe)
+                          , ("folds and maps",         supportsFoldAndMap,         hasFoldMap)
+                          , ("set operations",         supportsSets,               hasSets)
+                          , ("bit vectors",            supportsBitVectors,         hasBVs)
+                          , ("special relations",      supportsSpecialRels,        needsSpecialRels)
+                          , ("needs quantifiers",      supportsQuantifiers,        needsQuantifiers)
+                          , ("unbounded integers",     supportsUnboundedInts,      hasInteger)
+                          , ("algebraic reals",        supportsReals,              hasReal)
+                          , ("floating-point numbers", supportsIEEE754,            hasFP)
+                          , ("uninterpreted sorts",    supportsUninterpretedSorts, not (null trueUSorts))
                           ]
 
                  nope w = [ "***     Given problem requires support for " ++ w
                           , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
                           ]
 
-        setAll reason = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
+        -- Some cases require all, some require none. Sigh..
+        setAll reason
+           | needsSpecialRels
+           = ["; has special relations, no logic set."]
+           | True
+           = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
 
         -- Determining the logic is surprisingly tricky!
         logic
@@ -912,6 +925,11 @@ cvtExp caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (QuantifiedBool i) [])   = i
         sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
+
+        sh a@(SBVApp (SpecialRelOp o) args)
+           = case args of
+              [_, _] -> '(' : show o ++ " " ++ unwords (map cvtSV args) ++ ")"
+              _      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to special op: " ++ show a
 
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ cvtSV a ++ ")"
 

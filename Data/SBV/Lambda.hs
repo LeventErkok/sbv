@@ -36,7 +36,7 @@ import Data.SBV.Utils.PrettyNum
 import           Data.SBV.Core.Symbolic hiding   (mkNewState, fresh)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
-import Data.IORef (readIORef, writeIORef)
+import Data.IORef (readIORef, modifyIORef')
 import Data.List
 
 import qualified Data.Foldable      as F
@@ -75,7 +75,7 @@ inSubState inState comp = do
                    , startTime    = share startTime
 
                    -- These are shared IORef's; and is shared, so they will be copied back to the parent state
-                   , rHasQuants   = share rHasQuants
+                   , rProgInfo    = share rProgInfo
                    , rIncState    = share rIncState
                    , rCInfo       = share rCInfo
                    , rUsedKinds   = share rUsedKinds
@@ -151,9 +151,9 @@ namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b
-constraintGen trans inState@State{rHasQuants} f = do
+constraintGen trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
-   liftIO $ writeIORef rHasQuants True
+   liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
    let mkDef (Defn deps Nothing       body) = trans deps body
        mkDef (Defn deps (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
