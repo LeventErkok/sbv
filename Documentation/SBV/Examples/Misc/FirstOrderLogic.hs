@@ -157,4 +157,8 @@ for relations created by 'mkPartialOrder' in SBV:
 >>> let r = uncurry (mkPartialOrder 0) :: (SU, SU) -> SBool
 >>> prove $ \(Forall x) -> r (x, x)
 Q.E.D.
+>>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+Q.E.D.
 -}
