@@ -626,13 +626,15 @@ instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m 
   proofArgReduce = proofArgReduce . quantifiedBool
 
 {-
--- The following works, but it lets us write properties that
+-- The following is a possible definition, but it lets us write properties that
 -- are not useful.. Such as: prove $ \x y -> (x::SInt8) == y
--- Running that will throw an exception since Haskell's equality
--- is not be supported by symbolic things. (Needs .==).
-instance Provable Bool where
-  argReduce  x  = argReduce  (if x then true else false :: SBool)
-  argReduce s x  = argReduce s (if x then true else false :: SBool)
+-- Running that will throw an exception since Haskell's equality is not be supported by symbolic things. (Needs .==).
+-- So, we avoid these insteances.
+instance ExtractIO m => ProvableM m Bool where
+  proofArgReduce x  = proofArgReduce (if x then sTrue else sFalse :: SBool)
+
+instance ExtractIO m => SatisfiableM m Bool where
+  satArgReduce x  = satArgReduce (if x then sTrue else sFalse :: SBool)
 -}
 
 -- | Create an argument
