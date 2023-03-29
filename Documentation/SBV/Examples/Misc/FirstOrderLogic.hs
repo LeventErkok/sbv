@@ -235,3 +235,21 @@ Q.E.D.
 >>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (y, x) .&& r (z, x)) .=> (r (y, z) .|| r (z, y))
 Q.E.D.
 -}
+
+-- ** Transitive closures
+{- $transitiveClosures
+A relation and its transitive closure can be created using 'transitiveClosure'. The transitive closure of
+a relation is not first-order axiomatizable. That is, we cannot write first-order formulas to uniquely
+describe them. However, we can check some expected properties:
+
+>>> let (cr, ctcR) = transitiveClosure "R"
+>>> let r   = uncurry cr   :: (SU, SU) -> SBool
+>>> let tcR = uncurry ctcR :: (SU, SU) -> SBool
+>>> prove $ \(Forall x) (Forall y) -> r (x, y) .=> tcR (x, y)
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> tcR (x, z)
+Q.E.D.
+
+What's missing here is the check that if the transitive closure relates two elements, then they are
+connected transitively in the original relation.
+-}
