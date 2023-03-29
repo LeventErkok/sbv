@@ -23,7 +23,7 @@
 
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
-       , MProvable(..), Provable, MSatisfiable(..), Satisfiable
+       , ProvableM(..), Provable, SatisfiableM(..), Satisfiable
        , generateSMTBenchmarkSat, generateSMTBenchmarkProof, Goal
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
@@ -168,17 +168,17 @@ type Predicate = Symbolic SBool
 -- goals will serve as appropriate directives for sat/prove calls.
 type Goal = Symbolic ()
 
--- | `Provable` is specialization of `MProvable` to the `IO` monad. Unless you are using
+-- | `Provable` is specialization of `ProvableM` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
-type Provable = MProvable IO
+type Provable = ProvableM IO
 
--- | `Data.SBV.Provers.Satisfiable` is specialization of `MSatisfiable` to the `IO` monad. Unless you are using
+-- | `Data.SBV.Provers.Satisfiable` is specialization of `SatisfiableM` to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
-type Satisfiable = MSatisfiable IO
+type Satisfiable = SatisfiableM IO
 
 -- | A type @a@ is satisfiable if it has constraints, potentially returning a boolean. This class
 -- captures essentially sat and optimize calls.
-class ExtractIO m => MSatisfiable m a where
+class ExtractIO m => SatisfiableM m a where
   -- | Reduce an arg, for sat purposes.
   satArgReduce :: a -> SymbolicT m SBool
 
@@ -334,7 +334,7 @@ satConcurrentWithAll solver qs a = do results <- sbvConcurrentWithAll solver go 
 
 -- | A type @a@ is provable if we can turn it into a predicate, i.e., it has to return a boolean.
 -- This class captures essentially prove calls.
-class ExtractIO m => MProvable m a where
+class ExtractIO m => ProvableM m a where
   -- | Reduce an arg, for proof purposes.
   proofArgReduce :: a -> SymbolicT m SBool
 
@@ -561,11 +561,11 @@ validate reducer isSAT cfg p res =
                        walkConstraints cstrs (checkOutputs (resOutputs result))
 
 -- | Create an SMT-Lib2 benchmark, for a SAT query.
-generateSMTBenchmarkSat :: MSatisfiable m a => a -> m String
+generateSMTBenchmarkSat :: SatisfiableM m a => a -> m String
 generateSMTBenchmarkSat = generateSMTBenchMarkGen True satArgReduce
 
 -- | Create an SMT-Lib2 benchmark, for a Proof query.
-generateSMTBenchmarkProof :: MProvable m a => a -> m String
+generateSMTBenchmarkProof :: ProvableM m a => a -> m String
 generateSMTBenchmarkProof = generateSMTBenchMarkGen False proofArgReduce
 
 -- | Generic benchmark creator
@@ -592,37 +592,37 @@ checkNoOptimizations = do objectives <- Control.getObjectives
                                                 , "*** Use \"optimize\"/\"optimizeWith\" to calculate optimal satisfaction!"
                                                 ]
 
-instance ExtractIO m => MSatisfiable m (SymbolicT m ()) where satArgReduce a = satArgReduce ((a >> pure sTrue) :: SymbolicT m SBool)
--- instance ExtractIO m => MProvable m (SymbolicT m ())  -- NO INSTANCE ON PURPOSE; don't want to prove goals
+instance ExtractIO m => SatisfiableM m (SymbolicT m ()) where satArgReduce a = satArgReduce ((a >> pure sTrue) :: SymbolicT m SBool)
+-- instance ExtractIO m => ProvableM m (SymbolicT m ())  -- NO INSTANCE ON PURPOSE; don't want to prove goals
 
-instance ExtractIO m => MSatisfiable m (SymbolicT m SBool) where satArgReduce   = id
-instance ExtractIO m => MProvable    m (SymbolicT m SBool) where proofArgReduce = id
+instance ExtractIO m => SatisfiableM m (SymbolicT m SBool) where satArgReduce   = id
+instance ExtractIO m => ProvableM    m (SymbolicT m SBool) where proofArgReduce = id
 
-instance ExtractIO m => MSatisfiable m SBool where satArgReduce   = return
-instance ExtractIO m => MProvable    m SBool where proofArgReduce = return
+instance ExtractIO m => SatisfiableM m SBool where satArgReduce   = return
+instance ExtractIO m => ProvableM    m SBool where proofArgReduce = return
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Forall a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Forall a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Exists a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ForallN n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ExistsN n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Exists a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MSatisfiable m r) => MSatisfiable m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ForallN n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, MProvable m r) => MProvable m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ExistsN n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
 {-
@@ -640,59 +640,59 @@ mkArg :: (SymVal a, MonadSymbolic m) => m (SBV a)
 mkArg = mkSymVal (NonQueryVar Nothing) Nothing
 
 -- Functions
-instance (SymVal a, MSatisfiable m p) => MSatisfiable m (SBV a -> p) where
+instance (SymVal a, SatisfiableM m p) => SatisfiableM m (SBV a -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ k a
 
-instance (SymVal a, MProvable m p) => MProvable m (SBV a -> p) where
+instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ k a
 
 -- Arrays
-instance (HasKind a, HasKind b, MSatisfiable m p) => MSatisfiable m (SArray a b -> p) where
+instance (HasKind a, HasKind b, SatisfiableM m p) => SatisfiableM m (SArray a b -> p) where
   satArgReduce k = newArray_ Nothing >>= \a -> satArgReduce $ k a
 
-instance (HasKind a, HasKind b, MProvable m p) => MProvable m (SArray a b -> p) where
+instance (HasKind a, HasKind b, ProvableM m p) => ProvableM m (SArray a b -> p) where
   proofArgReduce k = newArray_ Nothing >>= \a -> proofArgReduce $ k a
 
 -- 2 Tuple
-instance (SymVal a, SymVal b, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b -> k (a, b)
 
-instance (SymVal a, SymVal b, MProvable m p) => MProvable m ((SBV a, SBV b) -> p) where
+instance (SymVal a, SymVal b, ProvableM m p) => ProvableM m ((SBV a, SBV b) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b -> k (a, b)
 
 -- 3 Tuple
-instance (SymVal a, SymVal b, SymVal c, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c -> k (a, b, c)
 
-instance (SymVal a, SymVal b, SymVal c, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c) -> p) where
+instance (SymVal a, SymVal b, SymVal c, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c -> k (a, b, c)
 
 -- 4 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   satArgReduce k = mkArg  >>= \a -> satArgReduce $ \b c d -> k (a, b, c, d)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d) -> p) where
   proofArgReduce k = mkArg  >>= \a -> proofArgReduce $ \b c d -> k (a, b, c, d)
 
 -- 5 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e -> k (a, b, c, d, e)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e -> k (a, b, c, d, e)
 
 -- 6 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
 
 -- 7 Tuple
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MSatisfiable m p) => MSatisfiable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
-instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, MProvable m p) => MProvable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
 -- | Generalization of 'Data.SBV.runSMT'

@@ -14,7 +14,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-missing-methods #-} -- for MProvable orphan
+{-# OPTIONS_GHC -fno-warn-orphans -fno-warn-missing-methods #-} -- for ProvableM orphan
 
 module Utils.SBVBenchFramework
   ( mkExecString
@@ -120,7 +120,7 @@ filterOverhead e fp = do (header:file) <- L.lines <$> readFile fp
 
 -- NO INSTANCE ON PURPOSE; don't want to prove goals. We provide this instance
 -- just to allow the testsuite to run tests with try to Prove Goals. In general,
--- this violates the invariants promised by the @MProvable@ and @MSatisfiable@
+-- this violates the invariants promised by the @ProvableM@ and @SatisfiableM@
 -- type classes. Thus, this should not be publicly exposed under any
 -- circumstances.
-instance MProvable IO (SymbolicT IO ())
+instance ProvableM IO (SymbolicT IO ())

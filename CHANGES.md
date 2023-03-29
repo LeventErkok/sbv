@@ -77,6 +77,10 @@
   * [BACKWARDS COMPATIBILITY] The function 'isVacuous' is renamed to 'isVacuousProof' (and 'isVacuousWith'
     became 'isVacuousProofWith') to better reflect this function applies to checking vacuity in a proof context.
 
+  * [BACKWARDS COMPATIBILITY] Satisfiability and proof checks are now put in different classes, instead of sharing
+    the same class. This should not have any impact on user-level code, unless you were building libraries
+    on top of SBV. See the 'ProvableM' and 'SatisfiableM' classes.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 

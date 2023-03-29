@@ -35,7 +35,7 @@ module Data.SBV.Internals (
 
   -- * Operations useful for instantiating SBV type classes
   , genLiteral, genFromCV, CV(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod, registerKind, svToSV
-  , MProvable()
+  , ProvableM(), SatisfiableM()
 
   -- * Compilation to C, extras
   , compileToC', compileToCLib'
@@ -82,7 +82,7 @@ import Data.SBV.Compilers.CodeGen
 
 import Data.SBV.SMT.SMT (genParse, showModel)
 
-import Data.SBV.Provers.Prover (MProvable)
+import Data.SBV.Provers.Prover (ProvableM, SatisfiableM)
 
 import Data.SBV.Utils.Numeric
 
