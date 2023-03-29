@@ -251,5 +251,5 @@ Q.E.D.
 Q.E.D.
 
 What's missing here is the check that if the transitive closure relates two elements, then they are
-connected transitively in the original relation.
+connected transitively in the original relation. This requirement is not axiomatizable in first order logic.
 -}
