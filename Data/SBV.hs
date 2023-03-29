@@ -305,6 +305,7 @@ module Data.SBV (
   , SMTDefinable(..)
 
   -- * Special relations
+  -- $specialRels
   , mkPartialOrder, mkLinearOrder, mkTreeOrder, mkPiecewiseLinearOrder
   , transitiveClosure
 
@@ -445,7 +446,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Core.Floating
-import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT)
+import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT, registerKind, SpecialRelOp(..), ProgInfo(..), rProgInfo)
 
 import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
@@ -454,6 +455,8 @@ import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        isTheorem, isTheoremWith, isSatisfiable,
                                        isSatisfiableWith, runSMT, runSMTWith,
                                        sName, safe, safeWith)
+
+import Data.IORef (modifyIORef')
 
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO
@@ -1457,36 +1460,52 @@ instance ByteConverter (SWord 1024) where
      = error $ "fromBytes:SWord 1024: Incorrect number of bytes: " ++ show l
      where l = length as
 
+{- $specialRels
+A special relation is a binary relation that has additional properties. SBV allows for the creation of various kinds
+of special relations respecting various order axioms. See "Documentation.SBV.Examples.Misc.FirstOrderLogic" for several
+examples.
+-}
 -- | Make a partial order. The integer argument uniquely identifies this order.
 mkPartialOrder :: Int -> SBV a -> SBV a -> SBool
-mkPartialOrder = mkSpecialRelation "partial-order" . Left
+mkPartialOrder = mkSpecialRelation . PartialOrder
 
 -- | Make a linear order. The integer argument uniquely identifies this order.
 mkLinearOrder :: Int -> SBV a -> SBV a -> SBool
-mkLinearOrder = mkSpecialRelation "linear-order" . Left
+mkLinearOrder = mkSpecialRelation . LinearOrder
 
 -- | Make a tree order. The integer argument uniquely identifies this order.
 mkTreeOrder :: Int -> SBV a -> SBV a -> SBool
-mkTreeOrder = mkSpecialRelation "tree-order" . Left
+mkTreeOrder = mkSpecialRelation . TreeOrder
 
 -- | Make a piece-wise linear order.
 mkPiecewiseLinearOrder :: Int -> SBV a -> SBV a -> SBool
-mkPiecewiseLinearOrder = mkSpecialRelation "piecewise-linear-order" . Left
+mkPiecewiseLinearOrder = mkSpecialRelation . PiecewiseLinearOrder
 
 -- | Create a named relation and its transitive closure.
 transitiveClosure :: SymVal a => String -> (SBV a -> SBV a -> SBool, SBV a -> SBV a -> SBool)
-transitiveClosure nm = (uninterpret nm, mkSpecialRelation "transitive-closure" (Right nm))
+transitiveClosure nm = (uninterpret nm, mkSpecialRelation (TransitiveClosure nm))
 
 -- | Create special relations of given type
-mkSpecialRelation :: String -> Either Int String -> SBV a -> SBV a -> SBool
-mkSpecialRelation nm is
-  | Left i <- is, i < 0
-  = error $ "Data.SBV.mkSpecialRelation: Index to " ++ nm ++ " must be non-negative, received: " ++ show i
+mkSpecialRelation :: SpecialRelOp -> SBV a -> SBV a -> SBool
+mkSpecialRelation op
+  | idx < 0
+  = error $ "Data.SBV.mkSpecialRelation: Index to " ++ nm ++ " must be non-negative, received: " ++ show idx
   | True
-  = \a b -> let result st = do sa <- sbvToSV st a
-                               sb <- sbvToSV st b
-                               let tag = "(_ " ++ nm ++ " " ++ show is ++ ")"
-                               newExpr st KBool $ SBVApp (Uninterpreted tag) [sa, sb]
-            in SBV $ SVal KBool $ Right $ cache result
+  = fun
+ where (idx, nm) = case op of
+                     PartialOrder         i -> (i, "mkPartialOrder")
+                     LinearOrder          i -> (i, "mkLinearOrder")
+                     TreeOrder            i -> (i, "mkTreeOrder")
+                     PiecewiseLinearOrder i -> (i, "mkPiecewiseLinearOrder")
+                     TransitiveClosure    _ -> (0, "transitiveClosure")
+       fun a b = SBV $ SVal KBool $ Right $ cache result
+         where result st = do sa <- sbvToSV st a
+                              sb <- sbvToSV st b
+
+                              -- register
+                              registerKind st (kindOf sa)
+                              modifyIORef' (rProgInfo st) (\u -> u{hasSpecialRels = True})
+
+                              newExpr st KBool $ SBVApp (SpecialRelOp op) [sa, sb]
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
