@@ -113,8 +113,8 @@ puzzle = do BD birthMonth birthDay <- mkBirthday
 --
 -- >>> cheryl
 -- Solution #1:
---   birthDay   = Jul :: Month
---   birthMonth = D16 :: Day
+--   birthMonth = Jul :: Month
+--   birthDay   = D16 :: Day
 -- This is the only solution.
 cheryl :: IO ()
 cheryl = print =<< allSat puzzle
