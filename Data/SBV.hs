@@ -900,8 +900,9 @@ Or you can prove/sat quantified formulas directly:
 This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
 your other symbolic computations.  See the following files demonstrating reasoning with quantifiers:
 
-   * "Documentation.SBV.Examples.Puzzles.Rabbits"
+   * "Documentation.SBV.Examples.Puzzles.Birthday"
    * "Documentation.SBV.Examples.Puzzles.KnightsAndKnaves"
+   * "Documentation.SBV.Examples.Puzzles.Rabbits"
    * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
 -}
 

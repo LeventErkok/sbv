@@ -27,8 +27,9 @@
 
     See the following files demonstrating reasoning with quantifiers:
     
-       * Documentation/SBV/Examples/Puzzles/Rabbits.hs
+       * Documentation/SBV/Examples/Puzzles/Birthday.hs
        * Documentation/SBV/Examples/Puzzles/KnightsAndKnaves.hs
+       * Documentation/SBV/Examples/Puzzles/Rabbits.hs
        * Documentation/SBV/Examples/Misc/FirstOrderLogic.hs
 
   * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
