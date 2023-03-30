@@ -303,3 +303,21 @@ tcExample2 = prove $ do
 
   -- Show that in tcR, a and c cannot be connected
   pure $ sNot $ tcR (sA, sC) :: Predicate
+
+-- | Demonstrates computing the transitive closure of existing relations. We have:
+--
+-- >>> tcExample3
+-- Q.E.D.
+tcExample3 :: IO ThmResult
+tcExample3 = prove $ do
+
+        -- Define a relation over the type 'E', which only relates 'A' to 'B'.
+        let rel :: SE -> SE -> SBool
+            rel x y = (x, y) .== (sA, sB)
+
+        -- Create a relation and its transitive closure, and associate it with our function:
+        let (r, tcR) = transitiveClosure "R"
+        constrain $ \(Forall a) (Forall b) -> r a b .== rel a b
+
+        -- Show that in tcR, a and c cannot be connected
+        pure $ sNot $ tcR sA sC :: Predicate
