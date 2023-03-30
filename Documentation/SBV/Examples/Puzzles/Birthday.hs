@@ -81,6 +81,14 @@ valid (BD m d) =   (m .== sMay .=> d `sElem` [sD15, sD16, sD19])
 -----------------------------------------------------------------------------------------------
 
 -- | Encode the conversation as given in the puzzle.
+--
+-- NB. Lee Pike pointed out that not all the constraints are actually necessary! (Private
+-- communication.) The puzzle still has a unique solution if the statements @a1@ and @b1@
+-- (i.e., Albert and Bernard saying they themselves do not know the answer) are removed.
+-- To experiment you can simply comment out those statements and observe that there still
+-- is a unique solution. Thanks to Lee for pointing this out! In fact, it is instructive to
+-- assert the conversation line-by-line, and see how the search-space gets reduced in each
+-- step.
 puzzle :: ConstraintSet
 puzzle = do BD birthMonth birthDay <- mkBirthday
 
