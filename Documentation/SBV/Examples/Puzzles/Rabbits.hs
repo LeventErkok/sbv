@@ -59,6 +59,7 @@ rabbits = do -- All rabbits that are not greedy are black
              pure $ quantifiedBool $ \(Exists x) -> black x .&& sNot (old x)
 
 -- | Prove the claim. We have:
+--
 -- >>> rabbitsAreOK
 -- Q.E.D.
 rabbitsAreOK :: IO ThmResult

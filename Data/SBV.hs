@@ -82,6 +82,9 @@
 --   * Ability to define SMTLib functions, generated directly from Haskell versions,
 --     including support for recursive and mutually recursive functions.
 --
+--   * Express quantified formulas (both universals and existentials, including
+--     alternating quantifiers), covering first-order logic.
+--
 --   * Model validation: SBV can validate models returned by solvers, which allows
 --     for protection against bugs in SMT solvers and SBV itself. (See the 'validateModel'
 --     parameter.)
@@ -326,14 +329,15 @@ module Data.SBV (
   , generateSMTBenchmarkSat, generateSMTBenchmarkProof
   , solve
 
-  -- * Constraints
+  -- * Constraints and Quantifiers
   -- $constrainIntro
   -- ** General constraints
   -- $generalConstraints
-  , constrain, softConstrain, Forall(..), Exists(..), ForallN(..), ExistsN(..)
+  , constrain, softConstrain
 
-  -- * Quantified booleans and quantifier elimination
-  , QuantifiedBool, quantifiedBool
+  -- ** Quantified constraints and quantifier elimination
+  -- $quantifiers
+  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ForallN(..), ExistsN(..)
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
@@ -870,6 +874,35 @@ constraints are not vacuous, the functions 'isVacuousProof' (and 'isVacuousProof
 Also note that this semantics imply that test case generation ('Data.SBV.Tools.GenTest.genTest') and
 quick-check can take arbitrarily long in the presence of constraints, if the random input values generated
 rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFalse'@.)
+-}
+
+{- $quantifiers
+You can write quantified formulas, and reason with them as in first-order logic. Here is a simple example is:
+
+@
+    constrain $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
+@
+
+You can nest quantifiers as you wish, and the quantified parameters can be of arbitrary symbolic type.
+Additionally, you can convert such a quantified formula to a regular boolean, via a call to 'quantifiedBool'
+function, essentially performing quantifier elimination:
+
+@
+    other_condition .&& quantifiedBool (\(Forall x) (Exists y) -> y .> (x :: SInteger))
+@
+
+Or you can prove/sat quantified formulas directly:
+
+@
+    prove $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
+@
+
+This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
+your other symbolic computations.  See the following files demonstrating reasoning with quantifiers:
+
+   * "Documentation.SBV.Examples.Puzzles.Rabbits"
+   * "Documentation.SBV.Examples.Puzzles.KnightsAndKnaves"
+   * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
 -}
 
 {- $constraintVacuity
