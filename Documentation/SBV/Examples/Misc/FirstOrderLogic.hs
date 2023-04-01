@@ -151,7 +151,7 @@ hence both disjuncts are false. Thus, the alleged conjecture is not an equivalen
 -- ** Partial orders
 {- $partialOrder
 A partial order is a reflexive, antisymmetic, and a transitive relation. We can prove these properties
-for relations created by 'mkPartialOrder' in SBV:
+for relations that are checked by the 'isPartialOrder' predicate in SBV:
 
 \(\forall x\,R(x,x)\)
 
@@ -182,7 +182,7 @@ poExample = prove $ do
 
 -- ** Linear orders
 {- $linearOrder
-A linear order, created by 'mkLinearOrder', satisfies the following axioms:
+A linear order, ensured by the predicate 'isLinearOrder', satisfies the following axioms:
 
 \(\forall x\,R(x,x)\)
 
@@ -206,7 +206,7 @@ Q.E.D.
 
 -- ** Tree orders
 {- $treeOrder
-A tree order, created by 'mkTreeOrder', satisfies the following axioms:
+A tree order, ensured by the predicate 'isTreeOrder', satisfies the following axioms:
 
 \(\forall x\,R(x,x)\)
 
@@ -230,7 +230,7 @@ Q.E.D.
 
 -- ** Piecewise linear orders
 {- $piecewiseLinear
-A piecewise linear order, created by 'mkPiecewiseLinearOrder', satisfies the following axioms:
+A piecewise linear order, ensured by the predicate 'isPiecewiseLinearOrder', satisfies the following axioms:
 
 \(\forall x\,R(x,x)\)
 
