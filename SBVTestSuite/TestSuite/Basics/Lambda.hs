@@ -11,7 +11,9 @@
 
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
@@ -185,14 +187,25 @@ tests =
       , goldenCapturedIO "lambda62" $ \rf -> do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} drinker
                                                 appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
                                                 `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
+
+      -- Special relations (kind of lambda related)
+      , goldenCapturedIO "lambda63" $ spRel $        quantifiedBool (\(Forall x) -> rel (x, x))
+      , goldenCapturedIO "lambda64" $ spRel $ po .=> quantifiedBool (\(Forall x) -> rel (x, x))
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
-  where record :: (State -> IO String) -> FilePath -> IO ()
+  where rel :: Relation Integer
+        rel =  uninterpret "R"
+        po = isPartialOrder "poR" rel
+
+        record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
                            appendFile rf . (P.++ "\n") =<< gen st
+
+        spRel b rf = do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} b
+                        appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
 
         runSat   f = runSatExpecting f Sat
         runUnsat f = runSatExpecting f Unsat
