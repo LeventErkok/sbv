@@ -1509,19 +1509,19 @@ See "Documentation.SBV.Examples.Misc.FirstOrderLogic" for several examples.
 -- | A type synonym for binary relations.
 type Relation a = (SBV a, SBV a) -> SBool
 
--- | Make a partial order. The string argument must uniquely identify this order.
+-- | Check if a relation is a partial order. The string argument must uniquely identify this order.
 isPartialOrder :: SymVal a => String -> Relation a -> SBool
 isPartialOrder = checkSpecialRelation . IsPartialOrder
 
--- | Make a linear order. The string argument must uniquely identify this order.
+-- | Check if a relation is a linear order. The string argument must uniquely identify this order.
 isLinearOrder :: SymVal a => String -> Relation a -> SBool
 isLinearOrder = checkSpecialRelation . IsLinearOrder
 
--- | Make a tree order. The string argument must uniquely identify this order.
+-- | Check if a relation is a tree order. The string argument must uniquely identify this order.
 isTreeOrder :: SymVal a => String -> Relation a -> SBool
 isTreeOrder = checkSpecialRelation . IsTreeOrder
 
--- | Make a piece-wise linear order. The string argument must uniquely identify this order.
+-- | Check if a relation is a piece-wise linear order. The string argument must uniquely identify this order.
 isPiecewiseLinearOrder :: SymVal a => String -> Relation a -> SBool
 isPiecewiseLinearOrder = checkSpecialRelation . IsPiecewiseLinearOrder
 
@@ -1531,7 +1531,7 @@ sanitizeRelName s = "__internal_sbv_" ++ map sanitize s
   where sanitize c | isSpace c || isPunctuation c = '_'
                                | True             = c
 
--- | Create a named relation and its transitive closure. The string argument must uniquely identify this order.
+-- | Create the transitive closure of a given relation. The string argument must uniquely identify the newly created relation.
 mkTransitiveClosure :: forall a. SymVal a => String -> Relation a -> Relation a
 mkTransitiveClosure nm rel = res
   where ka = kindOf (Proxy @a)
