@@ -191,21 +191,24 @@ tests =
       -- Special relations (kind of lambda related)
       , goldenCapturedIO "lambda63" $ spRel $         quantifiedBool (\(Forall x) -> rel (x, x))
       , goldenCapturedIO "lambda64" $ spRel $ po  .=> quantifiedBool (\(Forall x) -> rel (x, x))
-      , goldenCapturedIO "lambda65" $ spRel $ poI .=> quantifiedBool (\(Forall x) -> ieq (x, x))
+      , goldenCapturedIO "lambda65" $ spRel $ poI .=> quantifiedBool (\(Forall x) -> leq (x, x))
       , goldenCapturedIO "lambda66" $ spRel $ let u   = uninterpret "U" :: Relation Integer
                                                   tcU = mkTransitiveClosure "tcU" u
                                               in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (u (x, y) .&& u (y, z)) .=> tcU (x, z))
+      , goldenCapturedIO "lambda67" $ spRel $ let tcU = mkTransitiveClosure "tcLeq" leq
+                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
+                                                                     -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
-  where rel, ieq :: Relation Integer
+  where rel, leq :: Relation Integer
         rel =  uninterpret "R"
-        ieq (x, y) = x .<= y
+        leq (x, y) = x .<= y
         po  = isPartialOrder "poR" rel
-        poI = isPartialOrder "poI" ieq
+        poI = isPartialOrder "poI" leq
 
         record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
