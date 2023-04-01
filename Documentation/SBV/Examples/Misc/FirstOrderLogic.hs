@@ -10,10 +10,11 @@
 -- prove all come from <https://en.wikipedia.org/wiki/First-order_logic>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -158,14 +159,26 @@ for relations created by 'mkPartialOrder' in SBV:
 
 \(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
 
->>> let r = uncurry (mkPartialOrder 0) :: (SU, SU) -> SBool
->>> prove $ \(Forall x) -> r (x, x)
+>>> let r         = uninterpret "R" :: Relation U
+>>> let isPartial = isPartialOrder "poR" r
+>>> prove $ \(Forall x) -> isPartial .=> r (x, x)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+>>> prove $ \(Forall x) (Forall y) -> isPartial .=> (r (x, y) .&& r (y, x) .=> x .== y)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isPartial .=> (r (x, y) .&& r (y, z) .=> r (x, z))
 Q.E.D.
 -}
+
+-- | Demonstrates creating a partial order. We have:
+--
+-- >>> poExample
+-- Q.E.D.
+poExample :: IO ThmResult
+poExample = prove $ do
+  let r = uninterpret "R" :: Relation E
+  constrain $ isPartialOrder "poR" r
+
+  pure $ qe (\(Forall x) -> r (x, x)) :: Predicate
 
 -- ** Linear orders
 {- $linearOrder
@@ -179,14 +192,15 @@ A linear order, created by 'mkLinearOrder', satisfies the following axioms:
 
 \(\forall x\,\forall y\, R(x, y) \lor R(y, x)\)
 
->>> let r = uncurry (mkLinearOrder 0) :: (SU, SU) -> SBool
->>> prove $ \(Forall x) -> r (x, x)
+>>> let r        = uninterpret "R" :: Relation U
+>>> let isLinear = isLinearOrder "loR" r
+>>> prove $ \(Forall x) -> isLinear .=> r (x, x)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+>>> prove $ \(Forall x) (Forall y) -> isLinear .=> (r (x, y) .&& r (y, x) .=> x .== y)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isLinear .=> (r (x, y) .&& r (y, z) .=> r (x, z))
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) -> r (x, y) .|| r (y, x)
+>>> prove $ \(Forall x) (Forall y) -> isLinear .=> (r (x, y) .|| r (y, x))
 Q.E.D.
 -}
 
@@ -200,17 +214,18 @@ A tree order, created by 'mkTreeOrder', satisfies the following axioms:
 
 \(\forall x\,\forall y\, \forall z\, R(x, y) \land R(y, z) \Rightarrow R(x, z)\)
 
-\(\forall x\,\forall y\,\forall z\, (R(x, y) \land R(x, z)) \Rightarrow (R (y, z) \lor R (z, y))\)
+\(\forall x\,\forall y\,\forall z\, (R(y, x) \land R(z, z)) \Rightarrow (R (y, z) \lor R (z, y))\)
 
->>> let r = uncurry (mkTreeOrder 0) :: (SU, SU) -> SBool
->>> prove $ \(Forall x) -> r (x, x)
-Falsifiable
->>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+>>> let r      = uninterpret "R" :: Relation U
+>>> let isTree = isTreeOrder "toR" r
+>>> prove $ \(Forall x) -> isTree .=> r (x, x)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+>>> prove $ \(Forall x) (Forall y) -> isTree .=> (r (x, y) .&& r (y, x) .=> x .== y)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y))
-Falsifiable
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isTree .=> (r (x, y) .&& r (y, z) .=> r (x, z))
+Q.E.D.
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isTree .=> ((r (y, x) .&& r (z, x)) .=> (r (y, z) .|| r (z, y)))
+Q.E.D.
 -}
 
 -- ** Piecewise linear orders
@@ -227,28 +242,28 @@ A piecewise linear order, created by 'mkPiecewiseLinearOrder', satisfies the fol
 
 \(\forall x\,\forall y\,\forall z\, (R(y, x) \land R(z, x)) \Rightarrow (R (y, z) \lor R (z, y))\)
 
->>> let r = uncurry (mkPiecewiseLinearOrder 0) :: (SU, SU) -> SBool
->>> prove $ \(Forall x) -> r (x, x)
+>>> let r           = uninterpret "R" :: Relation U
+>>> let isPiecewise = isPiecewiseLinearOrder "plR" r
+>>> prove $ \(Forall x) -> isPiecewise .=> r (x, x)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) -> r (x, y) .&& r (y, x) .=> x .== y
+>>> prove $ \(Forall x) (Forall y) -> isPiecewise .=> (r (x, y) .&& r (y, x) .=> x .== y)
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> r (x, z)
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isPiecewise .=> (r (x, y) .&& r (y, z) .=> r (x, z))
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y))
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isPiecewise .=> ((r (x, y) .&& r (x, z)) .=> (r (y, z) .|| r (z, y)))
 Q.E.D.
->>> prove $ \(Forall x) (Forall y) (Forall z) -> (r (y, x) .&& r (z, x)) .=> (r (y, z) .|| r (z, y))
+>>> prove $ \(Forall x) (Forall y) (Forall z) -> isPiecewise .=> ((r (y, x) .&& r (z, x)) .=> (r (y, z) .|| r (z, y)))
 Q.E.D.
 -}
 
 -- ** Transitive closures
 {- $transitiveClosures
-A relation and its transitive closure can be created using 'transitiveClosure'. The transitive closure of
-a relation is not first-order axiomatizable. That is, we cannot write first-order formulas to uniquely
-describe them. However, we can check some expected properties:
+The transitive closure of a relation can be created using 'mkTransitiveClosure'. Transitive closures
+are not first-order axiomatizable. That is, we cannot write first-order formulas to uniquely
+describe them. However, we can check some of the expected properties:
 
->>> let (cr, ctcR) = transitiveClosure "R"
->>> let r   = uncurry cr   :: (SU, SU) -> SBool
->>> let tcR = uncurry ctcR :: (SU, SU) -> SBool
+>>> let r   = uninterpret "R" :: Relation U
+>>> let tcR = mkTransitiveClosure "tcR" r
 >>> prove $ \(Forall x) (Forall y) -> r (x, y) .=> tcR (x, y)
 Q.E.D.
 >>> prove $ \(Forall x) (Forall y) (Forall z) -> r (x, y) .&& r (y, z) .=> tcR (x, z)
@@ -265,15 +280,12 @@ connected transitively in the original relation. This requirement is not axiomat
 -- Q.E.D.
 tcExample1 :: IO ThmResult
 tcExample1 = prove $ do
-  a <- free "a"
-  b <- free "b"
-  c <- free "c"
+  a :: SU <- free "a"
+  b :: SU <- free "b"
+  c :: SU <- free "c"
 
-  let (cr, ctcR) = transitiveClosure "R"
-
-      r, tcR :: (SU, SU) -> SBool
-      r   = uncurry cr
-      tcR = uncurry ctcR
+  let r   = uninterpret "R"
+      tcR = mkTransitiveClosure "tcR" r
 
   -- Add R(a, b), R(b, c), but explicitly state ~R(a, c)
   constrain $ r (a, b)
@@ -290,11 +302,8 @@ tcExample1 = prove $ do
 -- Q.E.D.
 tcExample2 :: IO ThmResult
 tcExample2 = prove $ do
-  let (cr, ctcR) = transitiveClosure "R"
-
-      r, tcR :: (SE, SE) -> SBool
-      r   = uncurry cr
-      tcR = uncurry ctcR
+  let r   = uninterpret "r"
+      tcR = mkTransitiveClosure "tcR" r
 
   -- Add R(A, B), ~R(A, C), ~R(B, C) then it shouldn't be the case that R(a, c)
   constrain $ r (sA, sB)
@@ -312,12 +321,11 @@ tcExample3 :: IO ThmResult
 tcExample3 = prove $ do
 
         -- Define a relation over the type 'E', which only relates 'A' to 'B'.
-        let rel :: SE -> SE -> SBool
-            rel x y = (x, y) .== (sA, sB)
+        let rel :: Relation E
+            rel xy = xy .== (sA, sB)
 
         -- Create a relation and its transitive closure, and associate it with our function:
-        let (r, tcR) = transitiveClosure "R"
-        constrain $ \(Forall a) (Forall b) -> r a b .== rel a b
+        let tcR = mkTransitiveClosure "R" rel
 
         -- Show that in tcR, a and c cannot be connected
-        pure $ sNot $ tcR sA sC :: Predicate
+        pure $ sNot $ tcR (sA, sC) :: Predicate

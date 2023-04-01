@@ -59,7 +59,8 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  [NamedSymVar]                         -- ^ inputs
+type SMTLibIncConverter a =  ProgInfo                              -- ^ Various prog info
+                          -> [NamedSymVar]                         -- ^ inputs
                           -> Set.Set Kind                          -- ^ new kinds
                           -> (CnstMap, [(SV, CV)])                 -- ^ all constants sofar, and new constants
                           -> [(Int, ArrayInfo)]                    -- ^ newly created arrays

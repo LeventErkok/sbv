@@ -56,7 +56,7 @@ import Data.Foldable  (toList)
 
 import Data.SBV.Core.Data
 
-import Data.SBV.Core.Symbolic (MonadQuery(..), State(..), incrementInternalCounter, validationRequested, getSV, lookupInput)
+import Data.SBV.Core.Symbolic (MonadQuery(..), State(..), incrementInternalCounter, validationRequested, getSV, lookupInput, mustIgnoreVar)
 
 import Data.SBV.Utils.SExpr
 
@@ -328,12 +328,12 @@ getModelAtIndex mbi = do
 
           let name     = fst . snd
               removeSV = snd
-              prepare  = S.unstableSort . S.filter (not . isNonModelVar cfg . T.unpack . name)
+              prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . T.unpack . name)
               assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (isNonModelVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                  not (isNonModelVar cfg nm)]
+          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, satTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                  not (mustIgnoreVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger

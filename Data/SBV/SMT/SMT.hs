@@ -72,7 +72,7 @@ import qualified Data.Text       as T
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (SMTEngine, State(..))
+import Data.SBV.Core.Symbolic (SMTEngine, State(..), mustIgnoreVar)
 import Data.SBV.Core.Concrete (showCV)
 import Data.SBV.Core.Kind     (showBaseKind, intOfProxy)
 
@@ -558,7 +558,7 @@ showModelDictionary warnEmpty includeEverything cfg allVars
         relevantVars  = filter (not . ignore) allVars
         ignore (T.pack -> s, _)
           | includeEverything = False
-          | True              = "__internal_sbv_" `T.isPrefixOf` s || isNonModelVar cfg (T.unpack s)
+          | True              = mustIgnoreVar cfg (T.unpack s)
 
         shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
         shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))

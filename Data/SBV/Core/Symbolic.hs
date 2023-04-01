@@ -60,7 +60,7 @@ module Data.SBV.Core.Symbolic
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
-  , validationRequested, outputSVal, ProgInfo(..)
+  , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
   ) where
 
 import Control.DeepSeq             (NFData(..))
@@ -74,7 +74,7 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy)
+import Data.List                   (intercalate, sortBy, isPrefixOf)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
 
@@ -200,8 +200,8 @@ data Op = Plus
         | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
-        | SpecialRelOp  SpecialRelOp
         | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value
+        | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
         | NonLinear NROp                        -- Non-linear ops (mostly trigonometric), categorized separately
@@ -223,20 +223,17 @@ data Op = Plus
         deriving (Eq, Ord, G.Data)
 
 -- | Special relations supported by z3
-data SpecialRelOp = PartialOrder         Int
-                  | LinearOrder          Int
-                  | TreeOrder            Int
-                  | PiecewiseLinearOrder Int
-                  | TransitiveClosure    String
-                  deriving (Eq, Ord, G.Data)
+data SpecialRelOp = IsPartialOrder         String
+                  | IsLinearOrder          String
+                  | IsTreeOrder            String
+                  | IsPiecewiseLinearOrder String
+                  deriving (Eq, Ord, G.Data, Show)
 
--- | The print out matches z3's internal names
-instance Show SpecialRelOp where
-  show (PartialOrder         i) = "(_ partial-order "          ++ show i ++ ")"
-  show (LinearOrder          i) = "(_ linear-order "           ++ show i ++ ")"
-  show (TreeOrder            i) = "(_ tree-order "             ++ show i ++ ")"
-  show (PiecewiseLinearOrder i) = "(_ piecewise-linear-order " ++ show i ++ ")"
-  show (TransitiveClosure    n) = "(_ transitive-closure "     ++      n ++ ")"
+instance NFData SpecialRelOp where
+  rnf (IsPartialOrder         n) = rnf n
+  rnf (IsLinearOrder          n) = rnf n
+  rnf (IsTreeOrder            n) = rnf n
+  rnf (IsPiecewiseLinearOrder n) = rnf n
 
 -- | Floating point operations
 data FPOp = FP_Cast        Kind Kind SV   -- From-Kind, To-Kind, RoundingMode. This is "value" conversion
@@ -570,8 +567,6 @@ instance Show Op where
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
   show (QuantifiedBool i)   = "[quantified boolean] " ++ i
 
-  show (SpecialRelOp o)     = show o
-
   show (Label s)            = "[label] " ++ s
 
   show (IEEEFP w)           = show w
@@ -830,12 +825,13 @@ instance NFData ResultInp where
    rnf (ResultLamInps xs) = rnf xs
 
 -- | Several data about the program
-data ProgInfo = ProgInfo { hasQuants      :: Bool
-                         , hasSpecialRels :: Bool
+data ProgInfo = ProgInfo { hasQuants         :: Bool
+                         , progSpecialRels   :: [SpecialRelOp]
+                         , progTransClosures :: [(String, String)]
                          }
 
 instance NFData ProgInfo where
-   rnf (ProgInfo hasQuants hasSpecialRels) = rnf hasQuants `seq` rnf hasSpecialRels
+   rnf (ProgInfo a b c) = rnf a `seq` rnf b `seq` rnf c
 
 -- | Result of running a symbolic computation
 data Result = Result { progInfo       :: ProgInfo                                     -- ^ various info we collect about the program
@@ -1211,7 +1207,14 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , rSVCache     :: IORef (Cache SV)
                     , rAICache     :: IORef (Cache ArrayIndex)
                     , rQueryState  :: IORef (Maybe QueryState)
+                    , parentState  :: Maybe State  -- Pointer to our parent if we're in a sublevel
                     }
+
+-- | Chase to the root state
+getRootState :: State -> State
+getRootState st = case parentState st of
+                    Nothing  -> st                -- at the top!
+                    Just sub -> getRootState sub  -- recurse
 
 -- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
 instance NFData State where
@@ -1315,8 +1318,9 @@ incrementInternalCounter :: State -> IO Int
 incrementInternalCounter st = do ctr <- readIORef (rctr st)
                                  modifyState st rctr (+1) (return ())
                                  return ctr
+{-# INLINE incrementInternalCounter #-}
 
--- Kind of code we have for uninterpretation
+-- | Kind of code we have for uninterpretation
 data UICodeKind = UINone          -- no code
                 | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
                 | UICgC  [String] -- Code-gen, currently only C
@@ -1339,7 +1343,7 @@ svUninterpreted k nm code args = SVal k $ Right $ cache result
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> String -> SBVType -> UICodeKind -> IO ()
 newUninterpreted st nm t uiCode
-  | null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm)))
+  | not isInternal && (null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm))))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
   | True
   = do () <- case uiCode of
@@ -1371,6 +1375,9 @@ newUninterpreted st nm t uiCode
 
         validChar x = isAlphaNum x || x `elem` ("_" :: String)
         enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` ("|\\" :: String)) (tail (init nm)))
+
+        -- let internal names go through
+        isInternal = "__internal_sbv_" `isPrefixOf` nm
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()
@@ -1746,8 +1753,9 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
 mkNewState cfg currentRunMode = liftIO $ do
      currTime   <- getCurrentTime
-     progInfo   <- newIORef ProgInfo { hasQuants      = False
-                                     , hasSpecialRels = False
+     progInfo   <- newIORef ProgInfo { hasQuants         = False
+                                     , progSpecialRels   = []
+                                     , progTransClosures = []
                                      }
      rm         <- newIORef currentRunMode
      ctr        <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -1811,6 +1819,7 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rOptGoals    = optGoals
                   , rAsserts     = asserts
                   , rQueryState  = qstate
+                  , parentState  = Nothing
                   }
 
 -- | Generalization of 'Data.SBV.runSymbolic'
@@ -2160,6 +2169,10 @@ data SMTConfig = SMTConfig {
        , ignoreExitCode              :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
+
+-- | Ignore internal names and those the user told us to
+mustIgnoreVar :: SMTConfig -> String -> Bool
+mustIgnoreVar cfg s = "__internal_sbv" `isPrefixOf` s || isNonModelVar cfg s
 
 -- | We show the name of the solver for the config. Arguably this is misleading, but better than nothing.
 instance Show SMTConfig where

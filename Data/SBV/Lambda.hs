@@ -106,6 +106,9 @@ inSubState inState comp = do
                    , rexprMap     = fresh rexprMap
                    , rSVCache     = fresh rSVCache
                    , rQueryState  = fresh rQueryState
+
+                   -- keep track of our parent
+                   , parentState  = Just inState
                    }
 
 -- In this case, we expect just one group of parameters, with universal quantification
@@ -187,12 +190,13 @@ constraintStr = constraintGen toStr
 -- | Convert to an appropriate SMTLib representation.
 convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
 convert st expectedKind comp = do
-   ((), res) <- runSymbolicInState st comp
-   pure $ toLambda (stCfg st) expectedKind res
+   ((), res)   <- runSymbolicInState st comp
+   curProgInfo <- liftIO $ readIORef (rProgInfo st)
+   pure $ toLambda curProgInfo (stCfg st) expectedKind res
 
 -- | Convert the result of a symbolic run to a more abstract representation
-toLambda :: SMTConfig -> Kind -> Result -> Defn
-toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
+toLambda :: ProgInfo -> SMTConfig -> Kind -> Result -> Defn
+toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -293,7 +297,7 @@ toLambda cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
                                   ]
 
                mkAsgn (sv, e) = (sv, converter e)
-               converter = cvtExp solverCaps rm tableMap funcMap
+               converter = cvtExp curProgInfo solverCaps rm tableMap funcMap
                  where solverCaps = capabilities (solver cfg)
                        rm         = roundingMode cfg
                        tableMap   = IM.empty

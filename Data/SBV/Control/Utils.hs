@@ -78,8 +78,9 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
-                              , UserInputs, getSV, getUserName, NamedSymVar(..), lookupInput, getUserName'
-                              , Name, CnstMap, UICodeKind(UINone), smtDefGivenName, Inputs(..)
+                              , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
+                              , Name, CnstMap, UICodeKind(UINone), smtDefGivenName, Inputs(..), ProgInfo(..)
+                              , mustIgnoreVar
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -157,8 +158,8 @@ io :: MonadIO m => IO a -> m a
 io = liftIO
 
 -- | Sync-up the external solver with new context we have generated
-syncUpSolver :: (MonadIO m, MonadQuery m) => IORef CnstMap -> IncState -> m ()
-syncUpSolver rGlobalConsts is = do
+syncUpSolver :: (MonadIO m, MonadQuery m) => ProgInfo -> IORef CnstMap -> IncState -> m ()
+syncUpSolver progInfo rGlobalConsts is = do
         cfg <- getConfig
 
         -- update global consts to have the new ones
@@ -181,7 +182,7 @@ syncUpSolver rGlobalConsts is = do
 
                        let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
 
-                       return $ toIncSMTLib cfg inps ks (allConsts, cnsts) arrs tbls uis as constraints cfg
+                       return $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) arrs tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -209,9 +210,10 @@ modifyQueryState f = do state <- queryState
 
 -- | Generalization of 'Data.SBV.Control.inNewContext'
 inNewContext :: (MonadIO m, MonadQuery m) => (State -> IO a) -> m a
-inNewContext act = do st@State{rconstMap} <- queryState
-                      (is, r) <- io $ withNewIncState st act
-                      syncUpSolver rconstMap is
+inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
+                      (is, r)  <- io $ withNewIncState st act
+                      progInfo <- io $ readIORef rProgInfo
+                      syncUpSolver progInfo rconstMap is
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal' values
@@ -1131,11 +1133,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
                      let allUiFuns = [u | satTrackUFs cfg                                         -- config says consider UIFs
                                         , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (isNonModelVar cfg nm)                              -- make sure they aren't explicitly ignored
+                                        , not (mustIgnoreVar cfg nm)                              -- make sure they aren't explicitly ignored
                                      ]
 
                          allUiRegs = [u | u@(nm, SBVType as) <- allUninterpreteds, length as == 1  -- non-function ones
-                                        , not (isNonModelVar cfg nm)                               -- make sure not ignored
+                                        , not (mustIgnoreVar cfg nm)                               -- make sure they aren't explicitly ignored
                                      ]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
@@ -1172,8 +1174,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      let vars :: S.Seq (SVal, NamedSymVar)
                          vars = let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
 
-                                    ignored k = isNonModelVar cfg (getUserName' k)
-                                              || "__internal_sbv" `T.isPrefixOf` getUserName k
+                                    ignored k = mustIgnoreVar cfg (getUserName' k)
 
                                 in mkSVal <$> S.filter (not . ignored) allModelInputs
 

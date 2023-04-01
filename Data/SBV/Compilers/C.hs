@@ -472,7 +472,7 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
   = error "SBV->C: Cannot compile in the presence of quantified variables."
-  | hasSpecialRels pinfo
+  | not $ null (progSpecialRels pinfo)
   = error "SBV->C: Cannot compile in the presence of special relations."
   | not (null axioms)
   = error "SBV->C: Cannot compile in the presence of 'smtFunction' definitions, use 'compileToCLib' instead."

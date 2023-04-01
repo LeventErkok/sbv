@@ -309,8 +309,7 @@ module Data.SBV (
 
   -- * Special relations
   -- $specialRels
-  , mkPartialOrder, mkLinearOrder, mkTreeOrder, mkPiecewiseLinearOrder
-  , transitiveClosure
+  , Relation, isPartialOrder, isLinearOrder, isTreeOrder, isPiecewiseLinearOrder, mkTransitiveClosure
 
   -- * Properties, proofs, and satisfiability
   -- $proveIntro
@@ -420,6 +419,8 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
+import Control.Monad (when)
+
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
@@ -450,7 +451,10 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.SizedFloats
 
 import Data.SBV.Core.Floating
-import Data.SBV.Core.Symbolic   (MonadSymbolic(..), SymbolicT, registerKind, SpecialRelOp(..), ProgInfo(..), rProgInfo)
+import Data.SBV.Core.Symbolic   ( MonadSymbolic(..), SymbolicT, registerKind
+                                , ProgInfo(..), rProgInfo, SpecialRelOp(..), UICodeKind(UINone)
+                                , getRootState
+                                )
 
 import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        dsat, dsatWith, dprove, dproveWith,
@@ -460,7 +464,7 @@ import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
                                        isSatisfiableWith, runSMT, runSMTWith,
                                        sName, safe, safeWith)
 
-import Data.IORef (modifyIORef')
+import Data.IORef (modifyIORef', readIORef)
 
 import Data.SBV.Client
 import Data.SBV.Client.BaseIO
@@ -481,6 +485,8 @@ import Data.Proxy (Proxy(..))
 import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 
 import Prelude hiding((+), (-)) -- to avoid the haddock ambiguity
+
+import Data.Char (isSpace, isPunctuation)
 
 --- $setup
 --- >>> -- For doctest purposes only:
@@ -1495,51 +1501,95 @@ instance ByteConverter (SWord 1024) where
      where l = length as
 
 {- $specialRels
-A special relation is a binary relation that has additional properties. SBV allows for the creation of various kinds
-of special relations respecting various order axioms. See "Documentation.SBV.Examples.Misc.FirstOrderLogic" for several
-examples.
+A special relation is a binary relation that has additional properties. SBV allows for the checking of various kinds
+of special relations respecting various axioms, and allows for creating transitive closures.
+See "Documentation.SBV.Examples.Misc.FirstOrderLogic" for several examples.
 -}
--- | Make a partial order. The integer argument uniquely identifies this order.
-mkPartialOrder :: Int -> SBV a -> SBV a -> SBool
-mkPartialOrder = mkSpecialRelation . PartialOrder
 
--- | Make a linear order. The integer argument uniquely identifies this order.
-mkLinearOrder :: Int -> SBV a -> SBV a -> SBool
-mkLinearOrder = mkSpecialRelation . LinearOrder
+-- | A type synonym for binary relations.
+type Relation a = (SBV a, SBV a) -> SBool
 
--- | Make a tree order. The integer argument uniquely identifies this order.
-mkTreeOrder :: Int -> SBV a -> SBV a -> SBool
-mkTreeOrder = mkSpecialRelation . TreeOrder
+-- | Make a partial order. The string argument must uniquely identify this order.
+isPartialOrder :: SymVal a => String -> Relation a -> SBool
+isPartialOrder = checkSpecialRelation . IsPartialOrder
 
--- | Make a piece-wise linear order.
-mkPiecewiseLinearOrder :: Int -> SBV a -> SBV a -> SBool
-mkPiecewiseLinearOrder = mkSpecialRelation . PiecewiseLinearOrder
+-- | Make a linear order. The string argument must uniquely identify this order.
+isLinearOrder :: SymVal a => String -> Relation a -> SBool
+isLinearOrder = checkSpecialRelation . IsLinearOrder
 
--- | Create a named relation and its transitive closure.
-transitiveClosure :: SymVal a => String -> (SBV a -> SBV a -> SBool, SBV a -> SBV a -> SBool)
-transitiveClosure nm = (uninterpret nm, mkSpecialRelation (TransitiveClosure nm))
+-- | Make a tree order. The string argument must uniquely identify this order.
+isTreeOrder :: SymVal a => String -> Relation a -> SBool
+isTreeOrder = checkSpecialRelation . IsTreeOrder
 
--- | Create special relations of given type
-mkSpecialRelation :: SpecialRelOp -> SBV a -> SBV a -> SBool
-mkSpecialRelation op
-  | idx < 0
-  = error $ "Data.SBV.mkSpecialRelation: Index to " ++ nm ++ " must be non-negative, received: " ++ show idx
-  | True
-  = fun
- where (idx, nm) = case op of
-                     PartialOrder         i -> (i, "mkPartialOrder")
-                     LinearOrder          i -> (i, "mkLinearOrder")
-                     TreeOrder            i -> (i, "mkTreeOrder")
-                     PiecewiseLinearOrder i -> (i, "mkPiecewiseLinearOrder")
-                     TransitiveClosure    _ -> (0, "transitiveClosure")
-       fun a b = SBV $ SVal KBool $ Right $ cache result
-         where result st = do sa <- sbvToSV st a
-                              sb <- sbvToSV st b
+-- | Make a piece-wise linear order. The string argument must uniquely identify this order.
+isPiecewiseLinearOrder :: SymVal a => String -> Relation a -> SBool
+isPiecewiseLinearOrder = checkSpecialRelation . IsPiecewiseLinearOrder
 
-                              -- register
-                              registerKind st (kindOf sa)
-                              modifyIORef' (rProgInfo st) (\u -> u{hasSpecialRels = True})
+-- | Make sure it's internally acceptable
+sanitizeRelName :: String -> String
+sanitizeRelName s = "__internal_sbv_" ++ map sanitize s
+  where sanitize c | isSpace c || isPunctuation c = '_'
+                               | True             = c
 
-                              newExpr st KBool $ SBVApp (SpecialRelOp op) [sa, sb]
+-- | Create a named relation and its transitive closure. The string argument must uniquely identify this order.
+mkTransitiveClosure :: forall a. SymVal a => String -> Relation a -> Relation a
+mkTransitiveClosure nm rel = res
+  where ka = kindOf (Proxy @a)
+
+        -- The internal name of this relation
+        inm = sanitizeRelName $ "_TransitiveClosure_" ++ nm ++ "_"
+        key = (inm, nm)
+
+        res (a, b) = SBV $ SVal KBool $ Right $ cache result
+          where result st = do -- Is this new? If so create it, otherwise reuse
+                               ProgInfo{progTransClosures = curProgTransClosures} <- readIORef (rProgInfo st)
+
+                               when (key `notElem` curProgTransClosures) $ do
+
+                                  registerKind st ka
+
+                                  -- Add to the end so if we get incremental ones the order doesn't change for old ones!
+                                  modifyIORef' (rProgInfo st) (\u -> u{progTransClosures = curProgTransClosures ++ [key]})
+
+                                  -- Equate it to the relation we are given. We want to do this in the root state
+                                  let SBV eq = quantifiedBool $ \(Forall x) (Forall y) -> rel (x, y) .== uninterpret inm x y
+                                  internalConstraint (getRootState st) False [] eq
+
+                               sa <- sbvToSV st a
+                               sb <- sbvToSV st b
+
+                               newExpr st KBool $ SBVApp (Uninterpreted nm) [sa, sb]
+
+-- | Check if the given relation satisfies the required axioms
+checkSpecialRelation :: forall a. SymVal a => SpecialRelOp -> Relation a -> SBool
+checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
+  where ka = kindOf (Proxy @a)
+
+        internalize nm = case op of
+                           IsPartialOrder         _ -> IsPartialOrder         nm
+                           IsLinearOrder          _ -> IsLinearOrder          nm
+                           IsTreeOrder            _ -> IsTreeOrder            nm
+                           IsPiecewiseLinearOrder _ -> IsPiecewiseLinearOrder nm
+
+        result st = do -- The internal name of this relation
+                       let nm  = sanitizeRelName (show op)
+                           iop = internalize nm
+
+                       -- Is this new? If so create it, otherwise reuse
+                       ProgInfo{progSpecialRels = curSpecialRels} <- readIORef (rProgInfo st)
+
+                       when (op `notElem` curSpecialRels) $ do
+
+                          registerKind st ka
+                          newUninterpreted st nm (SBVType [ka, ka, KBool]) UINone
+
+                          -- Add to the end so if we get incremental ones the order doesn't change for old ones!
+                          modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})
+
+                          -- Equate it to the relation we are given. We want to do this in the parent state
+                          let SBV eq = quantifiedBool $ \(Forall x) (Forall y) -> rel (x, y) .== uninterpret nm x y
+                          internalConstraint (getRootState st) False [] eq
+
+                       newExpr st KBool $ SBVApp (SpecialRelOp ka iop) []
 
 {-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}

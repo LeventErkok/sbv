@@ -9,6 +9,7 @@
 -- Conversion of symbolic programs to SMTLib format, Using v2 of the standard
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE PatternGuards       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
@@ -18,7 +19,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, nub)
+import Data.List  (intercalate, partition, nub, findIndex)
 import Data.Maybe (listToMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
@@ -33,7 +34,7 @@ import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString
-                              , SMTDef(..), ResultInp(..), ProgInfo(..)
+                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
@@ -79,8 +80,9 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
                              isFoldMap SeqFoldLeftI{} = True
                              isFoldMap _              = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
-        needsSpecialRels = hasSpecialRels curProgInfo
-        needsQuantifiers = hasQuants      curProgInfo
+
+        (needsQuantifiers, needsSpecialRels) = case curProgInfo of
+           ProgInfo hasQ srs tcs -> (hasQ, not (null srs && null tcs))
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
@@ -233,13 +235,13 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
              ++ [ "; --- arrays ---" ]
              ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
-             ++ concatMap declUI uis
+             ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
              ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
              ++ [ "; --- user defined functions ---"]
              ++ declUserFuns defs
              ++ [ "; --- assignments ---" ]
-             ++ concatMap (declDef cfg tableMap funcMap) asgns
+             ++ concatMap (declDef curProgInfo cfg tableMap funcMap) asgns
              ++ [ "; --- arrayDelayeds ---" ]
              ++ concat arrayDelayeds
              ++ [ "; --- arraySetups ---" ]
@@ -459,7 +461,7 @@ declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerat
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: SMTLibIncConverter [String]
-cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -476,11 +478,11 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
             -- arrays
             ++ concat arrayConstants
             -- uninterpreteds
-            ++ concatMap declUI uis
+            ++ concatMap (declUI curProgInfo) uis
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef cfg tableMap funcMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef curProgInfo cfg tableMap funcMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- table setups
@@ -515,11 +517,11 @@ cvtInc inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg 
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: SMTConfig -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
-declDef cfg tableMap funcMap (s, expr) =
+declDef :: ProgInfo -> SMTConfig -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
+declDef curProgInfo cfg tableMap funcMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                           e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp caps rm tableMap funcMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                                       e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap funcMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -543,8 +545,24 @@ declConst cfg (s, c)
   | True
   = defineFun cfg (s, cvtCV (roundingMode cfg) c) Nothing
 
-declUI :: (String, SBVType) -> [String]
-declUI (i, t) = declareName i t Nothing
+-- Make a function equality of nm against the internal function fun
+mkRelEq :: String -> (String, String) -> Kind -> String
+mkRelEq nm (fun, order) ak = res
+   where lhs = "(" ++ nm ++ " x y)" 
+         rhs = "((_ " ++ fun ++ " " ++ order ++ ") x y)"
+         tk  = smtType ak
+         res = "(forall ((x " ++ tk ++ ") (y " ++ tk ++ ")) (= " ++ lhs ++ " " ++ rhs ++ "))"
+
+declUI :: ProgInfo -> (String, SBVType) -> [String]
+declUI ProgInfo{progTransClosures} (i, t) = declareName i t Nothing ++ declClosure
+  where declClosure | Just external <- lookup i progTransClosures
+                    =  declareName external t Nothing
+                    ++ ["(assert " ++ mkRelEq external ("transitive-closure", i) (argKind t) ++ ")"]
+                    | True
+                    = []
+
+        argKind (SBVType [ka, _, KBool]) = ka
+        argKind _                        = error $ "declUI: Unexpected type for name: " ++ show (i, t)
 
 -- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
 -- and axioms. We spit axioms as is; and topologically sort the definitions.
@@ -739,11 +757,12 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: SolverCapabilities -> RoundingMode -> TableMap -> FunctionMap -> SBVExpr -> String
-cvtExp caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> FunctionMap -> SBVExpr -> String
+cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
   where hasPB       = supportsPseudoBooleans caps
-        hasInt2bv   = supportsInt2bv caps
-        hasDistinct = supportsDistinct caps
+        hasInt2bv   = supportsInt2bv         caps
+        hasDistinct = supportsDistinct       caps
+        specialRels = progSpecialRels        curProgInfo
 
         bvOp     = all isBounded   arguments
         intOp    = any isUnbounded arguments
@@ -926,10 +945,21 @@ cvtExp caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (QuantifiedBool i) [])   = i
         sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
-        sh a@(SBVApp (SpecialRelOp o) args)
-           = case args of
-              [_, _] -> '(' : show o ++ " " ++ unwords (map cvtSV args) ++ ")"
-              _      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to special op: " ++ show a
+        sh a@(SBVApp (SpecialRelOp k o) args)
+          | not (null args)
+          = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to special op: " ++ show a
+          | True
+          = let order = case findIndex (== o) specialRels of
+                          Just i -> i
+                          Nothing -> error $ unlines [ "SBV.SMT.SMTLib2.cvtExp: Cannot find " ++ show o ++ " in the special-relations list."
+                                                     , "Known relations: " ++ intercalate ", " (map show specialRels)
+                                                     ]
+                asrt nm fun = mkRelEq nm (fun, show order) k
+            in case o of
+                 IsPartialOrder         nm -> asrt nm "partial-order"
+                 IsLinearOrder          nm -> asrt nm "linear-order"
+                 IsTreeOrder            nm -> asrt nm "tree-order"
+                 IsPiecewiseLinearOrder nm -> asrt nm "piecewise-linear-order"
 
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ cvtSV a ++ ")"
 
