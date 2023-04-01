@@ -1210,11 +1210,9 @@ data State  = State { pathCond     :: SVal                             -- ^ kind
                     , parentState  :: Maybe State  -- Pointer to our parent if we're in a sublevel
                     }
 
--- | Chase to the root state
+-- | Chase to the root state. No infinite chains!
 getRootState :: State -> State
-getRootState st = case parentState st of
-                    Nothing  -> st                -- at the top!
-                    Just sub -> getRootState sub  -- recurse
+getRootState st = maybe st getRootState (parentState st)
 
 -- NFData is a bit of a lie, but it's sufficient, most of the content is iorefs that we don't want to touch
 instance NFData State where

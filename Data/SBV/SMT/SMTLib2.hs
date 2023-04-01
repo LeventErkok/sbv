@@ -19,7 +19,7 @@
 module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
 
 import Data.Bits  (bit)
-import Data.List  (intercalate, partition, nub, findIndex)
+import Data.List  (intercalate, partition, nub, elemIndex)
 import Data.Maybe (listToMaybe, catMaybes)
 
 import qualified Data.Foldable as F (toList)
@@ -949,7 +949,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
           | not (null args)
           = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to special op: " ++ show a
           | True
-          = let order = case findIndex (== o) specialRels of
+          = let order = case o `elemIndex` specialRels of
                           Just i -> i
                           Nothing -> error $ unlines [ "SBV.SMT.SMTLib2.cvtExp: Cannot find " ++ show o ++ " in the special-relations list."
                                                      , "Known relations: " ++ intercalate ", " (map show specialRels)
