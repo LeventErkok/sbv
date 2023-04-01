@@ -557,7 +557,7 @@ declUI :: ProgInfo -> (String, SBVType) -> [String]
 declUI ProgInfo{progTransClosures} (i, t) = declareName i t Nothing ++ declClosure
   where declClosure | Just external <- lookup i progTransClosures
                     =  declareName external t Nothing
-                    ++ ["(assert " ++ mkRelEq i ("transitive-closure", external) (argKind t) ++ ")"]
+                    ++ ["(assert " ++ mkRelEq external ("transitive-closure", i) (argKind t) ++ ")"]
                     | True
                     = []
 
