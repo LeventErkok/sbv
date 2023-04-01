@@ -56,10 +56,10 @@
   * Added support for abduct-generation, as supported by CVC5. See "Documentation/SBV/Examples/Queries/Abducts.hs"
     for a basic example.
 
-  * Added support for special-relations. You can now create partial, linear, tree, and piecewise-linear orders in SBV.
-    (See functions mkPartialOrder, mkLinearOrder, mkTreeOrder, and mkPiecewiseLinearOrder). Additionally, you
-    can create relations and their transitive-closures. See Documentation/SBV/Examples/Misc/FirstOrderLogic.hs
-    for some examples.
+  * Added support for special-relations. You can now check if a relation is partial, linear, tree,
+    or piecewise-linear orders in SBV. (Or you can constrain relations to satisfy the corresponding laws, thus
+    creating relations with these properties.) Additionally, you can create transitive-closures of relations.
+    See Documentation/SBV/Examples/Misc/FirstOrderLogic.hs for several examples.
 
   * [BACKWARDS COMPATIBILITY] The signature of Data.SBV.List's concat has changed. In previous releases
     this was a synonym for appending two lists, now it takes a list-of-lists and flattens it, matching the
