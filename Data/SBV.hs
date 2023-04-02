@@ -886,7 +886,7 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFal
 You can write quantified formulas, and reason with them as in first-order logic. Here is a simple example is:
 
 @
-    constrain $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
+    constrain $ \\(Forall x) (Exists y) -> y .> (x :: SInteger)
 @
 
 You can nest quantifiers as you wish, and the quantified parameters can be of arbitrary symbolic type.
@@ -894,13 +894,13 @@ Additionally, you can convert such a quantified formula to a regular boolean, vi
 function, essentially performing quantifier elimination:
 
 @
-    other_condition .&& quantifiedBool (\(Forall x) (Exists y) -> y .> (x :: SInteger))
+    other_condition .&& quantifiedBool (\\(Forall x) (Exists y) -> y .> (x :: SInteger))
 @
 
 Or you can prove/sat quantified formulas directly:
 
 @
-    prove $ \(Forall x) (Exists y) -> y .> (x :: SInteger)
+    prove $ \\(Forall x) (Exists y) -> y .> (x :: SInteger)
 @
 
 This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
