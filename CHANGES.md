@@ -96,6 +96,8 @@
 
   * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
 
+  * Rewrote some of the older examples to use more modern SBV idioms.
+
   * Changes needed to compile with upcoming GHC 9.6. Thanks to Lars Kuhtz for the patch.
 
 ### Version 9.2, 2023-1-16
