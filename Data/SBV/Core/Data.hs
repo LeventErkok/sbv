@@ -749,3 +749,99 @@ instance SymArray SArray where
            mkNm (Just nm) _ = nm
            aknd = kindOf (Proxy @a)
            bknd = kindOf (Proxy @b)
+
+-- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
+-- Comparing symbolic values will necessarily return a symbolic value.
+--
+-- Minimal complete definition: None, if the type is instance of @Generic@. Otherwise '(.==)'.
+infix 4 .==, ./=, .===, ./==
+class EqSymbolic a where
+  -- | Symbolic equality.
+  (.==) :: a -> a -> SBool
+  -- | Symbolic inequality.
+  (./=) :: a -> a -> SBool
+  -- | Strong equality. On floats ('SFloat'/'SDouble'), strong equality is object equality; that
+  -- is @NaN == NaN@ holds, but @+0 == -0@ doesn't. On other types, (.===) is simply (.==).
+  -- Note that (.==) is the /right/ notion of equality for floats per IEEE754 specs, since by
+  -- definition @+0 == -0@ and @NaN@ equals no other value including itself. But occasionally
+  -- we want to be stronger and state @NaN@ equals @NaN@ and @+0@ and @-0@ are different from
+  -- each other. In a context where your type is concrete, simply use `Data.SBV.fpIsEqualObject`. But in
+  -- a polymorphic context, use the strong equality instead.
+  --
+  -- NB. If you do not care about or work with floats, simply use (.==) and (./=).
+  (.===) :: a -> a -> SBool
+  -- | Negation of strong equality. Equaivalent to negation of (.===) on all types.
+  (./==) :: a -> a -> SBool
+
+  -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
+  distinct :: [a] -> SBool
+
+  -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
+  -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
+  -- distinct regardless of repetition.
+  distinctExcept :: [a] -> [a] -> SBool
+
+  -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.
+  allEqual :: [a] -> SBool
+
+  -- | Symbolic membership test.
+  sElem    :: a -> [a] -> SBool
+
+  -- | Symbolic negated membership test.
+  sNotElem :: a -> [a] -> SBool
+
+  x ./=  y = sNot (x .==  y)
+  x .=== y = x .== y
+  x ./== y = sNot (x .=== y)
+
+  allEqual []     = sTrue
+  allEqual (x:xs) = sAll (x .==) xs
+
+  -- Default implementation of 'distinct'. Note that we override
+  -- this method for the base types to generate better code.
+  distinct []     = sTrue
+  distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
+
+  -- Default implementation of 'distinctExcept'. Note that we override
+  -- this method for the base types to generate better code.
+  distinctExcept es ignored = go es
+    where isIgnored = (`sElem` ignored)
+
+          go []     = sTrue
+          go (x:xs) = let xOK  = isIgnored x .|| sAll (\y -> isIgnored y .|| x ./= y) xs
+                      in xOK .&& go xs
+
+  x `sElem`    xs = sAny (.== x) xs
+  x `sNotElem` xs = sNot (x `sElem` xs)
+
+  -- Default implementation for '(.==)' if the type is 'Generic'
+  default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
+  (.==) = symbolicEqDefault
+
+-- | Default implementation of symbolic equality, when the underlying type is generic
+-- Not exported, used with automatic deriving.
+symbolicEqDefault :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
+symbolicEqDefault x y = symbolicEq (G.from x) (G.from y)
+
+-- | Not exported, used for implementing generic equality.
+class GEqSymbolic f where
+  symbolicEq :: f a -> f a -> SBool
+
+instance GEqSymbolic U1 where
+  symbolicEq _ _ = sTrue
+
+instance (EqSymbolic c) => GEqSymbolic (K1 i c) where
+  symbolicEq (K1 x) (K1 y) = x .== y
+
+instance (GEqSymbolic f) => GEqSymbolic (M1 i c f) where
+  symbolicEq (M1 x) (M1 y) = symbolicEq x y
+
+instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :*: g) where
+  symbolicEq (x1 :*: y1) (x2 :*: y2) = symbolicEq x1 x2 .&& symbolicEq y1 y2
+
+instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
+  symbolicEq (L1 l) (L1 r) = symbolicEq l r
+  symbolicEq (R1 l) (R1 r) = symbolicEq l r
+  symbolicEq (L1 _) (R1 _) = sFalse
+  symbolicEq (R1 _) (L1 _) = sFalse
+
