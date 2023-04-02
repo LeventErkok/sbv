@@ -445,10 +445,14 @@ instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
 -- | Functions of a unique single existential
 instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Constraint m (ExistsUnique a -> r) where
   mkConstraint st fn = mkConstraint st fn'
-    where fn' (Exists x) (Forall x1) (Forall x2) = fx .&& ((fx1 .&& fx2) .=> x1 .== x2)
-                where fx  = quantifiedBool $ fn (ExistsUnique x)
-                      fx1 = quantifiedBool $ fn (ExistsUnique x1)
-                      fx2 = quantifiedBool $ fn (ExistsUnique x2)
+    where fn' (Exists x) (Forall x1) (Forall x2) = fx .&& unique
+                where fx    = quantifiedBool $ fn (ExistsUnique x)
+                      fx1   = fn (ExistsUnique x1)
+                      fx2   = fn (ExistsUnique x2)
+
+                      bothHolds  = quantifiedBool fx1 .&& quantifiedBool fx2
+                      mustEqual  = x1 .== x2
+                      unique     = bothHolds .=> mustEqual
 
 -- | Functions of a number of existentials
 instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n a -> r) where
