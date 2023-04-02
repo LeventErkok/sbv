@@ -79,7 +79,10 @@ import Data.Maybe             (fromMaybe)
 import Data.Proxy
 import Data.Typeable          (Typeable)
 
-import qualified Data.Generics as G    (Data(..))
+import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
+import qualified GHC.Generics  as G
+import qualified Data.Generics as G (Data(..))
+
 
 import qualified Data.IORef         as R    (readIORef)
 import qualified Data.IntMap.Strict as IMap (size, insert)
