@@ -55,6 +55,7 @@ import Control.Monad          (when, unless, mplus)
 import Control.Monad.Trans    (liftIO)
 import Control.Monad.IO.Class (MonadIO)
 
+import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
