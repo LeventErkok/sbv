@@ -91,7 +91,7 @@ testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
 docTest:
-	@$(TIME) cabal new-run SBVDocTest -- --timeout 120
+	@$(TIME) cabal new-run SBVDocTest -- --timeout 300
 
 # Check a single module using doctest:
 #   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer.hs
