@@ -66,7 +66,6 @@ module Data.SBV.Core.Data
 
 import GHC.TypeLits (KnownNat, Nat)
 
-import GHC.Generics (Generic)
 import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
@@ -80,7 +79,7 @@ import Data.Maybe             (fromMaybe)
 import Data.Proxy
 import Data.Typeable          (Typeable)
 
-import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
+import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
 import qualified Data.Generics as G (Data(..))
 
