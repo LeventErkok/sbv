@@ -2134,7 +2134,7 @@ data SolverCapabilities = SolverCapabilities {
 -- precision value on the screen. The field 'printRealPrec' controls the printing precision, by specifying the number of digits after
 -- the decimal point. The default value is 16, but it can be set to any positive integer.
 --
--- When printing, SBV will add the suffix @...@ at the and of a real-value, if the given bound is not sufficient to represent the real-value
+-- When printing, SBV will add the suffix @...@ at the end of a real-value, if the given bound is not sufficient to represent the real-value
 -- exactly. Otherwise, the number will be written out in standard decimal notation. Note that SBV will always print the whole value if it
 -- is precise (i.e., if it fits in a finite number of digits), regardless of the precision limit. The limit only applies if the representation
 -- of the real value is not finite, i.e., if it is not rational.
