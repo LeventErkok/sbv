@@ -29,6 +29,7 @@ module Documentation.SBV.Examples.Puzzles.AOC_2021_24 where
 
 import Prelude hiding (read, mod, div)
 
+import Control.Monad (forM_)
 import Data.Maybe
 
 import qualified Data.Map.Strict          as M
@@ -169,7 +170,7 @@ puzzle shouldMaximize = print =<< optimizeWith z3{isNonModelVar = (/= finalVar)}
                      let digits = reverse inputs
 
                      -- Each digit is between 1-9
-                     ST.forM_ digits $ \d -> constrain $ d `inRange` (1, 9)
+                     forM_ digits $ \d -> constrain $ d `inRange` (1, 9)
 
                      -- Digits spell out the model number. We minimize/maximize this value as requested:
                      let modelNum = foldl (\sofar d -> 10 * sofar + d) 0 digits
