@@ -96,12 +96,12 @@ docTest:
 # Check a single module using doctest:
 #   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer.hs
 docTestModule:
-	cabal new-run SBVDocTest -- --timeout 120 --module $(basename $(subst /,.,${TGT}))
+	cabal new-run SBVDocTest -- --timeout 300 --module $(basename $(subst /,.,${TGT}))
 
 # Same as above, but doesn't compile the program; i.e., only use it if you only
 # modified the doctest in a comment but haven't changed the code itself
 docTestModuleFast:
-	cabal-docspec --timeout=120 --module $(basename $(subst /,.,${TGT}))
+	cabal-docspec --timeout 300 --module $(basename $(subst /,.,${TGT}))
 
 test:
 	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
