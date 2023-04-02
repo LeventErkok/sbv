@@ -19,16 +19,17 @@ import Documentation.SBV.Examples.Puzzles.Sudoku
 import Utils.SBVBenchFramework
 import BenchSuite.Bench.Bench as S
 
+import Data.Maybe (fromMaybe)
+
 
 -- benchmark suite
 benchmarks :: Runner
 benchmarks = rGroup
-    [ S.run ("sudoku " ++ show n) (checkPuzzle s) `using` runner satWith
-       | (n, s) <-
-           zip
-             [(0::Int)..]
-             [puzzle0, puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6] ]
+    [ runIO ("sudoku" ++ show n) (checkPuzzle s)
+    | (n, s) <- zip [(0::Int)..] [puzzle1, puzzle2, puzzle3, puzzle4, puzzle5, puzzle6] ]
 
 
-checkPuzzle :: Puzzle -> Symbolic SBool
-checkPuzzle (i, f) = (valid . f) `fmap` mkFreeVars i
+checkPuzzle :: Puzzle -> IO Bool
+checkPuzzle p = do final <- fillBoard p
+                   let vld = valid (map (map literal) final)
+                   pure $ fromMaybe False (unliteral vld)
