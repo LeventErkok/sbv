@@ -37,7 +37,7 @@ import qualified "template-haskell" Language.Haskell.TH.Syntax as TH
 #endif
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model
+import Data.SBV.Core.Model () -- instances only
 import Data.SBV.Provers.Prover
 
 -- | Check whether the given solver is installed and is ready to go. This call does a

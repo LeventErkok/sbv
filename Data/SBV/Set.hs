@@ -55,7 +55,7 @@ import Data.Proxy (Proxy(Proxy))
 import qualified Data.Set as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Model    ((.==), (./=))
+import Data.SBV.Core.Model () -- instances only
 import Data.SBV.Core.Symbolic (SetOp(..))
 
 import qualified Data.Generics.Uniplate.Data as G
