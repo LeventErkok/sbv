@@ -2682,7 +2682,7 @@ cantQuickCheck = error $ unlines [ "*** Data.SBV: Cannot quickcheck the given pr
                                  , "***   - Uninterpreted constants."
                                  , "***   - Floating point operations with rounding modes other than RNE."
                                  , "***   - Floating point FMA operation, regardless of rounding mode."
-                                 , "***   - Quantified booleans, i.e., uses of Forall/Exists."
+                                 , "***   - Quantified booleans, i.e., uses of Forall/Exists/ExistsUnique."
                                  , "***   - Calls to 'observe' (use 'sObserve' instead)"
                                  , "***"
                                  , "*** If you can't avoid the above features or run into an issue with"

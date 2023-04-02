@@ -609,6 +609,9 @@ instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => Provab
 instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Exists a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r, EqSymbolic (SBV a)) => SatisfiableM m (ExistsUnique a -> r) where
+  satArgReduce = satArgReduce . quantifiedBool
+
 instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ForallN n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
@@ -616,6 +619,9 @@ instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM
   satArgReduce = satArgReduce . quantifiedBool
 
 instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Exists a -> r) where
+  proofArgReduce = proofArgReduce . quantifiedBool
+
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r, EqSymbolic (SBV a)) => ProvableM m (ExistsUnique a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
 instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ForallN n a -> r) where

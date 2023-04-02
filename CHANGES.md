@@ -25,6 +25,9 @@
     This facility makes quantifiers part of the regular SBV language, allowing them to be mixed/matched with all
     your other symbolic computations.
 
+    SBV also supports the constructors ExistsUnique to create unique existentials, in addition to
+    ForallN and ExistsN for creating multiple variables at the same time.
+
     See the following files demonstrating reasoning with quantifiers:
     
        * Documentation/SBV/Examples/Puzzles/Birthday.hs
@@ -88,6 +91,8 @@
 
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
+
+  * Several fixes to make SBV compile with newer versions of mtl and GHC. Thanks to Ryan Scott for the patches.
 
   * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
 

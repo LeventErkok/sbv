@@ -21,6 +21,7 @@
 {-# LANGUAGE PatternGuards         #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -59,8 +60,8 @@ module Data.SBV.Core.Data
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
- , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..)
+ , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
+ , QuantifiedBool(..), EqSymbolic(..)
  ) where
 
 import GHC.TypeLits (KnownNat, Nat)
@@ -70,7 +71,7 @@ import GHC.Exts     (IsList(..))
 
 import Control.DeepSeq        (NFData(..))
 import Control.Monad          (void, replicateM)
-import Control.Monad.Trans    (liftIO)
+import Control.Monad.Trans    (liftIO, MonadIO)
 import Data.Int               (Int8, Int16, Int32, Int64)
 import Data.Word              (Word8, Word16, Word32, Word64)
 import Data.List              (elemIndex)
@@ -419,6 +420,9 @@ instance MonadSymbolic m => Constraint m SBool where
 -- | An existential symbolic variable, used in building quantified constraints
 newtype Exists a = Exists (SBV a)
 
+-- | An existential unique symbolic variable, used in building quantified constraints
+newtype ExistsUnique a = ExistsUnique (SBV a)
+
 -- | A universal symbolic variable, used in building quantified constraints
 newtype Forall a = Forall (SBV a)
 
@@ -428,33 +432,35 @@ newtype ExistsN (n :: Nat) a = ExistsN [SBV a]
 -- | A fixed number of universal symbolic variables, used in in building quantified constraints
 newtype ForallN (n :: Nat) a = ForallN [SBV a]
 
+-- | make a quantifier argument in the given state
+mkQArg :: forall m a. (HasKind a, MonadIO m) => State -> Quantifier -> m (SBV a)
+mkQArg st q = do let k = kindOf (Proxy @a)
+                 sv <- liftIO $ quantVar q st k
+                 pure $ SBV $ SVal k (Right (cache (const (return sv))))
+
 -- | Functions of a single existential
 instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
-  mkConstraint st fn = mkArg >>= mkConstraint st . fn . Exists
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ quantVar EX st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+  mkConstraint st fn = mkQArg st EX >>= mkConstraint st . fn . Exists
+
+-- | Functions of a unique single existential
+instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Constraint m (ExistsUnique a -> r) where
+  mkConstraint st fn = mkConstraint st fn'
+    where fn' (Exists x) (Forall x1) (Forall x2) = fx .&& ((fx1 .&& fx2) .=> x1 .== x2)
+                where fx  = quantifiedBool $ fn (ExistsUnique x)
+                      fx1 = quantifiedBool $ fn (ExistsUnique x1)
+                      fx2 = quantifiedBool $ fn (ExistsUnique x2)
 
 -- | Functions of a number of existentials
 instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n a -> r) where
-  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) mkArg >>= mkConstraint st . fn . ExistsN
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ quantVar EX st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st EX) >>= mkConstraint st . fn . ExistsN
 
 -- | Functions of a single universal
 instance (SymVal a, Constraint m r) => Constraint m (Forall a -> r) where
-  mkConstraint st fn = mkArg >>= mkConstraint st . fn . Forall
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ quantVar ALL st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+  mkConstraint st fn = mkQArg st ALL >>= mkConstraint st . fn . Forall
 
 -- | Functions of a number of universals
 instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN n a -> r) where
-  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) mkArg >>= mkConstraint st . fn . ForallN
-    where mkArg = do let k = kindOf (Proxy @a)
-                     sv <- liftIO $ quantVar ALL st k
-                     pure $ SBV $ SVal k (Right (cache (const (return sv))))
+  mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st ALL) >>= mkConstraint st . fn . ForallN
 
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where

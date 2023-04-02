@@ -336,7 +336,7 @@ module Data.SBV (
 
   -- ** Quantified constraints and quantifier elimination
   -- $quantifiers
-  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ForallN(..), ExistsN(..)
+  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
@@ -910,6 +910,9 @@ your other symbolic computations.  See the following files demonstrating reasoni
    * "Documentation.SBV.Examples.Puzzles.KnightsAndKnaves"
    * "Documentation.SBV.Examples.Puzzles.Rabbits"
    * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
+
+SBV also supports the constructors 'ExistsUnique' to create unique existentials, in addition to
+'ForallN' and 'ExistsN' for creating multiple variables at the same time.
 -}
 
 {- $constraintVacuity
