@@ -25,7 +25,8 @@ import Data.SBV.List ((.:), (!!))
 import qualified Data.SBV.List as L
 import qualified Data.SBV.Tools.BoundedList as BL
 
-import Control.Monad.State
+import Control.Monad (unless)
+import Control.Monad.State (MonadState(..), State, modify, runState)
 
 -- | Flag to mark a failed computation
 newtype Failure = Failure SBool
