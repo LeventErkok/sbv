@@ -146,6 +146,20 @@ But left-hand-side is not a tautology: Clearly neither \(P\) nor \(Q\) are true 
 hence both disjuncts are false. Thus, the alleged conjecture is not an equivalence in first order logic.
 -}
 
+-- * Exists unique
+{- $existsUnique
+We can use the 'ExistsUnique' constructor to indicate a value must exists uniquely. For instance,
+we can prove that there is an element in 'E' that's less than 'C', but it's not unique. However,
+there's a unique element that's less than all the elements in 'E':
+
+>>> prove $ \(Exists       (me :: SE)) -> me .<= sC
+Q.E.D.
+>>> prove $ \(ExistsUnique (me :: SE)) -> me .<= sC
+Falsifiable
+>>> prove $ \(ExistsUnique (me :: SE)) (Forall e) -> me .<= e
+Q.E.D.
+-}
+
 -- * Special relations
 
 -- ** Partial orders
