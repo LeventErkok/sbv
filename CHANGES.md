@@ -95,13 +95,11 @@
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 
-  * Several fixes to make SBV compile with newer versions of mtl and GHC. Thanks to Ryan Scott for the patches.
-
   * Add missing Arbitrary instances for WordN and IntN types, enabling quickcheck on these types.
 
   * Rewrote some of the older examples to use more modern SBV idioms.
 
-  * Changes needed to compile with upcoming GHC 9.6. Thanks to Lars Kuhtz for the patch.
+  * Changes needed to compile with upcoming GHC 9.6. Thanks to Lars Kuhtz and Ryan Scott for several patches.
 
 ### Version 9.2, 2023-1-16
 
