@@ -435,7 +435,12 @@ newtype ForallN (n :: Nat) a = ForallN [SBV a]
 -- | Values whose top-level existentials can be lifted
 class QuantifiedBool a => LiftExists a where
   -- | Lift a value to a boolean, by making its prefix existentials top-level variables so we
-  -- can get values when we have a satisfying instance. Compare:
+  -- can get values when we have a satisfying instance. Note that this is a simple version
+  -- of skolemization: It reduces top-level existentials but does not go through universals,
+  -- leaving them untouched. If you need to skolemize fully, you'll have to do that manually.
+  -- Note that once you go below a universal, the skolemization process introduces the so
+  -- called skolem functions, and while the solver can return interpretations for them, SBV
+  -- usually can't reinterpret those functions as Haskell values, except in simple cases.
   liftExists :: [String] -> a -> Symbolic SBool
 
 -- | If we hit an exists, we can lift it to the top

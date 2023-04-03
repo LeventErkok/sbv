@@ -37,6 +37,8 @@
 
     In general, SBV will not display the values of quantified variables for a satisfying (or a counter-example)
     instance. The function 'liftExists' can be used to make the prefix-existentials visible at the top-level.
+    Note that this is not full skolemization: It'll stop at the universals. If you want full skolemization,
+    you'll have to perform that manually.
 
   * You can now define new functions in the generated SMTLib output, via an smtFunction call. Typically, we simply
     unroll all definitions, but there are certain cases where we would like the functions
