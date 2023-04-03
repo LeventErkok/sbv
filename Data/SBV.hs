@@ -336,8 +336,7 @@ module Data.SBV (
 
   -- ** Quantified constraints and quantifier elimination
   -- $quantifiers
-  , QuantifiedBool, quantifiedBool, liftExists
-  , Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
+  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
@@ -915,19 +914,23 @@ your other symbolic computations.  See the following files demonstrating reasoni
 SBV also supports the constructors 'ExistsUnique' to create unique existentials, in addition to
 'ForallN' and 'ExistsN' for creating multiple variables at the same time.
 
-In general, SBV will not display the values of quantified variables for a satisfying (or a counter-example)
-instance. However, it's possible to lift prefix-existentials to top-level variables so they become
-model variables, using 'liftExists'. For instance, compare:
+In general, SBV will not display the values of quantified variables for a satisfying instance.
+For a satisfiability problem, you can apply skolemization manually to have these values
+computed by the backend solver. Note that skolemization will produce functions for
+existentials under universals, and SBV generally cannot translate function values back
+to Haskell, except in certain simple cases. However, for prefix existentials, the manual
+transformation can pay off. As an example, compare:
 
->>> prove $ \(Exists x) (Forall y) -> y .> (x :: SInteger)
-Falsifiable
+>>> sat $ \(Exists x) (Forall y) -> x .<= (y :: SWord8)
+Satisfiable
 
 to:
 
->>> prove $ liftExists ["x"] $ \(Exists x) (Forall y) -> y .> (x :: SInteger)
-Falsifiable. Counter-example:
-  x = 0 :: Integer
+>>> sat $ do { x <- free "x"; pure (quantifiedBool (\(Forall y) -> x .<= (y :: SWord8))) }
+Satisfiable. Model:
+  x = 0 :: Word8
 
+where we have skolemized the top-level existential out, and received a witness value for it.
 -}
 
 {- $constraintVacuity

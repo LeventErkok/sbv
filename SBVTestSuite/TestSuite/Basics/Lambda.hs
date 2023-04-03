@@ -200,16 +200,6 @@ tests =
       , goldenCapturedIO "lambda67" $ runP $ let tcU = mkTransitiveClosure "tcLeq" leq
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
-
-      -- Lifting exists
-      , goldenCapturedIO "lambda68" $ runP $       \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda69" $ runP $ le1 $ \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda70" $ runP $ leA $ \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda71" $ runS $ le1 $ \(Exists x)     (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
-      , goldenCapturedIO "lambda72" $ runS $ leA $ \(Exists x)     (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
-      , goldenCapturedIO "lambda73" $ runP $ leA $ \(Exists x)     (Forall y)     (Exists z) (Forall k) -> (x :: SInteger) .<= y+z+k
-      , goldenCapturedIO "lambda74" $ runS $ leA $ \(Exists x)     (ExistsN @4 y) (Forall z) (Exists k) -> (x :: SInteger) .<= P.sum y+z+k
-      , goldenCapturedIO "lambda75" $ runS $ leA $ \(ForallN @2 x) (ExistsN @4 y) (Forall z) (Exists k) -> (z :: SInteger) .<= P.sum y+z+k+P.sum x
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -221,16 +211,11 @@ tests =
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
 
-        supply = ['x' : show i | i <- [(1::Int) ..]]
-        le1 b = liftExists (P.take 1   supply) b
-        leA b = liftExists (P.take 100 supply) b
-
         record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
                            appendFile rf . (P.++ "\n") =<< gen st
 
         runP b rf = runGen proveWith b rf
-        runS b rf = runGen satWith   b rf
         runGen a b rf = do m <- a z3{verbose=True, redirectVerbose=Just rf} b
                            appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
 
