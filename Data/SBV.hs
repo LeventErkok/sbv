@@ -336,7 +336,8 @@ module Data.SBV (
 
   -- ** Quantified constraints and quantifier elimination
   -- $quantifiers
-  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
+  , QuantifiedBool, quantifiedBool, liftExists
+  , Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
 
   -- ** Constraint Vacuity
   -- $constraintVacuity
@@ -913,6 +914,20 @@ your other symbolic computations.  See the following files demonstrating reasoni
 
 SBV also supports the constructors 'ExistsUnique' to create unique existentials, in addition to
 'ForallN' and 'ExistsN' for creating multiple variables at the same time.
+
+In general, SBV will not display the values of quantified variables for a satisfying (or a counter-example)
+instance. However, it's possible to lift prefix-existentials to top-level variables so they become
+model variables, using 'liftExists'. For instance, compare:
+
+>>> prove $ \(Exists x) (Forall y) -> y .> (x :: SInteger)
+Falsifiable
+
+to:
+
+>>> prove $ liftExists ["x"] $ \(Exists x) (Forall y) -> y .> (x :: SInteger)
+Falsifiable. Counter-example:
+  x = 0 :: Integer
+
 -}
 
 {- $constraintVacuity

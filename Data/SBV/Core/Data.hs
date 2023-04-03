@@ -23,6 +23,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE TypeOperators         #-}
 {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -61,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), EqSymbolic(..)
+ , QuantifiedBool(..), LiftExists(..), EqSymbolic(..)
  ) where
 
 import GHC.TypeLits (KnownNat, Nat)
@@ -430,6 +431,43 @@ newtype ExistsN (n :: Nat) a = ExistsN [SBV a]
 
 -- | A fixed number of universal symbolic variables, used in in building quantified constraints
 newtype ForallN (n :: Nat) a = ForallN [SBV a]
+
+-- | Values whose top-level existentials can be lifted
+class QuantifiedBool a => LiftExists a where
+  -- | Lift a value to a boolean, by making its prefix existentials top-level variables so we
+  -- can get values when we have a satisfying instance. Compare:
+  liftExists :: [String] -> a -> Symbolic SBool
+
+-- | If we hit an exists, we can lift it to the top
+instance (SymVal a, LiftExists r, QuantifiedBool (Exists a -> r)) => LiftExists (Exists a -> r) where
+  liftExists []       f = pure $ quantifiedBool f
+  liftExists (nm:nms) f = do a <- free nm
+                             liftExists nms (f (Exists a))
+
+-- | If we hit a unique exists, we can lift it to the top
+instance (SymVal a, LiftExists r, QuantifiedBool (ExistsUnique a -> r)) => LiftExists (ExistsUnique a -> r) where
+  liftExists []       f = pure $ quantifiedBool f
+  liftExists (nm:nms) f = do a <- free nm
+                             liftExists nms (f (ExistsUnique a))
+
+-- | If we hit countable exists, we only lift if we can lift all off them up. While we can
+-- lift only the prefix we can, I think this makes more sense.
+instance (KnownNat n, SymVal a, LiftExists r, QuantifiedBool (ExistsN n a -> r)) => LiftExists (ExistsN n a -> r) where
+  liftExists nms f
+     | count <- intOfProxy (Proxy @n), length nms >= count
+     = do let (cur, rest) = splitAt count nms
+          as <- mapM free cur
+          liftExists rest (f (ExistsN as))
+     | True
+     = pure $ quantifiedBool f
+
+-- | If we hit a universal, we stop. It doesn't make sense to lift this one
+instance (QuantifiedBool (Forall a -> r))  => LiftExists (Forall a -> r) where
+  liftExists _ = pure . quantifiedBool
+
+-- | If we hit a counted universal, we stop. It doesn't make sense to lift this one
+instance (QuantifiedBool (ForallN n a -> r))  => LiftExists (ForallN n a -> r) where
+  liftExists _ = pure . quantifiedBool
 
 -- | make a quantifier argument in the given state
 mkQArg :: forall m a. (HasKind a, MonadIO m) => State -> Quantifier -> m (SBV a)
