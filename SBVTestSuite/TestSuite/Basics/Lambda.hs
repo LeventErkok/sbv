@@ -9,6 +9,7 @@
 -- Test lambda generation
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE FlexibleContexts    #-}
@@ -189,16 +190,25 @@ tests =
                                                 `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" P.++ show e P.++ "\n"))
 
       -- Special relations (kind of lambda related)
-      , goldenCapturedIO "lambda63" $ spRel $         quantifiedBool (\(Forall x) -> rel (x, x))
-      , goldenCapturedIO "lambda64" $ spRel $ po  .=> quantifiedBool (\(Forall x) -> rel (x, x))
-      , goldenCapturedIO "lambda65" $ spRel $ poI .=> quantifiedBool (\(Forall x) -> leq (x, x))
-      , goldenCapturedIO "lambda66" $ spRel $ let u   = uninterpret "U" :: Relation Integer
-                                                  tcU = mkTransitiveClosure "tcU" u
-                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
+      , goldenCapturedIO "lambda63" $ runP $         quantifiedBool (\(Forall x) -> rel (x, x))
+      , goldenCapturedIO "lambda64" $ runP $ po  .=> quantifiedBool (\(Forall x) -> rel (x, x))
+      , goldenCapturedIO "lambda65" $ runP $ poI .=> quantifiedBool (\(Forall x) -> leq (x, x))
+      , goldenCapturedIO "lambda66" $ runP $ let u   = uninterpret "U" :: Relation Integer
+                                                 tcU = mkTransitiveClosure "tcU" u
+                                             in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (u (x, y) .&& u (y, z)) .=> tcU (x, z))
-      , goldenCapturedIO "lambda67" $ spRel $ let tcU = mkTransitiveClosure "tcLeq" leq
-                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
+      , goldenCapturedIO "lambda67" $ runP $ let tcU = mkTransitiveClosure "tcLeq" leq
+                                             in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
+
+      -- Lifting exists
+      , goldenCapturedIO "lambda68" $ runS $       \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda69" $ runS $ le1 $ \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda70" $ runS $ leA $ \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda71" $ runS $ le1 $ \(Exists x) (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
+      , goldenCapturedIO "lambda72" $ runS $ leA $ \(Exists x) (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
+      , goldenCapturedIO "lambda73" $ runS $ leA $ \(Exists x) (Forall y)     (Exists z) (Forall k) -> (x :: SInteger) .<= y+z+k
+      , goldenCapturedIO "lambda74" $ runS $ leA $ \(Exists x) (ExistsN @4 y) (Forall z) (Exists k) -> (x :: SInteger) .<= P.sum y+z+k
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -210,12 +220,18 @@ tests =
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
 
+        supply = ['x' : show i | i <- [(1::Int) ..]]
+        le1 b = liftExists (P.take 1   supply) b
+        leA b = liftExists (P.take 100 supply) b
+
         record :: (State -> IO String) -> FilePath -> IO ()
         record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
                            appendFile rf . (P.++ "\n") =<< gen st
 
-        spRel b rf = do m <- proveWith z3{verbose=True, redirectVerbose=Just rf} b
-                        appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
+        runP b rf = runGen proveWith b rf
+        runS b rf = runGen satWith   b rf
+        runGen a b rf = do m <- a z3{verbose=True, redirectVerbose=Just rf} b
+                           appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
 
         runSat   f = runSatExpecting f Sat
         runUnsat f = runSatExpecting f Unsat
@@ -322,3 +338,4 @@ eval2 cArg1 cArg2 (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirect
 {-# ANN module ("HLint: ignore Use odd"        :: String) #-}
 {-# ANN module ("HLint: ignore Use product"    :: String) #-}
 {-# ANN module ("HLint: ignore Avoid lambda"   :: String) #-}
+{-# ANN module ("HLint: ignore Eta reduce"     :: String) #-}
