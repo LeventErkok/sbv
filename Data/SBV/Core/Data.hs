@@ -62,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), LiftExists(..), EqSymbolic(..)
+ , QuantifiedBool(..), EqSymbolic(..)
  ) where
 
 import GHC.TypeLits (KnownNat, Nat)
