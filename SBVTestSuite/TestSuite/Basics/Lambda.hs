@@ -202,13 +202,14 @@ tests =
                                                                      -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
 
       -- Lifting exists
-      , goldenCapturedIO "lambda68" $ runP $       \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda69" $ runP $ le1 $ \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda70" $ runP $ leA $ \(Exists x) (Forall y)                           -> (x :: SInteger) .<= y
-      , goldenCapturedIO "lambda71" $ runS $ le1 $ \(Exists x) (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
-      , goldenCapturedIO "lambda72" $ runS $ leA $ \(Exists x) (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
-      , goldenCapturedIO "lambda73" $ runP $ leA $ \(Exists x) (Forall y)     (Exists z) (Forall k) -> (x :: SInteger) .<= y+z+k
-      , goldenCapturedIO "lambda74" $ runS $ leA $ \(Exists x) (ExistsN @4 y) (Forall z) (Exists k) -> (x :: SInteger) .<= P.sum y+z+k
+      , goldenCapturedIO "lambda68" $ runP $       \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda69" $ runP $ le1 $ \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda70" $ runP $ leA $ \(Exists x)     (Forall y)                           -> (x :: SInteger) .<= y
+      , goldenCapturedIO "lambda71" $ runS $ le1 $ \(Exists x)     (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
+      , goldenCapturedIO "lambda72" $ runS $ leA $ \(Exists x)     (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
+      , goldenCapturedIO "lambda73" $ runP $ leA $ \(Exists x)     (Forall y)     (Exists z) (Forall k) -> (x :: SInteger) .<= y+z+k
+      , goldenCapturedIO "lambda74" $ runS $ leA $ \(Exists x)     (ExistsN @4 y) (Forall z) (Exists k) -> (x :: SInteger) .<= P.sum y+z+k
+      , goldenCapturedIO "lambda74" $ runS $ leA $ \(ForallN @2 x) (ExistsN @4 y) (Forall z) (Exists k) -> (z :: SInteger) .<= P.sum y+z+k+P.sum x
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
