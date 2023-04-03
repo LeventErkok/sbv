@@ -209,7 +209,7 @@ tests =
       , goldenCapturedIO "lambda72" $ runS $ leA $ \(Exists x)     (Forall y)     (Exists z)            -> (x :: SInteger) .<= y+z
       , goldenCapturedIO "lambda73" $ runP $ leA $ \(Exists x)     (Forall y)     (Exists z) (Forall k) -> (x :: SInteger) .<= y+z+k
       , goldenCapturedIO "lambda74" $ runS $ leA $ \(Exists x)     (ExistsN @4 y) (Forall z) (Exists k) -> (x :: SInteger) .<= P.sum y+z+k
-      , goldenCapturedIO "lambda74" $ runS $ leA $ \(ForallN @2 x) (ExistsN @4 y) (Forall z) (Exists k) -> (z :: SInteger) .<= P.sum y+z+k+P.sum x
+      , goldenCapturedIO "lambda75" $ runS $ leA $ \(ForallN @2 x) (ExistsN @4 y) (Forall z) (Exists k) -> (z :: SInteger) .<= P.sum y+z+k+P.sum x
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
