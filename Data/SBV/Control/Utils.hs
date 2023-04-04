@@ -36,7 +36,7 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
@@ -372,7 +372,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
-  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m, SymVal r) => fun -> SExpr -> m (Maybe ([(a, r)], r))
+  sexprToFun     :: (MonadIO m, SolverContext m, MonadQuery m, MonadSymbolic m, SymVal r) => fun -> (String, SExpr) -> m (Either String ([(a, r)], r))
 
   {-# MINIMAL sexprToArg, smtFunSaturate, smtFunType  #-}
 
@@ -415,14 +415,15 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind
 
-  sexprToFun f e = do nm <- smtFunName f
-                      case parseSExprFunction e of
-                        Just (Left nm') -> case (nm == nm', smtFunDefault f) of
-                                             (True, Just v)  -> return $ Just ([], v)
-                                             _               -> bailOut nm
-                        Just (Right v)  -> return $ convert v
-                        Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
-                                              return $ mbPVS >>= convert
+  sexprToFun f (s, e) = do nm <- smtFunName f
+                           mbRes <- case parseSExprFunction e of
+                                      Just (Left nm') -> case (nm == nm', smtFunDefault f) of
+                                                           (True, Just v)  -> return $ Just ([], v)
+                                                           _               -> bailOut nm
+                                      Just (Right v)  -> return $ convert v
+                                      Nothing         -> do mbPVS <- pointWiseExtract nm (smtFunType f)
+                                                            return $ mbPVS >>= convert
+                           pure $ maybe (Left s) Right mbRes
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
           sexprPoint (as, v) = (,) <$> sexprToArg f as    <*> sexprToVal v
 
@@ -447,26 +448,7 @@ registerUISMTFunction f = do st <- contextState
 -- way out of it. Note that we only do this if we have a pure boolean type, as otherwise we'd blow
 -- up. And I think it'll only be necessary then, I haven't seen z3 try anything smarter in other scenarios.
 pointWiseExtract ::  forall m. (MonadIO m, MonadQuery m) => String -> SBVType -> m (Maybe ([([SExpr], SExpr)], SExpr))
-pointWiseExtract nm typ
-   | isBoolFunc
-   = tryPointWise
-   | True
-   = error $ unlines [ ""
-                     , "*** Data.SBV.getFunction: Unsupported: Extracting interpretation for function:"
-                     , "***"
-                     , "***     " ++ nm ++ " :: " ++ show typ
-                     , "***"
-                     , "*** At this time, the expression returned by the solver is too complicated for SBV!"
-                     , "***"
-                     , "*** You can ignore uninterpreted function models for sat models using the 'satTrackUFs' parameter:"
-                     , "***"
-                     , "***             satWith    z3{satTrackUFs = False}"
-                     , "***             allSatWith z3{satTrackUFs = False}"
-                     , "***"
-                     , "*** You can see the response from the solver by running with '{verbose = True}' option."
-                     , "***"
-                     , "*** NB. If this is a use case you'd like SBV to support, please get in touch!"
-                     ]
+pointWiseExtract nm typ = tryPointWise
   where trueSExpr  = ENum (1, Nothing)
         falseSExpr = ENum (0, Nothing)
 
@@ -666,8 +648,19 @@ instance ( SymVal a,   HasKind a
                        (mkSaturatingArg (kindOf (Proxy @g)))
                        (mkSaturatingArg (kindOf (Proxy @h)))
 
+-- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
+-- into     "(lambda ((x!1 Int)) (+ 3 (* 2 x!1)))"
+-- If we can't see that, we simply return the input unchanged
+trimFunctionResponse :: String -> String -> String
+trimFunctionResponse resp nm = case trim resp of
+                                '(':'(':rest | nm `isPrefixOf` rest -> butLast2 $ trim (drop (length nm) rest)
+                                _                                   -> resp
+  where trim     = dropWhile isSpace
+        butLast2 = reverse . drop 2 . reverse
+
 -- | Generalization of 'Data.SBV.Control.getFunction'
-getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r) => fun -> m ([(a, r)], r)
+getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
+            => fun -> m (Either String ([(a, r)], r))
 getFunction f = do nm <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
@@ -675,13 +668,13 @@ getFunction f = do nm <- smtFunName f
 
                    r <- ask cmd
 
-                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f e
+                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f (trimFunctionResponse r nm, e)
                                                                                case mbAssocs of
-                                                                                 Just assocs -> return assocs
-                                                                                 Nothing     -> do mbPVS <- pointWiseExtract nm (smtFunType f)
-                                                                                                   case mbPVS >>= convert of
-                                                                                                     Just x  -> return x
-                                                                                                     Nothing -> bad r Nothing
+                                                                                 Right assocs -> return $ Right assocs
+                                                                                 Left  raw    -> do mbPVS <- pointWiseExtract nm (smtFunType f)
+                                                                                                    case mbPVS >>= convert of
+                                                                                                      Just x  -> return $ Right x
+                                                                                                      Nothing -> return $ Left raw
                                        _                                 -> bad r Nothing
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
           sexprPoint (as, v) = (,) <$> sexprToArg f as    <*> sexprToVal v
@@ -1007,7 +1000,7 @@ getUICVal mbi (nm, t) = case t of
                           _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpeted value of a base type, received something else: " ++ show (nm, t)
 
 -- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
-getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m ([([CV], CV)], CV)
+getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, SBVType) -> m (Either String ([([CV], CV)], CV))
 getUIFunCVAssoc mbi (nm, typ) = do
   let modelIndex = case mbi of
                      Nothing -> ""
@@ -1031,22 +1024,24 @@ getUIFunCVAssoc mbi (nm, typ) = do
       toRes :: SExpr -> Maybe CV
       toRes = recoverKindedValue rt
 
+      -- if we fail to parse, we'll return this answer as the string
+      fallBack = trimFunctionResponse r nm
+
       -- In case we end up in the pointwise scenario, boolify the result
       -- as that's the only type we support here.
-      tryPointWise bailOut = do mbSExprs <- pointWiseExtract nm typ
-                                case mbSExprs of
-                                  Nothing     -> bailOut
-                                  Just sExprs -> maybe bailOut return (convert sExprs)
+      tryPointWise = do mbSExprs <- pointWiseExtract nm typ
+                        case mbSExprs of
+                          Nothing     -> pure $ Left fallBack
+                          Just sExprs -> pure $ maybe (Left fallBack) Right (convert sExprs)
 
-  parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> let bailOut = bad r Nothing
-                                                           in case parseSExprFunction e of
-                                                                Just (Right assocs) | Just res <- convert assocs                   -> return res
-                                                                                    | True                                         -> tryPointWise bailOut
+  parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> case parseSExprFunction e of
+                                                             Just (Right assocs) | Just res <- convert assocs                 -> return (Right res)
+                                                                                 | True                                       -> tryPointWise
 
-                                                                Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> return ([], res)
-                                                                                    | True                                         -> bad r Nothing
+                                                             Just (Left nm')     | nm == nm', let res = defaultKindedValue rt -> return (Right ([], res))
+                                                                                 | True                                       -> bad r Nothing
 
-                                                                Nothing                                                            -> tryPointWise bailOut
+                                                             Nothing                                                          -> tryPointWise
 
                       _                                 -> bad r Nothing
 
@@ -1131,7 +1126,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      allUninterpreteds <- getUIs
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
-                     let allUiFuns = [u | satTrackUFs cfg                                         -- config says consider UIFs
+                     let allUiFuns = [u | allSatTrackUFs cfg                                      -- config says consider UIFs
                                         , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
                                         , not (mustIgnoreVar cfg nm)                              -- make sure they aren't explicitly ignored
                                      ]
@@ -1451,8 +1446,29 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
 
                                                      (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
-                                                     -- Otherwise, we have things to refute, go for it:
-                                                     mkNotEq (nm, (SBVType ts, vs)) = (reject, def ++ dif)
+                                                     -- Otherwise, we have things to refute, go for it if we have a good interpretation for it
+                                                     mkNotEq (nm, (typ, Left{})) =
+                                                        error $ unlines [
+                                                            ""
+                                                          , "*** Data.SBV.getFunction: Unsupported: Extracting interpretation for function:"
+                                                          , "***"
+                                                          , "***     " ++ nm ++ " :: " ++ show typ
+                                                          , "***"
+                                                          , "*** At this time, the expression returned by the solver is too complicated for SBV!"
+                                                          , "***"
+                                                          , "*** You can ignore specific functions via the 'isNonModelVar' filter:"
+                                                          , "***"
+                                                          , "***    allSatWith z3{isNonModelVar = (`elem` [" ++ show nm ++ "])} ..."
+                                                          , "***"
+                                                          , "*** Or you can ignore all uninterpreted functions for all-sat purposes using the 'allSatTrackUFs' parameter:"
+                                                          , "***"
+                                                          , "***    allSatWith z3{allSatTrackUFs = False} ..."
+                                                          , "***"
+                                                          , "*** You can see the response from the solver by running with the '{verbose = True}' option."
+                                                          , "***"
+                                                          , "*** NB. If this is a use case you'd like SBV to support, please get in touch!"
+                                                          ]
+                                                     mkNotEq (nm, (SBVType ts, Right vs)) = (reject, def ++ dif)
                                                        where nm' = nm ++ "_model" ++ show cnt
 
                                                              reject = nm' ++ "_reject"

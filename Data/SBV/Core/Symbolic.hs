@@ -2153,7 +2153,7 @@ data SMTConfig = SMTConfig {
        , satCmd                      :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
        , allSatMaxModelCount         :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
        , allSatPrintAlong            :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
-       , satTrackUFs                 :: Bool           -- ^ In a 'Data.SBV.sat' call, should we try to extract values of uninterpreted functions?
+       , allSatTrackUFs              :: Bool           -- ^ In a 'Data.SBV.allSat' call, should we try to extract values of uninterpreted functions?
        , isNonModelVar               :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
        , validateModel               :: Bool           -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
        , optimizeValidateConstraints :: Bool           -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
@@ -2186,12 +2186,13 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]                 -- ^ Mapping of symbolic values to objective values.
-     , modelBindings   :: Maybe [(NamedSymVar, CV)]                 -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
-     , modelAssocs     :: [(String, CV)]                            -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, (SBVType, ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                                    -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                                    -- in the 'modelAssocs' field.
+       modelObjectives :: [(String, GeneralizedCV)]                               -- ^ Mapping of symbolic values to objective values.
+     , modelBindings   :: Maybe [(NamedSymVar, CV)]                               -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
+     , modelAssocs     :: [(String, CV)]                                          -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (SBVType, Either String ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                                  -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                                  -- in the 'modelAssocs' field. Left is used when the function returned is too
+                                                                                  -- difficult for SBV to figure out what it means
      }
      deriving Show
 

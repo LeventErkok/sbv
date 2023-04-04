@@ -469,7 +469,7 @@ getUninterpretedValue = Trans.getUninterpretedValue
 -- | Get the value of an uninterpreted function, as a list of domain, value pairs.
 -- The final value is the "else" clause, i.e., what the function maps values outside
 -- of the domain of the first list.
-getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query ([(a, r)], r)
+getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query (Either String ([(a, r)], r))
 getFunction = Trans.getFunction
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,
@@ -486,7 +486,7 @@ getUICVal = Trans.getUICVal
 -- | Get the value of an uninterpreted function as an association list
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUIFunCVAssoc'
-getUIFunCVAssoc :: Maybe Int -> (String, SBVType) -> Query ([([CV], CV)], CV)
+getUIFunCVAssoc :: Maybe Int -> (String, SBVType) -> Query (Either String ([([CV], CV)], CV))
 getUIFunCVAssoc = Trans.getUIFunCVAssoc
 
 -- | Check for satisfiability.

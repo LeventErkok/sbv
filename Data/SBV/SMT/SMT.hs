@@ -417,10 +417,10 @@ class Modelable a where
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
   -- | Extract model uninterpreted-functions
-  getModelUIFuns :: a -> M.Map String (SBVType, ([([CV], CV)], CV))
+  getModelUIFuns :: a -> M.Map String (SBVType, Either String ([([CV], CV)], CV))
 
   -- | Extract the value of an uninterpreted-function as an association list
-  getModelUIFunValue :: String -> a -> Maybe (SBVType, ([([CV], CV)], CV))
+  getModelUIFunValue :: String -> a -> Maybe (SBVType, Either String ([([CV], CV)], CV))
   getModelUIFunValue v r = v `M.lookup` getModelUIFuns r
 
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
@@ -581,23 +581,26 @@ showModelDictionary warnEmpty includeEverything cfg allVars
         lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show an uninterpreted function
-showModelUI :: SMTConfig -> (String, (SBVType, ([([CV], CV)], CV))) -> String
-showModelUI cfg (nm, (SBVType ts, (defs, dflt))) = intercalate "\n" ["  " ++ l | l <- sig : map align body]
+showModelUI :: SMTConfig -> (String, (SBVType, Either String ([([CV], CV)], CV))) -> String
+showModelUI cfg (nm, (SBVType ts, interp))
+  = intercalate "\n" $ case interp of
+                         Left  e  -> ["  " ++ l | l <- [sig,  nm ++ " = fromSMTLib " ++ e]]
+                         Right ds -> ["  " ++ l | l <- sig : mkBody ds]
   where noOfArgs = length ts - 1
 
         sig      = nm ++ " :: " ++ intercalate " -> " (map showBaseKind ts)
 
-        ls       = map line defs
-        defLine  = (nm : replicate noOfArgs "_", scv dflt)
+        mkBody (defs, dflt) = map align body
+          where ls       = map line defs
+                defLine  = (nm : replicate noOfArgs "_", scv dflt)
+                body     = ls ++ [defLine]
 
-        body     = ls ++ [defLine]
+                colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
 
-        colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
+                resWidth  = maximum  (0 : map (length . snd) body)
 
-        resWidth  = maximum  (0 : map (length . snd) body)
-
-        align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
-           where left i x = take i (x ++ repeat ' ')
+                align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
+                   where left i x = take i (x ++ repeat ' ')
 
         -- NB. We'll ignore crackNum here. Seems to be overkill while displaying an
         -- uninterpreted function.

@@ -200,6 +200,9 @@ tests =
       , goldenCapturedIO "lambda67" $ runP $ let tcU = mkTransitiveClosure "tcLeq" leq
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
+
+      -- Not really lambda related, but kind of fits in here
+      , goldenCapturedIO "lambda68" $ runS $ \(Forall x) -> uninterpret "F" x .== 2*x+(3::SInteger)
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -216,6 +219,7 @@ tests =
                            appendFile rf . (P.++ "\n") =<< gen st
 
         runP b rf = runGen proveWith b rf
+        runS b rf = runGen satWith   b rf
         runGen a b rf = do m <- a z3{verbose=True, redirectVerbose=Just rf} b
                            appendFile rf ("\nRESULT:\n" P.++ show m P.++ "\n")
 

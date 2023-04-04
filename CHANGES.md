@@ -89,6 +89,11 @@
     of constraints can be satisfied, but proving them does not make sense. The name goal, however, suggested
     something we can prove.
 
+  * [BACKWARDS COMPATIBILITY] SBV is now more lenient in returning function-interpretations, returning the SMTLib
+    string in complicated cases in case of bailing out. Note that we still don't support complicated function
+    values in allSat calls, as there's no way to reject existing interpretations. Consequently, the
+    parameter 'satTrackUFs' is renamed to 'allSatTrackUFs' to better capture its new role.
+
   * Addressed an issue on Windows where solver synchronization fails due to unmapped diagnostic-challenge.
     (See issue #644 for details.) Thanks to Ryan Scott for reporting and helping with debugging.
 
