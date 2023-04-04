@@ -203,6 +203,7 @@ tests =
 
       -- Not really lambda related, but kind of fits in here
       , goldenCapturedIO "lambda68" $ runS $ \(Forall x) -> uninterpret "F" x .== 2*x+(3::SInteger)
+      , goldenCapturedIO "lambda69" $ runS $ \(Forall x) (Forall y) -> uninterpret "F" x y .== 2*x+(3-y::SInteger)
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
