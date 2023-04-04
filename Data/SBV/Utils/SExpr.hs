@@ -542,7 +542,68 @@ chainAssigns chain = regroup $ partitionEithers chain
 ---  into
 --  "F x = 3 + 2 * x"
 -- if we can. We try but don't push too hard! This is only used for display purposes.
+--
+-- This isn't very fool-proof; can be confused if there are binding constructs etc.
+-- Also, the generated text isn't necessarily fully Haskell acceptable.
+-- But it seems to do an OK job for most common use cases.
 makeHaskellFunction :: String -> String -> Maybe String
-makeHaskellFunction _ _ = Nothing
+makeHaskellFunction resp nm
+   = case parseSExpr resp of
+       Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
+                                                       return $ unwords (nm : args) ++ " = " ++ bd
+       _                                         -> Nothing
+
+  where -- infinite supply of names
+        supply =  ["x", "y", "z"]
+               ++ [[c] | c <- ['a' .. 'z'], c < 'x']
+               ++ ['x' : show i | i <- [(1::Int) ..]]
+
+        lambda :: SExpr -> Maybe ([String], String)
+        lambda (EApp [ECon "lambda", EApp args, bd]) = do as <- mapM getArg args
+                                                          let env = zip as supply
+                                                          pure (map snd env, body env bd)
+        lambda _                                     = Nothing
+
+        getArg (EApp [ECon argName, _]) = Just argName
+        getArg _                        = Nothing
+
+        body env = go
+          where go :: SExpr -> String
+                go (ECon n) | Just a <- lookup n env = a
+                            | True                   = n
+
+                go (ENum (i, _))      = show i
+                go (EReal  a)         = show a
+                go (EFloat f)         = show f
+                go (EFloatingPoint f) = show f
+                go (EDouble f)        = show f
+                go (EApp xs)          = app xs
+
+                parens x = '(' : x ++ ")"
+
+                wrap x | "-" `isPrefixOf` x = parens x
+                       | any isSpace x      = parens x
+                       | True               = x
+
+                mkBin o a b = wrap a ++ " " ++ o ++ " " ++ wrap b
+
+                -- Make an application, with some simplifications
+                app :: [SExpr] -> String
+                app (ECon "+" : xs) | length xs >= 2 = foldr1 (mkBin "+") (map go xs)
+
+                -- multiplication of arbitrary elements, with proviso for multiplication by -1
+                app [ECon "*", ENum (-1, _), x]      = '-' : wrap (go x)
+                app (ECon "*" : xs) | length xs >= 2 = foldr1 (mkBin "*") (map go xs)
+
+                -- binary arith ops
+                app [ECon "-",  a, b] = mkBin "-"  (go a) (go b)
+                app [ECon "/",  a, b] = mkBin "/"  (go a) (go b)
+                app [ECon "<",  a, b] = mkBin "<"  (go a) (go b)
+                app [ECon "<=", a, b] = mkBin "<=" (go a) (go b)
+                app [ECon ">",  a, b] = mkBin ">"  (go a) (go b)
+                app [ECon ">=", a, b] = mkBin ">=" (go a) (go b)
+
+                -- give up, and just do prefix!
+                app xs = unwords (map (wrap . go) xs)
 
 {-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}

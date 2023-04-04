@@ -45,4 +45,4 @@
 RESULT:
 Satisfiable. Model:
   F :: Integer -> Integer -> Integer
-  F = fromSMTLib (lambda ((x!1 Int) (x!2 Int)) (+ 3 (* 2 x!1) (* (- 1) x!2)))
+  F x y = 3 + ((2 * x) + (-y))
