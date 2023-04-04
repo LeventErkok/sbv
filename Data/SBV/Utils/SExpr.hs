@@ -13,7 +13,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction) where
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction) where
 
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
@@ -536,5 +536,13 @@ chainAssigns chain = regroup $ partitionEithers chain
         eRank EFloatingPoint{} = 4
         eRank EDouble{}        = 5
         eRank EApp{}           = 6
+
+-- Turn
+--  "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
+---  into
+--  "F x = 3 + 2 * x"
+-- if we can. We try but don't push too hard! This is only used for display purposes.
+makeHaskellFunction :: String -> String -> Maybe String
+makeHaskellFunction _ _ = Nothing
 
 {-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}

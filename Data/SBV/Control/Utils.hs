@@ -649,14 +649,19 @@ instance ( SymVal a,   HasKind a
                        (mkSaturatingArg (kindOf (Proxy @h)))
 
 -- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
--- into     "(lambda ((x!1 Int)) (+ 3 (* 2 x!1)))"
--- If we can't see that, we simply return the input unchanged
+-- into something more palatable.
+-- If we can't do that, we simply return the input unchanged
 trimFunctionResponse :: String -> String -> String
-trimFunctionResponse resp nm = case trim resp of
-                                '(':'(':rest | nm `isPrefixOf` rest -> butLast2 $ trim (drop (length nm) rest)
-                                _                                   -> resp
+trimFunctionResponse resp nm
+  | Just parsed <- makeHaskellFunction resp nm
+  = parsed
+  | True
+  = def $ case trim resp of
+            '(':'(':rest | nm `isPrefixOf` rest -> butLast2 $ trim (drop (length nm) rest)
+            _                                   -> resp
   where trim     = dropWhile isSpace
         butLast2 = reverse . drop 2 . reverse
+        def x = nm ++ " = fromSMTLib " ++ x
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)

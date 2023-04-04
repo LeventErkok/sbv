@@ -584,7 +584,7 @@ showModelDictionary warnEmpty includeEverything cfg allVars
 showModelUI :: SMTConfig -> (String, (SBVType, Either String ([([CV], CV)], CV))) -> String
 showModelUI cfg (nm, (SBVType ts, interp))
   = intercalate "\n" $ case interp of
-                         Left  e  -> ["  " ++ l | l <- [sig,  nm ++ " = fromSMTLib " ++ e]]
+                         Left  e  -> ["  " ++ l | l <- [sig,  e]]
                          Right ds -> ["  " ++ l | l <- sig : mkBody ds]
   where noOfArgs = length ts - 1
 
