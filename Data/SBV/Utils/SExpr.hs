@@ -18,7 +18,7 @@ module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunc
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
 import Data.Either (partitionEithers)
-import Data.List   (isPrefixOf, nubBy)
+import Data.List   (isPrefixOf, nubBy, intercalate)
 import Data.Maybe  (fromMaybe, listToMaybe)
 import Data.Word   (Word32, Word64)
 
@@ -577,7 +577,7 @@ makeHaskellFunction resp nm
                 go (EFloat f)         = show f
                 go (EFloatingPoint f) = show f
                 go (EDouble f)        = show f
-                go (EApp xs)          = app xs
+                go (EApp xs)          = app (map (wrap . go) xs)
 
                 parens x = '(' : x ++ ")"
 
@@ -588,22 +588,22 @@ makeHaskellFunction resp nm
                 mkBin o a b = wrap a ++ " " ++ o ++ " " ++ wrap b
 
                 -- Make an application, with some simplifications
-                app :: [SExpr] -> String
-                app (ECon "+" : xs) | length xs >= 2 = foldr1 (mkBin "+") (map go xs)
+                app :: [String] -> String
+                app ("+" : xs) = intercalate " + " xs
 
                 -- multiplication of arbitrary elements, with proviso for multiplication by -1
-                app [ECon "*", ENum (-1, _), x]      = '-' : wrap (go x)
-                app (ECon "*" : xs) | length xs >= 2 = foldr1 (mkBin "*") (map go xs)
+                app ["*", "(-1)", x]  = '-' : x
+                app ("*" : xs)        = intercalate " * " xs
 
                 -- binary arith ops
-                app [ECon "-",  a, b] = mkBin "-"  (go a) (go b)
-                app [ECon "/",  a, b] = mkBin "/"  (go a) (go b)
-                app [ECon "<",  a, b] = mkBin "<"  (go a) (go b)
-                app [ECon "<=", a, b] = mkBin "<=" (go a) (go b)
-                app [ECon ">",  a, b] = mkBin ">"  (go a) (go b)
-                app [ECon ">=", a, b] = mkBin ">=" (go a) (go b)
+                app ["-",  a, b] = mkBin "-"  a b
+                app ["/",  a, b] = mkBin "/"  a b
+                app ["<",  a, b] = mkBin "<"  a b
+                app ["<=", a, b] = mkBin "<=" a b
+                app [">",  a, b] = mkBin ">"  a b
+                app [">=", a, b] = mkBin ">=" a b
 
                 -- give up, and just do prefix!
-                app xs = unwords (map (wrap . go) xs)
+                app xs = unwords xs
 
 {-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}

@@ -45,4 +45,4 @@
 RESULT:
 Satisfiable. Model:
   F :: Integer -> Integer -> Integer
-  F x y = 3 + ((2 * x) + (-y))
+  F x y = 3 + (2 * x) + (-y)
