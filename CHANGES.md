@@ -171,7 +171,7 @@
   * SBV now supports cvc5; the latest incarnation of CVC. See https://github.com/cvc5/cvc5
     for details.
 
-  * SBV now supports bitwuzla; the latest incarnation of Boolector. See https://github.com/bitwuzla/bitwuzla
+  * SBV now supports bitwuzla; the latest incarnation of Boolector. See https://bitwuzla.github.io
     for details.
 
   * Fixed handling of CRational values in constant folding, which was missing a case.
@@ -2229,7 +2229,7 @@ uninterpreted.
 ### Version 2.10, 2013-03-22
 
  * Add support for the Boolector SMT solver
-    * See: http://fmv.jku.at/boolector/
+    * See: https://boolector.github.io
     * Use `import Data.SBV.Bridge.Boolector` to use Boolector from SBV
     * Boolector supports QF_BV (with an without arrays). In the last
       SMT-Lib competition it won both bit-vector categories. It is definitely

@@ -6,10 +6,10 @@ report any issues you might see with newer releases.
       * http://github.com/berkeley-abc/abc
       * Version as downloaded from the above site on Apr 25, 2022
   * Boolector:
-      * http://github.com/Boolector/boolector
+      * https://boolector.github.io
       * Version 3.2.2
   * Bitwuzla:
-      * https://github.com/bitwuzla/bitwuzla
+      * https://bitwuzla.github.io
       * Version 1.0-prerelease
   * CVC4:
       * https://github.com/CVC4/CVC4

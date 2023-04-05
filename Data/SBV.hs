@@ -122,8 +122,8 @@
 --
 --   * CVC4, and CVC5 from Stanford University and the University of Iowa. <https://cvc4.github.io/> and <https://cvc5.github.io>
 --
---   * Boolector from Johannes Kepler University: <http://fmv.jku.at/boolector/> and its successor Bitwuzla from Stanford
---     university: <https://github.com/bitwuzla/bitwuzla>
+--   * Boolector from Johannes Kepler University: <https://boolector.github.io> and its successor Bitwuzla from Stanford
+--     university: <https://bitwuzla.github.io>
 --
 --   * MathSAT from Fondazione Bruno Kessler and DISI-University of Trento: <http://mathsat.fbk.eu/>
 --
