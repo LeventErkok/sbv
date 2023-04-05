@@ -35,6 +35,6 @@
 [SEND] (get-value (q1))
 [RECV] ((q1 (lambda ((x!1 Bool)) x!1)))
 
-MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q1",(SBool -> SBool,([([True :: Bool],True :: Bool)],False :: Bool)))]}
+MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q1",(SBool -> SBool,Right ([([True :: Bool],True :: Bool)],False :: Bool)))]}
 DONE.*** Solver   : Z3
 *** Exit code: ExitSuccess
