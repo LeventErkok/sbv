@@ -835,6 +835,9 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
+
+        p Implies [a, b] | kindOf (head opArgs) == KBool = parens (text "!" P.<> a <+> text "||" <+> b)
+
         p NotEqual xs = mkDistinct xs
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
 

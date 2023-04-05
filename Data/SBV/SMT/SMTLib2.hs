@@ -1062,6 +1062,8 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
         sh (SBVApp (MaybeIs          k True ) [arg]) = '(' : dtAccessor    "just_SBVMaybe"    [k]   (KMaybe k) ++ " " ++ cvtSV arg ++ ")"
         sh (SBVApp MaybeAccess                [arg]) = "(get_just_SBVMaybe " ++ cvtSV arg ++ ")"
 
+        sh (SBVApp Implies [a, b]) = "(=> " ++ cvtSV a ++ " " ++ cvtSV b ++ ")"
+
         sh inp@(SBVApp op args)
           | intOp, Just f <- lookup op smtOpIntTable
           = f True (map cvtSV args)

@@ -177,6 +177,7 @@ data Op = Plus
         | Quot
         | Rem
         | Equal
+        | Implies
         | NotEqual
         | LessThan
         | GreaterThan
@@ -608,7 +609,7 @@ instance Show Op where
     where syms = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (UNeg, "-"), (Abs, "abs")
                  , (Quot, "quot")
                  , (Rem,  "rem")
-                 , (Equal, "=="), (NotEqual, "/=")
+                 , (Equal, "=="), (NotEqual, "/="), (Implies, "=>")
                  , (LessThan, "<"), (GreaterThan, ">"), (LessEq, "<="), (GreaterEq, ">=")
                  , (Ite, "if_then_else")
                  , (And, "&"), (Or, "|"), (XOr, "^"), (Not, "~")

@@ -23,7 +23,7 @@ module Data.SBV.Core.Operations
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs
   , svDivide, svQuot, svRem, svQuotRem
-  , svEqual, svNotEqual, svStrongEqual, svSetEqual
+  , svEqual, svNotEqual, svStrongEqual, svImplies, svSetEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
@@ -297,6 +297,24 @@ svEqual a b
   = svSetEqual a b
   | True
   = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
+
+-- | Implication. Only for booleans.
+svImplies :: SVal -> SVal -> SVal
+svImplies a b
+  |    isConcreteZero a -- false implies everything
+    || isConcreteOne  b -- true is implied by everything
+  = svTrue
+  | any (\x -> kindOf x /= KBool) [a, b]
+  = bad
+  | True
+  = liftSym2B (mkSymOpSC (eqOpt trueSV) Implies) rationalCheck bad imp bad bad bad bad bad bad bad bad bad bad bad a b
+  where bad = error $ "Data.SBV.svImplies: Unexpected arguments: " ++ show (a, kindOf a, b, kindOf b)
+        imp :: Integer -> Integer -> Bool
+        imp 0 0 = True
+        imp 0 1 = True
+        imp 1 0 = False
+        imp 1 1 = True
+        imp x y = error $ "Data.SBV.svImplies: Called on unreduced arguments: " ++ show (x, y, a, kindOf a, b, kindOf b)
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal

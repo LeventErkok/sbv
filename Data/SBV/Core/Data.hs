@@ -298,7 +298,7 @@ x .~| y = sNot (x .|| y)
 -- | Symbolic implication
 infixr 1 .=>
 (.=>) :: SBool -> SBool -> SBool
-x .=> y = sNot x .|| y
+SBV x .=> SBV y = SBV (x `svImplies` y)
 -- NB. Do *not* try to optimize @x .=> x = True@ here! If constants go through, it'll get simplified.
 -- The case "x .=> x" can hit is extremely rare, and the getAllSatResult function relies on this
 -- trick to generate constraints in the unlucky case of ui-function models.
@@ -306,7 +306,7 @@ x .=> y = sNot x .|| y
 -- | Symbolic boolean equivalence
 infixr 1 .<=>
 (.<=>) :: SBool -> SBool -> SBool
-x .<=> y = (x .&& y) .|| (sNot x .&& sNot y)
+SBV x .<=> SBV y = SBV (x `svEqual` y)
 
 -- | Conversion from 'Bool' to 'SBool'
 fromBool :: Bool -> SBool
@@ -857,4 +857,3 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
   symbolicEq (R1 l) (R1 r) = symbolicEq l r
   symbolicEq (L1 _) (R1 _) = sFalse
   symbolicEq (R1 _) (L1 _) = sFalse
-
