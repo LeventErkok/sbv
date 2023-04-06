@@ -18,6 +18,8 @@
 
 module Documentation.SBV.Examples.Existentials.Diophantine where
 
+import Data.List (intercalate, transpose)
+
 import Data.SBV
 import Data.Proxy
 
@@ -31,7 +33,30 @@ import GHC.TypeLits
 -- second component plus one of the vectors in the first component.
 data Solution = Homogeneous    [[Integer]]
               | NonHomogeneous [[Integer]] [[Integer]]
-              deriving Show
+
+instance Show Solution where
+  show s = case s of
+             Homogeneous        xss -> comb supplyH (zip (repeat False) xss)
+             NonHomogeneous css xss -> intercalate "\n" [comb supplyNH ((True, cs) : zip (repeat False) xss) | cs <- css]
+    where supplyH  = ['k' : replicate i '\'' | i <- [0 ..]]
+          supplyNH = "" : supplyH
+
+          comb supply xss = vec $ map add (transpose (zipWith muls supply xss))
+            where muls x (isConst, cs) = map mul cs
+                    where mul 0 = "0"
+                          mul 1 | isConst = "1"
+                                | True    = x
+                          mul k | isConst = show k
+                                | True    = show k ++ x
+
+                  add [] = "0"
+                  add xs = foldr1 plus xs
+
+                  plus "0" y   = y
+                  plus x   "0" = x
+                  plus x   y   = x ++ "+" ++ y
+
+          vec xs = "(" ++ intercalate ", " xs ++ ")"
 
 --------------------------------------------------------------------------------------------------
 -- * Solving diophantine equations
@@ -82,19 +107,12 @@ basis _ mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim
 -- We have:
 --
 -- >>> test
--- NonHomogeneous [[0,2,0],[1,0,0]] [[0,1,1],[1,0,2]]
+-- (k, 2+k', 2k+k')
+-- (1+k, k', 2k+k')
 --
--- which means that the solutions are of the form:
---
---    @(0, 2, 0) + k (0, 1, 1) + k' (1, 0, 2) = (k', 2+k, k+2k')@
---
--- OR
---
---    @(1, 0, 0) + k (0, 1, 1) + k' (1, 0, 2) = (1+k', k, k+2k')@
---
--- for arbitrary @k@, @k'@. It's easy to see that these are really solutions
--- to the equation given. It's harder to see that they cover all possibilities,
--- but a moments thought reveals that is indeed the case.
+-- That is, for arbitrary @k@ and @k'@, we have two different solutions. (An infinite family.)
+-- You can verify these solutuions by substituting the values for @x@, @y@ and @z@ in the above, for each choice.
+-- It's harder to see that they cover all possibilities, but a moments thought reveals that is indeed the case.
 test :: IO Solution
 test = ldn (Proxy @4) Nothing [([2,1,-1], 2)]
 
