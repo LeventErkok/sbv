@@ -166,9 +166,6 @@ Given a formula, skolemization produces an equisatisfiable formula that has no e
 the existentials are replaced by uninterpreted functions.
 Skolemization is useful when we want to see the instantiation of nested existential variables. Interpretation for such variables will be
 functions of the enclosing universals.
-
-Note that proving a formula is NOT equivalent to proving its skolemized form. In general, to prove (i.e.,
-to check validity), you should negate the formula first, and then skolemize.
 -}
 
 -- | Consider the formula \(\forall x\,\exists y\, x \ge y\), over bit-vectors of size 8. We can ask SBV to satisfy it:
@@ -217,6 +214,54 @@ skolemEx1 (Forall x) (Exists y) = x .>= y
 -- @0@ when interpreted modulo @2^8@. Clever!
 skolemEx2 :: Forall Word8 -> Exists Word8 -> Forall Word8 -> Exists Word8 -> SBool
 skolemEx2 (Forall x) (Exists k) (Forall y) (Exists l) = x + k .>= y + l
+
+-- | A common proof technique to show validity is to show that the negation is unsatisfiable. Note
+-- that if you want to skolemize during this process, you should first /negate/ and then skolemize!
+--
+-- This example demonstrates the possible pitfall. The 'skolemEx3' function
+-- encodes \(\exists x\, \forall y\, y \ge x\) for 8-bit bitvectors; which is a valid statement since
+-- @x = 0@ acts as the witness. We can directly prove this in SBV:
+--
+-- >>> prove skolemEx3
+-- Q.E.D.
+--
+-- Or, we can ask if the negation is unsatisfiable:
+--
+-- >>> let phi  = skolemEx3
+-- >>> let nPhi = qNot phi :: Forall Word8 -> Exists Word8 -> SBool
+-- >>> sat nPhi
+-- Unsatisfiable
+--
+-- If we want, we can skolemize after the negation step:
+--
+-- >>> let phi   = skolemEx3
+-- >>> let nPhi  = qNot phi :: Forall Word8 -> Exists Word8 -> SBool
+-- >>> let snPhi = skolemize ["y"] nPhi :: Forall Word8 -> SBool
+-- >>> sat snPhi
+-- Unsatisfiable
+--
+-- and get the same result. However, it would be __unsound__ to skolemize first and then negate:
+--
+-- >>> let phi   = skolemEx3
+-- >>> let sPhi  = skolemize ["x"] phi :: Forall Word8 -> SBool
+-- >>> let nsPhi = qNot sPhi :: Exists Word8 -> SBool
+-- >>> sat nsPhi
+-- Satisfiable. Model:
+--   x = 1 :: Word8
+--
+-- And that would be the incorrect conclusion that our formula is invalid with a counter-example! You
+-- can see the same by doing:
+--
+-- >>> let phi   = skolemEx3
+-- >>> let sPhi  = skolemize ["x"] phi :: Forall Word8 -> SBool
+-- >>> prove sPhi
+-- Falsifiable. Counter-example:
+--   x = 1 :: Word8
+--
+-- So, if you want to check validity and want to also perform skolemization; you should negate your
+-- formula first and then skolemize, not the other way around!
+skolemEx3 :: Exists Word8 -> Forall Word8 -> SBool
+skolemEx3 (Exists x) (Forall y) = y .>= x
 
 -- * Special relations
 

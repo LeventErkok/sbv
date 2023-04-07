@@ -62,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), EqSymbolic(..), skolemize
+ , QuantifiedBool(..), EqSymbolic(..), skolemize, qNot
  ) where
 
 import GHC.TypeLits (KnownNat, Nat)
@@ -867,7 +867,7 @@ instance Skolemizer (SBV a) (SBV a) where
 instance Skolemizer r r' => Skolemizer (Forall a -> r) (Forall a -> r') where
   skolemizer (ns, args) f arg@(Forall a) = skolemizer (ns, args ++ [unSBV a]) (f arg)
 
--- | Skolemize over a number of universal quantifier
+-- | Skolemize over a number of universal quantifiers
 instance Skolemizer r r' => Skolemizer (ForallN n a -> r) (ForallN n a -> r') where
   skolemizer (ns, args) f arg@(ForallN xs) = skolemizer (ns, args ++ map unSBV xs) (f arg)
 
@@ -893,6 +893,37 @@ instance (HasKind a, Skolemizer (Forall a -> Forall a -> SBool) r', QuantifiedBo
   skolemizer ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing an ExistsUnique!"
   skolemizer (n:ns, args) f = skolemizer (ns, args) (rewriteExistsUnique f (Exists skolemized))
     where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
+
+-- | Class of things that we can logically negate
+class QNot a b where
+  -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
+  -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
+  -- quantifiers, so prefer this version if you want to keep them around.
+  qNot :: a -> b
+
+-- | Base case; pure symbolic boolean
+instance QNot SBool SBool where
+  qNot = sNot
+
+-- | Negate over a universal quantifier. Switches to existential.
+instance QNot r r' => QNot (Forall a -> r) (Exists a -> r') where
+  qNot f (Exists a) = qNot (f (Forall a))
+
+-- | Negate over a number of universal quantifiers
+instance QNot r r' => QNot (ForallN n a -> r) (ExistsN n a -> r') where
+  qNot f (ExistsN xs) = qNot (f (ForallN xs))
+
+-- | Negate over an existential quantifier. Switches to universal.
+instance QNot r r' => QNot (Exists a -> r) (Forall a -> r') where
+  qNot f (Forall a) = qNot (f (Exists a))
+
+-- | Negate over a number of existential quantifiers
+instance QNot r r' => QNot (ExistsN n a -> r) (ForallN n a -> r') where
+  qNot f (ForallN xs) = qNot (f (ExistsN xs))
+
+-- | Negate over an unique existential quantifier
+instance (QNot (Exists a -> Forall a -> Forall a -> SBool) (Forall a -> Exists a -> Exists a -> r'), EqSymbolic (SBV a), QuantifiedBool r) => QNot (ExistsUnique a -> r) (Forall a -> Exists a -> Exists a -> r') where
+  qNot = qNot . rewriteExistsUnique
 
 -- | Get rid of exists unique: E!x. f x = Ex.Aa.Ab. f x /\ (f a /\ f b => a == b)
 rewriteExistsUnique :: (EqSymbolic (SBV a), QuantifiedBool b) => (ExistsUnique a -> b) -> Exists a -> Forall a -> Forall a -> SBool
