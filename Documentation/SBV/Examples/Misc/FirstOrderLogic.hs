@@ -160,6 +160,64 @@ Falsifiable
 Q.E.D.
 -}
 
+-- * Skolemization
+{- $skolemization
+Given a formula, skolemization produces an equisatisfiable formula that has no existential quantifiers. Instead,
+the existentials are replaced by uninterpreted functions.
+Skolemization is useful when we want to see the instantiation of nested existential variables. Interpretation for such variables will be
+functions of the enclosing universals.
+
+Note that proving a formula is NOT equivalent to proving its skolemized form. In general, to prove (i.e.,
+to check validity), you should negate the formula first, and then skolemize.
+-}
+
+-- | Consider the formula \(\forall x\,\exists y\, x \ge y\), over bit-vectors of size 8. We can ask SBV to satisfy it:
+--
+-- >>> sat skolemEx1
+-- Satisfiable
+--
+-- But this isn't really illimunating. We can first skolemize, and then ask to satisfy:
+--
+-- >>> sat (skolemize ["y"] skolemEx1 :: Forall Word8 -> SBool)
+-- Satisfiable. Model:
+--   y :: Word8 -> Word8
+--   y x = x
+--
+-- which is much better We are told that we can have the witness as the value given for each choice of @x@.
+skolemEx1 :: Forall Word8 -> Exists Word8 -> SBool
+skolemEx1 (Forall x) (Exists y) = x .>= y
+
+-- | Consider the formula \(\forall x\,\exists k\,\forall y\,\exists l\, x + k >= y + l\), over bit-vectors of size 8. We can ask SBV to satisfy it:
+--
+-- >>> sat skolemEx2
+-- Satisfiable
+--
+-- Again, we're left in the dark as to why this is satisfiable. Let's skolemize first, and then call 'sat' on it:
+--
+-- >>> sat (skolemize ["k", "l"] skolemEx2 :: Forall Word8 -> Forall Word8 -> SBool)
+-- Satisfiable. Model:
+--   k :: Word8 -> Word8
+--   k _ = 0
+-- <BLANKLINE>
+--   l :: Word8 -> Word8 -> Word8
+--   l x y = x + (255 * y)
+--
+-- Let's see what the solver said. It suggested we should use the value of @0@ for @k@, regardless of the
+-- choice of @x@. (Note how @k@ is a function of one variable.) And it suggested using @x + (255 * y)@ for @l@,
+-- for whatever we choose for @x@ and @y@. Why does this work? Well, given arbitrary @x@ and @y@, we end up with:
+--
+-- @
+--     x + k >= y + l
+--     x + 0 >= y + x + (255 * y)
+--     x >= 256y + x
+--     x >= x
+-- @
+--
+-- showing the formula is satisfiable for whatever values you pick for @x@ and @y@. Note that @256@ is simply
+-- @0@ when interpreted modulo @2^8@. Clever!
+skolemEx2 :: Forall Word8 -> Exists Word8 -> Forall Word8 -> Exists Word8 -> SBool
+skolemEx2 (Forall x) (Exists k) (Forall y) (Exists l) = x + k .>= y + l
+
 -- * Special relations
 
 -- ** Partial orders
