@@ -217,12 +217,12 @@ is incorrect, but the stipulated invariant is not valid.
 The termination measure must always be non-negative:
 
 >>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
->>> let measure   SumS{n, i}    = [- i]
+>>> let measure   SumS{n, i}    = [1-i]
 >>> void $ correctness invariant (Just measure)
 Following proof obligation failed:
 ==================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = 3, i = 1, s = 1}
+    State  : SumS {n = 3, i = 2, s = 3}
     Measure: -1
 
 The failure is pretty obvious in this case: Measure produces a negative value.
