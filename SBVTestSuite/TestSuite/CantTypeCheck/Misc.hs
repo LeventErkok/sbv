@@ -28,6 +28,7 @@ tests :: TestTree
 tests = testGroup "CantTypeCheck.Misc" [
            testCase "noTypeCheckBad01"  $ shouldNotTypeCheck $ isTheorem t1
          , testCase "noTypeCheckBad02"  $ shouldNotTypeCheck $ isTheorem t2
+         , testCase "noTypeCheckBad03"  $ shouldNotTypeCheck   runSko
          , testCase "noTypeCheckGood01" $                      assertIsSat t1
          , testCase "noTypeCheckGood02" $                      assertIsSat t2
 
@@ -39,3 +40,13 @@ tests = testGroup "CantTypeCheck.Misc" [
 
         t2 :: ConstraintSet
         t2 = pure ()
+
+        -- shouldn't be able to skolemize like this
+        sko :: Forall Integer -> SInteger
+        sko = skolemize ["x"] $ \(Exists x) (Forall y) -> x + (y :: SInteger)
+
+        -- We have to reduce the above to a IO Bool so the rnf instance does the right thing!
+        -- Oh the horrors of "deferring type errors"
+        runSko = case unliteral (sko (Forall (literal 3))) of
+                   Just x  -> return $ x == x
+                   Nothing -> return False

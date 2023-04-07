@@ -851,37 +851,45 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
   symbolicEq (R1 _) (L1 _) = sFalse
 
 -- | Skolemization. For any formula, skolemization gives back an equisatisfiable formula that
--- has no existential quantifiers in it.
-skolemize :: Skolemizer a b => [String] -> a -> b
-skolemize ns = skolemizer (ns, [])
+-- has no existential quantifiers in it. You have to provide enough names for all the
+-- existentials in the argument. (Extras OK, so you can pass an infinite list if you like.)
+-- The names should be distinct, and also different from any other uninterpreted name
+-- you might have elsewhere.
+--
+-- NB. 'skolemize' has a very general type to allow for arbitrary nesting of quantifiers.
+-- If you use it, you'll find that you might have to annotate the terms with their types
+-- to make the type-checker happy.
+skolemize :: (Constraint Symbolic b, Skolemize a b) => [String] -> a -> b
+skolemize ns = skolem (ns, [])
 
--- | A class of values that can be skolemized
-class Skolemizer a b where
-  skolemizer :: ([String], [SVal]) -> a -> b
+-- | A class of values that can be skolemized. Note that we don't export this class. Use
+-- the 'skolemize' function instead.
+class Skolemize a b where
+  skolem :: ([String], [SVal]) -> a -> b
 
 -- | Base case; pure symbolic values
-instance Skolemizer (SBV a) (SBV a) where
-  skolemizer _ = id
+instance Skolemize (SBV a) (SBV a) where
+  skolem _ = id
 
 -- | Skolemize over a universal quantifier
-instance Skolemizer r r' => Skolemizer (Forall a -> r) (Forall a -> r') where
-  skolemizer (ns, args) f arg@(Forall a) = skolemizer (ns, args ++ [unSBV a]) (f arg)
+instance Skolemize r r' => Skolemize (Forall a -> r) (Forall a -> r') where
+  skolem (ns, args) f arg@(Forall a) = skolem (ns, args ++ [unSBV a]) (f arg)
 
 -- | Skolemize over a number of universal quantifiers
-instance Skolemizer r r' => Skolemizer (ForallN n a -> r) (ForallN n a -> r') where
-  skolemizer (ns, args) f arg@(ForallN xs) = skolemizer (ns, args ++ map unSBV xs) (f arg)
+instance Skolemize r r' => Skolemize (ForallN n a -> r) (ForallN n a -> r') where
+  skolem (ns, args) f arg@(ForallN xs) = skolem (ns, args ++ map unSBV xs) (f arg)
 
 -- | Skolemize over an existential quantifier
-instance (HasKind a, Skolemizer r r') => Skolemizer (Exists a -> r) r' where
-  skolemizer ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing!"
-  skolemizer (n:ns, args) f = skolemizer (ns, args) (f (Exists skolemized))
+instance (HasKind a, Skolemize r r') => Skolemize (Exists a -> r) r' where
+  skolem ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing!"
+  skolem (n:ns, args) f = skolem (ns, args) (f (Exists skolemized))
     where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
 
 -- | Skolemize over a number of existential quantifiers
-instance (HasKind a, KnownNat n, Skolemizer r r') => Skolemizer (ExistsN n a -> r) r' where
-  skolemizer (ns, args) f
+instance (HasKind a, KnownNat n, Skolemize r r') => Skolemize (ExistsN n a -> r) r' where
+  skolem (ns, args) f
      | length fs == need
-     = skolemizer (rs, args) (f (ExistsN skolemized))
+     = skolem (rs, args) (f (ExistsN skolemized))
      | True
      = error $ "Skolemize: Ran out of names while skolemizing an ExistN. Needed " ++ show need ++ ", got: " ++ show fs
     where need     = intOfProxy (Proxy @n)
@@ -889,41 +897,48 @@ instance (HasKind a, KnownNat n, Skolemizer r r') => Skolemizer (ExistsN n a -> 
           skolemized = [SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
-instance (HasKind a, Skolemizer (Forall a -> Forall a -> SBool) r', QuantifiedBool r, EqSymbolic (SBV a)) => Skolemizer (ExistsUnique a -> r) r' where
-  skolemizer ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing an ExistsUnique!"
-  skolemizer (n:ns, args) f = skolemizer (ns, args) (rewriteExistsUnique f (Exists skolemized))
+instance (HasKind a, Skolemize (Forall a -> Forall a -> SBool) r', QuantifiedBool r, EqSymbolic (SBV a)) => Skolemize (ExistsUnique a -> r) r' where
+  skolem ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing an ExistsUnique!"
+  skolem (n:ns, args) f = skolem (ns, args) (rewriteExistsUnique f (Exists skolemized))
     where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
 
+-- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
+-- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
+-- quantifiers, so prefer this version if you want to keep them around.
+--
+-- NB. 'qNot' has a very general type to allow for arbitrary nesting of quantifiers.
+-- If you use it, you'll find that you might have to annotate the terms with their types
+-- to make the type-checker happy.
+qNot :: (Constraint Symbolic b, QNegate a b) => a -> b
+qNot = qNegate
+
 -- | Class of things that we can logically negate
-class QNot a b where
-  -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
-  -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
-  -- quantifiers, so prefer this version if you want to keep them around.
-  qNot :: a -> b
+class QNegate a b where
+  qNegate :: a -> b
 
 -- | Base case; pure symbolic boolean
-instance QNot SBool SBool where
-  qNot = sNot
+instance QNegate SBool SBool where
+  qNegate = sNot
 
 -- | Negate over a universal quantifier. Switches to existential.
-instance QNot r r' => QNot (Forall a -> r) (Exists a -> r') where
-  qNot f (Exists a) = qNot (f (Forall a))
+instance QNegate r r' => QNegate (Forall a -> r) (Exists a -> r') where
+  qNegate f (Exists a) = qNegate (f (Forall a))
 
 -- | Negate over a number of universal quantifiers
-instance QNot r r' => QNot (ForallN n a -> r) (ExistsN n a -> r') where
-  qNot f (ExistsN xs) = qNot (f (ForallN xs))
+instance QNegate r r' => QNegate (ForallN n a -> r) (ExistsN n a -> r') where
+  qNegate f (ExistsN xs) = qNegate (f (ForallN xs))
 
 -- | Negate over an existential quantifier. Switches to universal.
-instance QNot r r' => QNot (Exists a -> r) (Forall a -> r') where
-  qNot f (Forall a) = qNot (f (Exists a))
+instance QNegate r r' => QNegate (Exists a -> r) (Forall a -> r') where
+  qNegate f (Forall a) = qNegate (f (Exists a))
 
 -- | Negate over a number of existential quantifiers
-instance QNot r r' => QNot (ExistsN n a -> r) (ForallN n a -> r') where
-  qNot f (ForallN xs) = qNot (f (ExistsN xs))
+instance QNegate r r' => QNegate (ExistsN n a -> r) (ForallN n a -> r') where
+  qNegate f (ForallN xs) = qNegate (f (ExistsN xs))
 
 -- | Negate over an unique existential quantifier
-instance (QNot (Exists a -> Forall a -> Forall a -> SBool) (Forall a -> Exists a -> Exists a -> r'), EqSymbolic (SBV a), QuantifiedBool r) => QNot (ExistsUnique a -> r) (Forall a -> Exists a -> Exists a -> r') where
-  qNot = qNot . rewriteExistsUnique
+instance (QNegate (Exists a -> Forall a -> Forall a -> SBool) (Forall a -> Exists a -> Exists a -> r'), EqSymbolic (SBV a), QuantifiedBool r) => QNegate (ExistsUnique a -> r) (Forall a -> Exists a -> Exists a -> r') where
+  qNegate = qNegate . rewriteExistsUnique
 
 -- | Get rid of exists unique: E!x. f x = Ex.Aa.Ab. f x /\ (f a /\ f b => a == b)
 rewriteExistsUnique :: (EqSymbolic (SBV a), QuantifiedBool b) => (ExistsUnique a -> b) -> Exists a -> Forall a -> Forall a -> SBool
