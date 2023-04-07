@@ -62,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), EqSymbolic(..)
+ , QuantifiedBool(..), EqSymbolic(..), skolemize
  ) where
 
 import GHC.TypeLits (KnownNat, Nat)
@@ -444,15 +444,7 @@ instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
 
 -- | Functions of a unique single existential
 instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Constraint m (ExistsUnique a -> r) where
-  mkConstraint st fn = mkConstraint st fn'
-    where fn' (Exists x) (Forall x1) (Forall x2) = fx .&& unique
-                where fx    = quantifiedBool $ fn (ExistsUnique x)
-                      fx1   = fn (ExistsUnique x1)
-                      fx2   = fn (ExistsUnique x2)
-
-                      bothHolds  = quantifiedBool fx1 .&& quantifiedBool fx2
-                      mustEqual  = x1 .== x2
-                      unique     = bothHolds .=> mustEqual
+  mkConstraint st = mkConstraint st . rewriteExistsUnique
 
 -- | Functions of a number of existentials
 instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n a -> r) where
@@ -857,3 +849,58 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
   symbolicEq (R1 l) (R1 r) = symbolicEq l r
   symbolicEq (L1 _) (R1 _) = sFalse
   symbolicEq (R1 _) (L1 _) = sFalse
+
+-- | Skolemization. For any formula, skolemization gives back an equisatisfiable formula that
+-- has no existential quantifiers in it.
+skolemize :: Skolemizer a b => [String] -> a -> b
+skolemize ns = skolemizer (ns, [])
+
+-- | A class of values that can be skolemized
+class Skolemizer a b where
+  skolemizer :: ([String], [SVal]) -> a -> b
+
+-- | Base case; pure symbolic values
+instance Skolemizer (SBV a) (SBV a) where
+  skolemizer _ = id
+
+-- | Skolemize over a universal quantifier
+instance Skolemizer r r' => Skolemizer (Forall a -> r) (Forall a -> r') where
+  skolemizer (ns, args) f arg@(Forall a) = skolemizer (ns, args ++ [unSBV a]) (f arg)
+
+-- | Skolemize over a number of universal quantifier
+instance Skolemizer r r' => Skolemizer (ForallN n a -> r) (ForallN n a -> r') where
+  skolemizer (ns, args) f arg@(ForallN xs) = skolemizer (ns, args ++ map unSBV xs) (f arg)
+
+-- | Skolemize over an existential quantifier
+instance (HasKind a, Skolemizer r r') => Skolemizer (Exists a -> r) r' where
+  skolemizer ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing!"
+  skolemizer (n:ns, args) f = skolemizer (ns, args) (f (Exists skolemized))
+    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
+
+-- | Skolemize over a number of existential quantifiers
+instance (HasKind a, KnownNat n, Skolemizer r r') => Skolemizer (ExistsN n a -> r) r' where
+  skolemizer (ns, args) f
+     | length fs == need
+     = skolemizer (rs, args) (f (ExistsN skolemized))
+     | True
+     = error $ "Skolemize: Ran out of names while skolemizing an ExistN. Needed " ++ show need ++ ", got: " ++ show fs
+    where need     = intOfProxy (Proxy @n)
+          (fs, rs) = splitAt need ns
+          skolemized = [SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args | n <- fs]
+
+-- | Skolemize over a unique existential quantifier
+instance (HasKind a, Skolemizer (Forall a -> Forall a -> SBool) r', QuantifiedBool r, EqSymbolic (SBV a)) => Skolemizer (ExistsUnique a -> r) r' where
+  skolemizer ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing an ExistsUnique!"
+  skolemizer (n:ns, args) f = skolemizer (ns, args) (rewriteExistsUnique f (Exists skolemized))
+    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
+
+-- | Get rid of exists unique: E!x. f x = Ex.Aa.Ab. f x /\ (f a /\ f b => a == b)
+rewriteExistsUnique :: (EqSymbolic (SBV a), QuantifiedBool b) => (ExistsUnique a -> b) -> Exists a -> Forall a -> Forall a -> SBool
+rewriteExistsUnique f (Exists x) (Forall x1) (Forall x2) = fx .&& unique
+  where fx    = quantifiedBool $ f (ExistsUnique x)
+        fx1   = f (ExistsUnique x1)
+        fx2   = f (ExistsUnique x2)
+
+        bothHolds  = quantifiedBool fx1 .&& quantifiedBool fx2
+        mustEqual  = x1 .== x2
+        unique     = bothHolds .=> mustEqual
