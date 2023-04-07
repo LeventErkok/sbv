@@ -23,10 +23,9 @@
          (let ((l1_s2 (fp.isInfinite l1_s0)))
          (let ((l1_s3 (or l1_s1 l1_s2)))
          (let ((l1_s4 (not l1_s3)))
-         (let ((l1_s5 (not l1_s4)))
-         (let ((l1_s6 (fp.leq s0 l1_s0)))
-         (let ((l1_s7 (or l1_s5 l1_s6)))
-         l1_s7)))))))))
+         (let ((l1_s5 (fp.leq s0 l1_s0)))
+         (let ((l1_s6 (=> l1_s4 l1_s5)))
+         l1_s6))))))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---

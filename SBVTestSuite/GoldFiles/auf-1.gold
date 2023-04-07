@@ -3,14 +3,14 @@ INPUTS
   s1 :: SWord32, aliasing "y"
 CONSTANTS
   s2 = 2 :: Word32
-  s6 = 3 :: Word32
-  s11 = 1 :: Word32
+  s5 = 3 :: Word32
+  s10 = 1 :: Word32
 TABLES
 ARRAYS
   array_0 :: SWord32 -> SWord32, aliasing "a"
      Context:  initialized with random elements
   array_1 :: SWord32 -> SWord32
-     Context:  cloned from array_0 with s0 :: SWord32 |-> s6 :: SWord32
+     Context:  cloned from array_0 with s0 :: SWord32 |-> s5 :: SWord32
 UNINTERPRETED CONSTANTS
   [uninterpreted] f :: SWord32 -> SWord64
 USER GIVEN CODE SEGMENTS
@@ -18,16 +18,15 @@ AXIOMS-DEFINITIONS
 DEFINE
   s3 :: SWord32 = s0 + s2
   s4 :: SBool = s1 == s3
-  s5 :: SBool = ~ s4
-  s7 :: SWord32 = s1 - s2
-  s8 :: SWord32 = select array_1 s7
-  s9 :: SWord64 = [uninterpreted] f s8
-  s10 :: SWord32 = s1 - s0
-  s12 :: SWord32 = s10 + s11
-  s13 :: SWord64 = [uninterpreted] f s12
-  s14 :: SBool = s9 == s13
-  s15 :: SBool = s5 | s14
+  s6 :: SWord32 = s1 - s2
+  s7 :: SWord32 = select array_1 s6
+  s8 :: SWord64 = [uninterpreted] f s7
+  s9 :: SWord32 = s1 - s0
+  s11 :: SWord32 = s9 + s10
+  s12 :: SWord64 = [uninterpreted] f s11
+  s13 :: SBool = s8 == s12
+  s14 :: SBool = s4 => s13
 CONSTRAINTS
 ASSERTIONS
 OUTPUTS
-  s15
+  s14

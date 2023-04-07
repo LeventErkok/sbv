@@ -32,16 +32,15 @@
          l1_s3))))
 [GOOD] (define-fun s3 () Thing (thingMerge s2 s2))
 [GOOD] (define-fun s6 () Bool (= s4 s5))
-[GOOD] (define-fun s7 () Bool (not s6))
-[GOOD] (define-fun s8 () Bool (thingCompare s4 s5))
-[GOOD] (define-fun s9 () Bool (or s7 s8))
+[GOOD] (define-fun s7 () Bool (thingCompare s4 s5))
+[GOOD] (define-fun s8 () Bool (=> s6 s7))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)
 [GOOD] (assert s1)
-[GOOD] (assert (not s9))
+[GOOD] (assert (not s8))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3

@@ -30,10 +30,9 @@
          (let ((l1_s3 (U l1_s0 l1_s1)))
          (let ((l1_s4 (U l1_s1 l1_s2)))
          (let ((l1_s5 (and l1_s3 l1_s4)))
-         (let ((l1_s6 (not l1_s5)))
-         (let ((l1_s7 (tcU l1_s0 l1_s2)))
-         (let ((l1_s8 (or l1_s6 l1_s7)))
-         l1_s8))))))))
+         (let ((l1_s6 (tcU l1_s0 l1_s2)))
+         (let ((l1_s7 (=> l1_s5 l1_s6)))
+         l1_s7)))))))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---

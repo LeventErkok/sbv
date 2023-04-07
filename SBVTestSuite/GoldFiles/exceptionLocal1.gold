@@ -9,7 +9,7 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (_ BitVec 1) #b0)
-[GOOD] (define-fun s68 () (_ BitVec 32) #x00000001)
+[GOOD] (define-fun s67 () (_ BitVec 32) #x00000001)
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (_ BitVec 32)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
@@ -20,8 +20,8 @@
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () (_ BitVec 1) ((_ extract 0 0) s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
-[GOOD] (define-fun s4 () Bool (not s3))
-[GOOD] (define-fun s5 () (_ BitVec 32) (bvmul s0 s0))
+[GOOD] (define-fun s4 () (_ BitVec 32) (bvmul s0 s0))
+[GOOD] (define-fun s5 () (_ BitVec 32) (bvmul s4 s4))
 [GOOD] (define-fun s6 () (_ BitVec 32) (bvmul s5 s5))
 [GOOD] (define-fun s7 () (_ BitVec 32) (bvmul s6 s6))
 [GOOD] (define-fun s8 () (_ BitVec 32) (bvmul s7 s7))
@@ -50,14 +50,13 @@
 [GOOD] (define-fun s31 () (_ BitVec 32) (bvmul s30 s30))
 [GOOD] (define-fun s32 () (_ BitVec 32) (bvmul s31 s31))
 [GOOD] (define-fun s33 () (_ BitVec 32) (bvmul s32 s32))
-[GOOD] (define-fun s34 () (_ BitVec 32) (bvmul s33 s33))
-[FAIL] (define-fun s35 () (_ BitVec 32) (bvmul s34 s34))
+[FAIL] (define-fun s34 () (_ BitVec 32) (bvmul s33 s33))
 CAUGHT SMT EXCEPTION
 *** Data.SBV: Unexpected non-success response from Yices:
 ***
-***    Sent      : (define-fun s35 () (_ BitVec 32) (bvmul s34 s34))
+***    Sent      : (define-fun s34 () (_ BitVec 32) (bvmul s33 s33))
 ***    Expected  : success
-***    Received  : (error "at line 41, column 35: in bvmul: maximal polynomial degree exceeded")
+***    Received  : (error "at line 40, column 35: in bvmul: maximal polynomial degree exceeded")
 ***
 ***    Exit code : ExitSuccess
 ***    Executable: /usr/local/bin/yices-smt2

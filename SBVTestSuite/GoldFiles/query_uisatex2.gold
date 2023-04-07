@@ -96,8 +96,6 @@
 [GOOD] (define-fun s66 () Int (q5 s64 s65))
 [GOOD] (define-fun s68 () Bool (= s66 s67))
 [GOOD] (define-fun s69 () Bool (q6 s17))
-[GOOD] (define-fun s70 () Bool (not s69))
-[GOOD] (define-fun s71 () Bool (or s69 s70))
 [GOOD] ; --- arrayDelayeds ---
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
@@ -118,7 +116,6 @@
 [GOOD] (assert s58)
 [GOOD] (assert s63)
 [GOOD] (assert s68)
-[GOOD] (assert s71)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q1))
