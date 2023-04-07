@@ -587,21 +587,29 @@ makeHaskellFunction resp nm
 
                 mkBin o a b = wrap a ++ " " ++ o ++ " " ++ wrap b
 
+                isPlus  = (`elem` ["+",  "bvadd"])
+                isTimes = (`elem` ["*",  "bvmul"])
+                isLT    = (`elem` ["<",  "bvult", "bvslt", "fp.lt" ])
+                isLTE   = (`elem` ["<=", "bvule", "bvsle", "fp.leq"])
+                isGT    = (`elem` [">",  "bvugt", "bvsgt", "fp.gt" ])
+                isGTE   = (`elem` [">=", "bvuge", "bvsge", "fp.gte"])
+
                 -- Make an application, with some simplifications
                 app :: [String] -> String
-                app ("+" : xs) = intercalate " + " xs
+                app (o : xs) | isPlus o = intercalate " + " xs
 
                 -- multiplication of arbitrary elements, with proviso for multiplication by -1
-                app ["*", "(-1)", x]  = '-' : x
-                app ("*" : xs)        = intercalate " * " xs
+                app [m, "(-1)", x] | isTimes m = '-' : x
+                app (m  : xs)      | isTimes m = intercalate " * " xs
 
                 -- binary arith ops
                 app ["-",  a, b] = mkBin "-"  a b
                 app ["/",  a, b] = mkBin "/"  a b
-                app ["<",  a, b] = mkBin "<"  a b
-                app ["<=", a, b] = mkBin "<=" a b
-                app [">",  a, b] = mkBin ">"  a b
-                app [">=", a, b] = mkBin ">=" a b
+
+                app [o, a, b] | isLT  o = mkBin "<"  a b
+                app [o, a, b] | isLTE o = mkBin "<=" a b
+                app [o, a, b] | isGT  o = mkBin ">"  a b
+                app [o, a, b] | isGTE o = mkBin ">=" a b
 
                 -- give up, and just do prefix!
                 app xs = unwords xs
