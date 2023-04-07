@@ -28,6 +28,9 @@
     SBV also supports the constructors ExistsUnique to create unique existentials, in addition to
     ForallN and ExistsN for creating multiple variables at the same time.
 
+    The new function skolemize can be used to skolemize quantified formulas: The skolemized version of a
+    formula has no existential (replaced by uninterpeted functions), and is equisatisfiable to the original.
+
     See the following files demonstrating reasoning with quantifiers:
     
        * Documentation/SBV/Examples/Puzzles/Birthday.hs
