@@ -93,18 +93,18 @@ lintTest:
 testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
+# If you specify TGT, it'll just run on that target. Give the full path to the haskell file with .hs extension
+# If you also specify FAST, it won't compile first; good when you change the "comment" but not the code
 docTest:
-	@$(TIME) cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT}
-
-# Check a single module using doctest:
-#   make docTestModule TGT=Documentation/SBV/Examples/Lists/CountOutAndTransfer.hs
-docTestModule:
-	cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
-
-# Same as above, but doesn't compile the program; i.e., only use it if you only
-# modified the doctest in a comment but haven't changed the code itself
-docTestModuleFast:
+ifdef TGT
+ifdef FAST
 	cabal-docspec --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+else
+	cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+endif
+else
+	@$(TIME) cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT}
+endif
 
 test:
 	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE}
