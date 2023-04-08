@@ -9,6 +9,7 @@
 -- Test suite for things that should not type-check
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleInstances #-}
 
 -- Defer type-errors is essential here!
@@ -42,11 +43,12 @@ tests = testGroup "CantTypeCheck.Misc" [
         t2 = pure ()
 
         -- shouldn't be able to skolemize like this
-        sko :: Forall Integer -> SInteger
-        sko = skolemize ["x"] $ \(Exists x) (Forall y) -> x + (y :: SInteger)
+        sko :: Forall "y" Integer -> SInteger
+        sko = skolemize fml
+          where fml :: Exists "x" Integer -> Forall "y" Integer -> SInteger
+                fml (Exists x) (Forall y) = x + y
 
         -- We have to reduce the above to a IO Bool so the rnf instance does the right thing!
         -- Oh the horrors of "deferring type errors"
-        runSko = case unliteral (sko (Forall (literal 3))) of
-                   Just x  -> return $ x == x
-                   Nothing -> return False
+        runSko :: IO Bool
+        runSko = isSatisfiable $ sko (Forall (literal 3))

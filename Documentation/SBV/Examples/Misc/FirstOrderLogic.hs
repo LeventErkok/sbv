@@ -10,6 +10,7 @@
 -- prove all come from <https://en.wikipedia.org/wiki/First-order_logic>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -25,6 +26,7 @@ import Data.SBV
 -- $setup
 -- >>> -- For doctest purposes only, ignore.
 -- >>> import Data.SBV
+-- >>> :set -XDataKinds
 
 -- | An uninterpreted sort for demo purposes, named 'U'
 data U
@@ -175,29 +177,29 @@ functions of the enclosing universals.
 --
 -- But this isn't really illimunating. We can first skolemize, and then ask to satisfy:
 --
--- >>> sat (skolemize ["y"] skolemEx1 :: Forall Word8 -> SBool)
+-- >>> sat (skolemize skolemEx1 :: Forall "x" Word8 -> SBool)
 -- Satisfiable. Model:
 --   y :: Word8 -> Word8
 --   y x = x
 --
 -- which is much better We are told that we can have the witness as the value given for each choice of @x@.
-skolemEx1 :: Forall Word8 -> Exists Word8 -> SBool
+skolemEx1 :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
 skolemEx1 (Forall x) (Exists y) = x .>= y
 
--- | Consider the formula \(\forall x\,\exists k\,\forall y\,\exists l\, x + k >= y + l\), over bit-vectors of size 8. We can ask SBV to satisfy it:
+-- | Consider the formula \(\forall x\,\exists a\,\forall y\,\exists b\, x + a >= y + b\), over bit-vectors of size 8. We can ask SBV to satisfy it:
 --
 -- >>> sat skolemEx2
 -- Satisfiable
 --
 -- Again, we're left in the dark as to why this is satisfiable. Let's skolemize first, and then call 'sat' on it:
 --
--- >>> sat (skolemize ["k", "l"] skolemEx2 :: Forall Word8 -> Forall Word8 -> SBool)
+-- >>> sat (skolemize skolemEx2 :: Forall "x" Word8 -> Forall "y" Word8 -> SBool)
 -- Satisfiable. Model:
---   k :: Word8 -> Word8
---   k _ = 0
+--   a :: Word8 -> Word8
+--   a _ = 0
 -- <BLANKLINE>
---   l :: Word8 -> Word8 -> Word8
---   l x y = x + (255 * y)
+--   b :: Word8 -> Word8 -> Word8
+--   b x y = x + (255 * y)
 --
 -- Let's see what the solver said. It suggested we should use the value of @0@ for @k@, regardless of the
 -- choice of @x@. (Note how @k@ is a function of one variable.) And it suggested using @x + (255 * y)@ for @l@,
@@ -212,8 +214,8 @@ skolemEx1 (Forall x) (Exists y) = x .>= y
 --
 -- showing the formula is satisfiable for whatever values you pick for @x@ and @y@. Note that @256@ is simply
 -- @0@ when interpreted modulo @2^8@. Clever!
-skolemEx2 :: Forall Word8 -> Exists Word8 -> Forall Word8 -> Exists Word8 -> SBool
-skolemEx2 (Forall x) (Exists k) (Forall y) (Exists l) = x + k .>= y + l
+skolemEx2 :: Forall "x" Word8 -> Exists "a" Word8 -> Forall "y" Word8 -> Exists "b" Word8 -> SBool
+skolemEx2 (Forall x) (Exists a) (Forall y) (Exists b) = x + a .>= y + b
 
 -- | A common proof technique to show validity is to show that the negation is unsatisfiable. Note
 -- that if you want to skolemize during this process, you should first /negate/ and then skolemize!
@@ -228,23 +230,23 @@ skolemEx2 (Forall x) (Exists k) (Forall y) (Exists l) = x + k .>= y + l
 -- Or, we can ask if the negation is unsatisfiable:
 --
 -- >>> let phi  = skolemEx3
--- >>> let nPhi = qNot phi :: Forall Word8 -> Exists Word8 -> SBool
+-- >>> let nPhi = qNot phi :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
 -- >>> sat nPhi
 -- Unsatisfiable
 --
 -- If we want, we can skolemize after the negation step:
 --
 -- >>> let phi   = skolemEx3
--- >>> let nPhi  = qNot phi :: Forall Word8 -> Exists Word8 -> SBool
--- >>> let snPhi = skolemize ["y"] nPhi :: Forall Word8 -> SBool
+-- >>> let nPhi  = qNot phi :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
+-- >>> let snPhi = skolemize nPhi :: Forall "x" Word8 -> SBool
 -- >>> sat snPhi
 -- Unsatisfiable
 --
 -- and get the same result. However, it would be __unsound__ to skolemize first and then negate:
 --
 -- >>> let phi   = skolemEx3
--- >>> let sPhi  = skolemize ["x"] phi :: Forall Word8 -> SBool
--- >>> let nsPhi = qNot sPhi :: Exists Word8 -> SBool
+-- >>> let sPhi  = skolemize phi :: Forall "y" Word8 -> SBool
+-- >>> let nsPhi = qNot sPhi :: Exists "y" Word8 -> SBool
 -- >>> sat nsPhi
 -- Satisfiable. Model:
 --   x = 1 :: Word8
@@ -253,14 +255,14 @@ skolemEx2 (Forall x) (Exists k) (Forall y) (Exists l) = x + k .>= y + l
 -- can see the same by doing:
 --
 -- >>> let phi   = skolemEx3
--- >>> let sPhi  = skolemize ["x"] phi :: Forall Word8 -> SBool
+-- >>> let sPhi  = skolemize phi :: Forall "y" Word8 -> SBool
 -- >>> prove sPhi
 -- Falsifiable. Counter-example:
 --   x = 1 :: Word8
 --
 -- So, if you want to check validity and want to also perform skolemization; you should negate your
 -- formula first and then skolemize, not the other way around!
-skolemEx3 :: Exists Word8 -> Forall Word8 -> SBool
+skolemEx3 :: Exists "x" Word8 -> Forall "y" Word8 -> SBool
 skolemEx3 (Exists x) (Forall y) = y .>= x
 
 -- * Special relations

@@ -600,34 +600,34 @@ instance ExtractIO m => ProvableM    m (SymbolicT m SBool) where proofArgReduce 
 instance ExtractIO m => SatisfiableM m SBool where satArgReduce   = return
 instance ExtractIO m => ProvableM    m SBool where proofArgReduce = return
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Forall nm a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Forall a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Forall nm a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Exists nm a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r, EqSymbolic (SBV a)) => SatisfiableM m (ExistsUnique a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r, EqSymbolic (SBV a)) => SatisfiableM m (ExistsUnique nm a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ForallN nm n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ExistsN nm n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Exists a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (Exists nm a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r, EqSymbolic (SBV a)) => ProvableM m (ExistsUnique a -> r) where
+instance (ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r, EqSymbolic (SBV a)) => ProvableM m (ExistsUnique nm a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ForallN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (ForallN nm n a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
-instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ExistsN n a -> r) where
+instance (KnownNat n, ExtractIO m, SymVal a, Constraint Symbolic r, ProvableM m r) => ProvableM m (ExistsN nm n a -> r) where
   proofArgReduce = proofArgReduce . quantifiedBool
 
 {-

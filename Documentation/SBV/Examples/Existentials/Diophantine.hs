@@ -87,7 +87,7 @@ basis :: forall proxy n. KnownNat n => proxy n -> Maybe Int -> [[SInteger]] -> I
 basis _ mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim} cond
  where cond = do as <- mkFreeVars  n
 
-                 constrain $ \(ForallN bs :: ForallN n Integer) ->
+                 constrain $ \(ForallN bs :: ForallN nm n Integer) ->
                         ok as .&& (ok bs .=> as .== bs .|| sNot (bs `less` as))
 
        n = if null m then 0 else length (head m)

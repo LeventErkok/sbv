@@ -65,7 +65,7 @@ module Data.SBV.Core.Data
  , QuantifiedBool(..), EqSymbolic(..), skolemize, qNot
  ) where
 
-import GHC.TypeLits (KnownNat, Nat)
+import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol)
 
 import GHC.Exts     (IsList(..))
 
@@ -418,19 +418,19 @@ instance MonadSymbolic m => Constraint m SBool where
   mkConstraint _ out = void $ output out
 
 -- | An existential symbolic variable, used in building quantified constraints
-newtype Exists a = Exists (SBV a)
+newtype Exists (nm :: Symbol) a = Exists (SBV a)
 
 -- | An existential unique symbolic variable, used in building quantified constraints
-newtype ExistsUnique a = ExistsUnique (SBV a)
+newtype ExistsUnique (nm :: Symbol) a = ExistsUnique (SBV a)
 
 -- | A universal symbolic variable, used in building quantified constraints
-newtype Forall a = Forall (SBV a)
+newtype Forall (nm :: Symbol) a = Forall (SBV a)
 
 -- | A fixed number of existential symbolic variables, used in building quantified constraints
-newtype ExistsN (n :: Nat) a = ExistsN [SBV a]
+newtype ExistsN (nm :: Symbol) (n :: Nat) a = ExistsN [SBV a]
 
 -- | A fixed number of universal symbolic variables, used in in building quantified constraints
-newtype ForallN (n :: Nat) a = ForallN [SBV a]
+newtype ForallN (nm :: Symbol) (n :: Nat) a = ForallN [SBV a]
 
 -- | make a quantifier argument in the given state
 mkQArg :: forall m a. (HasKind a, MonadIO m) => State -> Quantifier -> m (SBV a)
@@ -439,23 +439,23 @@ mkQArg st q = do let k = kindOf (Proxy @a)
                  pure $ SBV $ SVal k (Right (cache (const (return sv))))
 
 -- | Functions of a single existential
-instance (SymVal a, Constraint m r) => Constraint m (Exists a -> r) where
+instance (SymVal a, Constraint m r) => Constraint m (Exists nm a -> r) where
   mkConstraint st fn = mkQArg st EX >>= mkConstraint st . fn . Exists
 
 -- | Functions of a unique single existential
-instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Constraint m (ExistsUnique a -> r) where
+instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Constraint m (ExistsUnique nm a -> r) where
   mkConstraint st = mkConstraint st . rewriteExistsUnique
 
 -- | Functions of a number of existentials
-instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n a -> r) where
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN nm n a -> r) where
   mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st EX) >>= mkConstraint st . fn . ExistsN
 
 -- | Functions of a single universal
-instance (SymVal a, Constraint m r) => Constraint m (Forall a -> r) where
+instance (SymVal a, Constraint m r) => Constraint m (Forall nm a -> r) where
   mkConstraint st fn = mkQArg st ALL >>= mkConstraint st . fn . Forall
 
 -- | Functions of a number of universals
-instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN n a -> r) where
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN nm n a -> r) where
   mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st ALL) >>= mkConstraint st . fn . ForallN
 
 -- | Values that we can turn into a lambda abstraction
@@ -859,48 +859,48 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
 -- NB. 'skolemize' has a very general type to allow for arbitrary nesting of quantifiers.
 -- If you use it, you'll find that you might have to annotate the terms with their types
 -- to make the type-checker happy.
-skolemize :: (Constraint Symbolic b, Skolemize a b) => [String] -> a -> b
-skolemize ns = skolem (ns, [])
+skolemize :: (Constraint Symbolic b, Skolemize a b) => a -> b
+skolemize = skolem []
 
 -- | A class of values that can be skolemized. Note that we don't export this class. Use
 -- the 'skolemize' function instead.
 class Skolemize a b where
-  skolem :: ([String], [SVal]) -> a -> b
+  skolem :: [SVal] -> a -> b
 
 -- | Base case; pure symbolic values
 instance Skolemize (SBV a) (SBV a) where
   skolem _ = id
 
 -- | Skolemize over a universal quantifier
-instance Skolemize r r' => Skolemize (Forall a -> r) (Forall a -> r') where
-  skolem (ns, args) f arg@(Forall a) = skolem (ns, args ++ [unSBV a]) (f arg)
+instance Skolemize r r' => Skolemize (Forall nm a -> r) (Forall nm a -> r') where
+  skolem args f arg@(Forall a) = skolem (args ++ [unSBV a]) (f arg)
 
 -- | Skolemize over a number of universal quantifiers
-instance Skolemize r r' => Skolemize (ForallN n a -> r) (ForallN n a -> r') where
-  skolem (ns, args) f arg@(ForallN xs) = skolem (ns, args ++ map unSBV xs) (f arg)
+instance Skolemize r r' => Skolemize (ForallN nm n a -> r) (ForallN nm n a -> r') where
+  skolem args f arg@(ForallN xs) = skolem (args ++ map unSBV xs) (f arg)
 
 -- | Skolemize over an existential quantifier
-instance (HasKind a, Skolemize r r') => Skolemize (Exists a -> r) r' where
-  skolem ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing!"
-  skolem (n:ns, args) f = skolem (ns, args) (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
+instance (HasKind a, KnownSymbol nm, Skolemize r r') => Skolemize (Exists nm a -> r) r' where
+  skolem args f = skolem args (f (Exists skolemized))
+    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Skolemize over a number of existential quantifiers
-instance (HasKind a, KnownNat n, Skolemize r r') => Skolemize (ExistsN n a -> r) r' where
-  skolem (ns, args) f
-     | length fs == need
-     = skolem (rs, args) (f (ExistsN skolemized))
-     | True
-     = error $ "Skolemize: Ran out of names while skolemizing an ExistN. Needed " ++ show need ++ ", got: " ++ show fs
-    where need     = intOfProxy (Proxy @n)
-          (fs, rs) = splitAt need ns
+instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN nm n a -> r) r' where
+  skolem args f = skolem args (f (ExistsN skolemized))
+    where need   = intOfProxy (Proxy @n)
+          prefix = symbolVal (Proxy @nm)
+          fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
           skolemized = [SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
-instance (HasKind a, Skolemize (Forall a -> Forall a -> SBool) r', QuantifiedBool r, EqSymbolic (SBV a)) => Skolemize (ExistsUnique a -> r) r' where
-  skolem ([],   _)    _ = error "Skolemize: Ran out of names while skolemizing an ExistsUnique!"
-  skolem (n:ns, args) f = skolem (ns, args) (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) n UINone args
+instance (  HasKind a
+          , EqSymbolic (SBV a)
+          , KnownSymbol nm
+          , QuantifiedBool r
+          , Skolemize (Forall (AppendSymbol nm "_unique1") a -> Forall (AppendSymbol nm "_unique2") a -> SBool) r'
+         ) => Skolemize (ExistsUnique nm a -> r) r' where
+  skolem args f = skolem args (rewriteExistsUnique f (Exists skolemized))
+    where skolemized = SBV $ svUninterpreted (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
 -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
@@ -921,27 +921,38 @@ instance QNegate SBool SBool where
   qNegate = sNot
 
 -- | Negate over a universal quantifier. Switches to existential.
-instance QNegate r r' => QNegate (Forall a -> r) (Exists a -> r') where
+instance QNegate r r' => QNegate (Forall nm a -> r) (Exists nm a -> r') where
   qNegate f (Exists a) = qNegate (f (Forall a))
 
 -- | Negate over a number of universal quantifiers
-instance QNegate r r' => QNegate (ForallN n a -> r) (ExistsN n a -> r') where
+instance QNegate r r' => QNegate (ForallN nm n a -> r) (ExistsN nm n a -> r') where
   qNegate f (ExistsN xs) = qNegate (f (ForallN xs))
 
 -- | Negate over an existential quantifier. Switches to universal.
-instance QNegate r r' => QNegate (Exists a -> r) (Forall a -> r') where
+instance QNegate r r' => QNegate (Exists nm a -> r) (Forall nm a -> r') where
   qNegate f (Forall a) = qNegate (f (Exists a))
 
 -- | Negate over a number of existential quantifiers
-instance QNegate r r' => QNegate (ExistsN n a -> r) (ForallN n a -> r') where
+instance QNegate r r' => QNegate (ExistsN nm n a -> r) (ForallN nm n a -> r') where
   qNegate f (ForallN xs) = qNegate (f (ExistsN xs))
 
 -- | Negate over an unique existential quantifier
-instance (QNegate (Exists a -> Forall a -> Forall a -> SBool) (Forall a -> Exists a -> Exists a -> r'), EqSymbolic (SBV a), QuantifiedBool r) => QNegate (ExistsUnique a -> r) (Forall a -> Exists a -> Exists a -> r') where
+instance ( EqSymbolic (SBV a)
+         , QuantifiedBool r
+         , QNegate (Exists nm a -> Forall (AppendSymbol nm "_unique1") a -> Forall (AppendSymbol nm "_unique2") a -> SBool) r'
+         )
+       => QNegate (ExistsUnique nm a -> r) r' where
   qNegate = qNegate . rewriteExistsUnique
 
 -- | Get rid of exists unique: E!x. f x = Ex.Aa.Ab. f x /\ (f a /\ f b => a == b)
-rewriteExistsUnique :: (EqSymbolic (SBV a), QuantifiedBool b) => (ExistsUnique a -> b) -> Exists a -> Forall a -> Forall a -> SBool
+rewriteExistsUnique :: ( QuantifiedBool b                     -- If b can be turned into a boolean
+                       , EqSymbolic (SBV a)                   -- If we can do equality on symbolic a's
+                       )                                      -- THEN
+                    => (ExistsUnique nm a -> b)               -- Given an unique-existential, we can
+                    -> Exists nm a                            -- Turn it into an existential
+                    -> Forall (AppendSymbol nm "_unique1") a  -- A universal
+                    -> Forall (AppendSymbol nm "_unique2") a  -- Another universal
+                    -> SBool                                  -- Making sure given holds, and if both univers hold, they're the same
 rewriteExistsUnique f (Exists x) (Forall x1) (Forall x2) = fx .&& unique
   where fx    = quantifiedBool $ f (ExistsUnique x)
         fx1   = f (ExistsUnique x1)
