@@ -546,17 +546,24 @@ chainAssigns chain = regroup $ partitionEithers chain
 -- This isn't very fool-proof; can be confused if there are binding constructs etc.
 -- Also, the generated text isn't necessarily fully Haskell acceptable.
 -- But it seems to do an OK job for most common use cases.
-makeHaskellFunction :: String -> String -> Maybe String
-makeHaskellFunction resp nm
+makeHaskellFunction :: String -> String -> Maybe [String] -> Maybe String
+makeHaskellFunction resp nm mbArgs
    = case parseSExpr resp of
        Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
                                                        return $ unwords (nm : args) ++ " = " ++ bd
        _                                         -> Nothing
 
-  where -- infinite supply of names
-        supply =  ["x", "y", "z"]
+  where -- infinite supply of names; starting with the ones we're given
+        preSupply = fromMaybe [] mbArgs
+
+        extras =  ["x", "y", "z"]
                ++ [[c] | c <- ['a' .. 'z'], c < 'x']
                ++ ['x' : show i | i <- [(1::Int) ..]]
+
+        mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
+                   | True               = x
+
+        supply = preSupply ++ map mkUnique extras
 
         lambda :: SExpr -> Maybe ([String], String)
         lambda (EApp [ECon "lambda", EApp args, bd]) = do as <- mapM getArg args

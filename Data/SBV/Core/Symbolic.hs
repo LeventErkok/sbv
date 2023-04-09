@@ -37,7 +37,7 @@ module Data.SBV.Core.Symbolic
   , RegExp(..), regExpToSMTString
   , Quantifier(..), needsExistentials, VarContext(..)
   , RoundingMode(..)
-  , SBVType(..), svUninterpreted, newUninterpreted
+  , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
   , ArrayContext(..), ArrayInfo
@@ -844,7 +844,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, SBVType)]                          -- ^ uninterpreted constants
+                     , resUIConsts    :: [(String, (Maybe [String], SBVType))]        -- ^ uninterpreted constants
                      , resDefinitions :: [SMTDef]                                     -- ^ definitions created via smtFunction or lambda
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
@@ -964,16 +964,16 @@ type TableMap = Map.Map (Kind, Kind, [SV]) Int
 type ArrayInfo = (String, (Kind, Kind), ArrayContext)
 
 -- | SMT Arrays generated during a symbolic run
-type ArrayMap  = IMap.IntMap ArrayInfo
+type ArrayMap = IMap.IntMap ArrayInfo
 
 -- | Uninterpreted-constants generated during a symbolic run
-type UIMap     = Map.Map String SBVType
+type UIMap = Map.Map String (Maybe [String], SBVType)
 
 -- | Code-segments for Uninterpreted-constants, as given by the user
-type CgMap     = Map.Map String [String]
+type CgMap = Map.Map String [String]
 
 -- | Cached values, implementing sharing
-type Cache a   = IMap.IntMap [(StableName (State -> IO a), a)]
+type Cache a = IMap.IntMap [(StableName (State -> IO a), a)]
 
 -- | Stage of an interactive run
 data IStage = ISetup        -- Before we initiate contact.
@@ -1332,16 +1332,22 @@ data UICodeKind = UINone          -- no code
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
 svUninterpreted :: Kind -> String -> UICodeKind -> [SVal] -> SVal
-svUninterpreted k nm code args = SVal k $ Right $ cache result
+svUninterpreted k nm code args = svUninterpretedGen k nm code args Nothing
+
+svUninterpretedNamedArgs :: Kind -> String -> UICodeKind -> [(SVal, String)] -> SVal
+svUninterpretedNamedArgs k nm code args = svUninterpretedGen k nm code (map fst args) (Just (map snd args))
+
+svUninterpretedGen :: Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
+svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       newUninterpreted st nm ty code
+                       newUninterpreted st (nm, mbArgNames) ty code
                        sws <- mapM (svToSV st) args
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm) sws
 
 -- | Create a new uninterpreted symbol, possibly with user given code
-newUninterpreted :: State -> String -> SBVType -> UICodeKind -> IO ()
-newUninterpreted st nm t uiCode
+newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO ()
+newUninterpreted st (nm, mbArgNames) t uiCode
   | not isInternal && (null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm))))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
   | True
@@ -1360,11 +1366,12 @@ newUninterpreted st nm t uiCode
 
        uiMap <- readIORef (rUIMap st)
        case nm `Map.lookup` uiMap of
-         Just t' -> checkType t' (return ())
-         Nothing -> modifyState st rUIMap (Map.insert nm t)
-                           $ modifyIncState st rNewUIs (\newUIs -> case nm `Map.lookup` newUIs of
-                                                                     Just t' -> checkType t' newUIs
-                                                                     Nothing -> Map.insert nm t newUIs)
+         Just (_, t') -> checkType t' (return ())
+         Nothing      -> modifyState st rUIMap (Map.insert nm (mbArgNames, t))
+                           $ modifyIncState st rNewUIs
+                                              (\newUIs -> case nm `Map.lookup` newUIs of
+                                                            Just (_, t') -> checkType t' newUIs
+                                                            Nothing      -> Map.insert nm (mbArgNames, t) newUIs)
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"

@@ -553,8 +553,8 @@ mkRelEq nm (fun, order) ak = res
          tk  = smtType ak
          res = "(forall ((x " ++ tk ++ ") (y " ++ tk ++ ")) (= " ++ lhs ++ " " ++ rhs ++ "))"
 
-declUI :: ProgInfo -> (String, SBVType) -> [String]
-declUI ProgInfo{progTransClosures} (i, t) = declareName i t Nothing ++ declClosure
+declUI :: ProgInfo -> (String, (Maybe [String], SBVType)) -> [String]
+declUI ProgInfo{progTransClosures} (i, (_, t)) = declareName i t Nothing ++ declClosure
   where declClosure | Just external <- lookup i progTransClosures
                     =  declareName external t Nothing
                     ++ ["(assert " ++ mkRelEq external ("transitive-closure", i) (argKind t) ++ ")"]

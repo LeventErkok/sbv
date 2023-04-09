@@ -186,36 +186,39 @@ functions of the enclosing universals.
 skolemEx1 :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
 skolemEx1 (Forall x) (Exists y) = x .>= y
 
--- | Consider the formula \(\forall x\,\exists a\,\forall y\,\exists b\, x + a >= y + b\), over bit-vectors of size 8. We can ask SBV to satisfy it:
+-- | Consider the formula \(\forall a\,\exists b\,\forall c\,\exists d\, a + b >= c + d\), over bit-vectors of size 8. We can ask SBV to satisfy it:
 --
 -- >>> sat skolemEx2
 -- Satisfiable
 --
 -- Again, we're left in the dark as to why this is satisfiable. Let's skolemize first, and then call 'sat' on it:
 --
--- >>> sat (skolemize skolemEx2 :: Forall "x" Word8 -> Forall "y" Word8 -> SBool)
+-- >>> sat (skolemize skolemEx2 :: Forall "a" Word8 -> Forall "c" Word8 -> SBool)
 -- Satisfiable. Model:
---   a :: Word8 -> Word8
---   a _ = 0
+--   b :: Word8 -> Word8
+--   b _ = 0
 -- <BLANKLINE>
---   b :: Word8 -> Word8 -> Word8
---   b x y = x + (255 * y)
+--   d :: Word8 -> Word8 -> Word8
+--   d a c = a + (255 * c)
 --
--- Let's see what the solver said. It suggested we should use the value of @0@ for @k@, regardless of the
--- choice of @x@. (Note how @k@ is a function of one variable.) And it suggested using @x + (255 * y)@ for @l@,
--- for whatever we choose for @x@ and @y@. Why does this work? Well, given arbitrary @x@ and @y@, we end up with:
+-- Let's see what the solver said. It suggested we should use the value of @0@ for @b@, regardless of the
+-- choice of @a@. (Note how @b@ is a function of one variable, i.e., of @a@)
+-- And it suggested using @a + (255 * c)@ for @d@,
+-- for whatever we choose for @a@ and @c@. Why does this work? Well, given
+-- arbitrary @a@ and @c@, we end up with:
 --
 -- @
---     x + k >= y + l
---     x + 0 >= y + x + (255 * y)
---     x >= 256y + x
---     x >= x
+--     a + b >= c + d
+--     --> substitute b = 0 and d = a + 255c as suggested by the solver
+--     a + 0 >= c + a + 255c
+--     a >= 256c + a
+--     a >= a
 -- @
 --
--- showing the formula is satisfiable for whatever values you pick for @x@ and @y@. Note that @256@ is simply
+-- showing the formula is satisfiable for whatever values you pick for @a@ and @c@. Note that @256@ is simply
 -- @0@ when interpreted modulo @2^8@. Clever!
-skolemEx2 :: Forall "x" Word8 -> Exists "a" Word8 -> Forall "y" Word8 -> Exists "b" Word8 -> SBool
-skolemEx2 (Forall x) (Exists a) (Forall y) (Exists b) = x + a .>= y + b
+skolemEx2 :: Forall "a" Word8 -> Exists "b" Word8 -> Forall "c" Word8 -> Exists "d" Word8 -> SBool
+skolemEx2 (Forall a) (Exists b) (Forall c) (Exists d) = a + b .>= c + d
 
 -- | A common proof technique to show validity is to show that the negation is unsatisfiable. Note
 -- that if you want to skolemize during this process, you should first /negate/ and then skolemize!

@@ -50,7 +50,7 @@ type SMTLibConverter a =  QueryContext                                  -- ^ Int
                        -> (CnstMap, [(SV, CV)])                         -- ^ constants. The map, and as rendered in order
                        -> [((Int, Kind, Kind), [SV])]                   -- ^ auto-generated tables
                        -> [(Int, ArrayInfo)]                            -- ^ user specified arrays
-                       -> [(String, SBVType)]                           -- ^ uninterpreted functions/constants
+                       -> [(String, (Maybe [String], SBVType))]         -- ^ uninterpreted functions/constants
                        -> [SMTDef]                                      -- ^ user given axioms/definitions
                        -> SBVPgm                                        -- ^ assignments
                        -> S.Seq (Bool, [(String, String)], SV)          -- ^ extra constraints
@@ -65,7 +65,7 @@ type SMTLibIncConverter a =  ProgInfo                              -- ^ Various 
                           -> (CnstMap, [(SV, CV)])                 -- ^ all constants sofar, and new constants
                           -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
                           -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
-                          -> [(String, SBVType)]                   -- ^ newly created uninterpreted functions/constants
+                          -> [(String, (Maybe [String], SBVType))] -- ^ newly created uninterpreted functions/constants
                           -> SBVPgm                                -- ^ assignments
                           -> S.Seq (Bool, [(String, String)], SV)  -- ^ extra constraints
                           -> SMTConfig                             -- ^ configuration

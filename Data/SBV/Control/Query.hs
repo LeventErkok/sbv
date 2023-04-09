@@ -332,8 +332,8 @@ getModelAtIndex mbi = do
               assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [ui | ui@(nm, SBVType as) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [ui | ui@(nm, SBVType as) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
+          let uiFuns = [(nm, t) | (nm, (_, t@(SBVType as))) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [(nm, t) | (nm, (_, t@(SBVType as))) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger

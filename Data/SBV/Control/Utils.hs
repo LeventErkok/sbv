@@ -368,7 +368,7 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
-  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m String
+  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m (String, Maybe [String])
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
@@ -386,36 +386,40 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   -- Given the function, determine what its name is and do some sanity checks
   smtFunName f = do st@State{rUIMap} <- contextState
                     uiMap <- liftIO $ readIORef rUIMap
-                    findName st uiMap
-    where findName st@State{spgm} uiMap = do
+                    nm    <- findName st uiMap
+                    case nm `Map.lookup` uiMap of
+                      Nothing          -> cantFind uiMap
+                      Just (mbArgs, _) -> pure (nm, mbArgs)
+    where cantFind uiMap = error $ unlines $    [ ""
+                                                , "*** Data.SBV.getFunction: Must be called on an uninterpreted function!"
+                                                , "***"
+                                                , "***    Expected to receive a function created by \"uninterpret\""
+                                                ]
+                                             ++ tag
+                                             ++ [ "***"
+                                                , "*** Make sure to call getFunction on uninterpreted functions only!"
+                                                , "*** If that is already the case, please report this as a bug."
+                                                ]
+             where tag = case map fst (Map.toList uiMap) of
+                               []    -> [ "***    But, there are no matching uninterpreted functions in the context." ]
+                               [x]   -> [ "***    The only possible candidate is: " ++ x ]
+                               cands -> [ "***    Candidates are:"
+                                        , "***        " ++ intercalate ", " cands
+                                        ]
+
+          findName st@State{spgm} uiMap = do
              r <- liftIO $ sbvToSV st (smtFunSaturate f)
              liftIO $ forceSVArg r
              SBVPgm asgns <- liftIO $ readIORef spgm
 
-             let cantFind = error $ unlines $    [ ""
-                                                 , "*** Data.SBV.getFunction: Must be called on an uninterpreted function!"
-                                                 , "***"
-                                                 , "***    Expected to receive a function created by \"uninterpret\""
-                                                 ]
-                                              ++ tag
-                                              ++ [ "***"
-                                                 , "*** Make sure to call getFunction on uninterpreted functions only!"
-                                                 , "*** If that is already the case, please report this as a bug."
-                                                 ]
-                      where tag = case map fst (Map.toList uiMap) of
-                                    []    -> [ "***    But, there are no matching uninterpreted functions in the context." ]
-                                    [x]   -> [ "***    The only possible candidate is: " ++ x ]
-                                    cands -> [ "***    Candidates are:"
-                                             , "***        " ++ intercalate ", " cands
-                                             ]
 
              case S.findIndexR ((== r) . fst) asgns of
-               Nothing -> cantFind
+               Nothing -> cantFind uiMap
                Just i  -> case asgns `S.index` i of
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
-                            _                                           -> cantFind
+                            _                                           -> cantFind uiMap
 
-  sexprToFun f (s, e) = do nm <- smtFunName f
+  sexprToFun f (s, e) = do nm <- fst <$> smtFunName f
                            mbRes <- case parseSExprFunction e of
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
                                                            (True, Just v)  -> return $ Just ([], v)
@@ -439,9 +443,9 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 -- function itself will register it automatically. But there are cases where doing this explicitly can
 -- come in handy.
 registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
-registerUISMTFunction f = do st <- contextState
-                             nm <- smtFunName f
-                             io $ newUninterpreted st nm (smtFunType f) UINone
+registerUISMTFunction f = do st   <- contextState
+                             nmas <- smtFunName f
+                             io $ newUninterpreted st nmas (smtFunType f) UINone
 
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our
@@ -651,9 +655,9 @@ instance ( SymVal a,   HasKind a
 -- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
 -- into something more palatable.
 -- If we can't do that, we simply return the input unchanged
-trimFunctionResponse :: String -> String -> String
-trimFunctionResponse resp nm
-  | Just parsed <- makeHaskellFunction resp nm
+trimFunctionResponse :: String -> String -> Maybe [String] -> String
+trimFunctionResponse resp nm mbArgs
+  | Just parsed <- makeHaskellFunction resp nm mbArgs
   = parsed
   | True
   = def $ case trim resp of
@@ -666,14 +670,14 @@ trimFunctionResponse resp nm
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
             => fun -> m (Either String ([(a, r)], r))
-getFunction f = do nm <- smtFunName f
+getFunction f = do (nm, args) <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
                        bad = unexpected "getFunction" cmd "a function value" Nothing
 
                    r <- ask cmd
 
-                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f (trimFunctionResponse r nm, e)
+                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f (trimFunctionResponse r nm args, e)
                                                                                case mbAssocs of
                                                                                  Right assocs -> return $ Right assocs
                                                                                  Left  raw    -> do mbPVS <- pointWiseExtract nm (smtFunType f)
@@ -1030,7 +1034,7 @@ getUIFunCVAssoc mbi (nm, typ) = do
       toRes = recoverKindedValue rt
 
       -- if we fail to parse, we'll return this answer as the string
-      fallBack = trimFunctionResponse r nm
+      fallBack = trimFunctionResponse r nm Nothing
 
       -- In case we end up in the pointwise scenario, boolify the result
       -- as that's the only type we support here.
@@ -1100,7 +1104,7 @@ getObservables = do State{rObservables} <- queryState
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
 -- Generalization of 'Data.SBV.Control.getUIs'.
-getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, SBVType)]
+getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Maybe [String], SBVType))]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
@@ -1131,18 +1135,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      allUninterpreteds <- getUIs
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
-                     let allUiFuns = [u | allSatTrackUFs cfg                                      -- config says consider UIFs
-                                        , u@(nm, SBVType as) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (mustIgnoreVar cfg nm)                              -- make sure they aren't explicitly ignored
+                     let allUiFuns = [(nm, t) | allSatTrackUFs cfg                                             -- config says consider UIFs
+                                              , (nm, (_, t@(SBVType as))) <- allUninterpreteds, length as > 1  -- get the function ones
+                                              , not (mustIgnoreVar cfg nm)                                     -- make sure they aren't explicitly ignored
                                      ]
 
-                         allUiRegs = [u | u@(nm, SBVType as) <- allUninterpreteds, length as == 1  -- non-function ones
-                                        , not (mustIgnoreVar cfg nm)                               -- make sure they aren't explicitly ignored
+                         allUiRegs = [(nm, t) | (nm, (_, t@(SBVType as))) <- allUninterpreteds, length as == 1 -- non-function ones
+                                              , not (mustIgnoreVar cfg nm)                                     -- make sure they aren't explicitly ignored
                                      ]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
-                         collectAcceptable []                           sofar = return sofar
+                         collectAcceptable []                                sofar = return sofar
                          collectAcceptable ((nm, t@(SBVType ats)):rest) sofar
                            | not (any hasUninterpretedSorts ats)
                            = collectAcceptable rest (nm : sofar)

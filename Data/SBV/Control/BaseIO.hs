@@ -59,7 +59,7 @@ getObservables = Trans.getObservables
 -- | Get the uninterpreted constants/functions recorded during a run.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getUIs'
-getUIs :: Query [(String, SBVType)]
+getUIs :: Query [(String, (Maybe [String], SBVType))]
 getUIs = Trans.getUIs
 
 -- | Issue check-sat and get an SMT Result out.
