@@ -39,9 +39,12 @@
 [GOOD] (assert s0)
 [GOOD] (assert (not s1))
 [SEND] (check-sat)
-[RECV] sat
+[RECV] unknown
+[SEND] (get-info :reason-unknown)
+[RECV] (:reason-unknown "smt tactic failed to show goal to be sat/unsat (incomplete quantifiers)")
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-Falsifiable
+Unknown.
+  Reason: smt tactic failed to show goal to be sat/unsat (incomplete quantifiers)
