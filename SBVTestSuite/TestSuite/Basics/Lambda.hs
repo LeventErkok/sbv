@@ -197,6 +197,7 @@ tests =
                                                  tcU = mkTransitiveClosure "tcU" u
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (u (x, y) .&& u (y, z)) .=> tcU (x, z))
+
       , goldenCapturedIO "lambda67" $ runP $ let tcU = mkTransitiveClosure "tcLeq" leq
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
@@ -210,8 +211,8 @@ tests =
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
   where rel, leq :: Relation Integer
-        rel =  uninterpret "R"
-        leq (x, y) = x .<= y
+        rel = uninterpret "R"
+        leq = uncurry $ smtFunction "leq" (.<=)
         po  = isPartialOrder "poR" rel
         poI = isPartialOrder "poI" leq
 
