@@ -336,7 +336,7 @@ module Data.SBV (
 
   -- ** Quantified constraints, quantifier elimination, and skolemization
   -- $quantifiers
-  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..), skolemize, taggedSkolemize, qNot
+  , QuantifiedBool, quantifiedBool, Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..), QNot(..), Skolemize(..)
 
   -- ** Constraint Vacuity
   -- $constraintVacuity

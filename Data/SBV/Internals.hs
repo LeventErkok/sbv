@@ -67,7 +67,7 @@ module Data.SBV.Internals (
 
 import Control.Monad.IO.Class (MonadIO)
 
-import Data.SBV.Core.Data hiding (Forall(..), Exists(..), ForallN(..), ExistsN(..), ExistsUnique(..), skolemize, taggedSkolemize, qNot)
+import Data.SBV.Core.Data hiding (Forall(..), Exists(..), ForallN(..), ExistsN(..), ExistsUnique(..), Skolemize(..), QNot(..))
 
 import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Sized      (SWord)

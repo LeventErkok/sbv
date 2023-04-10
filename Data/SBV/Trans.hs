@@ -120,7 +120,7 @@ module Data.SBV.Trans (
   -- ** Multiple optimization goals
   , OptimizeStyle(..)
   -- ** Objectives
-  , Objective(..), Metric(..)
+  , Objective(..)
   -- ** Soft assumptions
   , assertWithPenalty , Penalty(..)
   -- ** Field extensions

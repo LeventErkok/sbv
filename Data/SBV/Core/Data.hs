@@ -62,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), EqSymbolic(..), skolemize, taggedSkolemize, qNot
+ , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(skolemize, taggedSkolemize)
  ) where
 
 import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol)
@@ -859,25 +859,25 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
   symbolicEq (L1 _) (R1 _) = sFalse
   symbolicEq (R1 _) (L1 _) = sFalse
 
--- | Skolemization. For any formula, skolemization gives back an equisatisfiable formula that
--- has no existential quantifiers in it. You have to provide enough names for all the
--- existentials in the argument. (Extras OK, so you can pass an infinite list if you like.)
--- The names should be distinct, and also different from any other uninterpreted name
--- you might have elsewhere.
-skolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => a -> SkolemsTo a
-skolemize = skolem "" []
-
--- | If you use the same names for skolemized arguments in different functions, they will
--- collide; which is undesirable. Unfortunately there's no easy way for SBV to detect this.
--- In such cases, use 'taggedSkolemize' to add a scope to the skolem-function names generated.
-taggedSkolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => String -> a -> SkolemsTo a
-taggedSkolemize scope = skolem (scope ++ "_") []
-
 -- | A class of values that can be skolemized. Note that we don't export this class. Use
 -- the 'skolemize' function instead.
 class Skolemize a where
   type SkolemsTo a :: Type
   skolem :: String -> [(SVal, String)] -> a -> SkolemsTo a
+
+  -- | Skolemization. For any formula, skolemization gives back an equisatisfiable formula that
+  -- has no existential quantifiers in it. You have to provide enough names for all the
+  -- existentials in the argument. (Extras OK, so you can pass an infinite list if you like.)
+  -- The names should be distinct, and also different from any other uninterpreted name
+  -- you might have elsewhere.
+  skolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => a -> SkolemsTo a
+  skolemize = skolem "" []
+
+  -- | If you use the same names for skolemized arguments in different functions, they will
+  -- collide; which is undesirable. Unfortunately there's no easy way for SBV to detect this.
+  -- In such cases, use 'taggedSkolemize' to add a scope to the skolem-function names generated.
+  taggedSkolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => String -> a -> SkolemsTo a
+  taggedSkolemize scope = skolem (scope ++ "_") []
 
 -- | Base case; pure symbolic values
 instance Skolemize (SBV a) where
