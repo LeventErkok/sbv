@@ -449,7 +449,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
 registerUISMTFunction f = do st   <- contextState
                              nmas <- smtFunName f
-                             io $ newUninterpreted False st nmas (smtFunType f) UINone
+                             io $ newUninterpreted st nmas (smtFunType f) UINone
 
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our

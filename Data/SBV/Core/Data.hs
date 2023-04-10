@@ -892,7 +892,7 @@ instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN n nm a -> r) (Fo
 -- | Skolemize over an existential quantifier
 instance (HasKind a, KnownSymbol nm, Skolemize r r') => Skolemize (Exists nm a -> r) r' where
   skolem args f = skolem args (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Skolemize over a number of existential quantifiers
 instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN n nm a -> r) r' where
@@ -900,7 +900,7 @@ instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (E
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
           fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
-          skolemized = [SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) n UINone args | n <- fs]
+          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) n UINone args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
 instance (  HasKind a
@@ -910,7 +910,7 @@ instance (  HasKind a
           , Skolemize (Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
          ) => Skolemize (ExistsUnique nm a -> r) r' where
   skolem args f = skolem args (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
 -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
