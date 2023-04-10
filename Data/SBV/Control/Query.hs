@@ -332,8 +332,8 @@ getModelAtIndex mbi = do
               assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
 
           -- collect UIs, and UI functions if requested
-          let uiFuns = [(nm, t) | (nm, (_, t@(SBVType as))) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
-              uiRegs = [(nm, t) | (nm, (_, t@(SBVType as))) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
+          let uiFuns = [ui | ui@(nm, (_, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
+              uiRegs = [ui | ui@(nm, (_, SBVType as)) <- uis, length as == 1,                     not (mustIgnoreVar cfg nm)]
 
           -- If there are uninterpreted functions, arrange so that z3's pretty-printer flattens things out
           -- as cex's tend to get larger
@@ -352,9 +352,9 @@ getModelAtIndex mbi = do
                          then Just <$> mapM get allModelInputs
                          else return Nothing
 
-          uiFunVals <- mapM (\ui@(nm, t) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
+          uiFunVals <- mapM (\ui@(nm, (_, t)) -> (\a -> (nm, (t, a))) <$> getUIFunCVAssoc mbi ui) uiFuns
 
-          uiVals    <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal mbi ui) uiRegs
+          uiVals    <- mapM (\ui@(nm, (_, _)) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
           return SMTModel { modelObjectives = []
                           , modelBindings   = toList <$> bindings

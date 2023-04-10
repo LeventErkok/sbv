@@ -1331,14 +1331,14 @@ data UICodeKind = UINone          -- no code
 -- We support uninterpreted-functions as a general means of black-box'ing
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
-svUninterpreted :: Kind -> String -> UICodeKind -> [SVal] -> SVal
-svUninterpreted k nm code args = svUninterpretedGen k nm code args Nothing
+svUninterpreted :: Bool -> Kind -> String -> UICodeKind -> [SVal] -> SVal
+svUninterpreted isSkolem k nm code args = svUninterpretedGen isSkolem k nm code args Nothing
 
-svUninterpretedNamedArgs :: Kind -> String -> UICodeKind -> [(SVal, String)] -> SVal
-svUninterpretedNamedArgs k nm code args = svUninterpretedGen k nm code (map fst args) (Just (map snd args))
+svUninterpretedNamedArgs :: Bool -> Kind -> String -> UICodeKind -> [(SVal, String)] -> SVal
+svUninterpretedNamedArgs isSkolem k nm code args = svUninterpretedGen isSkolem k nm code (map fst args) (Just (map snd args))
 
-svUninterpretedGen :: Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
-svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
+svUninterpretedGen :: Bool -> Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
+svUninterpretedGen _isSkolem k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
                        newUninterpreted st (nm, mbArgNames) ty code
                        sws <- mapM (svToSV st) args

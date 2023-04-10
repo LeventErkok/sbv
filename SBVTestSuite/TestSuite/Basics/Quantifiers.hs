@@ -37,12 +37,12 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
                           , goldenCapturedIO ("quantified_prove" ++ "_" ++ nm) $ \rf -> void $ proveWith z3{verbose=True, redirectVerbose=Just rf} p
                           ]
 
-         others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @xs @4 xs)   -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
-                  , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @xs @4 xs)   -> sum xs .== (0::SWord8)
-                  , goldenCapturedIO "quantifiedB_2" $ check $ \k (ForallN @xs @4 xs) -> sum xs .== (k::SWord8)
-                  , goldenCapturedIO "quantifiedB_3" $ check $ \k (ExistsN @xs @4 xs) -> sum xs .== (k::SWord8)
-                  , goldenCapturedIO "quantifiedB_4" $ check $ \(ExistsN @xs @4 xs) (Exists k) -> sum xs .== (k::SWord8)
-                  , goldenCapturedIO "quantifiedB_5" $ check $ \(ExistsN @xs @4 xs) (Forall k) -> sum xs .== (k::SWord8)
+         others = [ goldenCapturedIO "quantifiedB_0" $ check $ \(ExistsN @4 xs)   -> sAll (.< (20 :: SWord8)) xs .&& sum (1 : xs) .== (0::SWord8)
+                  , goldenCapturedIO "quantifiedB_1" $ check $ \(ExistsN @4 xs)   -> sum xs .== (0::SWord8)
+                  , goldenCapturedIO "quantifiedB_2" $ check $ \k (ForallN @4 xs) -> sum xs .== (k::SWord8)
+                  , goldenCapturedIO "quantifiedB_3" $ check $ \k (ExistsN @4 xs) -> sum xs .== (k::SWord8)
+                  , goldenCapturedIO "quantifiedB_4" $ check $ \(ExistsN @4 xs) (Exists k) -> sum xs .== (k::SWord8)
+                  , goldenCapturedIO "quantifiedB_5" $ check $ \(ExistsN @4 xs) (Forall k) -> sum xs .== (k::SWord8)
                   , goldenCapturedIO "quantifiedB_6" $ check $ quantifiedBool (quantifiedBool (\(Exists (x::SBool)) -> x) )
                   , goldenCapturedIO "quantifiedB_7" $ check $ \(Exists (x :: SBool)) -> quantifiedBool (quantifiedBool (\(Exists (y::SBool)) -> x .|| y) )
                   , goldenCapturedIO "quantifiedB_8" $ check $ \(Exists (x :: SBool)) -> quantifiedBool (\(Exists (y::SBool)) -> x .|| y)
