@@ -9,10 +9,11 @@
 -- Test suite for basic allsat calls
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -22,6 +23,8 @@ import Utils.SBVTestFramework
 
 import Control.Monad(void)
 import Data.List (sortOn)
+
+import qualified Control.Exception as C
 
 data Q
 mkUninterpretedSort ''Q
@@ -36,6 +39,8 @@ tests =
     , goldenVsStringShow "allSat5" $ fmap srt $ allSat $ \x y -> x .< y .&& y .< (4::SWord8)
     , goldenVsStringShow "allSat6" $            allSat t3
     , goldenCapturedIO   "allSat7" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t4)
+    , goldenCapturedIO   "allSat8" $ \rf -> void (allSatWith z3{verbose=True, redirectVerbose=Just rf} t5)
+                                            `C.catch` (\(e :: C.SomeException) -> appendFile rf ("\nEXCEPTION CAUGHT:\n" ++ show e ++ "\n"))
     ]
 
 srt :: AllSatResult -> AllSatResult
@@ -69,3 +74,6 @@ t4 = do x <- sInteger "x"
         constrain $ z `inRange` range
 
         constrain $ distinct [x, y, z]
+
+t5 :: ConstraintSet
+t5 = constrain $ \(Forall x) -> uninterpret "f" x .== x+(1::SInteger)

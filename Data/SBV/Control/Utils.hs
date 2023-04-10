@@ -1460,14 +1460,15 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                      (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
                                                      -- Otherwise, we have things to refute, go for it if we have a good interpretation for it
-                                                     mkNotEq (nm, (typ, Left{})) =
+                                                     mkNotEq (nm, (typ, Left def)) =
                                                         error $ unlines [
                                                             ""
-                                                          , "*** Data.SBV.getFunction: Unsupported: Extracting interpretation for function:"
+                                                          , "*** allSat: Unsupported: Building a rejecting instance for:"
                                                           , "***"
                                                           , "***     " ++ nm ++ " :: " ++ show typ
+                                                          , "***     " ++ def
                                                           , "***"
-                                                          , "*** At this time, the expression returned by the solver is too complicated for SBV!"
+                                                          , "*** At this time, SBV cannot compute allSat when the model has a non-table definition."
                                                           , "***"
                                                           , "*** You can ignore specific functions via the 'isNonModelVar' filter:"
                                                           , "***"
