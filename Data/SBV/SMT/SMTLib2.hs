@@ -104,11 +104,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
                           ]
 
         -- Some cases require all, some require none. Sigh..
-        setAll reason
-           | needsSpecialRels
-           = ["; has special relations, no logic set."]
-           | True
-           = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
+        setAll reason = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
 
         -- Determining the logic is surprisingly tricky!
         logic
@@ -139,6 +135,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
            -- NB. This isn't really fool proof!
 
            -- we never set QF_S (ALL seems to work better in all cases)
+
+           | needsSpecialRels      = ["; has special relations, no logic set."]
 
            -- Things that require ALL
            | hasInteger            = setAll "has unbounded values"
