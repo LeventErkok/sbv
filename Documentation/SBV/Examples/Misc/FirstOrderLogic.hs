@@ -16,6 +16,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -177,7 +178,7 @@ functions of the enclosing universals.
 --
 -- But this isn't really illimunating. We can first skolemize, and then ask to satisfy:
 --
--- >>> sat (skolemize skolemEx1 :: Forall "x" Word8 -> SBool)
+-- >>> sat $ skolemize skolemEx1
 -- Satisfiable. Model:
 --   y :: Word8 -> Word8
 --   y x = x
@@ -193,7 +194,7 @@ skolemEx1 (Forall x) (Exists y) = x .>= y
 --
 -- Again, we're left in the dark as to why this is satisfiable. Let's skolemize first, and then call 'sat' on it:
 --
--- >>> sat (skolemize skolemEx2 :: Forall "a" Word8 -> Forall "c" Word8 -> SBool)
+-- >>> sat $ skolemize skolemEx2
 -- Satisfiable. Model:
 --   b :: Word8 -> Word8
 --   b _ = 0
@@ -232,34 +233,24 @@ skolemEx2 (Forall a) (Exists b) (Forall c) (Exists d) = a + b .>= c + d
 --
 -- Or, we can ask if the negation is unsatisfiable:
 --
--- >>> let phi  = skolemEx3
--- >>> let nPhi = qNot phi :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
--- >>> sat nPhi
+-- >>> sat (qNot skolemEx3)
 -- Unsatisfiable
 --
 -- If we want, we can skolemize after the negation step:
 --
--- >>> let phi   = skolemEx3
--- >>> let nPhi  = qNot phi :: Forall "x" Word8 -> Exists "y" Word8 -> SBool
--- >>> let snPhi = skolemize nPhi :: Forall "x" Word8 -> SBool
--- >>> sat snPhi
+-- >>> sat (skolemize (qNot skolemEx3))
 -- Unsatisfiable
 --
 -- and get the same result. However, it would be __unsound__ to skolemize first and then negate:
 --
--- >>> let phi   = skolemEx3
--- >>> let sPhi  = skolemize phi :: Forall "y" Word8 -> SBool
--- >>> let nsPhi = qNot sPhi :: Exists "y" Word8 -> SBool
--- >>> sat nsPhi
+-- >>> sat (qNot (skolemize skolemEx3))
 -- Satisfiable. Model:
 --   x = 1 :: Word8
 --
 -- And that would be the incorrect conclusion that our formula is invalid with a counter-example! You
 -- can see the same by doing:
 --
--- >>> let phi   = skolemEx3
--- >>> let sPhi  = skolemize phi :: Forall "y" Word8 -> SBool
--- >>> prove sPhi
+-- >>> prove (skolemize skolemEx3)
 -- Falsifiable. Counter-example:
 --   x = 1 :: Word8
 --
@@ -268,42 +259,29 @@ skolemEx2 (Forall a) (Exists b) (Forall c) (Exists d) = a + b .>= c + d
 skolemEx3 :: Exists "x" Word8 -> Forall "y" Word8 -> SBool
 skolemEx3 (Exists x) (Forall y) = y .>= x
 
-
 -- | If you skolemize different formulas that share the same name for their existentials, then SBV will
 -- get confused and will think those represent the same skolem function. This is unfortunate, but it follows
 -- the requirement that uninterpreted function names should be unique. In this particular case, however, since
 -- SBV creates these functions, it is harder to control the internal names. In such cases, use the function
--- 'taggedSkolemize' to provide a name to prefix the skolem functions. As demonstrated by 'skolemEx4', we get:
+-- 'taggedSkolemize' to provide a name to prefix the skolem functions. As demonstrated by 'skolemEx4'. We get:
 --
 -- >>> skolemEx4
 -- Satisfiable. Model:
---   phi1_y :: Integer -> Integer
---   phi1_y x = x
+--   c1_y :: Integer -> Integer
+--   c1_y x = x
 -- <BLANKLINE>
---   phi2_y :: Integer -> Integer
---   phi2_y x = 1 + x
+--   c2_y :: Integer -> Integer
+--   c2_y x = 1 + x
 --
--- Note how the internal skolem functions are named according to the name given. If you use regular 'skolemize'
+-- Note how the internal skolem functions are named according to the tag given. If you use regular 'skolemize'
 -- this program will essentially do the wrong thing by assuming the skolem functions for both predicates are
--- the same. Beware! All skolem functions should be named differently in your program for your deductions to
--- be sound.
+-- the same, and will return unsat. Beware!
+-- All skolem functions should be named differently in your program for your deductions to be sound.
 skolemEx4 :: IO SatResult
-skolemEx4 = sat p
-  where p :: ConstraintSet
-        p = do constrain sPhi1
-               constrain sPhi2
-
-        phi1 :: Forall "x" Integer -> Exists "y" Integer -> SBool
-        phi1 (Forall x) (Exists y) = x .== y
-
-        sPhi1 :: Forall "x" Integer -> SBool
-        sPhi1 = taggedSkolemize "phi1" phi1
-
-        phi2 :: Forall "x" Integer -> Exists "y" Integer -> SBool
-        phi2 (Forall x) (Exists y) = x .== y-1
-
-        sPhi2 :: Forall "x" Integer -> SBool
-        sPhi2 = taggedSkolemize "phi2" phi2
+skolemEx4 = sat cs
+  where cs :: ConstraintSet
+        cs = do constrain $ taggedSkolemize "c1" $ \(Forall @"x" x) (Exists @"y" y) -> x .== (y   :: SInteger)
+                constrain $ taggedSkolemize "c2" $ \(Forall @"x" x) (Exists @"y" y) -> x .== (y-1 :: SInteger)
 
 -- * Special relations
 

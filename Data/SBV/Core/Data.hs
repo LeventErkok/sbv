@@ -77,6 +77,7 @@ import Data.Word              (Word8, Word16, Word32, Word64)
 import Data.List              (elemIndex)
 import Data.Maybe             (fromMaybe)
 
+import Data.Kind (Type)
 import Data.Proxy
 import Data.Typeable          (Typeable)
 
@@ -863,45 +864,47 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
 -- existentials in the argument. (Extras OK, so you can pass an infinite list if you like.)
 -- The names should be distinct, and also different from any other uninterpreted name
 -- you might have elsewhere.
---
--- NB. 'skolemize' has a very general type to allow for arbitrary nesting of quantifiers.
--- If you use it, you'll find that you might have to annotate the terms with their types
--- to make the type-checker happy.
-skolemize :: (Constraint Symbolic b, Skolemize a b) => a -> b
+skolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => a -> SkolemsTo a
 skolemize = skolem "" []
-
--- | A class of values that can be skolemized. Note that we don't export this class. Use
--- the 'skolemize' function instead.
-class Skolemize a b where
-  skolem :: String -> [(SVal, String)] -> a -> b
 
 -- | If you use the same names for skolemized arguments in different functions, they will
 -- collide; which is undesirable. Unfortunately there's no easy way for SBV to detect this.
 -- In such cases, use 'taggedSkolemize' to add a scope to the skolem-function names generated.
-taggedSkolemize :: (Constraint Symbolic b, Skolemize a b) => String -> a -> b
+taggedSkolemize :: (Constraint Symbolic (SkolemsTo a), Skolemize a) => String -> a -> SkolemsTo a
 taggedSkolemize scope = skolem (scope ++ "_") []
 
+-- | A class of values that can be skolemized. Note that we don't export this class. Use
+-- the 'skolemize' function instead.
+class Skolemize a where
+  type SkolemsTo a :: Type
+  skolem :: String -> [(SVal, String)] -> a -> SkolemsTo a
+
 -- | Base case; pure symbolic values
-instance Skolemize (SBV a) (SBV a) where
+instance Skolemize (SBV a) where
+  type SkolemsTo (SBV a) = SBV a
   skolem _ _ = id
 
 -- | Skolemize over a universal quantifier
-instance (KnownSymbol nm, Skolemize r r') => Skolemize (Forall nm a -> r) (Forall nm a -> r') where
+instance (KnownSymbol nm, Skolemize r) => Skolemize (Forall nm a -> r) where
+  type SkolemsTo (Forall nm a -> r) = Forall nm a -> SkolemsTo r
   skolem scope args f arg@(Forall a) = skolem scope (args ++ [(unSBV a, symbolVal (Proxy @nm))]) (f arg)
 
 -- | Skolemize over a number of universal quantifiers
-instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN n nm a -> r) (ForallN n nm a -> r') where
+instance (KnownSymbol nm, Skolemize r) => Skolemize (ForallN n nm a -> r) where
+  type SkolemsTo (ForallN n nm a -> r) = ForallN n nm a -> SkolemsTo r
   skolem scope args f arg@(ForallN xs) = skolem scope (args ++ zipWith grab xs [(1::Int)..]) (f arg)
     where pre = symbolVal (Proxy @nm)
           grab x i = (unSBV x, pre ++ "_" ++ show i)
 
 -- | Skolemize over an existential quantifier
-instance (HasKind a, KnownSymbol nm, Skolemize r r') => Skolemize (Exists nm a -> r) r' where
+instance (HasKind a, KnownSymbol nm, Skolemize r) => Skolemize (Exists nm a -> r) where
+  type SkolemsTo (Exists nm a -> r) = SkolemsTo r
   skolem scope args f = skolem scope args (f (Exists skolemized))
     where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
 
 -- | Skolemize over a number of existential quantifiers
-instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN n nm a -> r) r' where
+instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (ExistsN n nm a -> r) where
+  type SkolemsTo (ExistsN n nm a -> r) = SkolemsTo r
   skolem scope args f = skolem scope args (f (ExistsN skolemized))
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
@@ -913,52 +916,54 @@ instance (  HasKind a
           , EqSymbolic (SBV a)
           , KnownSymbol nm
           , QuantifiedBool r
-          , Skolemize (Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
-         ) => Skolemize (ExistsUnique nm a -> r) r' where
+          , Skolemize (Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool)
+         ) => Skolemize (ExistsUnique nm a -> r) where
+  type SkolemsTo (ExistsUnique nm a -> r) =  Forall (AppendSymbol nm "_eu1") a
+                                          -> Forall (AppendSymbol nm "_eu2") a
+                                          -> SBool
   skolem scope args f = skolem scope args (rewriteExistsUnique f (Exists skolemized))
     where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
 
--- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
--- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
--- quantifiers, so prefer this version if you want to keep them around.
---
--- NB. 'qNot' has a very general type to allow for arbitrary nesting of quantifiers.
--- If you use it, you'll find that you might have to annotate the terms with their types
--- to make the type-checker happy.
-qNot :: (Constraint Symbolic b, QNegate a b) => a -> b
-qNot = qNegate
-
 -- | Class of things that we can logically negate
-class QNegate a b where
-  qNegate :: a -> b
+class QNot a where
+  type NegatesTo a :: Type
+  -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
+  -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
+  -- quantifiers, so prefer this version if you want to keep them around.
+  qNot :: a -> NegatesTo a
 
 -- | Base case; pure symbolic boolean
-instance QNegate SBool SBool where
-  qNegate = sNot
+instance QNot SBool where
+  type NegatesTo SBool = SBool
+  qNot = sNot
 
 -- | Negate over a universal quantifier. Switches to existential.
-instance QNegate r r' => QNegate (Forall nm a -> r) (Exists nm a -> r') where
-  qNegate f (Exists a) = qNegate (f (Forall a))
+instance QNot r => QNot (Forall nm a -> r) where
+  type NegatesTo (Forall nm a -> r) = Exists nm a -> NegatesTo r
+  qNot f (Exists a) = qNot (f (Forall a))
 
 -- | Negate over a number of universal quantifiers
-instance QNegate r r' => QNegate (ForallN nm n a -> r) (ExistsN nm n a -> r') where
-  qNegate f (ExistsN xs) = qNegate (f (ForallN xs))
+instance QNot r => QNot (ForallN nm n a -> r) where
+  type NegatesTo (ForallN nm n a -> r) = ExistsN nm n a -> NegatesTo r
+  qNot f (ExistsN xs) = qNot (f (ForallN xs))
 
 -- | Negate over an existential quantifier. Switches to universal.
-instance QNegate r r' => QNegate (Exists nm a -> r) (Forall nm a -> r') where
-  qNegate f (Forall a) = qNegate (f (Exists a))
+instance QNot r => QNot (Exists nm a -> r) where
+  type NegatesTo (Exists nm a -> r) = Forall nm a -> NegatesTo r
+  qNot f (Forall a) = qNot (f (Exists a))
 
 -- | Negate over a number of existential quantifiers
-instance QNegate r r' => QNegate (ExistsN nm n a -> r) (ForallN nm n a -> r') where
-  qNegate f (ForallN xs) = qNegate (f (ExistsN xs))
+instance QNot r => QNot (ExistsN nm n a -> r) where
+  type NegatesTo (ExistsN nm n a -> r) = ForallN nm n a -> NegatesTo r
+  qNot f (ForallN xs) = qNot (f (ExistsN xs))
 
 -- | Negate over an unique existential quantifier
-instance ( EqSymbolic (SBV a)
-         , QuantifiedBool r
-         , QNegate (Exists nm a -> Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
-         )
-       => QNegate (ExistsUnique nm a -> r) r' where
-  qNegate = qNegate . rewriteExistsUnique
+instance (QNot r, QuantifiedBool r, EqSymbolic (SBV a)) => QNot (ExistsUnique nm a -> r) where
+  type NegatesTo (ExistsUnique nm a -> r) =  Forall nm a
+                                          -> Exists (AppendSymbol nm "_eu1") a
+                                          -> Exists (AppendSymbol nm "_eu2") a
+                                          -> SBool
+  qNot = qNot . rewriteExistsUnique
 
 -- | Get rid of exists unique.
 rewriteExistsUnique :: ( QuantifiedBool b                 -- If b can be turned into a boolean
