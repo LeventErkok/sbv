@@ -268,6 +268,43 @@ skolemEx2 (Forall a) (Exists b) (Forall c) (Exists d) = a + b .>= c + d
 skolemEx3 :: Exists "x" Word8 -> Forall "y" Word8 -> SBool
 skolemEx3 (Exists x) (Forall y) = y .>= x
 
+
+-- | If you skolemize different formulas that share the same name for their existentials, then SBV will
+-- get confused and will think those represent the same skolem function. This is unfortunate, but it follows
+-- the requirement that uninterpreted function names should be unique. In this particular case, however, since
+-- SBV creates these functions, it is harder to control the internal names. In such cases, use the function
+-- 'taggedSkolemize' to provide a name to prefix the skolem functions. As demonstrated by 'skolemEx4', we get:
+--
+-- >>> skolemEx4
+-- Satisfiable. Model:
+--   phi1_y :: Integer -> Integer
+--   phi1_y x = x
+-- <BLANKLINE>
+--   phi2_y :: Integer -> Integer
+--   phi2_y x = 1 + x
+--
+-- Note how the internal skolem functions are named according to the name given. If you use regular 'skolemize'
+-- this program will essentially do the wrong thing by assuming the skolem functions for both predicates are
+-- the same. Beware! All skolem functions should be named differently in your program for your deductions to
+-- be sound.
+skolemEx4 :: IO SatResult
+skolemEx4 = sat p
+  where p :: ConstraintSet
+        p = do constrain sPhi1
+               constrain sPhi2
+
+        phi1 :: Forall "x" Integer -> Exists "y" Integer -> SBool
+        phi1 (Forall x) (Exists y) = x .== y
+
+        sPhi1 :: Forall "x" Integer -> SBool
+        sPhi1 = taggedSkolemize "phi1" phi1
+
+        phi2 :: Forall "x" Integer -> Exists "y" Integer -> SBool
+        phi2 (Forall x) (Exists y) = x .== y-1
+
+        sPhi2 :: Forall "x" Integer -> SBool
+        sPhi2 = taggedSkolemize "phi2" phi2
+
 -- * Special relations
 
 -- ** Partial orders

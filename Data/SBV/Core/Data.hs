@@ -62,7 +62,7 @@ module Data.SBV.Core.Data
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
- , QuantifiedBool(..), EqSymbolic(..), skolemize, qNot
+ , QuantifiedBool(..), EqSymbolic(..), skolemize, taggedSkolemize, qNot
  ) where
 
 import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol)
@@ -868,39 +868,45 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
 -- If you use it, you'll find that you might have to annotate the terms with their types
 -- to make the type-checker happy.
 skolemize :: (Constraint Symbolic b, Skolemize a b) => a -> b
-skolemize = skolem []
+skolemize = skolem "" []
 
 -- | A class of values that can be skolemized. Note that we don't export this class. Use
 -- the 'skolemize' function instead.
 class Skolemize a b where
-  skolem :: [(SVal, String)] -> a -> b
+  skolem :: String -> [(SVal, String)] -> a -> b
+
+-- | If you use the same names for skolemized arguments in different functions, they will
+-- collide; which is undesirable. Unfortunately there's no easy way for SBV to detect this.
+-- In such cases, use 'taggedSkolemize' to add a scope to the skolem-function names generated.
+taggedSkolemize :: (Constraint Symbolic b, Skolemize a b) => String -> a -> b
+taggedSkolemize scope = skolem (scope ++ "_") []
 
 -- | Base case; pure symbolic values
 instance Skolemize (SBV a) (SBV a) where
-  skolem _ = id
+  skolem _ _ = id
 
 -- | Skolemize over a universal quantifier
 instance (KnownSymbol nm, Skolemize r r') => Skolemize (Forall nm a -> r) (Forall nm a -> r') where
-  skolem args f arg@(Forall a) = skolem (args ++ [(unSBV a, symbolVal (Proxy @nm))]) (f arg)
+  skolem scope args f arg@(Forall a) = skolem scope (args ++ [(unSBV a, symbolVal (Proxy @nm))]) (f arg)
 
 -- | Skolemize over a number of universal quantifiers
 instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN n nm a -> r) (ForallN n nm a -> r') where
-  skolem args f arg@(ForallN xs) = skolem (args ++ zipWith grab xs [(1::Int)..]) (f arg)
+  skolem scope args f arg@(ForallN xs) = skolem scope (args ++ zipWith grab xs [(1::Int)..]) (f arg)
     where pre = symbolVal (Proxy @nm)
           grab x i = (unSBV x, pre ++ "_" ++ show i)
 
 -- | Skolemize over an existential quantifier
 instance (HasKind a, KnownSymbol nm, Skolemize r r') => Skolemize (Exists nm a -> r) r' where
-  skolem args f = skolem args (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+  skolem scope args f = skolem scope args (f (Exists skolemized))
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
 
 -- | Skolemize over a number of existential quantifiers
 instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN n nm a -> r) r' where
-  skolem args f = skolem args (f (ExistsN skolemized))
+  skolem scope args f = skolem scope args (f (ExistsN skolemized))
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
           fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
-          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) n UINone args | n <- fs]
+          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ n) UINone args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
 instance (  HasKind a
@@ -909,8 +915,8 @@ instance (  HasKind a
           , QuantifiedBool r
           , Skolemize (Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
          ) => Skolemize (ExistsUnique nm a -> r) r' where
-  skolem args f = skolem args (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+  skolem scope args f = skolem scope args (rewriteExistsUnique f (Exists skolemized))
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
 
 -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
 -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
