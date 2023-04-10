@@ -15,24 +15,22 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] (declare-fun __internal_sbv__TransitiveClosure_tcLeq_ (Int Int) Bool)
-[GOOD] (declare-fun tcLeq (Int Int) Bool)
-[GOOD] (assert (forall ((x Int) (y Int)) (= (tcLeq x y) ((_ transitive-closure __internal_sbv__TransitiveClosure_tcLeq_) x y))))
+[GOOD] (declare-fun U ((_ BitVec 8) (_ BitVec 8)) Bool)
+[GOOD] (declare-fun __internal_sbv__TransitiveClosure_tcU_ ((_ BitVec 8) (_ BitVec 8)) Bool)
+[GOOD] (declare-fun tcU ((_ BitVec 8) (_ BitVec 8)) Bool)
+[GOOD] (assert (forall ((x (_ BitVec 8)) (y (_ BitVec 8))) (= (tcU x y) ((_ transitive-closure __internal_sbv__TransitiveClosure_tcU_) x y))))
 [GOOD] ; --- user defined functions ---
-[GOOD] ; -- user given definition: leq
-[GOOD] (define-fun leq ((l2_s0 Int) (l2_s1 Int)) Bool
-         (<= l2_s0 l2_s1))
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s0 () Bool (forall ((l1_s0 Int) (l1_s1 Int))
-         (let ((l1_s2 (leq l1_s0 l1_s1)))
-         (let ((l1_s3 (__internal_sbv__TransitiveClosure_tcLeq_ l1_s0 l1_s1)))
+[GOOD] (define-fun s0 () Bool (forall ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)))
+         (let ((l1_s2 (U l1_s0 l1_s1)))
+         (let ((l1_s3 (__internal_sbv__TransitiveClosure_tcU_ l1_s0 l1_s1)))
          (let ((l1_s4 (= l1_s2 l1_s3)))
          l1_s4)))))
-[GOOD] (define-fun s1 () Bool (forall ((l1_s0 Int) (l1_s1 Int) (l1_s2 Int))
-         (let ((l1_s3 (leq l1_s0 l1_s1)))
-         (let ((l1_s4 (leq l1_s1 l1_s2)))
+[GOOD] (define-fun s1 () Bool (forall ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)) (l1_s2 (_ BitVec 8)))
+         (let ((l1_s3 (U l1_s0 l1_s1)))
+         (let ((l1_s4 (U l1_s1 l1_s2)))
          (let ((l1_s5 (and l1_s3 l1_s4)))
-         (let ((l1_s6 (tcLeq l1_s0 l1_s2)))
+         (let ((l1_s6 (tcU l1_s0 l1_s2)))
          (let ((l1_s7 (=> l1_s5 l1_s6)))
          l1_s7)))))))
 [GOOD] ; --- arrayDelayeds ---
@@ -42,12 +40,9 @@
 [GOOD] (assert s0)
 [GOOD] (assert (not s1))
 [SEND] (check-sat)
-[RECV] unknown
-[SEND] (get-info :reason-unknown)
-[RECV] (:reason-unknown "smt tactic failed to show goal to be sat/unsat (incomplete quantifiers)")
+[RECV] unsat
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT:
-Unknown.
-  Reason: smt tactic failed to show goal to be sat/unsat (incomplete quantifiers)
+Q.E.D.

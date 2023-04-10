@@ -198,9 +198,10 @@ tests =
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
                                                                      -> (u (x, y) .&& u (y, z)) .=> tcU (x, z))
 
-      , goldenCapturedIO "lambda67" $ runP $ let tcU = mkTransitiveClosure "tcLeq" leq
+      , goldenCapturedIO "lambda67" $ runP $ let u   = uninterpret "U" :: Relation Word8
+                                                 tcU = mkTransitiveClosure "tcU" u
                                              in quantifiedBool (\(Forall x) (Forall y) (Forall z)
-                                                                     -> (leq (x, y) .&& leq (y, z)) .=> tcU (x, z))
+                                                                     -> (u (x, y) .&& u (y, z)) .=> tcU (x, z))
 
       -- Not really lambda related, but kind of fits in here
       , goldenCapturedIO "lambda68" $ runS $ \(Forall x) -> uninterpret "F" x .== 2*x+(3::SInteger)
