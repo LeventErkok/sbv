@@ -1602,7 +1602,7 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                        when (op `notElem` curSpecialRels) $ do
 
                           registerKind st ka
-                          newUninterpreted st (nm, Nothing) (SBVType [ka, ka, KBool]) UINone
+                          newUninterpreted False st (nm, Nothing) (SBVType [ka, ka, KBool]) UINone
 
                           -- Add to the end so if we get incremental ones the order doesn't change for old ones!
                           modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})

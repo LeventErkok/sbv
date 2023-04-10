@@ -205,6 +205,18 @@ tests =
       -- Not really lambda related, but kind of fits in here
       , goldenCapturedIO "lambda68" $ runS $ \(Forall x) -> uninterpret "F" x .== 2*x+(3::SInteger)
       , goldenCapturedIO "lambda69" $ runS $ \(Forall x) (Forall y) -> uninterpret "F" x y .== 2*x+(3-y::SInteger)
+
+      -- Most skolems are tested inline, here's a fancy one!
+      , goldenCapturedIO "lambda70" $
+                let phi :: ExistsUnique "x" Integer -> SBool
+                    phi (ExistsUnique  x) = x .== 0 .|| x .== 1
+
+                    nPhi :: Forall "x" Integer -> Exists "x_eu1" Integer -> Exists "x_eu2" Integer -> SBool
+                    nPhi = qNot phi
+
+                    snPhi :: Forall "x" Integer -> SBool
+                    snPhi = skolemize nPhi
+                in runS snPhi
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))

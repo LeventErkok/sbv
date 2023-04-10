@@ -1338,20 +1338,24 @@ svUninterpretedNamedArgs :: Bool -> Kind -> String -> UICodeKind -> [(SVal, Stri
 svUninterpretedNamedArgs isSkolem k nm code args = svUninterpretedGen isSkolem k nm code (map fst args) (Just (map snd args))
 
 svUninterpretedGen :: Bool -> Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
-svUninterpretedGen _isSkolem k nm code args mbArgNames = SVal k $ Right $ cache result
+svUninterpretedGen isSkolem k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       newUninterpreted st (nm, mbArgNames) ty code
+                       newUninterpreted isSkolem st (nm, mbArgNames) ty code
                        sws <- mapM (svToSV st) args
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm) sws
 
 -- | Create a new uninterpreted symbol, possibly with user given code
-newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO ()
-newUninterpreted st (nm, mbArgNames) t uiCode
-  | not isInternal && (null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm))))
-  = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid identifier."
+newUninterpreted :: Bool -> State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO ()
+newUninterpreted isSkolem st (givenName, mbArgNames) t uiCode
+  | not isInternal && (null givenName || not enclosed && (not (isAlpha (head givenName)) || not (all validChar (tail givenName))))
+  = error $ "Bad uninterpreted constant name: " ++ show givenName ++ ". Must be a valid SMTLib identifier."
   | True
-  = do () <- case uiCode of
+  = do uiMap <- readIORef (rUIMap st)
+
+       let nm = mkUnique uiMap
+
+       () <- case uiCode of
                UINone  -> pure ()
                UISMT d -> modifyState st rDefns (\defs -> d : filter (\o -> smtDefGivenName o /= Just nm) defs)
                             $ noInteractive [ "Defined functions (smtFunction):"
@@ -1364,7 +1368,6 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
                           modifyState st rCgMap (Map.insert nm c) (return ())
 
-       uiMap <- readIORef (rUIMap st)
        case nm `Map.lookup` uiMap of
          Just (_, t') -> checkType t' (return ())
          Nothing      -> modifyState st rUIMap (Map.insert nm (mbArgNames, t))
@@ -1374,16 +1377,28 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                                                             Nothing      -> Map.insert nm (mbArgNames, t) newUIs)
   where checkType :: SBVType -> r -> r
         checkType t' cont
-          | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
+          | t /= t' = error $  "Uninterpreted constant " ++ show givenName ++ " used at incompatible types\n"
                             ++ "      Current type      : " ++ show t ++ "\n"
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
 
         validChar x = isAlphaNum x || x `elem` ("_" :: String)
-        enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` ("|\\" :: String)) (tail (init nm)))
+        enclosed    = head givenName == '|' && last givenName == '|' && length givenName > 2 && not (any (`elem` ("|\\" :: String)) (tail (init givenName)))
 
         -- let internal names go through
-        isInternal = "__internal_sbv_" `isPrefixOf` nm
+        isInternal = "__internal_sbv_" `isPrefixOf` givenName
+
+        -- If this is a skolem func, then uniquify unless we get the exact same value. This isn't really very safe; but I hope
+        -- it'll work for most cases. Why? Because we can have two sepeate skolem vars with the same name and
+        -- types, yet are different as used in different contexts. I don't see an easy way to figure that out. Sigh.
+        mkUnique uiMap
+          | not isSkolem = givenName
+          | True         = head $ filter ok cands
+          where cands = givenName : [givenName ++ "_" ++ show i | i <- [(1::Int) ..]]
+                ok n = case n `Map.lookup` uiMap of
+                         Nothing                        -> True
+                         Just p  | p == (mbArgNames, t) -> True
+                                 | True                 -> False
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()

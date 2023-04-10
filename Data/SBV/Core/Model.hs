@@ -2342,7 +2342,7 @@ instance HasKind a => SMTDefinable (SBV a) where
           result st = do isSMT <- inSMTMode st
                          case (isSMT, uiKind) of
                            (True, UICodeC (v, _)) -> sbvToSV st v
-                           _                      -> do newUninterpreted st (nm, Nothing) (SBVType [ka]) =<< retrieveUICode nm st ka uiKind
+                           _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [ka]) =<< retrieveUICode nm st ka uiKind
                                                         newExpr st ka $ SBVApp (Uninterpreted nm) []
 
 -- Functions of one argument
@@ -2358,7 +2358,7 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                mapM_ forceSVArg [sw0]
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
@@ -2377,7 +2377,7 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                mapM_ forceSVArg [sw0, sw1]
@@ -2398,7 +2398,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2421,7 +2421,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2446,7 +2446,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2473,7 +2473,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2503,7 +2503,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted False st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
