@@ -417,20 +417,28 @@ class MonadSymbolic m => Constraint m a where
 instance MonadSymbolic m => Constraint m SBool where
   mkConstraint _ out = void $ output out
 
--- | An existential symbolic variable, used in building quantified constraints
+-- | An existential symbolic variable, used in building quantified constraints. The name
+-- attached via the symbol is used during skolemization to create a skolem-function name
+-- when this variable is eliminated.
 newtype Exists (nm :: Symbol) a = Exists (SBV a)
 
--- | An existential unique symbolic variable, used in building quantified constraints
+-- | An existential unique symbolic variable, used in building quantified constraints. The name
+-- attached via the symbol is used during skolemization. It's split into two extra names, suffixed
+-- @_eu1@ and @_eu2@, to name the universals in the equivalent formula:
+-- \(\exists! x\,P(x)\Leftrightarrow \exists x\,P(x) \land \forall x_{eu1} \forall x_{eu2} (P(x_{eu1}) \land P(x_{eu2}) \Rightarrow x_{eu1} = x_{eu2}) \)
 newtype ExistsUnique (nm :: Symbol) a = ExistsUnique (SBV a)
 
--- | A universal symbolic variable, used in building quantified constraints
+-- | A universal symbolic variable, used in building quantified constraints. The name attached via the symbol is used
+-- during skolemization. It names the corresponding argument to the skolem-functions within the scope of this quantifier.
 newtype Forall (nm :: Symbol) a = Forall (SBV a)
 
--- | A fixed number of existential symbolic variables, used in building quantified constraints
-newtype ExistsN (nm :: Symbol) (n :: Nat) a = ExistsN [SBV a]
+-- | Exactly @n@ existential symbolic variables, used in building quantified constraints. The name attached
+-- will be prefixed in front of @_1@, @_2@, ..., @_n@ to form the names of the variables.
+newtype ExistsN (n :: Nat) (nm :: Symbol) a = ExistsN [SBV a]
 
--- | A fixed number of universal symbolic variables, used in in building quantified constraints
-newtype ForallN (nm :: Symbol) (n :: Nat) a = ForallN [SBV a]
+-- | Exactly @n@ universal symbolic variables, used in in building quantified constraints. The name attached
+-- will be prefixed in front of @_1@, @_2@, ..., @_n@ to form the names of the variables.
+newtype ForallN (n :: Nat) (nm :: Symbol) a = ForallN [SBV a]
 
 -- | make a quantifier argument in the given state
 mkQArg :: forall m a. (HasKind a, MonadIO m) => State -> Quantifier -> m (SBV a)
@@ -447,7 +455,7 @@ instance (SymVal a, Constraint m r, EqSymbolic (SBV a), QuantifiedBool r) => Con
   mkConstraint st = mkConstraint st . rewriteExistsUnique
 
 -- | Functions of a number of existentials
-instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN nm n a -> r) where
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ExistsN n nm a -> r) where
   mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st EX) >>= mkConstraint st . fn . ExistsN
 
 -- | Functions of a single universal
@@ -455,7 +463,7 @@ instance (SymVal a, Constraint m r) => Constraint m (Forall nm a -> r) where
   mkConstraint st fn = mkQArg st ALL >>= mkConstraint st . fn . Forall
 
 -- | Functions of a number of universals
-instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN nm n a -> r) where
+instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN n nm a -> r) where
   mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st ALL) >>= mkConstraint st . fn . ForallN
 
 -- | Values that we can turn into a lambda abstraction
@@ -876,7 +884,7 @@ instance (KnownSymbol nm, Skolemize r r') => Skolemize (Forall nm a -> r) (Foral
   skolem args f arg@(Forall a) = skolem (args ++ [(unSBV a, symbolVal (Proxy @nm))]) (f arg)
 
 -- | Skolemize over a number of universal quantifiers
-instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN nm n a -> r) (ForallN nm n a -> r') where
+instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN n nm a -> r) (ForallN n nm a -> r') where
   skolem args f arg@(ForallN xs) = skolem (args ++ zipWith grab xs [(1::Int)..]) (f arg)
     where pre = symbolVal (Proxy @nm)
           grab x i = (unSBV x, pre ++ "_" ++ show i)
@@ -884,25 +892,25 @@ instance (KnownSymbol nm, Skolemize r r') => Skolemize (ForallN nm n a -> r) (Fo
 -- | Skolemize over an existential quantifier
 instance (HasKind a, KnownSymbol nm, Skolemize r r') => Skolemize (Exists nm a -> r) r' where
   skolem args f = skolem args (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Skolemize over a number of existential quantifiers
-instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN nm n a -> r) r' where
+instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r r') => Skolemize (ExistsN n nm a -> r) r' where
   skolem args f = skolem args (f (ExistsN skolemized))
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
           fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
-          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) n UINone args | n <- fs]
+          skolemized = [SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) n UINone args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
 instance (  HasKind a
           , EqSymbolic (SBV a)
           , KnownSymbol nm
           , QuantifiedBool r
-          , Skolemize (Forall (AppendSymbol nm "_unique1") a -> Forall (AppendSymbol nm "_unique2") a -> SBool) r'
+          , Skolemize (Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
          ) => Skolemize (ExistsUnique nm a -> r) r' where
   skolem args f = skolem args (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs True (kindOf (Proxy @a)) (symbolVal (Proxy @nm)) UINone args
 
 -- | Negation of a quantified formula. This operation essentially lifts 'sNot' to quantified formulae.
 -- Note that you can achieve the same using @'sNot' . 'quantifiedBool'@, but that will hide the
@@ -941,19 +949,19 @@ instance QNegate r r' => QNegate (ExistsN nm n a -> r) (ForallN nm n a -> r') wh
 -- | Negate over an unique existential quantifier
 instance ( EqSymbolic (SBV a)
          , QuantifiedBool r
-         , QNegate (Exists nm a -> Forall (AppendSymbol nm "_unique1") a -> Forall (AppendSymbol nm "_unique2") a -> SBool) r'
+         , QNegate (Exists nm a -> Forall (AppendSymbol nm "_eu1") a -> Forall (AppendSymbol nm "_eu2") a -> SBool) r'
          )
        => QNegate (ExistsUnique nm a -> r) r' where
   qNegate = qNegate . rewriteExistsUnique
 
--- | Get rid of exists unique: E!x. f x = Ex.Aa.Ab. f x /\ (f a /\ f b => a == b)
-rewriteExistsUnique :: ( QuantifiedBool b                     -- If b can be turned into a boolean
-                       , EqSymbolic (SBV a)                   -- If we can do equality on symbolic a's
-                       )                                      -- THEN
-                    => (ExistsUnique nm a -> b)               -- Given an unique-existential, we can
-                    -> Exists nm a                            -- Turn it into an existential
-                    -> Forall (AppendSymbol nm "_unique1") a  -- A universal
-                    -> Forall (AppendSymbol nm "_unique2") a  -- Another universal
+-- | Get rid of exists unique.
+rewriteExistsUnique :: ( QuantifiedBool b                 -- If b can be turned into a boolean
+                       , EqSymbolic (SBV a)               -- If we can do equality on symbolic a's
+                       )                                  -- THEN
+                    => (ExistsUnique nm a -> b)           -- Given an unique-existential, we can
+                    -> Exists nm a                        -- Turn it into an existential
+                    -> Forall (AppendSymbol nm "_eu1") a  -- A universal
+                    -> Forall (AppendSymbol nm "_eu2") a  -- Another universal
                     -> SBool                                  -- Making sure given holds, and if both univers hold, they're the same
 rewriteExistsUnique f (Exists x) (Forall x1) (Forall x2) = fx .&& unique
   where fx    = quantifiedBool $ f (ExistsUnique x)
