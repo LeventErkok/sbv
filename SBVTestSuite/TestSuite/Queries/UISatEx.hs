@@ -9,8 +9,11 @@
 -- Testing uninterpreted function extraction
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE OverloadedLists     #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,6 +29,7 @@ tests =
   testGroup "Queries.UISatEx"
     [ goldenCapturedIO "query_uisatex1" testQuery1
     , goldenCapturedIO "query_uisatex2" testQuery2
+    , goldenCapturedIO "query_uisatex3" testQuery3
     ]
 
 testQuery1 :: FilePath -> IO ()
@@ -87,3 +91,16 @@ core = do x <- sInteger_
           constrain $ q5 [1,2,3] [8.2, 3] .== 7
           constrain $ q5 [9,5]   [8.2, 9] .== 21
           constrain $ q5 [5]     [8.2, 0] .== 210
+
+testQuery3 :: FilePath -> IO ()
+testQuery3 rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Just rf} t
+                   appendFile rf ("\n FINAL:\n" ++ show r ++ "\nDONE!\n")
+
+  where t = do constrain $ skolemize $ \(Forall @"x" x) (Exists @"y" y) -> y .== 3*(x::SInteger)
+               query $ do cs <- checkSat
+                          case cs of
+                            Sat -> do yv <- getFunction (uninterpret "y" :: SInteger -> SInteger)
+                                      case yv of
+                                        Left x -> pure x
+                                        _      -> error $ "Expected fundef, got: " ++ show yv
+                            _   -> error $ "Expected sat, got: " ++ show cs
