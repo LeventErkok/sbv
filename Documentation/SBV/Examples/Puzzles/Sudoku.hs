@@ -9,13 +9,17 @@
 -- The Sudoku solver, quintessential SMT solver example!
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Puzzles.Sudoku where
 
+#if MIN_VERSION_base(4,18,0)
 import Control.Monad (when)
+#endif
+
 import Control.Monad.State.Lazy
 
 import Data.List     (transpose)
