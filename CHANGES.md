@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 9.2, 2023-01-16
+* Latest Hackage released version: 10.0, 2023-04-14
 
-### Version 10.0, Not yet released
+### Version 10.0, 2023-04-14
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
     ways of creating quantified variables (i.e., the functions sbvForall, sbvExists, universal, existential) are
