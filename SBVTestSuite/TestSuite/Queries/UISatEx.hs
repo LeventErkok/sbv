@@ -104,3 +104,7 @@ testQuery3 rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=J
                                         Left x -> pure x
                                         _      -> error $ "Expected fundef, got: " ++ show yv
                             _   -> error $ "Expected sat, got: " ++ show cs
+
+-- HLint complains about TypeApplications pragma, but if I remove it GHC complains
+-- I'm not sure who is right here; so ignore.
+{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
