@@ -167,10 +167,11 @@ Looking for solution 10
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store ((as const Array) false) false false true)))
+[RECV] ((q2 (store (store ((as const Array) true) false true false) true false false)))
 [GOOD] (define-fun q2_model10 ((x!0 Bool) (x!1 Bool)) Bool
-          (ite (and (= x!0 false) (= x!1 false)) true
-          false)
+          (ite (and (= x!0 true) (= x!1 false)) false
+          (ite (and (= x!0 false) (= x!1 true)) false
+          true))
        )
 [GOOD] (define-fun q2_model10_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -182,11 +183,10 @@ Looking for solution 11
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) false) false false true) true true true)))
+[RECV] ((q2 (store ((as const Array) false) false false true)))
 [GOOD] (define-fun q2_model11 ((x!0 Bool) (x!1 Bool)) Bool
-          (ite (and (= x!0 true) (= x!1 true)) true
           (ite (and (= x!0 false) (= x!1 false)) true
-          false))
+          false)
        )
 [GOOD] (define-fun q2_model11_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -198,11 +198,10 @@ Looking for solution 12
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) false) false false true) true false true)))
+[RECV] ((q2 (store ((as const Array) true) false true false)))
 [GOOD] (define-fun q2_model12 ((x!0 Bool) (x!1 Bool)) Bool
-          (ite (and (= x!0 true) (= x!1 false)) true
-          (ite (and (= x!0 false) (= x!1 false)) true
-          false))
+          (ite (and (= x!0 false) (= x!1 true)) false
+          true)
        )
 [GOOD] (define-fun q2_model12_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -214,10 +213,11 @@ Looking for solution 13
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q2))
-[RECV] ((q2 (store ((as const Array) true) false true false)))
+[RECV] ((q2 (store (store ((as const Array) true) false true false) true true false)))
 [GOOD] (define-fun q2_model13 ((x!0 Bool) (x!1 Bool)) Bool
+          (ite (and (= x!0 true) (= x!1 true)) false
           (ite (and (= x!0 false) (= x!1 true)) false
-          true)
+          true))
        )
 [GOOD] (define-fun q2_model13_reject () Bool
           (exists ((x!0 Bool) (x!1 Bool))
@@ -292,22 +292,22 @@ Solution #3:
   q2 _    _    = True 
 Solution #4:
   q2 :: Bool -> Bool -> Bool
+  q2 True  True = False
   q2 False True = False
   q2 _     _    = True 
 Solution #5:
   q2 :: Bool -> Bool -> Bool
-  q2 True  False = True 
-  q2 False False = True 
-  q2 _     _     = False
+  q2 False True = False
+  q2 _     _    = True 
 Solution #6:
   q2 :: Bool -> Bool -> Bool
-  q2 True  True  = True 
   q2 False False = True 
   q2 _     _     = False
 Solution #7:
   q2 :: Bool -> Bool -> Bool
-  q2 False False = True 
-  q2 _     _     = False
+  q2 True  False = False
+  q2 False True  = False
+  q2 _     _     = True 
 Solution #8:
   q2 :: Bool -> Bool -> Bool
   q2 True False = True 
