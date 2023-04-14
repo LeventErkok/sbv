@@ -15,6 +15,7 @@
 
 module Documentation.SBV.Examples.Puzzles.Sudoku where
 
+import Control.Monad (when)
 import Control.Monad.State.Lazy
 
 import Data.List     (transpose)
