@@ -35,7 +35,7 @@ module Data.SBV.Internals (
 
   -- * Operations useful for instantiating SBV type classes
   , genLiteral, genFromCV, CV(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod, registerKind, svToSV
-  , ProvableM(), SatisfiableM()
+  , ProvableM(), SatisfiableM(), UICodeKind(..)
 
   -- * Compilation to C, extras
   , compileToC', compileToCLib'
@@ -72,7 +72,7 @@ import Data.SBV.Core.Data hiding (Forall(..), Exists(..), ForallN(..), ExistsN(.
 import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Sized      (SWord)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
-import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState)
+import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState, UICodeKind(..))
 
 import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord)
 
