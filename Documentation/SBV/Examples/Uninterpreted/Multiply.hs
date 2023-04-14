@@ -47,9 +47,9 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 -- >>> sat synthMul22
 -- Satisfiable. Model:
 --   mul22_hi :: Bool -> Bool -> Bool -> Bool -> Bool
---   mul22_hi False True  True  True  = True
 --   mul22_hi True  False False True  = True
 --   mul22_hi True  True  False True  = True
+--   mul22_hi False True  True  True  = True
 --   mul22_hi True  False True  True  = True
 --   mul22_hi False True  True  False = True
 --   mul22_hi True  True  True  False = True
@@ -67,12 +67,12 @@ mul22 (a1, a0) (b1, b0) = (mul22_hi, mul22_lo)
 --
 -- >>> :{
 -- mul22_hi :: (SBool, SBool, SBool, SBool) -> SBool
--- mul22_hi params = params `sElem` [ (sFalse, sTrue , sTrue , sTrue )
---                                  , (sTrue , sFalse, sFalse, sTrue )
---                                  , (sTrue , sTrue , sFalse, sTrue )
---                                  , (sTrue , sFalse, sTrue , sTrue )
---                                  , (sFalse, sTrue , sTrue , sFalse)
---                                  , (sTrue , sTrue , sTrue , sFalse)
+-- mul22_hi params = params `sElem` [ (sTrue,  sFalse, sFalse, sTrue)
+--                                  , (sTrue,  sTrue,  sFalse, sTrue)
+--                                  , (sFalse, sTrue,  sTrue,  sTrue)
+--                                  , (sTrue,  sFalse, sTrue,  sTrue)
+--                                  , (sFalse, sTrue,  sTrue,  sFalse)
+--                                  , (sTrue,  sTrue,  sTrue,  sFalse)
 --                                  ]
 -- :}
 --

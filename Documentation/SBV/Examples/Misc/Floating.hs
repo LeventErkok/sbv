@@ -66,19 +66,19 @@ assocPlus x y z = x + (y + z) .== (x + y) + z
 --
 -- >>> assocPlusRegular
 -- Falsifiable. Counter-example:
---   x =   -6.52141e-25 :: Float
---   y =   3.175569e-26 :: Float
---   z = -1.2039427e-31 :: Float
+--   x =  2097149.9 :: Float
+--   y =  13.999817 :: Float
+--   z = -1.9998167 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let x =   -6.52141e-25 :: Float
--- >>> let y =   3.175569e-26 :: Float
--- >>> let z = -1.2039427e-31 :: Float
+-- >>> let x =  2097149.9 :: Float
+-- >>> let y =  13.999817 :: Float
+-- >>> let z = -1.9998167 :: Float
 -- >>> x + (y + z)
--- -6.2038546e-25
+-- 2097162.0
 -- >>> (x + y) + z
--- -6.203854e-25
+-- 2097161.8
 --
 -- Note the difference in the results!
 assocPlusRegular :: IO ThmResult
@@ -100,13 +100,13 @@ assocPlusRegular = prove $ do [x, y, z] <- sFloats ["x", "y", "z"]
 --
 -- >>> nonZeroAddition
 -- Falsifiable. Counter-example:
---   a = 3.6085657e25 :: Float
---   b =   0.13118681 :: Float
+--   a =   -7.441692e23 :: Float
+--   b = -7.5039685e-27 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 3.6085657e25 :: Float
--- >>> let b =   0.13118681 :: Float
+-- >>> let a =   -7.441692e23 :: Float
+-- >>> let b = -7.5039685e-27 :: Float
 -- >>> a + b == a
 -- True
 -- >>> b == 0
@@ -129,11 +129,11 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = 4.725159e-39 :: Float
+--   a = -5.69379e-39 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = 4.725159e-39 :: Float
+-- >>> let a = -5.69379e-39 :: Float
 -- >>> a * (1/a)
 -- 0.99999994
 multInverse :: IO ThmResult
@@ -155,25 +155,25 @@ multInverse = prove $ do a <- sFloat "a"
 --
 -- >>> roundingAdd
 -- Satisfiable. Model:
---   rm = RoundTowardPositive :: RoundingMode
---   x  =      -2.3508738e-38 :: Float
---   y  =       -1.175441e-38 :: Float
+--   rm = RoundTowardZero :: RoundingMode
+--   x  =  -1.0579198e-37 :: Float
+--   y  =   4.7017266e-38 :: Float
 --
 -- (Note that depending on your version of Z3, you might get a different result.)
 -- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
 -- 'SFloatingPoint' type does. We have:
 --
--- >>> fpAdd sRoundNearestTiesToEven (-2.3508738e-38) (-1.175441e-38) :: SFPSingle
--- -3.5263149e-38 :: SFloatingPoint 8 24
--- >>> fpAdd sRoundTowardZero (-2.3508738e-38) (-1.175441e-38) :: SFPSingle
--- -3.52631462e-38 :: SFloatingPoint 8 24
+-- >>> fpAdd sRoundTowardZero (-1.0579198e-37) (4.7017266e-38) :: SFPSingle
+-- -5.87747119e-38 :: SFloatingPoint 8 24
+-- >>> fpAdd sRoundNearestTiesToEven (-1.0579198e-37) (4.7017266e-38) :: SFPSingle
+-- -5.87747175e-38 :: SFloatingPoint 8 24
 --
 -- We can see why these two results are indeed different: The 'RoundTowardZero'
 -- (which rounds towards zero) produces a larger result, closer to 0. Indeed, if we treat these numbers
 -- as 'Double' values, we get:
 --
--- >>> (-2.3508738e-38) + (-1.175441e-38) :: Double
--- -3.5263148e-38
+-- >>> (-1.0579198e-37) + (4.7017266e-38) :: Double
+-- -5.8774714e-38
 --
 -- we see that the "more precise" result is larger than what the 'Float' value is, justifying the
 -- larger value with 'RoundTowardZero'. A more detailed study is beyond our current scope, so we'll

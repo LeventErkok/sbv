@@ -30,7 +30,7 @@ report any issues you might see with newer releases.
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Apr 9th, 2023
+      * Version as downloaded from the above site on Apr 14th, 2023
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
         always use their latest release.
