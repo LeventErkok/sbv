@@ -3,6 +3,10 @@
 
 * Latest Hackage released version: 10.1, 2023-04-14
 
+### Version 10.1.5, New development version
+
+  * No changes yet
+
 ### Version 10.1, 2023-04-14
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
