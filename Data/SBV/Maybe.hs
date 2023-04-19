@@ -119,29 +119,8 @@ fromJust ma
   | True
   = SBV $ SVal ka $ Right $ cache res
   where ka     = kindOf (Proxy @a)
-        kMaybe = KMaybe ka
-
-        -- We play the usual trick here of creating a just value
-        -- and asserting equivalence under implication. This will
-        -- be underspecified as required should the value
-        -- received be `Nothing`.
-        res st = do -- grab an internal variable and make a Maybe out of it
-                    e  <- internalVariable st ka
-                    es <- newExpr st kMaybe (SBVApp (MaybeConstructor ka True) [e])
-
-                    -- Create the condition that it is equal to the input
-                    ms <- sbvToSV st ma
-                    eq <- newExpr st KBool (SBVApp Equal [es, ms])
-
-                    -- Gotta make sure we do this only when input is not nothing
-                    caseNothing <- sbvToSV st (isNothing ma)
-                    require     <- newExpr st KBool (SBVApp Or [caseNothing, eq])
-
-                    -- register the constraint:
-                    internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
-
-                    -- We're good to go:
-                    return e
+        res st = do ms <- sbvToSV st ma
+                    newExpr st ka (SBVApp MaybeAccess [ms])
 
 -- | Construct an @SMaybe a@ from a @Maybe (SBV a)@.
 --

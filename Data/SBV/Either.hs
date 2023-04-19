@@ -201,29 +201,8 @@ fromLeft sab
   | True
   = SBV $ SVal ka $ Right $ cache res
   where ka      = kindOf (Proxy @a)
-        kb      = kindOf (Proxy @b)
-        kEither = KEither ka kb
-
-        -- We play the usual trick here of creating a left value and asserting equivalence
-        -- under implication. This will be underspecified as required should the value
-        -- received be a right thing.
-        res st = do -- grab an internal variable and make a left out of it
-                    e  <- internalVariable st ka
-                    es <- newExpr st kEither (SBVApp (EitherConstructor ka kb False) [e])
-
-                    -- Create the condition that it is equal to the input
-                    ms <- sbvToSV st sab
-                    eq <- newExpr st KBool (SBVApp Equal [es, ms])
-
-                    -- Gotta make sure we do this only when input is not right
-                    caseRight <- sbvToSV st (isRight sab)
-                    require   <- newExpr st KBool (SBVApp Or [caseRight, eq])
-
-                    -- register the constraint:
-                    internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
-
-                    -- We're good to go
-                    return e
+        res st = do ms <- sbvToSV st sab
+                    newExpr st ka (SBVApp (EitherAccess False) [ms])
 
 -- | Return the value from the right component. The behavior is undefined if
 -- passed a left value, i.e., it can return any value.
@@ -245,29 +224,8 @@ fromRight sab
   = literal b
   | True
   = SBV $ SVal kb $ Right $ cache res
-  where ka      = kindOf (Proxy @a)
-        kb      = kindOf (Proxy @b)
-        kEither = KEither ka kb
-
-        -- We play the usual trick here of creating a right value and asserting equivalence
-        -- under implication. This will be underspecified as required should the value
-        -- received be a right thing.
-        res st = do -- grab an internal variable and make a right out of it
-                    e  <- internalVariable st kb
-                    es <- newExpr st kEither (SBVApp (EitherConstructor ka kb True) [e])
-
-                    -- Create the condition that it is equal to the input
-                    ms <- sbvToSV st sab
-                    eq <- newExpr st KBool (SBVApp Equal [es, ms])
-
-                    -- Gotta make sure we do this only when input is not left
-                    caseLeft <- sbvToSV st (isLeft sab)
-                    require  <- newExpr st KBool (SBVApp Or [caseLeft, eq])
-
-                    -- register the constraint:
-                    internalConstraint st False [] $ SVal KBool $ Right $ cache $ \_ -> return require
-
-                    -- We're good to go
-                    return e
+  where kb      = kindOf (Proxy @b)
+        res st = do ms <- sbvToSV st sab
+                    newExpr st kb (SBVApp (EitherAccess True) [ms])
 
 {-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
