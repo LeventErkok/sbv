@@ -211,9 +211,9 @@ fromLeft sab
 -- 'a' :: SChar
 -- >>> prove $ \x -> fromRight (sRight x :: SEither Char Integer) .== (x :: SInteger)
 -- Q.E.D.
--- >>> sat $ \x -> x .== (fromRight (sLeft (literal 'a') :: SEither Char Integer))
+-- >>> sat $ \x -> x .== (fromRight (sLeft (literal 2) :: SEither Integer Char))
 -- Satisfiable. Model:
---   s0 = 0 :: Integer
+--   s0 = 'A' :: Char
 --
 -- Note how we get a satisfying assignment in the last case: The behavior
 -- is unspecified, thus the SMT solver picks whatever satisfies the
