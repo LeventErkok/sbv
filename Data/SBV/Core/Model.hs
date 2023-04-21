@@ -55,7 +55,7 @@ import Control.Monad          (when, unless, mplus)
 import Control.Monad.Trans    (liftIO)
 import Control.Monad.IO.Class (MonadIO)
 
-import GHC.Generics (U1(..), M1(..), (:*:)(..), K1(..))
+import GHC.Generics (M1(..), V1, U1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
@@ -2184,6 +2184,9 @@ symbolicMergeDefault force t x y = G.to $ symbolicMerge' force t (G.from x) (G.f
 -- the generic representations of product types where each element is Mergeable.
 class GMergeable f where
   symbolicMerge' :: Bool -> SBool -> f a -> f a -> f a
+
+instance GMergeable V1 where
+  symbolicMerge' _ _ x _ = x
 
 instance GMergeable U1 where
   symbolicMerge' _ _ _ _ = U1

@@ -81,10 +81,9 @@ import Data.Kind (Type)
 import Data.Proxy
 import Data.Typeable          (Typeable)
 
-import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
+import GHC.Generics (Generic, V1, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
 import qualified Data.Generics as G (Data(..))
-
 
 import qualified Data.IORef         as R    (readIORef)
 import qualified Data.IntMap.Strict as IMap (size, insert)
@@ -840,6 +839,9 @@ symbolicEqDefault x y = symbolicEq (G.from x) (G.from y)
 -- | Not exported, used for implementing generic equality.
 class GEqSymbolic f where
   symbolicEq :: f a -> f a -> SBool
+
+instance GEqSymbolic V1 where
+  symbolicEq _ _ = sTrue
 
 instance GEqSymbolic U1 where
   symbolicEq _ _ = sTrue
