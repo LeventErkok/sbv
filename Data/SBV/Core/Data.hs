@@ -81,7 +81,7 @@ import Data.Kind (Type)
 import Data.Proxy
 import Data.Typeable          (Typeable)
 
-import GHC.Generics (Generic, V1, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
+import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
 import qualified Data.Generics as G (Data(..))
 
@@ -840,8 +840,14 @@ symbolicEqDefault x y = symbolicEq (G.from x) (G.from y)
 class GEqSymbolic f where
   symbolicEq :: f a -> f a -> SBool
 
+{-
+ - N.B. A V1 instance like the below would be wrong!
+ - Why? Because in SBV, we use empty data to mean "uninterpreted" sort; not
+ - something that has no constructors. Perhaps that was a bad design
+ - decision. So, do not allow equality checking of such values.
 instance GEqSymbolic V1 where
   symbolicEq _ _ = sTrue
+-}
 
 instance GEqSymbolic U1 where
   symbolicEq _ _ = sTrue
