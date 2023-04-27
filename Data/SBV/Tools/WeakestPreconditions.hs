@@ -17,6 +17,7 @@
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE NamedFieldPuns         #-}
 {-# LANGUAGE ScopedTypeVariables    #-}
+{-# LANGUAGE TypeOperators          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -206,7 +207,7 @@ instance Show res => Show (ProofResult res) where
 
 
 -- | Checking WP based correctness
-wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st res) => WPConfig -> Program st -> IO (ProofResult res)
+wpProveWith :: forall st res. (Show res, Mergeable st, Queriable IO st, res ~ QueryResult st) => WPConfig -> Program st -> IO (ProofResult res)
 wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postcondition, stability} =
    runSMTWith (wpSolver cfg) $ do setup
                                   query q
@@ -339,7 +340,7 @@ wpProveWith cfg@WPConfig{wpVerbose} Program{setup, precondition, program, postco
                                 ++ measureDecreases   st'
 
 -- | Check correctness using the default solver. Equivalent to @'wpProveWith' 'defaultWPCfg'@.
-wpProve :: (Show res, Mergeable st, Queriable IO st res) => Program st -> IO (ProofResult res)
+wpProve :: (Show res, Mergeable st, Queriable IO st, res ~ QueryResult st) => Program st -> IO (ProofResult res)
 wpProve = wpProveWith defaultWPCfg
 
 -- | Configuration for WP proofs.

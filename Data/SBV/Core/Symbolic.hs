@@ -24,6 +24,7 @@
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
@@ -77,6 +78,7 @@ import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
+import Data.Kind                   (Type)
 
 import Data.Time (getCurrentTime, UTCTime)
 
@@ -784,14 +786,18 @@ class Fresh m a where
 
 -- | An queriable value. This is a generalization of the 'Fresh' class, in case one needs
 -- to be more specific about how projections/embeddings are done.
-class Queriable m a b | a -> b where
+class Queriable m a where
+  type QueryResult a :: Type
+
   -- | ^ Create a new symbolic value of type @a@
   create  :: QueryT m a
+
   -- | ^ Extract the current value in a SAT context
-  project :: a -> QueryT m b
+  project :: a -> QueryT m (QueryResult a)
+
   -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
   -- via the 'QueryT' monad transformer.
-  embed   :: b -> QueryT m a
+  embed   :: QueryResult a -> QueryT m a
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (QueryT m) where

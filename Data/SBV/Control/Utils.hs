@@ -19,7 +19,9 @@
 {-# LANGUAGE ScopedTypeVariables    #-}
 {-# LANGUAGE TupleSections          #-}
 {-# LANGUAGE TypeApplications       #-}
+{-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE ViewPatterns           #-}
+{-# LANGUAGE UndecidableInstances   #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
 
@@ -217,13 +219,15 @@ inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal' values
-instance (MonadIO m, SymVal a) => Queriable m (SBV a) a where
+instance (MonadIO m, SymVal a) => Queriable m (SBV a) where
+  type QueryResult (SBV a) = a
   create  = freshVar_
   project = getValue
   embed   = return . literal
 
 -- | Generic 'Queriable' instance for things that are 'Fresh' and look like containers:
-instance (MonadIO m, SymVal a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) (t a) where
+instance (MonadIO m, SymVal a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) where
+  type QueryResult (t (SBV a)) = t a
   create  = fresh
   project = mapM getValue
   embed   = return . fmap literal
@@ -850,7 +854,8 @@ recoverKindedValue k e = case k of
              | Just (Right assocs) <- mbAssocs = decode assocs
              | True                            = tbd "Expected a set value, but couldn't decipher the solver output."
 
-           where tbd w = error $ unlines [ ""
+           where tbd :: String -> a
+                 tbd w = error $ unlines [ ""
                                          , "*** Data.SBV.interpretSet: Unable to process solver output."
                                          , "***"
                                          , "*** Kind    : " ++ show (KSet ke)

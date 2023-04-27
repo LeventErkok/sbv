@@ -17,6 +17,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE OverloadedLists       #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -60,7 +61,8 @@ instance Show a => Show (AppC a) where
   show (AppC xs ys ts zs) = "{xs = " P.++ show xs P.++ ", ys = " P.++ show ys P.++ ", ts = " P.++ show ts P.++ ", zs = " P.++ show zs P.++ "}"
 
 -- | 'Queriable' instance for the program state
-instance Queriable IO (AppS Integer) (AppC Integer) where
+instance Queriable IO (AppS Integer) where
+  type QueryResult (AppS Integer) = AppC Integer
   create                     = AppS <$> freshVar_   <*> freshVar_   <*> freshVar_   <*> freshVar_
   project (AppS xs ys ts zs) = AppC <$> getValue xs <*> getValue ys <*> getValue ts <*> getValue zs
   embed   (AppC xs ys ts zs) = return $ AppS (literal xs) (literal ys) (literal ts) (literal zs)

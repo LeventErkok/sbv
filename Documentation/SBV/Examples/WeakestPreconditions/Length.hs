@@ -16,6 +16,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -58,7 +59,8 @@ instance Show a => Show (LenC a) where
 
 -- | We have to write the bijection between 'LenS' and 'LenC' explicitly. Luckily, the
 -- definition is more or less boilerplate.
-instance Queriable IO (LenS Integer) (LenC Integer) where
+instance Queriable IO (LenS Integer) where
+  type QueryResult (LenS Integer) = LenC Integer
   create                 = LenS <$> freshVar_   <*> freshVar_   <*> freshVar_
   project (LenS xs ys l) = LenC <$> getValue xs <*> getValue ys <*> getValue l
   embed   (LenC xs ys l) = return $ LenS (literal xs) (literal ys) (literal l)
