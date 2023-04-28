@@ -149,14 +149,17 @@ run pgm = ST.execStateT pgm initState
 -----------------------------------------------------------------------------------------------
 
 -- | We simply run the 'monad' program, and specify the constraints at the end. We take a boolean
--- as a parameter, choosing whether we want to minimize or maximize the model-number. We have:
+-- as a parameter, choosing whether we want to minimize or maximize the model-number. Note that this
+-- test takes rather long to run. We get:
 --
--- >>> puzzle True
+-- @
+-- ghci> puzzle True
 -- Optimal model:
 --   Maximum model number = 96918996924991 :: Int64
--- >>> puzzle False
+-- ghci> puzzle False
 -- Optimal model:
 --   Minimum model number = 91811241911641 :: Int64
+-- @
 puzzle :: Bool -> IO ()
 puzzle shouldMaximize = print =<< optimizeWith z3{isNonModelVar = (/= finalVar)}  Lexicographic problem
   where finalVar | shouldMaximize = "Maximum model number"
