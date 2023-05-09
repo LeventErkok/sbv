@@ -20,6 +20,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies     #-}
 {-# LANGUAGE TypeOperators    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
