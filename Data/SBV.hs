@@ -883,7 +883,7 @@ rarely satisfy the constraints. (As an extreme case, consider @'constrain' 'sFal
 -}
 
 {- $quantifiers
-You can write quantified formulas, and reason with them as in first-order logic. Here is a simple example is:
+You can write quantified formulas, and reason with them as in first-order logic. Here is a simple example:
 
 @
     constrain $ \\(Forall x) (Exists y) -> y .> (x :: SInteger)
