@@ -2781,5 +2781,5 @@ lambdaAsArray f = SArray $ SArr (kindOf (Proxy @a), kindOf (Proxy @b)) $ cache g
 
                   extract =<< newArrayInState Nothing (Right def) st
 
-{-# ANN module   ("HLint: ignore Reduce duplication" :: String) #-}
-{-# ANN module   ("HLint: ignore Eta reduce" :: String)         #-}
+{- HLint ignore module   "Reduce duplication" -}
+{- HLint ignore module   "Eta reduce"         -}

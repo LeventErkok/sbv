@@ -433,4 +433,4 @@ instance ( SymVal a, Metric a
                         msMaximize (nm ++ "^._7") (p^._7)
                         msMaximize (nm ++ "^._8") (p^._8)
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

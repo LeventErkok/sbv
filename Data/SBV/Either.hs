@@ -228,4 +228,4 @@ fromRight sab
         res st = do ms <- sbvToSV st sab
                     newExpr st kb (SBVApp (EitherAccess True) [ms])
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

@@ -334,13 +334,13 @@ eval2 cArg1 cArg2 (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirect
                     _ -> error $ "Unexpected output: " P.++ show cs
 
 
-{-# ANN module ("HLint: ignore Use map once"   :: String) #-}
-{-# ANN module ("HLint: ignore Use sum"        :: String) #-}
-{-# ANN module ("HLint: ignore Fuse foldr/map" :: String) #-}
-{-# ANN module ("HLint: ignore Use zipWith"    :: String) #-}
-{-# ANN module ("HLint: ignore Use uncurry"    :: String) #-}
-{-# ANN module ("HLint: ignore Use even"       :: String) #-}
-{-# ANN module ("HLint: ignore Use odd"        :: String) #-}
-{-# ANN module ("HLint: ignore Use product"    :: String) #-}
-{-# ANN module ("HLint: ignore Avoid lambda"   :: String) #-}
-{-# ANN module ("HLint: ignore Eta reduce"     :: String) #-}
+{- HLint ignore module "Use map once"   -}
+{- HLint ignore module "Use sum"        -}
+{- HLint ignore module "Fuse foldr/map" -}
+{- HLint ignore module "Use zipWith"    -}
+{- HLint ignore module "Use uncurry"    -}
+{- HLint ignore module "Use even"       -}
+{- HLint ignore module "Use odd"        -}
+{- HLint ignore module "Use product"    -}
+{- HLint ignore module "Avoid lambda"   -}
+{- HLint ignore module "Eta reduce"     -}

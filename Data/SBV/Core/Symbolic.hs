@@ -2268,7 +2268,7 @@ instance Show QueryContext where
    show QueryInternal = "Internal Query"
    show QueryExternal = "User Query"
 
-{-# ANN type FPOp ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type PBOp ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type OvOp ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type NROp ("HLint: ignore Use camelCase" :: String) #-}
+{- HLint ignore type FPOp "Use camelCase" -}
+{- HLint ignore type PBOp "Use camelCase" -}
+{- HLint ignore type OvOp "Use camelCase" -}
+{- HLint ignore type NROp "Use camelCase" -}

@@ -1768,5 +1768,5 @@ executeQuery queryContext (QueryT userQuery) = do
                                           , "*** and each call to runSMT should have only one query call inside."
                                           ]
 
-{-# ANN module          ("HLint: ignore Reduce duplication" :: String) #-}
-{-# ANN getAllSatResult ("HLint: ignore Use forM_"          :: String) #-}
+{- HLint ignore module          "Reduce duplication" -}
+{- HLint ignore getAllSatResult "Use forM_"          -}

@@ -56,7 +56,7 @@ type GF28 = SWord 8
 
 -- | Multiplication in GF(2^8). This is simple polynomial multiplication, followed
 -- by the irreducible polynomial @x^8+x^4+x^3+x^1+1@. We simply use the 'pMult'
--- function exported by SBV to do the operation. 
+-- function exported by SBV to do the operation.
 gf28Mult :: GF28 -> GF28 -> GF28
 gf28Mult x y = pMult (x, y, [8, 4, 3, 1, 0])
 
@@ -449,7 +449,7 @@ t256Dec = aesDecrypt ct ks
 -- @
 --   quickCheck aes128IsCorrect
 -- @
--- 
+--
 -- and get some degree of confidence in our code. Similar predicates can be easily constructed for 192, and
 -- 256 bit cases as well.
 aes128IsCorrect :: (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ plain-text words
@@ -594,5 +594,5 @@ hex8 :: (SymVal a, Show a, Integral a) => SBV a -> String
 hex8 v = replicate (8 - length s) '0' ++ s
   where s = flip showHex "" . fromJust . unliteral $ v
 
-{-# ANN aesRound    ("HLint: ignore Use head" :: String) #-}
-{-# ANN aesInvRound ("HLint: ignore Use head" :: String) #-}
+{- HLint ignore aesRound    "Use head" -}
+{- HLint ignore aesInvRound "Use head" -}

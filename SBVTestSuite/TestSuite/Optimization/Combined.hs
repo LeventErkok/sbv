@@ -84,4 +84,4 @@ pareto3 = do x <- sInteger "x"
              minimize "min_x"            x
              maximize "max_x_plus_x"   $ x + x
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

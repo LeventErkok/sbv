@@ -174,4 +174,4 @@ querySumMergeEither2 = query $ do
    bv <- getValue b
    return (xv, yv, bv)
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

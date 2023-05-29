@@ -82,5 +82,5 @@ tests = testGroup "Basics.Quantifiers" $ concatMap mkGoal goals ++ concatMap mkP
          t2 A E act = pure $ quantifiedBool $ \(Forall x) (Exists y) -> act x y
          t2 A A act = pure $ quantifiedBool $ \(Forall x) (Forall y) -> act x y
 
-{-# ANN module ("HLint: ignore Reduce duplication"     :: String) #-}
-{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
+{- HLint ignore module "Reduce duplication"     -}
+{- HLint ignore module "Unused LANGUAGE pragma" -}

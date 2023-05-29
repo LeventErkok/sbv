@@ -163,4 +163,4 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
                                                      io . putStrLn $ "P2: " ++ show p2V
                                                      io . putStrLn $ "Ts: " ++ show ts
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

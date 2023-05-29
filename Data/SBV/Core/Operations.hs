@@ -41,7 +41,7 @@ module Data.SBV.Core.Operations
   , svBarrelRotateLeft, svBarrelRotateRight
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
-  , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord 
+  , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord
   -- ** Basic array operations
   , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   -- Utils
@@ -1452,6 +1452,6 @@ svFloatingPointAsSWord fVal@(SVal kFrom@(KFP eb sb) _)
                              return n
 svFloatingPointAsSWord (SVal k _) = error $ "svFloatingPointAsSWord: non-float type: " ++ show k
 
-{-# ANN svIte     ("HLint: ignore Eta reduce" :: String)         #-}
-{-# ANN svLazyIte ("HLint: ignore Eta reduce" :: String)         #-}
-{-# ANN module    ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore svIte     "Eta reduce"         -}
+{- HLint ignore svLazyIte "Eta reduce"         -}
+{- HLint ignore module    "Reduce duplication" -}

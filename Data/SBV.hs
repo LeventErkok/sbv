@@ -1613,4 +1613,4 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
 
                        newExpr st KBool $ SBVApp (SpecialRelOp ka iop) []
 
-{-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
+{- HLint ignore module "Use import/export shortcut" -}

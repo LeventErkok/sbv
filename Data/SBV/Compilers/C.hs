@@ -1069,4 +1069,4 @@ getLDFlag (o, k) = flag o
                        , FP_IsZero
                        ]
 
-{-# ANN module ("HLint: ignore Redundant lambda" :: String) #-}
+{- HLint ignore module "Redundant lambda" -}

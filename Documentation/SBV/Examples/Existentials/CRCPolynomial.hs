@@ -79,4 +79,4 @@ genPoly hd maxCnt = do res <- allSatWith defaultSMTCfg{allSatMaxModelCount = Jus
 findHD4Polynomials :: Int -> IO ()
 findHD4Polynomials = genPoly 4
 
-{-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}
+{- HLint ignore crc_48_16 "Use camelCase" -}

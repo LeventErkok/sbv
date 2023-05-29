@@ -136,7 +136,7 @@ buffer. We would like to hear if you do need these functions regularly so we can
 -- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord32AsSFloat (sFloatAsComparableSWord32 x) `fpIsEqualObject` x
 -- Q.E.D.
 sComparableSWord32AsSFloat :: SWord32 -> SFloat
-sComparableSWord32AsSFloat = CF.sComparableSWord32AsSFloat 
+sComparableSWord32AsSFloat = CF.sComparableSWord32AsSFloat
 
 -- | Inverse transformation to 'sDoubleAsComparableSWord64'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
@@ -146,7 +146,7 @@ sComparableSWord32AsSFloat = CF.sComparableSWord32AsSFloat
 -- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWord64AsSDouble (sDoubleAsComparableSWord64 x) `fpIsEqualObject` x
 -- Q.E.D.
 sComparableSWord64AsSDouble :: SWord64 -> SDouble
-sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble 
+sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble
 
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
@@ -158,4 +158,4 @@ sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble
 sComparableSWordAsSFloatingPoint :: forall eb sb. (KnownNat (eb + sb), BVIsNonZero (eb + sb), ValidFloat eb sb) => SWord (eb + sb) -> SFloatingPoint eb sb
 sComparableSWordAsSFloatingPoint = CF.sComparableSWordAsSFloatingPoint
 
-{-# ANN module ("HLint: ignore Use import/export shortcut" :: String) #-}
+{- HLint ignore module "Use import/export shortcut" -}

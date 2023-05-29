@@ -59,5 +59,5 @@ crcGood hd divisor sent received =
 mkPoly :: SWord 16 -> SWord 64
 mkPoly d = 1 # d
 
-{-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN crcGoodE  ("HLint: ignore Use <$>"       :: String) #-}
+{- HLint ignore crc_48_16 "Use camelCase" -}
+{- HLint ignore crcGoodE  "Use <$>"       -}

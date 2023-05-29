@@ -784,4 +784,4 @@ st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
 
 sst :: [STuple Integer Integer]
 sst = map literal st
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

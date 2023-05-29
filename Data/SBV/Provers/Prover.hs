@@ -886,4 +886,4 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SExecutabl
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SExecutable m p) => SExecutable m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
   sName k = mkArg >>= \a -> sName $ \b c d e f g -> k (a, b, c, d, e, f, g)
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

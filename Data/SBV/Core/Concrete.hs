@@ -523,4 +523,4 @@ randomCVal k =
 randomCV :: Kind -> IO CV
 randomCV k = CV k <$> randomCVal k
 
-{-# ANN module ("HLint: ignore Redundant if" :: String) #-}
+{- HLint ignore module "Redundant if" -}

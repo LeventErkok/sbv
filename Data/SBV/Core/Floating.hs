@@ -763,4 +763,4 @@ instance ValidFloat eb sb => IEEEFloating (FloatingPoint eb sb) where
   --       fpIsPositiveZero :: SBV a -> SBool
   --       fpIsPoint        :: SBV a -> SBool
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

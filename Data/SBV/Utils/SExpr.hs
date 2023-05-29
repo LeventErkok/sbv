@@ -621,4 +621,4 @@ makeHaskellFunction resp nm mbArgs
                 -- give up, and just do prefix!
                 app xs = unwords xs
 
-{-# ANN chainAssigns ("HLint: ignore Redundant if" :: String) #-}
+{- HLint ignore chainAssigns "Redundant if" -}

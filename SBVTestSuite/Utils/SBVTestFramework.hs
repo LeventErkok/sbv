@@ -233,4 +233,4 @@ shouldNotTypeCheck a = do
       | True
       -> throwIO e
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

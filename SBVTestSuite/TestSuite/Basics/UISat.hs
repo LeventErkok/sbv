@@ -56,4 +56,4 @@ test3 = do setLogic Logic_ALL
            registerUISMTFunction q1
            registerUISMTFunction q2
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}
