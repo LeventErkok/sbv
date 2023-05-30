@@ -215,3 +215,5 @@ ex2 = check (Program  $ Var "x" `Plus` Var "y")
 ex3 :: IO (Either String CheckResult)
 ex3 = check (Program  $ Var "notAValidVar")
             (Property $ Var "result" `LessThan` Lit 10)
+
+{- HLint ignore module "Use fewer imports" -}

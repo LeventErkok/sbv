@@ -17,7 +17,7 @@
 module Documentation.SBV.Examples.Puzzles.Sudoku where
 
 #if MIN_VERSION_base(4,18,0)
-import Control.Monad (when)
+import Control.Monad (when, zipWithM_)
 #endif
 
 import Control.Monad.State.Lazy
@@ -73,7 +73,7 @@ fillBoard board = runSMT $ do
                 case cs of
                   Sat   -> do vals <- mapM getValue subst
                               pure $ fill id vals
-                  Unsat -> error $ "Unsolvable puzzle!"
+                  Unsat -> error "Unsolvable puzzle!"
                   _     -> error $ "Solver said: " ++ show cs
 
  where fill xform = evalState (mapM (mapM replace) board)
@@ -88,10 +88,10 @@ sudoku :: Puzzle -> IO ()
 sudoku board = fillBoard board >>= displayBoard
  where displayBoard :: Puzzle -> IO ()
        displayBoard puzzle = do
-            let sh       (i, r) = show r ++ if i `elem` [3, 6] then " " else ""
-                printRow (i, r) = do putStrLn $ "    " ++ unwords (map sh (zip [(1::Int)..] r))
-                                     when (i `elem` [3, 6]) $ putStrLn ""
-            mapM_ printRow (zip [(1::Int)..] puzzle)
+            let sh       i r = show r ++ if i `elem` [3, 6] then " " else ""
+                printRow i r = do putStrLn $ "    " ++ unwords (zipWith sh [(1::Int)..] r)
+                                  when (i `elem` [3, 6]) $ putStrLn ""
+            zipWithM_ printRow [(1::Int)..] puzzle
 
             let isValid = valid (map (map literal) puzzle)
             case unliteral isValid of

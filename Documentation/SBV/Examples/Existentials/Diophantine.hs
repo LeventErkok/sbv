@@ -12,6 +12,7 @@
 
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -36,8 +37,8 @@ data Solution = Homogeneous    [[Integer]]
 
 instance Show Solution where
   show s = case s of
-             Homogeneous        xss -> comb supplyH (zip (repeat False) xss)
-             NonHomogeneous css xss -> intercalate "\n" [comb supplyNH ((True, cs) : zip (repeat False) xss) | cs <- css]
+             Homogeneous        xss -> comb supplyH (map (False,) xss)
+             NonHomogeneous css xss -> intercalate "\n" [comb supplyNH ((True, cs) : map (False,) xss) | cs <- css]
     where supplyH  = ['k' : replicate i '\'' | i <- [0 ..]]
           supplyNH = "" : supplyH
 

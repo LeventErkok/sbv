@@ -126,3 +126,6 @@ puzzle = do BD birthMonth birthDay <- mkBirthday
 -- This is the only solution.
 cheryl :: IO ()
 cheryl = print =<< allSat puzzle
+
+{- HLint ignore puzzle "Redundant lambda" -}
+{- HLint ignore puzzle "Eta reduce"       -}

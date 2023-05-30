@@ -20,6 +20,7 @@ arguments :: [String]
 arguments =
     [ "Data"
     , "SBVTestSuite"
+    , "Documentation"
     , "-i", "Use otherwise"
     , "-i", "Parse error"
     , "--cpp-simple"

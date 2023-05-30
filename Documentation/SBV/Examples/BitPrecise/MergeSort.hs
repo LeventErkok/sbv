@@ -9,6 +9,8 @@
 -- Symbolic implementation of merge-sort and its correctness.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE TupleSections #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.BitPrecise.MergeSort where
@@ -60,7 +62,7 @@ nonDecreasing (a:b:xs) = a .<= b .&& nonDecreasing (b:xs)
 -- is a subset of the other, when considered as a set. The check is slightly complicated
 -- for the need to account for possibly duplicated elements.
 isPermutationOf :: [E] -> [E] -> SBool
-isPermutationOf as bs = go as (zip bs (repeat sTrue)) .&& go bs (zip as (repeat sTrue))
+isPermutationOf as bs = go as (map (, sTrue) bs) .&& go bs (map (, sTrue) as)
   where go []     _  = sTrue
         go (x:xs) ys = let (found, ys') = mark x ys in found .&& go xs ys'
         -- Go and mark off an instance of 'x' in the list, if possible. We keep track

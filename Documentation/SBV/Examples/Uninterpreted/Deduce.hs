@@ -71,3 +71,6 @@ test = prove $ do constrain $ \(Forall p) (Forall q) (Forall r) -> (p `or` q) `a
                   r <- free "r"
                   return $   not (p `or` (q `and` r))
                          .== (not p `and` not q) `or` (not p `and` not r)
+
+-- Hlint gets confused and thinks the use of @not@ above is from the prelude. Sigh.
+{- HLint ignore test "Redundant not" -}
