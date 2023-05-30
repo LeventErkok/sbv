@@ -75,4 +75,4 @@ q5 = do a <- sInteger "a"
         constrain $ b .>= 0
         minimize "goal" $ a+b
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

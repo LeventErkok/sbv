@@ -439,4 +439,4 @@ isConcretelyEmpty :: SString -> Bool
 isConcretelyEmpty ss | Just s <- unliteral ss = P.null s
                      | True                   = False
 
-{-# ANN implode ("HLint: ignore Use concatMap" :: String) #-}
+{- HLint ignore implode "Use concatMap" -}

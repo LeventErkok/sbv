@@ -108,5 +108,5 @@ t11 = do x <- sInteger "x"
          c <- sChar "c"
          constrain $ L.length (cf4 x c) .== 1
 
-{-# ANN module ("HLint: ignore Use ."        :: String) #-}
-{-# ANN module ("HLint: ignore Redundant ^." :: String) #-}
+{- HLint ignore module "Use ."        -}
+{- HLint ignore module "Redundant ^." -}

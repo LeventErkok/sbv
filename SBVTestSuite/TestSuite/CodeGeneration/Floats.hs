@@ -164,4 +164,4 @@ tests = testGroup "CodeGeneration.Floats" [
           , test1 "d_FP_IsPositive"         (fpIsPositive :: SDouble -> SBool)
           ]
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

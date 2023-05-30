@@ -13,16 +13,16 @@
 -- Here's Legato's algorithm, as coded in Mostek assembly:
 --
 -- @
---    step1 :       LDX #8         ; load X immediate with the integer 8 
---    step2 :       LDA #0         ; load A immediate with the integer 0 
---    step3 : LOOP  ROR F1         ; rotate F1 right circular through C 
---    step4 :       BCC ZCOEF      ; branch to ZCOEF if C = 0 
---    step5 :       CLC            ; set C to 0 
---    step6 :       ADC F2         ; set A to A+F2+C and C to the carry 
---    step7 : ZCOEF ROR A          ; rotate A right circular through C 
---    step8 :       ROR LOW        ; rotate LOW right circular through C 
---    step9 :       DEX            ; set X to X-1 
---    step10:       BNE LOOP       ; branch to LOOP if Z = 0 
+--    step1 :       LDX #8         ; load X immediate with the integer 8
+--    step2 :       LDA #0         ; load A immediate with the integer 0
+--    step3 : LOOP  ROR F1         ; rotate F1 right circular through C
+--    step4 :       BCC ZCOEF      ; branch to ZCOEF if C = 0
+--    step5 :       CLC            ; set C to 0
+--    step6 :       ADC F2         ; set A to A+F2+C and C to the carry
+--    step7 : ZCOEF ROR A          ; rotate A right circular through C
+--    step8 :       ROR LOW        ; rotate LOW right circular through C
+--    step9 :       DEX            ; set X to X-1
+--    step10:       BNE LOOP       ; branch to LOOP if Z = 0
 -- @
 --
 -- This program came to be known as the Legato's challenge in the community, where
@@ -309,5 +309,5 @@ legatoInC = compileToC Nothing "runLegato" $ do
                 cgOutput "hi" hi
                 cgOutput "lo" lo
 
-{-# ANN legato ("HLint: ignore Redundant $" :: String)        #-}
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore legato "Redundant $"        -}
+{- HLint ignore module "Reduce duplication" -}

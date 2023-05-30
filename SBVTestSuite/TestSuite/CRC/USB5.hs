@@ -58,4 +58,4 @@ usbGood sent16 received16 =
          frameSent     = mkFrame sent
          frameReceived = mkFrame received
 
-{-# ANN crc_11_16 ("HLint: ignore Use camelCase" :: String) #-}
+{- HLint ignore crc_11_16 "Use camelCase" -}

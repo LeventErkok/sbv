@@ -67,7 +67,7 @@ inSubState inState comp = do
         --      It better be the case that in "toLambda" below, you do something with it.
         --
         -- Note the above applies to all the IORefs, which is most of the state, though
-        -- not all. For the time being, those are pathCond, stCfg, and startTime; which 
+        -- not all. For the time being, those are pathCond, stCfg, and startTime; which
         -- don't really impact anything.
         comp State {
                    -- These are not IORefs; so we share by copying  the value; changes won't be copied back
@@ -303,4 +303,4 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                        tableMap   = IM.empty
                        funcMap    = M.empty
 
-{-# ANN module ("HLint: ignore Use second" :: String) #-}
+{- HLint ignore module "Use second" -}

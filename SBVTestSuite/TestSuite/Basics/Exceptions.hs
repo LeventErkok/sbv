@@ -65,4 +65,4 @@ z3Exc2 rf = do r <- runSMT z3ExcCatch `C.catch` \(e :: SBVException) -> return (
                         query $ do constrain $ x*y .== x*x
                                    show <$> checkSat
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

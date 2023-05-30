@@ -168,4 +168,4 @@ setOfTuples cfg = satWith cfg $ do
     y <- free_
     return $ x ./= y
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

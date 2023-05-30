@@ -60,4 +60,4 @@ crcUniGood hd sent received =
    where frameSent     = blastLE $ mkFrame sent
          frameReceived = blastLE $ mkFrame received
 
-{-# ANN crc_48_16 ("HLint: ignore Use camelCase" :: String) #-}
+{- HLint ignore crc_48_16 "Use camelCase" -}

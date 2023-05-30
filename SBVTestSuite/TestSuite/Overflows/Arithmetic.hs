@@ -239,4 +239,4 @@ overflow1 op cond = do x  <- free "x"
 
                        return $ overflowHappens `exactlyWhen` (extResult `svGreaterThan` toLarge (maxBound :: SBV a))
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

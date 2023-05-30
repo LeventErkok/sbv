@@ -173,4 +173,4 @@ demoDependent = do
   results <- satConcurrentWithAll z3 [firstQuery v1 v2, secondQuery v2] (sharedDependent v1)
   print results
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

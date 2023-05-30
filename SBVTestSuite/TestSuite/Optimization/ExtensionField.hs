@@ -52,4 +52,4 @@ optExtField3 = do x <- sReal "x"
 
                   maximize "x_plus_y" $ x + y
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

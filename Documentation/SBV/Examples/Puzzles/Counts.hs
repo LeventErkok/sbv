@@ -83,4 +83,4 @@ counts = do res <- allSat $ puzzle `fmap` mkFreeVars 10
                      ++ ", of 8 is " ++ show (ns !! 8)
                      ++ ", of 9 is " ++ show (ns !! 9)
                      ++ "."
-{-# ANN counts ("HLint: ignore Use head" :: String) #-}
+{- HLint ignore counts "Use head" -}

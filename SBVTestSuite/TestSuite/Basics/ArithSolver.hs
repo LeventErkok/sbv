@@ -869,4 +869,4 @@ se = [Left 3, Right 5]
 st :: [(Integer, Integer)]
 st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

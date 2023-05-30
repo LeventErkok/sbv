@@ -153,4 +153,4 @@ q8 = query $ do x :: SArray Integer Integer <- freshArray "x" Nothing
 
                 pure (r1, r2)
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

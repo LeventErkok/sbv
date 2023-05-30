@@ -94,4 +94,4 @@ q4 = do a <- sInteger "a"
                                  ,   a .== b .&& g c ./= g d
                                  ]
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

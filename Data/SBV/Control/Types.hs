@@ -251,5 +251,5 @@ instance Show Logic where
   show Logic_NONE      = "Logic_NONE"
   show (CustomLogic l) = l
 
-{-# ANN type SMTInfoResponse ("HLint: ignore Use camelCase" :: String) #-}
-{-# ANN type Logic           ("HLint: ignore Use camelCase" :: String) #-}
+{- HLint ignore type SMTInfoResponse "Use camelCase" -}
+{- HLint ignore type Logic           "Use camelCase" -}

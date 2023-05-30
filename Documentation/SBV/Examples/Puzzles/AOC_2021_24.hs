@@ -443,4 +443,4 @@ monad = do inp w
            mul y x
            add z y
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}

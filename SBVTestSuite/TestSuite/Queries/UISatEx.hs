@@ -107,4 +107,4 @@ testQuery3 rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=J
 
 -- HLint complains about TypeApplications pragma, but if I remove it GHC complains
 -- I'm not sure who is right here; so ignore.
-{-# ANN module ("HLint: ignore Unused LANGUAGE pragma" :: String) #-}
+{- HLint ignore module "Unused LANGUAGE pragma" -}

@@ -142,4 +142,4 @@ sumMergeEither2 = do
 
    constrain $ isRight $ ite b x y
 
-{-# ANN module ("HLint: ignore Reduce duplication" :: String) #-}
+{- HLint ignore module "Reduce duplication" -}
