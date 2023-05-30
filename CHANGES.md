@@ -5,7 +5,7 @@
 
 ### Version 10.1.5, New development version
 
-  * No changes yet
+  * Improve HLint pragmas. Thanks to George Thomas for the patch.
 
 ### Version 10.1, 2023-04-14
 
