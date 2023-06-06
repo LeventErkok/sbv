@@ -31,7 +31,7 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (R))
-[RECV] ((R ((as const Array) false)))
+[RECV] ((R ((as const (Array Int Int Bool)) false)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

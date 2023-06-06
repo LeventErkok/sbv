@@ -45,7 +45,7 @@ Looking for solution 2
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q1))
-[RECV] ((q1 ((as const Array) true)))
+[RECV] ((q1 ((as const (Array Bool Bool)) true)))
 [GOOD] (define-fun q1_model2 ((x!0 Bool)) Bool
           true
        )
@@ -59,7 +59,7 @@ Looking for solution 3
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (q1))
-[RECV] ((q1 (store ((as const Array) true) true false)))
+[RECV] ((q1 (store ((as const (Array Bool Bool)) true) true false)))
 [GOOD] (define-fun q1_model3 ((x!0 Bool)) Bool
           (ite (and (= x!0 true)) false
           true)

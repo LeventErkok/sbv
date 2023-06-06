@@ -50,7 +50,9 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (cf4))
-[RECV] ((cf4 ((as const Array) (seq.unit (mkSBVTuple2 (mkSBVTuple2 "A" "A") (seq.unit 2))))))
+[RECV] ((cf4 ((as const
+            (Array Int String (Seq (SBVTuple2 (SBVTuple2 String String) (Seq Int)))))
+         (seq.unit (mkSBVTuple2 (mkSBVTuple2 "A" "A") (seq.unit 2))))))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [("x",3 :: Integer),("c",'A' :: Char)], modelUIFuns = [("cf4",(SInteger -> SChar -> [((SChar, SChar), [SInteger])],Right ([],[(('A','A'),[2])] :: [((Char, Char), [Integer])])))]}
 DONE.*** Solver   : Z3

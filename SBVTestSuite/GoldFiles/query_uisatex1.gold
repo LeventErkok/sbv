@@ -122,11 +122,16 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (q1))
-[RECV] ((q1 (store (store (store ((as const Array) 12) 3 75) (- 3) 9) 0 1)))
+[RECV] ((q1 (store (store (store ((as const (Array Int Int)) 12) 3 75) (- 3) 9) 0 1)))
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) 5) false 7 6) false 12 3)))
+[RECV] ((q2 (store (store ((as const (Array Bool Int Int)) 5) false 7 6) false 12 3)))
 [SEND] (get-value (q3))
-[RECV] ((q3 (store (store ((as const Array) (fp #b0 #x82 #b00010011001100110011010))
+[RECV] ((q3 (store (store ((as const
+                          (Array (_ FloatingPoint 8 24)
+                                 Bool
+                                 Int
+                                 (_ FloatingPoint 8 24)))
+                       (fp #b0 #x82 #b00010011001100110011010))
                      (fp #b0 #x82 #b00110011001100110011010)
                      true
                      121
@@ -136,7 +141,8 @@
               8
               (_ +oo 8 24))))
 [SEND] (get-value (q4))
-[RECV] ((q4 (store (store ((as const Array) (fp #b0 #x85 #b00111000000000000000000))
+[RECV] ((q4 (store (store ((as const (Array String String (_ FloatingPoint 8 24)))
+                       (fp #b0 #x85 #b00111000000000000000000))
                      "c"
                      "tey"
                      (fp #b0 #x85 #b01110000000000000000000))
@@ -144,7 +150,7 @@
               "foo"
               (fp #b0 #x80 #b11000000000000000000000))))
 [SEND] (get-value (q5))
-[RECV] ((q5 (store (store ((as const Array) 7)
+[RECV] ((q5 (store (store ((as const (Array (Seq Int) (Seq (_ FloatingPoint 8 24)) Int)) 7)
                      (seq.++ (seq.unit 9) (seq.unit 5))
                      (seq.++ (seq.unit (fp #b0 #x82 #b00000110011001100110011))
                              (seq.unit (fp #b0 #x82 #b00100000000000000000000)))

@@ -50,9 +50,9 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (x_eu1))
-[RECV] ((x_eu1 ((as const Array) 0)))
+[RECV] ((x_eu1 ((as const (Array Int Int)) 0)))
 [SEND] (get-value (x_eu2))
-[RECV] ((x_eu2 ((as const Array) 1)))
+[RECV] ((x_eu2 ((as const (Array Int Int)) 1)))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

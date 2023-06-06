@@ -47,7 +47,8 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (cf3))
-[RECV] ((cf3 ((as const Array) (mkSBVTuple3 "A" "A" "A"))))
+[RECV] ((cf3 ((as const (Array Int (SBVTuple3 String String String)))
+         (mkSBVTuple3 "A" "A" "A"))))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf3",(SInteger -> (SChar, SChar, SChar),Right ([],('A','A','A') :: (Char, Char, Char))))]}
 DONE.*** Solver   : Z3

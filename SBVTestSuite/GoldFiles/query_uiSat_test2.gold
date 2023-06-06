@@ -35,7 +35,10 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (q2))
-[RECV] ((q2 (store (store ((as const Array) false) true true true) true false true)))
+[RECV] ((q2 (store (store ((as const (Array Bool Bool Bool)) false) true true true)
+              true
+              false
+              true)))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("q2",(SBool -> SBool -> SBool,Right ([([True :: Bool,False :: Bool],True :: Bool),([True :: Bool,True :: Bool],True :: Bool)],False :: Bool)))]}
 DONE.*** Solver   : Z3

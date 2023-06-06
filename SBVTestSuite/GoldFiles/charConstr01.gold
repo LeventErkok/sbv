@@ -37,7 +37,7 @@
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (cf))
-[RECV] ((cf ((as const Array) "B")))
+[RECV] ((cf ((as const (Array Int String)) "B")))
 
 MODEL: SMTModel {modelObjectives = [], modelBindings = Nothing, modelAssocs = [], modelUIFuns = [("cf",(SInteger -> SChar,Right ([],'B' :: Char)))]}
 DONE.*** Solver   : Z3
