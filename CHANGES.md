@@ -7,6 +7,9 @@
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
 
+  * Added an implementation of the Prince encryption algorithm. See
+    Documentation/SBV/Examples/Crypto/Prince.hs.
+
 ### Version 10.1, 2023-04-14
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
