@@ -49,8 +49,9 @@ module Data.SBV.Core.Operations
   )
   where
 
+import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
-import Data.List (genericIndex, genericLength, genericTake, foldl')
+import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl')
 
 import qualified Data.IORef         as R    (readIORef)
 import qualified Data.IntMap.Strict as IMap (size, insert)

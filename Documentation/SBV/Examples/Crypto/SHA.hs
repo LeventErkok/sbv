@@ -28,8 +28,9 @@ module Documentation.SBV.Examples.Crypto.SHA where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+import Prelude hiding (Foldable(..))
 import Data.Char (ord, toLower)
-import Data.List (genericLength, foldl')
+import Data.List (genericLength, length, foldl')
 import Numeric   (showHex)
 
 import Data.Proxy (Proxy(..))
