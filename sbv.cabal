@@ -119,6 +119,7 @@ Library
                   , Documentation.SBV.Examples.CodeGeneration.Uninterpreted
                   , Documentation.SBV.Examples.Crypto.AES
                   , Documentation.SBV.Examples.Crypto.RC4
+                  , Documentation.SBV.Examples.Crypto.Prince
                   , Documentation.SBV.Examples.Crypto.SHA
                   , Documentation.SBV.Examples.DeltaSat.DeltaSat
                   , Documentation.SBV.Examples.Existentials.CRCPolynomial
