@@ -7,8 +7,9 @@
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
 
-  * Added an implementation of the Prince encryption algorithm. See
-    Documentation/SBV/Examples/Crypto/Prince.hs.
+  * Added an implementation of the Prince encryption algorithm. See Documentation/SBV/Examples/Crypto/Prince.hs.
+
+  * Added on-the-fly decryption mode for AES. See Documentation/SBV/Examples/Crypto/AES.hs for details.
 
 ### Version 10.1, 2023-04-14
 
