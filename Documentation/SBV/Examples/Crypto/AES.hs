@@ -31,7 +31,7 @@
 
 module Documentation.SBV.Examples.Crypto.AES where
 
-import Control.Monad (void)
+import Control.Monad (void, when)
 
 import Data.SBV
 import Data.SBV.Tools.CodeGen
@@ -41,6 +41,8 @@ import Data.List (transpose)
 import Data.Maybe (fromJust)
 
 import Numeric (showHex)
+
+import Test.QuickCheck hiding (verbose)
 
 -- $setup
 -- >>> -- For doctest purposes only:
@@ -146,13 +148,13 @@ keyExpansion :: Int -> Key -> [Key]
 keyExpansion nk key = chop4 keys
    where keys :: [SWord 32]
          keys = key ++ [nextWord i prev old | i <- [nk ..] | prev <- drop (nk-1) keys | old <- keys]
-         chop4 :: [a] -> [[a]]
-         chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
+
          nextWord :: Int -> SWord 32 -> SWord 32 -> SWord 32
          nextWord i prev old
            | i `mod` nk == 0           = old `xor` subWordRcon (prev `rotateL` 8) (roundConstants !! (i `div` nk))
            | i `mod` nk == 4 && nk > 6 = old `xor` subWordRcon prev 0
            | True                      = old `xor` prev
+
          subWordRcon :: SWord 32 -> GF28 -> SWord 32
          subWordRcon w rc = fromBytes [a `xor` rc, b, c, d]
             where [a, b, c, d] = map sbox $ toBytes w
@@ -307,7 +309,9 @@ aesInvRound isFinal s key = d `addRoundKey` key
 
 -- | Key schedule. Given a 128, 192, or 256 bit key, expand it to get key-schedules
 -- for encryption and decryption. The key is given as a sequence of 32-bit words.
--- (4 elements for 128-bits, 6 for 192, and 8 for 256.)
+-- (4 elements for 128-bits, 6 for 192, and 8 for 256.) Compare this function to 'aesInvKeySchedule'
+-- which can calculate the key-expansion for decryption on the fly, as opposed to calculating
+-- the forward key-expansion first.
 aesKeySchedule :: Key -> (KS, KS)
 aesKeySchedule key
   | nk `elem` [4, 6, 8]
@@ -342,6 +346,86 @@ aesDecrypt ct decKS
   = error "aesDecrypt: Invalid cipher-text size"
 
 -----------------------------------------------------------------------------
+-- * On-the-fly decryption
+-- ${ontheflyintro}
+-----------------------------------------------------------------------------
+{- $ontheflyintro
+   While regular encryption can be fused with key-generation, the standard method of AES
+   decryption has to perform the key-expansion before decryption starts. This can be undesirable
+   as it necessarily serializes the action of key-expansion before decryption. An
+   alternative is to do on-the-fly decryption: We can expand the key in reverse, and thus
+   need not save the key-schedule. One downside of this approach, however, is that we need
+   to keep the "unwound" key: That is, instead of the common key used for encryption and
+   decryption, we need to hold on to the final value of key-expansion, so it can be run
+   in reverse. In this section, we implement on-the-fly decryption using this idea.
+-}
+
+-- | Inverse key expansion. Starting from the final round key, unwinds key generation operation
+-- to construct keys for the previous rounds. Used in on-the-fly decryption.
+invKeyExpansion :: Int -> Key -> [Key]
+invKeyExpansion nk rkey = map reverse (chop4 keys)
+   where keys :: [SWord 32]
+         keys = rkey ++ [invNextWord i prev old | i <- reverse [0 .. remaining - 1] | prev <- drop 1 keys | old <- keys]
+
+         totalWords = 4 * (nk + 6 + 1)
+         remaining  = totalWords - nk
+
+         invNextWord :: Int -> SWord 32 -> SWord 32 -> SWord 32
+         invNextWord i prev old
+           | i `mod` nk == 0           = old `xor` subWordRcon (prev `rotateL` 8) (roundConstants !! (1 + i `div` nk))
+           | i `mod` nk == 4 && nk > 6 = old `xor` subWordRcon prev 0
+           | True                      = old `xor` prev
+
+         subWordRcon :: SWord 32 -> GF28 -> SWord 32
+         subWordRcon w rc = fromBytes [a `xor` rc, b, c, d]
+            where [a, b, c, d] = map sbox $ toBytes w
+
+-- | AES inverse key schedule. Starting from the last-round key, construct the sequence of keys
+-- that can be used for doing on-the-fly decryption. Compare this function to 'aesKeySchedule' which
+-- returns both encryption and decryption schedules: In this case, we don't calculate the encryption
+-- sequence, hence we can fuse this function with the decryption operation.
+aesInvKeySchedule :: Key -> KS
+aesInvKeySchedule key
+  | nk `elem` [4, 6, 8]
+  = decKS
+  | True
+  = error "aesInvKeySchedule: Invalid key size"
+  where nk = length key
+        nr = nk + 6
+        decKS = (head rKeys, take (nr-1) (tail rKeys), rKeys !! nr)
+        rKeys = invKeyExpansion nk key
+
+-- | Block decryption, starting from the unwound key. That is, start from the final key.
+-- Also; we don't use the T-box implementation. Just pure AES inverse cipher.
+aesDecryptUnwoundKey :: [SWord 32] -> KS -> [SWord 32]
+aesDecryptUnwoundKey ct decKS
+  | length ct == 4
+  = doRounds aesInvRoundRegular decKS ct
+  | True
+  = error "aesDecrypt: Invalid cipher-text size"
+  where aesInvRoundRegular isFinal s key = u
+          where u :: State
+                u = map (f isFinal) [0 .. 3]
+                  where a   = map toBytes s
+                        kbs = map toBytes key
+                        f True j = fromBytes [ unSBox (a !! ((j+0) `mod` 4) !! 0)
+                                             , unSBox (a !! ((j+3) `mod` 4) !! 1)
+                                             , unSBox (a !! ((j+2) `mod` 4) !! 2)
+                                             , unSBox (a !! ((j+1) `mod` 4) !! 3)
+                                             ] `xor` (key !! j)
+                        f False j = e0 `xor` e1 `xor` e2 `xor` e3
+                              where e0 = otfU0 $ unSBox (a !! ((j+0) `mod` 4) !! 0) `xor` (kbs !! j !! 0)
+                                    e1 = otfU1 $ unSBox (a !! ((j+3) `mod` 4) !! 1) `xor` (kbs !! j !! 1)
+                                    e2 = otfU2 $ unSBox (a !! ((j+2) `mod` 4) !! 2) `xor` (kbs !! j !! 2)
+                                    e3 = otfU3 $ unSBox (a !! ((j+1) `mod` 4) !! 3) `xor` (kbs !! j !! 3)
+
+                otfU0Func b = [b `gf28Mult` 0xE, b `gf28Mult` 0x9, b `gf28Mult` 0xD, b `gf28Mult` 0xB]
+                otfU0 = select t0Table 0 where t0Table = [fromBytes (otfU0Func a)          | a <- [0..255]]
+                otfU1 = select t1Table 0 where t1Table = [fromBytes (otfU0Func a `rotR` 1) | a <- [0..255]]
+                otfU2 = select t2Table 0 where t2Table = [fromBytes (otfU0Func a `rotR` 2) | a <- [0..255]]
+                otfU3 = select t3Table 0 where t3Table = [fromBytes (otfU0Func a `rotR` 3) | a <- [0..255]]
+
+-----------------------------------------------------------------------------
 -- * Test vectors
 -----------------------------------------------------------------------------
 
@@ -372,6 +456,41 @@ aes192CT = [0xdda97ca4, 0x864cdfe0, 0x6eaf70a0, 0xec0d7191]
 -- | Expected cipher-text for 256-bit encryption
 aes256CT :: [SWord 32]
 aes256CT = [0x8ea2b7ca, 0x516745bf, 0xeafc4990, 0x4b496089]
+
+-- | Calculate the 128-bit final-round key from on-the-fly decryption key schedule
+aes128InvKey :: Key
+aes128InvKey = extractFinalKey aes128Key
+
+-- | Calculate the 192-bit final-round key from on-the-fly decryption key schedule
+aes192InvKey :: Key
+aes192InvKey = extractFinalKey aes192Key
+
+-- | Calculate the 192-bit final-round key from on-the-fly decryption key schedule. Compare this
+-- to 'aes192InvKey': Typically we just need the final 6-blocks, but it is advantageous to have
+-- the entire last 8-blocks even for 192-bit keys. That is,  e store the final 256-bits of key-expansion
+-- for speed purposes for both 192 and 256 bit versions. (But only the final 128 bits for the 128-bit version.)
+aes192InvKeyExtended :: Key
+aes192InvKeyExtended = extractFinalKeyExtended aes192Key
+
+-- | Calculate the 256-bit final-round key from on-the-fly decryption key schedule
+aes256InvKey :: Key
+aes256InvKey = extractFinalKey aes256Key
+
+-- | Extract the final key for on-the-fly decryption. This will extract exactly the number of blocks we need.
+extractFinalKey :: [SWord 32] -> [SWord 32]
+extractFinalKey initKey = take nk (extractFinalKeyExtended initKey)
+  where nk = length initKey
+
+-- | Extract the extended key for on-the-fly decryption. This will extract 4-blocks for 128-bit decryption,
+-- but 256 bit for both 192 and 256-bit variants
+extractFinalKeyExtended :: [SWord 32] -> [SWord 32]
+extractFinalKeyExtended initKey = take feed (concatMap reverse (chop4 (take feed roundKeys)))
+  where nk             = length initKey
+        feed | nk == 4 = 4
+             | True    = 8
+
+        ((f, m, l), _) = aesKeySchedule initKey
+        roundKeys      = l ++ concat (reverse m) ++ f
 
 -----------------------------------------------------------------------------
 -- ** 128-bit enc/dec test
@@ -433,6 +552,116 @@ t256Enc = aesEncrypt commonPT ks
 t256Dec :: [SWord 32]
 t256Dec = aesDecrypt aes256CT ks
   where (_, ks) = aesKeySchedule aes256Key
+
+-- | Various tests for round-trip properties. We have:
+--
+-- >>> runAESTests False
+-- GOOD: Key generation AES128
+-- GOOD: Key generation AES192
+-- GOOD: Key generation AES256
+-- GOOD: Encryption     AES128
+-- GOOD: Decryption     AES128
+-- GOOD: Decryption-OTF AES128
+-- GOOD: Encryption     AES192
+-- GOOD: Decryption     AES192
+-- GOOD: Decryption-OTF AES192
+-- GOOD: Encryption     AES256
+-- GOOD: Decryption     AES256
+-- GOOD: Decryption-OTF AES256
+runAESTests :: Bool -> IO ()
+runAESTests runQC = do
+                 testInvKeyExpansion
+
+                 check "AES128" aes128Key aes128InvKey aes128CT
+                 check "AES192" aes192Key aes192InvKey aes192CT
+                 check "AES256" aes256Key aes256InvKey aes256CT
+
+                 -- Quick-check tests are rather slow. So only run when requested.
+                 when runQC $ do
+                   putStrLn "Quick-check AES128 roundtrip" >> quickCheck roundTrip128
+                   putStrLn "Quick-check AES192 roundtrip" >> quickCheck roundTrip192
+                   putStrLn "Quick-check AES256 roundtrip" >> quickCheck roundTrip256
+
+  where check :: String -> Key -> Key -> [SWord 32] -> IO ()
+        check what key invKey ctExpected = do eq ("Encryption     " ++ what) ctExpected ctGot
+                                              eq ("Decryption     " ++ what) commonPT   ptGot
+                                              eq ("Decryption-OTF " ++ what) commonPT   ptGotInv
+           where (encKS, decKS) = aesKeySchedule key
+                 ctGot          = aesEncrypt           commonPT   encKS
+                 ptGot          = aesDecrypt           ctExpected decKS
+                 ptGotInv       = aesDecryptUnwoundKey ctExpected (aesInvKeySchedule invKey)
+
+                 eq tag expected got
+                   | length expected /= length got
+                   = error $ unlines [ "BAD!: " ++ tag
+                                     , "Comparing different sized lists:"
+                                     , "Expected: " ++ show expected
+                                     , "Got     : " ++ show got
+                                     ]
+                   | map extract expected == map extract got
+                   = putStrLn $ "GOOD: " ++ tag
+                   | True
+                   = error $ unlines [ "BAD!: " ++ tag
+                                     , "Expected: " ++ unwords (map hex8 expected)
+                                     , "Got     : " ++ unwords (map hex8 got)
+                                     ]
+                  where extract :: SWord 32 -> Integer
+                        extract = fromIntegral . fromJust . unliteral
+
+        testInvKeyExpansion :: IO ()
+        testInvKeyExpansion = do goTestInvKey "128" aes128Key
+                                 goTestInvKey "192" aes192Key
+                                 goTestInvKey "256" aes256Key
+        goTestInvKey what k = do
+          let nk = length k
+              nr = nk + 6
+
+              feed = case nk of
+                       4 -> 4
+                       _ -> 8
+
+              ((f, m, l), _) = aesKeySchedule k
+              required       = l ++ concat (reverse m) ++ f
+              invKeySchedule = take (nr+1) $ invKeyExpansion nk (take nk (concatMap reverse (chop4 (take feed required))))
+              obtained       = concat invKeySchedule
+
+              expected = map (fromJust . unliteral) required
+              result   = map (fromJust . unliteral) obtained
+
+              sh i a b
+               | a == b = pad ++ show i ++ " " ++ disp a
+               | True   = pad ++ show i ++ " " ++ disp a ++ " |vs| " ++ disp b
+               where pad = if i < 10 then " " else ""
+
+              disp = unwords . map (hex8 . literal)
+
+              lexpected = length expected
+              lresult   = length result
+
+          when (lexpected /= lresult) $
+             error $ what ++ ": BAD! Mismatching lengths: " ++ show (lexpected, lresult)
+
+          let debugging = False
+
+          if expected == result
+             then if debugging
+                     then putStrLn $ unlines $ ("Size " ++ what ++ ": Good") : zipWith3 sh [(0::Int)..] (chop4 expected) (chop4 result)
+                     else putStrLn $ "GOOD: Key generation AES" ++ what
+             else error    $ unlines $ ("Size " ++ what ++ ": BAD!") : zipWith3 sh [(0::Int)..] (chop4 expected) (chop4 result)
+
+        roundTrip128 (i0, i1, i2, i3) (k0, k1, k2, k3)                 = roundTrip [i0, i1, i2, i3] [k0, k1, k2, k3]
+        roundTrip192 (i0, i1, i2, i3) (k0, k1, k2, k3, k4, k5)         = roundTrip [i0, i1, i2, i3] [k0, k1, k2, k3, k4, k5]
+        roundTrip256 (i0, i1, i2, i3) (k0, k1, k2, k3, k4, k5, k6, k7) = roundTrip [i0, i1, i2, i3] [k0, k1, k2, k3, k4, k5, k6, k7]
+
+        roundTrip :: [SWord32] -> [SWord32] -> SBool
+        roundTrip ptIn keyIn = pt .== pt' .&& pt .== pt''
+           where pt  = map toSized ptIn
+                 key = map toSized keyIn
+
+                 (encKS, decKS) = aesKeySchedule key
+                 ct   = aesEncrypt pt encKS
+                 pt'  = aesDecrypt ct decKS
+                 pt'' = aesDecryptUnwoundKey ct (aesInvKeySchedule (extractFinalKey key))
 
 -----------------------------------------------------------------------------
 -- * Verification
@@ -544,9 +773,11 @@ cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
 -- | Components of the AES implementation that the library is generated from. For each case, we provide
 -- the driver values from the AES test-vectors.
 aesLibComponents :: Int -> [(String, [Integer], SBVCodeGen ())]
-aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keySchedule)
-                      , ("aes" ++ show sz ++ "BlockEncrypt", encDriverVals, enc)
-                      , ("aes" ++ show sz ++ "BlockDecrypt", decDriverVals, dec)
+aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",    keyDriverVals,    keySchedule)
+                      , ("aes" ++ show sz ++ "BlockEncrypt",   encDriverVals,    enc)
+                      , ("aes" ++ show sz ++ "BlockDecrypt",   decDriverVals,    dec)
+                      , ("aes" ++ show sz ++ "InvKeySchedule", invKeyDriverVals, invKeySchedule)
+                      , ("aes" ++ show sz ++ "OTFDecrypt",     invDecDriverVals, otfDec)
                       ]
   where badSize = error $ "aesLibComponents: Size must be one of 128, 192, or 256; received: " ++ show sz
 
@@ -561,14 +792,15 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keyS
         nr = nk + 6
         xk = 4 * (nr + 1)
 
-        (keyDriverVals, encDriverVals, decDriverVals)
-           | sz == 128 = (keyDriver aes128Key, encDriver commonPT aes128Key, decDriver aes128CT aes128Key)
-           | sz == 192 = (keyDriver aes192Key, encDriver commonPT aes192Key, decDriver aes192CT aes192Key)
-           | sz == 256 = (keyDriver aes256Key, encDriver commonPT aes256Key, decDriver aes256CT aes256Key)
+        (keyDriverVals, invKeyDriverVals, encDriverVals, decDriverVals, invDecDriverVals)
+           | sz == 128 = (keyDriver aes128Key, keyDriver aes128InvKey, encDriver commonPT aes128Key, decDriver aes128CT aes128Key, invDecDriver aes128CT aes128InvKey)
+           | sz == 192 = (keyDriver aes192Key, keyDriver aes192InvKey, encDriver commonPT aes192Key, decDriver aes192CT aes192Key, invDecDriver aes192CT aes192InvKey)
+           | sz == 256 = (keyDriver aes256Key, keyDriver aes256InvKey, encDriver commonPT aes256Key, decDriver aes256CT aes256Key, invDecDriver aes256CT aes256InvKey)
            | True      = badSize
-           where keyDriver    key = map cvt $ concatMap reverse (chop4 key)
-                 encDriver pt key = map cvt $ pt ++ flatten (fst (aesKeySchedule key))
-                 decDriver ct key = map cvt $ ct ++ flatten (snd (aesKeySchedule key))
+           where keyDriver       key = map cvt $ concatMap reverse (chop4 key)
+                 encDriver    pt key = map cvt $ pt ++ flatten (fst (aesKeySchedule    key))
+                 decDriver    ct key = map cvt $ ct ++ flatten (snd (aesKeySchedule    key))
+                 invDecDriver ct key = map cvt $ ct ++ flatten      (aesInvKeySchedule key)
 
                  flatten (f, mid, l) = f ++ concat mid ++ l
                  cvt = fromIntegral . fromJust . unliteral
@@ -577,6 +809,10 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keyS
                          let (encKS, decKS) = aesKeySchedule key
                          cgOutputArr "encKS" (ksToXKey encKS)
                          cgOutputArr "decKS" (ksToXKey decKS)
+
+        invKeySchedule = do key <- cgInputArr nk "key"     -- key
+                            let decKS = aesInvKeySchedule (concatMap reverse (chop4 key))
+                            cgOutputArr "decKS" (ksToXKey decKS)
 
         -- encryption
         enc = do pt   <- cgInputArr 4  "pt"    -- plain-text
@@ -587,6 +823,11 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keyS
         dec = do pt   <- cgInputArr 4  "ct"    -- cipher-text
                  xkey <- cgInputArr xk "xkey"  -- expanded key
                  cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
+
+        -- on-the-fly decryption
+        otfDec = do ct   <- cgInputArr 4  "ct"    -- cipher-text
+                    xkey <- cgInputArr xk "xkey"  -- expanded key
+                    cgOutputArr "pt" $ aesDecryptUnwoundKey ct (xkeyToKS xkey)
 
         -- Transforming back and forth from our KS type to a flat array used by the generated C code
         -- Turn a series of expanded keys to our internal KS type
@@ -599,11 +840,6 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keyS
         -- Turn a KS to a series of expanded key words
         ksToXKey :: KS -> [SWord 32]
         ksToXKey (f, m, l) = f ++ concat m ++ l
-
-        -- chunk in fours. (This function must be in some standard library, where?)
-        chop4 :: [a] -> [[a]]
-        chop4 [] = []
-        chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
 
 -- | Generate code for AES functionality; given the key size.
 cgAESLibrary :: Int -> Maybe FilePath -> IO ()
@@ -629,5 +865,11 @@ hex8 :: (SymVal a, Show a, Integral a) => SBV a -> String
 hex8 v = replicate (8 - length s) '0' ++ s
   where s = flip showHex "" . fromJust . unliteral $ v
 
-{- HLint ignore aesRound    "Use head" -}
-{- HLint ignore aesInvRound "Use head" -}
+-- | Chunk in groups of 4. (This function must be in some standard library, where?)
+chop4 :: [a] -> [[a]]
+chop4 [] = []
+chop4 xs = let (f, r) = splitAt 4 xs in f : chop4 r
+
+{- HLint ignore aesRound             "Use head" -}
+{- HLint ignore aesInvRound          "Use head" -}
+{- HLint ignore aesDecryptUnwoundKey "Use head" -}
