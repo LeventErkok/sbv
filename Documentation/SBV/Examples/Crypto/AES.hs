@@ -345,6 +345,34 @@ aesDecrypt ct decKS
 -- * Test vectors
 -----------------------------------------------------------------------------
 
+-- | Common plain text for test vectors
+commonPT :: [SWord 32]
+commonPT = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
+
+-- | Key for 128-bit encryption test
+aes128Key :: Key
+aes128Key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
+
+-- | Key for 192-bit encryption test
+aes192Key :: Key
+aes192Key = aes128Key ++ [0x10111213, 0x14151617]
+
+-- | Key for 256-bit encryption test
+aes256Key :: Key
+aes256Key = aes192Key ++ [0x18191a1b, 0x1c1d1e1f]
+
+-- | Expected cipher-text for 128-bit encryption
+aes128CT :: [SWord 32]
+aes128CT = [0x69c4e0d8, 0x6a7b0430, 0xd8cdb780, 0x70b4c55a]
+
+-- | Expected cipher-text for 192-bit encryption
+aes192CT :: [SWord 32]
+aes192CT = [0xdda97ca4, 0x864cdfe0, 0x6eaf70a0, 0xec0d7191]
+
+-- | Expected cipher-text for 256-bit encryption
+aes256CT :: [SWord 32]
+aes256CT = [0x8ea2b7ca, 0x516745bf, 0xeafc4990, 0x4b496089]
+
 -----------------------------------------------------------------------------
 -- ** 128-bit enc/dec test
 -----------------------------------------------------------------------------
@@ -353,23 +381,17 @@ aesDecrypt ct decKS
 --
 -- >>> map hex8 t128Enc
 -- ["69c4e0d8","6a7b0430","d8cdb780","70b4c55a"]
---
 t128Enc :: [SWord 32]
-t128Enc = aesEncrypt pt ks
-  where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
-        (ks, _) = aesKeySchedule key
+t128Enc = aesEncrypt commonPT ks
+  where (ks, _) = aesKeySchedule aes128Key
 
 -- | 128-bit decryption test, from Appendix C.1 of the AES standard:
 --
 -- >>> map hex8 t128Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
---
 t128Dec :: [SWord 32]
-t128Dec = aesDecrypt ct ks
-  where ct  = [0x69c4e0d8, 0x6a7b0430, 0xd8cdb780, 0x70b4c55a]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
-        (_, ks) = aesKeySchedule key
+t128Dec = aesDecrypt aes128CT ks
+  where (_, ks) = aesKeySchedule aes128Key
 
 -----------------------------------------------------------------------------
 -- ** 192-bit enc/dec test
@@ -379,12 +401,9 @@ t128Dec = aesDecrypt ct ks
 --
 -- >>> map hex8 t192Enc
 -- ["dda97ca4","864cdfe0","6eaf70a0","ec0d7191"]
---
 t192Enc :: [SWord 32]
-t192Enc = aesEncrypt pt ks
-  where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617]
-        (ks, _) = aesKeySchedule key
+t192Enc = aesEncrypt commonPT ks
+  where (ks, _) = aesKeySchedule aes192Key
 
 -- | 192-bit decryption test, from Appendix C.2 of the AES standard:
 --
@@ -392,10 +411,8 @@ t192Enc = aesEncrypt pt ks
 -- ["00112233","44556677","8899aabb","ccddeeff"]
 --
 t192Dec :: [SWord 32]
-t192Dec = aesDecrypt ct ks
-  where ct  = [0xdda97ca4, 0x864cdfe0, 0x6eaf70a0, 0xec0d7191]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617]
-        (_, ks) = aesKeySchedule key
+t192Dec = aesDecrypt aes192CT ks
+  where (_, ks) = aesKeySchedule aes192Key
 
 -----------------------------------------------------------------------------
 -- ** 256-bit enc/dec test
@@ -405,24 +422,17 @@ t192Dec = aesDecrypt ct ks
 --
 -- >>> map hex8 t256Enc
 -- ["8ea2b7ca","516745bf","eafc4990","4b496089"]
---
 t256Enc :: [SWord 32]
-t256Enc = aesEncrypt pt ks
-  where pt  = [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f]
-        (ks, _) = aesKeySchedule key
+t256Enc = aesEncrypt commonPT ks
+  where (ks, _) = aesKeySchedule aes256Key
 
 -- | 256-bit decryption, from Appendix C.3 of the AES standard:
 --
 -- >>> map hex8 t256Dec
 -- ["00112233","44556677","8899aabb","ccddeeff"]
---
 t256Dec :: [SWord 32]
-t256Dec = aesDecrypt ct ks
-  where ct  = [0x8ea2b7ca, 0x516745bf, 0xeafc4990, 0x4b496089]
-        key = [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f, 0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f]
-        (_, ks) = aesKeySchedule key
-
+t256Dec = aesDecrypt aes256CT ks
+  where (_, ks) = aesKeySchedule aes256Key
 
 -----------------------------------------------------------------------------
 -- * Verification
@@ -511,9 +521,10 @@ cgAES128BlockEncrypt :: IO ()
 cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
         pt  <- cgInputArr 4 "pt"        -- plain-text as an array of 4 Word32's
         key <- cgInputArr 4 "key"       -- key as an array of 4 Word32s
+
         -- Use the test values from Appendix C.1 of the AES standard as the driver values
-        cgSetDriverValues $    [0x00112233, 0x44556677, 0x8899aabb, 0xccddeeff]
-                            ++ [0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f]
+        cgSetDriverValues $ map (fromIntegral . fromJust . unliteral) $ commonPT ++ aes128Key
+
         let (encKs, _) = aesKeySchedule key
         cgOutputArr "ct" $ aesEncrypt pt encKs
 
@@ -530,33 +541,53 @@ cgAES128BlockEncrypt = compileToC Nothing "aes128BlockEncrypt" $ do
    The generated library is a typical @.a@ archive, that can be linked using the C-compiler as usual.
 -}
 
--- | Components of the AES implementation that the library is generated from
-aesLibComponents :: Int -> [(String, SBVCodeGen ())]
-aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
-                      , ("aes" ++ show sz ++ "BlockEncrypt", enc)
-                      , ("aes" ++ show sz ++ "BlockDecrypt", dec)
+-- | Components of the AES implementation that the library is generated from. For each case, we provide
+-- the driver values from the AES test-vectors.
+aesLibComponents :: Int -> [(String, [Integer], SBVCodeGen ())]
+aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keyDriverVals, keySchedule)
+                      , ("aes" ++ show sz ++ "BlockEncrypt", encDriverVals, enc)
+                      , ("aes" ++ show sz ++ "BlockDecrypt", decDriverVals, dec)
                       ]
-  where -- key-schedule
+  where badSize = error $ "aesLibComponents: Size must be one of 128, 192, or 256; received: " ++ show sz
+
+        -- key-schedule
         nk
          | sz == 128 = 4
          | sz == 192 = 6
          | sz == 256 = 8
-         | True      = error $ "aesLibComponents: Size must be one of 128, 192, or 256; received: " ++ show sz
+         | True      = badSize
+
         -- We get 4*(nr+1) keys, where nr = nk + 6
         nr = nk + 6
         xk = 4 * (nr + 1)
+
+        (keyDriverVals, encDriverVals, decDriverVals)
+           | sz == 128 = (keyDriver aes128Key, encDriver commonPT aes128Key, decDriver aes128CT aes128Key)
+           | sz == 192 = (keyDriver aes192Key, encDriver commonPT aes192Key, decDriver aes192CT aes192Key)
+           | sz == 256 = (keyDriver aes256Key, encDriver commonPT aes256Key, decDriver aes256CT aes256Key)
+           | True      = badSize
+           where keyDriver    key = map cvt $ concatMap reverse (chop4 key)
+                 encDriver pt key = map cvt $ pt ++ flatten (fst (aesKeySchedule key))
+                 decDriver ct key = map cvt $ ct ++ flatten (snd (aesKeySchedule key))
+
+                 flatten (f, mid, l) = f ++ concat mid ++ l
+                 cvt = fromIntegral . fromJust . unliteral
+
         keySchedule = do key <- cgInputArr nk "key"     -- key
                          let (encKS, decKS) = aesKeySchedule key
                          cgOutputArr "encKS" (ksToXKey encKS)
                          cgOutputArr "decKS" (ksToXKey decKS)
+
         -- encryption
         enc = do pt   <- cgInputArr 4  "pt"    -- plain-text
                  xkey <- cgInputArr xk "xkey"  -- expanded key
                  cgOutputArr "ct" $ aesEncrypt pt (xkeyToKS xkey)
+
         -- decryption
         dec = do pt   <- cgInputArr 4  "ct"    -- cipher-text
                  xkey <- cgInputArr xk "xkey"  -- expanded key
                  cgOutputArr "pt" $ aesDecrypt pt (xkeyToKS xkey)
+
         -- Transforming back and forth from our KS type to a flat array used by the generated C code
         -- Turn a series of expanded keys to our internal KS type
         xkeyToKS :: [SWord 32] -> KS
@@ -564,9 +595,11 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
            where f  = take 4 xs                             -- first round key
                  m  = chop4 (take (xk - 8) (drop 4 xs))     -- middle rounds
                  l  = drop (xk - 4) xs                      -- last round key
+
         -- Turn a KS to a series of expanded key words
         ksToXKey :: KS -> [SWord 32]
         ksToXKey (f, m, l) = f ++ concat m ++ l
+
         -- chunk in fours. (This function must be in some standard library, where?)
         chop4 :: [a] -> [[a]]
         chop4 [] = []
@@ -575,9 +608,11 @@ aesLibComponents sz = [ ("aes" ++ show sz ++ "KeySchedule",  keySchedule)
 -- | Generate code for AES functionality; given the key size.
 cgAESLibrary :: Int -> Maybe FilePath -> IO ()
 cgAESLibrary sz mbd
-  | sz `elem` [128, 192, 256] = void $ compileToCLib mbd nm (aesLibComponents sz)
+  | sz `elem` [128, 192, 256] = void $ compileToCLib mbd nm [(fnm, configure dvals f) | (fnm, dvals, f) <- aesLibComponents sz]
   | True                      = error $ "cgAESLibrary: Size must be one of 128, 192, or 256, received: " ++ show sz
   where nm = "aes" ++ show sz ++ "Lib"
+
+        configure dvals code = cgSetDriverValues dvals >> code
 
 -- | Generate a C library, containing functions for performing 128-bit enc/dec/key-expansion.
 -- A note on performance: In a very rough speed test, the generated code was able to do
