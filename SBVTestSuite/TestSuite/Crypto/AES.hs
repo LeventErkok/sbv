@@ -32,6 +32,6 @@ tests = testGroup "Crypto.AES" [
                                res | d    = aesEncrypt pt encKs
                                    | True = aesDecrypt pt decKs
                            cgOutputArr "ct" res
-       aes128Comps = [(f, setVals c) | (f, c) <- aesLibComponents 128]
+       aes128Comps = [(f, setVals c) | (f, _, c) <- aesLibComponents 128]
        setVals c = cgSetDriverValues (repeat 0) >> c
        thd (_, _, r) = r
