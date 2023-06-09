@@ -11,7 +11,7 @@
 
   * Added on-the-fly decryption mode for AES. See Documentation/SBV/Examples/Crypto/AES.hs for details.
 
-  * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over integers
+  * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over integers.
 
   * Added 'Data.SBV.Tools.NaturalInduction' which provides a proof method to perform induction over natural numbers. See the functions 'inductNat' and 'inductNatWith'.
 
