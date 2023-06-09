@@ -56,3 +56,5 @@ inductNatWith cfg p = proveWith cfg $ do
                         constrain $ k .>= 0
                         constrain pk
                         pure $ p0 .&& pk1
+
+{- HLint ignore module "Redundant ^." -}
