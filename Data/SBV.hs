@@ -262,7 +262,9 @@ module Data.SBV (
   -- * Symbolic integral numbers
   , SIntegral
   -- * Division and Modulus
-  , SDivisible(..), sEDivMod, sEDiv, sEMod
+  , SDivisible(..)
+  -- $euclidianNote
+  , sEDivMod, sEDiv, sEMod
   -- * Bit-vector operations
   -- ** Conversions
   , sFromIntegral
@@ -1138,6 +1140,32 @@ Q.E.D.
 >>> prove $ \a b -> distinctExcept [a, b] [0::SWord8] .<=> (a .== b .=> a .== 0)
 Q.E.D.
 >>> prove $ \a b c d -> distinctExcept [a, b, c, d] [] .== distinct [a, b, c, (d::SInteger)]
+Q.E.D.
+-}
+
+{- $euclidianNote
+=== Euclidian division and modulus
+
+Euclidian division and modulus for integers differ from regular division modulus when
+the divisor is negative. It satisfies the following desirable property: For any @m@, @n@, we have:
+
+@
+  Given @m@, @n@, s.t., n /= 0
+  Let (q, r) = m `sEDivMod` n
+  Then: m = n * q + r
+   and 0 <= r <= |n| - 1
+@
+
+That is, the modulus is always positive.
+There's no standard Haskell function that performs this operation. The main reason to prefer this
+function is that SMT solvers can deal with them better.
+Compare:
+
+>>> sDivMod @SInteger 3 (-2)
+(-2 :: SInteger,-1 :: SInteger)
+>>> sEDivMod 3 (-2)
+(-1 :: SInteger,1 :: SInteger)
+>>> prove $ \x y -> y .> 0 .=> x `sDivMod` y .== x `sEDivMod` y
 Q.E.D.
 -}
 
