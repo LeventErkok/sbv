@@ -13,6 +13,8 @@
 
   * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over integers
 
+  * Added 'Data.SBV.Tools.NaturalInduction' which provides a proof method to perform induction over natural numbers. See the functions 'inductNat' and 'inductNatWith'.
+
 ### Version 10.1, 2023-04-14
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous
