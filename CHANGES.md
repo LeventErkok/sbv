@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 10.1, 2023-04-14
+* Latest Hackage released version: 10.2, 2023-06-09
 
-### Version 10.1.5, New development version
+### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
 
@@ -11,7 +11,7 @@
 
   * Added on-the-fly decryption mode for AES. See Documentation/SBV/Examples/Crypto/AES.hs for details.
 
-  * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over integers.
+  * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over symbolic integers.
 
   * Added 'Data.SBV.Tools.NaturalInduction' which provides a proof method to perform induction over natural numbers. See the functions 'inductNat' and 'inductNatWith'.
 
