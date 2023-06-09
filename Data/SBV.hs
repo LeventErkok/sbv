@@ -262,7 +262,7 @@ module Data.SBV (
   -- * Symbolic integral numbers
   , SIntegral
   -- * Division and Modulus
-  , SDivisible(..)
+  , SDivisible(..), sEDivMod, sEDiv, sEMod
   -- * Bit-vector operations
   -- ** Conversions
   , sFromIntegral

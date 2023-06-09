@@ -11,6 +11,8 @@
 
   * Added on-the-fly decryption mode for AES. See Documentation/SBV/Examples/Crypto/AES.hs for details.
 
+  * Added functions `sEDivMod`, `sEDiv`, and `sEMod` which perform euclidian division over integers
+
 ### Version 10.1, 2023-04-14
 
   * [BACKWARDS COMPATIBILITY] SBV now handles quantifiers in a much more disciplined way. All of the previous

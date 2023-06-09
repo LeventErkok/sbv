@@ -40,6 +40,7 @@ module Data.SBV.Core.Model (
   , SymTuple, sTuple, sTuple_, sTuples
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
   , sSet, sSet_, sSets
+  , sEDivMod, sEDiv, sEMod
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf, sObserve
@@ -1841,6 +1842,31 @@ instance SDivisible SInteger where
     where (qE, rE) = liftQRem x y   -- for integers, this is euclidean due to SMTLib semantics
           i = ite (x .>= 0 .|| rE .== 0) 0
             $ ite (y .>  0)              1 (-1)
+
+-- | Euclidian division and modulus for integers. For any @m@, @n@, we have:
+--
+-- @
+--   Given @m@, @n@, s.t., n /= 0
+--   Let (q, r) = m `sEDivMod` n
+--   Then: m = n * q + r
+--    and 0 <= r <= |n| - 1
+--
+--  That is, the modulus is always positive. Division by zero is left undefined.
+--
+--  There's no standard Haskell function that performs this operation. The main reason to
+--  prefer this function is that SMT solvers can deal with them better.
+sEDivMod :: SInteger -> SInteger -> (SInteger, SInteger)
+sEDivMod a b = (a `sEDiv` b, a `sEMod` b)
+
+-- | Euclidian division. Division by zero is left undefined, i.e., the solver is free to
+-- assign any value it wants to it.
+sEDiv :: SInteger -> SInteger -> SInteger
+sEDiv (SBV a) (SBV b) = SBV $ a `svQuot` b
+
+-- | Euclidian modulus. Modulus by zero is left undefined, i.e., the solver is free to
+-- assign any value it wants to it.
+sEMod :: SInteger -> SInteger -> SInteger
+sEMod (SBV a) (SBV b) = SBV $ a `svRem` b
 
 -- Quickcheck interface
 instance (SymVal a, Arbitrary a) => Arbitrary (SBV a) where
