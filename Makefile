@@ -131,7 +131,7 @@ release:
 	$(TIME) make fullRelease
 
 checkExtensions:
-	@ag LANGUAGE | awk '{print $$3}' | sort | uniq | grep -v ignore | grep -v note | grep -v "^\""| grep -v "<-" > ./required_extensions
+	@ag LANGUAGE | awk '{print $$3}' | sort | uniq | grep -v LANGUAGE | grep -v ignore | grep -v note | grep -v "^\""| grep -v "<-" > ./required_extensions
 	@ghc -package base -package process ./buildUtils/checkExtensions.hs -e main
 	@/bin/rm -f required_extensions
 

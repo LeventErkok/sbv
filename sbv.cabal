@@ -51,7 +51,6 @@ common common-settings
                      ImplicitParams
                      InstanceSigs
                      KindSignatures
-                     LANGUAGE
                      LambdaCase
                      MultiParamTypeClasses
                      NamedFieldPuns
