@@ -28,12 +28,12 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SRational, SMaybe, SSet)
+                                SWord64, SEither, SRational, SMaybe, SSet, constrain, (.==))
 import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
-import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext,
-                                Symbolic, SBVRunMode, SMTConfig, SVal)
+import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
+                                SVal, symbolicEnv, modifyState, rPartitionVars)
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
@@ -50,6 +50,8 @@ import qualified Data.SBV.Core.Sized     as Trans
 import qualified Data.SBV.Core.Model     as Trans
 import qualified Data.SBV.Core.Symbolic  as Trans
 import qualified Data.SBV.Provers.Prover as Trans
+
+import Control.Monad.Trans (liftIO)
 
 -- | Prove a predicate, using the default solver.
 --
@@ -220,6 +222,12 @@ sbvToSymSV = Trans.sbvToSymSV
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.output'
 output :: Outputtable a => a -> Symbolic a
 output = Trans.output
+
+-- | Create a partitioning constraint, for all-sat calls.
+partition :: SymVal a => String -> SBV a -> Symbolic ()
+partition nm term = do v <- free nm
+                       symbolicEnv >>= \st -> liftIO $ modifyState st rPartitionVars (nm :) (return ())
+                       constrain $ v .== term
 
 -- | Create a free variable, universal in a proof, existential in sat
 --

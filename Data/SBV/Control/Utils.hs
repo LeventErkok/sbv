@@ -1136,12 +1136,13 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         , "*** Please use a solver that supports this feature."
                                         ]
 
-                     topState@State{rUsedKinds} <- queryState
+                     topState@State{rUsedKinds, rPartitionVars} <- queryState
 
                      ki   <- liftIO $ readIORef rUsedKinds
 
                      allModelInputs    <- getTopLevelInputs
                      allUninterpreteds <- getUIs
+                     partitionVars     <- liftIO $ readIORef rPartitionVars
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
                      let allUiFuns = [u | allSatTrackUFs cfg                                           -- config says consider UIFs
@@ -1184,12 +1185,14 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                        ]
 
                      -- Drop the things that are not model vars or internal
-                     let vars :: S.Seq (SVal, NamedSymVar)
-                         vars = let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
+                     let mkSVal nm@(getSV -> sv) = (SVal (kindOf sv) (Right (cache (const (return sv)))), nm)
+                     let extractVars :: S.Seq (SVal, NamedSymVar)
+                         extractVars = mkSVal <$> S.filter (not . mustIgnoreVar cfg . getUserName') allModelInputs
 
-                                    ignored k = mustIgnoreVar cfg (getUserName' k)
-
-                                in mkSVal <$> S.filter (not . ignored) allModelInputs
+                         vars :: S.Seq (SVal, NamedSymVar)
+                         vars = case partitionVars of
+                                  [] -> extractVars
+                                  pv -> mkSVal <$> S.filter (\k -> getUserName' k `elem` pv) allModelInputs
 
                      -- We can go fast using the disjoint model trick if things are simple enough:
                      --     - No uninterpreted functions (uninterpreted values are OK)
@@ -1212,6 +1215,18 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                               , allSatResults               = []
                                               }
 
+                     -- partition-variables are only supported if simple
+                     case partitionVars of
+                       [] -> pure ()
+                       xs -> unless isSimple $ error $ unlines [ ""
+                                                               , "Data.SBV: Unsupported complex allSat call in the presence of partition-variables"
+                                                               , ""
+                                                               , "Partition variables are only supported when there are no uninterpreted"
+                                                               , "functions or uninterpreted sorts."
+                                                               , ""
+                                                               , "Saw parition vars: " ++ unwords xs
+                                                               ]
+
                      if isSimple
                         then do let mkVar :: (String, (Maybe [String], SBVType)) -> IO (SVal, NamedSymVar)
                                     mkVar (nm, (_, SBVType [k])) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
@@ -1220,8 +1235,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                       pure (sval, nsv)
                                     mkVar nmt = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected: " ++ show nmt
                                 uiVars <- io $ S.fromList <$> mapM mkVar allUiRegs
-                                fastAllSat                                        allModelInputs (uiVars S.>< vars) cfg start
-                        else    loop       topState (allUiFuns, uiFuns) allUiRegs allModelInputs              vars  cfg start
+                                fastAllSat                                        allModelInputs (uiVars S.>< extractVars) (uiVars S.>< vars) cfg start
+                        else    loop       topState (allUiFuns, uiFuns) allUiRegs allModelInputs                                        vars  cfg start
 
    where isFree (KUserSort _ Nothing) = True
          isFree _                     = False
@@ -1236,8 +1251,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                              Nothing -> pure ()
                              Just m  -> io $ putStrLn m
 
-         fastAllSat :: S.Seq NamedSymVar -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
-         fastAllSat allInputs vars cfg start = do
+         fastAllSat :: S.Seq NamedSymVar -> S.Seq (SVal, NamedSymVar) -> S.Seq (SVal, NamedSymVar) -> SMTConfig -> AllSatResult -> m AllSatResult
+         fastAllSat allInputs extractVars vars cfg start = do
                 result <- io $ newIORef (0, start, False, Nothing)
                 go result vars
                 (found, sofar, _, extra) <- io $ readIORef result
@@ -1289,7 +1304,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                    io $ modifyIORef' finalResult $ \(h, s, _, _) -> (h, s{allSatSolverReturnedDSat = True}, True, Just ("[" ++ m ++ "]"))
 
                                       Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
-                                                                                                   return (sv, (n, (sval, cv)))) vars
+                                                                                                   return (sv, (n, (sval, cv)))) extractVars
 
                                                    bindings <- let grab i@(getSV -> sv) = case lookupInput fst sv assocs of
                                                                                             Just (_, (_, (_, cv))) -> return (i, cv)

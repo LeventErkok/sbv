@@ -321,7 +321,7 @@ module Data.SBV (
   , dprove, dproveWith
   , sat, satWith
   , dsat, dsatWith
-  , allSat, allSatWith
+  , allSat, allSatWith, partition
   , optimize, optimizeWith
   , isVacuousProof, isVacuousProofWith
   , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
