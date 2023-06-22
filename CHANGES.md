@@ -3,6 +3,12 @@
 
 * Latest Hackage released version: 10.2, 2023-06-09
 
+### Version 10.2.5, Not yet released
+
+  * Clean-up GHC extensions required in the cabal file
+
+  * Add 'partition', which allows for partitioning all-sat search spaces when models are generated.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.

@@ -321,7 +321,7 @@ module Data.SBV (
   , dprove, dproveWith
   , sat, satWith
   , dsat, dsatWith
-  , allSat, allSatWith, partition
+  , allSat, allSatWith
   , optimize, optimizeWith
   , isVacuousProof, isVacuousProofWith
   , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
@@ -329,6 +329,9 @@ module Data.SBV (
   , satWithAny,   satWithAll,   satConcurrentWithAny,   satConcurrentWithAll
   , generateSMTBenchmarkSat, generateSMTBenchmarkProof
   , solve
+  -- ** Partitioning result space
+  -- $partitionIntro
+  , partition
 
   -- * Constraints and Quantifiers
   -- $constrainIntro
@@ -815,6 +818,67 @@ Tuples can be used as symbolic values. This is useful in combination with lists,
 Symbolic words (both signed and unsigned) are an instance of Haskell's 'Bits' class, so regular
 bitwise operations are automatically available for them. Shifts and rotates, however, require
 specialized type-signatures since Haskell insists on an 'Int' second argument for them.
+-}
+
+{- $partitionIntro
+The function 'partition' allows one to restrict the results returned by calls to 'Data.SBV.allSat'.
+In certain cases, we might consider certain models to be "equivalent," i.e., we might want to
+create equivalence classes over the search space when it comes to what we consider all satisfying
+solutions. In these cases, we can use 'partition' to tell SBV what classes of solutions to consider
+as unique. Consider:
+
+>>> :{
+allSat $ do
+   x <- sInteger "x"
+   y <- sInteger "y"
+   partition "p1" $ x .>= 0
+   partition "p2" $ y .>= 0
+:}
+Solution #1:
+  x  =     0 :: Integer
+  y  =    -1 :: Integer
+  p1 =  True :: Bool
+  p2 = False :: Bool
+Solution #2:
+  x  =    -1 :: Integer
+  y  =     0 :: Integer
+  p1 = False :: Bool
+  p2 =  True :: Bool
+Solution #3:
+  x  =    -1 :: Integer
+  y  =    -1 :: Integer
+  p1 = False :: Bool
+  p2 = False :: Bool
+Solution #4:
+  x  =    0 :: Integer
+  y  =    0 :: Integer
+  p1 = True :: Bool
+  p2 = True :: Bool
+Found 4 different solutions.
+
+Without the call to 'partition' in the above example, 'allSat' would return all possible combinations of @x@ and @y@ subject to the constraints. (Since we have none here,
+the call would try to enumerate the infinite set of all integer tuples!) But 'partition' allows us to restrict our attention to the examples that satisfy the partitioning
+constraints. The first argument to 'partition' is simply a name, for diagnostic purposes. Note that the conditions given by 'partition' are /not/ imposed on the search
+space at all: They're only used when we construct the search space. In the above example, we pick one example from each quadrant. Furthermore, while it is typical to pass
+a boolean as a partitioning argument, it is not required: Any expression is OK, whose value creates the equivalence class:
+
+>>> :{
+allSat $ do
+   x <- sInteger "x"
+   partition "p" $ x `sMod` 3
+:}
+Solution #1:
+  x = 2 :: Integer
+  p = 2 :: Integer
+Solution #2:
+  x = 1 :: Integer
+  p = 1 :: Integer
+Solution #3:
+  x = 0 :: Integer
+  p = 0 :: Integer
+Found 3 different solutions.
+
+In the above, we get three examples, as the expression @x mod 3@ can take only three different values.
 -}
 
 {- $constrainIntro

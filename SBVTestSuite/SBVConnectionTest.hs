@@ -4,7 +4,7 @@
 
 module Main (main) where
 
-import Data.SBV
+import Data.SBV hiding (partition)
 import Data.List
 import Control.Monad
 import System.Exit
