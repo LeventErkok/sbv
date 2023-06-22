@@ -15,6 +15,7 @@
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -33,7 +34,7 @@ import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
-                                SVal, symbolicEnv, modifyState, rPartitionVars)
+                                SVal, symbolicEnv, rPartitionVars, State(..))
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
 import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
@@ -44,6 +45,8 @@ import Data.Kind
 
 import Data.Int
 import Data.Word
+
+import Data.IORef(readIORef, writeIORef)
 
 import qualified Data.SBV.Core.Data      as Trans
 import qualified Data.SBV.Core.Sized     as Trans
@@ -225,9 +228,20 @@ output = Trans.output
 
 -- | Create a partitioning constraint, for all-sat calls.
 partition :: SymVal a => String -> SBV a -> Symbolic ()
-partition nm term = do v <- free nm
-                       symbolicEnv >>= \st -> liftIO $ modifyState st rPartitionVars (nm :) (return ())
-                       constrain $ v .== term
+partition nm term = do
+   State{rPartitionVars} <- symbolicEnv
+
+   -- Generate a unique variable with the prefix nm if necessary and
+   -- add it to partitions
+   fresh <- liftIO $ do olds <- readIORef rPartitionVars
+                        let fresh = head $ filter (`notElem` olds)
+                                                  (nm : [nm ++ "_" ++ show i | i <- [(1 :: Int) ..]])
+                        writeIORef rPartitionVars (olds ++ [fresh])
+                        pure fresh
+
+   -- declare and constrain
+   v <- free fresh
+   constrain $ v .== term
 
 -- | Create a free variable, universal in a proof, existential in sat
 --
