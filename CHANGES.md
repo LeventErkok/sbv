@@ -9,6 +9,8 @@
 
   * Add 'partition', which allows for partitioning all-sat search spaces when models are generated.
 
+  * Add 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.

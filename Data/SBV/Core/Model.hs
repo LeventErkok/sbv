@@ -1086,6 +1086,9 @@ class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
     sPopCount           :: SBV a -> SWord8
     -- | A combo of 'setBit' and 'clearBit', when the bit to be set is symbolic.
     setBitTo            :: SBV a -> Int -> SBool -> SBV a
+    -- | Variant of 'setBitTo' when the index is symbolic. If the index it out-of-bounds,
+    -- then the result is underspecified.
+    sSetBitTo           :: Integral a => SBV a -> SBV a -> SBool -> SBV a
     -- | Full adder, returns carry-out from the addition. Only for unsigned quantities.
     fullAdder           :: SBV a -> SBV a -> (SBool, SBV a)
     -- | Full multiplier, returns both high and low-order bits. Only for unsigned quantities.
@@ -1133,6 +1136,22 @@ class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
             go !c w = go (c+1) (w .&. (w-1))
 
     setBitTo x i b = ite b (setBit x i) (clearBit x i)
+
+    sSetBitTo x idx b
+      | Just i <- unliteral idx, Just index <- safe i
+      = setBitTo x index b
+      | True
+      = go x [0 .. sFiniteBitSize x - 1]
+      where -- paranoia check: make sure index can fit in an int
+            safe i = let asInteger   = toInteger i
+                         asInt       = fromIntegral asInteger
+                         backInteger = toInteger asInt
+                     in if backInteger == asInteger
+                        then Just asInt
+                        else Nothing
+
+            go v []     = v
+            go v (i:is) = go (ite (idx .== literal (fromIntegral i)) (setBitTo v (fromIntegral i) b) v) is
 
     fullAdder a b
       | isSigned a = error "fullAdder: only works on unsigned numbers"
