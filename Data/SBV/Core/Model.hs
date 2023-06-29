@@ -2337,26 +2337,17 @@ class SMTDefinable a where
   -- by end-user-code, but is rather useful for the library development.
   sbvDefineValue :: String -> UIKind a -> a
 
-  -- | The final kind of the uninterpreted value. That is, if this is a function, what's the
-  -- resulting kind at the rightmost arrow?
-  sbvUninterpretFinalKind :: a -> Kind
-
   -- | A synonym for 'uninterpret'. Allows us to create variables without
   -- having to call 'free' explicitly, i.e., without being in the symbolic monad.
   sym :: String -> a
 
-  -- | Render an SMT function as an SMTLib definition string. Mostly for debugging purposes.
-  renderSMTFunction :: (MonadIO m, Lambda (SymbolicT m) a) => String -> a -> m String
-
-  {-# MINIMAL sbvDefineValue, sbvUninterpretFinalKind #-}
+  {-# MINIMAL sbvDefineValue #-}
 
   -- defaults:
-  uninterpret       nm        = sbvDefineValue nm   UIFree
-  smtFunction       nm      v = sbvDefineValue nm $ UIFun   (v, \st fk -> namedLambda st nm fk v)
-  cgUninterpret     nm code v = sbvDefineValue nm $ UICodeC (v, code)
-  renderSMTFunction nm      v = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
-                                   namedLambdaStr st nm (sbvUninterpretFinalKind v) v
-  sym                         = uninterpret
+  uninterpret    nm        = sbvDefineValue nm   UIFree
+  smtFunction    nm      v = sbvDefineValue nm $ UIFun   (v, \st fk -> namedLambda st nm fk v)
+  cgUninterpret  nm code v = sbvDefineValue nm $ UICodeC (v, code)
+  sym                      = uninterpret
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree                                  -- ^ completely uninterpreted
@@ -2383,8 +2374,6 @@ retrieveConstCode (UICodeC (v, _)) = Just v
 
 -- Plain constants
 instance HasKind a => SMTDefinable (SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind
      | Just v <- retrieveConstCode uiKind
      = v
@@ -2399,8 +2388,6 @@ instance HasKind a => SMTDefinable (SBV a) where
 
 -- Functions of one argument
 instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0
            | Just v <- retrieveConstCode uiKind, isConcrete arg0
@@ -2419,8 +2406,6 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
 
 -- Functions of two arguments
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1
@@ -2441,8 +2426,6 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
 
 -- Functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2
@@ -2465,8 +2448,6 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
 
 -- Functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
@@ -2491,8 +2472,6 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
 
 -- Functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
@@ -2519,8 +2498,6 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
 
 -- Functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
@@ -2550,8 +2527,6 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
 -- Functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
@@ -2582,46 +2557,34 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
 
 -- Uncurried functions of two arguments
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (curry <$> uiKind) in uncurry f
 
 -- Uncurried functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
 
 -- Uncurried functions of four arguments
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 fn a b c d = fn (a, b, c, d)
 
 -- Uncurried functions of five arguments
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 fn a b c d e = fn (a, b, c, d, e)
 
 -- Uncurried functions of six arguments
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
 
 -- Uncurried functions of seven arguments
 instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
-  sbvUninterpretFinalKind _ = kindOf (Proxy @a)
-
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
 

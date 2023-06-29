@@ -11,8 +11,6 @@
 
   * Add 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
 
-  * Add 'renderSMTFunction', which renders the given function as an SMTLib definition. Mainly useful for debugging purposes.
-
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
