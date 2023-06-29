@@ -149,9 +149,12 @@ namedLambda inState nm fk = namedLambdaGen mkDef inState fk
    where mkDef (Defn frees params body) = SMTDef nm fk frees (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
-namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m String
-namedLambdaStr inState nm fk = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = concat $ declUserFuns [SMTDef nm fk frees (extractAllUniversals <$> params) body]
+namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> SBVType -> a -> m String
+namedLambdaStr inState nm t = namedLambdaGen mkDef inState fk
+   where mkDef (Defn frees params body) = concat $ declUserFuns [(SMTDef nm fk frees (extractAllUniversals <$> params) body, undefined)]
+         fk = case t of
+                SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
+                SBVType xs -> last xs
 
 -- | Generic constraint generator.
 constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b

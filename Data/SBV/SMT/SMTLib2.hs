@@ -571,28 +571,28 @@ declUI ProgInfo{progTransClosures} (i, (_, t)) = declareName i t Nothing ++ decl
 
 -- Note that even though we get all user defined-functions here (i.e., lambda and axiom), we can only have defined-functions
 -- and axioms. We spit axioms as is; and topologically sort the definitions.
-declUserFuns :: [SMTDef] -> [String]
+declUserFuns :: [(SMTDef, SBVType)] -> [String]
 declUserFuns ds
   | not (null lambdas)
   = error $ unlines $ "Data.SBV.declUserFuns: Unexpected anonymous functions in declDef:" : map show lambdas
   | True
   = declFuncs others
-  where (lambdas, others) = partition isLam ds
+  where (lambdas, others) = partition (isLam . fst) ds
         isLam SMTLam{} = True
         isLam SMTDef{} = False
 
 -- We need to topologically sort the user given definitions and axioms and put them in the proper order and construct.
 -- Note that there are no anonymous functions at this level.
-declFuncs :: [SMTDef] -> [String]
+declFuncs :: [(SMTDef, SBVType)] -> [String]
 declFuncs ds = map declGroup sorted
   where mkNode d = (d, getKey d, getDeps d)
 
-        getKey d = case d of
-                     SMTDef n _ _ _ _ -> n
-                     SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+        getKey (d, _) = case d of
+                         SMTDef n _ _ _ _ -> n
+                         SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
 
-        getDeps (SMTDef _ _ d _ _) = d
-        getDeps l@SMTLam{}         = error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show l
+        getDeps (SMTDef _ _ d _ _, _) = d
+        getDeps (l@SMTLam{}, t)       = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
 
         mkDecl Nothing  rt = "() "    ++ rt
         mkDecl (Just p) rt = p ++ " " ++ rt
@@ -605,8 +605,8 @@ declFuncs ds = map declGroup sorted
                                          [x] -> declUserDef True x
                                          xs  -> declUserDefMulti xs
 
-        declUserDef _ d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
-        declUserDef isRec (SMTDef nm fk deps param body) = ("; " ++ nm ++ recursive ++ frees ++ "\n") ++ s
+        declUserDef _ d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
+        declUserDef isRec (SMTDef nm fk deps param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
@@ -620,12 +620,12 @@ declFuncs ds = map declGroup sorted
 
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
-          where collect d@SMTLam{} = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
-                collect (SMTDef nm fk deps param body) = (deps, nm, '(' : nm ++ " " ++  decl ++ ")", body 3)
+          where collect d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
+                collect (SMTDef nm fk deps param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
                   where decl = mkDecl param (smtType fk)
 
                 render defs = intercalate "\n" $
-                                  [ "; " ++ intercalate ", " [n | (_, n, _, _) <- defs]
+                                  [ "; " ++ intercalate ", " [n ++ " :: " ++ show ty | (_, n, ty, _, _) <- defs]
                                   , "(define-funs-rec"
                                   ]
                                ++ [ open i ++ param d ++ close1 i | (i, d) <- zip [1..] defs]
@@ -633,10 +633,10 @@ declFuncs ds = map declGroup sorted
                      where open 1 = "  ("
                            open _ = "   "
 
-                           param (_, _, p, _) = p
+                           param (_deps, _nm, _ty, p, _body) = p
 
-                           dump (deps, nm, _, body) = "; Definition of: " ++ nm ++ ". [Refers to: " ++ intercalate ", " deps ++ "]"
-                                                    ++ "\n" ++ body
+                           dump (deps, nm, ty, _, body) = "; Definition of: " ++ nm ++ " :: " ++ show ty ++ ". [Refers to: " ++ intercalate ", " deps ++ "]"
+                                                        ++ "\n" ++ body
 
                            ld = length defs
 

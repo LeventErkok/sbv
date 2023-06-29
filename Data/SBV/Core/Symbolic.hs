@@ -851,7 +851,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, (Maybe [String], SBVType))]        -- ^ uninterpreted constants
-                     , resDefinitions :: [SMTDef]                                     -- ^ definitions created via smtFunction or lambda
+                     , resDefinitions :: [(SMTDef, SBVType)]                          -- ^ definitions created via smtFunction or lambda
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
@@ -1208,7 +1208,7 @@ data State  = State { pathCond       :: SVal                             -- ^ ki
                     , rUIMap         :: IORef UIMap
                     , rUserFuncs     :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap         :: IORef CgMap
-                    , rDefns         :: IORef [SMTDef]
+                    , rDefns         :: IORef [(SMTDef, SBVType)]
                     , rSMTOptions    :: IORef [SMTOption]
                     , rOptGoals      :: IORef [Objective (SV, SV)]
                     , rAsserts       :: IORef [(String, Maybe CallStack, SV)]
@@ -1362,7 +1362,7 @@ newUninterpreted st (nm, mbArgNames) t uiCode
 
        () <- case uiCode of
                UINone  -> pure ()
-               UISMT d -> modifyState st rDefns (\defs -> d : filter (\o -> smtDefGivenName o /= Just nm) defs)
+               UISMT d -> modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
                             $ noInteractive [ "Defined functions (smtFunction):"
                                             , "  Name: " ++ nm
                                             , "  Type: " ++ show t
@@ -1914,7 +1914,7 @@ extractSymbolicSimulationState st@State{ runMode=rrm
    ds    <- reverse <$> readIORef defns
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has a definition associated with it
-               let defineds = mapMaybe smtDefGivenName ds
+               let defineds = mapMaybe (smtDefGivenName . fst) ds
                pure [ui | ui@(nm, _) <- unints, nm `notElem` defineds]
    knds  <- readIORef usedKinds
    cgMap <- Map.toList <$> readIORef cgs

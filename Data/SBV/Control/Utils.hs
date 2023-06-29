@@ -1117,7 +1117,7 @@ getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Maybe [String], SB
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
-                          pure $ mapMaybe smtDefGivenName allDefs
+                          pure $ mapMaybe (smtDefGivenName . fst) allDefs
 
             prior <- io $ readIORef rUIMap
             new   <- io $ readIORef rIncState >>= readIORef . rNewUIs

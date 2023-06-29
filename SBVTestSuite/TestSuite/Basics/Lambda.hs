@@ -131,13 +131,13 @@ tests =
       , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st $ \(Forall b)             -> sNot b
       , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
 
-      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" (kindOf (Proxy @SInteger)) (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" (kindOf (Proxy @SInteger)) (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr st "lambda42" (kindOf (Proxy @SInteger)) (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" i2i (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" i2i (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr st "lambda42" i2i (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr st "lambda43" (kindOf (Proxy @SWord32)) (0           :: SWord32)
-      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr st "lambda44" (kindOf (Proxy @SWord32)) (\x   -> x+1 :: SWord32)
-      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr st "lambda45" (kindOf (Proxy @SWord32)) (\x y -> x+y :: SWord32)
+      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr st "lambda43" w32_w32 (0           :: SWord32)
+      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr st "lambda44" w32_w32 (\x   -> x+1 :: SWord32)
+      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr st "lambda45" w32_w32 (\x y -> x+y :: SWord32)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
 
@@ -233,7 +233,11 @@ tests =
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
-  where def_foo, def_bar, def_baz, def_e, def_o :: SInteger -> SInteger
+  where i2i, w32_w32 :: SBVType
+        i2i     = SBVType [kindOf (Proxy @SInteger), kindOf (Proxy @SInteger)]
+        w32_w32 = SBVType [kindOf (Proxy @SWord32),  kindOf (Proxy @SWord32)]
+
+        def_foo, def_bar, def_baz, def_e, def_o :: SInteger -> SInteger
         def_foo = smtFunction "foo" $ \x -> def_bar (x-1)
         def_bar = smtFunction "bar" $ \x -> def_bar (x-1)
         def_baz = smtFunction "baz" $ \x -> x+1
