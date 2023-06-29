@@ -223,7 +223,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                   , consts      -- constants used
                   )
 
-                  _tbls         -- Tables                : nothing to do with them
+                  tbls          -- Tables                : nothing to do with them
                   _arrs         -- Arrays                : nothing to do with them
                   _uis          -- Uninterpeted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
@@ -246,6 +246,10 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          | not (null observables)
          = tbd [ "Observables."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- observables]
+               ]
+         | not (null tbls)
+         = tbd [ "Tables."
+               , "  Saw: " ++ intercalate ", " ["table" ++ show n ++ " :: " ++ show (SBVType [k1, k2]) | ((n, k1, k2), _) <- tbls]
                ]
          | kindOf out /= expectedKind
          = bad [ "Expected kind and final kind do not match"
