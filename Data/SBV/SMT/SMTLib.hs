@@ -36,10 +36,10 @@ toIncSMTLib SMTConfig{smtLibVersion} = case smtLibVersion of
 -- | Convert to SMTLib-2 format
 toSMTLib2 :: SMTLibConverter SMTLibPgm
 toSMTLib2 = cvt SMTLib2
-  where cvt v ctx progInfo kindInfo isSat comments qinps consts tbls arrs uis axs asgnsSeq cstrs out config = SMTLibPgm v pgm
-         where converter = case v of
-                             SMTLib2 -> SMT2.cvt
-               pgm = converter ctx progInfo kindInfo isSat comments qinps consts tbls arrs uis axs asgnsSeq cstrs out config
+  where cvt v ctx progInfo kindInfo isSat comments qinps consts tbls arrs uis axs asgnsSeq cstrs out config = SMTLibPgm v pgm defs
+         where converter   = case v of
+                               SMTLib2 -> SMT2.cvt
+               (pgm, defs) = converter ctx progInfo kindInfo isSat comments qinps consts tbls arrs uis axs asgnsSeq cstrs out config
 
 -- | Convert to SMTLib-2 format
 toIncSMTLib2 :: SMTLibIncConverter [String]

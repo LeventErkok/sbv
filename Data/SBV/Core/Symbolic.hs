@@ -2059,14 +2059,15 @@ data SMTLibVersion = SMTLib2
 smtLibVersionExtension :: SMTLibVersion -> String
 smtLibVersionExtension SMTLib2 = "smt2"
 
--- | Representation of an SMT-Lib program. In between pre and post goes the refuted models
-data SMTLibPgm = SMTLibPgm SMTLibVersion [String]
+-- | Representation of an SMT-Lib program. The second [String] are the function definitions,
+-- which is *replicated* in the first one. There are cases where that we need the second part on its own.
+data SMTLibPgm = SMTLibPgm SMTLibVersion [String] [String]
 
-instance NFData SMTLibVersion where rnf a               = a `seq` ()
-instance NFData SMTLibPgm     where rnf (SMTLibPgm v p) = rnf v `seq` rnf p
+instance NFData SMTLibVersion where rnf a                 = a `seq` ()
+instance NFData SMTLibPgm     where rnf (SMTLibPgm v p d) = rnf v `seq` rnf p `seq` rnf d
 
 instance Show SMTLibPgm where
-  show (SMTLibPgm _ pre) = intercalate "\n" pre
+  show (SMTLibPgm _ pgm _) = intercalate "\n" pgm
 
 -- Other Technicalities..
 instance NFData CV where

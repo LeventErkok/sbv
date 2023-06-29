@@ -24,7 +24,7 @@
 module Data.SBV.Provers.Prover (
          SMTSolver(..), SMTConfig(..), Predicate
        , ProvableM(..), Provable, SatisfiableM(..), Satisfiable
-       , generateSMTBenchmarkSat, generateSMTBenchmarkProof, ConstraintSet
+       , generateSMTBenchmarkSat, generateSMTBenchmarkProof, defs2smt, ConstraintSet
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
@@ -559,17 +559,22 @@ validate reducer isSAT cfg p res =
 
                        walkConstraints cstrs (checkOutputs (resOutputs result))
 
+-- | Given a satisfiability problem, extract the function definitions in it
+defs2smt :: SatisfiableM m a => a -> m String
+defs2smt = generateSMTBenchMarkGen True satArgReduce defs
+  where defs (SMTLibPgm _ _ ds) = intercalate "\n" ds
+
 -- | Create an SMT-Lib2 benchmark, for a SAT query.
 generateSMTBenchmarkSat :: SatisfiableM m a => a -> m String
-generateSMTBenchmarkSat = generateSMTBenchMarkGen True satArgReduce
+generateSMTBenchmarkSat = generateSMTBenchMarkGen True satArgReduce (\p -> show p ++ "\n(check-sat)\n")
 
 -- | Create an SMT-Lib2 benchmark, for a Proof query.
 generateSMTBenchmarkProof :: ProvableM m a => a -> m String
-generateSMTBenchmarkProof = generateSMTBenchMarkGen False proofArgReduce
+generateSMTBenchmarkProof = generateSMTBenchMarkGen False proofArgReduce (\p -> show p ++ "\n(check-sat)\n")
 
 -- | Generic benchmark creator
-generateSMTBenchMarkGen :: MonadIO m => Bool -> (a -> SymbolicT m SBool) -> a -> m String
-generateSMTBenchMarkGen isSat reduce a = do
+generateSMTBenchMarkGen :: MonadIO m => Bool -> (a -> SymbolicT m SBool) -> (SMTLibPgm -> b) -> a -> m b
+generateSMTBenchMarkGen isSat reduce render a = do
       t <- liftIO getZonedTime
 
       let comments = ["Automatically created by SBV on " ++ show t]
@@ -578,9 +583,8 @@ generateSMTBenchMarkGen isSat reduce a = do
       (_, res) <- runSymbolic cfg (SMTMode QueryInternal ISetup isSat cfg) $ reduce a >>= output
 
       let SMTProblem{smtLibPgm} = Control.runProofOn (SMTMode QueryInternal IRun isSat cfg) QueryInternal comments res
-          out                   = show (smtLibPgm cfg)
 
-      return $ out ++ "\n(check-sat)\n"
+      return $ render (smtLibPgm cfg)
 
 checkNoOptimizations :: MonadIO m => QueryT m ()
 checkNoOptimizations = do objectives <- Control.getObjectives

@@ -11,6 +11,10 @@
 
   * Add 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
 
+  * Add 'sbv2smt', which renders the given sbv definition as an SMTLib definition. Mainly useful for debugging purposes.
+    It can render both ground definitions and functions, and the latter can be handy in producing SMTLib functions to
+    be used in other settings.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
