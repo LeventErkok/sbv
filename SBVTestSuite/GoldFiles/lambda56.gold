@@ -17,7 +17,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; -- user given mutually-recursive definitions: bar, foo
+[GOOD] ; bar, foo
 [GOOD] (define-funs-rec
          ((bar ((l2_s0 Int)) Int)
           (foo ((l1_s0 Int)) Int))

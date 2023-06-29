@@ -17,7 +17,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; -- user given mutually-recursive definitions: f1, f2, f3, f4
+[GOOD] ; f1, f2, f3, f4
 [GOOD] (define-funs-rec
          ((f1 ((l1_s0 (_ BitVec 8))) (_ BitVec 8))
           (f2 ((l2_s0 (_ BitVec 8))) (_ BitVec 8))

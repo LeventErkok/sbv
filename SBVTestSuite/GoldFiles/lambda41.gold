@@ -1,4 +1,4 @@
-; -- user given definition: lambda41
+; lambda41
 (define-fun lambda41 ((l1_s0 Int)) Int
   (let ((l1_s1 1))
   (let ((l1_s2 (+ l1_s0 l1_s1)))

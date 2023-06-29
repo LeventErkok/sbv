@@ -25,7 +25,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; -- user given definition: isEvenOdd [Recursive]
+[GOOD] ; isEvenOdd [Recursive]
 [GOOD] (define-fun-rec isEvenOdd ((l1_s0 Int)) (SBVTuple2 Bool Bool)
          (let ((l1_s1 0))
          (let ((l1_s6 (mkSBVTuple2 true false)))

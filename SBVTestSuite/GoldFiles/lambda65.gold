@@ -17,7 +17,7 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun __internal_sbv_IsPartialOrder__poI_ (Int Int) Bool)
 [GOOD] ; --- user defined functions ---
-[GOOD] ; -- user given definition: leq
+[GOOD] ; leq
 [GOOD] (define-fun leq ((l2_s0 Int) (l2_s1 Int)) Bool
          (<= l2_s0 l2_s1))
 [GOOD] ; --- assignments ---
