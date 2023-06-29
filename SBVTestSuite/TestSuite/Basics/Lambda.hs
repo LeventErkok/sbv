@@ -218,12 +218,29 @@ tests =
                     snPhi :: Forall "x" Integer -> SBool
                     snPhi = skolemize nPhi
                 in runS snPhi
+
+      , goldenCapturedIO "lambda71" $ \f -> sbv2smt def_foo >>= writeFile f
+      , goldenCapturedIO "lambda72" $ \f -> sbv2smt def_bar >>= writeFile f
+      , goldenCapturedIO "lambda73" $ \f -> sbv2smt def_baz >>= writeFile f
+      , goldenCapturedIO "lambda74" $ \f -> sbv2smt def_e   >>= writeFile f
+      , goldenCapturedIO "lambda75" $ \f -> sbv2smt def_o   >>= writeFile f
+
+      , goldenCapturedIO "lambda76" $ \f -> sbv2smt (2 :: SInteger)                    >>= writeFile f
+      , goldenCapturedIO "lambda77" $ \f -> sbv2smt (literal 'a' :: SChar)             >>= writeFile f
+      , goldenCapturedIO "lambda78" $ \f -> sbv2smt (literal [1,2,3] :: SList Integer) >>= writeFile f
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
    P.++ qc1 "lambdaQC3" (\n -> let pn = abs n in (pn * (pn+1)) `sDiv` 2)
                         (let ssum = smtFunction "ssum" $ \(n :: SInteger) -> let pn = abs n in ite (pn .== 0) 0 (pn + ssum (pn - 1)) in ssum)
-  where rel, leq :: Relation Integer
+  where def_foo, def_bar, def_baz, def_e, def_o :: SInteger -> SInteger
+        def_foo = smtFunction "foo" $ \x -> def_bar (x-1)
+        def_bar = smtFunction "bar" $ \x -> def_bar (x-1)
+        def_baz = smtFunction "baz" $ \x -> x+1
+        def_e = smtFunction "e" $ \x -> def_o (x-1)
+        def_o = smtFunction "o" $ \x -> def_e (x-1)
+
+        rel, leq :: Relation Integer
         rel = uninterpret "R"
         leq = uncurry $ smtFunction "leq" (.<=)
         po  = isPartialOrder "poR" rel
