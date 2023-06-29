@@ -223,7 +223,8 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                   , consts      -- constants used
                   )
 
-                  tbls          -- Tables                : nothing to do with them
+                  tbls          -- Tables. Not supported.
+
                   _arrs         -- Arrays                : nothing to do with them
                   _uis          -- Uninterpeted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
