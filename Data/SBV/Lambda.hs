@@ -151,7 +151,7 @@ namedLambda inState nm fk = namedLambdaGen mkDef inState fk
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> SBVType -> a -> m String
 namedLambdaStr inState nm t = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = concat $ declUserFuns [(SMTDef nm fk frees (extractAllUniversals <$> params) body, undefined)]
+   where mkDef (Defn frees params body) = concat $ declUserFuns [(SMTDef nm fk frees (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
