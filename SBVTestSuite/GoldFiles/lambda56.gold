@@ -17,16 +17,16 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; bar, foo
+[GOOD] ; bar :: SInteger -> SInteger, foo :: SInteger -> SInteger
 [GOOD] (define-funs-rec
          ((bar ((l2_s0 Int)) Int)
           (foo ((l1_s0 Int)) Int))
-         (; Definition of: bar. [Refers to: foo]
+         (; Definition of: bar :: SInteger -> SInteger. [Refers to: foo]
           (let ((l2_s2 1))
           (let ((l2_s1 (foo l2_s0)))
           (let ((l2_s3 (+ l2_s1 l2_s2)))
           l2_s3)))
-          ; Definition of: foo. [Refers to: bar]
+          ; Definition of: foo :: SInteger -> SInteger. [Refers to: bar]
           (let ((l1_s2 1))
           (let ((l1_s1 (bar l1_s0)))
           (let ((l1_s3 (+ l1_s1 l1_s2)))

@@ -17,13 +17,13 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; f1, f2, f3, f4
+[GOOD] ; f1 :: SWord8 -> SWord8, f2 :: SWord8 -> SWord8, f3 :: SWord8 -> SWord8, f4 :: SWord8 -> SWord8
 [GOOD] (define-funs-rec
          ((f1 ((l1_s0 (_ BitVec 8))) (_ BitVec 8))
           (f2 ((l2_s0 (_ BitVec 8))) (_ BitVec 8))
           (f3 ((l3_s0 (_ BitVec 8))) (_ BitVec 8))
           (f4 ((l4_s0 (_ BitVec 8))) (_ BitVec 8)))
-         (; Definition of: f1. [Refers to: f1, f2]
+         (; Definition of: f1 :: SWord8 -> SWord8. [Refers to: f1, f2]
           (let ((l1_s1 #x00))
           (let ((l1_s3 #x01))
           (let ((l1_s6 #x02))
@@ -36,7 +36,7 @@
           (let ((l1_s10 (bvadd l1_s3 l1_s9)))
           (let ((l1_s11 (ite l1_s2 l1_s1 l1_s10)))
           l1_s11)))))))))))
-          ; Definition of: f2. [Refers to: f2, f3]
+          ; Definition of: f2 :: SWord8 -> SWord8. [Refers to: f2, f3]
           (let ((l2_s1 #x00))
           (let ((l2_s3 #x01))
           (let ((l2_s6 #x02))
@@ -49,7 +49,7 @@
           (let ((l2_s10 (bvadd l2_s3 l2_s9)))
           (let ((l2_s11 (ite l2_s2 l2_s1 l2_s10)))
           l2_s11)))))))))))
-          ; Definition of: f3. [Refers to: f3, f4]
+          ; Definition of: f3 :: SWord8 -> SWord8. [Refers to: f3, f4]
           (let ((l3_s1 #x00))
           (let ((l3_s3 #x01))
           (let ((l3_s6 #x02))
@@ -62,7 +62,7 @@
           (let ((l3_s10 (bvadd l3_s3 l3_s9)))
           (let ((l3_s11 (ite l3_s2 l3_s1 l3_s10)))
           l3_s11)))))))))))
-          ; Definition of: f4. [Refers to: f4, f1]
+          ; Definition of: f4 :: SWord8 -> SWord8. [Refers to: f4, f1]
           (let ((l4_s1 #x00))
           (let ((l4_s3 #x01))
           (let ((l4_s6 #x02))

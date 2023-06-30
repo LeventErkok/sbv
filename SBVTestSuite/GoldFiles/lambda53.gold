@@ -17,7 +17,7 @@
 [GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
-[GOOD] ; foo
+[GOOD] ; foo :: SInteger -> SInteger
 [GOOD] (define-fun foo ((l1_s0 Int)) Int
          (+ s0 l1_s0))
 [GOOD] ; --- assignments ---
