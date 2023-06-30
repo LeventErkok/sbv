@@ -1,3 +1,3 @@
-; lambda40
+; lambda40 :: SInteger
 (define-fun lambda40 () Int
   0)
