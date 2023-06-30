@@ -81,7 +81,7 @@ ceilingHighEnoughForHuman ceiling humanHeight = humanHeight' .< ceiling'
 --
 -- >>> sat problem
 -- Satisfiable. Model:
---   floorToCeiling =   3 :: Integer
+--   floorToCeiling =  16 :: Integer
 --   humanheight    = 255 :: Word16
 problem :: Predicate
 problem = do
