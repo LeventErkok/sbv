@@ -16,7 +16,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtInc, declUserFuns) where
+module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtCV, cvtInc, declUserFuns, constructTables) where
 
 import Data.Bits  (bit)
 import Data.List  (intercalate, partition, nub, elemIndex)

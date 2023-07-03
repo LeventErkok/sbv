@@ -41,7 +41,6 @@ import Data.List
 
 import qualified Data.Foldable      as F
 import qualified Data.Map.Strict    as M
-import qualified Data.IntMap.Strict as IM
 
 import qualified Data.Generics.Uniplate.Data as G
 
@@ -223,7 +222,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                   , consts      -- constants used
                   )
 
-                  tbls          -- Tables. Not supported.
+                  tbls          -- Tables.
 
                   _arrs         -- Arrays                : nothing to do with them
                   _uis          -- Uninterpeted constants: nothing to do with them
@@ -247,10 +246,6 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          | not (null observables)
          = tbd [ "Observables."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- observables]
-               ]
-         | not (null tbls)
-         = tbd [ "Tables."
-               , "  Saw: " ++ intercalate ", " ["table" ++ show n ++ " :: " ++ show (SBVType [k1, k2]) | ((n, k1, k2), _) <- tbls]
                ]
          | kindOf out /= expectedKind
          = bad [ "Expected kind and final kind do not match"
@@ -276,12 +271,34 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                        paramList ps = '(' : unwords (map (\p -> '(' : show p ++ " " ++ smtType (kindOf p) ++ ")")  ps) ++ ")"
 
                body tabAmnt
-                 | Just e <- simpleBody bindings out
-                 = [replicate tabAmnt ' ' ++ e]
+                 | null constTables
+                 , null nonConstTables
+                 , Just e <- simpleBody (constBindings ++ svBindings) out
+                 = [tab ++ e]
                  | True
-                 = let tab = replicate tabAmnt ' '
-                   in    [tab ++ "(let ((" ++ show s ++ " " ++ v ++ "))" | (s, v) <- bindings]
-                      ++ [tab ++ show out ++ replicate (length bindings) ')']
+                 = map (tab ++) $   [mkLet sv  | sv <- constBindings]
+                                 ++ [mkTable t | t  <- constTables]
+                                 ++ walk svBindings nonConstTables
+                                 ++ [show out ++ replicate totalClose ')']
+
+                 where tab          = replicate tabAmnt ' '
+                       mkBind l r   = "(let ((" ++ l ++ " " ++ r ++ "))"
+                       mkLet (s, v) = mkBind (show s) v
+
+                       mkTable (((i, ak, rk), elts), _) = mkBind nm (lambdaTable (map (const ' ') nm) ak rk elts)
+                          where nm = "table" ++ show i
+
+                       totalClose = length constBindings
+                                  + length svBindings
+                                  + length constTables
+                                  + length nonConstTables
+
+                       walk []  []        = []
+                       walk []  remaining = error $ "Data.SBV: Impossible: Ran out of bindings, but tables remain: " ++ show remaining
+                       walk (cur@(SV _ nd, _) : rest)  remaining =  map mkTable (map snd ready)
+                                                                 ++ [mkLet cur]
+                                                                 ++ walk rest notReady
+                          where (ready, notReady) = partition (\(need, _) -> need < getId nd) remaining
 
                -- if we have just one definition returning it, simplify
                simpleBody :: [(SV, String)] -> SV -> Maybe String
@@ -292,8 +309,9 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                constants = filter ((`notElem` [falseSV, trueSV]) . fst) consts
 
-               bindings :: [(SV, String)]
-               bindings = map mkConst constants ++ map mkAsgn assignments
+               constBindings, svBindings :: [(SV, String)]
+               constBindings = map mkConst constants
+               svBindings    = map mkAsgn assignments
 
                mkConst :: (SV, CV) -> (SV, String)
                mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
@@ -305,11 +323,38 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                                   , "   Saw: " ++ show outputs
                                   ]
 
+               rm = roundingMode cfg
+
+               (tableMap, constTables, nonConstTablesUnindexed) = constructTables rm consts tbls
+
+               -- Index each non-const table with the largest index of SV it needs
+               nonConstTables = [ (maximum ((0, 0) : [getId n | SV _ n <- elts]), nct)
+                                | nct@((_, elts), _) <- nonConstTablesUnindexed]
+
+               lambdaTable :: String -> Kind -> Kind -> [SV] -> String
+               lambdaTable extraSpace ak rk elts = "(lambda ((" ++ lv ++ " " ++ smtType ak ++ "))" ++ space ++ chain 0 elts ++ ")"
+                 where cnst k i = cvtCV rm (mkConstCV k (i::Integer))
+
+                       lv = "idx"
+
+                       -- If more than 5 elts, use new-lines
+                       long = not (null (drop 5 elts))
+                       space
+                         | long
+                         = "\n                  " ++ extraSpace
+                         | True
+                         = " "
+
+                       chain _ []     = cnst rk 0
+                       chain _ [x]    = show x
+                       chain i (x:xs) = "(ite (= " ++ lv ++ " " ++ cnst ak i ++ ") "
+                                           ++ show x ++ space
+                                           ++ chain (i+1) xs
+                                           ++ ")"
+
                mkAsgn (sv, e) = (sv, converter e)
                converter = cvtExp curProgInfo solverCaps rm tableMap funcMap
                  where solverCaps = capabilities (solver cfg)
-                       rm         = roundingMode cfg
-                       tableMap   = IM.empty
                        funcMap    = M.empty
 
 {- HLint ignore module "Use second" -}

@@ -228,6 +228,9 @@ tests =
       , goldenCapturedIO "lambda76" $ \f -> sbv2smt (2 :: SInteger)                    >>= writeFile f
       , goldenCapturedIO "lambda77" $ \f -> sbv2smt (literal 'a' :: SChar)             >>= writeFile f
       , goldenCapturedIO "lambda78" $ \f -> sbv2smt (literal [1,2,3] :: SList Integer) >>= writeFile f
+
+      , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
+      , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -246,6 +249,8 @@ tests =
         def_baz = smtFunction "baz" $ \x -> x+1
         def_e = smtFunction "e" $ \x -> def_o (x-1)
         def_o = smtFunction "o" $ \x -> def_e (x-1)
+        def_t1 = smtFunction "foo" (\x -> select [1,2,3]       (0 :: SWord32)  (x::SInteger))
+        def_t2 = smtFunction "foo" (\x -> select [x+1,x+2,x+3] (0 :: SInteger) (x::SInteger))
 
         rel, leq :: Relation Integer
         rel = uninterpret "R"
