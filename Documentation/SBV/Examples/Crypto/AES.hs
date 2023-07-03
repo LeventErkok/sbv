@@ -26,6 +26,7 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
@@ -39,6 +40,8 @@ import Data.SBV.Tools.Polynomial
 
 import Data.List (transpose)
 import Data.Maybe (fromJust)
+
+import Data.Proxy
 
 import Numeric (showHex)
 
@@ -693,13 +696,42 @@ runAESTests runQC = do
 -- 256 bit cases as well.
 aes128IsCorrect :: (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ plain-text words
                 -> (SWord 32, SWord 32, SWord 32, SWord 32)  -- ^ key-words
-                -> SBool                                 -- ^ True if round-trip gives us plain-text back
+                -> SBool                                     -- ^ True if round-trip gives us plain-text back
 aes128IsCorrect (i0, i1, i2, i3) (k0, k1, k2, k3) = pt .== pt'
    where pt  = [i0, i1, i2, i3]
          key = [k0, k1, k2, k3]
          (encKS, decKS) = aesKeySchedule key
          ct  = aesEncrypt pt encKS
          pt' = aesDecrypt ct decKS
+
+-----------------------------------------------------------------------------
+-- * Block encryption at full size
+-----------------------------------------------------------------------------
+
+-- | 128-bit encryption, that takes 128-bit values, instead of chunks. We have:
+--
+-- >>> hex8 $ aes128Enc 0x000102030405060708090a0b0c0d0e0f 0x00112233445566778899aabbccddeeff
+-- "69c4e0d86a7b0430d8cdb78070b4c55a"
+--
+-- You can also render this function as a stand-alone function using:
+--
+-- @
+--   sbv2smt (smtFunction "aes128Enc" aes128Enc)
+-- @
+aes128Enc :: SWord 128 -> SWord 128 -> SWord 128
+aes128Enc key pt = from32 $ aesEncrypt (to32 pt) ks
+  where to32 :: SWord 128 -> [SWord 32]
+        to32 x = [ bvExtract (Proxy @127) (Proxy @96) x
+                 , bvExtract (Proxy  @95) (Proxy @64) x
+                 , bvExtract (Proxy  @63) (Proxy @32) x
+                 , bvExtract (Proxy  @31) (Proxy  @0) x
+                 ]
+
+        from32 :: [SWord 32] -> SWord 128
+        from32 [a, b, c, d] = a # b # c # d
+        from32 _ = error "nope"
+
+        (ks, _)  = aesKeySchedule (to32 key)
 
 -----------------------------------------------------------------------------
 -- * Code generation
