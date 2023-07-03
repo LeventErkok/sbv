@@ -300,7 +300,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                        walk []  []        = []
                        walk []  remaining = error $ "Data.SBV: Impossible: Ran out of bindings, but tables remain: " ++ show remaining
-                       walk (cur@(SV _ nd, _) : rest)  remaining =  map mkTable (map snd ready)
+                       walk (cur@(SV _ nd, _) : rest)  remaining =  map (mkTable . snd) ready
                                                                  ++ [mkLet cur]
                                                                  ++ walk rest notReady
                           where (ready, notReady) = partition (\(need, _) -> need < getId nd) remaining
