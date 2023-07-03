@@ -218,13 +218,14 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                   is            -- Inputs
 
-                  ( _allConsts  -- This contains the CV->SV map, which isn't needed for lambdas since we don't support tables
+                  ( _allConsts  -- Not needed, consts are sufficient for this translation
                   , consts      -- constants used
                   )
 
-                  tbls          -- Tables.
+                  tbls          -- Tables
 
-                  _arrs         -- Arrays                : nothing to do with them
+                  arrs          -- Arrays: not supported
+
                   _uis          -- Uninterpeted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
 
@@ -246,6 +247,10 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          | not (null observables)
          = tbd [ "Observables."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- observables]
+               ]
+         | not (null arrs)
+         = tbd [ "Arrays."
+               , "  Saw: " ++ intercalate ", " (map show arrs)
                ]
          | kindOf out /= expectedKind
          = bad [ "Expected kind and final kind do not match"
