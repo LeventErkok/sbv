@@ -1352,6 +1352,7 @@ b .^ e
      in product $ zipWith (\use n -> ite use n 1)
                           blasted
                           (iterate (\x -> x*x) b)
+infixr 8 .^
 
 instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
   fromRational  = literal . fromRational
