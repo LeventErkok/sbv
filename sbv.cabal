@@ -119,6 +119,7 @@ Library
                   , Documentation.SBV.Examples.BitPrecise.Legato
                   , Documentation.SBV.Examples.BitPrecise.MergeSort
                   , Documentation.SBV.Examples.BitPrecise.MultMask
+                  , Documentation.SBV.Examples.BitPrecise.PEXT_PDEP
                   , Documentation.SBV.Examples.BitPrecise.PrefixSum
                   , Documentation.SBV.Examples.CodeGeneration.AddSub
                   , Documentation.SBV.Examples.CodeGeneration.CRC_USB5

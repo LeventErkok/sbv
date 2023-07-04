@@ -11,6 +11,8 @@
 
   * Add 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
 
+  * Added `Documentation.SBV.Examples.BitPrecise.PEXT_PDEP`, modeling x86 instructions PDEP and PEXT.
+
   * Add 'sbv2smt', which renders the given sbv definition as an SMTLib definition. Mainly useful for debugging purposes.
     It can render both ground definitions and functions, and the latter can be handy in producing SMTLib functions to
     be used in other settings.
