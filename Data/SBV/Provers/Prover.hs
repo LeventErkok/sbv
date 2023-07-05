@@ -478,12 +478,19 @@ validate reducer isSAT cfg p res =
 
                            notConcrete sv = wrap ("Data.SBV: Cannot validate the model, since " ++ show sv ++ " is not concretely computable.")
                                                  (  perhaps (why sv)
-                                                 ++ [ "SBV's model validator is incomplete, and cannot handle this particular case."
-                                                    , "Please report this as a feature request or possibly a bug!"
-                                                    ]
                                                  )
-                                where perhaps Nothing  = []
-                                      perhaps (Just x) = [x, ""]
+                                where perhaps Nothing  = case resObservables result of
+                                                           [] -> []
+                                                           xs -> [ "There are observable values in the model: " ++ unwords [show n | (n, _, _) <- xs]
+                                                                 , "SBV cannot validate in the presence of observables, unfortunately."
+                                                                 , "Try validation after removing calls to 'observe'."
+                                                                 ]
+
+                                      perhaps (Just x) = [ x
+                                                         , ""
+                                                         , "SBV's model validator is incomplete, and cannot handle this particular case."
+                                                         , "Please report this as a feature request or possibly a bug!"
+                                                         ]
 
                                       -- This is incomplete, but should capture the most common cases
                                       why s = case s `lookup` S.toList (pgmAssignments (resAsgns result)) of
