@@ -454,7 +454,7 @@ showCV shk w               = liftCV show show show show show show show show snd 
               | True       = v
               where needsParen = case dropWhile isSpace v of
                                    []         -> False
-                                   rest@(x:_) -> any isSpace rest && x `notElem` "{[("
+                                   rest@(x:_) -> x == '-' || (any isSpace rest && x `notElem` "{[(")
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
