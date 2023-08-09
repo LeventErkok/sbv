@@ -6,7 +6,8 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Solution to the following puzzle, which contains 10 questions:
+-- Solution to the following puzzle (found at hugopeters.me/posts/15)
+-- which contains 10 questions:
 --
 -- @
 -- a. What is sum of all integer answers?
