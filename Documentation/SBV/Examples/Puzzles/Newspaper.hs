@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Solution to the following puzzle (found at hugopeters.me/posts/15)
+-- Solution to the following puzzle (found at <http://hugopeters.me/posts/15>)
 -- which contains 10 questions:
 --
 -- @
