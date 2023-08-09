@@ -184,6 +184,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.LadyAndTigers
                   , Documentation.SBV.Examples.Puzzles.MagicSquare
                   , Documentation.SBV.Examples.Puzzles.Murder
+                  , Documentation.SBV.Examples.Puzzles.Newspaper
                   , Documentation.SBV.Examples.Puzzles.NQueens
                   , Documentation.SBV.Examples.Puzzles.Orangutans
                   , Documentation.SBV.Examples.Puzzles.Rabbits
