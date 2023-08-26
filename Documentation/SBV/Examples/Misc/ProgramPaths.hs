@@ -48,33 +48,33 @@ d4 x y = d1 x y + d2 y + d3 x y
 --
 -- >>> paths
 -- Solution #1:
---   x =   7 :: Integer
---   y =   4 :: Integer
---   r = 217 :: Integer
--- Solution #2:
---   x =   4 :: Integer
---   y =   0 :: Integer
---   r = 257 :: Integer
--- Solution #3:
---   x =   3 :: Integer
---   y =  -1 :: Integer
---   r = 157 :: Integer
--- Solution #4:
---   x =  -1 :: Integer
---   y =   3 :: Integer
---   r = 152 :: Integer
--- Solution #5:
---   x =  -1 :: Integer
---   y =   4 :: Integer
---   r = 212 :: Integer
--- Solution #6:
---   x =   0 :: Integer
---   y =   3 :: Integer
---   r = 252 :: Integer
--- Solution #7:
 --   x =  -2 :: Integer
 --   y =   4 :: Integer
 --   r = 112 :: Integer
+-- Solution #2:
+--   x =   0 :: Integer
+--   y =   3 :: Integer
+--   r = 252 :: Integer
+-- Solution #3:
+--   x =  -1 :: Integer
+--   y =   4 :: Integer
+--   r = 212 :: Integer
+-- Solution #4:
+--   x =   3 :: Integer
+--   y =   0 :: Integer
+--   r = 257 :: Integer
+-- Solution #5:
+--   x =   2 :: Integer
+--   y =  -1 :: Integer
+--   r = 157 :: Integer
+-- Solution #6:
+--   x =   7 :: Integer
+--   y =   4 :: Integer
+--   r = 217 :: Integer
+-- Solution #7:
+--   x =   0 :: Integer
+--   y =   0 :: Integer
+--   r = 152 :: Integer
 -- Found 7 different solutions.
 paths :: IO AllSatResult
 paths = allSat $ do

@@ -81,12 +81,12 @@ ceilingHighEnoughForHuman ceiling humanHeight = humanHeight' .< ceiling'
 --
 -- >>> sat problem
 -- Satisfiable. Model:
---   floorToCeiling =  16 :: Integer
---   humanheight    = 255 :: Word16
+--   floorToCeiling =   3 :: Integer
+--   humanheight    = 272 :: Word16
 problem :: Predicate
 problem = do
     ceiling     :: SMetres          <- free "floorToCeiling"
     humanHeight :: SHumanHeightInCm <- free "humanheight"
-    constrain $ humanHeight .<= tallestHumanEver
+    constrain $ humanHeight .== tallestHumanEver
 
     return $ ceilingHighEnoughForHuman ceiling humanHeight

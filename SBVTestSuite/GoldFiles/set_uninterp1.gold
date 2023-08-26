@@ -104,7 +104,7 @@ Fast allSat, Looking for solution 8
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (store (store ((as const (Array E Bool)) false) B true) C true)))
+[RECV] ((s0 (store (store ((as const (Array E Bool)) false) C true) B true)))
 [GOOD] (push 1)
 [GOOD] (define-fun s22 () (Array E Bool) (store (store ((as const (Array E Bool)) false) C true) B true))
 [GOOD] (define-fun s23 () Bool (= s0 s22))

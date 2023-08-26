@@ -117,12 +117,12 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 (- 1)))
+[RECV] ((s0 0))
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
 [SEND] (get-value (q1))
-[RECV] ((q1 (store (store (store ((as const (Array Int Int)) 12) 3 75) (- 3) 9) (- 1) 0)))
+[RECV] ((q1 (store (store (store ((as const (Array Int Int)) 12) 3 75) (- 3) 9) 0 1)))
 [SEND] (get-value (q2))
 [RECV] ((q2 (store (store ((as const (Array Bool Int Int)) 5) false 7 6) false 12 3)))
 [SEND] (get-value (q3))
@@ -164,10 +164,10 @@
 
  FINAL:
 Satisfiable. Model:
-  s0 = -1 :: Integer
+  s0 = 0 :: Integer
 
   q1 :: Integer -> Integer
-  q1 (-1) = 0 
+  q1 0    = 1 
   q1 (-3) = 9 
   q1 3    = 75
   q1 _    = 12
