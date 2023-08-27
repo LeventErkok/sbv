@@ -96,25 +96,25 @@ exampleMathSAT = do
 -- of @y@, which is the only common symbol among them. We have:
 --
 -- >>> runSMT evenOdd
--- "(or (= s1 0) (= s1 (* 2 (div s1 2))))"
+-- "(let (a!1 (= (mod (+ (* (- 1) s1) 0) 2) 0)) (or (= s1 0) a!1))"
 --
 -- This is a bit hard to read unfortunately, due to translation artifacts and use of strings. To analyze,
 -- we need to know that @s1@ is @y@ through SBV's translation. Let's express it in
--- regular infix notation with @y@ for @s1@:
+-- regular infix notation with @y@ for @s1@, and substitute the let-bound variable:
 --
--- @(y == 0) || (y == 2 * (y `div` 2))@
+-- @(y == 0) || ((-y) `mod` 2 == 0)@
 --
 -- Notice that the only symbol is @y@, as required. To establish that this is
 -- indeed an interpolant, we should establish that when @y@ is even, this formula
 -- is @True@; and if @y@ is odd, then it should be @False@. You can argue
--- mathematically that this indeed the case, but let's just use SBV to prove these:
+-- mathematically that this indeed the case, but let's just use SBV to prove the required relationships:
 --
--- >>> prove $ \y -> (y `sMod` 2 .== 0) .=> ((y .== 0) .|| (y .== 2 * (y `sDiv` (2::SInteger))))
+-- >>> prove $ \(y :: SInteger) -> (y `sMod` 2 .== 0) .=> ((y .== 0) .|| ((-y) `sMod` 2 .== 0))
 -- Q.E.D.
 --
 -- And:
 --
--- >>> prove $ \y -> (y `sMod` 2 .== 1) .=> sNot ((y .== 0) .|| (y .== 2 * (y `sDiv` (2::SInteger))))
+-- >>> prove $ \(y :: SInteger) -> (y `sMod` 2 .== 1) .=> sNot ((y .== 0) .|| ((-y) `sMod` 2 .== 0))
 -- Q.E.D.
 --
 -- This establishes that we indeed have an interpolant!
