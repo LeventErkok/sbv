@@ -955,7 +955,17 @@ svRotateLeft = svRotate svShiftLeft svRor svRol
 svRotateRight :: SVal -> SVal -> SVal
 svRotateRight = svRotate svShiftRight svRol svRor
 
--- | Common implementation for rotations
+-- | Common implementation for rotations. This is more complicated than it might first seem, since SMTLib does
+-- not allow for non-constant rotation amounts, and only defines rotations for bit-vectors. In SBV, we support
+-- both finite/infinite combos, and also non-constant (i.e., symbolic) rotations. Furthermore, if the rotation
+-- amount is negative, then the direction of the rotation is reversed.
+--
+--   Case 1. Infinite x. In this case, we call unbounded-shifter, since you can't rotate an unbounded integer value.
+--                       This is the Haskell semantics for rotates.
+--   Case 2. Finite x.
+--           Case 2.1. Infinite i, or finite i but i can contain a value > |x|. In this case, wrap-around can happen,
+--                     so we reduce by the size of |x|.
+--           Case 2.2. Finite i, and it can't contain a value > |x|. In this case, no reduction is needed.
 svRotate :: (SVal -> SVal -> SVal) -> (SVal -> Int -> SVal) -> (SVal -> Int -> SVal) -> SVal -> SVal -> SVal
 svRotate unboundedShifter opRot curRot x i
   | not (isBounded x)
@@ -980,10 +990,14 @@ svRotate unboundedShifter opRot curRot x i
        table :: [SVal]
        table = map rotK vals
          where rotK k = ifNegRotate (x `opRot` k) (x `curRot` k)
-               vals | noWrapAround = [0 .. bit si - 1]
-                    | True         = [0 .. sx     - 1]
+               vals | noWrapAround = if hasSign i
+                                        then -- If signed then bit (si-1) is the max abs value. (consider 3 bits, [-4..3] is the range)
+                                             [0 .. bit (si - 1)]
+                                        else [0 .. bit si  - 1]
+                    | True  -- If wrap-around can happen, then compute all rotations up to |x|
+                    = [0 .. sx - 1]
 
-       -- What's the current rotation amount. Here we change the type of the
+       -- What's the current rotation amount? Here we change the type of the
        -- index to make it one bit larger if the index is signed, since otherwise
        -- we run into (-(-1)) = -1 problem. See https://github.com/LeventErkok/sbv/issues/673#issuecomment-1782296700
        -- Note that curRotate is always non-negative.
@@ -995,11 +1009,22 @@ svRotate unboundedShifter opRot curRot x i
          where i' | hasSign i && isBounded i = toWord $ svAbs $ enlarge i
                   | True                     = i
 
-               enlarge = svFromIntegral (KBounded True  (si + 1))  -- Increment bit size
-               toWord  = svFromIntegral (KBounded False (si + 1))  -- Treat as word, after call to svAbs above
+               -- Make sure sx can fit into this many bits
+               si' = (si + 1) `max` bitsNeeded sx
 
-               -- NB. n can fit into this size. Why, otherwise noWrapAround would've been false
+               enlarge
+                 | isBounded i = svFromIntegral (KBounded True  si')  -- Increase bit size
+                 | True        = id
+               toWord
+                 | isBounded i = svFromIntegral (KBounded False si')  -- Treat as word, after call to svAbs above
+                 | True        = id
+
                n = svInteger (kindOf i') (toInteger sx)
+
+               bitsNeeded :: Int -> Int
+               bitsNeeded = go 0
+                 where go s 0 = s
+                       go s v = let s' = s + 1 in s' `seq` go s' (v `shiftR` 1)
 
 --------------------------------------------------------------------------------
 -- | Overflow detection.
