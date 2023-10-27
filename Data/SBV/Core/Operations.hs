@@ -897,26 +897,6 @@ svShift toLeft x i
 
                                 newExpr st kx (SBVApp op [sw1, adjustedShift])
 
--- | Generalization of 'svRol', where the rotation amount is symbolic.
--- If the first argument is not bounded, then the this is the same as shift.
-svRotateLeft :: SVal -> SVal -> SVal
-svRotateLeft x i
-  | not (isBounded x)
-  = svShiftLeft x i
-  | isBounded i && bit si <= toInteger sx            -- wrap-around not possible
-  = svIte (svLessThan i zi)
-          (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z (svUNeg i))
-          (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z         i)
-  | True
-  = svIte (svLessThan i zi)
-          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
-          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (       i `svRem` n))
-    where sx = intSizeOf x
-          si = intSizeOf i
-          z  = svInteger (kindOf x) 0
-          zi = svInteger (kindOf i) 0
-          n  = svInteger (kindOf i) (toInteger sx)
-
 -- | A variant of 'svRotateLeft' that uses a barrel-rotate design, which can lead to
 -- better verification code. Only works when both arguments are finite and the second
 -- argument is unsigned.
@@ -965,25 +945,61 @@ barrelRotate f a c = loop blasted a
         -- need not look at any position i s.t. 2^i > 32
         significant (_, pos) = pos < sa
 
+-- | Generalization of 'svRol', where the rotation amount is symbolic.
+-- If the first argument is not bounded, then the this is the same as shift.
+svRotateLeft :: SVal -> SVal -> SVal
+svRotateLeft = svRotate svShiftLeft svRor svRol
+
 -- | Generalization of 'svRor', where the rotation amount is symbolic.
 -- If the first argument is not bounded, then the this is the same as shift.
 svRotateRight :: SVal -> SVal -> SVal
-svRotateRight x i
+svRotateRight = svRotate svShiftRight svRol svRor
+
+-- | Common implementation for rotations
+svRotate :: (SVal -> SVal -> SVal) -> (SVal -> Int -> SVal) -> (SVal -> Int -> SVal) -> SVal -> SVal -> SVal
+svRotate unboundedShifter opRot curRot x i
   | not (isBounded x)
-  = svShiftRight x i
-  | isBounded i && bit si <= toInteger sx                   -- wrap-around not possible
-  = svIte (svLessThan i zi)
-          (svSelect [x `svRol` k | k <- [0 .. bit si - 1]] z (svUNeg i))
-          (svSelect [x `svRor` k | k <- [0 .. bit si - 1]] z         i)
+  = unboundedShifter x i
   | True
-  = svIte (svLessThan i zi)
-          (svSelect [x `svRol` k | k <- [0 .. sx     - 1]] z (svUNeg i `svRem` n))
-          (svSelect [x `svRor` k | k <- [0 .. sx     - 1]] z (       i `svRem` n))
-    where sx = intSizeOf x
-          si = intSizeOf i
-          z  = svInteger (kindOf x) 0
-          zi = svInteger (kindOf i) 0
-          n  = svInteger (kindOf i) (toInteger sx)
+  = svSelect table (svInteger (kindOf x) 0) curRotate
+ where sx = intSizeOf x
+       si = intSizeOf i
+
+       -- Is it the case that this rotation can never "wrap-around?" This happens if
+       -- i is bounded and the max rotation it can represent is less than the bit-size of the input
+       noWrapAround :: Bool
+       noWrapAround = isBounded i && maxRotate <= toInteger sx
+         where maxRotate :: Integer
+               maxRotate
+                 | hasSign i = 2^(si-1)
+                 | True      = 2^si-1
+
+       ifNegRotate = svIte (svLessThan i (svInteger (kindOf i) 0))
+
+       -- the lookup table has sx entries if index can wrap-around. Otherwise it is just as wide as it needs to be.
+       table :: [SVal]
+       table = map rotK vals
+         where rotK k = ifNegRotate (x `opRot` k) (x `curRot` k)
+               vals | noWrapAround = [0 .. bit si - 1]
+                    | True         = [0 .. sx     - 1]
+
+       -- What's the current rotation amount. Here we change the type of the
+       -- index to make it one bit larger if the index is signed, since otherwise
+       -- we run into (-(-1)) = -1 problem. See https://github.com/LeventErkok/sbv/issues/673#issuecomment-1782296700
+       -- Note that curRotate is always non-negative.
+       curRotate :: SVal
+       curRotate
+         | noWrapAround = ifNegRotate (svUNeg i'          ) i'
+         | True         = ifNegRotate (svUNeg i' `svRem` n) (i' `svRem` n)
+
+         where i' | hasSign i && isBounded i = toWord $ svAbs $ enlarge i
+                  | True                     = i
+
+               enlarge = svFromIntegral (KBounded True  (si + 1))  -- Increment bit size
+               toWord  = svFromIntegral (KBounded False (si + 1))  -- Treat as word, after call to svAbs above
+
+               -- NB. n can fit into this size. Why, otherwise noWrapAround would've been false
+               n = svInteger (kindOf i') (toInteger sx)
 
 --------------------------------------------------------------------------------
 -- | Overflow detection.
