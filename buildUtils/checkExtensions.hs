@@ -11,7 +11,10 @@ main :: IO ()
 main = do
   required <- words <$> readFile "required_extensions"
 
-  let process = sort . takeWhile (isUpper . head) . drop 1 . dropWhile (/= "other-extensions:")
+  let hd (x:_) = x
+      hd []    = error "impossible, hd received empty list on words"
+
+      process = sort . filter (isUpper . hd) . takeWhile (/= "Library") . drop 1 . dropWhile (/= "other-extensions:")
 
   found <- process . words <$> readFile "sbv.cabal"
 
@@ -27,5 +30,6 @@ main = do
     mapM_ (putStrLn . ("  " ++)) need
 
   if null (extras ++ need)
-     then exitSuccess
+     then do putStrLn "*** CHECK EXTENSIONS passed."
+             exitSuccess
      else exitFailure
