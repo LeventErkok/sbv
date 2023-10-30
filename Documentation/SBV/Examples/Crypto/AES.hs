@@ -24,11 +24,16 @@
 -- are supported.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE TypeApplications #-}
 
+#if MIN_VERSION_base(4,19,0)
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns -Wno-x-partial #-}
+#else
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
+#endif
 
 module Documentation.SBV.Examples.Crypto.AES where
 
