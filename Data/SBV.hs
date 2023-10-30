@@ -774,7 +774,7 @@ bit-vectors. The operations that are restricted to bounded word/int sizes are:
 
    * Extraction and concatenation: 'bvExtract', '#', 'zeroExtend', 'signExtend', 'bvDrop', and 'bvTake'
 
-Usual arithmetic ('+', '-', '*', 'sQuotRem', 'sQuot', 'sRem', 'sDivMod', 'sDiv', 'sMod') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
+Usual arithmetic ('Prelude.+', 'Prelude.-', '*', 'sQuotRem', 'sQuot', 'sRem', 'sDivMod', 'sDiv', 'sMod') and logical operations ('.<', '.<=', '.>', '.>=', '.==', './=') operations are
 supported for 'SInteger' fully, both in programming and verification modes.
 -}
 
