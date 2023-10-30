@@ -50,7 +50,7 @@ install: tags
 	@$(TIME) cabal new-install --lib
 
 docs:
-	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings
+	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings | ghc ./buildUtils/simpHaddock.hs -e main
 
 ghci:
 	cabal new-repl --repl-options=-Wno-unused-packages
