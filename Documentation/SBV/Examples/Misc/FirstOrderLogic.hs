@@ -10,6 +10,7 @@
 -- prove all come from <https://en.wikipedia.org/wiki/First-order_logic>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
@@ -17,6 +18,10 @@
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeApplications    #-}
+
+#if MIN_VERSION_base(4,19,0)
+{-# LANGUAGE TypeAbstractions    #-}
+#endif
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 

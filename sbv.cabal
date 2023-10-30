@@ -76,6 +76,9 @@ common common-settings
                      UndecidableInstances
                      ViewPatterns
 
+   if impl(ghc >= 9.8.1)
+      other-extensions: TypeAbstractions
+
    if impl(ghc >= 8.10.1)
       ghc-options  : -Wunused-packages
 

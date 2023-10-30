@@ -9,10 +9,15 @@
 -- Various combinations of quantifiers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+
+#if MIN_VERSION_base(4,19,0)
+{-# LANGUAGE TypeAbstractions    #-}
+#endif
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
