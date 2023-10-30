@@ -14,7 +14,7 @@
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE TupleSections       #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-x-partial #-}
 
 module TestSuite.Basics.ArithNoSolver(tests) where
 
