@@ -151,7 +151,7 @@ sComparableSWord64AsSDouble = CF.sComparableSWord64AsSDouble
 -- | Inverse transformation to 'sFloatingPointAsComparableSWord'. Note that this isn't a perfect inverse, since @-0@ maps to @0@ and back to @0@.
 -- Otherwise, it's faithful:
 --
--- >>> prove  $ \x -> let d = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord (d :: SFPHalf) .== x
+-- >>> prove  $ \x -> let d :: SFPHalf = sComparableSWordAsSFloatingPoint x in fpIsNaN d .|| fpIsNegativeZero d .|| sFloatingPointAsComparableSWord d .== x
 -- Q.E.D.
 -- >>> prove $ \x -> fpIsNegativeZero x .|| sComparableSWordAsSFloatingPoint (sFloatingPointAsComparableSWord x) `fpIsEqualObject` (x :: SFPHalf)
 -- Q.E.D.
