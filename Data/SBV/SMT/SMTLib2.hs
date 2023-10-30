@@ -817,11 +817,11 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
                            | bvOp, sgned = mkAbs fArg "bvslt" "bvneg"
                            | bvOp        = fArg
                            | True        = mkAbs fArg "<"     "-"
-          where fArg = hd "liftAgs" args
+          where fArg = hd "liftAbs" args
                 mkAbs x cmp neg = "(ite " ++ ltz ++ " " ++ nx ++ " " ++ x ++ ")"
                   where ltz = "(" ++ cmp ++ " " ++ x ++ " " ++ z ++ ")"
                         nx  = "(" ++ neg ++ " " ++ x ++ ")"
-                        z   = cvtCV rm (mkConstCV (kindOf fArg) (0::Integer))
+                        z   = cvtCV rm (mkConstCV (kindOf (hd "liftAbs.arguments" arguments)) (0::Integer))
 
         lift2B bOp vOp
           | boolOp = lift2 bOp
