@@ -129,13 +129,13 @@ nonZeroAddition = prove $ do [a, b] <- sFloats ["a", "b"]
 --
 -- >>> multInverse
 -- Falsifiable. Counter-example:
---   a = -1.7414917e38 :: Float
+--   a = 7.156233e-24 :: Float
 --
 -- Indeed, we have:
 --
--- >>> let a = -1.7414917e38 :: Float
+-- >>> let a = 7.156233e-24 :: Float
 -- >>> a * (1/a)
--- 0.9999999
+-- 0.99999994
 multInverse :: IO ThmResult
 multInverse = prove $ do a <- sFloat "a"
                          constrain $ fpIsPoint a
