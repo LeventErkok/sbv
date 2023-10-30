@@ -15,9 +15,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Core.Concrete
-  ( module Data.SBV.Core.Concrete
-  ) where
+module Data.SBV.Core.Concrete where
 
 import Control.Monad (replicateM)
 
@@ -25,7 +23,7 @@ import Data.Bits
 import System.Random (randomIO, randomRIO)
 
 import Data.Char (chr, isSpace)
-import Data.List (isPrefixOf, intercalate)
+import Data.List (intercalate)
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.AlgReals
@@ -214,9 +212,8 @@ showExtCV = go False
                                        | True       = v ++ " :: "  ++ showBaseKind (kindOf extCV)
 
                  add :: String -> String -> String
-                 add n v
-                  | "-" `isPrefixOf` v = n ++ " - " ++ tail v
-                  | True               = n ++ " + " ++ v
+                 add n ('-':v) = n ++ " - " ++ v
+                 add n v       = n ++ " + " ++ v
 
                  mul :: String -> String -> String
                  mul n v = n ++ " * " ++ v

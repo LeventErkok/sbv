@@ -24,4 +24,4 @@ tests =
     ]
     where gen generator f =
                 -- the first line is time-stamp, get rid of it so test is repeatable
-                unlines . tail . lines <$> generator f
+                unlines . drop 1 . lines <$> generator f

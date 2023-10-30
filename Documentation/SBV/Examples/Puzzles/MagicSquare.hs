@@ -34,7 +34,7 @@ check low high = sAll $ \x -> x .>= low .&& x .<= high
 
 -- | Get the diagonal of a square matrix
 diag :: [[a]] -> [a]
-diag ((a:_):rs) = a : diag (map tail rs)
+diag ((a:_):rs) = a : diag (map (drop 1) rs)
 diag _          = []
 
 -- | Test if a given board is a magic square

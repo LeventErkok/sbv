@@ -234,10 +234,11 @@ partition nm term = do
    -- Generate a unique variable with the prefix nm if necessary and
    -- add it to partitions
    fresh <- liftIO $ do olds <- readIORef rPartitionVars
-                        let fresh = head $ filter (`notElem` olds)
-                                                  (nm : [nm ++ "_" ++ show i | i <- [(1 :: Int) ..]])
-                        writeIORef rPartitionVars (olds ++ [fresh])
-                        pure fresh
+                        let new = case filter (`notElem` olds) (nm : [nm ++ "_" ++ show i | i <- [(1 :: Int) ..]]) of
+                                    h:_ -> h
+                                    []  -> error $ "Impossible: Can't get a fresh variable from infinite list in partition." ++ show (nm, term)
+                        writeIORef rPartitionVars (olds ++ [new])
+                        pure new
 
    -- declare and constrain
    v <- free fresh

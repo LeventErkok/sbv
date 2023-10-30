@@ -75,7 +75,7 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy, isPrefixOf)
+import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
 import Data.Kind                   (Type)
@@ -1355,7 +1355,9 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
 -- | Create a new uninterpreted symbol, possibly with user given code
 newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO ()
 newUninterpreted st (nm, mbArgNames) t uiCode
-  | not isInternal && (null nm || not enclosed && (not (isAlpha (head nm)) || not (all validChar (tail nm))))
+  | not (isInternal || case nm of
+                         []   -> False
+                         h:tl -> enclosed || (isAlpha h && all validChar tl))
   = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
   | True
   = do uiMap <- readIORef (rUIMap st)
@@ -1388,7 +1390,10 @@ newUninterpreted st (nm, mbArgNames) t uiCode
           | True    = cont
 
         validChar x = isAlphaNum x || x `elem` ("_" :: String)
-        enclosed    = head nm == '|' && last nm == '|' && length nm > 2 && not (any (`elem` ("|\\" :: String)) (tail (init nm)))
+        enclosed    =  "|" `isPrefixOf` nm
+                    && "|" `isSuffixOf` nm
+                    && length nm > 2
+                    && not (any (`elem` ("|\\" :: String)) (drop 1 (init nm)))
 
         -- let internal names go through
         isInternal = "__internal_sbv_" `isPrefixOf` nm
@@ -1761,7 +1766,9 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
          -- Also, the following will fail if we span the range of integers without finding a match, but your computer would
          -- die way ahead of that happening if that's the case!
          mkUnique :: T.Text -> Set.Set Name -> T.Text
-         mkUnique prefix names = head $ dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> T.pack (show i) | i <- [(0::Int)..]])
+         mkUnique prefix names = case dropWhile (`Set.member` names) (prefix : [prefix <> "_" <> T.pack (show i) | i <- [(0::Int)..]]) of
+                                   h:_ -> h
+                                   _   -> error $ "mkUnique: Impossible happened! Couldn't get a unique name for " ++ show (prefix, names)
 
 -- | Create a new state
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State

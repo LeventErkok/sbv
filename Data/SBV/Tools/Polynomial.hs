@@ -202,7 +202,7 @@ divx n _ xs _ | n <= 0 = ([], xs)
 divx n i xs ys'        = (q:qs, rs)
   where q        = xs `idx` i
         xs'      = ites q (xs `addPoly` ys') xs
-        (qs, rs) = divx (n-1) (i-1) xs' (tail ys')
+        (qs, rs) = divx (n-1) (i-1) xs' (drop 1 ys')
 
 -- | Compute CRCs over bit-vectors. The call @crcBV n m p@ computes
 -- the CRC of the message @m@ with respect to polynomial @p@. The
@@ -242,7 +242,10 @@ crcBV n m p = take n $ go (replicate n sFalse) (m ++ replicate n sFalse)
         go c []     = c
         go c (b:bs) = go next bs
           where c' = drop 1 c ++ [b]
-                next = ite (head c) (zipWith (.<+>) c' mask) c'
+                next = ite (hd c) (zipWith (.<+>) c' mask) c'
+
+                hd (f:_) = f
+                hd []    = error "crcBV: Impossible, prefix is empty"
 
 -- | Compute CRC's over polynomials, i.e., symbolic words. The first
 -- 'Int' argument plays the same role as the one in the 'crcBV' function.

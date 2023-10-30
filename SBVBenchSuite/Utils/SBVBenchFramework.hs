@@ -88,7 +88,7 @@ classifier e nm = Just $ last chunks
     is :: [Int]
     is = L.elemIndices e nm
 
-    chunks = [(a, tail b) | (a, b) <- fmap (`L.splitAt` nm) is]
+    chunks = [(a, drop 1 b) | (a, b) <- fmap (`L.splitAt` nm) is]
 
 -- | We live with some code duplication due to the way overhead benchmarks apply
 -- the "standalone" and "sbv" labels. By abstracting for overhead benchmarks
@@ -96,7 +96,7 @@ classifier e nm = Just $ last chunks
 -- the assumptions of the bench-show package, thus we define a specialty
 -- classifier to handle the overhead case
 overheadClassifier :: Char -> String -> Maybe (String, String)
-overheadClassifier e nm = Just $ last $ fmap (\(a,b) -> (tail b, a)) chunks
+overheadClassifier e nm = Just $ last $ fmap (\(a,b) -> (drop 1 b, a)) chunks
   where
     is :: [Int]
     is = L.elemIndices e nm

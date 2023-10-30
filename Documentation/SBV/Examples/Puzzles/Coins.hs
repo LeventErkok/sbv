@@ -94,12 +94,15 @@ c6 xs = sum (map val xs) ./= 95
 puzzle :: IO SatResult
 puzzle = sat $ do
         cs <- mapM mkCoin [1..6]
+
         -- Assert each of the constraints for all combinations that has
         -- at least two coins (to make change)
         mapM_ constrain [c s | s <- combinations cs, length s >= 2, c <- [c1, c2, c3, c4, c5, c6]]
+
         -- the following constraint is not necessary for solving the puzzle
         -- however, it makes sure that the solution comes in decreasing value of coins,
         -- thus allowing the above test to succeed regardless of the solver used.
-        constrain $ sAnd $ zipWith (.>=) cs (tail cs)
+        constrain $ sAnd $ zipWith (.>=) cs (drop 1 cs)
+
         -- assert that the sum must be 115 cents.
         return $ sum cs .== 115

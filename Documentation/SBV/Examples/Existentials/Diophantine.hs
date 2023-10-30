@@ -91,7 +91,9 @@ basis _ mbLim m = extractModels `fmap` allSatWith z3{allSatMaxModelCount = mbLim
                  constrain $ \(ForallN bs :: ForallN n nm Integer) ->
                         ok as .&& (ok bs .=> as .== bs .|| sNot (bs `less` as))
 
-       n = if null m then 0 else length (head m)
+       n = case m of
+            []  -> 0
+            f:_ -> length f
 
        ok xs = sAny (.> 0) xs .&& sAll (.>= 0) xs .&& sAnd [sum (zipWith (*) r xs) .== 0 | r <- m]
 

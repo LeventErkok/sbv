@@ -38,7 +38,7 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
-import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf)
+import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
 import Data.Function  (on)
@@ -816,14 +816,14 @@ recoverKindedValue k e = case k of
   where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
         getUIIndex _                        _ = Nothing
 
-        stringLike xs = length xs >= 2 && head xs == '"' && last xs == '"'
+        stringLike xs = length xs >= 2 && "\"" `isPrefixOf` xs && "\"" `isSuffixOf` xs
 
         -- Make sure strings are really strings
         interpretString xs
           | not (stringLike xs)
           = error $ "Expected a string constant with quotes, received: <" ++ xs ++ ">"
           | True
-          = qfsToString $ tail (init xs)
+          = qfsToString $ drop 1 (init xs)
 
         interpretChar xs = case interpretString xs of
                              [c] -> c

@@ -795,6 +795,9 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
 
         addRM s = s ++ " " ++ smtRoundingMode rm
 
+        hd _ (a:_) = a
+        hd w []    = error $ "Impossible: " ++ w ++ ": Received empty list of args!"
+
         -- lift a binary op
         lift2  o _ [x, y] = "(" ++ o ++ " " ++ x ++ " " ++ y ++ ")"
         lift2  o _ sbvs   = error $ "SBV.SMTLib2.sh.lift2: Unexpected arguments: "   ++ show (o, sbvs)
@@ -811,13 +814,14 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
 
         liftAbs sgned args | fpOp        = lift1 "fp.abs" sgned args
                            | intOp       = lift1 "abs"    sgned args
-                           | bvOp, sgned = mkAbs (head args) "bvslt" "bvneg"
-                           | bvOp        = head args
-                           | True        = mkAbs (head args) "<"     "-"
-          where mkAbs x cmp neg = "(ite " ++ ltz ++ " " ++ nx ++ " " ++ x ++ ")"
+                           | bvOp, sgned = mkAbs fArg "bvslt" "bvneg"
+                           | bvOp        = fArg
+                           | True        = mkAbs fArg "<"     "-"
+          where fArg = hd "liftAgs" args
+                mkAbs x cmp neg = "(ite " ++ ltz ++ " " ++ nx ++ " " ++ x ++ ")"
                   where ltz = "(" ++ cmp ++ " " ++ x ++ " " ++ z ++ ")"
                         nx  = "(" ++ neg ++ " " ++ x ++ ")"
-                        z   = cvtCV rm (mkConstCV (kindOf (head arguments)) (0::Integer))
+                        z   = cvtCV rm (mkConstCV (kindOf fArg) (0::Integer))
 
         lift2B bOp vOp
           | boolOp = lift2 bOp
@@ -852,7 +856,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
                       | True = lift2 o
 
         unintComp o [a, b]
-          | KUserSort s (Just _) <- kindOf (head arguments)
+          | KUserSort s (Just _) <- kindOf (hd "unintComp" arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
 
@@ -860,7 +864,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
         stringOrChar KChar   = True
         stringOrChar _       = False
         stringCmp swap o [a, b]
-          | stringOrChar (kindOf (head arguments))
+          | stringOrChar (kindOf (hd "stringCmp" arguments))
           = let (a1, a2) | swap = (b, a)
                          | True = (a, b)
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
@@ -868,7 +872,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
 
         -- NB. Likewise for sequences
         seqCmp swap o [a, b]
-          | KList{} <- kindOf (head arguments)
+          | KList{} <- kindOf (hd "seqCmp" arguments)
           = let (a1, a2) | swap = (b, a)
                          | True = (a, b)
             in "(" ++ o ++ " " ++ a1 ++ " " ++ a2 ++ ")"
@@ -1097,7 +1101,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
           | Just f <- lookup op uninterpretedTable
           = f (map cvtSV args)
           | True
-          = if not (null args) && isUserSort (head args)
+          = if not (null args) && isUserSort (hd "isUserSort" args)
             then error $ unlines [ ""
                                  , "*** Cannot translate operator        : " ++ show op
                                  , "*** When applied to arguments of kind: " ++ intercalate ", " (nub (map (show . kindOf) args))

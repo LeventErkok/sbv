@@ -846,7 +846,8 @@ instance EqSymbolic (SBV a) where
               | [SBV a, SBV b] <- xs, b `is` svBool True  = SBV $ svNot a
               | [SBV a, SBV b] <- xs, a `is` svBool False = SBV b
               | [SBV a, SBV b] <- xs, b `is` svBool False = SBV a
-              | length xs > 2 && isBool (head xs)         = sFalse
+              -- 3 booleans can't be distinct!
+              | (x : _ : _ : _) <- xs, isBool x           = sFalse
               | True                                      = SBV (SVal KBool (Right (cache r)))
     where r st = do xsv <- mapM (sbvToSV st) xs
                     newExpr st KBool (SBVApp NotEqual xsv)
@@ -872,10 +873,10 @@ instance EqSymbolic (SBV a) where
 
   -- Custom version of distinctExcept that generates better code for base types
   -- We essentially keep track of an array and count cardinalities as we walk along.
-  distinctExcept []  _       = sTrue
-  distinctExcept [_] _       = sTrue
-  distinctExcept es  ignored
-     | all isConc (es ++ ignored)
+  distinctExcept []            _       = sTrue
+  distinctExcept [_]           _       = sTrue
+  distinctExcept es@(firstE:_) ignored
+    | all isConc (es ++ ignored)
     = distinct (filter ignoreConc es)
     | True
     = SBV (SVal KBool (Right (cache r)))
@@ -883,7 +884,7 @@ instance EqSymbolic (SBV a) where
                            SBV (SVal KBool (Left cv)) -> cvToBool cv
                            _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
 
-          ek = case head es of  -- Head is safe here as we're guaranteed to have a non-empty es by pattern matching above. (Actually, there'll be at least two elements)
+          ek = case firstE of
                  SBV (SVal k _) -> k
 
           r st = do let zero = 0 :: SInteger

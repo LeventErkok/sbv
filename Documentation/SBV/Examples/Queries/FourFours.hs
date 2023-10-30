@@ -85,7 +85,7 @@ allPossibleTrees = trees $ replicate 4 F
                        t1            <- trees left
                        t2            <- trees right
                        trees [B () t1 t2]
-          where splits = init $ tail $ zip (inits xs) (tails xs)
+          where splits = init $ drop 1 $ zip (inits xs) (tails xs)
 
 -- | Given a tree with hols, fill it with symbolic operators. This is the /trick/ that allows
 -- us to consider only 640 trees as opposed to over 10 million.

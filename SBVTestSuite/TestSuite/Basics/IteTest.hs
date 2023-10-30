@@ -19,7 +19,9 @@ chk1 :: (SBool -> SBool -> SBool -> SBool) -> SWord8 -> SBool
 chk1 cond x = cond (x .== x) sTrue undefined
 
 chk2 :: (SBool -> [SBool] -> [SBool] -> [SBool]) -> SWord8 -> SBool
-chk2 cond x = head (cond (x .== x) [sTrue] [undefined])
+chk2 cond x = case cond (x .== x) [sTrue] [undefined] of
+                [v] -> v
+                _   -> error "chk2: Impossible happened in call to cond!"
 
 chk3 :: (SBool -> (SBool, SBool) -> (SBool, SBool)  -> (SBool, SBool)) -> SWord8 -> SBool
 chk3 cond x = fst (cond (x .== x) (sTrue, undefined::SBool) (undefined, undefined))

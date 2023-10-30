@@ -747,6 +747,9 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                     _                         -> def
         getShiftAmnt def _       = def
 
+        hd _ (h:_) = h
+        hd w []    = error $ "Data.SBV.C.ppExpr: Impossible happened: " ++ w ++ ", received empty list!"
+
         p :: Op -> [Doc] -> Doc
         p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
         p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
@@ -757,13 +760,13 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         p (KindCast _ to)   [a] = parens (text (show to)) <+> a
         p (Uninterpreted s) [] = text "/* Uninterpreted constant */" <+> text s
         p (Uninterpreted s) as = text "/* Uninterpreted function */" <+> text s P.<> parens (fsep (punctuate comma as))
-        p (Extract i j) [a]    = extract i j (head opArgs) a
+        p (Extract i j) [a]    = extract i j (hd "Extract" opArgs) a
         p Join [a, b]          = join (let (s1 : s2 : _) = opArgs in (s1, s2, a, b))
-        p (Rol i) [a]          = rotate True  i a (head opArgs)
-        p (Ror i) [a]          = rotate False i a (head opArgs)
+        p (Rol i) [a]          = rotate True  i a (hd "Rol" opArgs)
+        p (Ror i) [a]          = rotate False i a (hd "Ror" opArgs)
         p Shl     [a, i]       = shift  True  (getShiftAmnt i opArgs) a -- The order of i/a being reversed here is
         p Shr     [a, i]       = shift  False (getShiftAmnt i opArgs) a -- intentional and historical (from the days when Shl/Shr had a constant parameter.)
-        p Not [a]              = case kindOf (head opArgs) of
+        p Not [a]              = case kindOf (hd "Not" opArgs) of
                                    -- be careful about booleans, bitwise complement is not correct for them!
                                    KBool -> text "!" P.<> a
                                    _     -> text "~" P.<> a
@@ -809,10 +812,10 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x
         -- NB: Quot is supposed to truncate toward 0; Not clear to me if C guarantees this behavior.
         -- Brief googling suggests C99 does indeed truncate toward 0, but other C compilers might differ.
-        p Quot [a, b] = let k = kindOf (head opArgs)
+        p Quot [a, b] = let k = kindOf (hd "Quot" opArgs)
                             z = mkConst cfg $ mkConstCV k (0::Integer)
                         in protectDiv0 k "/" z a b
-        p Rem  [a, b] = protectDiv0 (kindOf (head opArgs)) "%" a a b
+        p Rem  [a, b] = protectDiv0 (kindOf (hd "Rem" opArgs)) "%" a a b
         p UNeg [a]    = parens (text "-" <+> a)
         p Abs  [a]    = let f KFloat             = text "fabsf" P.<> parens a
                             f KDouble            = text "fabs"  P.<> parens a
@@ -828,15 +831,15 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                      Just CgDouble     -> f KDouble
                                                      Just CgLongDouble -> text "fabsl" P.<> parens a
                             f _                  = text "abs" P.<> parens a
-                        in f (kindOf (head opArgs))
+                        in f (kindOf (hd "Abs" opArgs))
         -- for And/Or, translate to boolean versions if on boolean kind
-        p And [a, b] | kindOf (head opArgs) == KBool = a <+> text "&&" <+> b
-        p Or  [a, b] | kindOf (head opArgs) == KBool = a <+> text "||" <+> b
+        p And [a, b] | kindOf (hd "And" opArgs) == KBool = a <+> text "&&" <+> b
+        p Or  [a, b] | kindOf (hd "Or"  opArgs) == KBool = a <+> text "||" <+> b
         p o [a, b]
           | Just co <- lookup o cBinOps
           = a <+> text co <+> b
 
-        p Implies [a, b] | kindOf (head opArgs) == KBool = parens (text "!" P.<> a <+> text "||" <+> b)
+        p Implies [a, b] | kindOf (hd "Implies" opArgs) == KBool = parens (text "!" P.<> a <+> text "||" <+> b)
 
         p NotEqual xs = mkDistinct xs
         p o args = die $ "Received operator " ++ show o ++ " applied to " ++ show args
@@ -951,7 +954,9 @@ mergeToLib libName cfgBundles
   where bundles     = map snd cfgBundles
         kinds       = [k | CgPgmBundle k _ <- bundles]
         nubKinds    = nub kinds
-        bundleKind  = head nubKinds
+        bundleKind  = case nubKinds of
+                        bk:_ -> bk
+                        []   -> error "Data.SBV.C: Impossible happened: mergeLibs: kinds ended up being empty!"
         files       = concat [fs | CgPgmBundle _ fs <- bundles]
         sigs        = concat [ss | (_, (CgHeader ss, _)) <- files]
         anyMake     = not (null [() | (_, (CgMakefile{}, _)) <- files])

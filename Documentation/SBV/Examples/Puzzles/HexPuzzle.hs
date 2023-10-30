@@ -78,7 +78,7 @@ next b g = ite (readArray g b .== sBlack) g
          $ ite (b .== 15)                        (rot [10, 11, 16, 19, 18, 14]) g
   where rot xs = foldr (\(i, c) a -> writeArray a (literal i) c) g (zip new cur)
           where cur = map (readArray g . literal) xs
-                new = tail xs ++ [head xs]
+                new = drop 1 xs ++ take 1 xs
 
 -- | Iteratively search at increasing depths of button-presses to see if we can
 -- transform from the initial board position to a final board position.
