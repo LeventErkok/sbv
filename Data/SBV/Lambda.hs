@@ -224,7 +224,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                   tbls          -- Tables
 
-                  _arrs         -- Arrays                : nothing to do with them
+                  arrs          -- Arrays                : nothing to do with them
                   _uis          -- Uninterpeted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
 
@@ -246,6 +246,14 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          | not (null observables)
          = tbd [ "Observables."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- observables]
+               ]
+         | not (null tbls)
+         = tbd [ "Tables."
+               , "  Saw: " ++ intercalate ", " ["table" ++ show n ++ " :: " ++ show k0 ++ " -> " ++ show k1 | ((n, k0, k1), _) <- tbls]
+               ]
+         | not (null arrs)
+         = tbd [ "Tables."
+               , "  Saw: " ++ intercalate ", " ["array" ++ show n ++ " :: " ++ show i | (n, i) <- arrs]
                ]
          | kindOf out /= expectedKind
          = bad [ "Expected kind and final kind do not match"
@@ -325,6 +333,9 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                rm = roundingMode cfg
 
+               -- NB. The following is dead-code, since we ensure tbls is empty
+               -- We used to support this, but there are issues, so dropping support
+               -- See, for instance, https://github.com/LeventErkok/sbv/issues/664
                (tableMap, constTables, nonConstTablesUnindexed) = constructTables rm consts tbls
 
                -- Index each non-const table with the largest index of SV it needs
