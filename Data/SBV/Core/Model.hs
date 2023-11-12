@@ -2582,6 +2582,201 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
                                                                mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
+-- Functions of eight arguments
+instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable (SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+  sbv2smt fn = defs2smt $ \i h g f e d c b -> fn i h g f e d c b .== fn i h g f e d c b
+
+  sbvDefineValue nm uiKind = f
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
+           | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
+           | True
+           = SBV $ SVal ka $ Right $ cache result
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
+                 ki = kindOf (Proxy @i)
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, uiKind) of
+                                  (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7)
+                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki]) =<< retrieveUICode nm st ka uiKind
+                                                               sw0 <- sbvToSV st arg0
+                                                               sw1 <- sbvToSV st arg1
+                                                               sw2 <- sbvToSV st arg2
+                                                               sw3 <- sbvToSV st arg3
+                                                               sw4 <- sbvToSV st arg4
+                                                               sw5 <- sbvToSV st arg5
+                                                               sw6 <- sbvToSV st arg6
+                                                               sw7 <- sbvToSV st arg7
+                                                               mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7]
+                                                               newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7]
+
+-- Functions of nine arguments
+instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable (SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+  sbv2smt fn = defs2smt $ \j i h g f e d c b -> fn j i h g f e d c b .== fn j i h g f e d c b
+
+  sbvDefineValue nm uiKind = f
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
+           | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
+           | True
+           = SBV $ SVal ka $ Right $ cache result
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
+                 ki = kindOf (Proxy @i)
+                 kj = kindOf (Proxy @j)
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, uiKind) of
+                                  (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8)
+                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj]) =<< retrieveUICode nm st ka uiKind
+                                                               sw0 <- sbvToSV st arg0
+                                                               sw1 <- sbvToSV st arg1
+                                                               sw2 <- sbvToSV st arg2
+                                                               sw3 <- sbvToSV st arg3
+                                                               sw4 <- sbvToSV st arg4
+                                                               sw5 <- sbvToSV st arg5
+                                                               sw6 <- sbvToSV st arg6
+                                                               sw7 <- sbvToSV st arg7
+                                                               sw8 <- sbvToSV st arg8
+                                                               mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8]
+                                                               newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8]
+
+-- Functions of ten arguments
+instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable (SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+  sbv2smt fn = defs2smt $ \k j i h g f e d c b -> fn k j i h g f e d c b .== fn k j i h g f e d c b
+
+  sbvDefineValue nm uiKind = f
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
+           | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
+           | True
+           = SBV $ SVal ka $ Right $ cache result
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
+                 ki = kindOf (Proxy @i)
+                 kj = kindOf (Proxy @j)
+                 kk = kindOf (Proxy @k)
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, uiKind) of
+                                  (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9)
+                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk]) =<< retrieveUICode nm st ka uiKind
+                                                               sw0 <- sbvToSV st arg0
+                                                               sw1 <- sbvToSV st arg1
+                                                               sw2 <- sbvToSV st arg2
+                                                               sw3 <- sbvToSV st arg3
+                                                               sw4 <- sbvToSV st arg4
+                                                               sw5 <- sbvToSV st arg5
+                                                               sw6 <- sbvToSV st arg6
+                                                               sw7 <- sbvToSV st arg7
+                                                               sw8 <- sbvToSV st arg8
+                                                               sw9 <- sbvToSV st arg9
+                                                               mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9]
+                                                               newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9]
+
+-- Functions of eleven arguments
+instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable (SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+  sbv2smt fn = defs2smt $ \l k j i h g f e d c b -> fn l k j i h g f e d c b .== fn l k j i h g f e d c b
+
+  sbvDefineValue nm uiKind = f
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
+           | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9, isConcrete arg10
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
+           | True
+           = SBV $ SVal ka $ Right $ cache result
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
+                 ki = kindOf (Proxy @i)
+                 kj = kindOf (Proxy @j)
+                 kk = kindOf (Proxy @k)
+                 kl = kindOf (Proxy @l)
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, uiKind) of
+                                  (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10)
+                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl]) =<< retrieveUICode nm st ka uiKind
+                                                               sw0  <- sbvToSV st arg0
+                                                               sw1  <- sbvToSV st arg1
+                                                               sw2  <- sbvToSV st arg2
+                                                               sw3  <- sbvToSV st arg3
+                                                               sw4  <- sbvToSV st arg4
+                                                               sw5  <- sbvToSV st arg5
+                                                               sw6  <- sbvToSV st arg6
+                                                               sw7  <- sbvToSV st arg7
+                                                               sw8  <- sbvToSV st arg8
+                                                               sw9  <- sbvToSV st arg9
+                                                               sw10 <- sbvToSV st arg10
+                                                               mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10]
+                                                               newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10]
+
+-- Functions of twelve arguments
+instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable (SBV m -> SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+  sbv2smt fn = defs2smt $ \m l k j i h g f e d c b -> fn m l k j i h g f e d c b .== fn m l k j i h g f e d c b
+
+  sbvDefineValue nm uiKind = f
+    where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
+           | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9, isConcrete arg10, isConcrete arg11
+           = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
+           | True
+           = SBV $ SVal ka $ Right $ cache result
+           where ka = kindOf (Proxy @a)
+                 kb = kindOf (Proxy @b)
+                 kc = kindOf (Proxy @c)
+                 kd = kindOf (Proxy @d)
+                 ke = kindOf (Proxy @e)
+                 kf = kindOf (Proxy @f)
+                 kg = kindOf (Proxy @g)
+                 kh = kindOf (Proxy @h)
+                 ki = kindOf (Proxy @i)
+                 kj = kindOf (Proxy @j)
+                 kk = kindOf (Proxy @k)
+                 kl = kindOf (Proxy @l)
+                 km = kindOf (Proxy @m)
+                 result st = do isSMT <- inSMTMode st
+                                case (isSMT, uiKind) of
+                                  (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11)
+                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl, km]) =<< retrieveUICode nm st ka uiKind
+                                                               sw0  <- sbvToSV st arg0
+                                                               sw1  <- sbvToSV st arg1
+                                                               sw2  <- sbvToSV st arg2
+                                                               sw3  <- sbvToSV st arg3
+                                                               sw4  <- sbvToSV st arg4
+                                                               sw5  <- sbvToSV st arg5
+                                                               sw6  <- sbvToSV st arg6
+                                                               sw7  <- sbvToSV st arg7
+                                                               sw8  <- sbvToSV st arg8
+                                                               sw9  <- sbvToSV st arg9
+                                                               sw10 <- sbvToSV st arg10
+                                                               sw11 <- sbvToSV st arg11
+                                                               mapM_ forceSVArg [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10, sw11]
+                                                               newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10, sw11]
+
 -- Uncurried functions of two arguments
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
@@ -2626,6 +2821,46 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
 
   sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
+
+-- Uncurried functions of eight arguments
+instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable ((SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+  sbv2smt fn = defs2smt $ \p -> fn p .== fn p
+
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc8 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
+    where uc8 fn a b c d e f g h = fn (a, b, c, d, e, f, g, h)
+
+-- Uncurried functions of nine arguments
+instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable ((SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+  sbv2smt fn = defs2smt $ \p -> fn p .== fn p
+
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc9 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
+    where uc9 fn a b c d e f g h i = fn (a, b, c, d, e, f, g, h, i)
+
+-- Uncurried functions of ten arguments
+instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable ((SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+  sbv2smt fn = defs2smt $ \p -> fn p .== fn p
+
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc10 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
+    where uc10 fn a b c d e f g h i j = fn (a, b, c, d, e, f, g, h, i, j)
+
+-- Uncurried functions of eleven arguments
+instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable ((SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+  sbv2smt fn = defs2smt $ \p -> fn p .== fn p
+
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc11 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
+    where uc11 fn a b c d e f g h i j k = fn (a, b, c, d, e, f, g, h, i, j, k)
+
+-- Uncurried functions of twelve arguments
+instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+            => SMTDefinable ((SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
+  sbv2smt fn = defs2smt $ \p -> fn p .== fn p
+
+  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc12 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
+    where uc12 fn a b c d e f g h i j k l = fn (a, b, c, d, e, f, g, h, i, j, k, l)
 
 -- | Symbolic computations provide a context for writing symbolic programs.
 instance MonadIO m => SolverContext (SymbolicT m) where

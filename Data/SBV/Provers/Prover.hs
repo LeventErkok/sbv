@@ -659,59 +659,94 @@ mkArg = mkSymVal (NonQueryVar Nothing) Nothing
 
 -- Functions
 instance (SymVal a, SatisfiableM m p) => SatisfiableM m (SBV a -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ k a
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ fn a
 
 instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ k a
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ fn a
 
 -- Arrays
 instance (HasKind a, HasKind b, SatisfiableM m p) => SatisfiableM m (SArray a b -> p) where
-  satArgReduce k = newArray_ Nothing >>= \a -> satArgReduce $ k a
+  satArgReduce fn = newArray_ Nothing >>= \a -> satArgReduce $ fn a
 
 instance (HasKind a, HasKind b, ProvableM m p) => ProvableM m (SArray a b -> p) where
-  proofArgReduce k = newArray_ Nothing >>= \a -> proofArgReduce $ k a
+  proofArgReduce fn = newArray_ Nothing >>= \a -> proofArgReduce $ fn a
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b) -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ \b -> k (a, b)
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b -> fn (a, b)
 
 instance (SymVal a, SymVal b, ProvableM m p) => ProvableM m ((SBV a, SBV b) -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b -> k (a, b)
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b -> fn (a, b)
 
 -- 3 Tuple
 instance (SymVal a, SymVal b, SymVal c, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c) -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c -> k (a, b, c)
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c -> fn (a, b, c)
 
 instance (SymVal a, SymVal b, SymVal c, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c) -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c -> k (a, b, c)
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c -> fn (a, b, c)
 
 -- 4 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  satArgReduce k = mkArg  >>= \a -> satArgReduce $ \b c d -> k (a, b, c, d)
+  satArgReduce fn = mkArg  >>= \a -> satArgReduce $ \b c d -> fn (a, b, c, d)
 
 instance (SymVal a, SymVal b, SymVal c, SymVal d, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d) -> p) where
-  proofArgReduce k = mkArg  >>= \a -> proofArgReduce $ \b c d -> k (a, b, c, d)
+  proofArgReduce fn = mkArg  >>= \a -> proofArgReduce $ \b c d -> fn (a, b, c, d)
 
 -- 5 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e -> k (a, b, c, d, e)
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e -> fn (a, b, c, d, e)
 
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e) -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e -> k (a, b, c, d, e)
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e -> fn (a, b, c, d, e)
 
 -- 6 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f -> fn (a, b, c, d, e, f)
 
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f -> k (a, b, c, d, e, f)
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f -> fn (a, b, c, d, e, f)
 
 -- 7 Tuple
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  satArgReduce k = mkArg >>= \a -> satArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g -> fn (a, b, c, d, e, f, g)
 
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> p) where
-  proofArgReduce k = mkArg >>= \a -> proofArgReduce $ \b c d e f g -> k (a, b, c, d, e, f, g)
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g -> fn (a, b, c, d, e, f, g)
+
+-- 8 Tuple
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) -> p) where
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g h -> fn (a, b, c, d, e, f, g, h)
+
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) -> p) where
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g h -> fn (a, b, c, d, e, f, g, h)
+
+-- 9 Tuple
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i) -> p) where
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g h i -> fn (a, b, c, d, e, f, g, h, i)
+
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i) -> p) where
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g h i -> fn (a, b, c, d, e, f, g, h, i)
+
+-- 10 Tuple
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j) -> p) where
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g h i j -> fn (a, b, c, d, e, f, g, h, i, j)
+
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j) -> p) where
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g h i j -> fn (a, b, c, d, e, f, g, h, i, j)
+
+-- 11 Tuple
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, SymVal k, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j, SBV k) -> p) where
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g h i j k -> fn (a, b, c, d, e, f, g, h, i, j, k)
+
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, SymVal k, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j, SBV k) -> p) where
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g h i j k -> fn (a, b, c, d, e, f, g, h, i, j, k)
+
+-- 12 Tuple
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, SymVal k, SymVal l, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j, SBV k, SBV l) -> p) where
+  satArgReduce fn = mkArg >>= \a -> satArgReduce $ \b c d e f g h i j k l -> fn (a, b, c, d, e, f, g, h, i, j, k, l)
+
+instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, SymVal h, SymVal i, SymVal j, SymVal k, SymVal l, ProvableM m p) => ProvableM m ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h, SBV i, SBV j, SBV k, SBV l) -> p) where
+  proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ \b c d e f g h i j k l -> fn (a, b, c, d, e, f, g, h, i, j, k, l)
 
 -- | Generalization of 'Data.SBV.runSMT'
 runSMT :: MonadIO m => SymbolicT m a -> m a
