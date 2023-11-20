@@ -97,7 +97,7 @@ data SBVToC = SBVToC
 
 instance CgTarget SBVToC where
   targetName _ = "C"
-  translate _  = cgen
+  translate  _ = cgen
 
 -- Unexpected input, or things we will probably never support
 die :: String -> a
@@ -187,7 +187,9 @@ pprCWord :: HasKind a => Bool -> a -> Doc
 pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 
 -- | Almost a "show", but map "SWord1" to "SBool"
--- which is used for extracting one-bit words.
+-- which is used for extracting one-bit words. This is OK since C's `bool` type
+-- handles arithmetic fine, and maps nicely to our `SWord 1`. (Same isn't true for `SInt 1`, which
+-- doesn't have an easy counter-part on the C side.
 showCType :: HasKind a => a -> String
 showCType i = case kindOf i of
                 KBounded False 1 -> "SBool"
@@ -262,7 +264,6 @@ showSizedConst _   i t@(False, 32) = text $ chex False True t i
 showSizedConst _   i t@(True,  32) = text $ chex False True t i
 showSizedConst _   i t@(False, 64) = text $ chex False True t i
 showSizedConst _   i t@(True,  64) = text $ chex False True t i
-showSizedConst _   i   (True,  1)  = die $ "Signed 1-bit value " ++ show i
 showSizedConst _   i   (s, sz)     = die $ "Constant " ++ show i ++ " at type " ++ (if s then "SInt" else "SWord") ++ show sz
 
 -- | Generate a makefile. The first argument is True if we have a driver.
@@ -452,22 +453,24 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
   | KString `Set.member` kindInfo
-  = error "SBV->C: Strings are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Strings"
   | KChar `Set.member` kindInfo
-  = error "SBV->C: Characters are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Characters"
   | any isSet kindInfo
-  = error "SBV->C: Sets (SSet) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Sets (SSet)"
   | any isList kindInfo
-  = error "SBV->C: Lists (SList) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Lists (SList)"
   | any isTuple kindInfo
-  = error "SBV->C: Tuples (STupleN) are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Tuples (STupleN)"
   | any isMaybe kindInfo
-  = error "SBV->C: Optional (SMaybe) values are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Optional (SMaybe) values"
   | any isEither kindInfo
-  = error "SBV->C: Either (SEither) values are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+  = notyet "Either (SEither) values"
   | isNothing (cgReal cfg) && KReal `Set.member` kindInfo
   = error $ "SBV->C: SReal values are not supported by the C compiler."
           ++ "\nUse 'cgSRealType' to specify a custom type for SReal representation."
+  | not (null unsupportedBVs)
+  = error $ "SBV->C: Unsupported bit-vector type(s): " ++ intercalate ", " (map show unsupportedBVs)
   | not (null usorts)
   = error $ "SBV->C: Cannot compile functions with uninterpreted sorts: " ++ intercalate ", " usorts
   | hasQuants pinfo
@@ -482,7 +485,9 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = tbd "User specified arrays"
   | True
   = ([pre, header, post], flagsNeeded)
- where asserts | cgIgnoreAsserts cfg = []
+ where notyet m = error $ "SBV->C: " ++ m ++ " are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
+
+       asserts | cgIgnoreAsserts cfg = []
                | True                = origAsserts
 
        usorts = [s | KUserSort s _ <- Set.toList kindInfo, s /= "RoundingMode"] -- No support for any sorts other than RoundingMode!
@@ -491,6 +496,10 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
               $$ text ""
 
        header = text "#include" <+> doubleQuotes (nm P.<> text ".h")
+
+       unsupportedBVs = [k | k@(KBounded sg sz) <- Set.toList kindInfo, (not . supported) (sg, sz)]
+         where supported (False, sz) = sz `elem` [1, 8, 16, 32, 64]
+               supported (True,  sz) = sz `elem` [   8, 16, 32, 64]
 
        post   = text ""
              $$ vcat (map codeSeg cgs)
