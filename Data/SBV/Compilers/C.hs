@@ -187,7 +187,7 @@ pprCWord :: HasKind a => Bool -> a -> Doc
 pprCWord cnst v = (if cnst then text "const" else empty) <+> text (showCType v)
 
 -- | Almost a "show", but map "SWord1" to "SBool"
--- which is used for extracting one-bit words. This is OK since C's `bool` type
+-- which is used for extracting one-bit words. This is OK since C's bool type
 -- handles arithmetic fine, and maps nicely to our `SWord 1`. (Same isn't true for `SInt 1`, which
 -- doesn't have an easy counter-part on the C side.
 showCType :: HasKind a => a -> String
