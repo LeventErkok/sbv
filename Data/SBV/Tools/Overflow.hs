@@ -80,7 +80,6 @@ class ArithOverflow a where
   --   s0 = -128 :: Int8
   --   s1 =   -1 :: Int8
   -- This is the only solution.
-
   bvDivO :: a -> a -> (SBool, SBool)
 
   -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow, when the argument is
