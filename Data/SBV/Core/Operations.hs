@@ -33,7 +33,7 @@ module Data.SBV.Core.Operations
   , svSign, svUnsign, svSetBit, svWordFromBE, svWordFromLE
   , svExp, svFromIntegral
   -- ** Overflows
-  , svMkOverflow
+  , svMkOverflow1, svMkOverflow2
   -- ** Derived operations
   , svToWord1, svFromWord1, svTestBit
   , svShiftLeft, svShiftRight
@@ -1028,8 +1028,13 @@ svRotate unboundedShifter opRot curRot x i
 
 --------------------------------------------------------------------------------
 -- | Overflow detection.
-svMkOverflow :: OvOp -> SVal -> SVal -> SVal
-svMkOverflow o x y = SVal KBool (Right (cache r))
+svMkOverflow1 :: OvOp -> SVal -> SVal
+svMkOverflow1 o x = SVal KBool (Right (cache r))
+    where r st = do sx <- svToSV st x
+                    newExpr st KBool $ SBVApp (OverflowOp o) [sx]
+
+svMkOverflow2 :: OvOp -> SVal -> SVal -> SVal
+svMkOverflow2 o x y = SVal KBool (Right (cache r))
     where r st = do sx <- svToSV st x
                     sy <- svToSV st y
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]

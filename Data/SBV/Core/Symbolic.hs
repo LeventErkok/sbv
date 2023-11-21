@@ -336,16 +336,21 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           deriving (Eq, Ord, Show, G.Data)
 
 -- | Overflow operations
-data OvOp = Overflow_SMul_OVFL   -- ^ Signed multiplication overflow
-          | Overflow_SMul_UDFL   -- ^ Signed multiplication underflow
-          | Overflow_UMul_OVFL   -- ^ Unsigned multiplication overflow
+data OvOp = PlusOv Bool           -- ^ Addition    overflow.    Bool is True if signed.
+          | SubOv  Bool           -- ^ Subtraction overflow.    Bool is True if signed.
+          | MulOv  Bool           -- ^ Multiplication overflow. Bool is True if signed.
+          | DivOv                 -- ^ Division overflow.       Only signed, since unsigned division does not overflow.
+          | NegOv                 -- ^ Unary negation overflow. Only signed, since unsigned negation does not overflow.
           deriving (Eq, Ord, G.Data)
 
--- | Show instance. It's important that these follow the internal z3 names
+-- | Show instance. It's important that these follow the SMTLib names.
 instance Show OvOp where
-  show Overflow_SMul_OVFL = "bvsmul_noovfl"
-  show Overflow_SMul_UDFL = "bvsmul_noudfl"
-  show Overflow_UMul_OVFL = "bvumul_noovfl"
+  show (PlusOv signed) = "bv" ++ (if signed then "s" else "u") ++ "addo"
+  show (SubOv  signed) = "bv" ++ (if signed then "s" else "u") ++ "subo"
+  show (MulOv  signed) = "bv" ++ (if signed then "s" else "u") ++ "mulo"
+  show DivOv           = "bvsdivo"
+  show NegOv           = "bvnego"  -- TODO: z3 takes the name bvnego; but this might actually be bvsnego when finally formalized
+                                   -- Reported at: https://github.com/Z3Prover/z3/issues/7010
 
 -- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings

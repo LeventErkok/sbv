@@ -1029,8 +1029,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
           | True  = reducePB pb args'
           where args' = map cvtSV args
 
-        -- NB: Z3 semantics have the predicates reversed: i.e., it returns true if overflow isn't possible. Hence the not.
-        sh (SBVApp (OverflowOp op) args) = "(not (" ++ show op ++ " " ++ unwords (map cvtSV args) ++ "))"
+        sh (SBVApp (OverflowOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         -- Note the unfortunate reversal in StrInRe..
         sh (SBVApp (StrOp (StrInRe r)) args) = "(str.in.re " ++ unwords (map cvtSV args) ++ " " ++ regExpToSMTString r ++ ")"

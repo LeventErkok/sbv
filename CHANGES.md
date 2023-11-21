@@ -21,6 +21,13 @@
     It can render both ground definitions and functions, and the latter can be handy in producing SMTLib functions to
     be used in other settings.
 
+  * Fix a bug in bit-vector rotation that manifested itself in small-bv sizes. Thanks to Sirui Lu for reporting.
+
+  * [BACKWARDS COMPATIBILITY] Change the overflow detection API to match the new SMTLib predicates. These predicates
+    do not distinguish between over/underflow, so strictly speaking the new API is less powerful than the old one. However,
+    we choose to follow SMTLib here for portability purposes. If you need separate overflow/underflow checking you can
+    use the encodings from earlier implementations, please get in touch if this proves problematic.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
