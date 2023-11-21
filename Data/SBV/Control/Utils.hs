@@ -1136,9 +1136,10 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                         , "*** Please use a solver that supports this feature."
                                         ]
 
-                     topState@State{rUsedKinds, rPartitionVars} <- queryState
+                     topState@State{rUsedKinds, rPartitionVars, rProgInfo} <- queryState
 
-                     ki   <- liftIO $ readIORef rUsedKinds
+                     progInfo <- liftIO $ readIORef rProgInfo
+                     ki       <- liftIO $ readIORef rUsedKinds
 
                      allModelInputs    <- getTopLevelInputs
                      allUninterpreteds <- getUIs
@@ -1197,17 +1198,19 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      -- We can go fast using the disjoint model trick if things are simple enough:
                      --     - No uninterpreted functions (uninterpreted values are OK)
                      --     - No uninterpreted sorts
+                     --     - No quantifiers
                      --
                      -- Why can't we support the above?
                      --     - Uninterpreted functions: There is no (standard) way to define a function as a literal in SMTLib.
                      --     Some solvers support lambda, but this isn't common/reliable yet.
                      --     - Uninterpreted sort: There's no way to access the value the solver assigns to an uninterpreted sort.
+                     --     - Quantifiers: Too complicated!
                      --
                      -- So, if these two things are present, we go the "slow" route, by repeatedly rejecting the
                      -- previous model and asking for a new one. If they don't exist (which is the common case anyhow)
                      -- we use an idea due to z3 folks <http://theory.stanford.edu/%7Enikolaj/programmingz3.html#sec-blocking-evaluations>
                      -- which splits the search space into disjoint models and can produce results much more quickly.
-                     let isSimple = null allUiFuns && null usorts
+                     let isSimple = null allUiFuns && null usorts && not (hasQuants progInfo)
 
                          start = AllSatResult { allSatMaxModelCountReached  = False
                                               , allSatSolverReturnedUnknown = False
