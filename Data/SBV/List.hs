@@ -157,9 +157,6 @@ listToListAt s offset = subList s offset 1
 --
 -- >>> prove $ \i -> i `inRange` (0, 4) .=> [1,1,1,1,1] `elemAt` i .== (1::SInteger)
 -- Q.E.D.
---
--- ->>> prove $ \(l :: SList Integer) i e -> i `inRange` (0, length l - 1) .&& l `elemAt` i .== e .=> indexOf l (singleton e) .<= i
--- Q.E.D.
 elemAt :: SymVal a => SList a -> SInteger -> SBV a
 elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
@@ -329,9 +326,6 @@ replace l src dst
 
 -- | @`indexOf` l sub@. Retrieves first position of @sub@ in @l@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` l sub 0@.
---
--- ->>> prove $ \(l :: SList Int8) i -> i .> 0 .&& i .< length l .=> indexOf l (subList l i 1) .<= i
--- Q.E.D.
 --
 -- >>> prove $ \(l1 :: SList Word16) l2 -> length l2 .> length l1 .=> indexOf l1 l2 .== -1
 -- Q.E.D.

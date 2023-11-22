@@ -138,7 +138,6 @@ Library
                   , Documentation.SBV.Examples.Existentials.CRCPolynomial
                   , Documentation.SBV.Examples.Existentials.Diophantine
                   , Documentation.SBV.Examples.Lists.Fibonacci
-                  , Documentation.SBV.Examples.Lists.Nested
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
                   , Documentation.SBV.Examples.Misc.Definitions
