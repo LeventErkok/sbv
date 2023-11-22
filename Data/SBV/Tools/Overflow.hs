@@ -68,7 +68,7 @@ class ArithOverflow a where
   -- | Bit-vector division. Unsigned division neither underflows nor overflows. Signed division can only overflow. In fact, for each
   -- signed bitvector type, there's precisely one pair that overflows, when @x@ is @minBound@ and @y@ is @-1@:
   --
-  -- >>> allSat $ \x y -> snd (x `bvDivO` (y::SInt8))
+  -- >>> allSat $ \x y -> x `bvDivO` (y::SInt8)
   -- Solution #1:
   --   s0 = -128 :: Int8
   --   s1 =   -1 :: Int8
@@ -78,7 +78,7 @@ class ArithOverflow a where
   -- | Bit-vector negation. Unsigned negation neither underflows nor overflows. Signed negation can only overflow, when the argument is
   -- @minBound@:
   --
-  -- >>> prove $ \x -> x .== minBound .<=> snd (bvNegO (x::SInt16))
+  -- >>> prove $ \x -> x .== minBound .<=> bvNegO (x::SInt16)
   -- Q.E.D.
   bvNegO :: a -> SBool
 

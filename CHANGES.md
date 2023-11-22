@@ -5,7 +5,7 @@
 
 ### Version 10.2.5, Not yet released
 
-  * Clean-up GHC extensions required in the cabal file
+  * Clean-up GHC extensions required in the cabal file, and changes required to compile cleanly with GHC 9.8.1
 
   * Add 'partition', which allows for partitioning all-sat search spaces when models are generated.
 
