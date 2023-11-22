@@ -28,6 +28,13 @@
     we choose to follow SMTLib here for portability purposes. If you need separate overflow/underflow checking you can
     use the encodings from earlier implementations, please get in touch if this proves problematic.
 
+  * [BACKWARDS COMPATIBILITY] Dropped hasSize, which checked cardinality of sets. This call hasn't been supported by
+    z3 for some time, and its uses were thus limited, and behavior was problematic even when supported due to finiteness
+    issues.
+
+  * Removed 'Documentation.SBV.Examples.Lists.Nested'. It contained an example that was no longer supported
+    by z3, so no point in keeping it in the documentation.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.

@@ -536,7 +536,6 @@ data SetOp = SetEqual
            | SetSubset
            | SetDifference
            | SetComplement
-           | SetHasSize
         deriving (Eq, Ord, G.Data)
 
 -- The show instance for 'SetOp' is merely for debugging, we map them separately so
@@ -551,7 +550,6 @@ instance Show SetOp where
   show SetSubset     = "Set.subset"
   show SetDifference = "Set.difference"
   show SetComplement = "Set.complement"
-  show SetHasSize    = "Set.setHasSize"
 
 -- Show instance for 'Op'. Note that this is largely for debugging purposes, not used
 -- for being read by any tool.

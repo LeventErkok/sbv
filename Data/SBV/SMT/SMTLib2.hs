@@ -1057,7 +1057,6 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
         sh (SBVApp (SetOp SetSubset)     args)   = "(subset "       ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetDifference) args)   = "(setminus "     ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp (SetOp SetComplement) args)   = "(complement "   ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp (SetOp SetHasSize)    args)   = "(set-has-size " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (TupleConstructor 0)   [])    = "mkSBVTuple0"
         sh (SBVApp (TupleConstructor n)   args)  = "((as mkSBVTuple" ++ show n ++ " " ++ smtType (KTuple (map kindOf args)) ++ ") " ++ unwords (map cvtSV args) ++ ")"
