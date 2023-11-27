@@ -75,12 +75,14 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isAlpha, isAlphaNum, toLower)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf)
+import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
 import Data.Kind                   (Type)
 
 import Data.Time (getCurrentTime, UTCTime)
+
+import Data.Int (Int64)
 
 import GHC.Stack
 import GHC.Generics (Generic)
@@ -91,14 +93,16 @@ import qualified Control.Monad.Writer.Lazy   as LW
 import qualified Control.Monad.Writer.Strict as SW
 import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
+import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
-import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, elems)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
 import qualified Data.Text                   as T
 
 import System.Mem.StableName
+import System.Random
 
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
@@ -112,13 +116,30 @@ import Data.SBV.Control.Types
 import Control.Monad.Fail as Fail
 #endif
 
+-- | Context identifier. 0 is reserved global context
+newtype SBVContext = SBVContext Int64 deriving (Eq, Ord, G.Data, Show)
+
+-- | Global context
+globalSBVContext :: SBVContext
+globalSBVContext = SBVContext 0
+
+-- | Generate context. We make sure it isn't 0, i.e., the global context
+-- The "hope" here is that each time we call this we get a different context number.
+-- A random number doesn't necessarily have to do that, but I think the pseudo-generator
+-- has a large enough period for this to go through OK.
+genSBVContext :: IO SBVContext
+genSBVContext = do ctx <- SBVContext <$> randomIO
+                   if ctx == globalSBVContext   -- unlikely, but possible
+                      then genSBVContext
+                      else pure ctx
+
 -- | A symbolic node id
-newtype NodeId = NodeId { getId :: (Int, Int) } -- Lambda-level, and node-id
+newtype NodeId = NodeId { getId :: (SBVContext, Int, Int) } -- Lambda-level, and node-id
   deriving (Ord, G.Data)
 
 -- Equality is pair-wise, except we accommodate for negative node-id; which is reserved for true/false
 instance Eq NodeId where
-  NodeId n1@(_, i) == NodeId n2@(_, j)
+  NodeId n1@(_, _, i) == NodeId n2@(_, _, j)
      | i < 0 && j < 0
      = i == j
      | True
@@ -140,10 +161,10 @@ instance HasKind SV where
   kindOf (SV k _) = k
 
 instance Show SV where
-  show (SV _ (NodeId (l, n))) = case n of
-                                 -2 -> "false"
-                                 -1 -> "true"
-                                 _  -> prefix ++ 's' : show n
+  show (SV _ (NodeId (_, l, n))) = case n of
+                                     -2 -> "false"
+                                     -1 -> "true"
+                                     _  -> prefix ++ 's' : show n
         where prefix = case l of
                          0 -> ""
                          _ -> 'l' : show l ++ "_"
@@ -164,11 +185,11 @@ forceSVArg (SV k n) = k `seq` n `seq` return ()
 
 -- | Constant False as an 'SV'. Note that this value always occupies slot -2 and level 0.
 falseSV :: SV
-falseSV = SV KBool $ NodeId (0, -2)
+falseSV = SV KBool $ NodeId (globalSBVContext, 0, -2)
 
 -- | Constant True as an 'SV'. Note that this value always occupies slot -1 and level 0.
 trueSV :: SV
-trueSV  = SV KBool $ NodeId (0, -1)
+trueSV  = SV KBool $ NodeId (globalSBVContext, 0, -1)
 
 -- | Symbolic operations
 data Op = Plus
@@ -622,7 +643,7 @@ instance Show Op where
                  ]
 
 -- | Quantifiers: forall or exists. Note that we allow arbitrary nestings.
-data Quantifier = ALL | EX deriving Eq
+data Quantifier = ALL | EX deriving (Eq, G.Data)
 
 -- | Show instance for 'Quantifier'
 instance Show Quantifier where
@@ -680,7 +701,7 @@ type Name = T.Text
 
 -- | 'NamedSymVar' pairs symbolic values and user given/automatically generated names
 data NamedSymVar = NamedSymVar !SV !Name
-                 deriving (Show, Generic)
+                 deriving (Show, Generic, G.Data)
 
 -- | For comparison purposes, we simply use the SV and ignore the name
 instance Eq NamedSymVar where
@@ -829,6 +850,7 @@ instance NFData a => NFData (Objective a) where
 -- | A result can either produce something at the top or as a lambda/constraint. Distinguish by inputs
 data ResultInp = ResultTopInps ([NamedSymVar], [NamedSymVar])  -- user inputs -- trackers
                | ResultLamInps [(Quantifier, NamedSymVar)]     -- for constraints, we can have quantifiers
+               deriving G.Data
 
 instance NFData ResultInp where
    rnf (ResultTopInps xs) = rnf xs
@@ -949,6 +971,7 @@ instance Show Result where
 data ArrayContext = ArrayFree   (Either (Maybe SV) String) -- ^ A new array, the contents are initialized with the given value, if any, or the custom lambda given
                   | ArrayMutate ArrayIndex SV SV           -- ^ An array created by mutating another array at a given cell
                   | ArrayMerge  SV ArrayIndex ArrayIndex   -- ^ An array created by symbolically merging two other arrays
+                  deriving G.Data
 
 instance Show ArrayContext where
   show (ArrayFree (Left Nothing))   = " initialized with random elements"
@@ -1142,13 +1165,13 @@ lookupInput f sv ns
    | l == 0 = res
    | True   = Nothing  -- l != 0, a lambda var, so we ignore
   where
-    (l, i) = getId (swNodeId sv)
-    svs    = fmap f ns
-    res    = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
-               Nothing    -> secondLookup
-               x@(Just e) -> if sv == f e then x else secondLookup
-                 -- we try the fast lookup first, if the node ids don't match then
-                 -- we use the more expensive O (n) to find the index and the elem
+    (_, l, i) = getId (swNodeId sv)
+    svs       = fmap f ns
+    res       = case S.lookup i ns of -- Nothing on negative Int or Int > length seq
+                  Nothing    -> secondLookup
+                  x@(Just e) -> if sv == f e then x else secondLookup
+                    -- we try the fast lookup first, if the node ids don't match then
+                    -- we use the more expensive O (n) to find the index and the elem
     secondLookup = S.elemIndexL sv svs >>= flip S.lookup ns
 
 -- | A defined function/value
@@ -1186,7 +1209,8 @@ instance NFData SMTDef where
   rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
 -- | The state of the symbolic interpreter
-data State  = State { pathCond       :: SVal                             -- ^ kind KBool
+data State  = State { sbvContext     :: SBVContext
+                    , pathCond       :: SVal                             -- ^ kind KBool
                     , stCfg          :: SMTConfig
                     , startTime      :: UTCTime
                     , rProgInfo      :: IORef ProgInfo
@@ -1436,7 +1460,7 @@ lambdaVar = quantVar ALL
 newSV :: State -> Kind -> IO NamedSymVar
 newSV st k = do ctr <- incrementInternalCounter st
                 ll  <- readIORef (rLambdaLevel st)
-                let sv = SV k (NodeId (ll, ctr))
+                let sv = SV k (NodeId (sbvContext st, ll, ctr))
                 registerKind st k
                 return $ NamedSymVar sv $ T.pack (show sv)
 {-# INLINE newSV #-}
@@ -1553,11 +1577,26 @@ newExpr st k app = do
      -- <http://github.com/GaloisInc/cryptol/issues/566> as an example.
      Just sv | kindOf sv == k -> return sv
      _                        -> do (NamedSymVar sv _) <- newSV st k
+                                    checkConsistent sv e
                                     let append (SBVPgm xs) = SBVPgm (xs S.|> (sv, e))
                                     modifyState st spgm append $ modifyIncState st rNewAsgns append
                                     modifyState st rexprMap (Map.insert e sv) (return ())
                                     return sv
 {-# INLINE newExpr #-}
+
+-- | In rare cases, we can get a context mismatch; so make sure the expression is well-formed.
+-- This isn't a full solution, but handles the common case (hopefully!)
+checkConsistent :: SV -> SBVExpr -> IO ()
+checkConsistent lhs (SBVApp _ args) = mapM_ check args
+   where SV _ (NodeId (lhsContext, lambdaLevel, lhsId)) = lhs
+         check (SV _ (NodeId (rhsContext, ll, ni)))
+           | lhsContext `compatible` rhsContext && lambdaLevel >= ll && (lambdaLevel /= ll || lhsId > ni)
+           = pure ()
+           | True
+           = contextMismatchError lhsContext rhsContext (Just (lambdaLevel, lhsId)) (Just (ll, ni))
+
+         compatible c1 c2 = c1 == c2 || c1 == globalSBVContext || c2 == globalSBVContext
+{-# INLINE checkConsistent #-}
 
 -- | Convert a symbolic value to an internal SV
 svToSV :: State -> SVal -> IO SV
@@ -1711,7 +1750,12 @@ svMkSymVarGen isTracker varContext k mbNm st = do
                                    let nm = fromMaybe (T.unpack internalName) mbNm
                                        nsv = toNamedSV' sv nm
 
-                                       cv = case [v | (nsv', v) <- env, nsv == nsv'] of
+                                       -- Ignore the context equivalence check here. When validating, we are in a different
+                                       -- context; so they won't match
+                                       same (NamedSymVar (SV _ (NodeId (_, ll1, li1))) _)
+                                            (NamedSymVar (SV _ (NodeId (_, ll2, li2))) _) = (ll1, li1) == (ll2, li2)
+
+                                       cv = case [v | (nsv', v) <- env, nsv `same` nsv'] of
                                               []    -> if isTracker
                                                        then  -- The sole purpose of a tracker variable is to send the optimization
                                                              -- directive to the solver, so we can name "expressions" that are minimized
@@ -1813,7 +1857,9 @@ mkNewState cfg currentRunMode = liftIO $ do
      asserts    <- newIORef []
      istate     <- newIORef =<< newIncState
      qstate     <- newIORef Nothing
-     pure $ State { runMode        = rm
+     ctx        <- genSBVContext
+     pure $ State { sbvContext     = ctx
+                  , runMode        = rm
                   , stCfg          = cfg
                   , startTime      = currTime
                   , rProgInfo      = progInfo
@@ -1854,6 +1900,25 @@ runSymbolic cfg currentRunMode comp = do
    st <- mkNewState cfg currentRunMode
    runSymbolicInState st comp
 
+-- | Catch the catastrophic case of context mismatch
+contextMismatchError :: SBVContext -> SBVContext -> Maybe (Int, Int) -> Maybe (Int, Int) -> a
+contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
+  where prefix | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
+                                , "***"
+                                , "*** Current context: " ++ show ctx1
+                                , "*** Mixed with     : " ++ show ctx2
+                                ]
+               | True         = [ "Data.SBV: Mismatched levels detected in the same context."
+                                , "***"
+                                , "*** Refers to: " ++ show level1
+                                , "*** And also : " ++ show level2
+                                ]
+        rest = [ "***"
+               , "*** This happens if you call a proof-function (prove/sat) etc."
+               , "*** while another one is in execution. Avoid such nested calls."
+               , "*** See https://github.com/LeventErkok/sbv/issues/71 for examples."
+               ]
+
 -- | Run a symbolic computation in a given state
 runSymbolicInState :: MonadIO m => State -> SymbolicT m a -> m (a, Result)
 runSymbolicInState st (SymbolicT c) = do
@@ -1861,6 +1926,27 @@ runSymbolicInState st (SymbolicT c) = do
    _ <- liftIO $ newConst st trueCV  -- s(-1) == trueSV
    r <- runReaderT c st
    res <- liftIO $ extractSymbolicSimulationState st
+
+   -- Check that the state wasn't clobbered in any way
+   let check ctx | ctx == sbvContext st || ctx == globalSBVContext
+                 = pure ()
+                 | True
+                 = contextMismatchError (sbvContext st) ctx Nothing Nothing
+
+   -- Collect parts of the state that has an SV in it. unfortunately we can't just do G.universeBi res, because
+   -- the CV component contains a BigFloat, which doesn't have a Data instance. (And the library doesn't export
+   -- all the constructors, so we can't do a deriving instance. Sigh.)
+   mapM_ check $ nub [ctx | NodeId (ctx, _, _) <- G.universeBi $  [s | (_, _, s) <- resObservables res]
+                                                               ++ G.universeBi (resParams res)
+                                                               ++ Map.elems    (fst (resConsts res))
+                                                               ++ map fst      (snd (resConsts res))
+                                                               ++ G.universeBi (resTables res)
+                                                               ++ G.universeBi (resArrays res)
+                                                               ++ G.universeBi (pgmAssignments (resAsgns  res))
+                                                               ++ G.universeBi (resConstraints res)
+                                                               ++ [s | (_, _, s) <- resAssertions res]
+                                                               ++ resOutputs res
+                     ]
 
    -- Clean-up after ourselves
    qs <- liftIO $ readIORef $ rQueryState st

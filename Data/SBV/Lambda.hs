@@ -70,7 +70,8 @@ inSubState inState comp = do
         -- don't really impact anything.
         comp State {
                    -- These are not IORefs; so we share by copying  the value; changes won't be copied back
-                     pathCond       = share pathCond
+                     sbvContext     = share sbvContext
+                   , pathCond       = share pathCond
                    , startTime      = share startTime
 
                    -- These are shared IORef's; and is shared, so they will be copied back to the parent state
@@ -298,7 +299,10 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                        walk (cur@(SV _ nd, _) : rest)  remaining =  map (mkTable . snd) ready
                                                                  ++ [mkLet cur]
                                                                  ++ walk rest notReady
-                          where (ready, notReady) = partition (\(need, _) -> need < getId nd) remaining
+                          where (ready, notReady) = partition (\(need, _) -> need < getLLI nd) remaining
+
+               getLLI :: NodeId -> (Int, Int)
+               getLLI (NodeId (_, l, i)) = (l, i)
 
                -- if we have just one definition returning it, simplify
                simpleBody :: [(SV, String)] -> SV -> Maybe String
@@ -331,7 +335,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                (tableMap, constTables, nonConstTablesUnindexed) = constructTables rm consts tbls
 
                -- Index each non-const table with the largest index of SV it needs
-               nonConstTables = [ (maximum ((0, 0) : [getId n | SV _ n <- elts]), nct)
+               nonConstTables = [ (maximum ((0, 0) : [getLLI n | SV _ n <- elts]), nct)
                                 | nct@((_, elts), _) <- nonConstTablesUnindexed]
 
                lambdaTable :: String -> Kind -> Kind -> [SV] -> String

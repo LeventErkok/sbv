@@ -595,8 +595,8 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
          where static   = if location == -1 then text "static" else empty
                location = maximum (-1 : map getNodeId elts)
 
-       getNodeId s@(SV _ (NodeId (_, n))) | isConst s = -1
-                                          | True      = n
+       getNodeId s@(SV _ (NodeId (_, _, n))) | isConst s = -1
+                                             | True      = n
 
        genAsgn :: (SV, SBVExpr) -> (Int, Doc)
        genAsgn (sv, n) = (getNodeId sv, ppExpr cfg consts n (declSV typeWidth sv) (declSVNoConst typeWidth sv) P.<> semi)
