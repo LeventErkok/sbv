@@ -111,7 +111,6 @@ import qualified BenchSuite.Misc.Tuple
 -- Lists
 import qualified BenchSuite.Lists.BoundedMutex
 import qualified BenchSuite.Lists.Fibonacci
-import qualified BenchSuite.Lists.Nested
 
 -- Strings
 import qualified BenchSuite.Strings.RegexCrossword
@@ -342,7 +341,6 @@ misc = bgroup "Miscellaneous" $ runBenchmark <$> miscBenchmarks
 listBenchmarks :: [Runner]
 listBenchmarks = [ BenchSuite.Lists.BoundedMutex.benchmarks
                  , BenchSuite.Lists.Fibonacci.benchmarks
-                 , BenchSuite.Lists.Nested.benchmarks
                  ]
 
 lists :: Benchmark

@@ -487,7 +487,6 @@ Benchmark SBVBench
                   , BenchSuite.Misc.Tuple
                   , BenchSuite.Lists.BoundedMutex
                   , BenchSuite.Lists.Fibonacci
-                  , BenchSuite.Lists.Nested
                   , BenchSuite.Strings.RegexCrossword
                   , BenchSuite.Strings.SQLInjection
                   , BenchSuite.Existentials.CRCPolynomial
