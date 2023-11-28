@@ -131,6 +131,8 @@
 --
 --   * DReal from CMU: <http://dreal.github.io/>
 --
+--   * OpenSMT from Università della Svizzera italiana <https://verify.inf.usi.ch/opensmt>
+--
 --   * Z3 from Microsoft: <http://github.com/Z3Prover/z3/wiki>
 --
 -- SBV requires recent versions of these solvers; please see the file
@@ -402,7 +404,7 @@ module Data.SBV (
   -- $verbosity
 
   -- ** Solvers
-  , boolector, bitwuzla, cvc4, cvc5, yices, dReal, z3, mathSAT, abc
+  , boolector, bitwuzla, cvc4, cvc5, yices, dReal, z3, mathSAT, abc, openSMT
   -- ** Configurations
   , defaultSolverConfig, defaultSMTCfg, defaultDeltaSMTCfg, sbvCheckSolverInstallation, getAvailableSolvers
   , setLogic, Logic(..), setOption, setInfo, setTimeOut
