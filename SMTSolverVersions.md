@@ -25,6 +25,9 @@ report any issues you might see with newer releases.
   * MathSAT:
       * http://mathsat.fbk.eu/
       * Version 5.6.5
+  * OpenSMT:
+      * https://verify.inf.usi.ch/opensmt
+      * Version 2.5.3
   * Yices:
       * http://github.com/SRI-CSL/yices2
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
