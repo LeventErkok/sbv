@@ -369,9 +369,8 @@ instance Show OvOp where
   show (PlusOv signed) = "bv" ++ (if signed then "s" else "u") ++ "addo"
   show (SubOv  signed) = "bv" ++ (if signed then "s" else "u") ++ "subo"
   show (MulOv  signed) = "bv" ++ (if signed then "s" else "u") ++ "mulo"
-  show DivOv           = "bvsdivo"
-  show NegOv           = "bvnego"  -- TODO: z3 takes the name bvnego; but this might actually be bvsnego when finally formalized
-                                   -- Reported at: https://github.com/Z3Prover/z3/issues/7010
+  show DivOv           = "bvsdivo" -- This is confusing, the division is called bvsdivo, but negation is bvnego
+  show NegOv           = "bvnego"  -- But SMTLib's choice is deliberate: https://groups.google.com/u/0/g/smt-lib/c/J4D99wT0aKI
 
 -- | String operations. Note that we do not define @StrAt@ as it translates to 'StrSubstr' trivially.
 data StrOp = StrConcat       -- ^ Concatenation of one or more strings
