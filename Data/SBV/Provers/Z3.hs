@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- The connection to the MathSAT SMT solver
+-- The connection to the Z3 SMT solver
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ScopedTypeVariables #-}
