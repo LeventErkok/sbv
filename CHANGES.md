@@ -21,6 +21,8 @@
     It can render both ground definitions and functions, and the latter can be handy in producing SMTLib functions to
     be used in other settings.
 
+  * Add support for OpenSMT from Università della Svizzera italiana https://verify.inf.usi.ch/opensmt
+
   * Fix a bug in bit-vector rotation that manifested itself in small-bv sizes. Thanks to Sirui Lu for reporting.
 
   * [BACKWARDS COMPATIBILITY] Change the overflow detection API to match the new SMTLib predicates. These predicates

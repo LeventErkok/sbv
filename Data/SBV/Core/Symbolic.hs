@@ -2346,6 +2346,7 @@ data Solver = ABC
             | MathSAT
             | Yices
             | Z3
+            | OpenSMT
             deriving (Show, Enum, Bounded)
 
 -- | An SMT solver

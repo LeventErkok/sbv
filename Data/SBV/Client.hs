@@ -58,6 +58,7 @@ defaultSolverConfig CVC4      = cvc4
 defaultSolverConfig CVC5      = cvc5
 defaultSolverConfig DReal     = dReal
 defaultSolverConfig MathSAT   = mathSAT
+defaultSolverConfig OpenSMT   = openSMT
 defaultSolverConfig Yices     = yices
 defaultSolverConfig Z3        = z3
 

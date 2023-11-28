@@ -30,7 +30,7 @@ module Data.SBV.Provers.Prover (
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
        , getModelDictionaries, getModelValues, getModelUninterpretedValues
-       , abc, boolector, bitwuzla, cvc4, cvc5, dReal, mathSAT, yices, z3, defaultSMTCfg, defaultDeltaSMTCfg
+       , abc, boolector, bitwuzla, cvc4, cvc5, dReal, mathSAT, yices, z3, openSMT, defaultSMTCfg, defaultDeltaSMTCfg
        , proveWithAny, proveWithAll, proveConcurrentWithAny, proveConcurrentWithAll
        , satWithAny,   satWithAll,   satConcurrentWithAny,   satConcurrentWithAll
        ) where
@@ -77,6 +77,7 @@ import qualified Data.SBV.Provers.DReal     as DReal
 import qualified Data.SBV.Provers.MathSAT   as MathSAT
 import qualified Data.SBV.Provers.Yices     as Yices
 import qualified Data.SBV.Provers.Z3        as Z3
+import qualified Data.SBV.Provers.OpenSMT   as OpenSMT
 
 import GHC.TypeLits
 
@@ -147,6 +148,12 @@ z3 :: SMTConfig
 z3 = mkConfig Z3.z3 SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
                             , allOnStdOut
                             ]
+
+-- | Default configuration for the OpenSMT SMT solver
+openSMT :: SMTConfig
+openSMT = mkConfig OpenSMT.openSMT SMTLib2 [ Control.OptionKeyword ":smtlib2_compliant" ["true"]
+                                           , allOnStdOut
+                                           ]
 
 -- | The default solver used by SBV. This is currently set to z3.
 defaultSMTCfg :: SMTConfig
