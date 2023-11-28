@@ -18,7 +18,7 @@ solverName :: SMTConfig -> String
 solverName = show . name . solver
 
 main :: IO ()
-main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, bitwuzla, cvc4, cvc5, mathSAT, yices, z3, dReal]
+main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, bitwuzla, cvc4, cvc5, mathSAT, yices, z3, dReal, openSMT]
 
           args <- getArgs
 
@@ -33,8 +33,9 @@ main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, bitwuz
               (requiredBad, requiredPresent) = partition (\(n, _) -> n `elem` map solverName badSolvers) chosenSolvers
 
               pickTest s = case name (solver s) of
-                             DReal -> testI s
-                             _     -> test  s
+                             DReal   -> testI s
+                             OpenSMT -> testO s
+                             _       -> test  s
 
           mapM_ (pickTest . snd) requiredPresent
 
@@ -61,12 +62,19 @@ test s = do check  s "t0" t0 not
         t3 x = x*x .== (3::SWord8)
         t4 x = x*3 .== (12::SWord8)
 
--- integer only test, for dReal mostly
+-- for dreal
 testI :: SMTConfig -> IO ()
 testI s = do check s "t0" t0 id
              check s "t1" t1 not
   where t0 x = x .== (x :: SReal)
         t1 x = x .== (2 :: SReal) .&& (x .== 3)
+
+-- for openSMT
+testO :: SMTConfig -> IO ()
+testO s = do check s "t0" t0 id
+             check s "t1" t1 not
+  where t0 = do {setLogic QF_RDL; x <- free "x"; pure (x .== (x :: SReal))}
+        t1 = do {setLogic QF_RDL; x <- free "x"; pure (x .== (2 :: SReal) .&& (x .== 3))}
 
 check :: Provable a => SMTConfig -> String -> a -> (Bool -> Bool) -> IO ()
 check s m p f = isTheoremWith s p >>= decide s m f
