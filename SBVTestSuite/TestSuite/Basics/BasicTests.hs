@@ -16,8 +16,16 @@
 
 module TestSuite.Basics.BasicTests(tests) where
 
+import Data.SBV.Control
 import Data.SBV.Internals hiding (free, output)
 import Utils.SBVTestFramework
+
+import Control.Monad       (void)
+import Control.Monad.Trans (liftIO)
+
+import System.Random
+
+import qualified Control.Exception as C
 
 -- Test suite
 tests :: TestTree
@@ -52,6 +60,9 @@ tests = testGroup "Basics.BasicTests"
    , goldenVsStringShow "basic-5_3" $ test5 f3
    , goldenVsStringShow "basic-5_4" $ test5 f4
    , goldenVsStringShow "basic-5_5" $ test5 f5
+   , goldenCapturedIO   "nested1"   $ nested nested1
+   , goldenCapturedIO   "nested2"   $ nested nested2
+   , goldenCapturedIO   "nested3"   $ nested nested3
    ]
 
 test0 :: (forall a. Num a => (a -> a -> a)) -> Word8
@@ -81,3 +92,39 @@ f2 x y = (x*x)-(y*y)
 f3 x y = (x+y)*(x+y)
 f4 x y = let z = x + y in z * z
 f5 x _ = x + 1
+
+-- Nested calls are not OK; make sure we catch these
+nested :: (SMTConfig -> IO ThmResult) -> FilePath -> IO ()
+nested t rf = do setStdGen (mkStdGen 0)
+                 void (t z3{verbose=True, redirectVerbose=Just rf})
+                  `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
+                                                        appendFile rf (show e)
+
+nested1 :: SMTConfig -> IO ThmResult
+nested1 cfg = proveWith cfg $ do
+  x <- free "x"
+  y <- free "y"
+  liftIO $ f x y
+ where f :: SWord32 -> SWord32 -> IO SBool
+       f x y = do
+         res <- isSatisfiable $ x .== y
+         return $ if res then sTrue else sFalse
+
+nested2 :: SMTConfig -> IO ThmResult
+nested2 cfg = proveWith cfg $ do
+  x <- free "x"
+  liftIO $ f x
+ where f :: SWord32 -> IO SBool
+       f x = do
+         res <- isSatisfiable $ x .== 2
+         return $ if res then sTrue else sFalse
+
+nested3 :: SMTConfig -> IO ThmResult
+nested3 cfg = proveWith cfg $ do
+        y <- sBool "y"
+        x <- liftIO leak        -- reach in!
+        return $ y .== x
+  where leak :: IO SBool
+        leak = runSMTWith cfg $ do
+                        x <- sBool "x"
+                        query $ pure x
