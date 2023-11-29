@@ -98,6 +98,9 @@ endif
 testInterfaces:
 	@$(TIME) cabal new-test SBVConnections
 
+benchBuild:
+	@$(TIME) cabal new-build SBVBench
+
 # If you specify TGT, it'll just run on that target. Give the full path to the haskell file with .hs extension
 # If you also specify FAST, it won't compile first; good when you change the "comment" but not the code
 docTest:
@@ -124,7 +127,7 @@ mkDistro:
 releaseNoBuild: testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release! -- no SBV build was done."
 
-fullRelease: veryclean checkExtensions install docs testsuite testInterfaces mkDistro checkLinks
+fullRelease: veryclean checkExtensions install docs testsuite testInterfaces benchBuild mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 
 release:
