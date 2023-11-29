@@ -10,7 +10,7 @@ report any issues you might see with newer releases.
       * Version 3.2.2
   * Bitwuzla:
       * https://bitwuzla.github.io
-      * Version 1.0-prerelease
+      * Version 0.2.0-dev, downloaded Nov 29, 2023
   * CVC4:
       * https://github.com/CVC4/CVC4
       * Version installed via `brew tap cvc4/cvc4; brew rm cvc4; brew install cvc4/cvc4/cvc4 --HEAD`

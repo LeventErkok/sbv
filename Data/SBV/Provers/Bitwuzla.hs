@@ -24,7 +24,7 @@ bitwuzla = SMTSolver {
            name         = Bitwuzla
          , executable   = "bitwuzla"
          , preprocess   = id
-         , options      = const ["--smt2", "-m", "--output-format=smt2", "--no-exit-codes", "--incremental"]
+         , options      = const ["--produce-models"]
          , engine       = standardEngine "SBV_BITWUZLA" "SBV_BITWUZLA_OPTIONS"
          , capabilities = SolverCapabilities {
                                 supportsQuantifiers        = False
