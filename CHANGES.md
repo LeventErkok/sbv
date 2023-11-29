@@ -37,6 +37,9 @@
   * Removed 'Documentation.SBV.Examples.Lists.Nested'. It contained an example that was no longer supported
     by z3, so no point in keeping it in the documentation.
 
+  * SBV now keeps track of contexts, thus avoiding rare (but unsound) cases of incorrect API usage where contexts
+    are mixed. We now issue a run-time error. See https://github.com/LeventErkok/sbv/issues/71 for details.
+
 ### Version 10.2, 2023-06-09
 
   * Improve HLint pragmas. Thanks to George Thomas for the patch.
