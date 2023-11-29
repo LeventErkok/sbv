@@ -9,6 +9,7 @@
 -- Operations on concrete values
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE Rank2Types          #-}
@@ -36,9 +37,12 @@ import Data.SBV.Utils.Numeric (fpIsEqualObjectH, fpCompareObjectH)
 import Data.Set (Set)
 import qualified Data.Set as Set
 
+import qualified Data.Generics as G
+
 -- | A 'RCSet' is either a regular set or a set given by its complement from the corresponding universal set.
 data RCSet a = RegularSet    (Set a)
              | ComplementSet (Set a)
+             deriving G.Data
 
 -- | Show instance. Regular sets are shown as usual.
 -- Complements are shown "U -" notation.
@@ -83,6 +87,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CTuple    ![CVal]              -- ^ Tuple
           | CMaybe    !(Maybe CVal)        -- ^ Maybe
           | CEither   !(Either CVal CVal)  -- ^ Disjoint union
+          deriving G.Data
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -161,7 +166,7 @@ instance Ord CVal where
 data CV = CV { _cvKind  :: !Kind
              , cvVal    :: !CVal
              }
-        deriving (Eq, Ord)
+             deriving (Eq, Ord, G.Data)
 
 -- | A generalized CV allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
 data GeneralizedCV = ExtendedCV ExtCV

@@ -24,6 +24,7 @@
 {-# LANGUAGE PatternGuards              #-}
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeOperators              #-}
 {-# LANGUAGE UndecidableInstances       #-}
@@ -85,6 +86,7 @@ import Data.Time (getCurrentTime, UTCTime)
 import Data.Int (Int64)
 
 import GHC.Stack
+import GHC.Stack.Types
 import GHC.Generics (Generic)
 
 import qualified Control.Monad.State.Lazy    as LS
@@ -95,7 +97,7 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
-import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, elems)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
@@ -661,7 +663,7 @@ needsExistentials = (EX `elem`)
 -- We keep track of the signedness/size of the arguments. A non-function will
 -- have just one entry in the list.
 newtype SBVType = SBVType [Kind]
-             deriving (Eq, Ord)
+                deriving (Eq, Ord, G.Data)
 
 instance Show SBVType where
   show (SBVType []) = error "SBV: internal error, empty SBVType"
@@ -694,6 +696,7 @@ instance Show SBVExpr where
 
 -- | A program is a sequence of assignments
 newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SV, SBVExpr)}
+               deriving G.Data
 
 -- | Helper synonym for text, in case we switch to something else later.
 type Name = T.Text
@@ -860,9 +863,13 @@ data ProgInfo = ProgInfo { hasQuants         :: Bool
                          , progSpecialRels   :: [SpecialRelOp]
                          , progTransClosures :: [(String, String)]
                          }
+                         deriving G.Data
 
 instance NFData ProgInfo where
    rnf (ProgInfo a b c) = rnf a `seq` rnf b `seq` rnf c
+
+deriving instance G.Data CallStack
+deriving instance G.Data SrcLoc
 
 -- | Result of running a symbolic computation
 data Result = Result { progInfo       :: ProgInfo                                     -- ^ various info we collect about the program
@@ -881,6 +888,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resAssertions  :: [(String, Maybe CallStack, SV)]              -- ^ assertions
                      , resOutputs     :: [SV]                                         -- ^ outputs
                      }
+                     deriving G.Data
 
 -- Show instance for 'Result'. Only for debugging purposes.
 instance Show Result where
@@ -1183,6 +1191,7 @@ data SMTDef = SMTDef String           -- ^ Defined functions -- name
                      [String]         -- ^ Anonymous function -- other definitions it refers to
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
+            deriving G.Data
 
 -- | For debug purposes
 instance Show SMTDef where
@@ -1932,20 +1941,7 @@ runSymbolicInState st (SymbolicT c) = do
                  | True
                  = contextMismatchError (sbvContext st) ctx Nothing Nothing
 
-   -- Collect parts of the state that has an SV in it. unfortunately we can't just do G.universeBi res, because
-   -- the CV component contains a BigFloat, which doesn't have a Data instance. (And the library doesn't export
-   -- all the constructors, so we can't do a deriving instance. Sigh.)
-   mapM_ check $ nub [ctx | NodeId (ctx, _, _) <- G.universeBi $  [s | (_, _, s) <- resObservables res]
-                                                               ++ G.universeBi (resParams res)
-                                                               ++ Map.elems    (fst (resConsts res))
-                                                               ++ map fst      (snd (resConsts res))
-                                                               ++ G.universeBi (resTables res)
-                                                               ++ G.universeBi (resArrays res)
-                                                               ++ G.universeBi (pgmAssignments (resAsgns  res))
-                                                               ++ G.universeBi (resConstraints res)
-                                                               ++ [s | (_, _, s) <- resAssertions res]
-                                                               ++ resOutputs res
-                     ]
+   mapM_ check $ nub $ G.universeBi res
 
    -- Clean-up after ourselves
    qs <- liftIO $ readIORef $ rQueryState st

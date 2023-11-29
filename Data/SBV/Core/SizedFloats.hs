@@ -9,6 +9,7 @@
 -- Type-level sized floats.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
@@ -47,6 +48,8 @@ import Data.SBV.Utils.Numeric (floatToWord)
 import LibBF (BigFloat, BFOpts, RoundMode, Status)
 import qualified LibBF as BF
 
+import qualified Data.Generics as G
+
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
 --   An IEEE SP is @FloatingPoint  8 24@
@@ -84,7 +87,7 @@ data FP = FP { fpExponentSize    :: Int
              , fpSignificandSize :: Int
              , fpValue           :: BigFloat
              }
-             deriving (Ord, Eq)
+             deriving (Ord, Eq, G.Data)
 
 instance Show FP where
   show = bfRemoveRedundantExp . bfToString 10 False False
