@@ -743,7 +743,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                 return collated
 
                       where safeGetLine isFirst h =
-                                         let timeOutToUse | isSetCommand mbCommand = Just 1000000
+                                         let timeOutToUse | isSetCommand mbCommand = Just 2000000
                                                           | isFirst                = mbTimeOut
                                                           | True                   = Just 5000000
                                              timeOutMsg t | isFirst = "User specified timeout of " ++ showTimeoutValue t ++ " exceeded"
