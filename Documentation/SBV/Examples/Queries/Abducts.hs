@@ -22,10 +22,10 @@ import Data.SBV.Control
 -- and we want to make @x + y >= 2@. We have:
 --
 -- >>> example
--- Got: (define-fun abd () Bool (= s1 2))
--- Got: (define-fun abd () Bool (<= 2 s1))
--- Got: (define-fun abd () Bool (= (+ s1 s0) 2))
--- Got: (define-fun abd () Bool (= (+ s0 2) s1))
+-- Got: (define-fun abd () Bool (and (= s0 s1) (= s0 1)))
+-- Got: (define-fun abd () Bool (and (= 2 s1) (= s0 1)))
+-- Got: (define-fun abd () Bool (and (= s0 s1) (<= 1 s1)))
+-- Got: (define-fun abd () Bool (= 2 s1))
 --
 -- Note that @s0@ refers to @x@ and @s1@ refers to @y@ above. You can verify
 -- that adding any of these will ensure @x + y >= 2@.
