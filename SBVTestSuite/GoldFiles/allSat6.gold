@@ -1,8 +1,8 @@
 Solution #1:
-  x = 0 :: Word8
+  x = 1 :: Word8
   y = 2 :: Word8
 Solution #2:
-  x = 1 :: Word8
+  x = 0 :: Word8
   y = 2 :: Word8
 Solution #3:
   x = 0 :: Word8
