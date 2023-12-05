@@ -160,7 +160,7 @@
   * Handle uninterpreted sorts better, avoiding kind-registration issue.
     See #634 for details. Thanks to Nick Lewchenko for the report.
 
-### Version 9.1, Released, 2023-01-09
+### Version 9.1, 2023-01-09
 
   * CVC5: Add support for algebraic reals in CVC5 models
 
@@ -1099,7 +1099,7 @@
     'sAssert' calls were run in the context of the final output boolean,
     which is simply the wrong thing to do.
 
-### Version 7.8, Released 2018-05-18
+### Version 7.8, 2018-05-18
 
   * Fix printing of min-bounds for signed 32/64 bit numbers in C
     code generation: These are tricky since C does not allow
@@ -1135,7 +1135,7 @@
     showing how to code cover properties using SBV, using a form
     of bounded model checking.
 
-### Version 7.7, Released 2018-04-29
+### Version 7.7, 2018-04-29
 
   * Add support for Symbolic characters ('SChar') and strings ('SString'.)
     Thanks to Joel Burget for the initial implementation.
@@ -1191,7 +1191,7 @@
     reals from the Internals module for further user processing.
     Thanks  to Jan Path for the patch.
 
-### Version 7.6, Released 2018-03-18
+### Version 7.6, 2018-03-18
 
   * GHC 8.4.1 compatibility: Work around compilation issues. SBV
     now compiles cleanly with GHC 8.4.1.
@@ -1201,7 +1201,7 @@
     bit sizes. These are similar to sWord8, sInt8, etc.; except
     they create dynamic counterparts that can be of arbitrary bit size.
 
-### Version 7.5, Released 2018-01-13
+### Version 7.5, 2018-01-13
 
   * Remove obsolete references to tactics in a few haddock comments. Thanks
     to Matthew Pickering for reporting.
