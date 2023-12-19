@@ -66,6 +66,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
         hasArrayInits  = (not . null) $  [() | (_, (_, _, ArrayFree (Left  (Just _)))) <- arrs]
                                       ++ [() | (_, (_, _, ArrayFree (Right _       ))) <- arrs]
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
+        hasQuantBools  = (not . null) [() | QuantifiedBool _ <- G.universeBi asgnsSeq]
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
@@ -154,6 +155,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
            | hasRegExp             = setAll "has regular expressions"
            | hasArrayInits         = setAll "has array initializers"
            | hasOverflows          = setAll "has overflow checks"
+           | hasQuantBools         = setAll "has quantified booleans"
 
            | hasFP || hasRounding
            = if needsQuantifiers
