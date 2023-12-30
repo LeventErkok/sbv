@@ -7,10 +7,8 @@
 
   * Clean-up GHC extensions required in the cabal file, and changes required to compile cleanly with GHC 9.8 series.
 
-  * Add 'partition', which allows for partitioning all-sat search spaces when models are generated.
   * Added 'partition', which allows for partitioning all-sat search spaces when models are generated.
 
-  * Add 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
   * Added 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
 
   * Added `Documentation.SBV.Examples.Misc.ProgramPaths`, showing an example use of all-sat partitioning.
