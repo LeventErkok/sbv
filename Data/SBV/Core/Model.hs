@@ -2330,6 +2330,11 @@ class SMTDefinable a where
   -- the solver is free to instantiate to satisfy other constraints.
   uninterpret :: String -> a
 
+  -- | Uninterpret a value, with named arguments in case of functions. SBV will use these
+  -- names when it shows the values for the arguments. If the given names are more than needed
+  -- we ignore the excess. If not enough, we add from a stock set of variables.
+  uninterpretWithArgs :: String -> [String] -> a
+
   -- | Uninterpret a value, only for the purposes of code-generation. For execution
   -- and verification the value is used as is. For code-generation, the alternate
   -- definition is used. This is useful when we want to take advantage of native
@@ -2338,7 +2343,7 @@ class SMTDefinable a where
 
   -- | Most generalized form of uninterpretation, this function should not be needed
   -- by end-user-code, but is rather useful for the library development.
-  sbvDefineValue :: String -> UIKind a -> a
+  sbvDefineValue :: String -> Maybe [String] -> UIKind a -> a
 
   -- | A synonym for 'uninterpret'. Allows us to create variables without
   -- having to call 'free' explicitly, i.e., without being in the symbolic monad.
@@ -2350,10 +2355,11 @@ class SMTDefinable a where
   {-# MINIMAL sbvDefineValue, sbv2smt #-}
 
   -- defaults:
-  uninterpret    nm        = sbvDefineValue nm   UIFree
-  smtFunction    nm      v = sbvDefineValue nm $ UIFun   (v, \st fk -> namedLambda st nm fk v)
-  cgUninterpret  nm code v = sbvDefineValue nm $ UICodeC (v, code)
-  sym                      = uninterpret
+  uninterpret         nm        = sbvDefineValue nm Nothing     UIFree
+  uninterpretWithArgs nm as     = sbvDefineValue nm (Just as)   UIFree
+  smtFunction         nm      v = sbvDefineValue nm Nothing   $ UIFun   (v, \st fk -> namedLambda st nm fk v)
+  cgUninterpret       nm code v = sbvDefineValue nm Nothing   $ UICodeC (v, code)
+  sym                           = uninterpret
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree                                  -- ^ completely uninterpreted
@@ -2387,7 +2393,7 @@ instance HasKind a => SMTDefinable (SBV a) where
                                          , s
                                          ]
 
-  sbvDefineValue nm uiKind
+  sbvDefineValue nm mbArgs uiKind
      | Just v <- retrieveConstCode uiKind
      = v
      | True
@@ -2396,14 +2402,14 @@ instance HasKind a => SMTDefinable (SBV a) where
           result st = do isSMT <- inSMTMode st
                          case (isSMT, uiKind) of
                            (True, UICodeC (v, _)) -> sbvToSV st v
-                           _                      -> do newUninterpreted st (nm, Nothing) (SBVType [ka]) =<< retrieveUICode nm st ka uiKind
+                           _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [ka]) =<< retrieveUICode nm st ka uiKind
                                                         newExpr st ka $ SBVApp (Uninterpreted nm) []
 
 -- Functions of one argument
 instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \b -> fn b .== fn b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0
            | Just v <- retrieveConstCode uiKind, isConcrete arg0
            = v arg0
@@ -2414,7 +2420,7 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                mapM_ forceSVArg [sw0]
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
@@ -2423,7 +2429,7 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \c b -> fn c b .== fn c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1
            = v arg0 arg1
@@ -2435,7 +2441,7 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                mapM_ forceSVArg [sw0, sw1]
@@ -2445,7 +2451,7 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \d c b -> fn d c b .== fn d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2
            = v arg0 arg1 arg2
@@ -2458,7 +2464,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2469,7 +2475,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
 instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \e d c b -> fn e d c b .== fn e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3
            = v arg0 arg1 arg2 arg3
@@ -2483,7 +2489,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2495,7 +2501,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
 instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \f e d c b -> fn f e d c b .== fn f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4
            = v arg0 arg1 arg2 arg3 arg4
@@ -2510,7 +2516,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2523,7 +2529,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
 instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \f g e d c b -> fn g f e d c b .== fn g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5
            = v arg0 arg1 arg2 arg3 arg4 arg5
@@ -2539,7 +2545,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2554,7 +2560,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
             => SMTDefinable (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \h g f e d c b -> fn h g f e d c b .== fn h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6
@@ -2571,7 +2577,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2587,7 +2593,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
             => SMTDefinable (SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \i h g f e d c b -> fn i h g f e d c b .== fn i h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
@@ -2605,7 +2611,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2622,7 +2628,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
             => SMTDefinable (SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \j i h g f e d c b -> fn j i h g f e d c b .== fn j i h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
@@ -2641,7 +2647,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2659,7 +2665,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
             => SMTDefinable (SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \k j i h g f e d c b -> fn k j i h g f e d c b .== fn k j i h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
@@ -2679,7 +2685,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk]) =<< retrieveUICode nm st ka uiKind
                                                                sw0 <- sbvToSV st arg0
                                                                sw1 <- sbvToSV st arg1
                                                                sw2 <- sbvToSV st arg2
@@ -2698,7 +2704,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
             => SMTDefinable (SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \l k j i h g f e d c b -> fn l k j i h g f e d c b .== fn l k j i h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9, isConcrete arg10
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
@@ -2719,7 +2725,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl]) =<< retrieveUICode nm st ka uiKind
                                                                sw0  <- sbvToSV st arg0
                                                                sw1  <- sbvToSV st arg1
                                                                sw2  <- sbvToSV st arg2
@@ -2739,7 +2745,7 @@ instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, 
             => SMTDefinable (SBV m -> SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \m l k j i h g f e d c b -> fn m l k j i h g f e d c b .== fn m l k j i h g f e d c b
 
-  sbvDefineValue nm uiKind = f
+  sbvDefineValue nm mbArgs uiKind = f
     where f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
            | Just v <- retrieveConstCode uiKind, isConcrete arg0, isConcrete arg1, isConcrete arg2, isConcrete arg3, isConcrete arg4, isConcrete arg5, isConcrete arg6, isConcrete arg7, isConcrete arg8, isConcrete arg9, isConcrete arg10, isConcrete arg11
            = v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
@@ -2761,7 +2767,7 @@ instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, 
                  result st = do isSMT <- inSMTMode st
                                 case (isSMT, uiKind) of
                                   (True, UICodeC (v, _)) -> sbvToSV st (v arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11)
-                                  _                      -> do newUninterpreted st (nm, Nothing) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl, km]) =<< retrieveUICode nm st ka uiKind
+                                  _                      -> do newUninterpreted st (nm, mbArgs) (SBVType [kh, kg, kf, ke, kd, kc, kb, ka, ki, kj, kk, kl, km]) =<< retrieveUICode nm st ka uiKind
                                                                sw0  <- sbvToSV st arg0
                                                                sw1  <- sbvToSV st arg1
                                                                sw2  <- sbvToSV st arg2
@@ -2781,13 +2787,13 @@ instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, 
 instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (curry <$> uiKind) in uncurry f
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (curry <$> uiKind) in uncurry f
 
 -- Uncurried functions of three arguments
 instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc3 <$> uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
 
 -- Uncurried functions of four arguments
@@ -2795,7 +2801,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc4 <$> uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 fn a b c d = fn (a, b, c, d)
 
 -- Uncurried functions of five arguments
@@ -2803,7 +2809,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc5 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 fn a b c d e = fn (a, b, c, d, e)
 
 -- Uncurried functions of six arguments
@@ -2811,7 +2817,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
             => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc6 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
 
 -- Uncurried functions of seven arguments
@@ -2819,7 +2825,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
             => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc7 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
 
 -- Uncurried functions of eight arguments
@@ -2827,7 +2833,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
             => SMTDefinable ((SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc8 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc8 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
     where uc8 fn a b c d e f g h = fn (a, b, c, d, e, f, g, h)
 
 -- Uncurried functions of nine arguments
@@ -2835,7 +2841,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
             => SMTDefinable ((SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc9 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc9 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
     where uc9 fn a b c d e f g h i = fn (a, b, c, d, e, f, g, h, i)
 
 -- Uncurried functions of ten arguments
@@ -2843,7 +2849,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
             => SMTDefinable ((SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc10 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc10 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
     where uc10 fn a b c d e f g h i j = fn (a, b, c, d, e, f, g, h, i, j)
 
 -- Uncurried functions of eleven arguments
@@ -2851,7 +2857,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
             => SMTDefinable ((SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc11 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc11 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
     where uc11 fn a b c d e f g h i j k = fn (a, b, c, d, e, f, g, h, i, j, k)
 
 -- Uncurried functions of twelve arguments
@@ -2859,7 +2865,7 @@ instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, 
             => SMTDefinable ((SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  sbvDefineValue nm uiKind = let f = sbvDefineValue nm (uc12 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
+  sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc12 <$> uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
     where uc12 fn a b c d e f g h i j k l = fn (a, b, c, d, e, f, g, h, i, j, k, l)
 
 -- | Symbolic computations provide a context for writing symbolic programs.

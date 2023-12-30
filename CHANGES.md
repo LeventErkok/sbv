@@ -11,6 +11,9 @@
 
   * Added 'sSetBitTo', variant of 'setBitTo', but allows symbolic indexes.
 
+  * Added 'uninterpretWithArgs', which allows for user given argument names for uninterpreted functions. These
+    names come in handy when displaying models of uninterpreted functions.
+
   * Added `Documentation.SBV.Examples.Misc.ProgramPaths`, showing an example use of all-sat partitioning.
 
   * Added `Documentation.SBV.Examples.BitPrecise.PEXT_PDEP`, modeling x86 instructions PDEP and PEXT.
