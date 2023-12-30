@@ -568,57 +568,97 @@ makeHaskellFunction resp nm mbArgs
         lambda :: SExpr -> Maybe ([String], String)
         lambda (EApp [ECon "lambda", EApp args, bd]) = do as <- mapM getArg args
                                                           let env = zip as supply
-                                                          pure (map snd env, body env bd)
+                                                          pure (map snd env, hprint env bd)
         lambda _                                     = Nothing
 
         getArg (EApp [ECon argName, _]) = Just argName
         getArg _                        = Nothing
 
-        body env = go
-          where go :: SExpr -> String
-                go (ECon n) | Just a <- lookup n env = a
-                            | True                   = n
+-- Print as a Haskell expression, with minimal parens.
+-- This isn't fool-proof; but it does an OK job
+hprint :: [(String, String)] -> SExpr -> String
+hprint env = go (0 :: Int)
+  where go p e = case e of
+                   ECon n | Just a <- n `lookup` env -> a
+                          | True                     -> n
+                   ENum (i, _)       -> cnst i
+                   EReal  a          -> cnst a
+                   EFloat f          -> cnst f
+                   EFloatingPoint f  -> cnst f
+                   EDouble f         -> cnst f
 
-                go (ENum (i, _))      = show i
-                go (EReal  a)         = show a
-                go (EFloat f)         = show f
-                go (EFloatingPoint f) = show f
-                go (EDouble f)        = show f
-                go (EApp xs)          = app (map (wrap . go) xs)
+                   -- few simps
+                   EApp [ECon "not", EApp [ECon ">=", a, b]] -> go p $ EApp [ECon "<",  a, b]
+                   EApp [ECon "not", EApp [ECon "<=", a, b]] -> go p $ EApp [ECon ">",  a, b]
+                   EApp [ECon "not", EApp [ECon "<",  a, b]] -> go p $ EApp [ECon ">=", a, b]
+                   EApp [ECon "not", EApp [ECon ">",  a, b]] -> go p $ EApp [ECon "<=", a, b]
 
-                parens x = '(' : x ++ ")"
+                   -- Handle x + -y that z3 is fond of producing
+                   EApp [ECon a, x, EApp [ECon m, ENum (-1, _), y]] | isPlus a && isTimes m -> go p $ EApp [ECon "-", x, y]
+                   -- Handle x + -NUM that z3 is also fond of producing
+                   EApp [ECon a, x, ENum (i, mw)] | isPlus a && i < 0 -> go p $ EApp [ECon "-", x, ENum (-i, mw)]
 
-                wrap x | "-" `isPrefixOf` x = parens x
-                       | any isSpace x      = parens x
-                       | True               = x
+                   -- Handle -1 * x
+                   EApp [ECon o, ENum (-1, _), b] | isTimes o -> parenIf (p >= 8) (neg (go 8 b))
 
-                mkBin o a b = wrap a ++ " " ++ o ++ " " ++ wrap b
+                   -- Move constants to the right
+                   EApp [ECon o, x, y] | (isPlus o || isTimes o) && isConst x && not (isConst y) -> go p $ EApp [ECon o, y, x]
 
-                isPlus  = (`elem` ["+",  "bvadd"])
-                isTimes = (`elem` ["*",  "bvmul"])
-                isLT    = (`elem` ["<",  "bvult", "bvslt", "fp.lt" ])
-                isLTE   = (`elem` ["<=", "bvule", "bvsle", "fp.leq"])
-                isGT    = (`elem` [">",  "bvugt", "bvsgt", "fp.gt" ])
-                isGTE   = (`elem` [">=", "bvuge", "bvsge", "fp.gte"])
+                   -- Simp arithmetic
+                   EApp (ECon o : xs) | isPlus  o -> recurse 6 (Just "+")  xs
+                   EApp (ECon o : xs) | isMinus o -> recurse 6 (Just "-")  xs
+                   EApp (ECon o : xs) | isTimes o -> recurse 7 (Just "*")  xs
+                   EApp (ECon o : xs) | isDiv   o -> recurse 7 (Just "/")  xs
 
-                -- Make an application, with some simplifications
-                app :: [String] -> String
-                app (o : xs) | isPlus o = intercalate " + " xs
+                   -- Booleans
+                   EApp (ECon o : xs) | isLT    o -> recurse 4 (Just "<")  xs
+                   EApp (ECon o : xs) | isLTE   o -> recurse 4 (Just "<=") xs
+                   EApp (ECon o : xs) | isGT    o -> recurse 4 (Just ">")  xs
+                   EApp (ECon o : xs) | isGTE   o -> recurse 4 (Just ">=") xs
+                   EApp (ECon o : xs) | isAND   o -> recurse 3 (Just "&&") xs
+                   EApp (ECon o : xs) | isOR    o -> recurse 2 (Just "||") xs
+                   EApp (ECon o : xs) | isEQ    o -> recurse 4 (Just "==") xs
 
-                -- multiplication of arbitrary elements, with proviso for multiplication by -1
-                app [m, "(-1)", x] | isTimes m = '-' : x
-                app (m  : xs)      | isTimes m = intercalate " * " xs
+                   -- Otherwise, just do prefix
+                   EApp xs                        -> recurse 9 Nothing xs
 
-                -- binary arith ops
-                app ["-",  a, b] = mkBin "-"  a b
-                app ["/",  a, b] = mkBin "/"  a b
+           where recurse p' (Just op) xs = parenIf (p >= p') $ intercalate (' ' : op ++ " ") (map (parenNeg . go p') xs)
+                 recurse p' Nothing   xs = parenIf (p >= p') $ unwords                       (map (parenNeg . go p') xs)
 
-                app [o, a, b] | isLT  o = mkBin "<"  a b
-                app [o, a, b] | isLTE o = mkBin "<=" a b
-                app [o, a, b] | isGT  o = mkBin ">"  a b
-                app [o, a, b] | isGTE o = mkBin ">=" a b
+        isConst ECon          {} = False
+        isConst ENum          {} = True
+        isConst EReal         {} = True
+        isConst EFloat        {} = True
+        isConst EFloatingPoint{} = True
+        isConst EDouble       {} = True
+        isConst EApp          {} = False
 
-                -- give up, and just do prefix!
-                app xs = unwords xs
+        parenNeg x@('-':_) = paren x
+        parenNeg x         = x
+
+        neg ('-':x) = x
+        neg x       = '-' : parenIf (any isSpace x) x
+
+        cnst x = case show x of
+                  sx@('-' : _) -> paren sx
+                  sx           -> sx
+
+        paren r@('(':_) = r
+        paren r         = '(' : r ++ ")"
+
+        parenIf False r = r
+        parenIf True  r = paren r
+
+        isPlus  = (`elem` ["+",  "bvadd"])
+        isTimes = (`elem` ["*",  "bvmul"])
+        isMinus = (`elem` ["-",  "bvsub"])
+        isDiv   = (`elem` ["/",  "bvdiv"])
+        isLT    = (`elem` ["<",  "bvult", "bvslt", "fp.lt" ])
+        isLTE   = (`elem` ["<=", "bvule", "bvsle", "fp.leq"])
+        isGT    = (`elem` [">",  "bvugt", "bvsgt", "fp.gt" ])
+        isGTE   = (`elem` [">=", "bvuge", "bvsge", "fp.gte"])
+        isEQ    = (`elem` ["=",  "fp.eq"])
+        isAND   = (== "and")
+        isOR    = (== "or")
 
 {- HLint ignore chainAssigns "Redundant if" -}
