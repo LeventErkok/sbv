@@ -881,7 +881,7 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
                      , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
-                     , resUIConsts    :: [(String, (Maybe [String], SBVType))]        -- ^ uninterpreted constants
+                     , resUIConsts    :: [(String, (Bool, Maybe [String], SBVType))]  -- ^ uninterpreted constants
                      , resDefinitions :: [(SMTDef, SBVType)]                          -- ^ definitions created via smtFunction or lambda
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
                      , resConstraints :: S.Seq (Bool, [(String, String)], SV)         -- ^ additional constraints (boolean)
@@ -1006,7 +1006,7 @@ type ArrayInfo = (String, (Kind, Kind), ArrayContext)
 type ArrayMap = IMap.IntMap ArrayInfo
 
 -- | Uninterpreted-constants generated during a symbolic run
-type UIMap = Map.Map String (Maybe [String], SBVType)
+type UIMap = Map.Map String (Bool, Maybe [String], SBVType)   -- If Bool is true, then this is a curried function
 
 -- | Code-segments for Uninterpreted-constants, as given by the user
 type CgMap = Map.Map String [String]
@@ -1362,7 +1362,7 @@ incrementInternalCounter st = do ctr <- readIORef (rctr st)
 {-# INLINE incrementInternalCounter #-}
 
 -- | Kind of code we have for uninterpretation
-data UICodeKind = UINone          -- no code
+data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
                 | UICgC  [String] -- Code-gen, currently only C
 
@@ -1397,26 +1397,28 @@ newUninterpreted st (nm, mbArgNames) t uiCode
   | True
   = do uiMap <- readIORef (rUIMap st)
 
-       () <- case uiCode of
-               UINone  -> pure ()
-               UISMT d -> modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
-                            $ noInteractive [ "Defined functions (smtFunction):"
-                                            , "  Name: " ++ nm
-                                            , "  Type: " ++ show t
-                                            , ""
-                                            , "You should use these functions at least once the query part starts"
-                                            , "and then use them in the query section as usual."
-                                            ]
-               UICgC c -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                          modifyState st rCgMap (Map.insert nm c) (return ())
+       isCurried <- case uiCode of
+                      UINone c -> pure c
+                      UISMT d  -> do modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
+                                       $ noInteractive [ "Defined functions (smtFunction):"
+                                                       , "  Name: " ++ nm
+                                                       , "  Type: " ++ show t
+                                                       , ""
+                                                       , "You should use these functions at least once the query part starts"
+                                                       , "and then use them in the query section as usual."
+                                                       ]
+                                     pure True
+                      UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                                  do modifyState st rCgMap (Map.insert nm c) (return ())
+                                     pure True
 
        case nm `Map.lookup` uiMap of
-         Just (_, t') -> checkType t' (return ())
-         Nothing      -> modifyState st rUIMap (Map.insert nm (mbArgNames, t))
-                           $ modifyIncState st rNewUIs
-                                              (\newUIs -> case nm `Map.lookup` newUIs of
-                                                            Just (_, t') -> checkType t' newUIs
-                                                            Nothing      -> Map.insert nm (mbArgNames, t) newUIs)
+         Just (_, _, t') -> checkType t' (return ())
+         Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
+                              $ modifyIncState st rNewUIs
+                                                 (\newUIs -> case nm `Map.lookup` newUIs of
+                                                               Just (_, _, t') -> checkType t' newUIs
+                                                               Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
@@ -2296,13 +2298,13 @@ instance NFData SMTConfig where
 
 -- | A model, as returned by a solver
 data SMTModel = SMTModel {
-       modelObjectives :: [(String, GeneralizedCV)]                               -- ^ Mapping of symbolic values to objective values.
-     , modelBindings   :: Maybe [(NamedSymVar, CV)]                               -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
-     , modelAssocs     :: [(String, CV)]                                          -- ^ Mapping of symbolic values to constants.
-     , modelUIFuns     :: [(String, (SBVType, Either String ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
-                                                                                  -- Note that an uninterpreted constant (function of arity 0) will be stored
-                                                                                  -- in the 'modelAssocs' field. Left is used when the function returned is too
-                                                                                  -- difficult for SBV to figure out what it means
+       modelObjectives :: [(String, GeneralizedCV)]                                     -- ^ Mapping of symbolic values to objective values.
+     , modelBindings   :: Maybe [(NamedSymVar, CV)]                                     -- ^ Mapping of input variables as reported by the solver. Only collected if model validation is requested.
+     , modelAssocs     :: [(String, CV)]                                                -- ^ Mapping of symbolic values to constants.
+     , modelUIFuns     :: [(String, (Bool, SBVType, Either String ([([CV], CV)], CV)))] -- ^ Mapping of uninterpreted functions to association lists in the model.
+                                                                                        -- Note that an uninterpreted constant (function of arity 0) will be stored
+                                                                                        -- in the 'modelAssocs' field. Left is used when the function returned is too
+                                                                                        -- difficult for SBV to figure out what it means
      }
      deriving Show
 

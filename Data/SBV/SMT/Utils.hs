@@ -41,34 +41,34 @@ import qualified Data.Sequence as S   (Seq)
 import System.Exit (ExitCode(..))
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibConverter a =  QueryContext                                  -- ^ Internal or external query?
-                       -> ProgInfo                                      -- ^ Various program info
-                       -> Set.Set Kind                                  -- ^ Kinds used in the problem
-                       -> Bool                                          -- ^ is this a sat problem?
-                       -> [String]                                      -- ^ extra comments to place on top
-                       -> ResultInp                                     -- ^ inputs or params
-                       -> (CnstMap, [(SV, CV)])                         -- ^ constants. The map, and as rendered in order
-                       -> [((Int, Kind, Kind), [SV])]                   -- ^ auto-generated tables
-                       -> [(Int, ArrayInfo)]                            -- ^ user specified arrays
-                       -> [(String, (Maybe [String], SBVType))]         -- ^ uninterpreted functions/constants
-                       -> [(SMTDef, SBVType)]                           -- ^ user given axioms/definitions
-                       -> SBVPgm                                        -- ^ assignments
-                       -> S.Seq (Bool, [(String, String)], SV)          -- ^ extra constraints
-                       -> SV                                            -- ^ output variable
-                       -> SMTConfig                                     -- ^ configuration
+type SMTLibConverter a =  QueryContext                                   -- ^ Internal or external query?
+                       -> ProgInfo                                       -- ^ Various program info
+                       -> Set.Set Kind                                   -- ^ Kinds used in the problem
+                       -> Bool                                           -- ^ is this a sat problem?
+                       -> [String]                                       -- ^ extra comments to place on top
+                       -> ResultInp                                      -- ^ inputs or params
+                       -> (CnstMap, [(SV, CV)])                          -- ^ constants. The map, and as rendered in order
+                       -> [((Int, Kind, Kind), [SV])]                    -- ^ auto-generated tables
+                       -> [(Int, ArrayInfo)]                             -- ^ user specified arrays
+                       -> [(String, (Bool, Maybe [String], SBVType))]    -- ^ uninterpreted functions/constants
+                       -> [(SMTDef, SBVType)]                            -- ^ user given axioms/definitions
+                       -> SBVPgm                                         -- ^ assignments
+                       -> S.Seq (Bool, [(String, String)], SV)           -- ^ extra constraints
+                       -> SV                                             -- ^ output variable
+                       -> SMTConfig                                      -- ^ configuration
                        -> a
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
-type SMTLibIncConverter a =  ProgInfo                              -- ^ Various prog info
-                          -> [NamedSymVar]                         -- ^ inputs
-                          -> Set.Set Kind                          -- ^ new kinds
-                          -> (CnstMap, [(SV, CV)])                 -- ^ all constants sofar, and new constants
-                          -> [(Int, ArrayInfo)]                    -- ^ newly created arrays
-                          -> [((Int, Kind, Kind), [SV])]           -- ^ newly created tables
-                          -> [(String, (Maybe [String], SBVType))] -- ^ newly created uninterpreted functions/constants
-                          -> SBVPgm                                -- ^ assignments
-                          -> S.Seq (Bool, [(String, String)], SV)  -- ^ extra constraints
-                          -> SMTConfig                             -- ^ configuration
+type SMTLibIncConverter a =  ProgInfo                                    -- ^ Various prog info
+                          -> [NamedSymVar]                               -- ^ inputs
+                          -> Set.Set Kind                                -- ^ new kinds
+                          -> (CnstMap, [(SV, CV)])                       -- ^ all constants sofar, and new constants
+                          -> [(Int, ArrayInfo)]                          -- ^ newly created arrays
+                          -> [((Int, Kind, Kind), [SV])]                 -- ^ newly created tables
+                          -> [(String, (Bool, Maybe [String], SBVType))] -- ^ newly created uninterpreted functions/constants
+                          -> SBVPgm                                      -- ^ assignments
+                          -> S.Seq (Bool, [(String, String)], SV)        -- ^ extra constraints
+                          -> SMTConfig                                   -- ^ configuration
                           -> a
 
 -- | Create an annotated term

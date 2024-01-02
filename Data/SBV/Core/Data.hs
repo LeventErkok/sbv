@@ -908,7 +908,7 @@ instance (KnownSymbol nm, Skolemize r) => Skolemize (ForallN n nm a -> r) where
 instance (HasKind a, KnownSymbol nm, Skolemize r) => Skolemize (Exists nm a -> r) where
   type SkolemsTo (Exists nm a -> r) = SkolemsTo r
   skolem scope args f = skolem scope args (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) (UINone True) args
 
 -- | Skolemize over a number of existential quantifiers
 instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (ExistsN n nm a -> r) where
@@ -917,7 +917,7 @@ instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (Exis
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
           fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
-          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ n) UINone args | n <- fs]
+          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ n) (UINone True) args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
 instance (  HasKind a
@@ -930,7 +930,7 @@ instance (  HasKind a
                                           -> Forall (AppendSymbol nm "_eu2") a
                                           -> SBool
   skolem scope args f = skolem scope args (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) UINone args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) (UINone True) args
 
 -- | Class of things that we can logically negate
 class QNot a where

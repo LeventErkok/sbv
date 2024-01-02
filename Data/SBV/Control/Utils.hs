@@ -372,7 +372,7 @@ getValue s = do sv <- inNewContext (`sbvToSV` s)
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
-  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m (String, Maybe [String])
+  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m ((String, Maybe [String]), Bool)
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
@@ -396,8 +396,8 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                     -- introduced it as an uninterperted name!
                     newUIMap <- liftIO $ readIORef rUIMap
                     case nm `Map.lookup` newUIMap of
-                      Nothing          -> cantFind newUIMap
-                      Just (mbArgs, _) -> pure (nm, mbArgs)
+                      Nothing                     -> cantFind newUIMap
+                      Just (isCurried, mbArgs, _) -> pure ((nm, mbArgs), isCurried)
     where cantFind uiMap = error $ unlines $    [ ""
                                                 , "*** Data.SBV.getFunction: Must be called on an uninterpreted function!"
                                                 , "***"
@@ -427,7 +427,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind uiMap
 
-  sexprToFun f (s, e) = do nm <- fst <$> smtFunName f
+  sexprToFun f (s, e) = do nm <- (fst . fst) <$> smtFunName f
                            mbRes <- case parseSExprFunction e of
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
                                                            (True, Just v)  -> return $ Just ([], v)
@@ -451,9 +451,9 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 -- function itself will register it automatically. But there are cases where doing this explicitly can
 -- come in handy.
 registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
-registerUISMTFunction f = do st   <- contextState
-                             nmas <- smtFunName f
-                             io $ newUninterpreted st nmas (smtFunType f) UINone
+registerUISMTFunction f = do st                <- contextState
+                             (nmas, isCurried) <- smtFunName f
+                             io $ newUninterpreted st nmas (smtFunType f) (UINone isCurried)
 
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our
@@ -678,7 +678,7 @@ trimFunctionResponse resp nm mbArgs
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
             => fun -> m (Either String ([(a, r)], r))
-getFunction f = do (nm, args) <- smtFunName f
+getFunction f = do ((nm, args), _) <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
                        bad = unexpected "getFunction" cmd "a function value" Nothing
@@ -1012,14 +1012,14 @@ extractValue mbi nm k = do
                            _                                   -> bad r Nothing
 
 -- | Generalization of 'Data.SBV.Control.getUICVal'
-getUICVal :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Maybe [String], SBVType)) -> m CV
-getUICVal mbi (nm, (_, t)) = case t of
-                              SBVType [k] -> extractValue mbi nm k
-                              _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpeted value of a base type, received something else: " ++ show (nm, t)
+getUICVal :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Bool, Maybe [String], SBVType)) -> m CV
+getUICVal mbi (nm, (_, _, t)) = case t of
+                                 SBVType [k] -> extractValue mbi nm k
+                                 _           -> error $ "SBV.getUICVal: Expected to be called on an uninterpeted value of a base type, received something else: " ++ show (nm, t)
 
 -- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
-getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Maybe [String], SBVType)) -> m (Either String ([([CV], CV)], CV))
-getUIFunCVAssoc mbi (nm, (mbArgs, typ)) = do
+getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Bool, Maybe [String], SBVType)) -> m (Either String ([([CV], CV)], CV))
+getUIFunCVAssoc mbi (nm, (_, mbArgs, typ)) = do
   let modelIndex = case mbi of
                      Nothing -> ""
                      Just i  -> " :model_index " ++ show i
@@ -1113,7 +1113,7 @@ getObservables = do State{rObservables} <- queryState
 
 -- | Get UIs, both constants and functions. This call returns both the before and after query ones.
 -- Generalization of 'Data.SBV.Control.getUIs'.
-getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Maybe [String], SBVType))]
+getUIs :: forall m. (MonadIO m, MonadQuery m) => m [(String, (Bool, Maybe [String], SBVType))]
 getUIs = do State{rUIMap, rDefns, rIncState} <- queryState
             -- NB. no need to worry about new-defines, because we don't allow definitions once query mode starts
             defines <- do allDefs <- io $ readIORef rDefns
@@ -1146,19 +1146,19 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                      partitionVars     <- liftIO $ readIORef rPartitionVars
 
                       -- Functions have at least two kinds in their type and all components must be "interpreted"
-                     let allUiFuns = [u | allSatTrackUFs cfg                                           -- config says consider UIFs
-                                        , u@(nm, (_, SBVType as)) <- allUninterpreteds, length as > 1  -- get the function ones
-                                        , not (mustIgnoreVar cfg nm)                                    -- make sure they aren't explicitly ignored
+                     let allUiFuns = [u | allSatTrackUFs cfg                                              -- config says consider UIFs
+                                        , u@(nm, (_, _, SBVType as)) <- allUninterpreteds, length as > 1  -- get the function ones
+                                        , not (mustIgnoreVar cfg nm)                                      -- make sure they aren't explicitly ignored
                                      ]
 
-                         allUiRegs = [u | u@(nm, (_, SBVType as)) <- allUninterpreteds, length as == 1 -- non-function ones
-                                        , not (mustIgnoreVar cfg nm)                                   -- make sure they aren't explicitly ignored
+                         allUiRegs = [u | u@(nm, (_, _, SBVType as)) <- allUninterpreteds, length as == 1 -- non-function ones
+                                        , not (mustIgnoreVar cfg nm)                                      -- make sure they aren't explicitly ignored
                                      ]
 
                          -- We can only "allSat" if all component types themselves are interpreted. (Otherwise
                          -- there is no way to reflect back the values to the solver.)
                          collectAcceptable []                                sofar = return sofar
-                         collectAcceptable ((nm, (_, t@(SBVType ats))):rest) sofar
+                         collectAcceptable ((nm, (_, _, t@(SBVType ats))):rest) sofar
                            | not (any hasUninterpretedSorts ats)
                            = collectAcceptable rest (nm : sofar)
                            | True
@@ -1231,11 +1231,11 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                                ]
 
                      if isSimple
-                        then do let mkVar :: (String, (Maybe [String], SBVType)) -> IO (SVal, NamedSymVar)
-                                    mkVar (nm, (_, SBVType [k])) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
-                                                                      let sval = SVal k $ Right $ cache $ \_ -> pure sv
-                                                                          nsv  = NamedSymVar sv (T.pack nm)
-                                                                      pure (sval, nsv)
+                        then do let mkVar :: (String, (Bool, Maybe [String], SBVType)) -> IO (SVal, NamedSymVar)
+                                    mkVar (nm, (_, _, SBVType [k])) = do sv <- newExpr topState k (SBVApp (Uninterpreted nm) [])
+                                                                         let sval = SVal k $ Right $ cache $ \_ -> pure sv
+                                                                             nsv  = NamedSymVar sv (T.pack nm)
+                                                                         pure (sval, nsv)
                                     mkVar nmt = error $ "Data.SBV: Impossible happened; allSat.mkVar. Unexpected: " ++ show nmt
                                 uiVars <- io $ S.fromList <$> mapM mkVar allUiRegs
                                 fastAllSat                                        allModelInputs (uiVars S.>< extractVars) (uiVars S.>< vars) cfg start
@@ -1409,8 +1409,8 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                           Sat    -> do assocs <- mapM (\(sval, NamedSymVar sv n) -> do !cv <- getValueCV Nothing sv
                                                                                        return (sv, (n, (sval, cv)))) vars
 
-                                       let getUIFun ui@(nm, (_, t)) = do cvs <- getUIFunCVAssoc Nothing ui
-                                                                         return (nm, (t, cvs))
+                                       let getUIFun ui@(nm, (isCurried, _, t)) = do cvs <- getUIFunCVAssoc Nothing ui
+                                                                                    return (nm, (isCurried, t, cvs))
                                        uiFunVals <- mapM getUIFun allUiFuns
 
                                        uiRegVals <- mapM (\ui@(nm, _) -> (nm,) <$> getUICVal Nothing ui) allUiRegs
@@ -1483,7 +1483,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                      (rejects, defs) = unzip [mkNotEq ui | ui@(nm, _) <- uiFunVals, nm `elem` uiFunsToReject]
 
                                                      -- Otherwise, we have things to refute, go for it if we have a good interpretation for it
-                                                     mkNotEq (nm, (typ, Left def)) =
+                                                     mkNotEq (nm, (_, typ, Left def)) =
                                                         error $ unlines [
                                                             ""
                                                           , "*** allSat: Unsupported: Building a rejecting instance for:"
@@ -1505,7 +1505,7 @@ getAllSatResult = do queryDebug ["*** Checking Satisfiability, all solutions.."]
                                                           , "***"
                                                           , "*** NB. If this is a use case you'd like SBV to support, please get in touch!"
                                                           ]
-                                                     mkNotEq (nm, (SBVType ts, Right vs)) = (reject, def ++ dif)
+                                                     mkNotEq (nm, (_, SBVType ts, Right vs)) = (reject, def ++ dif)
                                                        where nm' = nm ++ "_model" ++ show cnt
 
                                                              reject = nm' ++ "_reject"

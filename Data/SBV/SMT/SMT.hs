@@ -417,10 +417,10 @@ class Modelable a where
   getModelObjectiveValue v r = v `M.lookup` getModelObjectives r
 
   -- | Extract model uninterpreted-functions
-  getModelUIFuns :: a -> M.Map String (SBVType, Either String ([([CV], CV)], CV))
+  getModelUIFuns :: a -> M.Map String (Bool, SBVType, Either String ([([CV], CV)], CV))
 
   -- | Extract the value of an uninterpreted-function as an association list
-  getModelUIFunValue :: String -> a -> Maybe (SBVType, Either String ([([CV], CV)], CV))
+  getModelUIFunValue :: String -> a -> Maybe (Bool, SBVType, Either String ([([CV], CV)], CV))
   getModelUIFunValue v r = v `M.lookup` getModelUIFuns r
 
 -- | Return all the models from an 'Data.SBV.allSat' call, similar to 'extractModel' but
@@ -581,26 +581,34 @@ showModelDictionary warnEmpty includeEverything cfg allVars
         lTrimRight = length . dropWhile isSpace . reverse
 
 -- | Show an uninterpreted function
-showModelUI :: SMTConfig -> (String, (SBVType, Either String ([([CV], CV)], CV))) -> String
-showModelUI cfg (nm, (SBVType ts, interp))
+showModelUI :: SMTConfig -> (String, (Bool, SBVType, Either String ([([CV], CV)], CV))) -> String
+showModelUI cfg (nm, (isCurried, SBVType ts, interp))
   = intercalate "\n" $ case interp of
                          Left  e  -> ["  " ++ l | l <- [sig,  e]]
                          Right ds -> ["  " ++ l | l <- sig : mkBody ds]
   where noOfArgs = length ts - 1
 
-        sig      = nm ++ " :: " ++ intercalate " -> " (map showBaseKind ts)
+        (ats, rt) = case map showBaseKind ts of
+                     []  -> error $ "showModelUI: Unexpected type: " ++ show (SBVType ts)
+                     tss -> (init tss, last tss)
+
+        sig | isCurried = nm ++ " :: "  ++ intercalate " -> " ats ++  " -> " ++ rt
+            | True      = nm ++ " :: (" ++ intercalate ", "   ats ++ ") -> " ++ rt
 
         mkBody (defs, dflt) = map align body
           where ls       = map line defs
-                defLine  = (nm : replicate noOfArgs "_", scv dflt)
+                defLine  = (replicate noOfArgs "_", scv dflt)
                 body     = ls ++ [defLine]
 
                 colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
 
                 resWidth  = maximum  (0 : map (length . snd) body)
 
-                align (xs, r) = unwords $ zipWith left colWidths xs ++ ["=", left resWidth r]
+                align (xs, r) = nm ++ " " ++ merge (zipWith left colWidths xs) ++ " = " ++ left resWidth r
                    where left i x = take i (x ++ repeat ' ')
+
+                         merge as | isCurried = unwords as
+                                  | True      = '(' : intercalate ", " as ++ ")"
 
         -- NB. We'll ignore crackNum here. Seems to be overkill while displaying an
         -- uninterpreted function.
@@ -617,12 +625,12 @@ showModelUI cfg (nm, (SBVType ts, interp))
         -- we might want to do this properly later somehow. (Perhaps
         -- using some sort of a view pattern.)
         line :: ([CV], CV) -> ([String], String)
-        line (args, r) = (nm : map (paren . scv) args, scv r)
-          where -- If negative, parenthesize. I think this is the only case
+        line (args, r) = (map (paren isCurried . scv) args, scv r)
+          where -- If negative and if we're curried, parenthesize. I think this is the only case
                 -- we need to worry about. Hopefully!
-                paren :: String -> String
-                paren x@('-':_) = '(' : x ++ ")"
-                paren x         = x
+                paren :: Bool -> String -> String
+                paren True x@('-':_) = '(' : x ++ ")"
+                paren _    x         = x
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> CV -> String
