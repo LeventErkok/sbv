@@ -546,11 +546,13 @@ chainAssigns chain = regroup $ partitionEithers chain
 -- This isn't very fool-proof; can be confused if there are binding constructs etc.
 -- Also, the generated text isn't necessarily fully Haskell acceptable.
 -- But it seems to do an OK job for most common use cases.
-makeHaskellFunction :: String -> String -> Maybe [String] -> Maybe String
-makeHaskellFunction resp nm mbArgs
+makeHaskellFunction :: String -> String -> Bool -> Maybe [String] -> Maybe String
+makeHaskellFunction resp nm isCurried mbArgs
    = case parseSExpr resp of
        Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
-                                                       return $ unwords (nm : args) ++ " = " ++ bd
+                                                       let params | isCurried = unwords args
+                                                                  | True      = '(' : intercalate ", " args ++ ")"
+                                                       return $ nm ++ " " ++ params ++ " = " ++ bd
        _                                         -> Nothing
 
   where -- infinite supply of names; starting with the ones we're given

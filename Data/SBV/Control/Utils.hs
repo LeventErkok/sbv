@@ -663,9 +663,9 @@ instance ( SymVal a,   HasKind a
 -- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
 -- into something more palatable.
 -- If we can't do that, we simply return the input unchanged
-trimFunctionResponse :: String -> String -> Maybe [String] -> String
-trimFunctionResponse resp nm mbArgs
-  | Just parsed <- makeHaskellFunction resp nm mbArgs
+trimFunctionResponse :: String -> String -> Bool -> Maybe [String] -> String
+trimFunctionResponse resp nm isCurried mbArgs
+  | Just parsed <- makeHaskellFunction resp nm isCurried mbArgs
   = parsed
   | True
   = def $ case trim resp of
@@ -678,14 +678,14 @@ trimFunctionResponse resp nm mbArgs
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
             => fun -> m (Either String ([(a, r)], r))
-getFunction f = do ((nm, args), _) <- smtFunName f
+getFunction f = do ((nm, args), isCurried) <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
                        bad = unexpected "getFunction" cmd "a function value" Nothing
 
                    r <- ask cmd
 
-                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f (trimFunctionResponse r nm args, e)
+                   parse r bad $ \case EApp [EApp [ECon o, e]] | o == nm -> do mbAssocs <- sexprToFun f (trimFunctionResponse r nm isCurried args, e)
                                                                                case mbAssocs of
                                                                                  Right assocs -> return $ Right assocs
                                                                                  Left  raw    -> do mbPVS <- pointWiseExtract nm (smtFunType f)
@@ -1019,7 +1019,7 @@ getUICVal mbi (nm, (_, _, t)) = case t of
 
 -- | Generalization of 'Data.SBV.Control.getUIFunCVAssoc'
 getUIFunCVAssoc :: forall m. (MonadIO m, MonadQuery m) => Maybe Int -> (String, (Bool, Maybe [String], SBVType)) -> m (Either String ([([CV], CV)], CV))
-getUIFunCVAssoc mbi (nm, (_, mbArgs, typ)) = do
+getUIFunCVAssoc mbi (nm, (isCurried, mbArgs, typ)) = do
   let modelIndex = case mbi of
                      Nothing -> ""
                      Just i  -> " :model_index " ++ show i
@@ -1043,7 +1043,7 @@ getUIFunCVAssoc mbi (nm, (_, mbArgs, typ)) = do
       toRes = recoverKindedValue rt
 
       -- if we fail to parse, we'll return this answer as the string
-      fallBack = trimFunctionResponse r nm mbArgs
+      fallBack = trimFunctionResponse r nm isCurried mbArgs
 
       -- In case we end up in the pointwise scenario, boolify the result
       -- as that's the only type we support here.
