@@ -20,6 +20,9 @@
 
   * Added `Documentation.SBV.Examples.Puzzles.Newspaper`, another puzzle example.
 
+  * Added `Documentation.SBV.Examples.ProofTools.AddHorn`, demonstrating the use of the horn-clause solver for
+    invariant generation.
+
   * Add 'sbv2smt', which renders the given sbv definition as an SMTLib definition. Mainly useful for debugging purposes.
     It can render both ground definitions and functions, and the latter can be handy in producing SMTLib functions to
     be used in other settings.
