@@ -98,3 +98,5 @@ verify = prove vcs
         vcs =   quantifiedBool (vc1 invariant)
             .&& quantifiedBool (vc3 invariant)
             .&& quantifiedBool (vc3 invariant)
+
+{- HLint ignore quantify "Redundant lambda" -}

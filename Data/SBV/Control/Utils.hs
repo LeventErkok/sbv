@@ -427,7 +427,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                             (sv, SBVApp (Uninterpreted nm) _) | r == sv -> return nm
                             _                                           -> cantFind uiMap
 
-  sexprToFun f (s, e) = do nm <- (fst . fst) <$> smtFunName f
+  sexprToFun f (s, e) = do nm    <- fst . fst <$> smtFunName f
                            mbRes <- case parseSExprFunction e of
                                       Just (Left nm') -> case (nm == nm', smtFunDefault f) of
                                                            (True, Just v)  -> return $ Just ([], v)
