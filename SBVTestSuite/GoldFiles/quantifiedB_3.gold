@@ -5,7 +5,7 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
-[GOOD] (set-logic BV)
+[GOOD] (set-logic ALL) ; has quantified booleans, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
@@ -32,9 +32,9 @@
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 #x00))
+[RECV] ((s0 #x01))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 
 RESULT: Satisfiable. Model:
-  s0 = 0 :: Word8
+  s0 = 1 :: Word8
