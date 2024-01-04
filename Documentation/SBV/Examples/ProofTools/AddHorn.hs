@@ -32,6 +32,10 @@ module Documentation.SBV.Examples.ProofTools.AddHorn where
 
 import Data.SBV
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV
+
 -- | Helper type synonym for the invariant.
 type Inv = (SInteger, SInteger, SInteger, SInteger) -> SBool
 
