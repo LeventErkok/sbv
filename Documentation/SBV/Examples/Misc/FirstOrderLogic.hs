@@ -205,7 +205,7 @@ skolemEx1 (Forall x) (Exists y) = x .>= y
 --   b _ = 0
 -- <BLANKLINE>
 --   d :: Word8 -> Word8 -> Word8
---   d a c = a + (255 * c)
+--   d a c = a + 255 * c
 --
 -- Let's see what the solver said. It suggested we should use the value of @0@ for @b@, regardless of the
 -- choice of @a@. (Note how @b@ is a function of one variable, i.e., of @a@)
@@ -276,7 +276,7 @@ skolemEx3 (Exists x) (Forall y) = y .>= x
 --   c1_y x = x
 -- <BLANKLINE>
 --   c2_y :: Integer -> Integer
---   c2_y x = 1 + x
+--   c2_y x = x + 1
 --
 -- Note how the internal skolem functions are named according to the tag given. If you use regular 'skolemize'
 -- this program will essentially do the wrong thing by assuming the skolem functions for both predicates are
