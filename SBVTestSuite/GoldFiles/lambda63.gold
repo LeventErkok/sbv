@@ -37,5 +37,5 @@
 
 RESULT:
 Falsifiable. Counter-example:
-  R :: Integer -> Integer -> Bool
-  R _ _ = False
+  R :: (Integer, Integer) -> Bool
+  R (_, _) = False

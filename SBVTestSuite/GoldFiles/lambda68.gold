@@ -44,4 +44,4 @@
 RESULT:
 Satisfiable. Model:
   F :: Integer -> Integer
-  F x = 3 + (2 * x)
+  F x = 2 * x + 3

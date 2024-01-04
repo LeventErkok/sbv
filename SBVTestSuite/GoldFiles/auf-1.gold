@@ -12,7 +12,7 @@ ARRAYS
   array_1 :: SWord32 -> SWord32
      Context:  cloned from array_0 with s0 :: SWord32 |-> s5 :: SWord32
 UNINTERPRETED CONSTANTS
-  [uninterpreted] f :: (Nothing,SWord32 -> SWord64)
+  [uninterpreted] f :: (True,Nothing,SWord32 -> SWord64)
 USER GIVEN CODE SEGMENTS
 AXIOMS-DEFINITIONS
 DEFINE
