@@ -2066,7 +2066,7 @@
 ### Version 4.1, 2015-03-06
 
   * Add support for the ABC solver from Berkeley. Thanks to Adam Foltzer
-    for the required infrastructure! See: http://www.eecs.berkeley.edu/~alanmi/abc/
+    for the required infrastructure! See: https://github.com/berkeley-abc/abc
     And Alan Mishchenko for adding infrastructure to ABC to work with SBV.
 
   * Upgrade the Boolector connection to use a SMT-Lib2 based interaction. NB. You
