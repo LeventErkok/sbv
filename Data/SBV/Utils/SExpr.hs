@@ -603,8 +603,9 @@ hprint env = go (0 :: Int)
                    -- Handle -1 * x
                    EApp [ECon o, ENum (-1, _), b] | isTimes o -> parenIf (p >= 8) (neg (go 8 b))
 
-                   -- Move constants to the right
-                   EApp [ECon o, x, y] | (isPlus o || isTimes o) && isConst x && not (isConst y) -> go p $ EApp [ECon o, y, x]
+                   -- Move additive constants to the right, multiplicative constants to the left
+                   EApp [ECon o, x, y] | isPlus  o && isConst x && not (isConst y) -> go p $ EApp [ECon o, y, x]
+                   EApp [ECon o, x, y] | isTimes o && isConst y && not (isConst x) -> go p $ EApp [ECon o, y, x]
 
                    -- Simp arithmetic
                    EApp (ECon o : xs) | isPlus  o -> recurse 6 (Just "+")  xs
