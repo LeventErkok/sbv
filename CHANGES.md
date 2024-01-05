@@ -40,8 +40,10 @@
     z3 for some time, and its uses were thus limited, and behavior was problematic even when supported due to finiteness
     issues.
 
-  * Removed 'Documentation.SBV.Examples.Lists.Nested'. It contained an example that was no longer supported
-    by z3, so no point in keeping it in the documentation.
+  * Removed a few examples, which were causing regression failures with changes in z3. These are trickier examples, and
+    new releases of z3 had varying performance issues, making them not suitable regression and documentation purposes. In
+    particular, 'Documentation.SBV.Examples.Existentials.CRCPolynomial', 'Documentation.SBV.Examples.Lists.Nested', and
+    'Documentation.SBV.Examples.BitPrecise.MultMask' were removed.
 
   * SBV now keeps track of contexts, thus avoiding rare (but unsound) cases of incorrect API usage where contexts
     are mixed. We now issue a run-time error. See https://github.com/LeventErkok/sbv/issues/71 for details.
