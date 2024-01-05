@@ -37,5 +37,5 @@
 *** Exit code: ExitSuccess
 
  FINAL:
-"y x = 3 * x"
+("y x = 3 * x",(True,Just ["x"],EApp [ECon "lambda",EApp [EApp [ECon "x!1",ECon "Int"]],EApp [ECon "*",ENum (3,Nothing),ECon "x!1"]]))
 DONE!
