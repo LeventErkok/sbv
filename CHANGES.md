@@ -48,6 +48,8 @@
   * SBV now keeps track of contexts, thus avoiding rare (but unsound) cases of incorrect API usage where contexts
     are mixed. We now issue a run-time error. See https://github.com/LeventErkok/sbv/issues/71 for details.
 
+  * Improve the getFunction signature, to return more detailed info on the produced SMT functions, including the parse-tree.
+
   * SBV now tracks whether a declared uninterpreted function is curried or not. This helps in more precise printing of
     satisfying models with uninterpreted functions. (Previously all UI functions were displayed as if they were curried.)
 

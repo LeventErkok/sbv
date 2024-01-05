@@ -660,6 +660,153 @@ instance ( SymVal a,   HasKind a
                        (mkSaturatingArg (kindOf (Proxy @g)))
                        (mkSaturatingArg (kindOf (Proxy @h)))
 
+-- | Curried functions of arity 2
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b) -> SBV r) (a, b) r
+         where
+  sexprToArg _ [a0, a1] = (,) <$> sexprToVal a0 <*> sexprToVal a1
+  sexprToArg _ _        = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       )
+
+-- | Curried functions of arity 3
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c) -> SBV r) (a, b, c) r
+         where
+  sexprToArg _ [a0, a1, a2] = (,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2
+  sexprToArg _ _            = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       )
+
+-- | Curried functions of arity 4
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SymVal d,  HasKind d
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d) -> SBV r) (a, b, c, d) r
+         where
+  sexprToArg _ [a0, a1, a2, a3] = (,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3
+  sexprToArg _ _                = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       , mkSaturatingArg (kindOf (Proxy @d))
+                       )
+
+-- | Curried functions of arity 5
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SymVal d,  HasKind d
+         , SymVal e,  HasKind e
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e) -> SBV r) (a, b, c, d, e) r
+         where
+  sexprToArg _ [a0, a1, a2, a3, a4] = (,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4
+  sexprToArg _ _                    = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       , mkSaturatingArg (kindOf (Proxy @d))
+                       , mkSaturatingArg (kindOf (Proxy @e))
+                       )
+
+-- | Curried functions of arity 6
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SymVal d,  HasKind d
+         , SymVal e,  HasKind e
+         , SymVal f,  HasKind f
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f) -> SBV r) (a, b, c, d, e, f) r
+         where
+  sexprToArg _ [a0, a1, a2, a3, a4, a5] = (,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5
+  sexprToArg _ _                        = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       , mkSaturatingArg (kindOf (Proxy @d))
+                       , mkSaturatingArg (kindOf (Proxy @e))
+                       , mkSaturatingArg (kindOf (Proxy @f))
+                       )
+
+-- | Curried functions of arity 7
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SymVal d,  HasKind d
+         , SymVal e,  HasKind e
+         , SymVal f,  HasKind f
+         , SymVal g,  HasKind g
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> SBV r) (a, b, c, d, e, f, g) r
+         where
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6] = (,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6
+  sexprToArg _ _                            = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       , mkSaturatingArg (kindOf (Proxy @d))
+                       , mkSaturatingArg (kindOf (Proxy @e))
+                       , mkSaturatingArg (kindOf (Proxy @f))
+                       , mkSaturatingArg (kindOf (Proxy @g))
+                       )
+
+-- | Curried functions of arity 8
+instance ( SymVal a,  HasKind a
+         , SymVal b,  HasKind b
+         , SymVal c,  HasKind c
+         , SymVal d,  HasKind d
+         , SymVal e,  HasKind e
+         , SymVal f,  HasKind f
+         , SymVal g,  HasKind g
+         , SymVal h,  HasKind h
+         , SatModel r, HasKind r
+         ) => SMTFunction ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g, SBV h) -> SBV r) (a, b, c, d, e, f, g, h) r
+         where
+  sexprToArg _ [a0, a1, a2, a3, a4, a5, a6, a7] = (,,,,,,,) <$> sexprToVal a0 <*> sexprToVal a1 <*> sexprToVal a2 <*> sexprToVal a3 <*> sexprToVal a4 <*> sexprToVal a5 <*> sexprToVal a6 <*> sexprToVal a7
+  sexprToArg _ _                                = Nothing
+
+  smtFunType _ = SBVType [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e), kindOf (Proxy @f), kindOf (Proxy @g), kindOf (Proxy @h), kindOf (Proxy @r)]
+
+  smtFunSaturate f = f ( mkSaturatingArg (kindOf (Proxy @a))
+                       , mkSaturatingArg (kindOf (Proxy @b))
+                       , mkSaturatingArg (kindOf (Proxy @c))
+                       , mkSaturatingArg (kindOf (Proxy @d))
+                       , mkSaturatingArg (kindOf (Proxy @e))
+                       , mkSaturatingArg (kindOf (Proxy @f))
+                       , mkSaturatingArg (kindOf (Proxy @g))
+                       , mkSaturatingArg (kindOf (Proxy @h))
+                       )
+
 -- Turn "((F (lambda ((x!1 Int)) (+ 3 (* 2 x!1)))))"
 -- into something more palatable.
 -- If we can't do that, we simply return the input unchanged
@@ -677,7 +824,7 @@ trimFunctionResponse resp nm isCurried mbArgs
 
 -- | Generalization of 'Data.SBV.Control.getFunction'
 getFunction :: (MonadIO m, MonadQuery m, SolverContext m, MonadSymbolic m, SymVal a, SymVal r, SMTFunction fun a r)
-            => fun -> m (Either String ([(a, r)], r))
+            => fun -> m (Either (String, (Bool, Maybe [String], SExpr))  ([(a, r)], r))
 getFunction f = do ((nm, args), isCurried) <- smtFunName f
 
                    let cmd = "(get-value (" ++ nm ++ "))"
@@ -691,7 +838,7 @@ getFunction f = do ((nm, args), isCurried) <- smtFunName f
                                                                                  Left  raw    -> do mbPVS <- pointWiseExtract nm (smtFunType f)
                                                                                                     case mbPVS >>= convert of
                                                                                                       Just x  -> return $ Right x
-                                                                                                      Nothing -> return $ Left raw
+                                                                                                      Nothing -> return $ Left (raw, (isCurried, args, e))
                                        _                                 -> bad r Nothing
     where convert    (vs, d) = (,) <$> mapM sexprPoint vs <*> sexprToVal d
           sexprPoint (as, v) = (,) <$> sexprToArg f as    <*> sexprToVal v

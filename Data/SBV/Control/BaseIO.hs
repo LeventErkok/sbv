@@ -26,6 +26,8 @@ import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel,
 import qualified Data.SBV.Control.Query as Trans
 import qualified Data.SBV.Control.Utils as Trans
 
+import Data.SBV.Utils.SExpr (SExpr)
+
 -- Data.SBV.Control.Query
 
 -- | Ask solver for info.
@@ -468,8 +470,10 @@ getUninterpretedValue = Trans.getUninterpretedValue
 
 -- | Get the value of an uninterpreted function, as a list of domain, value pairs.
 -- The final value is the "else" clause, i.e., what the function maps values outside
--- of the domain of the first list.
-getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query (Either String ([(a, r)], r))
+-- of the domain of the first list. If the result is not a value-association, then we get a string
+-- representation and the triple of whether it's curried, the argument list given by the user, and the s-expression as parsed
+-- by SBV from the SMT solver.
+getFunction :: (SymVal a, SymVal r, Trans.SMTFunction fun a r) => fun -> Query (Either (String, (Bool, Maybe [String], SExpr)) ([(a, r)], r))
 getFunction = Trans.getFunction
 
 -- | Get the value of a term. If the kind is Real and solver supports decimal approximations,

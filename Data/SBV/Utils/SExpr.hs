@@ -580,14 +580,28 @@ makeHaskellFunction resp nm isCurried mbArgs
 -- This isn't fool-proof; but it does an OK job
 hprint :: [(String, String)] -> SExpr -> String
 hprint env = go (0 :: Int)
-  where go p e = case e of
+  where sanitize = map clean
+
+        -- z3 uses ! as part of names, replace with _
+        clean '!' = '_'
+        clean c   = c
+
+        go p e = case e of
                    ECon n | Just a <- n `lookup` env -> a
-                          | True                     -> n
+                          | True                     -> sanitize n
                    ENum (i, _)       -> cnst i
                    EReal  a          -> cnst a
                    EFloat f          -> cnst f
                    EFloatingPoint f  -> cnst f
                    EDouble f         -> cnst f
+
+                   -- Handle lets
+                   EApp [ECon "let", EApp binders, rhs] ->
+                       let getBind (EApp [ECon nm, def]) = sanitize nm ++ " = " ++  go 0 def
+                           getBind bnd                   = go 0 bnd
+
+                           binds = '{' : intercalate "; " (map getBind binders) ++ "}"
+                       in parenIf (p >= 1) $ "let " ++ binds ++ " in " ++ go 0 rhs
 
                    -- few simps
                    EApp [ECon "not", EApp [ECon ">=", a, b]] -> go p $ EApp [ECon "<",  a, b]
@@ -597,6 +611,7 @@ hprint env = go (0 :: Int)
 
                    -- Handle x + -y that z3 is fond of producing
                    EApp [ECon a, x, EApp [ECon m, ENum (-1, _), y]] | isPlus a && isTimes m -> go p $ EApp [ECon "-", x, y]
+
                    -- Handle x + -NUM that z3 is also fond of producing
                    EApp [ECon a, x, ENum (i, mw)] | isPlus a && i < 0 -> go p $ EApp [ECon "-", x, ENum (-i, mw)]
 
