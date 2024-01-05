@@ -745,7 +745,7 @@ instance SymArray SArray where
            where ks   = (kindOf (Proxy @a), kindOf (Proxy @b))
                  r st = do amap <- R.readIORef (rArrayMap st)
 
-                           let k    = ArrayIndex $ IMap.size amap
+                           let k    = ArrayIndex (IMap.size amap) (sbvContext st)
                                iVal = literal initializer
 
                            iSV <- sbvToSV st iVal

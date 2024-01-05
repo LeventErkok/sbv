@@ -31,9 +31,10 @@ Data.SBV: Mismatched contexts detected.
 *** Current context: SBVContext (-7749304166575005736)
 *** Mixed with     : SBVContext (-531973508589804280)
 ***
-*** This happens if you call a proof-function (prove/sat) etc.
-*** while another one is in execution. Avoid such nested calls.
-*** See https://github.com/LeventErkok/sbv/issues/71 for examples.
+*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc.
+*** while another one is in execution, or use results from one such call in another.
+*** Please avoid such nested calls, all interactions should be from the same context.
+*** See https://github.com/LeventErkok/sbv/issues/71 for several examples.
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Core/Symbolic.hs:1915:48 in sbv-10.3-inplace:Data.SBV.Core.Symbolic
+  error, called at ./Data/SBV/Core/Symbolic.hs:1934:48 in sbv-10.3-inplace:Data.SBV.Core.Symbolic

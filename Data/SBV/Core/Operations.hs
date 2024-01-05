@@ -1051,6 +1051,10 @@ readSArr :: SArr -> SVal -> SVal
 readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
   where r st = do arr <- uncacheAI f st
                   i   <- svToSV st a
+
+                  let actx = unArrayContext arr
+                  checkCompatibleContext actx (contextOfSV i)
+
                   newExpr st bk (SBVApp (ArrRead arr) [i])
 
 -- | Update the element at @a@ to be @b@
@@ -1061,7 +1065,11 @@ writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
                   val  <- svToSV st b
                   amap <- R.readIORef (rArrayMap st)
 
-                  let j   = ArrayIndex $ IMap.size amap
+                  let actx = unArrayContext arr
+                  checkCompatibleContext actx (contextOfSV addr)
+                  checkCompatibleContext actx (contextOfSV val)
+
+                  let j   = ArrayIndex (IMap.size amap) actx
                       upd = IMap.insert (unArrayIndex j) ("array_" ++ show j, ainfo, ArrayMutate arr addr val)
 
                   j `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
@@ -1075,9 +1083,15 @@ mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
   where h st = do ai <- uncacheAI a st
                   bi <- uncacheAI b st
                   ts <- svToSV st t
+
+                  let ctx = sbvContext st
+                  checkCompatibleContext (unArrayContext ai) ctx
+                  checkCompatibleContext (unArrayContext bi) ctx
+                  checkCompatibleContext (contextOfSV    ts) ctx
+
                   amap <- R.readIORef (rArrayMap st)
 
-                  let k   = ArrayIndex $ IMap.size amap
+                  let k   = ArrayIndex (IMap.size amap) (sbvContext st)
                       upd = IMap.insert (unArrayIndex k) ("array_" ++ show k, ainfo, ArrayMerge ts ai bi)
 
                   k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
@@ -1094,7 +1108,7 @@ newSArr st ainfo mkNm mbVal = do
                                 Just sv -> Left . Just <$> svToSV st sv
                  Right lam -> pure (Right lam)
 
-    let i   = ArrayIndex $ IMap.size amap
+    let i   = ArrayIndex (IMap.size amap) (sbvContext st)
         nm  = mkNm (unArrayIndex i)
         upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree mbSWDef)
 

@@ -34,10 +34,10 @@
 
 module Data.SBV.Core.Symbolic
   ( NodeId(..)
-  , SV(..), swKind, trueSV, falseSV
+  , SV(..), swKind, trueSV, falseSV, contextOfSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
   , RegExp(..), regExpToSMTString
-  , Quantifier(..), needsExistentials, VarContext(..)
+  , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
@@ -121,6 +121,9 @@ import Control.Monad.Fail as Fail
 -- | Context identifier. 0 is reserved global context
 newtype SBVContext = SBVContext Int64 deriving (Eq, Ord, G.Data, Show)
 
+instance NFData SBVContext where
+  rnf (SBVContext i) = i `seq` ()
+
 -- | Global context
 globalSBVContext :: SBVContext
 globalSBVContext = SBVContext 0
@@ -150,6 +153,10 @@ instance Eq NodeId where
 -- | A symbolic word, tracking it's signedness and size.
 data SV = SV !Kind !NodeId
         deriving G.Data
+
+-- | Which context are we using this var at?
+contextOfSV :: SV -> SBVContext
+contextOfSV (SV _ (NodeId (c, _, _))) = c
 
 -- | For equality, we merely use the lambda-level/node-id
 instance Eq SV where
@@ -1600,13 +1607,25 @@ checkConsistent :: SV -> SBVExpr -> IO ()
 checkConsistent lhs (SBVApp _ args) = mapM_ check args
    where SV _ (NodeId (lhsContext, lambdaLevel, lhsId)) = lhs
          check (SV _ (NodeId (rhsContext, ll, ni)))
-           | lhsContext `compatible` rhsContext && lambdaLevel >= ll && (lambdaLevel /= ll || lhsId > ni)
+           | lhsContext `compatibleContext` rhsContext && lambdaLevel >= ll && (lambdaLevel /= ll || lhsId > ni)
            = pure ()
            | True
            = contextMismatchError lhsContext rhsContext (Just (lambdaLevel, lhsId)) (Just (ll, ni))
-
-         compatible c1 c2 = c1 == c2 || c1 == globalSBVContext || c2 == globalSBVContext
 {-# INLINE checkConsistent #-}
+
+-- | Are these compatible contexts? Either the same, or one of them is global
+compatibleContext :: SBVContext -> SBVContext -> Bool
+compatibleContext c1 c2 = c1 == c2 || c1 == globalSBVContext || c2 == globalSBVContext
+{-# INLINE compatibleContext #-}
+
+-- | Same as checkConsistent above, except in an array context
+checkCompatibleContext :: SBVContext -> SBVContext -> IO ()
+checkCompatibleContext ctx1 ctx2
+   | ctx1 `compatibleContext` ctx2
+   = pure ()
+   | True
+   = contextMismatchError ctx1 ctx2 Nothing Nothing
+{-# INLINE checkCompatibleContext #-}
 
 -- | Convert a symbolic value to an internal SV
 svToSV :: State -> SVal -> IO SV
@@ -1924,9 +1943,10 @@ contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
                                 , "*** And also : " ++ show level2
                                 ]
         rest = [ "***"
-               , "*** This happens if you call a proof-function (prove/sat) etc."
-               , "*** while another one is in execution. Avoid such nested calls."
-               , "*** See https://github.com/LeventErkok/sbv/issues/71 for examples."
+               , "*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc."
+               , "*** while another one is in execution, or use results from one such call in another."
+               , "*** Please avoid such nested calls, all interactions should be from the same context."
+               , "*** See https://github.com/LeventErkok/sbv/issues/71 for several examples."
                ]
 
 -- | Run a symbolic computation in a given state
@@ -2118,12 +2138,15 @@ cache = Cached
 uncache :: Cached SV -> State -> IO SV
 uncache = uncacheGen rSVCache
 
--- | An SMT array index is simply an int value
-newtype ArrayIndex = ArrayIndex { unArrayIndex :: Int } deriving (Eq, Ord, G.Data)
+-- | An SMT array index is simply an int value, and the context this array was created in
+data ArrayIndex = ArrayIndex { unArrayIndex   :: Int
+                             , unArrayContext :: SBVContext
+                             }
+               deriving (Eq, Ord, G.Data)
 
 -- | We simply show indexes as the underlying integer
 instance Show ArrayIndex where
-  show (ArrayIndex i) = show i
+  show = show . unArrayIndex
 
 -- | Uncache, retrieving SMT array indexes
 uncacheAI :: Cached ArrayIndex -> State -> IO ArrayIndex

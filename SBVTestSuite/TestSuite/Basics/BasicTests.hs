@@ -17,7 +17,7 @@
 module TestSuite.Basics.BasicTests(tests) where
 
 import Data.SBV.Control
-import Data.SBV.Internals hiding (free, output)
+import Data.SBV.Internals hiding (free, output, newArray_)
 import Utils.SBVTestFramework
 
 import Control.Monad       (void)
@@ -63,6 +63,7 @@ tests = testGroup "Basics.BasicTests"
    , goldenCapturedIO   "nested1"   $ nested nested1
    , goldenCapturedIO   "nested2"   $ nested nested2
    , goldenCapturedIO   "nested3"   $ nested nested3
+   , goldenCapturedIO   "nested4"   $ nested nested4
    ]
 
 test0 :: (forall a. Num a => (a -> a -> a)) -> Word8
@@ -94,7 +95,7 @@ f4 x y = let z = x + y in z * z
 f5 x _ = x + 1
 
 -- Nested calls are not OK; make sure we catch these
-nested :: (SMTConfig -> IO ThmResult) -> FilePath -> IO ()
+nested :: (SMTConfig -> IO a) -> FilePath -> IO ()
 nested t rf = do setStdGen (mkStdGen 0)
                  void (t z3{verbose=True, redirectVerbose=Just rf})
                   `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
@@ -128,3 +129,11 @@ nested3 cfg = proveWith cfg $ do
         leak = runSMTWith cfg $ do
                         x <- sBool "x"
                         query $ pure x
+
+nested4 :: SMTConfig -> IO Bool
+nested4 cfg = do
+  d1 <- runSMT (newArray_ Nothing :: Symbolic (SArray Bool Bool))
+
+  let sboolOfInterest = readArray d1 sTrue
+
+  isSatisfiableWith cfg sboolOfInterest
