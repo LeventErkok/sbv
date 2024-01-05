@@ -75,7 +75,6 @@ import qualified TestSuite.CRC.USB5
 import qualified TestSuite.Crypto.AES
 import qualified TestSuite.Crypto.RC4
 import qualified TestSuite.Crypto.SHA
-import qualified TestSuite.Existentials.CRCPolynomial
 import qualified TestSuite.GenTest.GenTests
 import qualified TestSuite.Optimization.AssertWithPenalty
 import qualified TestSuite.Optimization.Basics
@@ -189,7 +188,6 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Crypto.AES.tests
                       , TestSuite.Crypto.RC4.tests
                       , TestSuite.Crypto.SHA.tests
-                      , TestSuite.Existentials.CRCPolynomial.tests
                       , TestSuite.GenTest.GenTests.tests
                       , TestSuite.Optimization.AssertWithPenalty.tests
                       , TestSuite.Optimization.Basics.tests

@@ -135,7 +135,6 @@ Library
                   , Documentation.SBV.Examples.BitPrecise.BrokenSearch
                   , Documentation.SBV.Examples.BitPrecise.Legato
                   , Documentation.SBV.Examples.BitPrecise.MergeSort
-                  , Documentation.SBV.Examples.BitPrecise.MultMask
                   , Documentation.SBV.Examples.BitPrecise.PEXT_PDEP
                   , Documentation.SBV.Examples.BitPrecise.PrefixSum
                   , Documentation.SBV.Examples.CodeGeneration.AddSub
@@ -149,7 +148,6 @@ Library
                   , Documentation.SBV.Examples.Crypto.Prince
                   , Documentation.SBV.Examples.Crypto.SHA
                   , Documentation.SBV.Examples.DeltaSat.DeltaSat
-                  , Documentation.SBV.Examples.Existentials.CRCPolynomial
                   , Documentation.SBV.Examples.Existentials.Diophantine
                   , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Lists.BoundedMutex
@@ -338,7 +336,6 @@ Test-Suite SBVTest
                   , TestSuite.Crypto.AES
                   , TestSuite.Crypto.RC4
                   , TestSuite.Crypto.SHA
-                  , TestSuite.Existentials.CRCPolynomial
                   , TestSuite.GenTest.GenTests
                   , TestSuite.Optimization.AssertWithPenalty
                   , TestSuite.Optimization.Basics
@@ -446,7 +443,6 @@ Benchmark SBVBench
                   , BenchSuite.BitPrecise.BrokenSearch
                   , BenchSuite.BitPrecise.Legato
                   , BenchSuite.BitPrecise.MergeSort
-                  , BenchSuite.BitPrecise.MultMask
                   , BenchSuite.BitPrecise.PrefixSum
                   , BenchSuite.Queries.AllSat
                   , BenchSuite.Queries.CaseSplit
@@ -505,6 +501,5 @@ Benchmark SBVBench
                   , BenchSuite.Lists.Fibonacci
                   , BenchSuite.Strings.RegexCrossword
                   , BenchSuite.Strings.SQLInjection
-                  , BenchSuite.Existentials.CRCPolynomial
                   , BenchSuite.Existentials.Diophantine
                   , BenchSuite.Transformers.SymbolicEval

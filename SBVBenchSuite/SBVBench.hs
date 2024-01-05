@@ -38,7 +38,7 @@ import qualified BenchSuite.BitPrecise.BitTricks
 -- import qualified BenchSuite.BitPrecise.BrokenSearch
 -- import qualified BenchSuite.BitPrecise.Legato
 -- import qualified BenchSuite.BitPrecise.MergeSort
-import qualified BenchSuite.BitPrecise.MultMask
+-- import qualified BenchSuite.BitPrecise.MultMask
 -- import qualified BenchSuite.BitPrecise.PrefixSum
 
 -- Queries
@@ -117,7 +117,7 @@ import qualified BenchSuite.Strings.RegexCrossword
 import qualified BenchSuite.Strings.SQLInjection
 
 -- Existentials
-import qualified BenchSuite.Existentials.CRCPolynomial
+-- import qualified BenchSuite.Existentials.CRCPolynomial
 import qualified BenchSuite.Existentials.Diophantine
 
 -- Transformers
@@ -207,7 +207,7 @@ bitPreciseBenchmarks = [ BenchSuite.BitPrecise.BitTricks.benchmarks
                        -- , BenchSuite.BitPrecise.BrokenSearch.benchmarks
                        -- , BenchSuite.BitPrecise.Legato.benchmarks
                        -- , BenchSuite.BitPrecise.MergeSort.benchmarks
-                       , BenchSuite.BitPrecise.MultMask.benchmarks
+                       -- , BenchSuite.BitPrecise.MultMask.benchmarks
                        -- expensive
                        -- , BenchSuite.BitPrecise.PrefixSum.benchmarks
                        ]
@@ -359,8 +359,8 @@ strings = bgroup "Strings" $ runBenchmark <$> stringBenchmarks
 
 --------------------------- Existentials ----------------------------------------
 existentialBenchmarks :: [Runner]
-existentialBenchmarks = [ BenchSuite.Existentials.CRCPolynomial.benchmarks
-                        , BenchSuite.Existentials.Diophantine.benchmarks
+existentialBenchmarks = [ -- BenchSuite.Existentials.CRCPolynomial.benchmarks
+                          BenchSuite.Existentials.Diophantine.benchmarks
                         ]
 
 existentials :: Benchmark
