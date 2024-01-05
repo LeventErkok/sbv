@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 10.2, 2023-06-09
+* Latest Hackage released version: 10.3, 2024-01-05
 
-### Version 10.2.5, Not yet released
+### Version 10.3, 2024-01-05
 
   * Clean-up GHC extensions required in the cabal file, and changes required to compile cleanly with GHC 9.8 series.
 
