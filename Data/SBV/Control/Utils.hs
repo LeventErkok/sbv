@@ -273,22 +273,28 @@ queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()
 queryDebug msgs = do QueryState{queryConfig} <- getQueryState
                      io $ debug queryConfig msgs
 
+-- | We need to track sent asserts/check-sat calls so we can issue an extra check-sat call if needed
+trackAsserts :: (MonadIO m, MonadQuery m) => String -> m ()
+trackAsserts s
+   | isCheckSat || isAssert
+   = do State{rOutstandingAsserts} <- queryState
+        liftIO $ writeIORef rOutstandingAsserts isAssert
+   | True
+   = pure ()
+  where trimmedS   = dropWhile isSpace s
+        isCheckSat = "(check-sat" `isPrefixOf` trimmedS
+        isAssert   = "(assert"    `isPrefixOf` trimmedS
+
 -- | Generalization of 'Data.SBV.Control.ask'
 ask :: (MonadIO m, MonadQuery m) => String -> m String
-ask s = do QueryState{queryAsk, queryTimeOutValue} <- getQueryState
-
-           case queryTimeOutValue of
-             Nothing -> queryDebug ["[SEND] " `alignPlain` s]
-             Just i  -> queryDebug ["[SEND, TimeOut: " ++ showTimeoutValue i ++ "] " `alignPlain` s]
-           r <- io $ queryAsk queryTimeOutValue s
-           queryDebug ["[RECV] " `alignPlain` r]
-
-           return r
+ask s = askIgnoring s []
 
 -- | Send a string to the solver, and return the response. Except, if the response
 -- is one of the "ignore" ones, keep querying.
 askIgnoring :: (MonadIO m, MonadQuery m) => String -> [String] -> m String
 askIgnoring s ignoreList = do
+
+           trackAsserts s
 
            QueryState{queryAsk, queryRetrieveResponse, queryTimeOutValue} <- getQueryState
 
@@ -312,6 +318,8 @@ askIgnoring s ignoreList = do
 -- | Generalization of 'Data.SBV.Control.send'
 send :: (MonadIO m, MonadQuery m) => Bool -> String -> m ()
 send requireSuccess s = do
+
+            trackAsserts s
 
             QueryState{queryAsk, querySend, queryConfig, queryTimeOutValue} <- getQueryState
 
@@ -365,9 +373,30 @@ retrieveResponse userTag mbTo = do
 
 -- | Generalization of 'Data.SBV.Control.getValue'
 getValue :: (MonadIO m, MonadQuery m, SymVal a) => SBV a -> m a
-getValue s = do sv <- inNewContext (`sbvToSV` s)
-                cv <- getValueCV Nothing sv
-                return $ fromCV cv
+getValue s = do
+
+      sv <- inNewContext (`sbvToSV` s)
+
+      -- If we're issuing get-value, we gotta make sure there are no outstanding asserts
+      -- This can happen if we sent some ourselves. See https://github.com/LeventErkok/sbv/issues/682
+      outstandingAsserts <- do State{rOutstandingAsserts} <- queryState
+                               liftIO $ readIORef rOutstandingAsserts
+
+      if outstandingAsserts
+         then queryDebug ["[NOTE] getValue: There are outstanding asserts. Ensuring we're still sat."]
+         else queryDebug ["[NOTE] getValue: There are no outstanding asserts. Continuing with getValue."]
+
+      when outstandingAsserts $ do
+        r <- checkSat
+        let bad = unexpected "checkSat" "check-sat" "one of sat/unsat/unknown" Nothing (show r) Nothing
+        case r of
+          Sat    -> pure ()
+          DSat{} -> pure ()
+          Unk    -> bad
+          Unsat  -> bad
+
+      cv <- getValueCV Nothing sv
+      return $ fromCV cv
 
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
@@ -1147,7 +1176,7 @@ extractValue mbi nm k = do
 
            cmd        = "(get-value (" ++ nm ++ ")" ++ modelIndex ++ ")"
 
-           bad = unexpected "getModel" cmd ("a value binding for kind: " ++ show k) Nothing
+           bad = unexpected "get-value" cmd ("a value binding for kind: " ++ show k) Nothing
 
        r <- ask cmd
 

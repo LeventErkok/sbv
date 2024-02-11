@@ -1224,40 +1224,41 @@ instance NFData SMTDef where
   rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
 -- | The state of the symbolic interpreter
-data State  = State { sbvContext     :: SBVContext
-                    , pathCond       :: SVal                             -- ^ kind KBool
-                    , stCfg          :: SMTConfig
-                    , startTime      :: UTCTime
-                    , rProgInfo      :: IORef ProgInfo
-                    , runMode        :: IORef SBVRunMode
-                    , rIncState      :: IORef IncState
-                    , rCInfo         :: IORef [(String, CV)]
-                    , rObservables   :: IORef (S.Seq (Name, CV -> Bool, SV))
-                    , rctr           :: IORef Int
-                    , rLambdaLevel   :: IORef Int
-                    , rUsedKinds     :: IORef KindSet
-                    , rUsedLbls      :: IORef (Set.Set String)
-                    , rinps          :: IORef Inputs
-                    , rlambdaInps    :: IORef LambdaInputs
-                    , rConstraints   :: IORef (S.Seq (Bool, [(String, String)], SV))
-                    , rPartitionVars :: IORef [String]
-                    , routs          :: IORef [SV]
-                    , rtblMap        :: IORef TableMap
-                    , spgm           :: IORef SBVPgm
-                    , rconstMap      :: IORef CnstMap
-                    , rexprMap       :: IORef ExprMap
-                    , rArrayMap      :: IORef ArrayMap
-                    , rUIMap         :: IORef UIMap
-                    , rUserFuncs     :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
-                    , rCgMap         :: IORef CgMap
-                    , rDefns         :: IORef [(SMTDef, SBVType)]
-                    , rSMTOptions    :: IORef [SMTOption]
-                    , rOptGoals      :: IORef [Objective (SV, SV)]
-                    , rAsserts       :: IORef [(String, Maybe CallStack, SV)]
-                    , rSVCache       :: IORef (Cache SV)
-                    , rAICache       :: IORef (Cache ArrayIndex)
-                    , rQueryState    :: IORef (Maybe QueryState)
-                    , parentState    :: Maybe State  -- Pointer to our parent if we're in a sublevel
+data State  = State { sbvContext          :: SBVContext
+                    , pathCond            :: SVal                             -- ^ kind KBool
+                    , stCfg               :: SMTConfig
+                    , startTime           :: UTCTime
+                    , rProgInfo           :: IORef ProgInfo
+                    , runMode             :: IORef SBVRunMode
+                    , rIncState           :: IORef IncState
+                    , rCInfo              :: IORef [(String, CV)]
+                    , rObservables        :: IORef (S.Seq (Name, CV -> Bool, SV))
+                    , rctr                :: IORef Int
+                    , rLambdaLevel        :: IORef Int
+                    , rUsedKinds          :: IORef KindSet
+                    , rUsedLbls           :: IORef (Set.Set String)
+                    , rinps               :: IORef Inputs
+                    , rlambdaInps         :: IORef LambdaInputs
+                    , rConstraints        :: IORef (S.Seq (Bool, [(String, String)], SV))
+                    , rPartitionVars      :: IORef [String]
+                    , routs               :: IORef [SV]
+                    , rtblMap             :: IORef TableMap
+                    , spgm                :: IORef SBVPgm
+                    , rconstMap           :: IORef CnstMap
+                    , rexprMap            :: IORef ExprMap
+                    , rArrayMap           :: IORef ArrayMap
+                    , rUIMap              :: IORef UIMap
+                    , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
+                    , rCgMap              :: IORef CgMap
+                    , rDefns              :: IORef [(SMTDef, SBVType)]
+                    , rSMTOptions         :: IORef [SMTOption]
+                    , rOptGoals           :: IORef [Objective (SV, SV)]
+                    , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
+                    , rOutstandingAsserts :: IORef Bool            -- Did we send an assert after the last check-sat call?
+                    , rSVCache            :: IORef (Cache SV)
+                    , rAICache            :: IORef (Cache ArrayIndex)
+                    , rQueryState         :: IORef (Maybe QueryState)
+                    , parentState         :: Maybe State  -- Pointer to our parent if we're in a sublevel
                     }
 
 -- | Chase to the root state. No infinite chains!
@@ -1849,78 +1850,80 @@ introduceUserName st@State{runMode} (isQueryVar, isTracker) nmOrig k q sv = do
 -- | Create a new state
 mkNewState :: MonadIO m => SMTConfig -> SBVRunMode -> m State
 mkNewState cfg currentRunMode = liftIO $ do
-     currTime   <- getCurrentTime
-     progInfo   <- newIORef ProgInfo { hasQuants         = False
-                                     , progSpecialRels   = []
-                                     , progTransClosures = []
-                                     }
-     rm         <- newIORef currentRunMode
-     ctr        <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
-     lambda     <- newIORef $ case currentRunMode of
-                                SMTMode{}   -> 0
-                                CodeGen{}   -> 0
-                                Concrete{}  -> 0
-                                LambdaGen i -> i
-     cInfo      <- newIORef []
-     observes   <- newIORef mempty
-     pgm        <- newIORef (SBVPgm S.empty)
-     emap       <- newIORef Map.empty
-     cmap       <- newIORef Map.empty
-     inps       <- newIORef mempty
-     lambdaInps <- newIORef mempty
-     outs       <- newIORef []
-     tables     <- newIORef Map.empty
-     arrays     <- newIORef IMap.empty
-     userFuncs  <- newIORef Set.empty
-     uis        <- newIORef Map.empty
-     cgs        <- newIORef Map.empty
-     defns      <- newIORef []
-     swCache    <- newIORef IMap.empty
-     aiCache    <- newIORef IMap.empty
-     usedKinds  <- newIORef Set.empty
-     usedLbls   <- newIORef Set.empty
-     cstrs      <- newIORef S.empty
-     pvs        <- newIORef []
-     smtOpts    <- newIORef []
-     optGoals   <- newIORef []
-     asserts    <- newIORef []
-     istate     <- newIORef =<< newIncState
-     qstate     <- newIORef Nothing
-     ctx        <- genSBVContext
-     pure $ State { sbvContext     = ctx
-                  , runMode        = rm
-                  , stCfg          = cfg
-                  , startTime      = currTime
-                  , rProgInfo      = progInfo
-                  , pathCond       = SVal KBool (Left trueCV)
-                  , rIncState      = istate
-                  , rCInfo         = cInfo
-                  , rObservables   = observes
-                  , rctr           = ctr
-                  , rLambdaLevel   = lambda
-                  , rUsedKinds     = usedKinds
-                  , rUsedLbls      = usedLbls
-                  , rinps          = inps
-                  , rlambdaInps    = lambdaInps
-                  , routs          = outs
-                  , rtblMap        = tables
-                  , spgm           = pgm
-                  , rconstMap      = cmap
-                  , rArrayMap      = arrays
-                  , rexprMap       = emap
-                  , rUserFuncs     = userFuncs
-                  , rUIMap         = uis
-                  , rCgMap         = cgs
-                  , rDefns         = defns
-                  , rSVCache       = swCache
-                  , rAICache       = aiCache
-                  , rConstraints   = cstrs
-                  , rPartitionVars = pvs
-                  , rSMTOptions    = smtOpts
-                  , rOptGoals      = optGoals
-                  , rAsserts       = asserts
-                  , rQueryState    = qstate
-                  , parentState    = Nothing
+     currTime           <- getCurrentTime
+     progInfo           <- newIORef ProgInfo { hasQuants         = False
+                                             , progSpecialRels   = []
+                                             , progTransClosures = []
+                                             }
+     rm                 <- newIORef currentRunMode
+     ctr                <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
+     lambda             <- newIORef $ case currentRunMode of
+                                        SMTMode{}   -> 0
+                                        CodeGen{}   -> 0
+                                        Concrete{}  -> 0
+                                        LambdaGen i -> i
+     cInfo              <- newIORef []
+     observes           <- newIORef mempty
+     pgm                <- newIORef (SBVPgm S.empty)
+     emap               <- newIORef Map.empty
+     cmap               <- newIORef Map.empty
+     inps               <- newIORef mempty
+     lambdaInps         <- newIORef mempty
+     outs               <- newIORef []
+     tables             <- newIORef Map.empty
+     arrays             <- newIORef IMap.empty
+     userFuncs          <- newIORef Set.empty
+     uis                <- newIORef Map.empty
+     cgs                <- newIORef Map.empty
+     defns              <- newIORef []
+     swCache            <- newIORef IMap.empty
+     aiCache            <- newIORef IMap.empty
+     usedKinds          <- newIORef Set.empty
+     usedLbls           <- newIORef Set.empty
+     cstrs              <- newIORef S.empty
+     pvs                <- newIORef []
+     smtOpts            <- newIORef []
+     optGoals           <- newIORef []
+     asserts            <- newIORef []
+     outstandingAsserts <- newIORef False
+     istate             <- newIORef =<< newIncState
+     qstate             <- newIORef Nothing
+     ctx                <- genSBVContext
+     pure $ State { sbvContext          = ctx
+                  , runMode             = rm
+                  , stCfg               = cfg
+                  , startTime           = currTime
+                  , rProgInfo           = progInfo
+                  , pathCond            = SVal KBool (Left trueCV)
+                  , rIncState           = istate
+                  , rCInfo              = cInfo
+                  , rObservables        = observes
+                  , rctr                = ctr
+                  , rLambdaLevel        = lambda
+                  , rUsedKinds          = usedKinds
+                  , rUsedLbls           = usedLbls
+                  , rinps               = inps
+                  , rlambdaInps         = lambdaInps
+                  , routs               = outs
+                  , rtblMap             = tables
+                  , spgm                = pgm
+                  , rconstMap           = cmap
+                  , rArrayMap           = arrays
+                  , rexprMap            = emap
+                  , rUserFuncs          = userFuncs
+                  , rUIMap              = uis
+                  , rCgMap              = cgs
+                  , rDefns              = defns
+                  , rSVCache            = swCache
+                  , rAICache            = aiCache
+                  , rConstraints        = cstrs
+                  , rPartitionVars      = pvs
+                  , rSMTOptions         = smtOpts
+                  , rOptGoals           = optGoals
+                  , rAsserts            = asserts
+                  , rOutstandingAsserts = outstandingAsserts
+                  , rQueryState         = qstate
+                  , parentState         = Nothing
                   }
 
 -- | Generalization of 'Data.SBV.runSymbolic'

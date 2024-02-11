@@ -70,46 +70,47 @@ inSubState inState comp = do
         -- don't really impact anything.
         comp State {
                    -- These are not IORefs; so we share by copying  the value; changes won't be copied back
-                     sbvContext     = share sbvContext
-                   , pathCond       = share pathCond
-                   , startTime      = share startTime
+                     sbvContext          = share sbvContext
+                   , pathCond            = share pathCond
+                   , startTime           = share startTime
 
                    -- These are shared IORef's; and is shared, so they will be copied back to the parent state
-                   , rProgInfo      = share rProgInfo
-                   , rIncState      = share rIncState
-                   , rCInfo         = share rCInfo
-                   , rUsedKinds     = share rUsedKinds
-                   , rUsedLbls      = share rUsedLbls
-                   , rUIMap         = share rUIMap
-                   , rUserFuncs     = share rUserFuncs
-                   , rCgMap         = share rCgMap
-                   , rDefns         = share rDefns
-                   , rSMTOptions    = share rSMTOptions
-                   , rOptGoals      = share rOptGoals
-                   , rAsserts       = share rAsserts
-                   , rPartitionVars = share rPartitionVars
+                   , rProgInfo           = share rProgInfo
+                   , rIncState           = share rIncState
+                   , rCInfo              = share rCInfo
+                   , rUsedKinds          = share rUsedKinds
+                   , rUsedLbls           = share rUsedLbls
+                   , rUIMap              = share rUIMap
+                   , rUserFuncs          = share rUserFuncs
+                   , rCgMap              = share rCgMap
+                   , rDefns              = share rDefns
+                   , rSMTOptions         = share rSMTOptions
+                   , rOptGoals           = share rOptGoals
+                   , rAsserts            = share rAsserts
+                   , rOutstandingAsserts = share rOutstandingAsserts
+                   , rPartitionVars      = share rPartitionVars
 
                    -- Everything else is fresh in the substate; i.e., will not copy back
-                   , stCfg          = fresh stCfg
-                   , runMode        = fresh runMode
-                   , rctr           = fresh rctr
-                   , rLambdaLevel   = fresh rLambdaLevel
-                   , rtblMap        = fresh rtblMap
-                   , rArrayMap      = fresh rArrayMap
-                   , rAICache       = fresh rAICache
-                   , rinps          = fresh rinps
-                   , rlambdaInps    = fresh rlambdaInps
-                   , rConstraints   = fresh rConstraints
-                   , rObservables   = fresh rObservables
-                   , routs          = fresh routs
-                   , spgm           = fresh spgm
-                   , rconstMap      = fresh rconstMap
-                   , rexprMap       = fresh rexprMap
-                   , rSVCache       = fresh rSVCache
-                   , rQueryState    = fresh rQueryState
+                   , stCfg               = fresh stCfg
+                   , runMode             = fresh runMode
+                   , rctr                = fresh rctr
+                   , rLambdaLevel        = fresh rLambdaLevel
+                   , rtblMap             = fresh rtblMap
+                   , rArrayMap           = fresh rArrayMap
+                   , rAICache            = fresh rAICache
+                   , rinps               = fresh rinps
+                   , rlambdaInps         = fresh rlambdaInps
+                   , rConstraints        = fresh rConstraints
+                   , rObservables        = fresh rObservables
+                   , routs               = fresh routs
+                   , spgm                = fresh spgm
+                   , rconstMap           = fresh rconstMap
+                   , rexprMap            = fresh rexprMap
+                   , rSVCache            = fresh rSVCache
+                   , rQueryState         = fresh rQueryState
 
                    -- keep track of our parent
-                   , parentState    = Just inState
+                   , parentState         = Just inState
                    }
 
 -- In this case, we expect just one group of parameters, with universal quantification
