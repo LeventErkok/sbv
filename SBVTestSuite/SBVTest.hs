@@ -98,6 +98,7 @@ import qualified TestSuite.Puzzles.PowerSet
 import qualified TestSuite.Puzzles.Sudoku
 import qualified TestSuite.Puzzles.Temperature
 import qualified TestSuite.Puzzles.U2Bridge
+import qualified TestSuite.Queries.ArrayGetVal
 import qualified TestSuite.Queries.BasicQuery
 import qualified TestSuite.Queries.BadOption
 import qualified TestSuite.Queries.DSat
@@ -212,6 +213,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Puzzles.Temperature.tests
                       , TestSuite.Puzzles.U2Bridge.tests
                       , TestSuite.Queries.BadOption.tests
+                      , TestSuite.Queries.ArrayGetVal.tests
                       , TestSuite.Queries.BasicQuery.tests
                       , TestSuite.Queries.DSat.tests
                       , TestSuite.Queries.Interpolants.tests

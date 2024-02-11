@@ -360,6 +360,7 @@ Test-Suite SBVTest
                   , TestSuite.Puzzles.Temperature
                   , TestSuite.Puzzles.U2Bridge
                   , TestSuite.Queries.BasicQuery
+                  , TestSuite.Queries.ArrayGetVal
                   , TestSuite.Queries.BadOption
                   , TestSuite.Queries.DSat
                   , TestSuite.Queries.Enums
