@@ -3,6 +3,11 @@
 
 * Latest Hackage released version: 10.3, 2024-01-05
 
+### Version 10.3.5, Not yet released
+
+  * Before issuing a get-value, make sure there are no outstanding assert calls.
+    See: https://github.com/LeventErkok/sbv/issues/682 for details.
+
 ### Version 10.3, 2024-01-05
 
   * Clean-up GHC extensions required in the cabal file, and changes required to compile cleanly with GHC 9.8 series.
