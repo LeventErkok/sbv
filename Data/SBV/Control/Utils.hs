@@ -382,11 +382,8 @@ getValue s = do
       outstandingAsserts <- do State{rOutstandingAsserts} <- queryState
                                liftIO $ readIORef rOutstandingAsserts
 
-      if outstandingAsserts
-         then queryDebug ["[NOTE] getValue: There are outstanding asserts. Ensuring we're still sat."]
-         else queryDebug ["[NOTE] getValue: There are no outstanding asserts. Continuing with getValue."]
-
       when outstandingAsserts $ do
+        queryDebug ["[NOTE] getValue: There are outstanding asserts. Ensuring we're still sat."]
         r <- checkSat
         let bad = unexpected "checkSat" "check-sat" "one of sat/unsat/unknown" Nothing (show r) Nothing
         case r of
