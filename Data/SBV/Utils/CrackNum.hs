@@ -35,31 +35,31 @@ import Numeric
 -- | A class for cracking things deeper, if we know how.
 class CrackNum a where
   -- | Convert an item to possibly bit-level description, if possible.
-  crackNum :: a -> Maybe String
+  crackNum :: a -> Maybe Integer -> Maybe String
 
 -- | CVs are easy to crack
 instance CrackNum CV where
-  crackNum cv = case kindOf cv of
-                  -- Maybe one day we'll have a use for these, currently cracking them
-                  -- any further seems overkill
-                  KBool      {}  -> Nothing
-                  KUnbounded {}  -> Nothing
-                  KReal      {}  -> Nothing
-                  KUserSort  {}  -> Nothing
-                  KChar      {}  -> Nothing
-                  KString    {}  -> Nothing
-                  KList      {}  -> Nothing
-                  KSet       {}  -> Nothing
-                  KTuple     {}  -> Nothing
-                  KMaybe     {}  -> Nothing
-                  KEither    {}  -> Nothing
-                  KRational  {}  -> Nothing
+  crackNum cv mbIV = case kindOf cv of
+                       -- Maybe one day we'll have a use for these, currently cracking them
+                       -- any further seems overkill
+                       KBool      {}  -> Nothing
+                       KUnbounded {}  -> Nothing
+                       KReal      {}  -> Nothing
+                       KUserSort  {}  -> Nothing
+                       KChar      {}  -> Nothing
+                       KString    {}  -> Nothing
+                       KList      {}  -> Nothing
+                       KSet       {}  -> Nothing
+                       KTuple     {}  -> Nothing
+                       KMaybe     {}  -> Nothing
+                       KEither    {}  -> Nothing
+                       KRational  {}  -> Nothing
 
-                  -- Actual crackables
-                  KFloat{}       -> Just $ let CFloat   f = cvVal cv in float f
-                  KDouble{}      -> Just $ let CDouble  d = cvVal cv in float d
-                  KFP{}          -> Just $ let CFP      f = cvVal cv in float f
-                  KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
+                       -- Actual crackables
+                       KFloat{}       -> Just $ let CFloat   f = cvVal cv in float mbIV f
+                       KDouble{}      -> Just $ let CDouble  d = cvVal cv in float mbIV d
+                       KFP{}          -> Just $ let CFP      f = cvVal cv in float mbIV f
+                       KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
 
 -- How far off the screen we want displayed? Somewhat experimentally found.
 tab :: String
@@ -227,10 +227,30 @@ instance HasFloatData FP where
             | bfIsSubnormal opts f = Subnormal
             | True                 = Normal
 
--- | Show a float in detail
-float :: HasFloatData a => a -> String
-float f = intercalate "\n" $ ruler ++ legend : info
-   where fd@FloatData{prec, eb, sb, bits, fpKind, fpVals} = getFloatData f
+-- | Show a float in detail. mbSurface is the integer equivalent if this is a NaN; so we
+-- can represent it faithfully to the original given. Used by crackNum executable.
+float :: HasFloatData a => Maybe Integer -> a -> String
+float mbSurface f = intercalate "\n" $ ruler ++ legend : info
+   where fd@FloatData{prec, eb, sb, bits = bitsAsStored, fpKind, fpVals} = getFloatData f
+
+         nanKind = case fpKind of
+                     Zero{}    -> False
+                     Infty{}   -> False
+                     NaN       -> True
+                     Subnormal -> False
+                     Normal    -> False
+
+         (nanClassifier, bits)
+           | nanKind, Just i <- mbSurface = (extraClassifier i,  i)
+           | True                         = ("", bitsAsStored)
+
+         -- Is this surface representation a signaling NaN or a quiet nan?
+         -- The test is that the tip bit of the significand is high: If so, quiet. If top bit is low, then signaling.
+         extraClassifier :: Integer -> String
+         extraClassifier i
+           | sb < 2               = ""      -- I don't think this can happen, but just in case
+           | i `testBit` (sb - 2) = " (Quiet)"
+           | True                 = " (Signaling)"
 
          splits = [1, eb, sb]
          ruler  = map (tab ++) $ mkRuler (eb + sb) splits
@@ -260,7 +280,7 @@ float f = intercalate "\n" $ ruler ++ legend : info
                   ]
                ++ [ "        Exponent: " ++ show exponentVal ++ " (Subnormal, with fixed exponent value. " ++ esInfo ++ ")" | isSubNormal    ]
                ++ [ "        Exponent: " ++ show exponentVal ++ " ("                                       ++ esInfo ++ ")" | not isSubNormal]
-               ++ [ "  Classification: " ++ show fpKind]
+               ++ [ "  Classification: " ++ show fpKind ++ nanClassifier]
                ++ (case fpVals of
                      Left val                       -> [ "           Value: " ++ val]
                      Right (bval, oval, dval, hval) -> [ "          Binary: " ++ bval

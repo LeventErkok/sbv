@@ -2283,27 +2283,28 @@ data SolverCapabilities = SolverCapabilities {
 -- (i.e., SWord and SInt), but also with floats. It is particularly useful with floating-point numbers, as it shows you how they are laid out in
 -- memory following the IEEE754 rules.
 data SMTConfig = SMTConfig {
-         verbose                     :: Bool           -- ^ Debug mode
-       , timing                      :: Timing         -- ^ Print timing information on how long different phases took (construction, solving, etc.)
-       , printBase                   :: Int            -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
-       , printRealPrec               :: Int            -- ^ Print algebraic real values with this precision. (SReal, default: 16)
-       , crackNum                    :: Bool           -- ^ For each numeric value, show it in detail in the model with its bits spliced out. Good for floats.
-       , satCmd                      :: String         -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
-       , allSatMaxModelCount         :: Maybe Int      -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
-       , allSatPrintAlong            :: Bool           -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
-       , allSatTrackUFs              :: Bool           -- ^ In a 'Data.SBV.allSat' call, should we try to extract values of uninterpreted functions?
-       , isNonModelVar               :: String -> Bool -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
-       , validateModel               :: Bool           -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
-       , optimizeValidateConstraints :: Bool           -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
-       , transcript                  :: Maybe FilePath -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
-       , smtLibVersion               :: SMTLibVersion  -- ^ What version of SMT-lib we use for the tool
-       , dsatPrecision               :: Maybe Double   -- ^ Delta-sat precision
-       , solver                      :: SMTSolver      -- ^ The actual SMT solver.
-       , extraArgs                   :: [String]       -- ^ Extra command line arguments to pass to the solver.
-       , roundingMode                :: RoundingMode   -- ^ Rounding mode to use for floating-point conversions
-       , solverSetOptions            :: [SMTOption]    -- ^ Options to set as we start the solver
-       , ignoreExitCode              :: Bool           -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
-       , redirectVerbose             :: Maybe FilePath -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
+         verbose                     :: Bool                -- ^ Debug mode
+       , timing                      :: Timing              -- ^ Print timing information on how long different phases took (construction, solving, etc.)
+       , printBase                   :: Int                 -- ^ Print integral literals in this base (2, 10, and 16 are supported.)
+       , printRealPrec               :: Int                 -- ^ Print algebraic real values with this precision. (SReal, default: 16)
+       , crackNum                    :: Bool                -- ^ For each numeric value, show it in detail in the model with its bits spliced out. Good for floats.
+       , crackNumSurfaceVals         :: [(String, Integer)] -- ^ For crackNum: The surface representation of variables, if available
+       , satCmd                      :: String              -- ^ Usually "(check-sat)". However, users might tweak it based on solver characteristics.
+       , allSatMaxModelCount         :: Maybe Int           -- ^ In a 'Data.SBV.allSat' call, return at most this many models. If nothing, return all.
+       , allSatPrintAlong            :: Bool                -- ^ In a 'Data.SBV.allSat' call, print models as they are found.
+       , allSatTrackUFs              :: Bool                -- ^ In a 'Data.SBV.allSat' call, should we try to extract values of uninterpreted functions?
+       , isNonModelVar               :: String -> Bool      -- ^ When constructing a model, ignore variables whose name satisfy this predicate. (Default: (const False), i.e., don't ignore anything)
+       , validateModel               :: Bool                -- ^ If set, SBV will attempt to validate the model it gets back from the solver.
+       , optimizeValidateConstraints :: Bool                -- ^ Validate optimization results. NB: Does NOT make sure the model is optimal, just checks they satisfy the constraints.
+       , transcript                  :: Maybe FilePath      -- ^ If Just, the entire interaction will be recorded as a playable file (for debugging purposes mostly)
+       , smtLibVersion               :: SMTLibVersion       -- ^ What version of SMT-lib we use for the tool
+       , dsatPrecision               :: Maybe Double        -- ^ Delta-sat precision
+       , solver                      :: SMTSolver           -- ^ The actual SMT solver.
+       , extraArgs                   :: [String]            -- ^ Extra command line arguments to pass to the solver.
+       , roundingMode                :: RoundingMode        -- ^ Rounding mode to use for floating-point conversions
+       , solverSetOptions            :: [SMTOption]         -- ^ Options to set as we start the solver
+       , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
+       , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        }
 
 -- | Ignore internal names and those the user told us to

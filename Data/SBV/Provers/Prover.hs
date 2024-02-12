@@ -87,6 +87,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , printBase                   = 10
                                             , printRealPrec               = 16
                                             , crackNum                    = False
+                                            , crackNumSurfaceVals         = []
                                             , transcript                  = Nothing
                                             , solver                      = s
                                             , smtLibVersion               = smtVersion

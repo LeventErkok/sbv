@@ -8,6 +8,9 @@
   * Before issuing a get-value, make sure there are no outstanding assert calls.
     See: https://github.com/LeventErkok/sbv/issues/682 for details.
 
+  * crackNum mode now displays the surface form of NaNs more faithfully, if provided
+    with the input string. This functionality is used by the crackNum executable.
+
 ### Version 10.3, 2024-01-05
 
   * Clean-up GHC extensions required in the cabal file, and changes required to compile cleanly with GHC 9.8 series.

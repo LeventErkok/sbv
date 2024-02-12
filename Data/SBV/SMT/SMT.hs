@@ -560,8 +560,8 @@ showModelDictionary warnEmpty includeEverything cfg allVars
           | includeEverything = False
           | True              = mustIgnoreVar cfg (T.unpack s)
 
-        shM (s, RegularCV v) = let vs = shCV cfg v in ((length s, s), (vlength vs, vs))
-        shM (s, other)       = let vs = show other in ((length s, s), (vlength vs, vs))
+        shM (s, RegularCV v) = let vs = shCV cfg s v in ((length s, s), (vlength vs, vs))
+        shM (s, other)       = let vs = show other   in ((length s, s), (vlength vs, vs))
 
         display svs   = map line svs
            where line ((_, s), (_, v)) = "  " ++ right (nameWidth - length s) s ++ " = " ++ left (valWidth - lTrimRight (valPart v)) v
@@ -633,8 +633,8 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
                 paren _    x         = x
 
 -- | Show a constant value, in the user-specified base
-shCV :: SMTConfig -> CV -> String
-shCV SMTConfig{printBase, crackNum} cv = cracked (sh printBase cv)
+shCV :: SMTConfig -> String -> CV -> String
+shCV SMTConfig{printBase, crackNum, crackNumSurfaceVals} nm cv = cracked (sh printBase cv)
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS
@@ -642,7 +642,7 @@ shCV SMTConfig{printBase, crackNum} cv = cracked (sh printBase cv)
 
         cracked def
           | not crackNum = def
-          | True         = case CN.crackNum cv of
+          | True         = case CN.crackNum cv (nm `lookup` crackNumSurfaceVals) of
                              Nothing -> def
                              Just cs -> def ++ "\n" ++ cs
 
