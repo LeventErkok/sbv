@@ -52,6 +52,12 @@ install: tags
 docs:
 	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings | ghc ./buildUtils/simpHaddock.hs -e main
 
+# To upload docs to hackage, first run the below target (part of release), then run the next target..
+hackage-docs:
+	cabal new-haddock --haddock-for-hackage --enable-doc --haddock-option=--no-warnings | ghc ./buildUtils/simpHaddock.hs -e main
+	@echo "*** If all is well, then run:"
+	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
+
 ghci:
 	cabal new-repl --repl-options=-Wno-unused-packages
 
