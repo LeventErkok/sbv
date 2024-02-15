@@ -87,7 +87,7 @@ bench:
 
 testsuite: lintTest docTest test
 
--- To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
+# To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
 ifdef FAST
 	hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error" --cpp-simple
