@@ -1,9 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 10.3, 2024-01-05
+* Latest Hackage released version: 10.4, 2024-02-15
 
-### Version 10.3.5, Not yet released
+### Version 10.4, 2024-02-15
 
   * Before issuing a get-value, make sure there are no outstanding assert calls.
     See: https://github.com/LeventErkok/sbv/issues/682 for details.
