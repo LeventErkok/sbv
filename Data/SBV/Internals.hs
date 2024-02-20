@@ -61,6 +61,9 @@ module Data.SBV.Internals (
   , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
   , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
 
+  -- * Generalized floats
+  , svFloatingPointAsSWord
+
   -- * lambdas and axioms
   , lambda, lambdaStr, namedLambda, namedLambdaStr, constraint, constraintStr, Lambda(..), Constraint(..)
   ) where
@@ -74,7 +77,7 @@ import Data.SBV.Core.Sized      (SWord)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState, UICodeKind(..))
 
-import Data.SBV.Core.Floating   ( sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord)
+import Data.SBV.Core.Floating   (sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord, svFloatingPointAsSWord)
 
 import qualified Data.SBV.Core.Floating as CF (sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint)
 

@@ -28,6 +28,7 @@ module Data.SBV.Core.Floating (
        , blastSFloat, blastSDouble,  blastSFloatingPoint
        , sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord
        , sComparableSWord32AsSFloat, sComparableSWord64AsSDouble, sComparableSWordAsSFloatingPoint
+       , svFloatingPointAsSWord
        ) where
 
 import Data.Bits (testBit)

@@ -3,6 +3,9 @@
 
 * Latest Hackage released version: 10.4, 2024-02-15
 
+### Version 10.5, Not yet released
+
+  * Export svFloatingPointAsSWord through internals
 ### Version 10.4, 2024-02-15
 
   * Before issuing a get-value, make sure there are no outstanding assert calls.
