@@ -6,6 +6,10 @@
 ### Version 10.5, Not yet released
 
   * Export svFloatingPointAsSWord through internals
+
+  * crackNum: if verbose, alert the user if surface value of a NaN doesn't match its calculated value
+    due to the redundancy in NaN representations.
+
 ### Version 10.4, 2024-02-15
 
   * Before issuing a get-value, make sure there are no outstanding assert calls.

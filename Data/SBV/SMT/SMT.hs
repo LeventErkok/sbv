@@ -634,7 +634,7 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
 
 -- | Show a constant value, in the user-specified base
 shCV :: SMTConfig -> String -> CV -> String
-shCV SMTConfig{printBase, crackNum, crackNumSurfaceVals} nm cv = cracked (sh printBase cv)
+shCV SMTConfig{printBase, crackNum, verbose, crackNumSurfaceVals} nm cv = cracked (sh printBase cv)
   where sh 2  = binS
         sh 10 = show
         sh 16 = hexS
@@ -642,7 +642,7 @@ shCV SMTConfig{printBase, crackNum, crackNumSurfaceVals} nm cv = cracked (sh pri
 
         cracked def
           | not crackNum = def
-          | True         = case CN.crackNum cv (nm `lookup` crackNumSurfaceVals) of
+          | True         = case CN.crackNum cv verbose (nm `lookup` crackNumSurfaceVals) of
                              Nothing -> def
                              Just cs -> def ++ "\n" ++ cs
 

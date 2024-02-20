@@ -502,9 +502,9 @@ import Data.Char (isSpace, isPunctuation)
 
 -- | Show a value in detailed (cracked) form, if possible.
 -- This makes most sense with numbers, and especially floating-point types.
-crack :: SBV a -> String
-crack (SBV (SVal _ (Left cv))) | Just s <- CN.crackNum cv Nothing = s
-crack (SBV sv)                                                    = show sv
+crack :: Bool -> SBV a -> String
+crack verb (SBV (SVal _ (Left cv))) | Just s <- CN.crackNum cv verb Nothing = s
+crack _    (SBV sv)                                                         = show sv
 
 -- Haddock section documentation
 {- $progIntro

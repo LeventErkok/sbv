@@ -35,31 +35,31 @@ import Numeric
 -- | A class for cracking things deeper, if we know how.
 class CrackNum a where
   -- | Convert an item to possibly bit-level description, if possible.
-  crackNum :: a -> Maybe Integer -> Maybe String
+  crackNum :: a -> Bool -> Maybe Integer -> Maybe String
 
 -- | CVs are easy to crack
 instance CrackNum CV where
-  crackNum cv mbIV = case kindOf cv of
-                       -- Maybe one day we'll have a use for these, currently cracking them
-                       -- any further seems overkill
-                       KBool      {}  -> Nothing
-                       KUnbounded {}  -> Nothing
-                       KReal      {}  -> Nothing
-                       KUserSort  {}  -> Nothing
-                       KChar      {}  -> Nothing
-                       KString    {}  -> Nothing
-                       KList      {}  -> Nothing
-                       KSet       {}  -> Nothing
-                       KTuple     {}  -> Nothing
-                       KMaybe     {}  -> Nothing
-                       KEither    {}  -> Nothing
-                       KRational  {}  -> Nothing
+  crackNum cv verbose mbIV = case kindOf cv of
+                               -- Maybe one day we'll have a use for these, currently cracking them
+                               -- any further seems overkill
+                               KBool      {}  -> Nothing
+                               KUnbounded {}  -> Nothing
+                               KReal      {}  -> Nothing
+                               KUserSort  {}  -> Nothing
+                               KChar      {}  -> Nothing
+                               KString    {}  -> Nothing
+                               KList      {}  -> Nothing
+                               KSet       {}  -> Nothing
+                               KTuple     {}  -> Nothing
+                               KMaybe     {}  -> Nothing
+                               KEither    {}  -> Nothing
+                               KRational  {}  -> Nothing
 
-                       -- Actual crackables
-                       KFloat{}       -> Just $ let CFloat   f = cvVal cv in float mbIV f
-                       KDouble{}      -> Just $ let CDouble  d = cvVal cv in float mbIV d
-                       KFP{}          -> Just $ let CFP      f = cvVal cv in float mbIV f
-                       KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
+                               -- Actual crackables
+                               KFloat{}       -> Just $ let CFloat   f = cvVal cv in float verbose mbIV f
+                               KDouble{}      -> Just $ let CDouble  d = cvVal cv in float verbose mbIV d
+                               KFP{}          -> Just $ let CFP      f = cvVal cv in float verbose mbIV f
+                               KBounded sg sz -> Just $ let CInteger i = cvVal cv in int   sg sz i
 
 -- How far off the screen we want displayed? Somewhat experimentally found.
 tab :: String
@@ -229,8 +229,8 @@ instance HasFloatData FP where
 
 -- | Show a float in detail. mbSurface is the integer equivalent if this is a NaN; so we
 -- can represent it faithfully to the original given. Used by crackNum executable.
-float :: HasFloatData a => Maybe Integer -> a -> String
-float mbSurface f = intercalate "\n" $ ruler ++ legend : info
+float :: HasFloatData a => Bool -> Maybe Integer -> a -> String
+float verbose mbSurface f = intercalate "\n" $ ruler ++ legend : info
    where fd@FloatData{prec, eb, sb, bits = bitsAsStored, fpKind, fpVals} = getFloatData f
 
          nanKind = case fpKind of
@@ -240,9 +240,9 @@ float mbSurface f = intercalate "\n" $ ruler ++ legend : info
                      Subnormal -> False
                      Normal    -> False
 
-         (nanClassifier, bits)
-           | nanKind, Just i <- mbSurface = (extraClassifier i,  i)
-           | True                         = ("", bitsAsStored)
+         (nanClassifier, bits, nanChanged)
+           | nanKind, Just i <- mbSurface = (extraClassifier i,  i,            i /= bitsAsStored)
+           | True                         = ("",                 bitsAsStored, False)
 
          -- Is this surface representation a signaling NaN or a quiet nan?
          -- The test is that the tip bit of the significand is high: If so, quiet. If top bit is low, then signaling.
@@ -262,6 +262,9 @@ float mbSurface f = intercalate "\n" $ ruler ++ legend : info
          allBits :: [Bool]
          allBits = [bits `testBit` i | i <- reverse [0 .. eb + sb - 1]]
 
+         storedBits :: [Bool]
+         storedBits = [bitsAsStored `testBit` i | i <- reverse [0 .. eb + sb - 1]]
+
          flatHex = concatMap mkHex (split (split4 (eb + sb)) allBits)
          sign    = bits `testBit` (eb+sb-1)
 
@@ -269,12 +272,15 @@ float mbSurface f = intercalate "\n" $ ruler ++ legend : info
 
          esInfo = "Stored: " ++ show storedExponent ++ ", Bias: " ++ show bias
 
+         chunks bs = unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits bs]
+
          isSubNormal = case fpKind of
                          Subnormal -> True
                          _         -> False
 
-         info =   [ "   Binary layout: " ++ unwords [concatMap (\b -> if b then "1" else "0") is | is <- split splits allBits]
-                  , "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
+         info =   [ "   Binary layout: " ++ chunks allBits]
+               ++ [ " Calculated bits: " ++ chunks storedBits ++ " (Surface NaN value differs from calculated)" | verbose && nanChanged]
+               ++ [ "      Hex layout: " ++ unwords (split (split4 (length flatHex)) flatHex)
                   , "       Precision: " ++ prec
                   , "            Sign: " ++ if sign then "Negative" else "Positive"
                   ]
