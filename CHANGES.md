@@ -1,11 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://leventerkok.github.io/sbv/>
 
-* Latest Hackage released version: 10.4, 2024-02-15
+* Latest Hackage released version: 10.5, 2024-02-20
 
-### Version 10.5, Not yet released
+### Version 10.5, 2024-02-20
 
-  * Export svFloatingPointAsSWord through internals
+  * Export svFloatingPointAsSWord through Data.SBV.Internals
 
   * crackNum: if verbose, alert the user if surface value of a NaN doesn't match its calculated value
     due to the redundancy in NaN representations.
