@@ -6,15 +6,13 @@ Category    : Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation
 Synopsis    : SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description : Express properties about Haskell programs and automatically prove them using SMT
                (Satisfiability Modulo Theories) solvers.
-               .
-               For details, please see: <http://leventerkok.github.io/sbv/>
 
 Copyright          : Levent Erkok, 2010-2024
 License            : BSD-3-Clause
 License-file       : LICENSE
 Stability          : Experimental
 Author             : Levent Erkok
-Homepage           : http://leventerkok.github.io/sbv/
+Homepage           : http://github.com/LeventErkok/sbv
 Bug-reports        : http://github.com/LeventErkok/sbv/issues
 Maintainer         : Levent Erkok (erkokl@gmail.com)
 Build-Type         : Simple
