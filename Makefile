@@ -93,6 +93,16 @@ bench:
 
 testsuite: lintTest docTest test
 
+# Run this target, which updates the golds for those tests that rely on version updates
+# for SBV and Z3. Saves time before doing "make release"
+updateForVersionChange:
+	make test ACCEPT=1 TGT=nested1
+	make test ACCEPT=1 TGT=nested2
+	make test ACCEPT=1 TGT=nested3
+	make test ACCEPT=1 TGT=nested4
+	make test ACCEPT=1 TGT=allSat8
+	make test ACCEPT=1 TGT=query1
+
 # To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
 ifdef FAST
@@ -133,7 +143,7 @@ mkDistro:
 releaseNoBuild: testsuite testInterfaces mkDistro checkLinks
 	@echo "*** SBV is ready for release! -- no SBV build was done."
 
-fullRelease: veryclean checkExtensions install docs testsuite testInterfaces benchBuild mkDistro checkLinks
+fullRelease: veryclean checkExtensions install docs updateForVersionChange testsuite testInterfaces benchBuild mkDistro checkLinks
 	@echo "*** SBV is ready for release!"
 
 release:
