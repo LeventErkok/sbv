@@ -37,4 +37,4 @@ Data.SBV: Mismatched contexts detected.
 *** See https://github.com/LeventErkok/sbv/issues/71 for several examples.
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Core/Symbolic.hs:1937:48 in sbv-10.5.5-inplace:Data.SBV.Core.Symbolic
+  error, called at ./Data/SBV/Core/Symbolic.hs:1937:48 in sbv-10.6-inplace:Data.SBV.Core.Symbolic
