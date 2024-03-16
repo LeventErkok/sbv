@@ -1,15 +1,18 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
-* GitHub:  <http://leventerkok.github.io/sbv/>
+* GitHub:  <http://github.com/LeventErkok/sbv>
 
-* Latest Hackage released version: 10.5, 2024-02-20
+* Latest Hackage released version: 10.6, 2024-03-16
 
-### Version 10.5.5, Not yet released
+### Version 10.6, 2024-03-16
+
   * Added Data.SBV.Tools.BVOptimize module, which implements a custom optimizer for unsigned bit-vector
     values. See 'minBV' and 'maxBV' methods. These algorithms use the incremental solver instead of
     the optimizer engines, and they can be more performant in certain cases. (For instance, z3's
     optimization engine isn't incremental, which makes it perform poorly on certain BV-optimization
     problems.) These algorithms scan the bits from most to least significant bit, and individually
     set/unset them in an incremental fashion to optimize quickly.
+
+  * SBV web-page is no longer maintained. The info is put into the README.md instead.
 
 ### Version 10.5, 2024-02-20
 
