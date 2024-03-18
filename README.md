@@ -26,7 +26,7 @@ SBV also allows for an incremental mode: Users are given a handle to the SMT sol
 ## Overview
 
  - [Hackage](http://hackage.haskell.org/package/sbv)
- - [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md).
+ - [Release Notes](http://github.com/LeventErkok/sbv/tree/master/CHANGES.md)
    
 SBV library provides support for dealing with symbolic values in Haskell. It introduces the types:
 
