@@ -1,8 +1,6 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-* Latest Hackage released version: 10.6, 2024-03-16
-
 ### Version 10.6, 2024-03-16
 
   * Added Data.SBV.Tools.BVOptimize module, which implements a custom optimizer for unsigned bit-vector
