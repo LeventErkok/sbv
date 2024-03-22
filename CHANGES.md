@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version next
+
+  * Fix SMTDefinable instances for functions of arity 8-12. Thanks to Nick Lewchenko for the patch.
+    
 ### Version 10.6, 2024-03-16
 
   * Added Data.SBV.Tools.BVOptimize module, which implements a custom optimizer for unsigned bit-vector
