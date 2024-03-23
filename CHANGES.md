@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version next
+### Version 10.7, 2024-03-23
 
   * Fix SMTDefinable instances for functions of arity 8-12. Thanks to Nick Lewchenko for the patch.
     
@@ -2380,7 +2380,6 @@ uninterpreted.
     to the chosen solver as determined by the imported module. (The latter is
     useful for modifying options to the SMT solver in an solver-agnostic way.)
   * Various improvements to Z3 model parsing routines.
-  * New web page for SBV: http://leventerkok.github.io/sbv/ is now online.
 
 ### Version 2.8, 2012-11-29
 
