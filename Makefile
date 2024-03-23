@@ -96,12 +96,12 @@ testsuite: lintTest docTest test
 # Run this target, which updates the golds for those tests that rely on version updates
 # for SBV and Z3. Saves time before doing "make release"
 updateForVersionChange:
-	make test ACCEPT=1 TGT=nested1
-	make test ACCEPT=1 TGT=nested2
-	make test ACCEPT=1 TGT=nested3
-	make test ACCEPT=1 TGT=nested4
-	make test ACCEPT=1 TGT=allSat8
-	make test ACCEPT=1 TGT=query1
+	@cabal new-run SBVTest -- -p nested1 --accept --quiet
+	@cabal new-run SBVTest -- -p nested2 --accept --quiet
+	@cabal new-run SBVTest -- -p nested3 --accept --quiet
+	@cabal new-run SBVTest -- -p nested4 --accept --quiet
+	@cabal new-run SBVTest -- -p allSat8 --accept --quiet
+	@cabal new-run SBVTest -- -p query1  --accept --quiet
 
 # To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
