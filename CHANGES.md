@@ -1,6 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version next
+
+  * Increase the number of digits used in printing floats in decimal base, which leads to
+    better output in most cases.
+
 ### Version 10.7, 2024-03-23
 
   * Fix SMTDefinable instances for functions of arity 8-12. Thanks to Nick Lewchenko for the patch.
