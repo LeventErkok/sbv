@@ -113,7 +113,7 @@ bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
   | True          = trimZeros $ BF.bfToString b opts' a
-  where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
+  where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral (2 * sb)))
         opts' = case (withPrefix, forceExponent) of
                   (False, False) ->                                 opts
                   (False, True ) ->                 BF.forceExp  <> opts
