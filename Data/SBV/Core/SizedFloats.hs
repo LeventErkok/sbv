@@ -50,6 +50,8 @@ import qualified LibBF as BF
 
 import qualified Data.Generics as G
 
+import Data.SBV.Core.AlgReals
+
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
 --   An IEEE SP is @FloatingPoint  8 24@
@@ -112,8 +114,22 @@ bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsNaN  a = "NaN"
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
-  | True          = trimZeros $ BF.bfToString b opts' a
-  where opts = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral (2 * sb)))
+
+  -- Printing in base 10 is tricky. To avoid bizarre truncated
+  -- output, convert the internal representation to an algreal
+  -- and print it fully
+  | b == 10
+  , BF.BFRep _ (BF.Num x y) <- BF.bfToRep a
+  = let sign = if BF.bfIsPos a then 1 else -1
+        num  = sign * x  :: Integer
+        negP = y < 0
+        expt = 2 ^ abs y :: Integer
+    in if negP then show (fromRational (num % expt) :: AlgReal)
+               else show (num * expt :: Integer)
+
+  | True
+  = trimZeros $ BF.bfToString b opts' a
+  where opts  = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
         opts' = case (withPrefix, forceExponent) of
                   (False, False) ->                                 opts
                   (False, True ) ->                 BF.forceExp  <> opts
