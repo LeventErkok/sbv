@@ -114,7 +114,6 @@ bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsNaN  a = "NaN"
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
-
   -- Printing in base 10 is tricky. To avoid bizarre truncated
   -- output, convert the internal representation to an algreal
   -- and print it fully
