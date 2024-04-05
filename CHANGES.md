@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version next
+### Version 10.8, 2024-04-05
 
   * Increase the number of digits used in printing floats in decimal base, which leads to
     better output in most cases.
