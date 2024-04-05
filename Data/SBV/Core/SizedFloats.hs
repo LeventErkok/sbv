@@ -33,7 +33,7 @@ module Data.SBV.Core.SizedFloats (
        , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
        ) where
 
-import Data.Char (intToDigit)
+import Data.Char (intToDigit, toUpper)
 import Data.List (isSuffixOf)
 import Data.Proxy
 import GHC.TypeLits
@@ -49,8 +49,6 @@ import LibBF (BigFloat, BFOpts, RoundMode, Status)
 import qualified LibBF as BF
 
 import qualified Data.Generics as G
-
-import Data.SBV.Core.AlgReals
 
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
@@ -114,26 +112,21 @@ bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsNaN  a = "NaN"
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
-  -- Printing in base 10 is tricky. To avoid bizarre truncated
-  -- output, convert the internal representation to an algreal
-  -- and print it fully
-  | b == 10
-  , BF.BFRep _ (BF.Num x y) <- BF.bfToRep a
-  = let sign = if BF.bfIsPos a then 1 else -1
-        num  = sign * x  :: Integer
-        negP = y < 0
-        expt = 2 ^ abs y :: Integer
-    in if negP then show (fromRational (num % expt) :: AlgReal)
-               else show (num * expt :: Integer)
-
   | True
-  = trimZeros $ BF.bfToString b opts' a
-  where opts  = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral sb))
-        opts' = case (withPrefix, forceExponent) of
-                  (False, False) ->                                 opts
-                  (False, True ) ->                 BF.forceExp  <> opts
-                  (True,  False) -> BF.addPrefix                 <> opts
-                  (True,  True ) -> BF.addPrefix <> BF.forceExp  <> opts
+  = cap $ trimZeros $ BF.bfToString b opts' a
+  where opts  = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral prec))
+
+        -- For base 10, use a larger precision. It's really difficult to "pick"
+        -- the correct value here; but 2*sb seems to work ok. Note that even picking
+        -- sb is fine: The output isn't incorrect. It's just confusing.
+        prec | b == 10 = 2*sb
+             | True    = sb
+
+        opts'
+          | withPrefix && forceExponent = BF.addPrefix <> BF.forceExp  <> opts
+          | withPrefix                  = BF.addPrefix                 <> opts
+          | forceExponent               =                 BF.forceExp  <> opts
+          | True                        =                                 opts
 
         -- In base 10, exponent starts with 'e'. Otherwise (2, 8, 16) it starts with 'p'
         expChar = if b == 10 then 'e' else 'p'
@@ -145,6 +138,18 @@ bfToString b withPrefix forceExponent (FP _ sb a)
                                                                   res         -> res
                                            in pre' ++ post
           | True         = s
+
+        cap xs
+          | withPrefix = take 2 xs ++ capitalize (drop 2 xs)
+          | True       = capitalize xs
+
+        -- capitalize till we see the expChar
+        capitalize ""     = ""
+        capitalize (x:xs)
+         | ux == ue = x:xs
+         | True     = ux : capitalize xs
+         where ux = toUpper x
+               ue = toUpper expChar
 
 -- | Default options for BF options.
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
@@ -303,10 +308,9 @@ instance Real FP where
 
 -- | Real-frac instance for big-floats. Beware, not that well tested!
 instance RealFrac FP where
-  properFraction (FP eb sb r) = case BF.bfRoundInt BF.ToNegInf r of
-                                  (r', BF.Ok) | BF.bfSign r == BF.bfSign r' -> (getInt r', FP eb sb r - FP eb sb r')
-                                  x -> error $ "RealFrac.FP.properFraction: Failed to convert: " ++ show (r, x)
-       where getInt x = case BF.bfToRep x of
+  properFraction (FP eb sb r) = (getInt r', FP eb sb r - FP eb sb r')
+       where (r', _)  = BF.bfRoundInt BF.ToNegInf r
+             getInt x = case BF.bfToRep x of
                           BF.BFNaN     -> error $ "Data.SBV.FloatingPoint.properFraction: Failed to convert: " ++ show (r, x)
                           BF.BFRep s n -> case n of
                                            BF.Zero    -> 0
