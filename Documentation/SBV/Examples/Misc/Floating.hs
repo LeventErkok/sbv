@@ -163,10 +163,12 @@ multInverse = prove $ do a <- sFloat "a"
 -- Unfortunately Haskell floats do not allow computation with arbitrary rounding modes, but SBV's
 -- 'SFloatingPoint' type does. We have:
 --
--- >>> fpAdd sRoundTowardZero 1.7499695 1.2539366 :: SFPSingle
--- 3.00390601 :: SFloatingPoint 8 24
--- >>> fpAdd sRoundNearestTiesToEven 1.7499695 1.2539366 :: SFPSingle
--- 3.00390625 :: SFloatingPoint 8 24
+-- >>> sat $ \x -> x .== (fpAdd sRoundTowardZero 1.7499695 1.2539366 :: SFloat)
+-- Satisfiable. Model:
+--   s0 = 3.003906 :: Float
+-- >>> sat $ \x -> x .== (fpAdd sRoundNearestTiesToEven  1.7499695 1.2539366 :: SFloat)
+-- Satisfiable. Model:
+--   s0 = 3.0039063 :: Float
 --
 -- We can see why these two results are indeed different: The 'RoundTowardZero'
 -- (which rounds towards the origin) produces a smaller result, closer to 0. Indeed, if we treat these numbers
@@ -198,24 +200,23 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
 --
 -- >>> fp54Bounds
 -- Objective "max": Optimal model:
---   x   = 61400 :: FloatingPoint 5 4
+--   x   = 61440 :: FloatingPoint 5 4
 --   max =   503 :: WordN 9
 --   min =   503 :: WordN 9
 -- Objective "min": Optimal model:
---   x   = 0.00000763 :: FloatingPoint 5 4
---   max =        257 :: WordN 9
---   min =        257 :: WordN 9
+--   x   = 0.000007629 :: FloatingPoint 5 4
+--   max =         257 :: WordN 9
+--   min =         257 :: WordN 9
 --
--- The careful reader will notice that the numbers @61400@ and @0.00000763@ are quite suspicious, but the metric
--- space equivalents are correct. The reason for this is due to the sparcity of floats. The "computed" value of
--- the maximum in this bound is actually @61440@, however in @FloatingPoint 5 4@ representation all numbers
--- between @57344@ and @61440@ collapse to the same bit-pattern, and the pretty-printer picks a string
--- representation in decimal that falls within range that it considers is the "simplest." (Printing
--- floats precisely is a thorny subject!) Likewise, the minimum value we're looking for is actually
--- 2^-17, but any number between 2^-16 and 2^-17 will map to this number. It turns out that 0.00000763
--- in decimal is one such value. Moral of the story is that when reading floating-point numbers in
+-- An important note is in order. When printing floats in decimal, one can get correct yet surprising results.
+-- There's a large body of publications in how to render floats in decimal, or in bases that are not powers of
+-- two in general. So, when looking at such values in decimal, keep in mind that what you see might be
+-- a representative value: That is, it preserves the value when translated back to the format. For instance,
+-- the more precise answer for the min value would be 2^-17, which is 0.00000762939453125. But we see
+-- it truncated here. In fact, any number between 2^-16 and 2^-17 would be correct as they all map to the same
+-- underlying representation in this format. Moral of the story is that when reading floating-point numbers in
 -- decimal notation one should be very careful about the printed representation and the numeric value; while
--- they will match in vsalue (if there are no bugs!), they can print quite differently! (Also keep in
+-- they will match in value (if there are no bugs!), they can print quite differently! (Also keep in
 -- mind the rounding modes that impact how the conversion is done.)
 fp54Bounds :: IO OptimizeResult
 fp54Bounds = optimize Independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
