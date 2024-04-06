@@ -12,7 +12,7 @@ Optimal model:
           Binary: 0b1.11111111111111111111111p+127
            Octal: 0o3.77777774p+126
          Decimal: 3.4028235e38
-             Hex: 0xF.FFFFFp+124
+             Hex: 0xf.fffffp+124
   x              = 1.7014117e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
@@ -26,7 +26,7 @@ Optimal model:
           Binary: 0b1.11111111111111111111111p+126
            Octal: 0o1.77777776p+126
          Decimal: 1.7014117e38
-             Hex: 0x7.FFFFF8p+124
+             Hex: 0x7.fffff8p+124
   y              = 1.7014117e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
@@ -40,7 +40,7 @@ Optimal model:
           Binary: 0b1.11111111111111111111111p+126
            Octal: 0o1.77777776p+126
          Decimal: 1.7014117e38
-             Hex: 0x7.FFFFF8p+124
+             Hex: 0x7.fffff8p+124
   metric-max-x+y =   4286578687 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210

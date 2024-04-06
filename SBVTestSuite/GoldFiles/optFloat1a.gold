@@ -12,7 +12,7 @@ Optimal model:
           Binary: -0b1.11111111111111111111111p+127
            Octal: -0o3.77777774p+126
          Decimal: -3.4028235e38
-             Hex: -0xF.FFFFFp+124
+             Hex: -0xf.fffffp+124
   min-x =       8388608 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
