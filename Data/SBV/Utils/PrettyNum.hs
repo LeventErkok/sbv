@@ -22,7 +22,7 @@ module Data.SBV.Utils.PrettyNum (
       ) where
 
 import Data.Bits  ((.&.), countTrailingZeros)
-import Data.Char  (intToDigit, ord, chr, toUpper)
+import Data.Char  (intToDigit, ord, chr)
 import Data.Int   (Int8, Int16, Int32, Int64)
 import Data.List  (isPrefixOf)
 import Data.Maybe (fromJust, fromMaybe, listToMaybe)
@@ -552,10 +552,9 @@ showFloatAtBase base input
          | all (== 0) digits = ""
          | True              = "." ++ concatMap toDigit digits
 
-        toDigit v = map toUpper d
-           where d | v <= 15 = [intToDigit v]
-                   | v <  36 = [chr (ord 'a' + v - 10)]
-                   | True    = '<' : show v ++ ">"
+        toDigit v | v <= 15 = [intToDigit v]
+                  | v <  36 = [chr (ord 'a' + v - 10)]
+                  | True    = '<' : show v ++ ">"
 
 -- | When we show a negative number in SMTLib, we must properly parenthesize.
 showNegativeNumber :: (Show a, Num a, Ord a) => a -> String

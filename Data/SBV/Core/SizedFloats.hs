@@ -33,7 +33,7 @@ module Data.SBV.Core.SizedFloats (
        , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
        ) where
 
-import Data.Char (intToDigit, toUpper)
+import Data.Char (intToDigit)
 import Data.List (isSuffixOf)
 import Data.Proxy
 import GHC.TypeLits
@@ -113,7 +113,7 @@ bfToString b withPrefix forceExponent (FP _ sb a)
   | BF.bfIsInf  a = if BF.bfIsPos a then "Infinity" else "-Infinity"
   | BF.bfIsZero a = if BF.bfIsPos a then "0.0"      else "-0.0"
   | True
-  = cap $ trimZeros $ BF.bfToString b opts' a
+  = trimZeros $ BF.bfToString b opts' a
   where opts  = BF.showRnd BF.NearEven <> BF.showFree (Just (fromIntegral prec))
 
         -- For base 10, use a larger precision. It's really difficult to "pick"
@@ -138,18 +138,6 @@ bfToString b withPrefix forceExponent (FP _ sb a)
                                                                   res         -> res
                                            in pre' ++ post
           | True         = s
-
-        cap xs
-          | withPrefix = take 2 xs ++ capitalize (drop 2 xs)
-          | True       = capitalize xs
-
-        -- capitalize till we see the expChar
-        capitalize ""     = ""
-        capitalize (x:xs)
-         | ux == ue = x:xs
-         | True     = ux : capitalize xs
-         where ux = toUpper x
-               ue = toUpper expChar
 
 -- | Default options for BF options.
 mkBFOpts :: Integral a => a -> a -> RoundMode -> BFOpts
