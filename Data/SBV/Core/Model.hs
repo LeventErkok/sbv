@@ -67,6 +67,8 @@ import Data.Char   (toLower, isDigit)
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type)
 import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
+import Data.List.NonEmpty (NonEmpty(..))
+import qualified Data.List.NonEmpty as NE
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
@@ -958,6 +960,13 @@ instance OrdSymbolic a => OrdSymbolic [a] where
   []     .< _      = sTrue
   _      .< []     = sFalse
   (x:xs) .< (y:ys) = x .< y .|| (x .== y .&& xs .< ys)
+
+-- NonEmpty
+instance (EqSymbolic a) => EqSymbolic (NonEmpty a) where
+    (x :| xs) .== (y :| ys) = x .== y .&& xs .== ys
+
+instance (OrdSymbolic a) => OrdSymbolic (NonEmpty a) where
+    (x :| xs) .< (y :| ys) = x .< y .|| xs .< ys
 
 -- Maybe
 instance EqSymbolic a => EqSymbolic (Maybe a) where
@@ -2037,6 +2046,15 @@ concreteMerge t st eq x y
 instance Mergeable a => Mergeable [a] where
   symbolicMerge f t xs ys
     | lxs == lys = zipWith (symbolicMerge f t) xs ys
+    | True       = cannotMerge "lists"
+                               ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys ++ ". Must have the same length.")
+                               "Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists."
+    where (lxs, lys) = (length xs, length ys)
+
+-- NonEmpty
+instance Mergeable a => Mergeable (NonEmpty a) where
+  symbolicMerge f t xs ys
+    | lxs == lys = NE.zipWith (symbolicMerge f t) xs ys
     | True       = cannotMerge "lists"
                                ("Branches produce different sizes: " ++ show lxs ++ " vs " ++ show lys ++ ". Must have the same length.")
                                "Use the 'SList' type (and Data.SBV.List routines) to model fully symbolic lists."
