@@ -38,6 +38,7 @@ module Data.SBV.Control.Utils (
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
 
+import Control.Exception (finally)
 import Data.List  (sortBy, sortOn, elemIndex, partition, groupBy, tails, intercalate, nub, sort, isPrefixOf, isSuffixOf)
 
 import Data.Char      (isPunctuation, isSpace, isDigit)
@@ -1898,7 +1899,12 @@ executeQuery queryContext (QueryT userQuery) = do
 
                   liftIO $ writeIORef (runMode st) $ SMTMode qc IRun isSAT cfg
 
-                  lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
+                  lift $ join $ liftIO $
+                    finally (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery) $ do
+                      qs <- readIORef $ rQueryState st
+                      case qs of
+                        Nothing                         -> return ()
+                        Just QueryState{queryTerminate} -> queryTerminate
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with
