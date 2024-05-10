@@ -1,6 +1,9 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 10.10, 2024-05-10
+
+  * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type
 ### Version 10.9, 2024-04-05
 
   * Fix printing of floats to be more consistent, using lowercase letters
