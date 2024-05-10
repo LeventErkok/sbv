@@ -113,7 +113,7 @@
 -- all satisfying assignments.
 --
 -- The sbv library uses third-party SMT solvers via the standard SMT-Lib interface:
--- <http://smtlib.cs.uiowa.edu/>
+-- <https://smt-lib.org>
 --
 -- The SBV library is designed to work with any SMT-Lib compliant SMT-solver.
 -- Currently, we support the following SMT-Solvers out-of-the box:
@@ -541,7 +541,7 @@ The SBV library provides a "push-button" verification system via automated SMT s
 design goal is to let SMT solvers be used without any knowledge of how SMT solvers work
 or how different logics operate. The details are hidden behind the SBV framework, providing
 Haskell programmers with a clean API that is unencumbered by the details of individual solvers.
-To that end, we use the SMT-Lib standard (<http://smtlib.cs.uiowa.edu/>)
+To that end, we use the SMT-Lib standard (<https://smt-lib.org>)
 to communicate with arbitrary SMT solvers.
 -}
 
@@ -788,7 +788,7 @@ represent transcendentals.) Some irrational numbers are algebraic (such as @sqrt
 others are not (such as pi and e).
 
 SBV can deal with real numbers just fine, since the theory of reals is decidable. (See
-<http://smtlib.cs.uiowa.edu/theories-Reals.shtml>.) In addition, by leveraging backend
+<https://smt-lib.org/theories-Reals.shtml>.) In addition, by leveraging backend
 solver capabilities, SBV can also represent and solve non-linear equations involving real-variables.
 (For instance, the Z3 SMT solver, supports polynomial constraints on reals starting with v4.0.)
 -}
