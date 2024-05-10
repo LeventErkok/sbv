@@ -5,8 +5,6 @@
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type
 
-  * Fixes for better handling of subprocesses. Thanks to Sirui Lu.
-
 ### Version 10.9, 2024-04-05
 
   * Fix printing of floats to be more consistent, using lowercase letters
