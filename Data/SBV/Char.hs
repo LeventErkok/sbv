@@ -14,7 +14,7 @@
 -- and strings.
 --
 -- 'SChar' type only covers all unicode characters, following the specification
--- in <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>.
+-- in <https://smt-lib.org/theories-UnicodeStrings.shtml>.
 -- However, some of the recognizers only support the Latin1 subset, suffixed
 -- by @L1@. The reason for this is that there is no performant way of performing
 -- these functions for the entire unicode set. As SMTLib's capabilities increase,

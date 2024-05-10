@@ -1299,7 +1299,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                             in c1 ++ c2
 
 -----------------------------------------------------------------------------------------------
--- Casts supported by SMTLib. (From: <http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml>)
+-- Casts supported by SMTLib. (From: <https://smt-lib.org/theories-FloatingPoint.shtml>)
 --   ; from another floating point sort
 --   ((_ to_fp eb sb) RoundingMode (_ FloatingPoint mb nb) (_ FloatingPoint eb sb))
 --

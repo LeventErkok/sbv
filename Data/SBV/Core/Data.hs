@@ -174,7 +174,7 @@ type SFPDouble = SBV FPDouble
 type SFPQuad = SBV FPQuad
 
 -- | A symbolic character. Note that this is the full unicode character set.
--- see: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
+-- see: <https://smt-lib.org/theories-UnicodeStrings.shtml>
 -- for details.
 type SChar = SBV Char
 
@@ -717,7 +717,7 @@ class SymArray array where
   -- newArray, we must provide a dummy implementation for newArrayInState:
   newArrayInState = error "undefined: newArrayInState"
 
--- | Arrays implemented in terms of SMT-arrays: <http://smtlib.cs.uiowa.edu/theories-ArraysEx.shtml>
+-- | Arrays implemented in terms of SMT-arrays: <https://smt-lib.org/theories-ArraysEx.shtml>
 --
 --   * Maps directly to SMT-lib arrays
 --

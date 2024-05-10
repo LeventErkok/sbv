@@ -1199,7 +1199,7 @@
     due to the current limitations in SMT-solvers. However, there
     is a pending SMTLib proposal to support unicode, and SBV will track
     these changes to have full unicode support: For further details
-    see: http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml
+    see: https://smt-lib.org/theories-UnicodeStrings.shtml
 
     The 'SString' type is the type of symbolic strings, consisting
     of characters from the Latin-1 character set currently, just
@@ -2120,7 +2120,7 @@
   * Tracking changes in the SMT-Lib floating-point theory. If you are
     using symbolic floating-point types (i.e., SFloat and SDouble), then
     you should upgrade to this version and also get a very latest (unstable)
-    Z3 release. See http://smtlib.cs.uiowa.edu/theories-FloatingPoint.shtml
+    Z3 release. See https://smt-lib.org/theories-FloatingPoint.shtml
     for details.
 
   * Introduce a new class, 'RoundingFloat', which supports floating-point

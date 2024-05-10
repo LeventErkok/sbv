@@ -801,7 +801,7 @@ by Rummer and Wahl: <http://www.philipp.ruemmer.org/publications/smt-fpa.pdf>.
 
 {- $strings
 Support for characters, strings, and regular expressions (initial version contributed by Joel Burget)
-adds support for QF_S logic, described here: <http://smtlib.cs.uiowa.edu/theories-UnicodeStrings.shtml>
+adds support for QF_S logic, described here: <https://smt-lib.org/theories-UnicodeStrings.shtml>
 
 See "Data.SBV.Char", "Data.SBV.String", "Data.SBV.RegExp" for related functions.
 -}
