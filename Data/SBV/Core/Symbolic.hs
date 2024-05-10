@@ -1967,13 +1967,6 @@ runSymbolicInState st (SymbolicT c) = do
                  = contextMismatchError (sbvContext st) ctx Nothing Nothing
 
    mapM_ check $ nub $ G.universeBi res
-
-   -- Clean-up after ourselves
-   qs <- liftIO $ readIORef $ rQueryState st
-   case qs of
-     Nothing                         -> return ()
-     Just QueryState{queryTerminate} -> liftIO queryTerminate
-
    return (r, res)
 
 -- | Grab the program from a running symbolic simulation state.
