@@ -24,6 +24,8 @@
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
+*** Solver   : Z3
+*** Exit code: ExitFailure (-15)
 
 
 
@@ -31,4 +33,4 @@
 *** Use "optimize"/"optimizeWith" to calculate optimal satisfaction!
 
 CallStack (from HasCallStack):
-
+  error, called at ./Data/SBV/Provers/Prover.hs:608:33 in sbv-10.10-inplace:Data.SBV.Provers.Prover

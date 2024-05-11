@@ -38,6 +38,8 @@ Looking for solution 1
 [RECV] sat
 [SEND] (get-value (f))
 [RECV] ((f (lambda ((x!1 Int)) (+ 1 x!1))))
+*** Solver   : Z3
+*** Exit code: ExitFailure (-15)
 
 EXCEPTION CAUGHT:
 

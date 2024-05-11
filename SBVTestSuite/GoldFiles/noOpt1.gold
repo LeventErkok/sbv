@@ -22,6 +22,8 @@
 [GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
+*** Solver   : Z3
+*** Exit code: ExitFailure (-15)
 
 
 
@@ -29,4 +31,4 @@
 *** Use "sat" for plain satisfaction
 
 CallStack (from HasCallStack):
-
+  error, called at ./Data/SBV/Provers/Prover.hs:261:27 in sbv-10.10-inplace:Data.SBV.Provers.Prover
