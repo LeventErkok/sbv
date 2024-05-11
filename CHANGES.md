@@ -1,9 +1,11 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 10.10, Not yet released
+### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type
+
+  * Better handling of spawned processes, avoiding zombies. Thanks to Sirui Lu for the patch.
 
 ### Version 10.9, 2024-04-05
 
