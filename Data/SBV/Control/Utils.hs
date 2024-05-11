@@ -1905,8 +1905,8 @@ executeQuery queryContext (QueryT userQuery) = do
                            Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
 
                   lift $ join $ liftIO $ C.mask $ \restore -> do
-                    r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery) `C.catch` \e ->
-                      terminateSolver (Just e) >> C.throwIO (e :: C.SomeException)
+                    r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery)
+                          `C.catch` \e -> terminateSolver (Just e) >> C.throwIO (e :: C.SomeException)
                     terminateSolver Nothing
                     return r
 

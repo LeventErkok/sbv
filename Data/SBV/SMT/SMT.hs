@@ -875,23 +875,23 @@ runSolver cfg ctx execPath opts pgm continuation
                            recordEndTime cfg ctx
 
                            case (ex, maybeForwardedException) of
-                             (_, Just forwardedException) -> C.throwIO forwardedException
-                             (ExitSuccess, _) -> return ()
-                             _           -> if ignoreExitCode cfg
-                                               then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
-                                               else C.throwIO SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
-                                                                           , sbvExceptionSent        = Nothing
-                                                                           , sbvExceptionExpected    = Nothing
-                                                                           , sbvExceptionReceived    = Nothing
-                                                                           , sbvExceptionStdOut      = Just out
-                                                                           , sbvExceptionStdErr      = Just err
-                                                                           , sbvExceptionExitCode    = Just ex
-                                                                           , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
-                                                                           , sbvExceptionReason      = Nothing
-                                                                           , sbvExceptionHint        = if not (verbose cfg)
-                                                                                                       then Just ["Run with 'verbose=True' for further information"]
-                                                                                                       else Nothing
-                                                                           }
+                             (_,           Just forwardedException) -> C.throwIO forwardedException
+                             (ExitSuccess, _)                       -> return ()
+                             _                                      -> if ignoreExitCode cfg
+                                                                          then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
+                                                                          else C.throwIO SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
+                                                                                                      , sbvExceptionSent        = Nothing
+                                                                                                      , sbvExceptionExpected    = Nothing
+                                                                                                      , sbvExceptionReceived    = Nothing
+                                                                                                      , sbvExceptionStdOut      = Just out
+                                                                                                      , sbvExceptionStdErr      = Just err
+                                                                                                      , sbvExceptionExitCode    = Just ex
+                                                                                                      , sbvExceptionConfig      = cfg { solver = (solver cfg) { executable = execPath } }
+                                                                                                      , sbvExceptionReason      = Nothing
+                                                                                                      , sbvExceptionHint        = if not (verbose cfg)
+                                                                                                                                  then Just ["Run with 'verbose=True' for further information"]
+                                                                                                                                  else Nothing
+                                                                                                      }
 
                 return (send, ask, getResponseFromSolver, terminateSolver, cleanUp, pid)
 
