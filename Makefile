@@ -102,6 +102,8 @@ updateForVersionChange:
 	@cabal new-run SBVTest -- -p nested4 --accept --quiet
 	@cabal new-run SBVTest -- -p allSat8 --accept --quiet
 	@cabal new-run SBVTest -- -p query1  --accept --quiet
+	@cabal new-run SBVTest -- -p noOpt1  --accept --quiet
+	@cabal new-run SBVTest -- -p noOpt2  --accept --quiet
 
 # To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
