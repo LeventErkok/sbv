@@ -32,7 +32,7 @@ class MonadIO m => ExtractIO m where
 
 -- | Trivial IO extraction for 'IO'.
 instance ExtractIO IO where
-    extractIO = pure
+    extractIO = fmap pure
 
 -- | IO extraction for 'MaybeT'.
 instance ExtractIO m => ExtractIO (MaybeT m) where

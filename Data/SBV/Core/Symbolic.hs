@@ -89,6 +89,7 @@ import GHC.Stack
 import GHC.Stack.Types
 import GHC.Generics (Generic)
 
+import qualified Control.Exception as C
 import qualified Control.Monad.State.Lazy    as LS
 import qualified Control.Monad.State.Strict  as SS
 import qualified Control.Monad.Writer.Lazy   as LW
@@ -778,7 +779,7 @@ data QueryState = QueryState { queryAsk                 :: Maybe Int -> String -
                              , querySend                :: Maybe Int -> String -> IO ()
                              , queryRetrieveResponse    :: Maybe Int -> IO String
                              , queryConfig              :: SMTConfig
-                             , queryTerminate           :: IO ()
+                             , queryTerminate           :: Maybe C.SomeException -> IO ()
                              , queryTimeOutValue        :: Maybe Int
                              , queryAssertionStackDepth :: Int
                              }
@@ -1967,12 +1968,6 @@ runSymbolicInState st (SymbolicT c) = do
                  = contextMismatchError (sbvContext st) ctx Nothing Nothing
 
    mapM_ check $ nub $ G.universeBi res
-
-   -- Clean-up after ourselves
-   qs <- liftIO $ readIORef $ rQueryState st
-   case qs of
-     Nothing                         -> return ()
-     Just QueryState{queryTerminate} -> liftIO queryTerminate
 
    return (r, res)
 

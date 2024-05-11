@@ -1898,7 +1898,17 @@ executeQuery queryContext (QueryT userQuery) = do
 
                   liftIO $ writeIORef (runMode st) $ SMTMode qc IRun isSAT cfg
 
-                  lift $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery
+                  let terminateSolver maybeForwardedException = do
+                         qs <- readIORef $ rQueryState st
+                         case qs of
+                           Nothing                         -> return ()
+                           Just QueryState{queryTerminate} -> queryTerminate maybeForwardedException
+
+                  lift $ join $ liftIO $ C.mask $ \restore -> do
+                    r <- restore (extractIO $ join $ liftIO $ backend cfg' st (show pgm) $ extractIO . runReaderT userQuery) `C.catch` \e ->
+                      terminateSolver (Just e) >> C.throwIO (e :: C.SomeException)
+                    terminateSolver Nothing
+                    return r
 
         -- Already in a query, in theory we can just continue, but that causes use-case issues
         -- so we reject it. TODO: Review if we should actually support this. The issue arises with
