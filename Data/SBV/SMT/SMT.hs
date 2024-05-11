@@ -862,7 +862,7 @@ runSolver cfg ctx execPath opts pgm continuation
                                          ex <- waitForProcess pid `C.catch` (\(e :: C.SomeException) -> handleAsync e (return (ExitFailure (-999))))
                                          return (out, err, ex)
 
-                    cleanUp
+                    cleanUp maybeForwardedException
                       = do (out, err, ex) <- terminateSolver
 
                            msg $   [ "Solver   : " ++ nm
@@ -874,8 +874,9 @@ runSolver cfg ctx execPath opts pgm continuation
                            finalizeTranscript (transcript cfg) ex
                            recordEndTime cfg ctx
 
-                           case ex of
-                             ExitSuccess -> return ()
+                           case (ex, maybeForwardedException) of
+                             (_, Just forwardedException) -> C.throwIO forwardedException
+                             (ExitSuccess, _) -> return ()
                              _           -> if ignoreExitCode cfg
                                                then msg ["Ignoring non-zero exit code of " ++ show ex ++ " per user request!"]
                                                else C.throwIO SBVException { sbvExceptionDescription = "Failed to complete the call to " ++ nm
