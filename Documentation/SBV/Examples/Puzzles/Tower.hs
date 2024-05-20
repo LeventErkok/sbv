@@ -106,8 +106,6 @@ tower (top, left, bot, right, grid) = do
       constrain $ reqL .== visible elts
       constrain $ reqR .== visible (reverse elts)
 
-  pure ()
-
 -------------------------------------------------------------------
 -- * Example run
 -------------------------------------------------------------------
