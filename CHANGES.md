@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Not yet released
+
+  * Add Documentation.SBV.Examples.Puzzles.Tower module, solving the visible towers puzzle.
+
 ### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type
