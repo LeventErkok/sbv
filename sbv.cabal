@@ -97,7 +97,7 @@ Library
                   , text
                   , directory
                   , time
-                  , libBF            >= 0.6.7
+                  , libBF            >= 0.6.8
                   , process
                   , syb
                   , uniplate
