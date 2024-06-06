@@ -30,7 +30,7 @@ module Data.SBV.Core.SizedFloats (
         , fpFromInteger, fpFromRational, fpFromFloat, fpFromDouble, fpEncodeFloat
 
         -- * Internal operations
-       , fprCompareObject, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
+       , arbFPIsEqualObjectH, arbFPCompareObjectH, fprToSMTLib2, mkBFOpts, bfToString, bfRemoveRedundantExp
        ) where
 
 import Data.Char (intToDigit)
@@ -203,13 +203,35 @@ fprToSMTLib2 (FP eb sb r)
        mkB sz val = "#b" ++ pad sz (showIntAtBase 2 intToDigit val "")
        pad l str = replicate (l - length str) '0' ++ str
 
--- | Structural comparison only, for internal map indexes
-fprCompareObject :: FP -> FP -> Ordering
-fprCompareObject (FP eb sb a) (FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
-                                                 LT -> LT
-                                                 GT -> GT
-                                                 EQ -> a `BF.bfCompare` b
+-- | Check that two arbitrary floats are the exact same values, i.e., +0/-0 does not
+-- compare equal, and NaN's compare equal to themselves
+arbFPIsEqualObjectH :: FP -> FP -> Bool
+arbFPIsEqualObjectH (FP eb sb a) (FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
+                                                    LT                                 -> False
+                                                    GT                                 -> False
+                                                    EQ | BF.bfIsNaN a                  -> BF.bfIsNaN b
+                                                       | BF.bfIsZero a && BF.bfIsNeg a -> BF.bfIsZero b && BF.bfIsNeg b
+                                                       | BF.bfIsZero a && BF.bfIsPos a -> BF.bfIsZero b && BF.bfIsPos b
+                                                       | BF.bfIsInf  a                 -> BF.bfIsInf  b
+                                                       | True                          -> a == b
 
+-- | Ordering for arbitrary floats, avoiding the +0/-0/NaN issues. Note that this is
+-- essentially used for indexing into a map, so we need to be total. Thus,
+-- the order we pick is:
+--    NaN -oo -0 +0 +oo
+-- The placement of NaN here is questionable, but immaterial.
+arbFPCompareObjectH :: FP -> FP -> Ordering
+arbFPCompareObjectH fa@(FP eb sb a) fb@(FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
+                                                          LT -> LT
+                                                          GT -> GT
+                                                          EQ | fa `arbFPIsEqualObjectH` fb                    -> EQ
+                                                             | BF.bfIsNaN a                                   -> LT
+                                                             | BF.bfIsNaN b                                   -> GT
+                                                             | BF.bfIsZero a && BF.bfIsNeg a && BF.bfIsZero b -> LT
+                                                             | BF.bfIsZero b && BF.bfIsNeg b && BF.bfIsZero a -> GT
+                                                             | BF.bfIsInf  a                                  -> GT
+                                                             | BF.bfIsInf  b                                  -> LT
+                                                             | True                                           -> a `compare` b
 
 -- | Compute the signum of a big float
 bfSignum :: BigFloat -> BigFloat
