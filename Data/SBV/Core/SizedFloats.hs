@@ -56,7 +56,13 @@ import qualified Data.Generics as G
 --           DP is @FloatingPoint 11 53@
 -- etc.
 newtype FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP
-                                              deriving (Eq, Ord)
+                                              deriving (Eq)
+
+instance Ord (FloatingPoint eb sb) where
+  FloatingPoint f0 < FloatingPoint f1 = f0 < f1
+  FloatingPoint f0 <= FloatingPoint f1 = f0 <= f1
+  f0 > f1 = f1 < f0
+  f0 >= f1 = f1 <= f0
 
 -- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11
@@ -87,7 +93,22 @@ data FP = FP { fpExponentSize    :: Int
              , fpSignificandSize :: Int
              , fpValue           :: BigFloat
              }
-             deriving (Ord, Eq, G.Data)
+             deriving (Eq, G.Data)
+
+-- Manually implemented instance as GHC generated a non-IEEE 754 compliant instance.
+-- Note that we cannot pack the values in a tuple and then compare them as that will
+-- also give non-IEEE 754 compilant results.
+instance Ord FP where
+  FP eb0 sb0 v0 < FP eb1 sb1 v1
+    | eb0 /= eb1 || sb0 /= sb1 =
+      error $ "FP.<: comparing FPs with different precision: " <> show (eb0, sb0) <> show (eb1, sb1)
+    | otherwise = v0 < v1
+  FP eb0 sb0 v0 <= FP eb1 sb1 v1
+    | eb0 /= eb1 || sb0 /= sb1 =
+      error $ "FP.<=: comparing FPs with different precision: " <> show (eb0, sb0) <> show (eb1, sb1)
+    | otherwise = v0 <= v1
+  f0 > f1 = f1 < f0
+  f0 >= f1 = f1 <= f0
 
 instance Show FP where
   show = bfRemoveRedundantExp . bfToString 10 False False
