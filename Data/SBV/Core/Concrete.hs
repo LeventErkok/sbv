@@ -72,7 +72,9 @@ compareRCSet (ComplementSet a) (ComplementSet b) = a `compare` b
 instance HasKind a => HasKind (RCSet a) where
   kindOf _ = KSet (kindOf (Proxy @a))
 
--- | A constant value
+-- | A constant value.
+-- Note: If you add a new constructor here, make sure you add the
+-- corresponding equality in the instance "Eq CVal" and "Ord CVal"!
 data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CInteger  !Integer             -- ^ Bit-vector/unbounded integer
           | CFloat    !Float               -- ^ Float
