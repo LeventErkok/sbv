@@ -5,6 +5,9 @@
 
   * Add Documentation.SBV.Examples.Puzzles.Tower module, solving the visible towers puzzle.
 
+  * Fix several representation bugs related to arbitrary-precision floats. Thanks to Sirui
+    Lu for the reports and patches.
+
 ### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type

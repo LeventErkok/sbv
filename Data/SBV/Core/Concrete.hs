@@ -117,6 +117,7 @@ instance Eq CVal where
   CFloat    a == CFloat    b = a `fpIsEqualObjectH` b   -- We don't want +0/-0 to be confused; and also we want NaN = NaN here!
   CDouble   a == CDouble   b = a `fpIsEqualObjectH` b   -- ditto
   CRational a == CRational b = a == b
+  CFP       a == CFP       b = a `arbFPIsEqualObjectH` b
   CChar     a == CChar     b = a == b
   CString   a == CString   b = a == b
   CList     a == CList     b = a == b
@@ -142,7 +143,7 @@ instance Ord CVal where
   CFloat    a `compare` CFloat    b = a `fpCompareObjectH`         b
   CDouble   a `compare` CDouble   b = a `fpCompareObjectH`         b
   CRational a `compare` CRational b = a `compare`                  b
-  CFP       a `compare` CFP       b = a `fprCompareObject`         b
+  CFP       a `compare` CFP       b = a `arbFPCompareObjectH`      b
   CChar     a `compare` CChar     b = a `compare`                  b
   CString   a `compare` CString   b = a `compare`                  b
   CList     a `compare` CList     b = a `compare`                  b
