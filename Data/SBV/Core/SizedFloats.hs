@@ -99,10 +99,14 @@ data FP = FP { fpExponentSize    :: Int
 -- Note that we cannot pack the values in a tuple and then compare them as that will
 -- also give non-IEEE 754 compilant results.
 instance Ord FP where
-  FP eb0 sb0 v0 <  FP eb1 sb1 v1 =
-    eb0 < eb1 || (eb0 == eb1 && (sb0 < sb1 || (sb0 == sb1 && v0 < v1)))
-  FP eb0 sb0 v0 <= FP eb1 sb1 v1 =
-    eb0 < eb1 || (eb0 == eb1 && (sb0 < sb1 || (sb0 == sb1 && v0 <= v1)))
+  FP eb0 sb0 v0 < FP eb1 sb1 v1
+    | eb0 /= eb1 || sb0 /= sb1 =
+      error $ "FP.<: comparing FPs with different precision: " <> show (eb0, sb0) <> show (eb1, sb1)
+    | otherwise = v0 < v1
+  FP eb0 sb0 v0 <= FP eb1 sb1 v1
+    | eb0 /= eb1 || sb0 /= sb1 =
+      error $ "FP.<=: comparing FPs with different precision: " <> show (eb0, sb0) <> show (eb1, sb1)
+    | otherwise = v0 <= v1
   f0 > f1 = f1 < f0
   f0 >= f1 = f1 <= f0
 
