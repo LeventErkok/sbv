@@ -229,27 +229,18 @@ arbFPIsEqualObjectH (FP eb sb a) (FP eb' sb' b) = case (eb, sb) `compare` (eb', 
                                                     EQ | BF.bfIsNaN a                  -> BF.bfIsNaN b
                                                        | BF.bfIsZero a && BF.bfIsNeg a -> BF.bfIsZero b && BF.bfIsNeg b
                                                        | BF.bfIsZero a && BF.bfIsPos a -> BF.bfIsZero b && BF.bfIsPos b
-                                                       | BF.bfIsInf  a                 -> BF.bfIsInf  b
                                                        | True                          -> a == b
 
 -- | Ordering for arbitrary floats, avoiding the +0/-0/NaN issues. Note that this is
--- essentially used for indexing into a map, so we need to be total. Thus,
--- the order we pick is:
---    NaN -oo -0 +0 +oo
--- The placement of NaN here is questionable, but immaterial.
+-- essentially used for indexing into a map, so we need to be total.
+--
+-- This function uses the bfCompare function provided by the libBF. As per the libBF's documentation,
+-- it has the semantics: -0 < 0, NaN == NaN, and NaN is larger than all other numbers.
 arbFPCompareObjectH :: FP -> FP -> Ordering
-arbFPCompareObjectH fa@(FP eb sb a) fb@(FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
-                                                          LT -> LT
-                                                          GT -> GT
-                                                          EQ | fa `arbFPIsEqualObjectH` fb                    -> EQ
-                                                             | BF.bfIsNaN a                                   -> LT
-                                                             | BF.bfIsNaN b                                   -> GT
-                                                             | BF.bfIsZero a && BF.bfIsNeg a && BF.bfIsZero b -> LT
-                                                             | BF.bfIsZero b && BF.bfIsNeg b && BF.bfIsZero a -> GT
-                                                             | BF.bfIsInf  a                                  -> GT
-                                                             | BF.bfIsInf  b                                  -> LT
-                                                             | True                                           -> a `compare` b
-
+arbFPCompareObjectH (FP eb sb a) (FP eb' sb' b) = case (eb, sb) `compare` (eb', sb') of
+                                                    LT -> LT
+                                                    GT -> GT
+                                                    EQ -> BF.bfCompare a b
 -- | Compute the signum of a big float
 bfSignum :: BigFloat -> BigFloat
 bfSignum r | BF.bfIsNaN  r = r
