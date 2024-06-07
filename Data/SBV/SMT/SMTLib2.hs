@@ -1046,7 +1046,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
         sh inp@(SBVApp op@(SeqOp SBVReverse{}) args) = "(" ++ ops ++ " " ++ unwords (map cvtSV args) ++ ")"
           where ops = case op `M.lookup` functionMap of
                         Just s  -> s
-                        Nothing -> error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+                        Nothing -> error $ "*** SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
@@ -1110,7 +1110,16 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
                                  , "*** Note that uninterpreted kinds only support equality."
                                  , "*** If you believe this is in error, please report!"
                                  ]
-            else error $ "SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+            else error $ unlines [ ""
+                                 , "*** SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+                                 , "***"
+                                 , "*** Applied to arguments of type: " ++ intercalate ", " (nub (map (show . kindOf) args))
+                                 , "***"
+                                 , "*** This can happen if the Num instance isn't properly defined for a lifted kind."
+                                 , "*** (See https://github.com/LeventErkok/sbv/issues/698 for a discussion.)"
+                                 , "***"
+                                 , "*** If you believe this is in error, please report!"
+                                 ]
           where smtOpBVTable  = [ (Plus,          lift2   "bvadd")
                                 , (Minus,         lift2   "bvsub")
                                 , (Times,         lift2   "bvmul")
