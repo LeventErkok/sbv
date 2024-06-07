@@ -55,14 +55,20 @@ import qualified Data.Generics as G
 --   An IEEE SP is @FloatingPoint  8 24@
 --           DP is @FloatingPoint 11 53@
 -- etc.
-newtype FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP
-                                              deriving (Eq)
+-- NB. Don't derive Ord for this type automatically, see notes below.
+newtype FloatingPoint (eb :: Nat) (sb :: Nat) = FloatingPoint FP deriving Eq
 
+-- NB. Refrain from letting GHC derive @>@ and @>=@ and define
+-- it ourselves. Why? Because the default definition of @x > y@
+-- is @not (x <= y)@. But when one of the arguments is NaN, this does
+-- the wrong thing, since NaN doesn't compare to other values. (i.e., the
+-- comparison should be always False, but the default will give
+-- you the wrong result.)
 instance Ord (FloatingPoint eb sb) where
   FloatingPoint f0 <  FloatingPoint f1 = f0 <  f1
   FloatingPoint f0 <= FloatingPoint f1 = f0 <= f1
-  f0               >  f1               = f1 <  f0
-  f0               >= f1               = f1 <= f0
+  f0               >  f1               = f1 <  f0       -- See the note above
+  f0               >= f1               = f1 <= f0       -- See the note above
 
 -- | Abbreviation for IEEE half precision float, bit width 16 = 5 + 11.
 type FPHalf = FloatingPoint 5 11
@@ -98,13 +104,20 @@ data FP = FP { fpExponentSize    :: Int
 -- Manually implemented instance as GHC generated a non-IEEE 754 compliant instance.
 -- Note that we cannot pack the values in a tuple and then compare them as that will
 -- also give non-IEEE 754 compilant results.
+--
+-- NB. Refrain from letting GHC derive @>@ and @>=@ and define
+-- it ourselves. Why? Because the default definition of @x > y@
+-- is @not (x <= y)@. But when one of the arguments is NaN, this does
+-- the wrong thing, since NaN doesn't compare to other values. (i.e., the
+-- comparison should be always False, but the default will give
+-- you the wrong result.)
 instance Ord FP where
   FP eb0 sb0 v0 <  FP eb1 sb1 v1 | (eb0, sb0) /= (eb1, sb1) = error $ "FP.<: comparing FPs with different precision: "  <> show (eb0, sb0) <> show (eb1, sb1)
                                  | True                     = v0 <  v1
   FP eb0 sb0 v0 <= FP eb1 sb1 v1 | (eb0, sb0) /= (eb1, sb1) = error $ "FP.<=: comparing FPs with different precision: " <> show (eb0, sb0) <> show (eb1, sb1)
                                  | True                     = v0 <= v1
-  f0 >  f1 = f1 <  f0
-  f0 >= f1 = f1 <= f0
+  f0 >  f1 = f1 <  f0  -- See note above
+  f0 >= f1 = f1 <= f0  -- See note above
 
 instance Show FP where
   show = bfRemoveRedundantExp . bfToString 10 False False
