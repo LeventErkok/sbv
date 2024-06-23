@@ -14,6 +14,7 @@
 -- bounded prefix of this list, at which point these functions come in handy.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -71,11 +72,11 @@ bfoldlM cnt f = go (cnt `max` 0)
         go i b s = lcase s (return b) (\h t -> do { fbh <- f b h; go (i-1) fbh t })
 
 -- | Bounded sum.
-bsum :: (SymVal a, Num a, Ord a) => Int -> SList a -> SBV a
+bsum :: (SymVal a, Num a, Num (SBV a), Ord a) => Int -> SList a -> SBV a
 bsum i = bfoldl i (+) 0
 
 -- | Bounded product.
-bprod :: (SymVal a, Num a, Ord a) => Int -> SList a -> SBV a
+bprod :: (SymVal a, Num a, Num (SBV a), Ord a) => Int -> SList a -> SBV a
 bprod i = bfoldl i (*) 1
 
 -- | Bounded map.

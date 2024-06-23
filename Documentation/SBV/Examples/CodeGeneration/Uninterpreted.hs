@@ -13,6 +13,8 @@
 -- purposes, such as efficiency, or reliability.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.CodeGeneration.Uninterpreted where

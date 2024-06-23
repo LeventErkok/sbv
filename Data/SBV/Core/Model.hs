@@ -14,10 +14,13 @@
 {-# LANGUAGE DataKinds               #-}
 {-# LANGUAGE DefaultSignatures       #-}
 {-# LANGUAGE DeriveFunctor           #-}
+{-# LANGUAGE DerivingVia             #-}
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE FlexibleInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses   #-}
 {-# LANGUAGE Rank2Types              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
+{-# LANGUAGE StandaloneDeriving      #-}
 {-# LANGUAGE TypeApplications        #-}
 {-# LANGUAGE TypeFamilies            #-}
 {-# LANGUAGE TypeOperators           #-}
@@ -102,6 +105,8 @@ import Data.SBV.Utils.Lib     (isKString)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.IORef (readIORef)
+
+import Iso.Deriving
 
 -- Symbolic-Word class instances
 
@@ -1059,7 +1064,7 @@ instance EqSymbolic RegExp where
 -- @
 --
 -- It is similar to the standard 'Integral' class, except ranging over symbolic instances.
-class (SymVal a, Num a, Bits a, Integral a) => SIntegral a
+class (SymVal a, Num a, Num (SBV a), Bits a, Integral a) => SIntegral a
 
 -- 'SIntegral' Instances, skips Real/Float/Bool
 instance SIntegral Word8
@@ -1075,7 +1080,7 @@ instance SIntegral Integer
 -- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Loosely
 -- based on Haskell's @FiniteBits@ class, but with more methods defined and structured differently to fit into the
 -- symbolic world view. Minimal complete definition: 'sFiniteBitSize'.
-class (Ord a, SymVal a, Num a, Bits a) => SFiniteBits a where
+class (Ord a, SymVal a, Num a, Num (SBV a), Bits a) => SFiniteBits a where
     -- | Bit size.
     sFiniteBitSize      :: SBV a -> Int
     -- | Least significant bit of a word, always stored at index 0.
@@ -1215,7 +1220,7 @@ instance SFiniteBits Int32  where sFiniteBitSize _ = 32
 instance SFiniteBits Int64  where sFiniteBitSize _ = 64
 
 -- | Returns 1 if the boolean is 'sTrue', otherwise 0.
-oneIf :: (Ord a, Num a, SymVal a) => SBool -> SBV a
+oneIf :: (Ord a, Num (SBV a), SymVal a) => SBool -> SBV a
 oneIf t = ite t 1 0
 
 -- | Lift a pseudo-boolean op, performing checks
@@ -1319,26 +1324,37 @@ isConcreteOne (SBV (SVal _     (Left (CV _     (CInteger 1))))) = True
 isConcreteOne (SBV (SVal KReal (Left (CV KReal (CAlgReal v))))) = isExactRational v && v == 1
 isConcreteOne _                                                 = False
 
--- Num instance for symbolic words.
+instance Inject     SVal (SBV a) where inj         = SBV
+instance Project    SVal (SBV a) where prj (SBV a) = a
+instance Isomorphic SVal (SBV a)
+
+{-
 instance (Ord a, Num a, SymVal a) => Num (SBV a) where
   fromInteger = literal . fromIntegral
-  SBV x + SBV y = SBV (svPlus x y)
-  SBV x * SBV y = SBV (svTimes x y)
-  SBV x - SBV y = SBV (svMinus x y)
-  -- Abs is problematic for floating point, due to -0; case, so we carefully shuttle it down
-  -- to the solver to avoid the can of worms. (Alternative would be to do an if-then-else here.)
-  abs (SBV x) = SBV (svAbs x)
-  signum a
-    -- NB. The following "carefully" tests the number for == 0, as Float/Double's NaN and +/-0
-    -- cases would cause trouble with explicit equality tests.
-    | hasSign a = ite (a .> z) i
-                $ ite (a .< z) (negate i) a
-    | True      = ite (a .> z) i a
-    where z = genLiteral (kindOf a) (0::Integer)
-          i = genLiteral (kindOf a) (1::Integer)
-  -- negate is tricky because on double/float -0 is different than 0; so we cannot
-  -- just rely on the default definition; which would be 0-0, which is not -0!
-  negate (SBV x) = SBV (svUNeg x)
+-}
+instance Num SVal where
+  fromInteger = undefined
+  (+)         = svPlus
+  (*)         = svTimes
+  (-)         = svMinus
+  abs         = svAbs
+  signum      = svSignum
+  negate      = svUNeg
+
+-- Derive basic instances via SVal isomorphism
+deriving via (SVal `As` SInteger)             instance Num SInteger
+deriving via (SVal `As` SWord8)               instance Num SWord8
+deriving via (SVal `As` SWord16)              instance Num SWord16
+deriving via (SVal `As` SWord32)              instance Num SWord32
+deriving via (SVal `As` SWord64)              instance Num SWord64
+deriving via (SVal `As` SInt8)                instance Num SInt8
+deriving via (SVal `As` SInt16)               instance Num SInt16
+deriving via (SVal `As` SInt32)               instance Num SInt32
+deriving via (SVal `As` SInt64)               instance Num SInt64
+deriving via (SVal `As` SFloat)               instance Num SFloat
+deriving via (SVal `As` SDouble)              instance Num SDouble
+deriving via (SVal `As` SReal)                instance Num SReal
+deriving via (SVal `As` SFloatingPoint eb sb) instance Num (SFloatingPoint eb sb)
 
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
@@ -1365,7 +1381,7 @@ b .^ e
                           (iterate (\x -> x*x) b)
 infixr 8 .^
 
-instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
+instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) where
   fromRational  = literal . fromRational
   SBV x / sy@(SBV y) | div0 = ite (sy .== 0) 0 res
                      | True = res
@@ -1394,7 +1410,7 @@ instance (Ord a, SymVal a, Fractional a) => Fractional (SBV a) where
 -- (See the separate definition below for 'SFloatingPoint'.)  Note that unless you use delta-sat via 'Data.SBV.Provers.dReal' on 'SReal', most
 -- of the fields are "undefined" for symbolic values. We will add methods as they are supported by SMTLib. Currently, the
 -- only symbolically available function in this class is 'sqrt' for 'SFloat', 'SDouble' and 'SFloatingPoint'.
-instance (Ord a, SymVal a, Fractional a, Floating a) => Floating (SBV a) where
+instance (Ord a, Num (SBV a), SymVal a, Fractional a, Floating a) => Floating (SBV a) where
   pi      = fromRational . toRational $ (pi :: Double)
   exp     = lift1FNS "exp"     exp
   log     = lift1FNS "log"     log
@@ -1520,7 +1536,7 @@ lift2SReal w a b = SBV $ SVal k $ Right $ cache r
 -- -1 has all bits set to True for both signed and unsigned values
 -- | Using 'popCount' or 'testBit' on non-concrete values will result in an
 -- error. Use 'sPopCount' or 'sTestBit' instead.
-instance (Ord a, Num a, Bits a, SymVal a) => Bits (SBV a) where
+instance (Ord a, Num (SBV a), Num a, Bits a, SymVal a) => Bits (SBV a) where
   SBV x .&. SBV y    = SBV (svAnd x y)
   SBV x .|. SBV y    = SBV (svOr x y)
   SBV x `xor` SBV y  = SBV (svXOr x y)
@@ -1634,7 +1650,7 @@ sBarrelRotateRight = liftViaSVal svBarrelRotateRight
 -- a concrete argument for obvious reasons. Other variants (succ, pred, [x..]) etc are similarly
 -- limited. While symbolic variants can be defined for many of these, they will just diverge
 -- as final sizes cannot be determined statically.
-instance (Show a, Bounded a, Integral a, Num a, SymVal a) => Enum (SBV a) where
+instance (Show a, Bounded a, Integral a, Num a, Num (SBV a), SymVal a) => Enum (SBV a) where
   succ x
     | v == (maxBound :: a) = error $ "Enum.succ{" ++ showType x ++ "}: tried to take `succ' of maxBound"
     | True                 = fromIntegral $ v + 1
@@ -1842,7 +1858,7 @@ liftQRem x y
 -- | Lift 'divMod' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself. Essentially, this is conversion from quotRem
 -- (truncate to 0) to divMod (truncate towards negative infinity)
-liftDMod :: (Ord a, SymVal a, Num a, SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
+liftDMod :: (Ord a, SymVal a, Num a, Num (SBV a), SDivisible (SBV a)) => SBV a -> SBV a -> (SBV a, SBV a)
 liftDMod x y
   | isConcreteZero x
   = (x, x)
@@ -1920,7 +1936,7 @@ class Mergeable a where
    -- | Total indexing operation. @select xs default index@ is intuitively
    -- the same as @xs !! index@, except it evaluates to @default@ if @index@
    -- underflows/overflows.
-   select :: (Ord b, SymVal b, Num b) => [a] -> a -> SBV b -> a
+   select :: (Ord b, SymVal b, Num b, Num (SBV b)) => [a] -> a -> SBV b -> a
    -- NB. Earlier implementation of select used the binary-search trick
    -- on the index to chop down the search space. While that is a good trick
    -- in general, it doesn't work for SBV since we do not have any notion of

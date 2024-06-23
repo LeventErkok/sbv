@@ -11,8 +11,10 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE DerivingVia          #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeFamilies         #-}
 {-# LANGUAGE TypeOperators        #-}
@@ -40,8 +42,9 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
 import Data.SBV.Core.Symbolic
-
 import Data.SBV.SMT.SMT
+
+import Iso.Deriving
 
 import Test.QuickCheck(Arbitrary(..))
 
@@ -50,6 +53,9 @@ newtype WordN (n :: Nat) = WordN Integer deriving (Eq, Ord)
 
 -- | A symbolic unsigned bit-vector carrying its size info
 type SWord (n :: Nat) = SBV (WordN n)
+
+-- | Deriving num instance via SVal
+deriving via (SVal `As` SWord n) instance Num (SWord n)
 
 -- | Show instance for 'WordN'
 instance Show (WordN n) where
@@ -70,6 +76,9 @@ newtype IntN (n :: Nat) = IntN Integer deriving (Eq, Ord)
 
 -- | A symbolic signed bit-vector carrying its size info
 type SInt (n :: Nat) = SBV (IntN n)
+
+-- | Deriving num instance via SVal
+deriving via (SVal `As` SInt n) instance Num (SInt n)
 
 -- | Show instance for 'IntN'
 instance Show (IntN n) where

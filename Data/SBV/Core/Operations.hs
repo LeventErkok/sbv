@@ -21,7 +21,7 @@ module Data.SBV.Core.Operations
   -- ** Basic destructors
   , svAsBool, svAsInteger, svNumerator, svDenominator
   -- ** Basic operations
-  , svPlus, svTimes, svMinus, svUNeg, svAbs
+  , svPlus, svTimes, svMinus, svUNeg, svAbs, svSignum
   , svDivide, svQuot, svRem, svQuotRem
   , svEqual, svNotEqual, svStrongEqual, svImplies, svSetEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
@@ -180,6 +180,19 @@ svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate negate negate
 -- | Absolute value.
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs abs
+
+-- | Signum. 
+--
+-- NB. The following "carefully" tests the number for == 0, as Float/Double's NaN and +/-0
+-- cases would cause trouble with explicit equality tests.
+svSignum :: SVal -> SVal
+svSignum a
+  | hasSign a = svIte (a `svGreaterThan` z) i
+              $ svIte (a `svLessThan`    z) (svUNeg i) a
+  | True      = svIte (a `svGreaterThan` z) i a
+  where k = kindOf a
+        z = SVal k $ Left $ mkConstCV k (0 :: Integer)
+        i = SVal k $ Left $ mkConstCV k (1 :: Integer)
 
 -- | Division.
 svDivide :: SVal -> SVal -> SVal

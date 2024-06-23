@@ -10,6 +10,7 @@
 -- Symbolic option type, symbolic version of Haskell's 'Maybe' type.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -193,7 +194,7 @@ maybe brNothing brJust ma
                     newExpr st kb $ SBVApp Ite [noVal, br1, br2]
 
 -- | Custom 'Num' instance over 'SMaybe'
-instance {-# OVERLAPPING #-} (Ord a, SymVal a, Num a) => Num (SBV (Maybe a)) where
+instance (Ord a, SymVal a, Num a, Num (SBV a)) => Num (SBV (Maybe a)) where
   (+)         = map2 (+)
   (-)         = map2 (-)
   (*)         = map2 (*)
