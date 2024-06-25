@@ -101,7 +101,6 @@ Library
                   , process
                   , syb
                   , uniplate
-                  , iso-deriving
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
                   , Data.SBV.Dynamic

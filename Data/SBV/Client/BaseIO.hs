@@ -25,12 +25,12 @@
 module Data.SBV.Client.BaseIO where
 
 import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
-                                SymVal, SBool, SBV, SChar, SDouble, SFloat,
+                                SymVal, SBool, SBV, SChar, SDouble, SFloat, SWord, SInt,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
                                 SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SRational, SMaybe, SSet, constrain, (.==))
-import Data.SBV.Core.Sized     (SInt, SWord, IntN, WordN)
+import Data.SBV.Core.Sized     (IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
 import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
@@ -49,7 +49,6 @@ import Data.Word
 import Data.IORef(readIORef, writeIORef)
 
 import qualified Data.SBV.Core.Data      as Trans
-import qualified Data.SBV.Core.Sized     as Trans
 import qualified Data.SBV.Core.Model     as Trans
 import qualified Data.SBV.Core.Symbolic  as Trans
 import qualified Data.SBV.Provers.Prover as Trans

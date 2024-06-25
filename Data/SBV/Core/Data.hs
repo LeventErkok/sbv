@@ -31,6 +31,7 @@ module Data.SBV.Core.Data
  ( SBool, SWord8, SWord16, SWord32, SWord64
  , SInt8, SInt16, SInt32, SInt64, SInteger, SReal, SFloat, SDouble
  , SFloatingPoint, SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad
+ , SWord, SInt, WordN, IntN
  , SRational
  , SChar, SString, SList
  , SEither, SMaybe
@@ -63,9 +64,10 @@ module Data.SBV.Core.Data
  , OptimizeStyle(..), Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
  , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(skolemize, taggedSkolemize)
+ , bvExtract, (#), bvDrop, bvTake
  ) where
 
-import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol)
+import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol, type (+), type (-), type (<=), natVal)
 
 import GHC.Exts     (IsList(..))
 
@@ -91,6 +93,7 @@ import qualified Data.IntMap.Strict as IMap (size, insert)
 import System.Random
 
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Sized
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
@@ -172,6 +175,12 @@ type SFPDouble = SBV FPDouble
 
 -- | A symbolic quad-precision float
 type SFPQuad = SBV FPQuad
+
+-- | A symbolic unsigned bit-vector carrying its size info
+type SWord (n :: Nat) = SBV (WordN n)
+
+-- | A symbolic signed bit-vector carrying its size info
+type SInt (n :: Nat) = SBV (IntN n)
 
 -- | A symbolic character. Note that this is the full unicode character set.
 -- see: <https://smt-lib.org/theories-UnicodeStrings.shtml>
@@ -866,6 +875,89 @@ instance (GEqSymbolic f, GEqSymbolic g) => GEqSymbolic (f :+: g) where
   symbolicEq (R1 l) (R1 r) = symbolicEq l r
   symbolicEq (L1 _) (R1 _) = sFalse
   symbolicEq (R1 _) (L1 _) = sFalse
+
+-- We don't want to do a generic Num a => Num (SBV a) instance; since that would be dangerous. Liftings
+-- would only work for types we already handle. If a user defines his own type and makes an instance
+-- of it, it would do the wrong thing. See https://github.com/LeventErkok/sbv/issues/706 for a discussion.
+-- So, we have to declare the instances individually. I played around doing this via iso-deriving and
+-- other generic mechanisms, but failed to do so. The CPP solution here is crude, but it avoids the
+-- code duplication.
+#define MKSNUM(CSTR, TYPE, KIND)                                                            \
+instance (CSTR) => Num (TYPE) where {                                                       \
+  fromInteger i  = SBV $ SVal (KIND) $ Left $ mkConstCV (KIND) (fromIntegral i :: Integer); \
+  SBV a + SBV b  = SBV $ a `svPlus`  b;                                                     \
+  SBV a * SBV b  = SBV $ a `svTimes` b;                                                     \
+  SBV a - SBV b  = SBV $ a `svMinus` b;                                                     \
+  abs    (SBV a) = SBV $ svAbs    a;                                                        \
+  signum (SBV a) = SBV $ svSignum a;                                                        \
+  negate (SBV a) = SBV $ svUNeg   a;                                                        \
+}
+
+-- Derive basic instances we need
+MKSNUM((),               SInteger,             KUnbounded)
+MKSNUM((),               SWord8,               KBounded False  8)
+MKSNUM((),               SWord16,              KBounded False 16)
+MKSNUM((),               SWord32,              KBounded False 32)
+MKSNUM((),               SWord64,              KBounded False 64)
+MKSNUM((),               SInt8,                KBounded True   8)
+MKSNUM((),               SInt16,               KBounded True  16)
+MKSNUM((),               SInt32,               KBounded True  32)
+MKSNUM((),               SInt64,               KBounded True  64)
+MKSNUM((),               SFloat,               KFloat)
+MKSNUM((),               SDouble,              KDouble)
+MKSNUM((),               SReal,                KReal)
+MKSNUM(KnownNat n,       SWord n,              KBounded False (intOfProxy (Proxy @n)))
+MKSNUM(KnownNat n,       SInt  n,              KBounded True  (intOfProxy (Proxy @n)))
+MKSNUM(ValidFloat eb sb, SFloatingPoint eb sb, KFP (intOfProxy (Proxy @eb)) (intOfProxy (Proxy @sb)))
+
+-- | Extract a portion of bits to form a smaller bit-vector.
+bvExtract :: forall i j n bv proxy. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
+                                    , KnownNat i
+                                    , KnownNat j
+                                    , i + 1 <= n
+                                    , j <= i
+                                    , BVIsNonZero (i - j + 1)
+                                    ) => proxy i                -- ^ @i@: Start position, numbered from @n-1@ to @0@
+                                      -> proxy j                -- ^ @j@: End position, numbered from @n-1@ to @0@, @j <= i@ must hold
+                                      -> SBV (bv n)             -- ^ Input bit vector of size @n@
+                                      -> SBV (bv (i - j + 1))   -- ^ Output is of size @i - j + 1@
+bvExtract start end = SBV . svExtract i j . unSBV
+   where i  = fromIntegral (natVal start)
+         j  = fromIntegral (natVal end)
+
+-- | Join two bitvectors.
+(#) :: ( KnownNat n, BVIsNonZero n, SymVal (bv n)
+       , KnownNat m, BVIsNonZero m, SymVal (bv m)
+       ) => SBV (bv n)                     -- ^ First input, of size @n@, becomes the left side
+         -> SBV (bv m)                     -- ^ Second input, of size @m@, becomes the right side
+         -> SBV (bv (n + m))               -- ^ Concatenation, of size @n+m@
+n # m = SBV $ svJoin (unSBV n) (unSBV m)
+infixr 5 #
+
+-- | Drop bits from the top of a bit-vector.
+bvDrop :: forall i n m bv proxy. ( KnownNat n, BVIsNonZero n
+                                 , KnownNat i
+                                 , i + 1 <= n
+                                 , i + m - n <= 0
+                                 , BVIsNonZero (n - i)
+                                 ) => proxy i                    -- ^ @i@: Number of bits to drop. @i < n@ must hold.
+                                   -> SBV (bv n)                 -- ^ Input, of size @n@
+                                   -> SBV (bv m)                 -- ^ Output, of size @m@. @m = n - i@ holds.
+bvDrop i = SBV . svExtract start 0 . unSBV
+  where nv    = intOfProxy (Proxy @n)
+        start = nv - fromIntegral (natVal i) - 1
+
+-- | Take bits from the top of a bit-vector.
+bvTake :: forall i n bv proxy. ( KnownNat n, BVIsNonZero n
+                               , KnownNat i, BVIsNonZero i
+                               , i <= n
+                               ) => proxy i                  -- ^ @i@: Number of bits to take. @0 < i <= n@ must hold.
+                                 -> SBV (bv n)               -- ^ Input, of size @n@
+                                 -> SBV (bv i)               -- ^ Output, of size @i@
+bvTake i = SBV . svExtract start end . unSBV
+  where nv    = intOfProxy (Proxy @n)
+        start = nv - 1
+        end   = start - fromIntegral (natVal i) + 1
 
 -- | A class of values that can be skolemized. Note that we don't export this class. Use
 -- the 'skolemize' function instead.

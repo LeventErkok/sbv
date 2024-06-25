@@ -34,7 +34,6 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Model
 import Data.SBV.Core.Operations
-import Data.SBV.Core.Sized
 
 import GHC.TypeLits
 

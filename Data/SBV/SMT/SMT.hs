@@ -17,6 +17,7 @@
 {-# LANGUAGE Rank2Types                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE UndecidableInstances       #-}
 {-# LANGUAGE ViewPatterns               #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -74,7 +75,7 @@ import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic (SMTEngine, State(..), mustIgnoreVar)
 import Data.SBV.Core.Concrete (showCV)
-import Data.SBV.Core.Kind     (showBaseKind, intOfProxy)
+import Data.SBV.Core.Kind     (showBaseKind, intOfProxy, BVIsNonZero)
 
 import Data.SBV.Core.SizedFloats(FloatingPoint(..))
 
@@ -312,6 +313,14 @@ instance (KnownNat eb, KnownNat sb) => SatModel (FloatingPoint eb sb) where
   parseCVs (CV (KFP ei si) (CFP fp) : r)
     | intOfProxy (Proxy @eb) == ei , intOfProxy (Proxy @sb) == si = Just (FloatingPoint fp, r)
   parseCVs _                                                      = Nothing
+
+-- | Constructing models for 'WordN'
+instance (KnownNat n, BVIsNonZero n) => SatModel (WordN n) where
+  parseCVs = genParse (kindOf (undefined :: WordN n))
+
+-- | Constructing models for 'IntN'
+instance (KnownNat n, BVIsNonZero n) => SatModel (IntN n) where
+  parseCVs = genParse (kindOf (undefined :: IntN n))
 
 -- | @CV@ as extracted from a model; trivial definition
 instance SatModel CV where

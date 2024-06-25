@@ -14,13 +14,10 @@
 {-# LANGUAGE DataKinds               #-}
 {-# LANGUAGE DefaultSignatures       #-}
 {-# LANGUAGE DeriveFunctor           #-}
-{-# LANGUAGE DerivingVia             #-}
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE FlexibleInstances       #-}
-{-# LANGUAGE MultiParamTypeClasses   #-}
 {-# LANGUAGE Rank2Types              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
-{-# LANGUAGE StandaloneDeriving      #-}
 {-# LANGUAGE TypeApplications        #-}
 {-# LANGUAGE TypeFamilies            #-}
 {-# LANGUAGE TypeOperators           #-}
@@ -36,6 +33,7 @@ module Data.SBV.Core.Model (
   , sBool, sBool_, sBools, sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s, sWord32, sWord32_, sWord32s
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
+  , sWord, sWord_, sWords, sInt, sInt_, sInts
   , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
   , sFloatingPoint, sFloatingPoint_, sFloatingPoints
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
@@ -50,6 +48,7 @@ module Data.SBV.Core.Model (
   , sAssert
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
+  , zeroExtend, signExtend
   , sbvQuickCheck, lambdaAsArray
   )
   where
@@ -63,6 +62,7 @@ import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
 
 import GHC.Stack
+import GHC.TypeLits hiding (SChar)
 
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
@@ -90,6 +90,7 @@ import qualified Test.QuickCheck.Monadic as QC (monadicIO, run, assert, pre, mon
 import qualified Data.Foldable as F (toList)
 
 import Data.SBV.Core.AlgReals
+import Data.SBV.Core.Sized
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
@@ -105,8 +106,6 @@ import Data.SBV.Utils.Lib     (isKString)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.IORef (readIORef)
-
-import Iso.Deriving
 
 -- Symbolic-Word class instances
 
@@ -254,6 +253,18 @@ instance ValidFloat eb sb => SymVal (FloatingPoint eb sb) where
                                in SBV $ SVal k $ Left $ CV k (CFP r)
   fromCV  (CV _ (CFP r))     = FloatingPoint r
   fromCV  c                  = error $ "SymVal.FPR: Unexpected non-arbitrary-precision value: " ++ show c
+
+-- | 'SymVal' instance for 'WordN'
+instance (KnownNat n, BVIsNonZero n) => SymVal (WordN n) where
+   literal  x = genLiteral  (kindOf x) x
+   mkSymVal   = genMkSymVar (kindOf (undefined :: WordN n))
+   fromCV     = genFromCV
+
+-- | 'SymVal' instance for 'IntN'
+instance (KnownNat n, BVIsNonZero n) => SymVal (IntN n) where
+   literal  x = genLiteral  (kindOf x) x
+   mkSymVal   = genMkSymVar (kindOf (undefined :: IntN n))
+   fromCV     = genFromCV
 
 toCV :: SymVal a => a -> CVal
 toCV a = case literal a of
@@ -613,6 +624,30 @@ sFloatingPoint_ = free_
 -- | Generalization of 'Data.SBV.sFloatingPoints'
 sFloatingPoints :: ValidFloat eb sb => [String] -> Symbolic [SFloatingPoint eb sb]
 sFloatingPoints = symbolics
+
+-- | Generalization of 'Data.SBV.sWord'
+sWord :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => String -> m (SWord n)
+sWord = symbolic
+
+-- | Generalization of 'Data.SBV.sWord_'
+sWord_ :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => m (SWord n)
+sWord_ = free_
+
+-- | Generalization of 'Data.SBV.sWord64s'
+sWords :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => [String] -> m [SWord n]
+sWords = symbolics
+
+-- | Generalization of 'Data.SBV.sInt'
+sInt :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => String -> m (SInt n)
+sInt = symbolic
+
+-- | Generalization of 'Data.SBV.sInt_'
+sInt_ :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => m (SInt n)
+sInt_ = free_
+
+-- | Generalization of 'Data.SBV.sInts'
+sInts :: (KnownNat n, BVIsNonZero n) => MonadSymbolic m => [String] -> m [SInt n]
+sInts = symbolics
 
 -- | Generalization of 'Data.SBV.sChar'
 sChar :: MonadSymbolic m => String -> m SChar
@@ -1076,6 +1111,36 @@ instance SIntegral Int16
 instance SIntegral Int32
 instance SIntegral Int64
 instance SIntegral Integer
+instance (KnownNat n, BVIsNonZero n) => SIntegral (WordN n)
+instance (KnownNat n, BVIsNonZero n) => SIntegral (IntN n)
+
+-- | Zero extend a bit-vector.
+zeroExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
+                             , KnownNat m, BVIsNonZero m, SymVal (bv m)
+                             , n + 1 <= m
+                             , SIntegral (bv (m - n))
+                             , BVIsNonZero (m - n)
+                             ) => SBV (bv n)    -- ^ Input, of size @n@
+                               -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
+zeroExtend n = SBV $ svZeroExtend i (unSBV n)
+  where nv = intOfProxy (Proxy @n)
+        mv = intOfProxy (Proxy @m)
+        i  = fromIntegral (mv - nv)
+
+-- | Sign extend a bit-vector.
+signExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
+                             , KnownNat m, BVIsNonZero m, SymVal (bv m)
+                             , n + 1 <= m
+                             , SFiniteBits (bv n)
+                             , SIntegral   (bv (m - n))
+                             , BVIsNonZero (m - n)
+                             ) => SBV (bv n)  -- ^ Input, of size @n@
+                               -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
+signExtend n = SBV $ svSignExtend i (unSBV n)
+  where nv = intOfProxy (Proxy @n)
+        mv = intOfProxy (Proxy @m)
+        i  = fromIntegral (mv - nv)
+
 
 -- | Finite bit-length symbolic values. Essentially the same as 'SIntegral', but further leaves out 'Integer'. Loosely
 -- based on Haskell's @FiniteBits@ class, but with more methods defined and structured differently to fit into the
@@ -1218,6 +1283,8 @@ instance SFiniteBits Int8   where sFiniteBitSize _ =  8
 instance SFiniteBits Int16  where sFiniteBitSize _ = 16
 instance SFiniteBits Int32  where sFiniteBitSize _ = 32
 instance SFiniteBits Int64  where sFiniteBitSize _ = 64
+instance (KnownNat n, BVIsNonZero n) => SFiniteBits (WordN n) where sFiniteBitSize _ = intOfProxy (Proxy @n)
+instance (KnownNat n, BVIsNonZero n) => SFiniteBits (IntN  n) where sFiniteBitSize _ = intOfProxy (Proxy @n)
 
 -- | Returns 1 if the boolean is 'sTrue', otherwise 0.
 oneIf :: (Ord a, Num (SBV a), SymVal a) => SBool -> SBV a
@@ -1323,38 +1390,6 @@ isConcreteOne :: SBV a -> Bool
 isConcreteOne (SBV (SVal _     (Left (CV _     (CInteger 1))))) = True
 isConcreteOne (SBV (SVal KReal (Left (CV KReal (CAlgReal v))))) = isExactRational v && v == 1
 isConcreteOne _                                                 = False
-
-instance Inject     SVal (SBV a) where inj         = SBV
-instance Project    SVal (SBV a) where prj (SBV a) = a
-instance Isomorphic SVal (SBV a)
-
-{-
-instance (Ord a, Num a, SymVal a) => Num (SBV a) where
-  fromInteger = literal . fromIntegral
--}
-instance Num SVal where
-  fromInteger = undefined
-  (+)         = svPlus
-  (*)         = svTimes
-  (-)         = svMinus
-  abs         = svAbs
-  signum      = svSignum
-  negate      = svUNeg
-
--- Derive basic instances via SVal isomorphism
-deriving via (SVal `As` SInteger)             instance Num SInteger
-deriving via (SVal `As` SWord8)               instance Num SWord8
-deriving via (SVal `As` SWord16)              instance Num SWord16
-deriving via (SVal `As` SWord32)              instance Num SWord32
-deriving via (SVal `As` SWord64)              instance Num SWord64
-deriving via (SVal `As` SInt8)                instance Num SInt8
-deriving via (SVal `As` SInt16)               instance Num SInt16
-deriving via (SVal `As` SInt32)               instance Num SInt32
-deriving via (SVal `As` SInt64)               instance Num SInt64
-deriving via (SVal `As` SFloat)               instance Num SFloat
-deriving via (SVal `As` SDouble)              instance Num SDouble
-deriving via (SVal `As` SReal)                instance Num SReal
-deriving via (SVal `As` SFloatingPoint eb sb) instance Num (SFloatingPoint eb sb)
 
 -- | Symbolic exponentiation using bit blasting and repeated squaring.
 --
@@ -1800,37 +1835,39 @@ instance SDivisible CV where
     = let (r1, r2) = sDivMod x y in (normCV a{ cvVal = CInteger r1 }, normCV b{ cvVal = CInteger r2 })
   sDivMod a b = error $ "SBV.sDivMod: impossible, unexpected args received: " ++ show (a, b)
 
-instance SDivisible SWord64 where
+instance SDivisible SWord64 where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SWord32 where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SWord16 where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SWord8  where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SInt64  where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SInt32  where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SInt16  where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+instance SDivisible SInt8   where {sQuotRem = liftQRem; sDivMod  = liftDMod}
+
+-- | 'SDivisible' instance for 'WordN'
+instance (KnownNat n, BVIsNonZero n) => SDivisible (WordN n) where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `divMod` y
+
+-- | 'SDivisible' instance for 'IntN'
+instance (KnownNat n, BVIsNonZero n) => SDivisible (IntN n) where
+  sQuotRem x 0 = (0, x)
+  sQuotRem x y = x `quotRem` y
+  sDivMod  x 0 = (0, x)
+  sDivMod  x y = x `divMod` y
+
+-- | 'SDivisible' instance for 'SWord'
+instance (KnownNat n, BVIsNonZero n) => SDivisible (SWord n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
-instance SDivisible SInt64 where
+-- | 'SDivisible' instance for 'SInt'
+instance (KnownNat n, BVIsNonZero n) => SDivisible (SInt n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
-instance SDivisible SWord32 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt32 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SWord16 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt16 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SWord8 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
-
-instance SDivisible SInt8 where
-  sQuotRem = liftQRem
-  sDivMod  = liftDMod
 
 -- | Lift 'quotRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself.
@@ -3005,6 +3042,15 @@ instance Metric Int64 where
   type MetricSpace Int64 = Word64
   toMetricSpace    x     = sFromIntegral x + 9223372036854775808  -- 2^63
   fromMetricSpace  x     = sFromIntegral x - 9223372036854775808
+
+-- | Optimizing 'WordN'
+instance (KnownNat n, BVIsNonZero n) => Metric (WordN n)
+
+-- | Optimizing 'IntN'
+instance (KnownNat n, BVIsNonZero n) => Metric (IntN n) where
+  type MetricSpace (IntN n) = WordN n
+  toMetricSpace    x        = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
+  fromMetricSpace  x        = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

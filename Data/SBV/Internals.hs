@@ -73,7 +73,6 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.SBV.Core.Data hiding (Forall(..), Exists(..), ForallN(..), ExistsN(..), ExistsUnique(..), Skolemize(..), QNot(..))
 
 import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
-import Data.SBV.Core.Sized      (SWord)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
 import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState, UICodeKind(..))
 

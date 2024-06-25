@@ -431,7 +431,7 @@ import Control.Monad (when)
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
-                                        newArray, newArray_)
+                                        newArray, newArray_, bvExtract, bvDrop, bvTake, (#))
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,
@@ -440,18 +440,17 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads,
                                         sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s,
                                         sInt64, sInt64_, sInt64s, sInteger, sInteger_, sIntegers,
+                                        sWord, sWords, sWord_, sInt, sInts, sInt_,
                                         sList, sList_, sLists, sTuple, sTuple_, sTuples,
                                         sReal, sReal_, sReals, sString, sString_, sStrings,
                                         sRational, sRational_, sRationals,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets,
-                                        sBarrelRotateLeft, sBarrelRotateRight)
+                                        sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend)
 
-import qualified Data.SBV.Core.Model as M (sBarrelRotateLeft, sBarrelRotateRight)
-
-import           Data.SBV.Core.Sized       hiding (sWord, sWord_, sWords, sInt, sInt_, sInts, bvExtract, (#), zeroExtend, signExtend, bvDrop, bvTake)
-import qualified Data.SBV.Core.Sized as CS
+import qualified Data.SBV.Core.Model as M  (sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend)
+import qualified Data.SBV.Core.Data  as CD (bvExtract, (#), bvDrop, bvTake)
 
 import Data.SBV.Core.Kind
 
@@ -1373,7 +1372,7 @@ bvExtract :: forall i j n bv proxy. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                                       -> proxy j                -- ^ @j@: End position, numbered from @n-1@ to @0@, @j <= i@ must hold
                                       -> SBV (bv n)             -- ^ Input bit vector of size @n@
                                       -> SBV (bv (i - j + 1))   -- ^ Output is of size @i - j + 1@
-bvExtract = CS.bvExtract
+bvExtract = CD.bvExtract
 
 -- | Join two bitvectors.
 --
@@ -1384,7 +1383,7 @@ bvExtract = CS.bvExtract
        ) => SBV (bv n)                     -- ^ First input, of size @n@, becomes the left side
          -> SBV (bv m)                     -- ^ Second input, of size @m@, becomes the right side
          -> SBV (bv (n + m))               -- ^ Concatenation, of size @n+m@
-(#) = (CS.#)
+(#) = (CD.#)
 infixr 5 #
 
 -- | Zero extend a bit-vector.
@@ -1398,7 +1397,7 @@ zeroExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , BVIsNonZero (m - n)
                              ) => SBV (bv n)    -- ^ Input, of size @n@
                                -> SBV (bv m)    -- ^ Output, of size @m@. @n < m@ must hold
-zeroExtend = CS.zeroExtend
+zeroExtend = M.zeroExtend
 
 -- | Sign extend a bit-vector.
 --
@@ -1411,10 +1410,10 @@ signExtend :: forall n m bv. ( KnownNat n, BVIsNonZero n, SymVal (bv n)
                              , n + 1 <= m
                              , SFiniteBits (bv n)
                              , SIntegral   (bv (m - n))
-                             , BVIsNonZero   (m - n)
+                             , BVIsNonZero (m - n)
                              ) => SBV (bv n)  -- ^ Input, of size @n@
                                -> SBV (bv m)  -- ^ Output, of size @m@. @n < m@ must hold
-signExtend = CS.signExtend
+signExtend = M.signExtend
 
 -- | Drop bits from the top of a bit-vector.
 --
@@ -1430,7 +1429,7 @@ bvDrop :: forall i n m bv proxy. ( KnownNat n, BVIsNonZero n
                                  ) => proxy i                    -- ^ @i@: Number of bits to drop. @i < n@ must hold.
                                    -> SBV (bv n)                 -- ^ Input, of size @n@
                                    -> SBV (bv m)                 -- ^ Output, of size @m@. @m = n - i@ holds.
-bvDrop = CS.bvDrop
+bvDrop = CD.bvDrop
 
 -- | Take bits from the top of a bit-vector.
 --
@@ -1446,7 +1445,7 @@ bvTake :: forall i n bv proxy. ( KnownNat n, BVIsNonZero n
                                ) => proxy i                  -- ^ @i@: Number of bits to take. @0 < i <= n@ must hold.
                                  -> SBV (bv n)               -- ^ Input, of size @n@
                                  -> SBV (bv i)               -- ^ Output, of size @i@
-bvTake = CS.bvTake
+bvTake = CD.bvTake
 
 -- | A helper class to convert sized bit-vectors to/from bytes.
 class ByteConverter a where
