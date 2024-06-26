@@ -9,8 +9,9 @@
 -- Test suite for things that should not type-check
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE DataKinds            #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- Defer type-errors is essential here!
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans -Wno-deferred-type-errors -fdefer-type-errors #-}
@@ -25,11 +26,22 @@ import System.IO.Unsafe(unsafePerformIO)
 instance NFData (IO Bool) where
   rnf iob = rnf (unsafePerformIO iob) `seq` ()
 
+type Val = (Integer, Integer)
+
+instance Num Val where
+  (+)         = undefined
+  (*)         = undefined
+  (-)         = undefined
+  signum      = undefined
+  abs         = undefined
+  fromInteger = undefined
+
 tests :: TestTree
 tests = testGroup "CantTypeCheck.Misc" [
            testCase "noTypeCheckBad01"  $ shouldNotTypeCheck $ isTheorem t1
          , testCase "noTypeCheckBad02"  $ shouldNotTypeCheck $ isTheorem t2
          , testCase "noTypeCheckBad03"  $ shouldNotTypeCheck   runSko
+         , testCase "noTypeCheckBad04"  $ shouldNotTypeCheck   runNoNum
          , testCase "noTypeCheckGood01" $                      assertIsSat t1
          , testCase "noTypeCheckGood02" $                      assertIsSat t2
 
@@ -52,3 +64,10 @@ tests = testGroup "CantTypeCheck.Misc" [
         -- Oh the horrors of "deferring type errors"
         runSko :: IO Bool
         runSko = isSatisfiable $ sko (Forall (literal 3))
+
+        -- can't add SBV Val
+        noNumSBV :: SBV Val -> SBV Val -> SBV Val
+        noNumSBV x y = x + y
+
+        runNoNum :: IO Bool
+        runNoNum = isSatisfiable noNumSBV
