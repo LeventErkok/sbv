@@ -11,7 +11,6 @@
 
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 -- Defer type-errors is essential here!
 {-# OPTIONS_GHC -Wall -Werror -Wno-orphans -Wno-deferred-type-errors -fdefer-type-errors #-}

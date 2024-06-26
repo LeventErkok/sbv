@@ -104,9 +104,9 @@ liftEither = Prelude.either sLeft sRight
 -- | Case analysis for symbolic 'Either's. If the value 'isLeft', apply the
 -- first function; if it 'isRight', apply the second function.
 --
--- >>> either (*2) (*3) (sLeft 3)
+-- >>> either (*2) (*3) (sLeft (3 :: SInteger))
 -- 6 :: SInteger
--- >>> either (*2) (*3) (sRight 3)
+-- >>> either (*2) (*3) (sRight (3 :: SInteger))
 -- 9 :: SInteger
 -- >>> let f = uninterpret "f" :: SInteger -> SInteger
 -- >>> let g = uninterpret "g" :: SInteger -> SInteger

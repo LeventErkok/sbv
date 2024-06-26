@@ -71,7 +71,6 @@ common common-settings
                      TypeApplications
                      TypeFamilies
                      TypeOperators
-                     TypeSynonymInstances
                      UndecidableInstances
                      ViewPatterns
 
