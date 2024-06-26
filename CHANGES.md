@@ -8,6 +8,10 @@
   * Fix several representation bugs related to arbitrary-precision floats. Thanks to Sirui
     Lu for the reports and patches.
 
+  * Removed the generic Num a => Num (SBV a) instance. When used at a non-standard type, this
+    created type-checking but invalid SBV programs. See https://github.com/LeventErkok/sbv/issues/706
+    for details.
+
 ### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type
