@@ -9,6 +9,8 @@
 -- Test the pseudo-boolean functions
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts #-}
+
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
 
 module TestSuite.Basics.PseudoBoolean(tests)  where

@@ -9,6 +9,7 @@
 -- Test the bounded sequence/list functions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLists            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
