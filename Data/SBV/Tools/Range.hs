@@ -146,7 +146,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
 
 
                 getBound cstr = do let objName = "boundValue"
-                                   res@(LexicographicResult m) <- optimizeWith cfg Lexicographic $ do x <- free_
+                                   res@(LexicographicResult m) <- optimizeWith cfg lexicographic $ do x <- free_
                                                                                                       constrain $ prop x
                                                                                                       cstr objName x
                                    case m of

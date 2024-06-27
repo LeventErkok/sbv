@@ -218,8 +218,8 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
 -- decimal notation one should be very careful about the printed representation and the numeric value; while
 -- they will match in value (if there are no bugs!), they can print quite differently! (Also keep in
 -- mind the rounding modes that impact how the conversion is done.)
-fp54Bounds :: IO OptimizeResult
-fp54Bounds = optimize Independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
+fp54Bounds :: IO IndependentResult
+fp54Bounds = optimize independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
 
                                        constrain $ fpIsPoint x
                                        constrain $ x .> 0

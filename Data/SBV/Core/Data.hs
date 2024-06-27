@@ -61,7 +61,7 @@ module Data.SBV.Core.Data
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..)
- , OptimizeStyle(..), Penalty(..), Objective(..)
+ , Penalty(..), Objective(..)
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
  , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(skolemize, taggedSkolemize)
  , bvExtract, (#), bvDrop, bvTake

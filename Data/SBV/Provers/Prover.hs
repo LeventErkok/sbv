@@ -26,6 +26,8 @@ module Data.SBV.Provers.Prover (
        , ProvableM(..), Provable, SatisfiableM(..), Satisfiable
        , generateSMTBenchmarkSat, generateSMTBenchmarkProof, defs2smt, ConstraintSet
        , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
+       , OptimizeStyle, lexicographic, independent, pareto
+       , LexicographicResult(..), IndependentResult(..), ParetoResult(..)
        , SExecutable(..), isSafe
        , runSMT, runSMTWith
        , SatModel(..), Modelable(..), displayModels, extractModels
@@ -237,23 +239,18 @@ class ExtractIO m => SatisfiableM m a where
                                  _                         -> error $ "SBV.isSatisfiable: Received: " ++ show r
 
   -- | Generalization of 'Data.SBV.optimize'
-  optimize :: OptimizeStyle -> a -> m OptimizeResult
+  optimize :: (OptimizeResult result) => OptimizeStyle m result -> a -> m result
   optimize = optimizeWith defaultSMTCfg
 
   -- | Generalization of 'Data.SBV.optimizeWith'
-  optimizeWith :: SMTConfig -> OptimizeStyle -> a -> m OptimizeResult
-  optimizeWith config style optGoal = do
+  optimizeWith :: (OptimizeResult result) => SMTConfig -> OptimizeStyle m result -> a -> m result
+  optimizeWith config (OptimizeStyle priority getResult) optGoal = do
                    res <- runWithQuery satArgReduce True opt config optGoal
                    if not (optimizeValidateConstraints config)
                       then return res
                       else let v :: SMTResult -> m SMTResult
                                v = validate satArgReduce True config optGoal
-                           in case res of
-                                LexicographicResult m -> LexicographicResult <$> v m
-                                IndependentResult xs  -> let w []            sofar = return (reverse sofar)
-                                                             w ((n, m):rest) sofar = v m >>= \m' -> w rest ((n, m') : sofar)
-                                                         in IndependentResult <$> w xs []
-                                ParetoResult (b, rs)  -> ParetoResult . (b, ) <$> mapM v rs
+                           in validateWith v res
 
     where opt = do objectives <- Control.getObjectives
 
@@ -280,7 +277,7 @@ class ExtractIO m => SatisfiableM m a where
                                           ]
 
 
-                   let optimizerDirectives = concatMap minmax objectives ++ priority style
+                   let optimizerDirectives = concatMap minmax objectives ++ priority
                          where mkEq (x, y) = "(assert (= " ++ show x ++ " " ++ show y ++ "))"
 
                                minmax (Minimize          _  xy@(_, v))     = [mkEq xy, "(minimize "    ++ show v                 ++ ")"]
@@ -296,16 +293,47 @@ class ExtractIO m => SatisfiableM m a where
 
                                        group g = " :id " ++ g
 
-                               priority Lexicographic = [] -- default, no option needed
-                               priority Independent   = ["(set-option :opt.priority box)"]
-                               priority (Pareto _)    = ["(set-option :opt.priority pareto)"]
-
                    mapM_ (Control.send True) optimizerDirectives
+                   getResult objectives
 
-                   case style of
-                     Lexicographic -> LexicographicResult <$> Control.getLexicographicOptResults
-                     Independent   -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
-                     Pareto mbN    -> ParetoResult        <$> Control.getParetoOptResults mbN
+-- | Style of optimization. Note that in the pareto case the user is allowed
+-- to specify a max number of fronts to query the solver for, since there might
+-- potentially be an infinite number of them and there is no way to know exactly
+-- how many ahead of time. If 'Nothing' is given, SBV will possibly loop forever
+-- if the number is really infinite.
+data OptimizeStyle m result = OptimizeStyle [String] ([Objective (SV,SV)] -> QueryT m result)
+
+-- | Objectives are optimized in the order given, earlier objectives have higher priority.
+lexicographic :: (MonadIO m) => OptimizeStyle m LexicographicResult
+lexicographic =
+  OptimizeStyle [] $ -- default, no option needed
+    \_objectives -> LexicographicResult <$> Control.getLexicographicOptResults
+
+-- | Each objective is optimized independently.
+independent :: (MonadIO m) => OptimizeStyle m IndependentResult
+independent =
+  OptimizeStyle ["(set-option :opt.priority box)"] $
+    \objectives -> IndependentResult   <$> Control.getIndependentOptResults (map objectiveName objectives)
+
+-- | Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
+pareto :: (MonadIO m) => Maybe Int -> OptimizeStyle m ParetoResult
+pareto mbN =
+  OptimizeStyle ["(set-option :opt.priority pareto)"] $
+    \_objectives -> ParetoResult        <$> Control.getParetoOptResults mbN
+
+class OptimizeResult result where
+  validateWith :: (Monad m) => (SMTResult -> m SMTResult) -> result -> m result
+instance OptimizeResult LexicographicResult where
+  validateWith v (LexicographicResult m) = LexicographicResult <$> v m
+instance OptimizeResult ParetoResult where
+  validateWith v (ParetoResult (b, rs))  = ParetoResult . (b, ) <$> mapM v rs
+instance OptimizeResult IndependentResult where
+  validateWith v (IndependentResult xs)  =
+                           let w []            sofar = return (reverse sofar)
+                               w ((n, m):rest) sofar = v m >>= \m' -> w rest ((n, m') : sofar)
+                           in IndependentResult <$> w xs []
+
+
 
 -- | Find a satisfying assignment to a property with multiple solvers, running them in separate threads. The
 -- results will be returned in the order produced.

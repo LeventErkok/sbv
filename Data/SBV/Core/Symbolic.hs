@@ -59,7 +59,7 @@ module Data.SBV.Core.Symbolic
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
-  , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
+  , Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, Queriable(..), Fresh(..), QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
@@ -744,16 +744,6 @@ getUserName (NamedSymVar _ nm) = nm
 getUserName' :: NamedSymVar -> String
 getUserName' = T.unpack . getUserName
 
--- | Style of optimization. Note that in the pareto case the user is allowed
--- to specify a max number of fronts to query the solver for, since there might
--- potentially be an infinite number of them and there is no way to know exactly
--- how many ahead of time. If 'Nothing' is given, SBV will possibly loop forever
--- if the number is really infinite.
-data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the order given, earlier objectives have higher priority.
-                   | Independent        -- ^ Each objective is optimized independently.
-                   | Pareto (Maybe Int) -- ^ Objectives are optimized according to pareto front: That is, no objective can be made better without making some other worse.
-                   deriving (Eq, Show)
-
 -- | Penalty for a soft-assertion. The default penalty is @1@, with all soft-assertions belonging
 -- to the same objective goal. A positive weight and an optional group can be provided by using
 -- the 'Penalty' constructor.
@@ -844,9 +834,6 @@ type Query = QueryT IO
 
 instance MonadSymbolic Query where
    symbolicEnv = queryState
-
-instance NFData OptimizeStyle where
-   rnf x = x `seq` ()
 
 instance NFData Penalty where
    rnf DefaultPenalty  = ()

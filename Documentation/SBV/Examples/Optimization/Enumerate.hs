@@ -63,8 +63,8 @@ isWeekend = (`sElem` weekend)
 -- Optimal model:
 --   almostWeekend = Fri :: Day
 --   last-day      =   4 :: Word8
-almostWeekend :: IO OptimizeResult
-almostWeekend = optimize Lexicographic $ do
+almostWeekend :: IO LexicographicResult
+almostWeekend = optimize lexicographic $ do
                     day <- free "almostWeekend"
                     constrain $ sNot (isWeekend day)
                     maximize "last-day" day
@@ -76,8 +76,8 @@ almostWeekend = optimize Lexicographic $ do
 -- Optimal model:
 --   weekendJustOver = Mon :: Day
 --   first-day       =   0 :: Word8
-weekendJustOver :: IO OptimizeResult
-weekendJustOver = optimize Lexicographic $ do
+weekendJustOver :: IO LexicographicResult
+weekendJustOver = optimize lexicographic $ do
                       day <- free "weekendJustOver"
                       constrain $ sNot (isWeekend day)
                       minimize "first-day" day
@@ -89,8 +89,8 @@ weekendJustOver = optimize Lexicographic $ do
 -- Optimal model:
 --   firstWeekend  = Sat :: Day
 --   first-weekend =   5 :: Word8
-firstWeekend :: IO OptimizeResult
-firstWeekend = optimize Lexicographic $ do
+firstWeekend :: IO LexicographicResult
+firstWeekend = optimize lexicographic $ do
                       day <- free "firstWeekend"
                       constrain $ isWeekend day
                       minimize "first-weekend" day

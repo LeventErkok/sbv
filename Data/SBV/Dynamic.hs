@@ -87,7 +87,7 @@ module Data.SBV.Dynamic
   -- * Model extraction
 
   -- ** Inspecting proof results
-  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult, SMTResult(..)
 
   -- ** Programmable model extraction
   , genParse, getModelAssignment, getModelDictionary
@@ -144,8 +144,8 @@ import Data.SBV.Compilers.CodeGen ( SBVCodeGen
                                   )
 import Data.SBV.Compilers.C       (compileToC, compileToCLib)
 
-import Data.SBV.Provers.Prover (boolector, bitwuzla, cvc4, cvc5, dReal, yices, z3, mathSAT, abc, defaultSMTCfg)
-import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), OptimizeResult(..), AllSatResult(..), genParse)
+import Data.SBV.Provers.Prover (OptimizeResult, boolector, bitwuzla, cvc4, cvc5, dReal, yices, z3, mathSAT, abc, defaultSMTCfg)
+import Data.SBV.SMT.SMT        (ThmResult(..), SatResult(..), SafeResult(..), AllSatResult(..), genParse)
 import Data.SBV                (sbvCheckSolverInstallation, defaultSolverConfig, getAvailableSolvers)
 
 import qualified Data.SBV                as SBV (SBool, proveWithAll, proveWithAny, satWithAll, satWithAny

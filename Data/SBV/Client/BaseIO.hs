@@ -33,12 +33,11 @@ import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
 import Data.SBV.Core.Sized     (IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
-import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
+import Data.SBV.Core.Symbolic  (Objective, Result, VarContext, Symbolic, SBVRunMode, SMTConfig,
                                 SVal, symbolicEnv, rPartitionVars, State(..))
 import Data.SBV.Control.Types  (SMTOption)
-import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
-import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
-                                OptimizeResult)
+import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult, OptimizeResult)
+import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult)
 
 import GHC.TypeLits (KnownNat, TypeError, ErrorMessage(..))
 import Data.Kind
@@ -126,16 +125,18 @@ allSat = Trans.allSat
 allSatWith :: Satisfiable a => SMTConfig -> a -> IO AllSatResult
 allSatWith = Trans.allSatWith
 
+type OptimizeStyle = Trans.OptimizeStyle IO
+
 -- | Optimize a given collection of `Objective`s.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.optimize'
-optimize :: Satisfiable a => OptimizeStyle -> a -> IO OptimizeResult
+optimize :: (OptimizeResult result, Satisfiable a) => OptimizeStyle result -> a -> IO result
 optimize = Trans.optimize
 
 -- | Optimizes the objectives using the given SMT-solver.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.optimizeWith'
-optimizeWith :: Satisfiable a => SMTConfig -> OptimizeStyle -> a -> IO OptimizeResult
+optimizeWith :: (OptimizeResult result, Satisfiable a) => SMTConfig -> OptimizeStyle result -> a -> IO result
 optimizeWith = Trans.optimizeWith
 
 -- | Check if the constraints given are consistent in a prove call using the default solver.

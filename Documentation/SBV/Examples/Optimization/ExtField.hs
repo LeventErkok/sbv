@@ -25,7 +25,7 @@ import Data.SBV
 --
 -- We have:
 --
--- >>> optimize Independent problem
+-- >>> optimize independent problem
 -- Objective "one-x": Optimal in an extension field:
 --   one-x =  oo :: Integer
 --   min_y = 7.0 :: Real

@@ -161,7 +161,7 @@ run pgm = ST.execStateT pgm initState
 --   Minimum model number = 91811241911641 :: Int64
 -- @
 puzzle :: Bool -> IO ()
-puzzle shouldMaximize = print =<< optimizeWith z3{isNonModelVar = (/= finalVar)}  Lexicographic problem
+puzzle shouldMaximize = print =<< optimizeWith z3{isNonModelVar = (/= finalVar)}  lexicographic problem
   where finalVar | shouldMaximize = "Maximum model number"
                  | True           = "Minimum model number"
         problem = do State{env, inputs} <- run monad

@@ -371,7 +371,8 @@ module Data.SBV (
 
   -- ** Multiple optimization goals
   -- $multiOpt
-  , OptimizeStyle(..)
+  , BaseIO.OptimizeStyle
+  , lexicographic, independent, pareto
   -- ** Objectives and Metrics
   , Objective(..)
   , Metric(..), minimize, maximize
@@ -387,7 +388,8 @@ module Data.SBV (
 
   -- ** Inspecting proof results
   -- $resultTypes
-  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..), SMTReasonUnknown(..)
+  , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult, SMTResult(..), SMTReasonUnknown(..)
+  , LexicographicResult(..), IndependentResult(..), ParetoResult(..)
 
   -- ** Observing expressions
   -- $observeInternal
@@ -473,7 +475,7 @@ import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
 import Data.IORef (modifyIORef', readIORef)
 
 import Data.SBV.Client
-import Data.SBV.Client.BaseIO
+import Data.SBV.Client.BaseIO as BaseIO
 
 import Data.SBV.Utils.TDiff (Timing(..))
 

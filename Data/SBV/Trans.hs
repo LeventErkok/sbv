@@ -118,7 +118,10 @@ module Data.SBV.Trans (
   -- * Optimization
 
   -- ** Multiple optimization goals
-  , OptimizeStyle(..)
+  , OptimizeStyle
+  , lexicographic
+  , independent
+  , pareto
   -- ** Objectives
   , Objective(..)
   -- ** Soft assumptions

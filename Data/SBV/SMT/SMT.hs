@@ -38,7 +38,9 @@ module Data.SBV.SMT.SMT (
        , SatResult(..)
        , AllSatResult(..)
        , SafeResult(..)
-       , OptimizeResult(..)
+       , LexicographicResult(..)
+       , ParetoResult(..)
+       , IndependentResult(..)
        )
        where
 
@@ -120,12 +122,16 @@ data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: Bool          
 -- | A 'Data.SBV.safe' call results in a 'SafeResult'
 newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
 
--- | An 'Data.SBV.optimize' call results in a 'OptimizeResult'. In the 'ParetoResult' case, the boolean is 'True'
--- if we reached pareto-query limit and so there might be more unqueried results remaining. If 'False',
--- it means that we have all the pareto fronts returned. See the 'Pareto' 'OptimizeStyle' for details.
-data OptimizeResult = LexicographicResult SMTResult
-                    | ParetoResult        (Bool, [SMTResult])
-                    | IndependentResult   [(String, SMTResult)]
+-- | An 'Data.SBV.optimize' call results in a 'LexicographicResult',
+-- 'ParetoResult' or 'IndependentResult'.
+data LexicographicResult = LexicographicResult SMTResult
+-- | The boolean is 'True' if we reached pareto-query limit
+-- and so there might be more unqueried results remaining.
+-- If 'False', it means that we have all the pareto fronts returned.
+-- See the 'Pareto' 'OptimizeStyle' for details.
+data ParetoResult        = ParetoResult        (Bool, [SMTResult])
+data IndependentResult   = IndependentResult   [(String, SMTResult)]
+
 
 -- | What's the precision of a delta-sat query?
 getPrecision :: SMTResult -> Maybe String -> String
@@ -197,29 +203,32 @@ instance Show AllSatResult where
                            _             -> False
 
 -- Show instance for optimization results
-instance Show OptimizeResult where
+instance Show LexicographicResult where
+  show (LexicographicResult r)   = showResult id r
+
+instance Show IndependentResult where
+  show (IndependentResult   rs)  = showMulti "objectives" (map (uncurry shI) rs)
+      where shI n = showResult (\s -> "Objective "     ++ show n ++ ": " ++ s)
+
+instance Show ParetoResult where
   show res = case res of
-               LexicographicResult r   -> sh id r
-
-               IndependentResult   rs  -> multi "objectives" (map (uncurry shI) rs)
-
-               ParetoResult (False, [r]) -> sh ("Unique pareto front: " ++) r
-               ParetoResult (False, rs)  -> multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
-               ParetoResult (True,  rs)  ->    multi "pareto optimal values" (zipWith shP [(1::Int)..] rs)
+               ParetoResult (False, [r]) -> showResult ("Unique pareto front: " ++) r
+               ParetoResult (False, rs)  -> showMulti "pareto optimal values" (zipWith shP [(1::Int)..] rs)
+               ParetoResult (True,  rs)  ->    showMulti "pareto optimal values" (zipWith shP [(1::Int)..] rs)
                                            ++ "\n*** Note: Pareto-front extraction was terminated as requested by the user."
                                            ++ "\n***       There might be many other results!"
+      where shP i = showResult (\s -> "Pareto front #" ++ show i ++ ": " ++ s)
 
-       where multi w [] = "There are no " ++ w ++ " to display models for."
-             multi _ xs = intercalate "\n" xs
+showMulti :: String -> [String] -> String
+showMulti w [] = "There are no " ++ w ++ " to display models for."
+showMulti _ xs = intercalate "\n" xs
 
-             shI n = sh (\s -> "Objective "     ++ show n ++ ": " ++ s)
-             shP i = sh (\s -> "Pareto front #" ++ show i ++ ": " ++ s)
-
-             sh tag r = showSMTResult (tag "Unsatisfiable.")
-                                      (tag "Unknown.")
-                                      (tag "Optimal with no assignments.")
-                                      (tag "Optimal model:" ++ "\n")
-                                      (\mbP -> tag "Optimal model with delta-satisfiability, precision: " ++ getPrecision r mbP ++ ":" ++ "\n")
+showResult :: (String -> String) -> SMTResult -> String
+showResult tag r = showSMTResult (tag "Unsatisfiable.")
+                         (tag "Unknown.")
+                         (tag "Optimal with no assignments.")
+                         (tag "Optimal model:" ++ "\n")
+                         (\mbP -> tag "Optimal model with delta-satisfiability, precision: " ++ getPrecision r mbP ++ ":" ++ "\n")
                                       (tag "Optimal in an extension field:" ++ "\n")
                                       r
 
