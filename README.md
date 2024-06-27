@@ -104,6 +104,7 @@ The [LICENSE](http://github.com/LeventErkok/sbv/tree/master/LICENSE) file contai
 The following people made major contributions to SBV, by developing new features and contributing to the design in significant ways: Joel Burget, Brian Huffman, Brian Schroeder, and Jeffrey Young.
 
 The following people reported bugs, provided comments/feedback, or contributed to the development of SBV in various ways:
+Andreas Abel,
 Ara Adkins,
 Kanishka Azimi,
 Markus Barenhoff,
