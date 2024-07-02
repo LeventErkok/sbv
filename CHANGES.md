@@ -12,6 +12,10 @@
     created type-checking but invalid SBV programs. See https://github.com/LeventErkok/sbv/issues/706
     for details.
 
+  * Add functions optLexicographic, optLexicographicWith, optPareto, optParetoWith, optIndependent, optIndependentWith
+    which makes using optimization functions easier. These are simple wrappers over the existing optimization routines,
+    simplifying their interface.
+
 ### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type

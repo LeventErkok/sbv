@@ -324,7 +324,6 @@ module Data.SBV (
   , sat, satWith
   , dsat, dsatWith
   , allSat, allSatWith
-  , optimize, optimizeWith
   , isVacuousProof, isVacuousProofWith
   , isTheorem, isTheoremWith, isSatisfiable, isSatisfiableWith
   , proveWithAny, proveWithAll, proveConcurrentWithAny, proveConcurrentWithAll
@@ -368,6 +367,10 @@ module Data.SBV (
 
   -- * Optimization
   -- $optiIntro
+  , optimize, optimizeWith
+  , optLexicographic, optLexicographicWith
+  , optPareto, optParetoWith
+  , optIndependent, optIndependentWith
 
   -- ** Multiple optimization goals
   -- $multiOpt
@@ -1705,5 +1708,46 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                           internalConstraint (getRootState st) False [] eq
 
                        newExpr st KBool $ SBVApp (SpecialRelOp ka iop) []
+
+-- | Optimize lexicographically, with the default solver.
+optLexicographic :: Satisfiable a => a -> IO SMTResult
+optLexicographic = optLexicographicWith defaultSMTCfg
+
+-- | Optimize lexicographically, using the given solver.
+optLexicographicWith :: Satisfiable a => SMTConfig -> a -> IO SMTResult
+optLexicographicWith config p = do
+   res <- optimizeWith config Lexicographic p
+   case res of
+     LexicographicResult r -> pure r
+     _                     -> error $ "A lexicographic optimization call resulted in a bad result:"
+                                    ++ "\n" ++ show res
+
+-- Pareto front optimization, with the default solver.
+optPareto :: Satisfiable a => Maybe Int -> a -> IO (Bool, [SMTResult])
+optPareto = optParetoWith defaultSMTCfg
+
+-- | Pareto front optimization, with the given solver. The optional integer argument is the number of fronts to return. If 'Nothing', then
+-- we will return all pareto fronts. If the first component of the result is 'True' then we reached the pareto-query limit specified by
+-- the user, so there might be more unqueried results remaining. If 'False', it means that all the pareto fronts are returned.
+optParetoWith :: Satisfiable a => SMTConfig -> Maybe Int -> a -> IO (Bool, [SMTResult])
+optParetoWith config mbLim p = do
+   res <- optimizeWith config (Pareto mbLim) p
+   case res of
+     ParetoResult r -> pure r
+     _              -> error $ "A pareto optimization call resulted in a bad result:"
+                             ++ "\n" ++ show res
+
+-- | Independent optimization, with the default solver. In each result, string is the name of the objective optimized given by the user.
+optIndependent :: Satisfiable a => a -> IO [(String, SMTResult)]
+optIndependent = optIndependentWith defaultSMTCfg
+
+-- | Independent optimization, with the given solver. In each result, string is the name of the objective optimized given by the user.
+optIndependentWith :: Satisfiable a => SMTConfig -> a -> IO [(String, SMTResult)]
+optIndependentWith config p = do
+   res <- optimizeWith config Independent p
+   case res of
+     IndependentResult r -> pure r
+     _                   -> error $ "An independent optimization call resulted in a bad result:"
+                                  ++ "\n" ++ show res
 
 {- HLint ignore module "Use import/export shortcut" -}
