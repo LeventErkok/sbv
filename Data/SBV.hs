@@ -1722,7 +1722,7 @@ optLexicographicWith config p = do
      _                     -> error $ "A lexicographic optimization call resulted in a bad result:"
                                     ++ "\n" ++ show res
 
--- Pareto front optimization, with the default solver.
+-- | Pareto front optimization, with the default solver.
 optPareto :: Satisfiable a => Maybe Int -> a -> IO (Bool, [SMTResult])
 optPareto = optParetoWith defaultSMTCfg
 
