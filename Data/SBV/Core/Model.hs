@@ -2400,6 +2400,32 @@ class SMTDefinable a where
 
   -- | Uninterpret a value, i.e., add this value as a completely undefined value/function that
   -- the solver is free to instantiate to satisfy other constraints.
+  --
+  -- __Known issues__
+  --
+  -- Usually using an uninterpret function will register itself to the solver, but sometimes the lazyness
+  -- of the evaluation might render this unreliable.
+  --
+  -- For example, when working with quantifiers and uninterpreted functions with the following code:
+  --
+  -- > runSMTWith z3 $ do
+  -- >   let f = uninterpret "f" :: SInteger -> SInteger
+  -- >   query $ do
+  -- >     constrain $ \(Forall (b :: SInteger)) -> f b .== f b
+  -- >     checkSat
+  --
+  -- The solver will complain about the unknown constant @f (Int)@.
+  --
+  -- A workaround of this is to explicit register them with 'Data.SBV.Control.registerUISMTFunction':
+  --
+  -- > runSMTWith z3 $ do
+  -- >   let f = uninterpret "f" :: SInteger -> SInteger
+  -- >   registerUISMTFunction f
+  -- >   query $ do
+  -- >     constrain $ \(Forall (b :: SInteger)) -> f b .== f b
+  -- >     checkSat
+  --
+  -- See https://github.com/LeventErkok/sbv/issues/711 for more info.
   uninterpret :: String -> a
 
   -- | Uninterpret a value, with named arguments in case of functions. SBV will use these
