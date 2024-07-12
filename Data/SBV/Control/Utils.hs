@@ -398,7 +398,7 @@ getValue s = do
 -- | A class which allows for sexpr-conversion to functions
 class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
   sexprToArg     :: fun -> [SExpr] -> Maybe a
-  smtFunName     :: (MonadIO m, SolverContext m, MonadSymbolic m) => fun -> m ((String, Maybe [String]), Bool)
+  smtFunName     :: (MonadIO m, SolverContext m) => fun -> m ((String, Maybe [String]), Bool)
   smtFunSaturate :: fun -> SBV r
   smtFunType     :: fun -> SBVType
   smtFunDefault  :: fun -> Maybe r
@@ -476,7 +476,7 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
 -- | Registering an uninterpreted SMT function. This is typically not necessary as uses of the UI
 -- function itself will register it automatically. But there are cases where doing this explicitly can
 -- come in handy.
-registerUISMTFunction :: (MonadIO m, SolverContext m, MonadSymbolic m) => SMTFunction fun a r => fun -> m ()
+registerUISMTFunction :: (MonadIO m, SolverContext m) => SMTFunction fun a r => fun -> m ()
 registerUISMTFunction f = do st                <- contextState
                              (nmas, isCurried) <- smtFunName f
                              io $ newUninterpreted st nmas (smtFunType f) (UINone isCurried)
