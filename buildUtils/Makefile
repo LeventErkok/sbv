@@ -1,11 +1,3 @@
-TARGETS=../.travis.yml
-
-all: $(TARGETS)
-
-# We now use haskell-ci for travis.
-../.travis.yml:
-	@cd ..; haskell-ci sbv.cabal --osx 8.10.2 --no-tests --no-benchmarks --no-doctest --no-hlint --email-notifications
-
 clean:
 	@rm -f *.o *.hi
 
