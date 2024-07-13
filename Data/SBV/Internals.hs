@@ -100,6 +100,7 @@ import Data.SBV.Lambda
 
 --- $setup
 --- >>> -- For doctest purposes only:
+--  >>> :set -XScopedTypeVariables
 --- >>> import Data.SBV
 
 -- | Send an arbitrary string to the solver in a query.

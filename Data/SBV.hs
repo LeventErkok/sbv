@@ -499,7 +499,7 @@ import Data.Char (isSpace, isPunctuation)
 
 --- $setup
 --- >>> -- For doctest purposes only:
---- >>> :set -XDataKinds
+--- >>> :set -XDataKinds -XFlexibleContexts -XTypeApplications -XRankNTypes
 --- >>> import Data.Proxy
 
 -- | Show a value in detailed (cracked) form, if possible.

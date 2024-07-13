@@ -32,7 +32,7 @@ import Data.SBV
 -- $setup
 -- >>> -- For doctest purposes only, ignore.
 -- >>> import Data.SBV
--- >>> :set -XDataKinds
+-- >>> :set -XDataKinds -XScopedTypeVariables
 
 -- | An uninterpreted sort for demo purposes, named 'U'
 data U
