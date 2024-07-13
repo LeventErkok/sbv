@@ -222,7 +222,7 @@ solveN n = do putStrLn $ "Checking for solutions with " ++ show n ++ " move" ++ 
         disp :: Int -> (Bool, [(Bool, U2Member, U2Member)]) -> IO ()
         disp i (_, ss)
          | lss /= n = error $ "Expected " ++ show n ++ " results; got: " ++ show lss
-         | True     = do putStrLn $ "Solution #" ++ show i ++ ": "
+         | True     = do putStrLn $ "Solution #" ++ show i ++ ":"
                          go False 0 ss
                          return ()
          where lss  = length ss
