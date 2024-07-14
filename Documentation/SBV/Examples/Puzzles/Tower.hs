@@ -135,20 +135,19 @@ example = runSMT $ do
           let (minX, maxX) = bounds top
               (minY, maxY) = bounds left
 
-              sh x = do vx <- getValue x
-                        io $ putStr $ show vx ++ " "
-
+          -- Display top row
           io $ putStr "  "
-          forM_ [minX .. maxX] $ \x -> sh (top ! x)
-          io $ putStrLn ""
+          topVals <- forM [minX .. maxX] $ \x -> getValue (top ! x)
+          io $ putStrLn $ unwords (map show topVals)
 
+          -- Display each row, sandwiched between left/right
           forM_ [minY .. maxY] $ \y -> do
-             sh (left ! y)
-             forM_ [minX .. maxX] $ \x -> do
-               sh (grid ! (x, y))
-             sh (right ! y)
-             io $ putStrLn ""
+             lv <- getValue (left  ! y)
+             rv <- getValue (right ! y)
+             row <- forM [minX .. maxX] $ \x -> getValue (grid ! (x, y))
+             io $ putStrLn $ unwords (map show (lv : row ++ [rv]))
 
+          -- Finish with bottom row
           io $ putStr "  "
-          forM_ [minX .. maxX] $ \x -> sh (bot ! x)
-          io $ putStrLn ""
+          botVals <- forM [minX .. maxX] $ \x -> getValue (bot ! x)
+          io $ putStrLn $ unwords (map show botVals)
