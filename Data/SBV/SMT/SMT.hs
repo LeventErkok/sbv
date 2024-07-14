@@ -593,9 +593,11 @@ showModelDictionary warnEmpty includeEverything cfg allVars
 showModelUI :: SMTConfig -> (String, (Bool, SBVType, Either String ([([CV], CV)], CV))) -> String
 showModelUI cfg (nm, (isCurried, SBVType ts, interp))
   = intercalate "\n" $ case interp of
-                         Left  e  -> ["  " ++ l | l <- [sig, e]]
-                         Right ds -> ["  " ++ l | l <- sig : mkBody ds]
+                         Left  e  -> ["  " ++ trim l | l <- [sig, e]]
+                         Right ds -> ["  " ++ trim l | l <- sig : mkBody ds]
   where noOfArgs = length ts - 1
+
+        trim = reverse . dropWhile isSpace . reverse
 
         (ats, rt) = case map showBaseKind ts of
                      []  -> error $ "showModelUI: Unexpected type: " ++ show (SBVType ts)
