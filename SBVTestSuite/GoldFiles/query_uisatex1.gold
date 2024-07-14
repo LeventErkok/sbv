@@ -167,8 +167,8 @@ Satisfiable. Model:
   s0 = 0 :: Integer
 
   q1 :: Integer -> Integer
-  q1 0    = 1 
-  q1 (-3) = 9 
+  q1 0    = 1
+  q1 (-3) = 9
   q1 3    = 75
   q1 _    = 12
 
@@ -179,16 +179,16 @@ Satisfiable. Model:
 
   q3 :: Float -> Bool -> Integer -> Float
   q3 9.6 False 8   = Infinity
-  q3 9.6 True  121 = -0.0    
-  q3 _   _     _   = 8.6     
+  q3 9.6 True  121 = -0.0
+  q3 _   _     _   = 8.6
 
   q4 :: Char -> String -> Float
-  q4 'r' "foo" = 3.5 
+  q4 'r' "foo" = 3.5
   q4 'c' "tey" = 92.0
   q4 _   _     = 78.0
 
   q5 :: [Integer] -> [Float] -> Integer
   q5 [5]   [8.2,0.0] = 210
-  q5 [9,5] [8.2,9.0] = 21 
-  q5 _     _         = 7  
+  q5 [9,5] [8.2,9.0] = 21
+  q5 _     _         = 7
 DONE!

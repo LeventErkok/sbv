@@ -1886,54 +1886,54 @@ Looking for solution 65
 RESULT: Solution #1:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
   q2 True True = False
-  q2 _    _    = True 
+  q2 _    _    = True
 Solution #2:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True  = True 
-  q2 False False = True 
+  q2 False True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #3:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True  = True 
-  q2 False False = True 
+  q2 False True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #4:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False False = True 
+  q2 False False = True
   q2 _     _     = False
 Solution #5:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True = True 
+  q2 True True = True
   q2 _    _    = False
 Solution #6:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True = True 
+  q2 True True = True
   q2 _    _    = False
 Solution #7:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
   q2 _ _ = False
@@ -1942,39 +1942,39 @@ Solution #8:
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True False = True 
+  q2 True False = True
   q2 _    _     = False
 Solution #9:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True  = True 
-  q2 True False = True 
+  q2 True True  = True
+  q2 True False = True
   q2 _    _     = False
 Solution #10:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True  = True 
-  q2 True False = True 
+  q2 True True  = True
+  q2 True False = True
   q2 _    _     = False
 Solution #11:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True False = True 
+  q2 True False = True
   q2 _    _     = False
 Solution #12:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True = True 
+  q2 True True = True
   q2 _    _    = False
 Solution #13:
   q1 :: Bool -> Bool
@@ -1982,19 +1982,19 @@ Solution #13:
 
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #14:
   q1 :: Bool -> Bool
-  q1 False = True 
+  q1 False = True
   q1 _     = False
 
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #15:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
   q2 _ _ = True
@@ -2010,7 +2010,7 @@ Solution #17:
 
   q2 :: Bool -> Bool -> Bool
   q2 True True = False
-  q2 _    _    = True 
+  q2 _    _    = True
 Solution #18:
   q1 :: Bool -> Bool
   q1 _ = True
@@ -2018,135 +2018,135 @@ Solution #18:
   q2 :: Bool -> Bool -> Bool
   q2 True  True  = False
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #19:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #20:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #21:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  False = True 
-  q2 False True  = True 
+  q2 True  False = True
+  q2 False True  = True
   q2 _     _     = False
 Solution #22:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True = True 
-  q2 False True = True 
+  q2 True  True = True
+  q2 False True = True
   q2 _     _    = False
 Solution #23:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
+  q2 False True = True
   q2 _     _    = False
 Solution #24:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
+  q2 False True = True
   q2 _     _    = False
 Solution #25:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
-  q2 True  True = True 
+  q2 False True = True
+  q2 True  True = True
   q2 _     _    = False
 Solution #26:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
-  q2 True  True = True 
+  q2 False True = True
+  q2 True  True = True
   q2 _     _    = False
 Solution #27:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True False = True 
-  q2 True True  = True 
+  q2 True False = True
+  q2 True True  = True
   q2 _    _     = False
 Solution #28:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 False True  = False
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #29:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True = True 
-  q2 False True = True 
+  q2 True  True = True
+  q2 False True = True
   q2 _     _    = False
 Solution #30:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True True = True 
+  q2 True True = True
   q2 _    _    = False
 Solution #31:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
+  q2 False True = True
   q2 _     _    = False
 Solution #32:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True  = True 
-  q2 True  False = True 
+  q2 False True  = True
+  q2 True  False = True
   q2 _     _     = False
 Solution #33:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 True  True  = False
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #34:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True False = True 
+  q2 True False = True
   q2 _    _     = False
 Solution #35:
   q1 :: Bool -> Bool
@@ -2154,34 +2154,34 @@ Solution #35:
 
   q2 :: Bool -> Bool -> Bool
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #36:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 False False = False
-  q2 _     _     = True 
+  q2 _     _     = True
 Solution #37:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False True = True 
+  q2 False True = True
   q2 _     _    = False
 Solution #38:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True False = True 
+  q2 True False = True
   q2 _    _     = False
 Solution #39:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
@@ -2191,25 +2191,25 @@ Solution #40:
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  False = True 
-  q2 False False = True 
+  q2 True  False = True
+  q2 False False = True
   q2 _     _     = False
 Solution #41:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  False = True 
-  q2 False False = True 
+  q2 True  False = True
+  q2 False False = True
   q2 _     _     = False
 Solution #42:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 False False = True 
+  q2 False False = True
   q2 _     _     = False
 Solution #43:
   q1 :: Bool -> Bool
@@ -2218,10 +2218,10 @@ Solution #43:
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
   q2 True True  = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #44:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
@@ -2232,24 +2232,24 @@ Solution #45:
 
   q2 :: Bool -> Bool -> Bool
   q2 True True = False
-  q2 _    _    = True 
+  q2 _    _    = True
 Solution #46:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 True True = False
-  q2 _    _    = True 
+  q2 _    _    = True
 Solution #47:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
   q2 True True  = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #48:
   q1 :: Bool -> Bool
   q1 _ = False
@@ -2257,23 +2257,23 @@ Solution #48:
   q2 :: Bool -> Bool -> Bool
   q2 True  True = False
   q2 False True = False
-  q2 _     _    = True 
+  q2 _     _    = True
 Solution #49:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  False = True 
-  q2 False False = True 
+  q2 True  False = True
+  q2 False False = True
   q2 _     _     = False
 Solution #50:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False False = True 
+  q2 False False = True
   q2 _     _     = False
 Solution #51:
   q1 :: Bool -> Bool
@@ -2281,78 +2281,78 @@ Solution #51:
 
   q2 :: Bool -> Bool -> Bool
   q2 False True = False
-  q2 _     _    = True 
+  q2 _     _    = True
 Solution #52:
   q1 :: Bool -> Bool
-  q1 False = True 
+  q1 False = True
   q1 _     = False
 
   q2 :: Bool -> Bool -> Bool
   q2 False True = False
-  q2 _     _    = True 
+  q2 _     _    = True
 Solution #53:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 False True = False
-  q2 _     _    = True 
+  q2 _     _    = True
 Solution #54:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
   q2 False True = False
-  q2 _     _    = True 
+  q2 _     _    = True
 Solution #55:
   q1 :: Bool -> Bool
   q1 _ = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True  = True 
-  q2 False False = True 
+  q2 True  True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #56:
   q1 :: Bool -> Bool
   q1 True = False
-  q1 _    = True 
+  q1 _    = True
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True  = True 
-  q2 False False = True 
+  q2 True  True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #57:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #58:
   q1 :: Bool -> Bool
-  q1 True = True 
+  q1 True = True
   q1 _    = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True  = True 
-  q2 False False = True 
+  q2 True  True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #59:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 True  True  = True 
-  q2 False False = True 
+  q2 True  True  = True
+  q2 False False = True
   q2 _     _     = False
 Solution #60:
   q1 :: Bool -> Bool
   q1 _ = False
 
   q2 :: Bool -> Bool -> Bool
-  q2 False False = True 
+  q2 False False = True
   q2 _     _     = False
 Solution #61:
   q1 :: Bool -> Bool
@@ -2360,7 +2360,7 @@ Solution #61:
 
   q2 :: Bool -> Bool -> Bool
   q2 True False = False
-  q2 _    _     = True 
+  q2 _    _     = True
 Solution #62:
   q1 :: Bool -> Bool
   q1 _ = False
