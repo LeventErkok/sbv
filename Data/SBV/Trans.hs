@@ -133,7 +133,7 @@ module Data.SBV.Trans (
   , ThmResult(..), SatResult(..), AllSatResult(..), SafeResult(..), OptimizeResult(..), SMTResult(..), SMTReasonUnknown(..)
 
   -- ** Observing expressions
-  , observe
+  , observe, sObserve
 
   -- ** Programmable model extraction
   , SatModel(..), Modelable(..), displayModels, extractModels

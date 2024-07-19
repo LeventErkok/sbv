@@ -31,6 +31,8 @@ module Data.SBV.Core.Floating (
        , svFloatingPointAsSWord
        ) where
 
+import Control.Monad (when)
+
 import Data.Bits (testBit)
 import Data.Int  (Int8,  Int16,  Int32,  Int64)
 import Data.Word (Word8, Word16, Word32, Word64)
@@ -559,10 +561,16 @@ instance Metric Float where
    fromMetricSpace        = sComparableSWord32AsSFloat
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+
+   annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- | 'Double' instance for 'Metric' goes through the lexicographic ordering on 'Word64'.
 -- It implicitly makes sure that the value is not @NaN@.
@@ -573,10 +581,16 @@ instance Metric Double where
    fromMetricSpace         = sComparableSWord64AsSDouble
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+
+   annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- | Real instance for FloatingPoint. NB. The methods haven't been subjected to much testing, so beware of any floating-point snafus here.
 instance ValidFloat eb sb => Real (FloatingPoint eb sb) where
@@ -661,10 +675,16 @@ instance (BVIsNonZero (eb + sb), KnownNat (eb + sb), ValidFloat eb sb) => Metric
    fromMetricSpace                        = sComparableSWordAsSFloatingPoint
 
    msMinimize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
 
    msMaximize nm o = do constrain $ sNot $ fpIsNaN o
-                        addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+                        let nm' = annotateForMS nm o
+                        when (nm' /= nm) $ sObserve nm (unSBV o)
+                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
+
+   annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- Map SBV's rounding modes to LibBF's
 rmToRM :: SRoundingMode -> Maybe RoundMode

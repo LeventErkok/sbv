@@ -37,8 +37,8 @@ import Data.SBV.Core.Symbolic  (Objective, OptimizeStyle, Result, VarContext, Sy
                                 SVal, symbolicEnv, rPartitionVars, State(..))
 import Data.SBV.Control.Types  (SMTOption)
 import Data.SBV.Provers.Prover (Provable, Satisfiable, SExecutable, ThmResult)
-import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult,
-                                OptimizeResult)
+import Data.SBV.SMT.SMT        (AllSatResult, SafeResult, SatResult, OptimizeResult)
+import Data.SBV.Utils.Lib      (checkObservableName)
 
 import GHC.TypeLits (KnownNat, TypeError, ErrorMessage(..))
 import Data.Kind
@@ -889,6 +889,18 @@ addSValOptGoal = Trans.addSValOptGoal
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.outputSVal'
 outputSVal :: SVal -> Symbolic ()
 outputSVal = Trans.outputSVal
+
+-- | A variant of observe that you can use at the top-level. This is useful with quick-check, for instance.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sObserve'
+sObserve :: SymVal a => String -> SBV a -> Symbolic ()
+sObserve m x
+  | Just bad <- checkObservableName m
+  = error bad
+  | True
+  = do st <- symbolicEnv
+       liftIO $ do xsv <- Trans.sbvToSV st x
+                   Trans.recordObservable st m (const True) xsv
 
 -- | Capturing non-matching instances for better error messages, conversions from sized
 type FromSizedErr (arg :: Type) =     'Text "fromSized: Cannot convert from type: " ':<>: 'ShowType arg

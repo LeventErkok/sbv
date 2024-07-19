@@ -18,14 +18,18 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , joinArgs, splitArgs
                           , stringToQFS, qfsToString
                           , isKString
+                          , checkObservableName
                           )
                           where
 
-import Data.Char    (isSpace, chr, ord)
+import Data.Char    (isSpace, chr, ord, toLower, isDigit)
+import Data.List    (isPrefixOf)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 
 import Numeric (readHex, showHex)
+
+import Data.SBV.SMT.SMTLibNames (smtLibReservedNames)
 
 -- | We have a nasty issue with the usual String/List confusion in Haskell. However, we can
 -- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
@@ -131,3 +135,16 @@ stringToQFS = concatMap cvt
          | oc >= 0x20 && oc <= 0x7E = [c]
          | True                     = "\\u{" ++ showHex oc "" ++ "}"
          where oc = ord c
+
+-- | Check if an observable name is good.
+checkObservableName :: String -> Maybe String
+checkObservableName lbl
+  | null lbl
+  = Just "SBV.observe: Bad empty name!"
+  | map toLower lbl `elem` smtLibReservedNames
+  = Just $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show lbl
+  | "s" `isPrefixOf` lbl && all isDigit (drop 1 lbl)
+  = Just $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show lbl
+  | True
+  = Nothing
+

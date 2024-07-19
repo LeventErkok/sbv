@@ -51,7 +51,7 @@ module Data.SBV.Core.Symbolic
   , addInternInput, addUserInput
   , getUserName', getUserName
   , lookupInput , getSValPathCondition, extendSValPathCondition
-  , getTableIndex
+  , getTableIndex, sObserve
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..)
   , registerKind, registerLabel, recordObservable
@@ -111,7 +111,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff (Timing)
-import Data.SBV.Utils.Lib   (stringToQFS)
+import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName)
 
 import Data.SBV.Control.Types
 
@@ -2098,6 +2098,16 @@ addSValOptGoal obj = do st <- symbolicEnv
                                            $ noInteractive [ "Adding an optimization objective:"
                                                            , "  Objective: " ++ show obj
                                                            ]
+
+-- | Generalization of 'Data.SBV.sObserve'
+sObserve :: MonadSymbolic m => String -> SVal -> m ()
+sObserve m x
+  | Just bad <- checkObservableName m
+  = error bad
+  | True
+  = do st <- symbolicEnv
+       liftIO $ do xsv <- svToSV st x
+                   recordObservable st m (const True) xsv
 
 -- | Generalization of 'Data.SBV.outputSVal'
 outputSVal :: MonadSymbolic m => SVal -> m ()

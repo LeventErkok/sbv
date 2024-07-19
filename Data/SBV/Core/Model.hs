@@ -55,7 +55,6 @@ module Data.SBV.Core.Model (
 
 import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus)
-import Control.Monad.Trans    (liftIO)
 import Control.Monad.IO.Class (MonadIO)
 
 import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
@@ -66,10 +65,9 @@ import GHC.TypeLits hiding (SChar)
 
 import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
 import Data.Bits   (Bits(..))
-import Data.Char   (toLower, isDigit)
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type)
-import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate, isPrefixOf)
+import Data.List   (genericLength, genericIndex, genericTake, unzip4, unzip5, unzip6, unzip7, intercalate)
 import Data.Maybe  (fromMaybe, mapMaybe)
 import Data.String (IsString(..))
 import Data.Word   (Word8, Word16, Word32, Word64)
@@ -102,7 +100,7 @@ import Data.SBV.Utils.ExtractIO(ExtractIO)
 import Data.SBV.Provers.Prover (defaultSMTCfg, SafeResult(..), defs2smt, prove)
 import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
-import Data.SBV.Utils.Lib     (isKString)
+import Data.SBV.Utils.Lib     (isKString, checkObservableName)
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
 import Data.IORef (readIORef)
@@ -786,18 +784,6 @@ label m x
                   newExpr st k (SBVApp (Label m) [xsv])
 
 
--- | Check if an observable name is good.
-checkObservableName :: String -> Maybe String
-checkObservableName lbl
-  | null lbl
-  = Just "SBV.observe: Bad empty name!"
-  | map toLower lbl `elem` smtLibReservedNames
-  = Just $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show lbl
-  | "s" `isPrefixOf` lbl && all isDigit (drop 1 lbl)
-  = Just $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show lbl
-  | True
-  = Nothing
-
 -- | Observe the value of an expression, if the given condition holds.  Such values are useful in model construction, as they are printed part of a satisfying model, or a
 -- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
 -- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
@@ -816,16 +802,6 @@ observeIf cond m x
 -- | Observe the value of an expression, unconditionally. See 'observeIf' for a generalized version.
 observe :: SymVal a => String -> SBV a -> SBV a
 observe = observeIf (const True)
-
--- | A variant of observe that you can use at the top-level. This is useful with quick-check, for instance.
-sObserve :: SymVal a => String -> SBV a -> Symbolic ()
-sObserve m x
-  | Just bad <- checkObservableName m
-  = error bad
-  | True
-  = do st <- symbolicEnv
-       liftIO $ do xsv <- sbvToSV st x
-                   recordObservable st m (const True) xsv
 
 -- | Symbolic Comparisons. Similar to 'Eq', we cannot implement Haskell's 'Ord' class
 -- since there is no way to return an 'Ordering' value from a symbolic comparison.
@@ -2998,7 +2974,7 @@ assertWithPenalty nm o p = addSValOptGoal $ unSBV `fmap` AssertWithPenalty nm o 
 -- <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/nbjorner-scss2014.pdf>.
 --
 -- Minimal completion: None. However, if @MetricSpace@ is not identical to the type, you want
--- to define 'toMetricSpace' and possibly 'minimize'/'maximize' to add extra constraints as necessary.
+-- to define 'toMetricSpace'/'annotateForMS', and possibly 'minimize'/'maximize' to add extra constraints as necessary.
 class Metric a where
   -- | The metric space we optimize the goal over. Usually the same as the type itself, but not always!
   -- For instance, signed bit-vectors are optimized over their unsigned counterparts, floats are
@@ -3008,16 +2984,25 @@ class Metric a where
 
   -- | Compute the metric value to optimize.
   toMetricSpace   :: SBV a -> SBV (MetricSpace a)
+
   -- | Compute the value itself from the metric corresponding to it.
   fromMetricSpace :: SBV (MetricSpace a) -> SBV a
 
+  -- | Annotate for the metric space, to clarify the new name. If this result is not identity,
+  -- we will add an sObserve on the original.
+  annotateForMS :: String -> SBV a -> String
+
   -- | Minimizing a metric space
   msMinimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  msMinimize nm o = addSValOptGoal $ unSBV `fmap` Minimize nm (toMetricSpace o)
+  msMinimize nm o = do let nm' = annotateForMS nm o
+                       when (nm' /= nm) $ sObserve nm (unSBV o)
+                       addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
 
   -- | Maximizing a metric space
   msMaximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  msMaximize nm o = addSValOptGoal $ unSBV `fmap` Maximize nm (toMetricSpace o)
+  msMaximize nm o = do let nm' = annotateForMS nm o
+                       when (nm' /= nm) $ sObserve nm (unSBV o)
+                       addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
 
   -- if MetricSpace is the same, we can give a default definition
   default toMetricSpace :: (a ~ MetricSpace a) => SBV a -> SBV (MetricSpace a)
@@ -3026,11 +3011,16 @@ class Metric a where
   default fromMetricSpace :: (a ~ MetricSpace a) => SBV (MetricSpace a) -> SBV a
   fromMetricSpace = id
 
+  -- Annotations to indicate if the metric space transition was needed
+  default annotateForMS :: (a ~ MetricSpace a) => String -> SBV a -> String
+  annotateForMS s _ = s
+
 -- Booleans assume True is greater than False
 instance Metric Bool where
   type MetricSpace Bool = Word8
-  toMetricSpace t       = ite t 1 0
-  fromMetricSpace w     = w ./= 0
+  toMetricSpace t   = ite t 1 0
+  fromMetricSpace w = w ./= 0
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- | Generalization of 'Data.SBV.minimize'
 minimize :: (Metric a, MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
@@ -3051,23 +3041,27 @@ instance Metric AlgReal
 -- To optimize signed bounded values, we have to adjust to the range
 instance Metric Int8 where
   type MetricSpace Int8 = Word8
-  toMetricSpace    x    = sFromIntegral x + 128  -- 2^7
-  fromMetricSpace  x    = sFromIntegral x - 128
+  toMetricSpace   x = sFromIntegral x + 128  -- 2^7
+  fromMetricSpace x = sFromIntegral x - 128
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 instance Metric Int16 where
   type MetricSpace Int16 = Word16
-  toMetricSpace    x     = sFromIntegral x + 32768  -- 2^15
-  fromMetricSpace  x     = sFromIntegral x - 32768
+  toMetricSpace   x = sFromIntegral x + 32768  -- 2^15
+  fromMetricSpace x = sFromIntegral x - 32768
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 instance Metric Int32 where
   type MetricSpace Int32 = Word32
-  toMetricSpace    x     = sFromIntegral x + 2147483648 -- 2^31
-  fromMetricSpace  x     = sFromIntegral x - 2147483648
+  toMetricSpace   x = sFromIntegral x + 2147483648 -- 2^31
+  fromMetricSpace x = sFromIntegral x - 2147483648
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 instance Metric Int64 where
   type MetricSpace Int64 = Word64
-  toMetricSpace    x     = sFromIntegral x + 9223372036854775808  -- 2^63
-  fromMetricSpace  x     = sFromIntegral x - 9223372036854775808
+  toMetricSpace   x = sFromIntegral x + 9223372036854775808  -- 2^63
+  fromMetricSpace x = sFromIntegral x - 9223372036854775808
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- | Optimizing 'WordN'
 instance (KnownNat n, BVIsNonZero n) => Metric (WordN n)
@@ -3075,8 +3069,9 @@ instance (KnownNat n, BVIsNonZero n) => Metric (WordN n)
 -- | Optimizing 'IntN'
 instance (KnownNat n, BVIsNonZero n) => Metric (IntN n) where
   type MetricSpace (IntN n) = WordN n
-  toMetricSpace    x        = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
-  fromMetricSpace  x        = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
+  toMetricSpace   x = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
+  fromMetricSpace x = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
+  annotateForMS s _ = "MS(" ++ s ++ ")"
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

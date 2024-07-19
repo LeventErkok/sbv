@@ -450,7 +450,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets,
-                                        sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend)
+                                        sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend, sObserve)
 
 import qualified Data.SBV.Core.Model as M  (sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend)
 import qualified Data.SBV.Core.Data  as CD (bvExtract, (#), bvDrop, bvTake)

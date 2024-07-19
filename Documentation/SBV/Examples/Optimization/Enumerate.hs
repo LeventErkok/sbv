@@ -51,6 +51,8 @@ instance Metric Day where
                     $ ite (x .== 5) sSat
                                     sSun
 
+  annotateForMS s _ = "DayAsWord8(" ++ s ++ ")"
+
 -- | Identify weekend days
 isWeekend :: SDay -> SBool
 isWeekend = (`sElem` weekend)
@@ -61,8 +63,9 @@ isWeekend = (`sElem` weekend)
 --
 -- >>> almostWeekend
 -- Optimal model:
---   almostWeekend = Fri :: Day
---   last-day      =   4 :: Word8
+--   last-day             = Fri :: Day
+--   almostWeekend        = Fri :: Day
+--   DayAsWord8(last-day) =   4 :: Word8
 almostWeekend :: IO OptimizeResult
 almostWeekend = optimize Lexicographic $ do
                     day <- free "almostWeekend"
