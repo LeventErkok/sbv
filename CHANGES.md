@@ -16,6 +16,11 @@
     which makes using optimization functions easier. These are simple wrappers over the existing optimization routines,
     simplifying their interface.
 
+  * Change how optimization results are presented when the underlying metric space is different from the type
+    being optimized. As noted in https://github.com/LeventErkok/sbv/issues/716, the format SBV used was confusing.
+    We now be more explicit, and print the original value in its own right, along with the metric-space value.
+    Thanks to Andrew Anderson for reporting.
+
 ### Version 10.10, 2024-05-11
 
   * Add EqSymbolic, OrdSymbolic and Mergeable instances for NonEmpty type

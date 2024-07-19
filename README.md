@@ -106,6 +106,7 @@ The following people made major contributions to SBV, by developing new features
 The following people reported bugs, provided comments/feedback, or contributed to the development of SBV in various ways:
 Andreas Abel,
 Ara Adkins,
+Andrew Anderson,
 Kanishka Azimi,
 Markus Barenhoff,
 Reid Barton,
