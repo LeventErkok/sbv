@@ -1,5 +1,5 @@
 Optimal model:
-  x     =        -Infinity :: Double
+  min-x                =        -Infinity :: Double
                   6    5          4         3         2         1         0
                   3 21098765432 1098765432109876543210987654321098765432109876543210
                   S ----E11---- ------------------------S52-------------------------
@@ -10,7 +10,18 @@ Optimal model:
         Exponent: 1024 (Stored: 2047, Bias: 1023)
   Classification: FP_INFINITE
            Value: -Infinity
-  min-x = 4503599627370495 :: Word64
+  x                    =        -Infinity :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------S52-------------------------
+   Binary layout: 1 11111111111 0000000000000000000000000000000000000000000000000000
+      Hex layout: FFF0 0000 0000 0000
+       Precision: Double
+            Sign: Negative
+        Exponent: 1024 (Stored: 2047, Bias: 1023)
+  Classification: FP_INFINITE
+           Value: -Infinity
+  toMetricSpace(min-x) = 4503599627370495 :: Word64
                   6    5           4            3           2            1           0
                   3210 9876 5432 1098 7654 3210 9876 5432 1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 0000 0000 0000 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111

@@ -1,5 +1,5 @@
 Optimal model:
-  min-x+y        =    3.0e-45 :: Float
+  metric-min-x+y                =    3.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------S23----------
@@ -13,7 +13,21 @@ Optimal model:
            Octal: 0o4p-150
          Decimal: 3.0e-45
              Hex: 0x1p-148
-  x              =    1.0e-45 :: Float
+  min-x+y                       =    3.0e-45 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000010
+      Hex layout: 0000 0002
+       Precision: Single
+            Sign: Positive
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: FP_SUBNORMAL
+          Binary: 0b1p-148
+           Octal: 0o4p-150
+         Decimal: 3.0e-45
+             Hex: 0x1p-148
+  x                             =    1.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------S23----------
@@ -27,7 +41,7 @@ Optimal model:
            Octal: 0o2p-150
          Decimal: 1.0e-45
              Hex: 0x8p-152
-  y              =    1.0e-45 :: Float
+  y                             =    1.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------S23----------
@@ -41,7 +55,7 @@ Optimal model:
            Octal: 0o2p-150
          Decimal: 1.0e-45
              Hex: 0x8p-152
-  metric-min-x+y = 2147483650 :: Word32
+  toMetricSpace(metric-min-x+y) = 2147483650 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 1000 0000 0000 0000 0000 0000 0000 0010

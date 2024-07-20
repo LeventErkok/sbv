@@ -1,5 +1,5 @@
 Optimal model:
-  x     = 3.4028235e38 :: Float
+  max-x                = 3.4028235e38 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------S23----------
@@ -13,7 +13,21 @@ Optimal model:
            Octal: 0o3.77777774p+126
          Decimal: 3.4028235e38
              Hex: 0xf.fffffp+124
-  max-x =   4286578687 :: Word32
+  x                    = 3.4028235e38 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 11111110 11111111111111111111111
+      Hex layout: 7F7F FFFF
+       Precision: Single
+            Sign: Positive
+        Exponent: 127 (Stored: 254, Bias: 127)
+  Classification: FP_NORMAL
+          Binary: 0b1.11111111111111111111111p+127
+           Octal: 0o3.77777774p+126
+         Decimal: 3.4028235e38
+             Hex: 0xf.fffffp+124
+  toMetricSpace(max-x) =   4286578687 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 1111 1111 0111 1111 1111 1111 1111 1111

@@ -1,5 +1,5 @@
 Optimal model:
-  x     =   Infinity :: Float
+  max-y                =   Infinity :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
                   S ---E8--- ----------S23----------
@@ -10,7 +10,18 @@ Optimal model:
         Exponent: 128 (Stored: 255, Bias: 127)
   Classification: FP_INFINITE
            Value: Infinity
-  max-y = 4286578688 :: Word32
+  x                    =   Infinity :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 11111111 00000000000000000000000
+      Hex layout: 7F80 0000
+       Precision: Single
+            Sign: Positive
+        Exponent: 128 (Stored: 255, Bias: 127)
+  Classification: FP_INFINITE
+           Value: Infinity
+  toMetricSpace(max-y) = 4286578688 :: Word32
                   3 2            1           0
                   1098 7654 3210 9876 5432 1098 7654 3210
    Binary layout: 1111 1111 1000 0000 0000 0000 0000 0000
