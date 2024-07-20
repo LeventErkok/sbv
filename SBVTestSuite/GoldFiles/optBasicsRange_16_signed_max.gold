@@ -1,3 +1,4 @@
 Optimal model:
-  x = 32767 :: Int16
-  m = 65535 :: Word16
+  m                = 32767 :: Int16
+  x                = 32767 :: Int16
+  toMetricSpace(m) = 65535 :: Word16

@@ -1,3 +1,4 @@
 Optimal model:
-  x = -2147483648 :: Int32
-  m =           0 :: Word32
+  m                = -2147483648 :: Int32
+  x                = -2147483648 :: Int32
+  toMetricSpace(m) =           0 :: Word32

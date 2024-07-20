@@ -1,3 +1,4 @@
 Optimal model:
-  x = -9223372036854775808 :: Int64
-  m =                    0 :: Word64
+  m                = -9223372036854775808 :: Int64
+  x                = -9223372036854775808 :: Int64
+  toMetricSpace(m) =                    0 :: Word64
