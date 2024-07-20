@@ -2990,17 +2990,17 @@ class Metric a where
 
   -- | Annotate for the metric space, to clarify the new name. If this result is not identity,
   -- we will add an sObserve on the original.
-  annotateForMS :: String -> SBV a -> String
+  annotateForMS :: Proxy a -> String -> String
 
   -- | Minimizing a metric space
   msMinimize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  msMinimize nm o = do let nm' = annotateForMS nm o
+  msMinimize nm o = do let nm' = annotateForMS (Proxy @a) nm
                        when (nm' /= nm) $ sObserve nm (unSBV o)
                        addSValOptGoal $ unSBV `fmap` Minimize nm' (toMetricSpace o)
 
   -- | Maximizing a metric space
   msMaximize :: (MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
-  msMaximize nm o = do let nm' = annotateForMS nm o
+  msMaximize nm o = do let nm' = annotateForMS (Proxy @a) nm
                        when (nm' /= nm) $ sObserve nm (unSBV o)
                        addSValOptGoal $ unSBV `fmap` Maximize nm' (toMetricSpace o)
 
@@ -3012,15 +3012,15 @@ class Metric a where
   fromMetricSpace = id
 
   -- Annotations to indicate if the metric space transition was needed
-  default annotateForMS :: (a ~ MetricSpace a) => String -> SBV a -> String
-  annotateForMS s _ = s
+  default annotateForMS :: (a ~ MetricSpace a) => Proxy a -> String -> String
+  annotateForMS _ s = s
 
 -- Booleans assume True is greater than False
 instance Metric Bool where
   type MetricSpace Bool = Word8
   toMetricSpace t   = ite t 1 0
   fromMetricSpace w = w ./= 0
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 -- | Generalization of 'Data.SBV.minimize'
 minimize :: (Metric a, MonadSymbolic m, SolverContext m) => String -> SBV a -> m ()
@@ -3043,25 +3043,25 @@ instance Metric Int8 where
   type MetricSpace Int8 = Word8
   toMetricSpace   x = sFromIntegral x + 128  -- 2^7
   fromMetricSpace x = sFromIntegral x - 128
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 instance Metric Int16 where
   type MetricSpace Int16 = Word16
   toMetricSpace   x = sFromIntegral x + 32768  -- 2^15
   fromMetricSpace x = sFromIntegral x - 32768
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 instance Metric Int32 where
   type MetricSpace Int32 = Word32
   toMetricSpace   x = sFromIntegral x + 2147483648 -- 2^31
   fromMetricSpace x = sFromIntegral x - 2147483648
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 instance Metric Int64 where
   type MetricSpace Int64 = Word64
   toMetricSpace   x = sFromIntegral x + 9223372036854775808  -- 2^63
   fromMetricSpace x = sFromIntegral x - 9223372036854775808
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 -- | Optimizing 'WordN'
 instance (KnownNat n, BVIsNonZero n) => Metric (WordN n)
@@ -3071,7 +3071,7 @@ instance (KnownNat n, BVIsNonZero n) => Metric (IntN n) where
   type MetricSpace (IntN n) = WordN n
   toMetricSpace   x = sFromIntegral x + 2 ^ (intOfProxy (Proxy @n) - 1)
   fromMetricSpace x = sFromIntegral x - 2 ^ (intOfProxy (Proxy @n) - 1)
-  annotateForMS s _ = "MS(" ++ s ++ ")"
+  annotateForMS _ s = "toMetricSpace(" ++ s ++ ")"
 
 -- Quickcheck interface on symbolic-booleans..
 instance Testable SBool where

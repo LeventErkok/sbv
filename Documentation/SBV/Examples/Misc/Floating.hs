@@ -199,14 +199,10 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
 -- bits for the significand explicitly stored, includes the hidden bit. We have:
 --
 -- >>> fp54Bounds
--- Objective "max": Optimal model:
---   x   = 61440 :: FloatingPoint 5 4
---   max =   503 :: WordN 9
---   min =   503 :: WordN 9
--- Objective "min": Optimal model:
---   x   = 0.000007629 :: FloatingPoint 5 4
---   max =         257 :: WordN 9
---   min =         257 :: WordN 9
+-- Objective "toMetricSpace(max)": Optimal model:
+--   x = 61440 :: FloatingPoint 5 4
+-- Objective "toMetricSpace(min)": Optimal model:
+--   x = 0.000007629 :: FloatingPoint 5 4
 --
 -- An important note is in order. When printing floats in decimal, one can get correct yet surprising results.
 -- There's a large body of publications in how to render floats in decimal, or in bases that are not powers of
@@ -218,13 +214,18 @@ roundingAdd = sat $ do m :: SRoundingMode <- free "rm"
 -- decimal notation one should be very careful about the printed representation and the numeric value; while
 -- they will match in value (if there are no bugs!), they can print quite differently! (Also keep in
 -- mind the rounding modes that impact how the conversion is done.)
+--
+-- One final note: When printing the models, we skip optimization variables that are not named @x@. See the
+-- call to `Data.SBV.Core.Symbolic.isNonModelVal`. When we optimize floating-point values, the underlying engine actually optimizes
+-- with bit-vector values, producing intermediate results. We skip those here to simplify the presentation.
 fp54Bounds :: IO OptimizeResult
-fp54Bounds = optimize Independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
+fp54Bounds = optimizeWith z3{isNonModelVar = (/= "x")}
+                          Independent $ do x :: SFloatingPoint 5 4 <- sFloatingPoint "x"
 
-                                       constrain $ fpIsPoint x
-                                       constrain $ x .> 0
+                                           constrain $ fpIsPoint x
+                                           constrain $ x .> 0
 
-                                       maximize "max" x
-                                       minimize "min" x
+                                           maximize "max" x
+                                           minimize "min" x
 
-                                       pure sTrue
+                                           pure sTrue

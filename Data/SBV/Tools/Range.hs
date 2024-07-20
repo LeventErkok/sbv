@@ -11,6 +11,7 @@
 
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -26,6 +27,8 @@ module Data.SBV.Tools.Range (
 
 import Data.SBV
 import Data.SBV.Control
+
+import Data.Proxy
 
 import Data.SBV.Internals hiding (Range, free_)
 
@@ -153,7 +156,7 @@ rangesWith cfg prop = do mbBounds <- getInitialBounds
                                      Unsatisfiable{} -> return Nothing
                                      Unknown{}       -> error "Solver said Unknown!"
                                      ProofError{}    -> error (show res)
-                                     _               -> return $ getModelObjectiveValue objName m
+                                     _               -> return $ getModelObjectiveValue (annotateForMS (Proxy @a) objName) m
 
             mi <- getBound minimize
             ma <- getBound maximize
