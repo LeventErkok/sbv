@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Not yet released
+### Version 10.11, 2024-07-26
 
   * Add Documentation.SBV.Examples.Puzzles.Tower module, solving the visible towers puzzle.
 
