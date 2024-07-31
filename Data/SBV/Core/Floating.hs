@@ -12,6 +12,7 @@
 {-# LANGUAGE DefaultSignatures    #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
@@ -333,13 +334,14 @@ instance ValidFloat eb sb => IEEEFloatConvertible (FloatingPoint eb sb) where
     where ei = intOfProxy (Proxy @eb)
           si = intOfProxy (Proxy @sb)
 
+  toSFloatingPoint :: forall eb1 sb1. (ValidFloat eb sb, ValidFloat eb1 sb1) => SRoundingMode -> SBV (FloatingPoint eb sb) -> SFloatingPoint eb1 sb1
   toSFloatingPoint rm i
     | Just (FloatingPoint (FP _ _ v)) <- unliteral i, Just brm <- rmToRM rm
     = literal $ FloatingPoint $ FP ei si $ fst (bfRoundFloat (mkBFOpts ei si brm) v)
     | True
     = genericToFloat (\_ _ -> Nothing) rm i
-    where ei = intOfProxy (Proxy @eb)
-          si = intOfProxy (Proxy @sb)
+    where ei = intOfProxy (Proxy @eb1)
+          si = intOfProxy (Proxy @sb1)
 
   -- From and To are the same when the source is an arbitrary float!
   fromSFloatingPoint = toSFloatingPoint
