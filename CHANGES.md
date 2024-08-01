@@ -3,7 +3,7 @@
 
 ### Version 10.12, Not yet released
 
-  * Fix a custom-floating-point format conversion bug. Thanks to Sirui Lu for the patch.
+  * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
 
 ### Version 10.11, 2024-07-26
 
