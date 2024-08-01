@@ -298,7 +298,7 @@ convertWhenExactRational r
 instance IEEEFloatConvertible AlgReal where
   toSFloat         = genericToFloat (onlyWhenRNE convertWhenExactRational)
   toSDouble        = genericToFloat (onlyWhenRNE convertWhenExactRational)
-  toSFloatingPoint = genericToFloat (const       convertWhenExactRational)
+  toSFloatingPoint = genericToFloat (onlyWhenRNE convertWhenExactRational)
 
 -- Arbitrary floats can handle all rounding modes in concrete mode
 instance ValidFloat eb sb => IEEEFloatConvertible (FloatingPoint eb sb) where
