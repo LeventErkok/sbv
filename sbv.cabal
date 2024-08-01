@@ -92,7 +92,7 @@ Library
                   , random
                   , mtl
                   , transformers
-                  , async
+                  , async            >= 2.2.5
                   , filepath
                   , text
                   , directory
