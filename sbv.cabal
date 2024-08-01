@@ -84,22 +84,22 @@ Library
   import          : common-settings
   default-language: Haskell2010
   build-depends   : QuickCheck
-                  , containers
                   , array
-                  , deepseq
-                  , template-haskell
-                  , pretty
-                  , random
-                  , mtl
-                  , transformers
                   , async            >= 2.2.5
-                  , filepath
-                  , text
+                  , containers
+                  , deepseq
                   , directory
-                  , time
+                  , filepath
                   , libBF            >= 0.6.8
+                  , mtl
+                  , pretty
                   , process
+                  , random
                   , syb
+                  , template-haskell
+                  , text
+                  , time
+                  , transformers
                   , uniplate
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
@@ -274,8 +274,19 @@ Test-Suite SBVTest
   default-language : Haskell2010
   type             : exitcode-stdio-1.0
   ghc-options      : -with-rtsopts=-K64m
-  build-depends   : filepath, sbv, directory, random, mtl, containers, deepseq
-                  , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, QuickCheck
+  build-depends   : QuickCheck
+                  , bytestring
+                  , containers
+                  , deepseq
+                  , directory
+                  , filepath
+                  , mtl
+                  , random
+                  , sbv
+                  , tasty
+                  , tasty-golden
+                  , tasty-hunit
+                  , tasty-quickcheck
   hs-source-dirs  : SBVTestSuite
   main-is         : SBVTest.hs
   other-modules   : Utils.SBVTestFramework
@@ -400,8 +411,18 @@ Test-Suite SBVConnections
 Test-Suite SBVDocTest
     import          : common-settings
     default-language: Haskell2010
-    build-depends   : base, sbv, process, QuickCheck, filepath, mtl, bytestring, directory
-                    , tasty, tasty-quickcheck, tasty-golden, tasty-hunit, deepseq
+    build-depends   : QuickCheck
+                    , bytestring
+                    , deepseq
+                    , directory
+                    , filepath
+                    , mtl
+                    , process
+                    , sbv
+                    , tasty
+                    , tasty-golden
+                    , tasty-hunit
+                    , tasty-quickcheck
     hs-source-dirs  : SBVTestSuite
     main-is:          SBVDocTest.hs
     other-modules   : Utils.SBVTestFramework
@@ -411,8 +432,18 @@ Test-Suite SBVHLint
     import          : common-settings
     default-language: Haskell2010
 
-    build-depends   : base, directory, filepath, process, deepseq
-                    , bytestring, tasty, tasty-golden, tasty-hunit, tasty-quickcheck, mtl, QuickCheck, sbv
+    build-depends   : QuickCheck
+                    , bytestring
+                    , deepseq
+                    , directory
+                    , filepath
+                    , mtl
+                    , process
+                    , sbv
+                    , tasty
+                    , tasty-golden
+                    , tasty-hunit
+                    , tasty-quickcheck
     hs-source-dirs  : SBVTestSuite
     other-modules   : Utils.SBVTestFramework
     main-is         : SBVHLint.hs
@@ -423,7 +454,14 @@ Benchmark SBVBench
   default-language: Haskell2010
   type            : exitcode-stdio-1.0
   ghc-options     : -with-rtsopts=-K64m
-  build-depends   : filepath, sbv, random, time , process, deepseq, tasty, tasty-bench
+  build-depends   : deepseq
+                  , filepath
+                  , process
+                  , random
+                  , sbv
+                  , tasty
+                  , tasty-bench
+                  , time
   hs-source-dirs  : SBVBenchSuite
   main-is         : SBVBench.hs
   other-modules   : Utils.SBVBenchFramework
