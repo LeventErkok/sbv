@@ -52,7 +52,7 @@ bvsmulO x y = sNot zeroOut .&& overflow
         overflow =   ((approxLog x + approxLog y) .> literal (fromIntegral (nv - 2)))
                  .|| (prodN .<+> prodNm1)
 
--- Algorithm 3: Text-book definition
+-- Text-book definition
 textbook :: forall n. (BVIsNonZero n, KnownNat n, BVIsNonZero (n+n), KnownNat (n+n)) => SInt n -> SInt n -> SBool
 textbook x y = prod2N ./= sFromIntegral prodN
   where prod2N :: SInt (n+n)
@@ -61,31 +61,25 @@ textbook x y = prod2N ./= sFromIntegral prodN
         prodN :: SInt n
         prodN = x * y
 
--- Comparators
-comp :: forall n. (BVIsNonZero n, KnownNat n) => String -> (SInt n -> SInt n -> SBool) -> (SInt n -> SInt n -> SBool) -> IO ThmResult
-comp w f g = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @n))
-                proveWith bitwuzla{timing = PrintTiming} $ do
-                  x <- sInt "x"
-                  y <- sInt "x"
-                  pure $ f x y .== g x y
-
-runAll :: forall n. (BVIsNonZero n, KnownNat n, BVIsNonZero (n+n), KnownNat (n+n)) => (SInt n -> SInt n -> SBool) -> IO ()
-runAll f = do print =<< comp ("At " ++ show nv ++ " bits, against builtin:")  bvMulO   f
-              print =<< comp ("At " ++ show nv ++ " bits, against textbook:") textbook f
+test :: forall proxy n. (BVIsNonZero n, KnownNat n, BVIsNonZero (n+1), KnownNat (n+1), BVIsNonZero (n+n), KnownNat (n+n)) => proxy n -> IO ()
+test _ = do print =<< comp ("At " ++ show nv ++ " bits, against builtin:")  bvMulO   (bvsmulO :: SInt n -> SInt n -> SBool)
+            print =<< comp ("At " ++ show nv ++ " bits, against textbook:") textbook (bvsmulO :: SInt n -> SInt n -> SBool)
    where nv = natVal (Proxy @n)
-
-run :: forall proxy n. (KnownNat n, BVIsNonZero n, KnownNat (n+1), BVIsNonZero (n+1), KnownNat (n+n), BVIsNonZero (n+n)) => proxy n -> IO ()
-run _ = runAll @n bvsmulO
+         comp w f g = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @n))
+                         proveWith bitwuzla{timing = PrintTiming} $ do
+                           x <- sInt "x"
+                           y <- sInt "x"
+                           pure $ f x y .== g x y
 
 main :: IO ()
-main = do run (Proxy @1)
-          run (Proxy @2)
-          run (Proxy @3)
-          run (Proxy @4)
-          run (Proxy @5)
-          run (Proxy @6)
-          run (Proxy @7)
-          run (Proxy @8)
-          run (Proxy @16)
-          run (Proxy @24)
-          run (Proxy @32)
+main = do test (Proxy @1)
+          test (Proxy @2)
+          test (Proxy @3)
+          test (Proxy @4)
+          test (Proxy @5)
+          test (Proxy @6)
+          test (Proxy @7)
+          test (Proxy @8)
+          test (Proxy @16)
+          test (Proxy @24)
+          -- run (Proxy @32)   -- Takes about 2 minutes
