@@ -62,14 +62,13 @@ textbook x y = prod2N ./= sFromIntegral prodN
         prodN = x * y
 
 test :: forall proxy n. (BVIsNonZero n, KnownNat n, BVIsNonZero (n+1), KnownNat (n+1), BVIsNonZero (n+n), KnownNat (n+n)) => proxy n -> IO ()
-test _ = do print =<< comp ("At " ++ show nv ++ " bits, against builtin:")  bvMulO   (bvsmulO :: SInt n -> SInt n -> SBool)
-            print =<< comp ("At " ++ show nv ++ " bits, against textbook:") textbook (bvsmulO :: SInt n -> SInt n -> SBool)
-   where nv = natVal (Proxy @n)
-         comp w f g = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @n))
-                         proveWith bitwuzla{timing = PrintTiming} $ do
-                           x <- sInt "x"
-                           y <- sInt "x"
-                           pure $ f x y .== g x y
+test _ = do print =<< check "Against builtin"  bvMulO
+            print =<< check "Against textbook" textbook
+   where check w f = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @n))
+                        proveWith bitwuzla $ do
+                          x <- sInt "x"
+                          y <- sInt "x"
+                          pure $ f x y .== (bvsmulO :: SInt n -> SInt n -> SBool) x y
 
 main :: IO ()
 main = do test (Proxy @1)
