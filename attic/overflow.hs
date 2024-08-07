@@ -70,9 +70,9 @@ comp w f g = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @
                   pure $ f x y .== g x y
 
 runAll :: forall n. (BVIsNonZero n, KnownNat n, BVIsNonZero (n+n), KnownNat (n+n)) => (SInt n -> SInt n -> SBool) -> IO ()
-runAll f = do print =<< comp ("At " ++ show n ++ " bits, against builtin:")  bvMulO   f
-              print =<< comp ("At " ++ show n ++ " bits, against textbook:") textbook f
-   where n  = natVal (Proxy @n)
+runAll f = do print =<< comp ("At " ++ show nv ++ " bits, against builtin:")  bvMulO   f
+              print =<< comp ("At " ++ show nv ++ " bits, against textbook:") textbook f
+   where nv = natVal (Proxy @n)
 
 run :: forall proxy n. (KnownNat n, BVIsNonZero n, KnownNat (n+1), BVIsNonZero (n+1), KnownNat (n+n), BVIsNonZero (n+n)) => proxy n -> IO ()
 run _ = runAll @n bvsmulO
