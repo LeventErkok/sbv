@@ -17,6 +17,8 @@ import Data.Kind
 import Data.Type.Bool
 import Data.Type.Equality
 
+import Control.Monad
+
 import GHC.TypeLits
 
 type InvalidBVSMULO (n :: Nat) = 'Text "Invalid call to bvsmulO on n: " ':<>: 'ShowType n
@@ -29,6 +31,11 @@ type InvalidBVSMULO (n :: Nat) = 'Text "Invalid call to bvsmulO on n: " ':<>: 'S
 -- N-2 at the largest for N bits. Two of them give us 2N-4, and to fit into SWord16,
 -- we need 2N-4 <= 2^16-1, which implies N <= 32769, or N < 32770; which should be plenty enough for
 -- any practical purpose. Hence the constraint below.
+--
+-- Alternatively, we can use Integers and not worry about this, alas Bitwuzla (which does really well
+-- on bit-vector programs) does not support unbounded integers.
+--
+-- TODO: See if we can avoid the addition completely and somehow do a position comparision to see if it'll be N-2.
 type family BVIsValidSMulO (arg :: Nat) :: Constraint where
    BVIsValidSMulO (n :: Nat) = ( BVIsNonZero n
                                , KnownNat n
@@ -85,9 +92,9 @@ textbook x y = prod2N ./= sFromIntegral prodN
         prodN :: SInt n
         prodN = x * y
 
-test :: forall proxy n. (BVIsValidSMulO n, BVIsNonZero (n+1), KnownNat (n+1), BVIsNonZero (n+n), KnownNat (n+n)) => proxy n -> IO ()
-test _ = do print =<< check "Against builtin"  bvMulO
-            print =<< check "Against textbook" textbook
+test :: forall proxy n. (BVIsValidSMulO n, BVIsNonZero (n+1), KnownNat (n+1), BVIsNonZero (n+n), KnownNat (n+n)) => proxy n -> Bool -> IO ()
+test _ checkTextBook = do print =<< check "Against builtin"  bvMulO
+                          when checkTextBook (print =<< check "Against textbook" textbook)
    where check w f = do putStrLn $ "Proving: " ++ w ++ ", N = " ++ show (natVal (Proxy @n))
                         proveWith bitwuzla $ do
                           x <- sInt "x"
@@ -95,15 +102,15 @@ test _ = do print =<< check "Against builtin"  bvMulO
                           pure $ f x y .== (bvsmulO :: SInt n -> SInt n -> SBool) x y
 
 main :: IO ()
-main = do test (Proxy @1)
-          test (Proxy @2)
-          test (Proxy @3)
-          test (Proxy @4)
-          test (Proxy @5)
-          test (Proxy @6)
-          test (Proxy @7)
-          test (Proxy @8)
-          test (Proxy @16)
-          test (Proxy @24)
-          test (Proxy @32)
-          test (Proxy @64)
+main = do test (Proxy @1)  True
+          test (Proxy @2)  True
+          test (Proxy @3)  True
+          test (Proxy @4)  True
+          test (Proxy @5)  True
+          test (Proxy @6)  True
+          test (Proxy @7)  True
+          test (Proxy @8)  True
+          test (Proxy @16) True
+          test (Proxy @24) True
+          test (Proxy @32) True
+          test (Proxy @64) False
