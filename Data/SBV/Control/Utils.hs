@@ -219,14 +219,14 @@ inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
                       return r
 
 -- | Generic 'Queriable' instance for 'SymVal' values
-instance (MonadIO m, SymVal a) => Queriable m (SBV a) where
+instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
   type QueryResult (SBV a) = a
   create  = freshVar_
   project = getValue
   embed   = return . literal
 
 -- | Generic 'Queriable' instance for things that are 'Fresh' and look like containers:
-instance (MonadIO m, SymVal a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) where
+instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a, Foldable t, Traversable t, Fresh m (t (SBV a))) => Queriable m (t (SBV a)) where
   type QueryResult (t (SBV a)) = t a
   create  = fresh
   project = mapM getValue
