@@ -21,13 +21,13 @@ import Control.Monad
 
 import GHC.TypeLits
 
-type InvalidBVSMULO (n :: Nat) = 'Text "Invalid call to bvsmulO on n: " ':<>: 'ShowType n
+type InvalidBVSMULO (n :: Nat) = 'Text "Invalid type/size with n: " ':<>: 'ShowType n
                                ':$$: 'Text ""
-                               ':$$: 'Text "A valid call must have 0 < n <= 32769"
+                               ':$$: 'Text "A valid call must pass `SInt n` argument with 0 < n <= 32769"
                                ':$$: 'Text ""
                                ':$$: 'Text "Given type falls outside of this range, or the size is not a known natural."
 
--- We use an SWord16 as the approxLog; and we add two of these. The function computes
+-- We use an SWord16 as the nonSignBitPos; and we add two of these. The function computes
 -- N-2 at the largest for N bits. Two of them give us 2N-4, and to fit into SWord16,
 -- we need 2N-4 <= 2^16-1, which implies N <= 32769, or N < 32770; which should be plenty enough for
 -- any practical purpose. Hence the constraint below.
@@ -57,8 +57,8 @@ type family BVIsValidSMulO (arg :: Nat) :: Constraint where
 --    101 -> 1
 --    110 -> 0
 --    111 -> 0  (no differing bit from 1; so we get 0)
-approxLog :: BVIsValidSMulO n => SInt n -> SWord 16
-approxLog w = case blastBE w of
+nonSignBitPos :: BVIsValidSMulO n => SInt n -> SWord 16
+nonSignBitPos w = case blastBE w of
                 []     -> error $ "Impossible happened: Got no bits after blasing " ++ show w
                 x : xs -> walk (.== sNot x) (literal (fromIntegral (length xs - 1))) xs
  where walk :: (SBool -> SBool) -> SWord 16 -> [SBool] -> SWord 16
@@ -80,7 +80,7 @@ bvsmulO x y = sNot zeroOut .&& overflow
         prodN   = prod `sTestBit` nv
         prodNm1 = prod `sTestBit` (nv-1)
 
-        overflow =   ((approxLog x + approxLog y) .> literal (fromIntegral (nv - 2)))
+        overflow =   ((nonSignBitPos x + nonSignBitPos y) .> literal (fromIntegral (nv - 2)))
                  .|| (prodN .<+> prodNm1)
 
 -- Text-book definition
