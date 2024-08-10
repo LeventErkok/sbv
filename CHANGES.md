@@ -5,6 +5,9 @@
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
 
+  * Add a few OVERLAPPABLE pragms to generic Queriable instances to make them easily overridable by
+    user programs. Thanks to Marco Zocca for reporting.
+
   * Add signedMulOverflow, which checks whether multiplication of two signed-bitvectors can overflow.
     SBV already had a method (bvMulO) that served this purpose, translating to the corresponding predicate
     in SMTLib. Unfortunately not all solvers support this predicate efficiently. In particular, as of Aug 2024,

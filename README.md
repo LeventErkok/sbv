@@ -176,6 +176,7 @@ May Torrence,
 Daniel Wagner,
 Sean Weaver,
 Nis Wegmann,
-and Jared Ziegler.
+Jared Ziegler,
+and Marco Zocca.
 
 Thanks!
