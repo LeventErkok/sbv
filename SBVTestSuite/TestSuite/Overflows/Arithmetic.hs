@@ -9,7 +9,11 @@
 -- Test suite for overflow checking
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -21,6 +25,9 @@ import Data.SBV.Dynamic
 import Data.SBV.Internals (unSBV, SBV(..))
 
 import Data.SBV.Tools.Overflow
+
+import Data.Proxy
+import GHC.TypeLits
 
 import Utils.SBVTestFramework
 
@@ -47,7 +54,7 @@ tests = testGroup "Overflows" [testGroup "Arithmetic" ts]
                                   , testCase "i64" $ assertIsThm $ overflow  svMinus  (bvSubO :: SInt64  -> SInt64  -> SBool)
                                   ]
 
-             -- Multiplication checks are expensive; so only do at a few instances
+             -- Multiplication checks are expensive for z3; so only do at a few instances with z3
              , testGroup "mul-ov" [ testCase "w8"  $ assertIsThm $ overflow  svTimes  (bvMulO :: SWord8  -> SWord8  -> SBool)
                                   , testCase "w16" $ assertIsThm $ overflow  svTimes  (bvMulO :: SWord16 -> SWord16 -> SBool)
                                   -- , testCase "w32" $ assertIsThm $ overflow  svTimes  (bvMulO :: SWord32 -> SWord32 -> SBool)
@@ -57,6 +64,30 @@ tests = testGroup "Overflows" [testGroup "Arithmetic" ts]
                                   -- , testCase "i32" $ assertIsThm $ overflow  svTimes  (bvMulO :: SInt32  -> SInt32  -> SBool)
                                   -- , testCase "i64" $ assertIsThm $ overflow  svTimes  (bvMulO :: SInt64  -> SInt64  -> SBool)
                                   ]
+
+             -- Another group of multiplication overflow tests for signed-multiplication, using bitwuzla
+             , testGroup "mul-special"
+                                 [ testCase "smov1_int"  $ assert $ smulCheck (Proxy @1)  True
+                                 , testCase "smov1_txt"  $ assert $ smulCheck (Proxy @1)  False
+                                 , testCase "smov2_int"  $ assert $ smulCheck (Proxy @2)  True
+                                 , testCase "smov2_txt"  $ assert $ smulCheck (Proxy @2)  False
+                                 , testCase "smov3_int"  $ assert $ smulCheck (Proxy @3)  True
+                                 , testCase "smov3_txt"  $ assert $ smulCheck (Proxy @3)  False
+                                 , testCase "smov4_int"  $ assert $ smulCheck (Proxy @4)  True
+                                 , testCase "smov4_txt"  $ assert $ smulCheck (Proxy @4)  False
+                                 , testCase "smov5_int"  $ assert $ smulCheck (Proxy @5)  True
+                                 , testCase "smov5_txt"  $ assert $ smulCheck (Proxy @5)  False
+                                 , testCase "smov6_int"  $ assert $ smulCheck (Proxy @6)  True
+                                 , testCase "smov6_txt"  $ assert $ smulCheck (Proxy @6)  False
+                                 , testCase "smov7_int"  $ assert $ smulCheck (Proxy @7)  True
+                                 , testCase "smov7_txt"  $ assert $ smulCheck (Proxy @7)  False
+                                 , testCase "smov8_int"  $ assert $ smulCheck (Proxy @8)  True
+                                 , testCase "smov8_txt"  $ assert $ smulCheck (Proxy @8)  False
+                                 -- After this, text-book checks take long; so we just check against internal
+                                 , testCase "smov24_int" $ assert $ smulCheck (Proxy @24) True
+                                 , testCase "smov32_int" $ assert $ smulCheck (Proxy @32) True
+                                 , testCase "smov64_int" $ assert $ smulCheck (Proxy @64) True
+                                 ]
 
              , testGroup "div-ov" [ testCase "w8"  $ assertIsThm $ never     svDivide (bvDivO :: SWord8  -> SWord8  -> SBool)
                                   , testCase "w16" $ assertIsThm $ never     svDivide (bvDivO :: SWord16 -> SWord16 -> SBool)
@@ -143,5 +174,24 @@ overflow1 op cond = do x  <- free "x"
 
                        return $ overflowHappens `exactlyWhen` (       (extResult `svGreaterThan` toLarge (maxBound :: SBV a))
                                                                `svOr` (extResult `svLessThan`    toLarge (minBound :: SBV a)))
+
+-- Custom checker for signedMulOverflow
+smulCheck :: forall proxy n. ( KnownNat n,          BVIsNonZero n
+                             , KnownNat (n+1),      BVIsNonZero (n+1)
+                             , KnownNat (n+n),      BVIsNonZero (n+n)
+                             , KnownNat (2+Log2 n), BVIsNonZero (2+Log2 n)
+                             ) => proxy n -> Bool -> IO Bool
+smulCheck _ builtin = check (if builtin then bvMulO else textbook)
+   where check f = isTheoremWith bitwuzla $ do
+                        x <- sInt "x"
+                        y <- sInt "y"
+                        pure $ f x y .== (signedMulOverflow :: SInt n -> SInt n -> SBool) x y
+
+         textbook x y = prod2N ./= sFromIntegral prodN
+           where prod2N :: SInt (n+n)
+                 prod2N = sFromIntegral x * sFromIntegral y
+
+                 prodN :: SInt n
+                 prodN = x * y
 
 {- HLint ignore module "Reduce duplication" -}
