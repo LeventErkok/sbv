@@ -5,6 +5,12 @@
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
 
+  * Add signedMulOverflow, which checks whether multiplication of two signed-bitvectors can overflow.
+    SBV already had a method (bvMulO) that served this purpose, translating to the corresponding predicate
+    in SMTLib. Unfortunately not all solvers support this predicate efficiently. In particular, as of Aug 2024,
+    bitwuzla has a performant checker for this overflow, but z3 does not. In case you cannot use bitwuzla for
+    some reason, you might want to use the new signedMulOverflow funtion for better performance.
+
 ### Version 10.11, 2024-07-26
 
   * Add Documentation.SBV.Examples.Puzzles.Tower module, solving the visible towers puzzle.

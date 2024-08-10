@@ -10,12 +10,14 @@
 -- Based on: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ImplicitParams       #-}
 {-# LANGUAGE Rank2Types           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeApplications     #-}
+{-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -24,6 +26,9 @@ module Data.SBV.Tools.Overflow (
 
          -- * Arithmetic overflows
          ArithOverflow(..), CheckedArithmetic(..)
+
+         -- * Fast-checking of signed-multiplication overflow
+         , signedMulOverflow
 
          -- * Cast overflows
        , sFromIntegralO, sFromIntegralChecked
@@ -291,6 +296,58 @@ sFromIntegralChecked x = sAssert (Just ?loc) (msg "underflows") (sNot u)
 
         (r, (u, o)) = sFromIntegralO x
 
+-- | signedMulOverflow: Checking if a signed bitvector multiplication can overflow. In general you should simply use 'bvMulO' for checking
+-- signed multiplication overflow for bit-vectors. This is a function supported by SMTLib. Unfortunately, individual implementations have
+-- different performance characteristics. For instance, bitwuzla has a fairly performant implementation of this, but z3 does not. (At least
+-- not as of August 2024.) In cases where you can't use bitwuzla, you can use this implementation which has better performance.
+signedMulOverflow :: forall n. ( KnownNat n,          BVIsNonZero n
+                               , KnownNat (n+1),      BVIsNonZero (n+1)
+                               , KnownNat (2+Log2 n), BVIsNonZero (2+Log2 n))
+                               => SInt n -> SInt n -> SBool
+signedMulOverflow x y = sNot zeroOut .&& overflow
+  where zeroOut = x .== 0 .|| y .== 0
+
+        prod :: SInt (n+1)
+        prod = sFromIntegral x * sFromIntegral y
+
+        nv :: Int
+        nv = fromIntegral $ natVal (Proxy @n)
+
+        prodN, prodNm1 :: SBool
+        prodN   = prod `sTestBit` nv
+        prodNm1 = prod `sTestBit` (nv-1)
+
+        overflow =   nonSignBitPos x + nonSignBitPos y .> literal (fromIntegral (nv - 2))
+                 .|| prodN .<+> prodNm1
+
+        -- Find the position of the first non-sign bit. i.e., the first bit that differs from the msb.
+        -- Position is 0 indexed. Note that if there's no differing bit, then you also get back 0.
+        -- This is essentially an approximation of the logarithm of the magnitude of the number.
+        --
+        -- The result is at most N-2 for an N-bit word. Later we add two of these, so the maximum
+        -- value we need to represent is 2N-4. This will require 1 + lg(2N-4) = 2 + log(N-1) bits.
+        -- To suppor the case N=0, we return a (2 + log N) bit word.
+        --
+        -- Example for 3 bits:
+        --
+        --    000 -> 0  (no differing bit from 0; so we get 0)
+        --    001 -> 0
+        --    010 -> 1
+        --    011 -> 1
+        --    100 -> 1
+        --    101 -> 1
+        --    110 -> 0
+        --    111 -> 0  (no differing bit from 1; so we get 0)
+        nonSignBitPos :: ( KnownNat n,          BVIsNonZero n
+                         , KnownNat (2+Log2 n), BVIsNonZero (2+Log2 n))
+                         => SInt n -> SWord (2+Log2 n)
+        nonSignBitPos w = walk 0 rest
+          where (sign, rest) = case blastBE w of
+                                 []     -> error $ "Impossible happened, blastBE returned no bits for " ++ show w
+                                 (b:bs) -> (b, zip [0..] (reverse bs))
+
+                walk sofar []          = sofar
+                walk sofar ((i, b):bs) = walk (ite (b ./= sign) i sofar) bs
 
 -- Helpers
 l2 :: (SVal -> SVal -> SBool) -> SBV a -> SBV a -> SBool
