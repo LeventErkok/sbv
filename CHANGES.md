@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 10.12, Not yet released
+### Version 10.12, 2024-08-11
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
 
