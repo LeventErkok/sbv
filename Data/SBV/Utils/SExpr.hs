@@ -380,10 +380,16 @@ parseSetLambda funExpr = case funExpr of
 -- be flexible, this is certainly not a full fledged parser. But hopefully it'll
 -- cover everything z3 will throw at it.
 parseLambdaExpression :: SExpr -> Maybe ([([SExpr], SExpr)], SExpr)
-parseLambdaExpression funExpr = case funExpr of
+parseLambdaExpression funExpr = case squashLambdas funExpr of
                                   EApp [ECon "lambda", EApp params, body] -> mapM getParam params >>= flip lambda body >>= chainAssigns
                                   _                                       -> Nothing
-  where getParam (EApp [ECon v, ECon ty]) = Just (v, ty == "Bool")
+  where -- convert (lambda p1 (lambda p2 body)) to (lambda (p1 ++ p2) body)
+        squashLambdas (EApp  [ECon "lambda", EApp p1
+                                           , EApp [ECon "lambda", EApp p2, body]])
+                            = squashLambdas $ EApp [ECon "lambda", EApp (p1 ++ p2), body]
+        squashLambdas other = other
+
+        getParam (EApp [ECon v, ECon ty]) = Just (v, ty == "Bool")
         getParam (EApp [ECon v, _      ]) = Just (v, False)
         getParam _                        = Nothing
 
