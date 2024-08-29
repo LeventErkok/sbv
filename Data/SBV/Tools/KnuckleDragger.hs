@@ -69,7 +69,10 @@ theorem = lemmaGen "Theorem: "
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class ChainLemma steps step | steps -> step where
+
+  -- | Prove a property via a series of equality steps.
   chainLemma :: QuantifiedBool a => String -> a -> steps -> [Proven] -> IO Proven
+
   makeSteps  :: steps -> [step]
   makeInter  :: steps -> step -> step -> SBool
 
