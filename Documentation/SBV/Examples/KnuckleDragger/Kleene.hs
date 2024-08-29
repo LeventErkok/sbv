@@ -59,7 +59,7 @@ x <= y = x + y .== y
 --
 -- We have:
 --
--- >>> example
+-- >>> kleeneProofs
 -- Axiom: par_assoc                               Admitted.
 -- Axiom: par_comm                                Admitted.
 -- Axiom: par_idem                                Admitted.
@@ -85,8 +85,8 @@ x <= y = x + y .== y
 -- Lemma: star_star_2_3                           Q.E.D.
 -- Lemma: star_star_2_1                           Q.E.D.
 -- Lemma: star_star_2                             Q.E.D.
-example :: IO ()
-example = do
+kleeneProofs :: IO ()
+kleeneProofs = do
 
   -- Kozen axioms
   par_assoc <- axiom "par_assoc" $ \(Forall (x :: SKleene)) (Forall y) (Forall z) -> x + (y + z) .== (x + y) + z
