@@ -106,11 +106,11 @@ example = do
   least_fix <- axiom "least_fix" $ \(Forall x) (Forall e) (Forall f) -> ((f + e * x) <= x) .=> ((star e * f) <= x)
 
   -- Collect the basic axioms in a list for easy reference
-  let kleene = [ qb par_assoc,  qb par_comm, qb par_idem, qb par_zero
-               , qb seq_assoc,  qb seq_zero, qb seq_one
-               , qb ldistrib,   qb rdistrib
-               , qb unfold
-               , qb least_fix
+  let kleene = [ par_assoc,  par_comm, par_idem, par_zero
+               , seq_assoc,  seq_zero, seq_one
+               , ldistrib,   rdistrib
+               , unfold
+               , least_fix
                ]
 
   -- Various proofs:
