@@ -154,6 +154,7 @@ Library
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
+                  , Documentation.SBV.Examples.KnuckleDragger.Induction
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.FirstOrderLogic

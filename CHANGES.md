@@ -8,8 +8,8 @@
   * Add Data.SBV.Tools.KnuckleDragger, modeled after Philip Zucker's tool by the same
     name: https://github.com/philzook58/knuckledragger.
 
-  * Add Documentation.SBV.Examples.KnuckleDragger.Kleene, as an example of the Knuckle-dragger
-    proofs.
+  * Add Documentation.SBV.Examples.KnuckleDragger.{Kleene|Induction}, as examples
+    of some KnuckleDragger style proofs.
 
 ### Version 10.12, 2024-08-11
 
