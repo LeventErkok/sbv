@@ -5,6 +5,12 @@
 
   * Turn on support for floats and uninterpreted sorts/functions in Bitwuzla.
 
+  * Add Data.SBV.Tools.KnuckleDragger, modeled after Philip Zucker's tool by the same
+    name: https://github.com/philzook58/knuckledragger.
+
+  * Add Documentation.SBV.Examples.KnuckleDragger.Kleene, as an example of the Knuckle-dragger
+    proofs.
+
 ### Version 10.12, 2024-08-11
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.

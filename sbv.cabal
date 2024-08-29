@@ -122,6 +122,7 @@ Library
                   , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
+                  , Data.SBV.Tools.KnuckleDragger
                   , Data.SBV.Tools.NaturalInduction
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
@@ -151,6 +152,7 @@ Library
                   , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
+                  , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate
                   , Documentation.SBV.Examples.Misc.FirstOrderLogic
