@@ -214,7 +214,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
 
                   _qcInfo       -- Quickcheck info, does not apply, ignored
 
-                  observables   -- Observables: There's no way to display these, so ignore
+                  _observables  -- Observables: There's no way to display these, so ignore
 
                   _codeSegs     -- UI code segments: Again, shouldn't happen; if present, error out
 
@@ -245,10 +245,15 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          = tbd [ "Assertions."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- assertions]
                ]
+
+         {- Simply ignore the observables, instead of choking on them,
+          - This allows for more robust coding, though it might be confusing.
          | not (null observables)
          = tbd [ "Observables."
                , "  Saw: " ++ intercalate ", " [n | (n, _, _) <- observables]
                ]
+         -}
+
          | kindOf out /= expectedKind
          = bad [ "Expected kind and final kind do not match"
                , "   Saw     : " ++ show (kindOf out)

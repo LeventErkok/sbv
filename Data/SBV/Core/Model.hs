@@ -788,6 +788,9 @@ label m x
 -- counter-example. The same works for quick-check as well. Useful when we want to see intermediate values, or expected/obtained
 -- pairs in a particular run. Note that an observed expression is always symbolic, i.e., it won't be constant folded. Compare this to 'label'
 -- which is used for putting a label in the generated SMTLib-C code.
+--
+-- NB. If the observed expression happens under a SBV-lambda expression, then it is silently ignored; since
+-- there's no way to access the value of such a value.
 observeIf :: SymVal a => (a -> Bool) -> String -> SBV a -> SBV a
 observeIf cond m x
   | Just bad <- checkObservableName m
