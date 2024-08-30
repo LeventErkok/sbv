@@ -20,6 +20,7 @@
 
 module Data.SBV.Tools.KnuckleDragger (
          axiom
+       , sorry
        , lemma,      lemmaWith
        , theorem,    theoremWith
        , chainLemma, chainLemmaWith
@@ -62,6 +63,14 @@ data Proven = ProvenBool { boolOf :: SBool }
 -- giving meaning to uninterpreted symbols.
 axiom :: Proposition a => String -> a -> IO Proven
 axiom nm p = do putStrLn $ "Axiom: " ++ tag 0 nm "Admitted."
+                pure $ ProvenBool (quantifiedBool p)
+
+-- | Blindly believe a proposition as a theorem. This is in essence the same as 'axiom', except
+-- it serves for documentation purposes that it should be provable. It's useful during development,
+-- and also when you hit a theorem that the underlying solver just can't handle.
+-- giving meaning to uninterpreted symbols.
+sorry :: Proposition a => String -> a -> IO Proven
+sorry nm p = do putStrLn $ "Sorry: " ++ tag 0 nm "Blindly believed."
                 pure $ ProvenBool (quantifiedBool p)
 
 -- | Helper to generate lemma/theorem statements.
