@@ -28,9 +28,9 @@ inductionPrinciple :: String -> (SInteger -> SBool) -> IO (SInteger -> SBool, Pr
 inductionPrinciple nm p = do
     let qb = quantifiedBool
 
-        principle =       p 0 .&& qb (\(Forall n) -> p n .=> p (n+1))
-                  .=> qb --------------------------------------------
-                                (\(Forall n) -> (p n))
+        principle =       p 0 .&& qb (\(Forall n) -> (n .>= 0 .&& p n) .=> p (n+1))
+                  .=> qb -----------------------------------------------------------
+                                    (\(Forall n) -> n .>= 0 .=> p n)
 
     induction <- axiom (nm ++ "_induction") principle
 

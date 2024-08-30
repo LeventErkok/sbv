@@ -37,7 +37,7 @@ sumProof = do
 
    (p, induct) <- inductionPrinciple "sum" (\n -> sum n .== spec n)
 
-   lemma "sum_correct" (\(Forall n) -> p n) [induct]
+   lemma "sum_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
@@ -56,4 +56,4 @@ sumSquareProof = do
 
    (p, induct) <- inductionPrinciple "sumSquare" (\n -> sumSquare n .== spec n)
 
-   lemma "sumSquare_correct" (\(Forall n) -> p n) [induct]
+   lemma "sumSquare_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
