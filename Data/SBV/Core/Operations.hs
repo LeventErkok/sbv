@@ -206,7 +206,7 @@ svDivides n v
   | n <= 0 = error $ "svDivides: The first argument must be a strictly positive number, received: " ++ show n
   | True   = liftSym1B (mkSymOp1 (Divides n))
                        (noRealUnary "divides")
-                       (\x -> x `div` n == 0)
+                       (\x -> x `mod` n == 0)
                        (noFloatUnary  "divides")
                        (noDoubleUnary "divides")
                        (noFPUnary     "divides")
