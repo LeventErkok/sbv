@@ -22,7 +22,7 @@ module Data.SBV.Core.Operations
   , svAsBool, svAsInteger, svNumerator, svDenominator
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs, svSignum
-  , svDivide, svQuot, svRem, svQuotRem
+  , svDivide, svQuot, svRem, svQuotRem, svDivides
   , svEqual, svNotEqual, svStrongEqual, svImplies, svSetEqual
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   , svAnd, svOr, svXOr, svNot
@@ -199,6 +199,18 @@ svDivide :: SVal -> SVal -> SVal
 svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
    where idiv x 0 = x
          idiv x y = x `div` y
+
+-- | Divides predicate
+svDivides :: Integer -> SVal -> SVal
+svDivides n v
+  | n <= 0 = error $ "svDivides: The first argument must be a strictly positive number, received: " ++ show n
+  | True   = liftSym1B (mkSymOp1 (Divides n))
+                       (noRealUnary "divides")
+                       (\x -> x `div` n == 0)
+                       (noFloatUnary  "divides")
+                       (noDoubleUnary "divides")
+                       (noFPUnary     "divides")
+                       (noRatUnary    "divides") v
 
 -- | Exponentiation.
 svExp :: SVal -> SVal -> SVal
@@ -1164,6 +1176,27 @@ liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right 
    where c st = do sva <- svToSV st a
                    opS st k sva
 
+liftSym1B :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> Bool) -> (Integer -> Bool) -> (Float -> Bool) -> (Double -> Bool) -> (FP -> Bool) -> (Rational -> Bool) -> SVal -> SVal
+liftSym1B _   opCR opCI opCF opCD opFP opRA   (SVal _ (Left a)) = svBool (liftCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint noList noSet noTuple noMaybe noEither a)
+liftSym1B opS _    _    _    _    _    _    a                   = SVal KBool $ Right $ cache c
+   where c st = do sva <- svToSV st a
+                   opS st KBool sva
+
+noList :: [CVal] -> a
+noList _xs = error "Unexpected unary operation called on list value"
+
+noTuple :: [CVal] -> a
+noTuple _xs = error "Unexpected unary operation called on tuple value"
+
+noSet :: RCSet CVal -> a
+noSet _s = error "Unexpected unary operation called on set value"
+
+noMaybe :: Maybe CVal -> a
+noMaybe _m = error $ "Unexpected unary operation called on maybe value"
+
+noEither :: Either CVal CVal -> a
+noEither _e = error "Unexpected unary operation called on either value"
+
 {- A note on constant folding.
 
 There are cases where we miss out on certain constant foldings. On May 8 2018, Matt Peddie pointed this
@@ -1339,34 +1372,34 @@ rationalSBVCheck :: SVal -> SVal -> Bool
 rationalSBVCheck (SVal KReal (Left a)) (SVal KReal (Left b)) = rationalCheck a b
 rationalSBVCheck _                     _                     = True
 
-noReal :: String -> AlgReal -> AlgReal -> AlgReal
+noReal :: String -> AlgReal -> AlgReal -> a
 noReal o a b = error $ "SBV.AlgReal." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
-noFloat :: String -> Float -> Float -> Float
+noFloat :: String -> Float -> Float -> a
 noFloat o a b = error $ "SBV.Float." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
-noDouble :: String -> Double -> Double -> Double
+noDouble :: String -> Double -> Double -> a
 noDouble o a b = error $ "SBV.Double." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
-noFP :: String -> FP -> FP -> FP
+noFP :: String -> FP -> FP -> a
 noFP o a b = error $ "SBV.FPR." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
-noRat:: String -> Rational -> Rational -> Rational
+noRat:: String -> Rational -> Rational -> a
 noRat o a b = error $ "SBV.Rational." ++ o ++ ": Unexpected arguments: " ++ show (a, b)
 
-noRealUnary :: String -> AlgReal -> AlgReal
+noRealUnary :: String -> AlgReal -> a
 noRealUnary o a = error $ "SBV.AlgReal." ++ o ++ ": Unexpected argument: " ++ show a
 
-noFloatUnary :: String -> Float -> Float
+noFloatUnary :: String -> Float -> a
 noFloatUnary o a = error $ "SBV.Float." ++ o ++ ": Unexpected argument: " ++ show a
 
-noDoubleUnary :: String -> Double -> Double
+noDoubleUnary :: String -> Double -> a
 noDoubleUnary o a = error $ "SBV.Double." ++ o ++ ": Unexpected argument: " ++ show a
 
-noFPUnary :: String -> FP -> FP
+noFPUnary :: String -> FP -> a
 noFPUnary o a = error $ "SBV.FPR." ++ o ++ ": Unexpected argument: " ++ show a
 
-noRatUnary :: String -> Rational -> Rational
+noRatUnary :: String -> Rational -> a
 noRatUnary o a = error $ "SBV.Rational." ++ o ++ ": Unexpected argument: " ++ show a
 
 -- | Given a composite structure, figure out how to compare for less than

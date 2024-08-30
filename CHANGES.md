@@ -11,6 +11,11 @@
   * Add Documentation.SBV.Examples.KnuckleDragger.{Kleene|Induction}, as examples
     of some KnuckleDragger style proofs.
 
+  * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
+    if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
+    but it translates to the built-in divisibility predicate in SMTLib, which (might) perform better.
+    Note that the @n@ argument is concrete, and must be > 0.
+
 ### Version 10.12, 2024-08-11
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.

@@ -42,6 +42,7 @@ module Data.SBV.Core.Model (
   , sEither, sEither_, sEithers, sMaybe, sMaybe_, sMaybes
   , sSet, sSet_, sSets
   , sEDivMod, sEDiv, sEMod
+  , sDivides
   , solve
   , slet
   , sRealToSInteger, label, observe, observeIf, sObserve
@@ -1847,6 +1848,15 @@ instance (KnownNat n, BVIsNonZero n) => SDivisible (SInt n) where
   sQuotRem = liftQRem
   sDivMod  = liftDMod
 
+-- | Does the concrete positive number n divide the given integer?
+sDivides :: Integer -> SInteger -> SBool
+sDivides n v
+  | n < 0
+  = error $ "svDivides: First argument must be a strictly positive integer. Received: " ++ show n
+  | Just x <- unliteral v
+  = if (x `mod` n == 0) then sTrue else sFalse
+  | True
+  = SBV $ svDivides n (unSBV v)
 
 -- | Lift 'quotRem' to symbolic words. Division by 0 is defined s.t. @x/0 = 0@; which
 -- holds even when @x@ is @0@ itself.

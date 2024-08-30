@@ -266,7 +266,7 @@ module Data.SBV (
   -- * Division and Modulus
   , SDivisible(..)
   -- $euclidianNote
-  , sEDivMod, sEDiv, sEMod
+  , sEDivMod, sEDiv, sEMod, sDivides
   -- * Bit-vector operations
   -- ** Conversions
   , sFromIntegral

@@ -980,6 +980,8 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
                  IsTreeOrder            nm -> asrt nm "tree-order"
                  IsPiecewiseLinearOrder nm -> asrt nm "piecewise-linear-order"
 
+        sh (SBVApp (Divides n) [a]) = "((_ divisible " ++ show n ++ ") " ++ cvtSV a ++ ")"
+
         sh (SBVApp (Extract i j) [a]) | ensureBV = "((_ extract " ++ show i ++ " " ++ show j ++ ") " ++ cvtSV a ++ ")"
 
         sh (SBVApp (Rol i) [a])

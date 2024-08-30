@@ -225,6 +225,7 @@ data Op = Plus
         | Shr
         | Rol Int
         | Ror Int
+        | Divides Integer                       -- divides k n is True if k divides n. k must be > 0 constant
         | Extract Int Int                       -- Extract i j: extract bits i to j. Least significant bit is 0 (big-endian)
         | Join                                  -- Concat two words to form a bigger one, in the order given
         | ZeroExtend Int
