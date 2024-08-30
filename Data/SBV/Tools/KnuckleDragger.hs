@@ -17,11 +17,15 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KnuckleDragger (
-        axiom, lemma, theorem, chainLemma, Proven
+         axiom
+       , lemma,      lemmaWith
+       , theorem,    theoremWith
+       , chainLemma, chainLemmaWith
+       , Proven
        ) where
 
 import Data.SBV
-import Control.Monad(void)
+import Control.Monad(when, void)
 
 -- | Tag the start of an axiom or lemma. The ribbon-length is roughly
 -- the width of the line you want printed. Perhaps it should be configurable,
@@ -32,10 +36,11 @@ tag tab s w = s ++ replicate (ribbonLength - length s - tab) ' ' ++ w
         ribbonLength = 40
 
 -- | Tag the start of an axiom/lemma.
-start :: String -> String -> IO Int
-start knd nm = do let tab = 2 * length (filter (== '.') nm)
-                  putStr $ replicate tab ' ' ++ knd ++ nm
-                  pure tab
+start :: Bool -> String -> String -> IO Int
+start isVerbose knd nm = do let tab = 2 * length (filter (== '.') nm)
+                            putStr $ replicate tab ' ' ++ knd ++ nm
+                            when isVerbose $ putStrLn ""
+                            pure tab
 
 -- | A proven property. Note that axioms are considered proven.
 data Proven = ProvenBool { boolOf :: SBool }
@@ -47,42 +52,54 @@ axiom nm p = do putStrLn $ "Axiom: " ++ tag 0 nm "Admitted."
                 pure $ ProvenBool (quantifiedBool p)
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: QuantifiedBool a => String -> String -> a -> [Proven] -> IO Proven
-lemmaGen what nm p by = do
-    tab <- start what nm
-    t <- isTheorem (quantifiedBool (sAnd (map boolOf by) .=> quantifiedBool p))
+lemmaGen :: QuantifiedBool a => SMTConfig -> String -> String -> a -> [Proven] -> IO Proven
+lemmaGen cfg what nm p by = do
+    tab <- start (verbose cfg) what nm
+    t <- isTheoremWith cfg (quantifiedBool (sAnd (map boolOf by) .=> quantifiedBool p))
     if t
        then putStrLn $ drop (length nm) $ tag tab nm "Q.E.D."
        else do putStrLn $ "\n*** Failed to prove " ++ nm ++ ":"
-               print =<< proveWith z3{verbose=True} (quantifiedBool p)
+               print =<< proveWith cfg{verbose=True} (quantifiedBool p)
                error "Failed"
     pure $ ProvenBool (quantifiedBool p)
 
--- | Prove a given statement, using auxiliaries as helpers.
+-- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: QuantifiedBool a => String -> a -> [Proven] -> IO Proven
-lemma = lemmaGen "Lemma: "
+lemma = lemmaGen defaultSMTCfg "Lemma: "
 
--- | Prove a given statement, using auxiliaries as helpers. Essentially the same as lemma, except for the name.
+-- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
+lemmaWith :: QuantifiedBool a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+lemmaWith cfg = lemmaGen cfg "Lemma: "
+
+-- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: QuantifiedBool a => String -> a -> [Proven] -> IO Proven
-theorem = lemmaGen "Theorem: "
+theorem = lemmaGen defaultSMTCfg "Theorem: "
+
+-- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
+theoremWith :: QuantifiedBool a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+theoremWith cfg = lemmaGen cfg "Theorem: "
 
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class ChainLemma steps step | steps -> step where
 
   -- | Prove a property via a series of equality steps.
-  chainLemma :: QuantifiedBool a => String -> a -> steps -> [Proven] -> IO Proven
+  chainLemma     :: QuantifiedBool a =>              String -> a -> steps -> [Proven] -> IO Proven
+  chainLemmaWith :: QuantifiedBool a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
 
+  -- | Internal, shouldn't be needed outside the library
   makeSteps  :: steps -> [step]
   makeInter  :: steps -> step -> step -> SBool
 
-  chainLemma nm result steps base = do
-        void (start "Chain: " (nm ++ "\n"))
+  chainLemma = chainLemmaWith defaultSMTCfg
+
+  chainLemmaWith cfg nm result steps base = do
+        void (start (verbose cfg) "Chain: " (nm ++ "\n"))
         go (1 :: Int) base (makeSteps steps)
-     where go _ sofar []         = lemma nm result sofar
-           go _ sofar [_]        = lemma nm result sofar
+     where go _ sofar []         = lemmaWith cfg nm result sofar
+           go _ sofar [_]        = lemmaWith cfg nm result sofar
            go i sofar (a:b:rest) = do let intermediate = makeInter steps a b
-                                      _step <- lemma (nm ++ "." ++ show i) intermediate sofar
+                                      _step <- lemmaWith cfg (nm ++ "." ++ show i) intermediate sofar
                                       go (i+1) (ProvenBool (quantifiedBool intermediate) : sofar) (b:rest)
 
 -- | Chaining lemmas that depend on a single quantified varible.
