@@ -11,12 +11,14 @@
 -- Based on <http://www.philipzucker.com/bryzzowski_kat/>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
+{-# LANGUAGE TypeAbstractions     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
@@ -89,21 +91,21 @@ kleeneProofs :: IO ()
 kleeneProofs = do
 
   -- Kozen axioms
-  par_assoc <- axiom "par_assoc" $ \(Forall (x :: SKleene)) (Forall y) (Forall z) -> x + (y + z) .== (x + y) + z
-  par_comm  <- axiom "par_comm"  $ \(Forall (x :: SKleene)) (Forall y)            -> x + y       .== y + x
-  par_idem  <- axiom "par_idem"  $ \(Forall (x :: SKleene))                       -> x + x       .== x
-  par_zero  <- axiom "par_zero"  $ \(Forall (x :: SKleene))                       -> x + 0       .== x
+  par_assoc <- axiom "par_assoc" $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x + (y + z) .== (x + y) + z
+  par_comm  <- axiom "par_comm"  $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y)                 -> x + y       .== y + x
+  par_idem  <- axiom "par_idem"  $ \(Forall @"x" (x :: SKleene))                                 -> x + x       .== x
+  par_zero  <- axiom "par_zero"  $ \(Forall @"x" (x :: SKleene))                                 -> x + 0       .== x
 
-  seq_assoc <- axiom "seq_assoc" $ \(Forall (x :: SKleene)) (Forall y) (Forall z) -> x * (y * z) .== (x * y) * z
-  seq_zero  <- axiom "seq_zero"  $ \(Forall (x :: SKleene))                       -> x * 0       .== 0
-  seq_one   <- axiom "seq_one"   $ \(Forall (x :: SKleene))                       -> x * 1       .== x
+  seq_assoc <- axiom "seq_assoc" $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x * (y * z) .== (x * y) * z
+  seq_zero  <- axiom "seq_zero"  $ \(Forall @"x" (x :: SKleene))                                 -> x * 0       .== 0
+  seq_one   <- axiom "seq_one"   $ \(Forall @"x" (x :: SKleene))                                 -> x * 1       .== x
 
-  rdistrib  <- axiom "rdistrib"  $ \(Forall (x :: SKleene)) (Forall y) (Forall z) -> x * (y + z) .== x * y + x * z
-  ldistrib  <- axiom "ldistrib"  $ \(Forall (x :: SKleene)) (Forall y) (Forall z) -> (y + z) * x .== y * x + z * x
+  rdistrib  <- axiom "rdistrib"  $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x * (y + z) .== x * y + x * z
+  ldistrib  <- axiom "ldistrib"  $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> (y + z) * x .== y * x + z * x
 
-  unfold    <- axiom "unfold"    $ \(Forall e) -> star e .== 1 + e * star e
+  unfold    <- axiom "unfold"    $ \(Forall @"e" e) -> star e .== 1 + e * star e
 
-  least_fix <- axiom "least_fix" $ \(Forall x) (Forall e) (Forall f) -> ((f + e * x) <= x) .=> ((star e * f) <= x)
+  least_fix <- axiom "least_fix" $ \(Forall @"x" x) (Forall @"e" e) (Forall @"f" f) -> ((f + e * x) <= x) .=> ((star e * f) <= x)
 
   -- Collect the basic axioms in a list for easy reference
   let kleene = [ par_assoc,  par_comm, par_idem, par_zero
@@ -114,12 +116,12 @@ kleeneProofs = do
                ]
 
   -- Various proofs:
-  par_lzero    <- lemma "par_lzero" (\(Forall (x :: SKleene)) -> 0 + x .== x) kleene
-  par_monotone <- lemma "par_monotone" (\(Forall (x :: SKleene)) (Forall y) (Forall z) -> x <= y .=> ((x + z) <= (y + z))) kleene
-  seq_monotone <- lemma "seq_monotone" (\(Forall (x :: SKleene)) (Forall y) (Forall z) -> x <= y .=> ((x * z) <= (y * z))) kleene
+  par_lzero    <- lemma "par_lzero" (\(Forall @"x" (x :: SKleene)) -> 0 + x .== x) kleene
+  par_monotone <- lemma "par_monotone" (\(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x <= y .=> ((x + z) <= (y + z))) kleene
+  seq_monotone <- lemma "seq_monotone" (\(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x <= y .=> ((x * z) <= (y * z))) kleene
 
   -- This one requires a chain of reasoning: x* x* == x*
-  star_star_1  <- chainLemma "star_star_1" (\(Forall (x :: SKleene)) -> star x * star x .== star x)
+  star_star_1  <- chainLemma "star_star_1" (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x)
                                            (\x -> [ star x * star x
                                                   , (1 + x * star x) * (1 + x * star x)
                                                   , (1 + 1) + (x * star x + x * star x)
@@ -128,13 +130,13 @@ kleeneProofs = do
                                                   ])
                                            kleene
 
-  subset_eq   <- lemma "subset_eq" (\(Forall x) (Forall y) -> (x .== y) .== (x <= y .&& y <= x)) kleene
+  subset_eq   <- lemma "subset_eq" (\(Forall @"x" x) (Forall @"y" y) -> (x .== y) .== (x <= y .&& y <= x)) kleene
 
   -- Prove: x** = x*
-  star_star_2 <- do _1 <- lemma "star_star_2_2" (\(Forall x) -> ((star x * star x + 1) <= star x) .=> star (star x) <= star x) kleene
-                    _2 <- lemma "star_star_2_3" (\(Forall x) -> star (star x) <= star x)                                             (kleene ++ [_1])
-                    _3 <- lemma "star_star_2_1" (\(Forall x) -> star x        <= star (star x))                                      kleene
+  star_star_2 <- do _1 <- lemma "star_star_2_2" (\(Forall @"x" x) -> ((star x * star x + 1) <= star x) .=> star (star x) <= star x) kleene
+                    _2 <- lemma "star_star_2_3" (\(Forall @"x" x) -> star (star x) <= star x)                                             (kleene ++ [_1])
+                    _3 <- lemma "star_star_2_1" (\(Forall @"x" x) -> star x        <= star (star x))                                      kleene
 
-                    lemma "star_star_2" (\(Forall (x :: SKleene)) -> star (star x) .== star x) [subset_eq, _2, _3]
+                    lemma "star_star_2" (\(Forall @"x" (x :: SKleene)) -> star (star x) .== star x) [subset_eq, _2, _3]
 
   pure ()

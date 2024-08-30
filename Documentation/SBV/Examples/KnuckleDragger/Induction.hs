@@ -10,6 +10,9 @@
 --
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds        #-}
+{-# LANGUAGE TypeAbstractions #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Induction where
@@ -38,11 +41,11 @@ sumProof = do
        spec n = (n * (n+1)) `sDiv` 2
 
        p :: SInteger -> SBool
-       p n = sum n .== spec n
+       p n = observe "imp" (sum n) .== observe "spec" (spec n)
 
    induct <- inductionPrinciple p
 
-   lemma "sum_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
+   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct]
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
@@ -60,11 +63,11 @@ sumSquareProof = do
        spec n = (n * (n+1) * (2*n+1)) `sDiv` 6
 
        p :: SInteger -> SBool
-       p n = sumSquare n .== spec n
+       p n = observe "imp" (sumSquare n) .== observe "spec" (spec n)
 
    induct <- inductionPrinciple p
 
-   lemma "sumSquare_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
+   lemma "sumSquare_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct]
 
 -- | Prove that the length of a list is one more than the length of its tail.
 --
@@ -82,8 +85,8 @@ listLengthProof = do
        spec = SL.length
 
        p :: SList Integer -> SBool
-       p xs = length xs .== spec xs
+       p xs = observe "imp" (length xs) .== observe "spec" (spec xs)
 
    induct <- inductionPrinciple p
 
-   lemma "length_correct" (\(Forall xs) -> p xs) [induct]
+   lemma "length_correct" (\(Forall @"xs" xs) -> p xs) [induct]

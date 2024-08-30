@@ -10,8 +10,10 @@
 -- Modeled after Philip Zucker's tool with the same name, see <http://github.com/philzook58/knuckledragger>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE ConstraintKinds        #-}
 {-# LANGUAGE MultiParamTypeClasses  #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -25,7 +27,18 @@ module Data.SBV.Tools.KnuckleDragger (
        ) where
 
 import Data.SBV
+-- import Data.SBV.SMT.SMT   (showSMTResult)
+import Data.SBV.Core.Data (Constraint)
+
 import Control.Monad(when, void)
+
+-- | Capture the context of what we can prove via KnuckleDragger
+type Proposition a = ( QuantifiedBool a
+                     , QNot a
+                     , Satisfiable (SkolemsTo (NegatesTo a))
+                     , Constraint Symbolic (SkolemsTo (NegatesTo a))
+                     , Skolemize (NegatesTo a)
+                     )
 
 -- | Tag the start of an axiom or lemma. The ribbon-length is roughly
 -- the width of the line you want printed. Perhaps it should be configurable,
@@ -47,36 +60,54 @@ data Proven = ProvenBool { boolOf :: SBool }
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols.
-axiom :: QuantifiedBool a => String -> a -> IO Proven
+axiom :: Proposition a => String -> a -> IO Proven
 axiom nm p = do putStrLn $ "Axiom: " ++ tag 0 nm "Admitted."
                 pure $ ProvenBool (quantifiedBool p)
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: QuantifiedBool a => SMTConfig -> String -> String -> a -> [Proven] -> IO Proven
+lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proven] -> IO Proven
 lemmaGen cfg what nm p by = do
     tab <- start (verbose cfg) what nm
-    t <- isTheoremWith cfg (quantifiedBool (sAnd (map boolOf by) .=> quantifiedBool p))
-    if t
-       then putStrLn $ drop (length nm) $ tag tab nm "Q.E.D."
-       else do putStrLn $ "\n*** Failed to prove " ++ nm ++ ":"
-               print =<< proveWith cfg{verbose=True} (quantifiedBool p)
-               error "Failed"
-    pure $ ProvenBool (quantifiedBool p)
+
+    let proposition = quantifiedBool (sAnd (map boolOf by) .=> quantifiedBool p)
+
+        good = do putStrLn $ drop (length nm) $ tag tab nm "Q.E.D."
+                  pure $ ProvenBool (quantifiedBool p)
+
+        cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                  -- Calculate as a sat call on negation, but print as a theorem
+                  -- This allows for much better display of results.
+                  SatResult res <- satWith cfg (skolemize (qNot p))
+                  print $ ThmResult res
+                  error "Failed"
+
+        failed r = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                      print r
+                      error "Failed"
+
+    pRes <- proveWith cfg proposition
+    case pRes of
+      ThmResult Unsatisfiable{} -> good
+      ThmResult Satisfiable{}   -> cex
+      ThmResult DeltaSat{}      -> cex
+      ThmResult SatExtField{}   -> cex
+      ThmResult Unknown{}       -> failed pRes
+      ThmResult ProofError{}    -> failed pRes
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
-lemma :: QuantifiedBool a => String -> a -> [Proven] -> IO Proven
+lemma :: Proposition a => String -> a -> [Proven] -> IO Proven
 lemma = lemmaGen defaultSMTCfg "Lemma: "
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: QuantifiedBool a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
 lemmaWith cfg = lemmaGen cfg "Lemma: "
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
-theorem :: QuantifiedBool a => String -> a -> [Proven] -> IO Proven
+theorem :: Proposition a => String -> a -> [Proven] -> IO Proven
 theorem = lemmaGen defaultSMTCfg "Theorem: "
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: QuantifiedBool a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
 theoremWith cfg = lemmaGen cfg "Theorem: "
 
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
@@ -84,10 +115,10 @@ theoremWith cfg = lemmaGen cfg "Theorem: "
 class ChainLemma steps step | steps -> step where
 
   -- | Prove a property via a series of equality steps, using the default solver.
-  chainLemma :: QuantifiedBool a =>              String -> a -> steps -> [Proven] -> IO Proven
+  chainLemma :: Proposition a => String -> a -> steps -> [Proven] -> IO Proven
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: QuantifiedBool a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
 
   -- | Internal, shouldn't be needed outside the library
   makeSteps  :: steps -> [step]
