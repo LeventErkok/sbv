@@ -14,11 +14,13 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Induction where
 
-import Prelude hiding (sum)
+import Prelude hiding (sum, length)
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 import Data.SBV.Tools.KnuckleDragger.Induction
+
+import qualified Data.SBV.List as SL
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
@@ -63,3 +65,23 @@ sumSquareProof = do
    induct <- inductionPrinciple p
 
    lemma "sumSquare_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
+
+-- | Prove that the length of a list is one more than the length of its tail.
+--
+-- We have:
+--
+-- >>> listLengthProof
+listLengthProof :: IO Proven
+listLengthProof = do
+   let length :: SList Integer -> SInteger
+       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (5 + length (SL.tail xs))
+
+       spec :: SList Integer -> SInteger
+       spec = SL.length
+
+       p :: SList Integer -> SBool
+       p xs = length xs .== spec xs
+
+   induct <- inductionPrinciple p
+
+   lemma "length_correct" (\(Forall xs) -> p xs) [induct]

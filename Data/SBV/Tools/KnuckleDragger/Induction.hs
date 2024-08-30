@@ -19,6 +19,8 @@ module Data.SBV.Tools.KnuckleDragger.Induction (
     ) where
 
 import Data.SBV
+import qualified Data.SBV.List as SL
+
 import Data.SBV.Tools.KnuckleDragger
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
@@ -66,6 +68,17 @@ instance Induction SInteger where
 
           principle =       p 0 .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
                     .=> qb ---------------------------------------------------------
-                                         (\(Forall i) -> p i)
+                                           (\(Forall i) -> p i)
 
       axiom "Integer.splitInduction" principle
+
+-- | Induction over lists
+instance SymVal a => Induction (SList a) where
+  inductionPrinciple p = do
+     let qb a = quantifiedBool a
+
+         principle =       p SL.nil .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
+                   .=> qb ----------------------------------------------------------------------
+                                             (\(Forall xs) -> p xs)
+
+     axiom "List(a).induction" principle
