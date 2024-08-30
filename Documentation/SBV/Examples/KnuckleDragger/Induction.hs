@@ -27,7 +27,7 @@ import qualified Data.SBV.List as SL
 -- We have:
 --
 -- >>> sumProof
--- Axiom: sum_induction                           Admitted.
+-- Axiom: Nat.induction                           Admitted.
 -- Lemma: sum_correct                             Q.E.D.
 sumProof :: IO Proven
 sumProof = do
@@ -49,7 +49,7 @@ sumProof = do
 -- We have:
 --
 -- >>> sumSquareProof
--- Axiom: sumSquare_induction                     Admitted.
+-- Axiom: Nat.induction                           Admitted.
 -- Lemma: sumSquare_correct                       Q.E.D.
 sumSquareProof :: IO Proven
 sumSquareProof = do
@@ -71,10 +71,12 @@ sumSquareProof = do
 -- We have:
 --
 -- >>> listLengthProof
+-- Axiom: List(a).induction                       Admitted.
+-- Lemma: length_correct                          Q.E.D.
 listLengthProof :: IO Proven
 listLengthProof = do
    let length :: SList Integer -> SInteger
-       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (5 + length (SL.tail xs))
+       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
 
        spec :: SList Integer -> SInteger
        spec = SL.length
