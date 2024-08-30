@@ -35,7 +35,10 @@ sumProof = do
        spec :: SInteger -> SInteger
        spec n = (n * (n+1)) `sDiv` 2
 
-   (p, induct) <- inductionPrinciple "sum" (\n -> sum n .== spec n)
+       p :: SInteger -> SBool
+       p n = sum n .== spec n
+
+   induct <- inductionPrinciple p
 
    lemma "sum_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]
 
@@ -54,6 +57,9 @@ sumSquareProof = do
        spec :: SInteger -> SInteger
        spec n = (n * (n+1) * (2*n+1)) `sDiv` 6
 
-   (p, induct) <- inductionPrinciple "sumSquare" (\n -> sumSquare n .== spec n)
+       p :: SInteger -> SBool
+       p n = sumSquare n .== spec n
+
+   induct <- inductionPrinciple p
 
    lemma "sumSquare_correct" (\(Forall n) -> n .>= 0 .=> p n) [induct]

@@ -23,15 +23,18 @@ module Data.SBV.Tools.KnuckleDragger.Induction (
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
--- | Given a predicate on integers, return an induction principle which would prove it for all n >= 0.
-inductionPrinciple :: String -> (SInteger -> SBool) -> IO (SInteger -> SBool, Proven)
-inductionPrinciple nm p = do
+-- | Given a predicate, return an induction principle for it.
+class Induction a where
+  inductionPrinciple :: (a -> SBool) -> IO Proven
+
+-- | Induction over naturals. Note that the parameter here is over 'SInteger', which is a superset
+-- of naturals. The principle returned will be able to establish proofs of the form n >= 0 .=> P n.
+instance Induction SInteger where
+   inductionPrinciple p = do
     let qb = quantifiedBool
 
         principle =       p 0 .&& qb (\(Forall n) -> (n .>= 0 .&& p n) .=> p (n+1))
                   .=> qb -----------------------------------------------------------
                                     (\(Forall n) -> n .>= 0 .=> p n)
 
-    induction <- axiom (nm ++ "_induction") principle
-
-    pure (p, induction)
+    axiom "Nat.induction" principle
