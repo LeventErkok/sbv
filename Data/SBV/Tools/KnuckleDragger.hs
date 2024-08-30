@@ -83,8 +83,10 @@ theoremWith cfg = lemmaGen cfg "Theorem: "
 -- as a sequence of equalities, each step following from the previous.
 class ChainLemma steps step | steps -> step where
 
-  -- | Prove a property via a series of equality steps.
-  chainLemma     :: QuantifiedBool a =>              String -> a -> steps -> [Proven] -> IO Proven
+  -- | Prove a property via a series of equality steps, using the default solver.
+  chainLemma :: QuantifiedBool a =>              String -> a -> steps -> [Proven] -> IO Proven
+
+  -- | Prove a property via a series of equality steps, using the given solver.
   chainLemmaWith :: QuantifiedBool a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
 
   -- | Internal, shouldn't be needed outside the library
