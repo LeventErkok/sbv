@@ -11,6 +11,7 @@
   * Added several KnuckleDragger proof examples, under Documentation.SBV.Examples.KnuckleDragger:
       - Kleene         : Proves kleene algebra theorems
       - Induction      : Some induction examples
+      - Sqrt2Irrational: Prove that sqrt(2) is irrational
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
     if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
