@@ -68,10 +68,11 @@ axiom nm p = do putStrLn $ "Axiom: " ++ tag 0 nm "Admitted."
 -- | Blindly believe a proposition as a theorem. This is in essence the same as 'axiom', except
 -- it serves for documentation purposes that it should be provable. It's useful during development,
 -- and also when you hit a theorem that the underlying solver just can't handle.
--- giving meaning to uninterpreted symbols.
-sorry :: Proposition a => String -> a -> IO Proven
-sorry nm p = do putStrLn $ "Sorry: " ++ tag 0 nm "Blindly believed."
-                pure $ ProvenBool (quantifiedBool p)
+-- giving meaning to uninterpreted symbols. The list argument is unused, but it makes the
+-- signature similar to 'lemma', allowing replacing `lemma` and `sorry` easily during development process.
+sorry :: Proposition a => String -> a -> [b] -> IO Proven
+sorry nm p _bu = do putStrLn $ "Sorry: " ++ tag 0 nm "Blindly believed."
+                    pure $ ProvenBool (quantifiedBool p)
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proven] -> IO Proven
