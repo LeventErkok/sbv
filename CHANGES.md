@@ -8,8 +8,9 @@
   * Add Data.SBV.Tools.KnuckleDragger, modeled after Philip Zucker's tool by the same
     name: https://github.com/philzook58/knuckledragger.
 
-  * Add Documentation.SBV.Examples.KnuckleDragger.{Kleene|Induction}, as examples
-    of some KnuckleDragger style proofs.
+  * Added several KnuckleDragger proof examples, under Documentation.SBV.Examples.KnuckleDragger:
+      - Kleene         : Proves kleene algebra theorems
+      - Induction      : Some induction examples
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
     if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
