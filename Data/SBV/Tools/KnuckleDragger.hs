@@ -7,7 +7,8 @@
 -- Stability : experimental
 --
 -- A lightweight theorem proving like interface, built on top of SBV.
--- Inspired by and modeled after Philip Zucker's tool with the same name, see <http://github.com/philzook58/knuckledragger>.
+-- Inspired by and modeled after Philip Zucker's tool with the same
+-- name, see <http://github.com/philzook58/knuckledragger>.
 --
 -- Example uses:
 --
