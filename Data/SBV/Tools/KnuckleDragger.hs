@@ -7,7 +7,13 @@
 -- Stability : experimental
 --
 -- A lightweight theorem proving like interface, built on top of SBV.
--- Modeled after Philip Zucker's tool with the same name, see <http://github.com/philzook58/knuckledragger>
+-- Inspired by and modeled after Philip Zucker's tool with the same name, see <http://github.com/philzook58/knuckledragger>.
+--
+-- Example uses:
+--
+--    * Proving Kleene algebra properties: "Documentation.SBV.Examples.KnuckleDragger.Kleene"
+--    * Several induction examples over naturals and lists: "Documentation.SBV.Examples.KnuckleDragger.Induction"
+--    * Proving square-root-of-2 is irrational: "Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational"
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ConstraintKinds        #-}
