@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Sqrt2Irrational
+-- Module    : Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -16,7 +16,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Sqrt2Irrational where
+module Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational where
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
@@ -38,7 +38,7 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- We have:
 --
--- >>> sqrt2Irrational
+-- >>> sqrt2IsIrrational
 -- Chain: evenSquaredIsEven
 --   Lemma: evenSquaredIsEven.1                   Q.E.D.
 -- Lemma: evenSquaredIsEven                       Q.E.D.
@@ -52,8 +52,8 @@ import Data.SBV.Tools.KnuckleDragger
 --   Lemma: sqrt2_irrational.1                    Q.E.D.
 --   Lemma: sqrt2_irrational.2                    Q.E.D.
 -- Lemma: sqrt2_irrational                        Q.E.D.
-sqrt2Irrational :: IO ()
-sqrt2Irrational = do
+sqrt2IsIrrational :: IO ()
+sqrt2IsIrrational = do
     let isEven :: SInteger -> SBool
         isEven = (2 `sDivides`)
 

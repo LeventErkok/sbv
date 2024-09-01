@@ -5,13 +5,13 @@
 
   * Turn on support for floats and uninterpreted sorts/functions in Bitwuzla.
 
-  * Add Data.SBV.Tools.KnuckleDragger, modeled after Philip Zucker's tool by the same
-    name: https://github.com/philzook58/knuckledragger.
+  * Add Data.SBV.Tools.KnuckleDragger, inspired by and modeled after Philip Zucker's tool
+    by the same name: https://github.com/philzook58/knuckledragger.
 
   * Added several KnuckleDragger proof examples, under Documentation.SBV.Examples.KnuckleDragger:
-      - Kleene         : Proves kleene algebra theorems
-      - Induction      : Some induction examples
-      - Sqrt2Irrational: Prove that sqrt(2) is irrational
+      - Kleene           : Proves kleene algebra theorems
+      - Induction        : Some induction examples
+      - Sqrt2IsIrrational: Prove that sqrt(2) is irrational
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
     if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
