@@ -89,13 +89,10 @@ sqrt2Irrational = do
     sqrt2_irrational <- chainLemma "sqrt2_irrational"
         (\(Forall @"a" a) (Forall @"b" b) -> (a*a .== 2*b*b) .=> (isEven a .&& isEven b))
         (\(a :: SInteger) (b :: SInteger) ->
-            let c, ca :: SInteger
-                c  = a `sDiv` 2
-                ca = c * 2
-            in [ a*a .== 2*b*b .=> isEven (a*a)
-               , isEven (a*a)  .=> isEven a
-               , a .== ca      .=> a * a .== 4 * c * c
-               ])
+             let c = a `sDiv` 2
+             in [ isEven (a*a) .=> isEven a
+                , a .== 2 * c  .=> a * a .== 4 * c * c
+                ])
         [evenIfSquareIsEven]
 
     pure ()
