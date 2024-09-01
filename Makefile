@@ -62,7 +62,11 @@ ghci:
 	cabal new-repl --repl-options=-Wno-unused-packages
 
 ghcid:
+ifdef TGT
+	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
+else
 	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
+endif
 
 ghci_SBVTest:
 	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
