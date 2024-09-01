@@ -125,6 +125,19 @@ theoremWith cfg = lemmaGen cfg "Theorem: "
 class ChainLemma steps step | steps -> step where
 
   -- | Prove a property via a series of equality steps, using the default solver.
+  -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
+  -- Given a call of the form @chainLemma name P [A, B, C, D] H@, we proceed as follows:
+  --
+  --    * Prove: @H -> A == B@
+  --    * Prove: @H && A == B -> B == C@
+  --    * Prove: @H && A == B && B == C -> C == D@
+  --    * Prove: @H && A == B && B == C && C == D -> P@
+  --    * If all of the above steps succeed, conclude @P@.
+  --
+  -- So, chain-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning.
+  --
+  -- There must be at least 2 steps given, as no helpers is equivalent to 'lemma' and a single step
+  -- wouldn't be helpful since there's no equality to establish first.
   chainLemma :: Proposition a => String -> a -> steps -> [Proven] -> IO Proven
 
   -- | Prove a property via a series of equality steps, using the given solver.
@@ -138,7 +151,14 @@ class ChainLemma steps step | steps -> step where
 
   chainLemmaWith cfg nm result steps base = do
         void (start (verbose cfg) "Chain: " (nm ++ "\n"))
-        go (1 :: Int) base (makeSteps steps)
+        let proofSteps = makeSteps steps
+            len        = length proofSteps
+        when (len < 2) $
+         error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
+                           , "   ** There must be at least two steps."
+                           , "   ** Saw " ++ show len ++ " step(s) only."
+                           ]
+        go (1 :: Int) base proofSteps
      where go _ sofar []         = lemmaWith cfg nm result sofar
            go _ sofar [_]        = lemmaWith cfg nm result sofar
            go i sofar (a:b:rest) = do let intermediate = makeInter steps a b
