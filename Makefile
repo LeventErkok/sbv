@@ -43,7 +43,7 @@ DOCTESTTIMEOUT = 300
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-install --lib
+	@$(TIME) cabal new-install --lib --force-reinstalls
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --allow-newer --ghc-options=$(CONFIGOPTS)
