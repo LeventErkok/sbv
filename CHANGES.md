@@ -11,6 +11,7 @@
   * Added several KnuckleDragger proof examples, under Documentation.SBV.Examples.KnuckleDragger:
       - Kleene           : Proves kleene algebra theorems
       - Induction        : Some induction examples
+      - Lists            : Several proofs about lists
       - Sqrt2IsIrrational: Prove that sqrt(2) is irrational
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue

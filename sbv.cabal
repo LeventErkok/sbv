@@ -123,7 +123,6 @@ Library
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.KnuckleDragger
-                  , Data.SBV.Tools.KnuckleDragger.Induction
                   , Data.SBV.Tools.NaturalInduction
                   , Data.SBV.Tools.Overflow
                   , Data.SBV.Tools.Polynomial
@@ -155,6 +154,7 @@ Library
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Induction
+                  , Documentation.SBV.Examples.KnuckleDragger.Lists
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate
