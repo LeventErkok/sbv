@@ -7,7 +7,6 @@
 -- Stability : experimental
 --
 -- Prove that square-root of 2 is irrational.
---
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
@@ -21,38 +20,39 @@ module Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
--- | Prove that square-root of @2@ is irrational. If square-root of @2@ is rational, then:
+-- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
+-- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.
 --
---     - There must exist two integers @a@ and @b@ that are co-prime, and @sqrt(2) == a / b@
---     - Thus, @2 == a*a / b*b@
---     - Thus, @a*a == 2*b*b@
+-- In order not to deal with reals and square-roots, we prove the integer-only alternative:
+-- If @a^2 = 2b^2@, then @a@ and @b@ cannot be co-prime. We proceed (roughly) as follows:
 --
--- Here's where KnuckleDragger comes in. Let's assume we can prove @a*a == 2*b*b@ implies @a@ and @b@ are
--- both even.
+--   (1) Start with @a^2 = 2b^2@.
+--   (2) Thus, @a^2@ is even.
+--   (3) Thus, @a@ is even.
+--   (4) Thus, @a@ is a multiple of @2@, meaning @a^2@ is a multiple of @4@.
+--   (5) Thus, @b^2@ must be even.
+--   (6) Thus, @b@ is even.
+--   (7) Since @a@ and @b@ are both even, they cannot be co-prime.
 --
--- If above is established, then @a@ and @b@ cannot be co-prime, since they are both even. Thus, there
--- is no ratio @a/b@ that can equal the square-root of 2. This will establish that @2@ must be irrational.
---
--- NB. In fact, one can prove @a*a = 2*b*b@ implies @a@ and @b@ are both @0@, but we won't pursue
--- that fact here. It is not needed to establish our main goal.
+-- Note that KnuckleDragger will fill in most of these gaps, but we'll help it along
+-- with several helpers.
 --
 -- We have:
 --
 -- >>> sqrt2IsIrrational
 -- Chain: evenSquaredIsEven
---   Lemma: evenSquaredIsEven.1                   Q.E.D.
--- Lemma: evenSquaredIsEven                       Q.E.D.
+--   Lemma: evenSquaredIsEven.1                      Q.E.D.
+-- Lemma: evenSquaredIsEven                          Q.E.D.
 -- Chain: oddSquaredIsOdd
---   Lemma: oddSquaredIsOdd.1                     Q.E.D.
--- Lemma: oddSquaredIsOdd                         Q.E.D.
+--   Lemma: oddSquaredIsOdd.1                        Q.E.D.
+-- Lemma: oddSquaredIsOdd                            Q.E.D.
 -- Chain: evenIfSquareIsEven
---   Lemma: evenIfSquareIsEven.1                  Q.E.D.
--- Lemma: evenIfSquareIsEven                      Q.E.D.
--- Chain: sqrt2_irrational
---   Lemma: sqrt2_irrational.1                    Q.E.D.
---   Lemma: sqrt2_irrational.2                    Q.E.D.
--- Lemma: sqrt2_irrational                        Q.E.D.
-sqrt2IsIrrational :: IO ()
+--   Lemma: evenIfSquareIsEven.1                     Q.E.D.
+-- Lemma: evenIfSquareIsEven                         Q.E.D.
+-- Chain: sqrt2IsIrrational
+--   Lemma: sqrt2IsIrrational.1                      Q.E.D.
+-- Theorem: sqrt2IsIrrational                        Q.E.D.
+sqrt2IsIrrational :: IO Proven
 sqrt2IsIrrational = do
     let isEven :: SInteger -> SBool
         isEven = (2 `sDivides`)
@@ -78,21 +78,25 @@ sqrt2IsIrrational = do
                in [hx .== x, hx * hx .== x * x]
         ) []
 
-    -- Prove that if a square number is even, then its square-root must be even as well
+    -- Prove that if a number squared is even, then it must be even as well
     evenIfSquareIsEven <- chainLemma "evenIfSquareIsEven"
         (\(Forall @"x" x) -> isEven (x * x) .=> isEven x)
         (\x -> [isOdd x, isOdd (x * x)])
         [evenSquaredIsEven, oddSquaredIsOdd]
 
-    -- Prove that square-root of 2 is irrational, by showing for all @a*a == 2*b*b@
-    -- implies @a@ and @b@ are both even.
-    sqrt2_irrational <- chainLemma "sqrt2_irrational"
-        (\(Forall @"a" a) (Forall @"b" b) -> (a*a .== 2*b*b) .=> (isEven a .&& isEven b))
+    -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
+    -- as z3 deals with that much better. Two numbers are co-prime if for all @z@ that divides both,
+    -- @z@ must equal 1.
+    let coPrime :: SInteger -> SInteger -> SBool
+        coPrime x y = quantifiedBool (\(Forall @"z" z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
+
+    -- Prove that square-root of 2 is irrational, by showing for all pairs of integers @a@ and @b@
+    -- such that @a*a == 2*b*b@, we can show that @a@ and @b@ are not co-prime:
+    chainTheorem "sqrt2IsIrrational"
+        (\(Forall @"a" a) (Forall @"b" b) -> ((a*a .== 2*b*b) .=> sNot (coPrime a b)))
         (\(a :: SInteger) (b :: SInteger) ->
              let c = a `sDiv` 2
              in [ isEven (a*a) .=> isEven a
                 , a .== 2 * c  .=> a * a .== 4 * c * c
                 ])
         [evenIfSquareIsEven]
-
-    pure ()
