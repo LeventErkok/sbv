@@ -162,14 +162,23 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
 class Induction a where
-  inductionPrinciple  :: (a -> SBool) -> IO Proven
-  inductionPrinciple2 :: (a -> SBool) -> IO Proven
-  inductionPrinciple3 :: (a -> SBool) -> IO Proven
+  inductionPrinciple     :: (a -> SBool) -> IO Proven
+  inductionPrincipleAlt1 :: (a -> SBool) -> IO Proven
+  inductionPrincipleAlt2 :: (a -> SBool) -> IO Proven
 
-  -- The second and third principles are the same as first by default, unless we provide them
-  -- explicitly.
-  inductionPrinciple2 = inductionPrinciple
-  inductionPrinciple3 = inductionPrinciple
+  -- The second and third principles are the same as first by default, unless we provide them explicitly.
+  inductionPrincipleAlt1 = inductionPrinciple
+  inductionPrincipleAlt2 = inductionPrinciple
+
+  -- Induction for multiple argument predicates, inducting over the first argument
+  inductionPrinciple2 :: SymVal b                       => (a -> SBV b ->                   SBool) -> IO Proven
+  inductionPrinciple3 :: (SymVal b, SymVal c)           => (a -> SBV b -> SBV c ->          SBool) -> IO Proven
+  inductionPrinciple4 :: (SymVal b, SymVal c, SymVal d) => (a -> SBV b -> SBV c -> SBV d -> SBool) -> IO Proven
+
+  inductionPrinciple2 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b)                       -> f a b)
+  inductionPrinciple3 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c)            -> f a b c)
+  inductionPrinciple4 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c) (Forall d) -> f a b c d)
+
 
 -- | Induction over SInteger. We provide various induction principles here: The first one
 -- is over naturals, will only prove predicates that explicitly restrict the argument to >= 0.
@@ -189,7 +198,7 @@ instance Induction SInteger where
 
    -- | Induction over integers, using the strategy that @P(n)@ is equivalent to @P(n+1)@
    -- (i.e., not just @P(n) => P(n+1)@), thus covering the entire range.
-   inductionPrinciple2 p = do
+   inductionPrincipleAlt1 p = do
       let qb = quantifiedBool
 
           principle =       p 0 .&& qb (\(Forall i) -> p i .== p (i+1))
@@ -199,7 +208,7 @@ instance Induction SInteger where
       axiom "Integer.induction" principle
 
    -- | Induction over integers, using the strategy that @P(n) => P(n+1)@ and @P(n) => P(n-1)@.
-   inductionPrinciple3 p = do
+   inductionPrincipleAlt2 p = do
       let qb = quantifiedBool
 
           principle =       p 0 .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
