@@ -82,8 +82,8 @@ class ChainLemma steps step | steps -> step where
   chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
 
   -- | Internal, shouldn't be needed outside the library
-  makeSteps  :: steps -> [step]
-  makeInter  :: steps -> step -> step -> SBool
+  makeSteps :: steps -> [step]
+  makeInter :: steps -> step -> step -> SBool
 
   chainLemma   = chainLemmaWith   defaultSMTCfg
   chainTheorem = chainTheoremWith defaultSMTCfg
