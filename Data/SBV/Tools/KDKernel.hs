@@ -26,7 +26,7 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Data.List (intercalate)
+import Data.List (intercalate, nub, sort)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
@@ -43,6 +43,13 @@ type Proposition a = ( QuantifiedBool a
                      , Skolemize (NegatesTo a)
                      )
 
+
+-- | Keeping track of provenance information.
+data Provenance = FromSorry String   -- ^ From a call to 'sorry'
+                | FromAxiom String   -- ^ Created from an axiom/definition
+                | FromLemma String   -- ^ Proven legitimately using the underlying solver
+                deriving (Eq, Ord)
+
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 start :: Bool -> String -> [String] -> IO Int
 start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
@@ -53,17 +60,20 @@ start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         line   = indent ++ tag
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
-finish :: String -> Int -> IO ()
-finish what skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
+finish :: Provenance -> [Provenance] -> Int -> IO ()
+finish origin parents skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
   where -- Ideally an aestheticly pleasing length of the line. Perhaps this
         -- should be configurable, but this is good enough for now.
         ribbonLength :: Int
         ribbonLength = 50
 
--- | Keeping track of provenance information.
-data Provenance = FromSorry String   -- ^ From a call to 'sorry'
-                | FromAxiom String   -- ^ Created from an axiom/definition
-                | FromLemma String   -- ^ Proven legitimately using the underlying solver
+        -- If provenance contains a sorry, then we blindly believe..
+        what = case origin of
+                 FromSorry _ -> "Blindly believed."
+                 FromAxiom _ -> "Admitted."
+                 FromLemma _ -> case [nm | FromSorry nm <- parents] of
+                                  [] -> "Q.E.D."
+                                  xs -> "Blindly believed. [Due to: " ++ unwords xs ++ "]"
 
 -- | A proven property. This type is left abstract, i.e., the only way to create on is via a
 -- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
@@ -79,8 +89,9 @@ data Proven = Proven { provenance :: [Provenance] -- ^ What was used to establis
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> IO Proven
-axiom nm p = do start False "Axiom" [nm] >>= finish "Admitted."
-                pure Proven{ provenance = [FromAxiom nm]
+axiom nm p = do let origin = FromAxiom nm
+                start False "Axiom" [nm] >>= finish origin []
+                pure Proven{ provenance = [origin]
                            , getProof   = quantifiedBool p
                            }
 
@@ -90,8 +101,9 @@ axiom nm p = do start False "Axiom" [nm] >>= finish "Admitted."
 -- giving meaning to uninterpreted symbols. The list argument is unused, but it makes the
 -- signature similar to 'lemma', allowing replacing `lemma` and `sorry` easily during development process.
 sorry :: Proposition a => String -> a -> [b] -> IO Proven
-sorry nm p _u = do start False "Sorry" [nm] >>= finish "Blindly believed."
-                   pure Proven{ provenance = [FromSorry nm]
+sorry nm p _u = do let origin = FromSorry nm
+                   start False "Sorry" [nm] >>= finish origin []
+                   pure Proven{ provenance = [origin]
                               , getProof   = quantifiedBool p
                               }
 
@@ -104,8 +116,10 @@ lemmaGen cfg what nms p by = do
 
         proposition = quantifiedBool (sAnd (map getProof by) .=> quantifiedBool p)
 
-        good = do finish "Q.E.D." tab
-                  pure Proven{ provenance = concatMap provenance by ++ [FromLemma nm]
+        good = do let origin = FromLemma nm
+                      parent = concatMap provenance by
+                  finish (FromLemma nm) parent tab
+                  pure Proven{ provenance = nub (sort parent) ++ [origin]
                              , getProof   = quantifiedBool p
                              }
 
