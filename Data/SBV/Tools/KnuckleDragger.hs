@@ -98,8 +98,8 @@ class ChainLemma steps step | steps -> step where
             len        = length proofSteps
         when (len == 1) $
          error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
-                           , "   ** There must be either none, or at least two steps."
-                           , "   ** Was given only one step."
+                           , "**   There must be either none, or at least two steps."
+                           , "**   Was given only one step."
                            ]
         go (1 :: Int) base (zipWith (makeInter steps) proofSteps (drop 1 proofSteps))
      where go _ sofar []

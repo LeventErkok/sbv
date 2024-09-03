@@ -9,8 +9,9 @@
 -- Example use of the KnuckleDragger, on lists.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeAbstractions    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
 
@@ -21,6 +22,7 @@ import Prelude hiding (sum, length, (++))
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+import Data.SBV.List ((.:))
 import qualified Data.SBV.List as SL
 
 -- $setup
@@ -85,20 +87,23 @@ badProof = do
 concatAssoc :: IO Proven
 concatAssoc = do
    -- Definition of concat
-   let (++) :: SList Integer -> SList Integer -> SList Integer
-       (++) = smtFunction "concat" $ \xs ys -> ite (SL.null xs) ys (SL.head xs SL..: SL.tail xs ++ ys)
+   let (++) :: SymVal a => SList a -> SList a -> SList a
+       (++) = smtFunction "concat" $ \xs ys -> ite (SL.null xs) ys (SL.head xs .: SL.tail xs ++ ys)
        infixr 5 ++
 
    -- The classic proof by induction on xs
-   let p :: SList Integer -> SBool
+   let p :: SymVal a => SList a -> SBool
        p xs = quantifiedBool $ \(Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
-   induct <- inductionPrinciple p
+   -- Do the proof over integers:
+   induct <- inductionPrinciple (p :: SList Integer -> SBool)
 
-   chainLemma "concatAssoc" (\(Forall @"xs" xs) -> p xs)
-      (\xxs ys zs -> let (_x, _xs) = SL.uncons (xxs :: SList Integer)
-                     in [ SL.nil ++ (ys ++ zs)
-                        , ys ++ zs
-                        ]
-      )
-      [induct]
+   cons_app <- lemma "cons_app"
+        (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys) -> x .: (xs ++ ys) .== (x .: xs) ++ ys)
+        []
+
+   lemma "concatAssoc"
+         (\(Forall @"xs" (xs :: SList Integer))
+           (Forall @"ys" ys)
+           (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
+         [cons_app, induct]
