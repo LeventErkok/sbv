@@ -16,7 +16,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude hiding (sum, length)
+import Prelude hiding (sum, length, (++))
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
@@ -80,3 +80,25 @@ badProof = do
    lemma "bad" (\(Forall @"xs" xs) -> p xs) [induct]
 
    pure ()
+
+-- | Prove that list concatenation is associative.
+concatAssoc :: IO Proven
+concatAssoc = do
+   -- Definition of concat
+   let (++) :: SList Integer -> SList Integer -> SList Integer
+       (++) = smtFunction "concat" $ \xs ys -> ite (SL.null xs) ys (SL.head xs SL..: SL.tail xs ++ ys)
+       infixr 5 ++
+
+   -- The classic proof by induction on xs
+   let p :: SList Integer -> SBool
+       p xs = quantifiedBool $ \(Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
+
+   induct <- inductionPrinciple p
+
+   chainLemma "concatAssoc" (\(Forall @"xs" xs) -> p xs)
+      (\xxs ys zs -> let (_x, _xs) = SL.uncons (xxs :: SList Integer)
+                     in [ SL.nil ++ (ys ++ zs)
+                        , ys ++ zs
+                        ]
+      )
+      [induct]
