@@ -266,6 +266,7 @@ Library
                   , Data.SBV.Provers.OpenSMT
                   , Data.SBV.Provers.Yices
                   , Data.SBV.Provers.Z3
+                  , Data.SBV.Tools.KDKernel
                   , Data.SBV.Utils.CrackNum
                   , Data.SBV.Utils.ExtractIO
                   , Data.SBV.Utils.Numeric
