@@ -26,7 +26,9 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Data.List (intercalate, nub, sort)
+import Data.List     (intercalate, nub, sort)
+
+import System.IO     (hFlush, stdout)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
@@ -53,6 +55,7 @@ data Provenance = FromSorry String   -- ^ From a call to 'sorry'
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 start :: Bool -> String -> [String] -> IO Int
 start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
+                            hFlush stdout
                             return (length line)
   where tab    = 2 * length (drop 1 nms)
         indent = replicate tab ' '
@@ -73,7 +76,7 @@ finish origin parents skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ w
                  FromAxiom _ -> "Admitted."
                  FromLemma _ -> case [nm | FromSorry nm <- parents] of
                                   [] -> "Q.E.D."
-                                  xs -> "Blindly believed. [Due to: " ++ unwords xs ++ "]"
+                                  xs -> "Q.E.D. [Modulo: " ++ intercalate ", " xs ++ "]"
 
 -- | A proven property. This type is left abstract, i.e., the only way to create on is via a
 -- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
