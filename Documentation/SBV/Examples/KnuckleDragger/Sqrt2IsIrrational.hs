@@ -17,6 +17,8 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational where
 
+import Prelude hiding (even, odd)
+
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
@@ -24,71 +26,79 @@ import Data.SBV.Tools.KnuckleDragger
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.
 --
 -- In order not to deal with reals and square-roots, we prove the integer-only alternative:
--- If @a^2 = 2b^2@, then @a@ and @b@ cannot be co-prime. We proceed (roughly) as follows:
+-- If @a^2 = 2b^2@, then @a@ and @b@ cannot be co-prime. We proceed by establishing the
+-- following helpers first:
 --
---   (1) An odd number squared can be written as 2*c+1. We will tell the solver what this c is.
---   (2) Hence, An odd number squared is odd as well.
---   (3) If a number is even, then it's square must be a multiple of 4.
---   (3) If a number is even, then it's square must be a multiple of 4.
---   (4) Start with @a^2 = 2b^2@.
---   (2) Thus, @a^2@ is even.
---   (3) Thus, @a@ is even.
---   (4) Thus, @a@ is a multiple of @2@, meaning @a^2@ is a multiple of @4@.
---   (5) Thus, @b^2@ must be even.
---   (6) Thus, @b@ is even.
---   (7) Since @a@ and @b@ are both even, they cannot be co-prime.
+--   (1) An odd number squared is odd: @odd x -> odd x^2@
+--   (2) An even number that is a perfect square must be the square of an even number: @even x^2 -> even x@.
+--   (3) If a number is even, then its square must be a multiple of 4: @even x .=> x*x % 4 == 0@.
 --
--- Note that KnuckleDragger will fill in most of these gaps, but we'll help it along
--- with several helpers.
+--  Using these helpers, we can argue:
+--
+--   (a) Start with the premise @a^2 = 2b^2@.
+--   (b) Thus, @a^2@ must be even. (Since it equals @2b^2@ by a.)
+--   (c) Thus, @a@ must be even. (Using 2 and b.)
+--   (d) Thus, @a^2@ must be divisible by @4@. (Using 3 and c. That is, 2b^2 == 4*K for someK.)
+--   (e) Thus, @b^2@ must be even. (Using d, b^2 = 2K.)
+--   (f) Thus, @b@ must be even. (Using 2 and e.)
+--   (g) Since @a@ and @b@ are both even, they cannot be co-prime. (Using c and f.)
+--
+-- Note that our proof is mostly about the first 3 facts above, then z3 and KnuckleDragger fills in the rest.
 --
 -- We have:
 --
 -- >>> sqrt2IsIrrational
--- Lemma: oddSquaredAsMul2P1               Q.E.D.
+-- Lemma: expandOddXInSq                   Q.E.D.
 -- Lemma: oddSquaredIsOdd                  Q.E.D.
 -- Lemma: evenIfSquareIsEven               Q.E.D.
 -- Lemma: evenSquaredIsMult4               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 sqrt2IsIrrational :: IO Proven
 sqrt2IsIrrational = do
-    let isEven, isOdd :: SInteger -> SBool
-        isEven = (2 `sDivides`)
-        isOdd  = sNot . isEven
+    let even, odd :: SInteger -> SBool
+        even = (2 `sDivides`)
+        odd  = sNot . even
 
         sq :: SInteger -> SInteger
         sq x = x * x
 
     -- Prove that an odd number squared gives you an odd number.
+    -- Interestingly, the solver doesn't need the analogous theorem that even number
+    -- squared is even, possibly because the even/odd definition above is enough for
+    -- it to deduce that fact automatically.
     oddSquaredIsOdd <- do
-        -- Help the solver by telling it that if x is odd, then its square can be written as
-        -- an odd number as well. Note that we state this by providing a witness (instead of
-        -- using an equivaent quantified formula), which allows the solver to conclude
-        -- the next lemma easily.
-        oddSquaredAsMul2P1 <- lemma "oddSquaredAsMul2P1"
-            (\(Forall @"x" x) -> isOdd x .=> sq x .== sq (2 * (x `sDiv` 2) + 1))
+
+        -- Help the solver by explicitly proving  that if @x@ is odd, then it can be written as @2k+1@.
+        -- We do need to do this in a bit of a round about way, proving @sq x@ is the square
+        -- of another odd number, as that seems to help z3 do better quantifier instantiation.
+        --
+        -- Note that, instead of using an existential quantifier for k, we actually tell
+        -- the solver what the witness is, which makes the proof go through.
+        expandOddXInSq <- lemma "expandOddXInSq"
+            (\(Forall @"x" x) -> odd x .=> sq x .== sq (2 * (x `sDiv` 2) + 1))
             []
 
         lemma "oddSquaredIsOdd"
-            (\(Forall @"x" x) -> isOdd x .=> isOdd (sq x))
-            [oddSquaredAsMul2P1]
+            (\(Forall @"x" x) -> odd x .=> odd (sq x))
+            [expandOddXInSq]
 
-    -- Prove that if a number squared is even, then it must be even as well.
-    evenIfSquareIsEven <- lemma "evenIfSquareIsEven"
-        (\(Forall @"x" x) -> isEven (sq x) .=> isEven x)
-        [oddSquaredIsOdd]
+    -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
+    -- is enough to establish this.
+    evenIfSquareIsEven <- lemma "evenIfSquareIsEven" (\(Forall @"x" x) -> even (sq x) .=> even x) [oddSquaredIsOdd]
+
+    -- Prove that if @a@ is an even number, then its square is four times the square of another.
+    -- Happily, z3 needs no helpers to establish this all on its own.
+    evenSquaredIsMult4 <- lemma "evenSquaredIsMult4"
+        (\(Forall @"a" a) -> even a .=> quantifiedBool (\(Exists @"b" b) -> sq a .== 4 * sq b))
+        []
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.
     let coPrime :: SInteger -> SInteger -> SBool
         coPrime x y = quantifiedBool (\(Forall @"z" z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
 
-    -- Prove that if a is an even number, then its square four times the square of another.
-    evenSquaredIsMult4 <- lemma "evenSquaredIsMult4"
-        (\(Forall @"a" a) -> isEven a .=> quantifiedBool (\(Exists @"b" b) -> sq a .== 4 * sq b))
-        []
-
-    -- Prove that square-root of 2 is irrational, by showing for all pairs of integers @a@ and @b@
-    -- such that @a*a == 2*b*b@, we can show that @a@ and @b@ are not co-prime:
+    -- Prove that square-root of 2 is irrational. We do this by showing for all pairs of integers @a@ and @b@
+    -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ are not be co-prime:
     lemma "sqrt2IsIrrational"
         (\(Forall @"a" a) (Forall @"b" b) -> ((sq a .== 2 * sq b) .=> sNot (coPrime a b)))
         [evenIfSquareIsEven, evenSquaredIsMult4]
