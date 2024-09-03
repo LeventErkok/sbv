@@ -26,8 +26,8 @@ import Data.SBV.Tools.KnuckleDragger
 -- We have:
 --
 -- >>> sumProof
--- Axiom: Nat.induction                              Admitted.
--- Lemma: sum_correct                                Q.E.D.
+-- Axiom: Nat.induction                    Admitted.
+-- Lemma: sum_correct                      Q.E.D.
 sumProof :: IO Proven
 sumProof = do
    let sum :: SInteger -> SInteger
@@ -48,8 +48,8 @@ sumProof = do
 -- We have:
 --
 -- >>> sumSquareProof
--- Axiom: Nat.induction                              Admitted.
--- Lemma: sumSquare_correct                          Q.E.D.
+-- Axiom: Nat.induction                    Admitted.
+-- Lemma: sumSquare_correct                Q.E.D.
 sumSquareProof :: IO Proven
 sumSquareProof = do
    let sumSquare :: SInteger -> SInteger

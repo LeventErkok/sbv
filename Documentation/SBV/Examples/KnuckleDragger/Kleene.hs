@@ -62,31 +62,31 @@ x <= y = x + y .== y
 -- We have:
 --
 -- >>> kleeneProofs
--- Axiom: par_assoc                                  Admitted.
--- Axiom: par_comm                                   Admitted.
--- Axiom: par_idem                                   Admitted.
--- Axiom: par_zero                                   Admitted.
--- Axiom: seq_assoc                                  Admitted.
--- Axiom: seq_zero                                   Admitted.
--- Axiom: seq_one                                    Admitted.
--- Axiom: rdistrib                                   Admitted.
--- Axiom: ldistrib                                   Admitted.
--- Axiom: unfold                                     Admitted.
--- Axiom: least_fix                                  Admitted.
--- Lemma: par_lzero                                  Q.E.D.
--- Lemma: par_monotone                               Q.E.D.
--- Lemma: seq_monotone                               Q.E.D.
+-- Axiom: par_assoc                        Admitted.
+-- Axiom: par_comm                         Admitted.
+-- Axiom: par_idem                         Admitted.
+-- Axiom: par_zero                         Admitted.
+-- Axiom: seq_assoc                        Admitted.
+-- Axiom: seq_zero                         Admitted.
+-- Axiom: seq_one                          Admitted.
+-- Axiom: rdistrib                         Admitted.
+-- Axiom: ldistrib                         Admitted.
+-- Axiom: unfold                           Admitted.
+-- Axiom: least_fix                        Admitted.
+-- Lemma: par_lzero                        Q.E.D.
+-- Lemma: par_monotone                     Q.E.D.
+-- Lemma: seq_monotone                     Q.E.D.
 -- Chain: star_star_1
---   Lemma: star_star_1.1                            Q.E.D.
---   Lemma: star_star_1.2                            Q.E.D.
---   Lemma: star_star_1.3                            Q.E.D.
---   Lemma: star_star_1.4                            Q.E.D.
--- Lemma: star_star_1                                Q.E.D.
--- Lemma: subset_eq                                  Q.E.D.
--- Lemma: star_star_2_2                              Q.E.D.
--- Lemma: star_star_2_3                              Q.E.D.
--- Lemma: star_star_2_1                              Q.E.D.
--- Lemma: star_star_2                                Q.E.D.
+--   Lemma: star_star_1.1                  Q.E.D.
+--   Lemma: star_star_1.2                  Q.E.D.
+--   Lemma: star_star_1.3                  Q.E.D.
+--   Lemma: star_star_1.4                  Q.E.D.
+-- Lemma: star_star_1                      Q.E.D.
+-- Lemma: subset_eq                        Q.E.D.
+-- Lemma: star_star_2_2                    Q.E.D.
+-- Lemma: star_star_2_3                    Q.E.D.
+-- Lemma: star_star_2_1                    Q.E.D.
+-- Lemma: star_star_2                      Q.E.D.
 kleeneProofs :: IO ()
 kleeneProofs = do
 

@@ -65,7 +65,7 @@ finish origin parents skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ w
   where -- Ideally an aestheticly pleasing length of the line. Perhaps this
         -- should be configurable, but this is good enough for now.
         ribbonLength :: Int
-        ribbonLength = 50
+        ribbonLength = 40
 
         -- If provenance contains a sorry, then we blindly believe..
         what = case origin of

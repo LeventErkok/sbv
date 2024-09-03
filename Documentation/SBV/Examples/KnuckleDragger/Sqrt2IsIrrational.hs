@@ -44,11 +44,11 @@ import Data.SBV.Tools.KnuckleDragger
 -- We have:
 --
 -- >>> sqrt2IsIrrational
--- Lemma: oddSquaredAsMul2P1                         Q.E.D.
--- Lemma: oddSquaredIsOdd                            Q.E.D.
--- Lemma: evenIfSquareIsEven                         Q.E.D.
--- Lemma: evenSquaredIsMult4                         Q.E.D.
--- Lemma: sqrt2IsIrrational                          Q.E.D.
+-- Lemma: oddSquaredAsMul2P1               Q.E.D.
+-- Lemma: oddSquaredIsOdd                  Q.E.D.
+-- Lemma: evenIfSquareIsEven               Q.E.D.
+-- Lemma: evenSquaredIsMult4               Q.E.D.
+-- Lemma: sqrt2IsIrrational                Q.E.D.
 sqrt2IsIrrational :: IO Proven
 sqrt2IsIrrational = do
     let isEven, isOdd :: SInteger -> SBool

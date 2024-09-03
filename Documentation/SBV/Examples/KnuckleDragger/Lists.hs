@@ -36,8 +36,8 @@ import qualified Data.SBV.List as SL
 -- We have:
 --
 -- >>> listLengthProof
--- Axiom: List(a).induction                          Admitted.
--- Lemma: length_correct                             Q.E.D.
+-- Axiom: List(a).induction                Admitted.
+-- Lemma: length_correct                   Q.E.D.
 listLengthProof :: IO Proven
 listLengthProof = do
    let length :: SList Integer -> SInteger
@@ -59,7 +59,7 @@ listLengthProof = do
 -- than 5 elements and have 42 in it. We have:
 --
 -- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
--- Axiom: List(a).induction                          Admitted.
+-- Axiom: List(a).induction                Admitted.
 -- Lemma: bad
 -- *** Failed to prove bad.
 -- Falsifiable. Counter-example:
@@ -89,9 +89,9 @@ badProof = do
 -- We have:
 --
 -- >>> concatAssoc
--- Axiom: List(a).induction                          Admitted.
--- Lemma: cons_app                                   Q.E.D.
--- Lemma: concatAssoc                                Q.E.D.
+-- Axiom: List(a).induction                Admitted.
+-- Lemma: cons_app                         Q.E.D.
+-- Lemma: concatAssoc                      Q.E.D.
 concatAssoc :: IO Proven
 concatAssoc = do
    -- Definition of concat
