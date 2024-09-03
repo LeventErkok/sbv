@@ -84,32 +84,76 @@ badProof = do
 
    pure ()
 
--- | Prove that list concatenation is associative.
+-- | Define append. Note that SBV already defines append, but we'll give our explicit recursive
+-- definition here so we can reason about it explicitly.
+(++) :: SymVal a => SList a -> SList a -> SList a
+(++) = smtFunction "append" $ \xs ys -> ite (SL.null xs)
+                                            ys
+                                            (SL.head xs .: SL.tail xs ++ ys)
+infixr 5 ++
+
+-- | A helper lemma, pushing a cons into an append. This is a generator lemma, since we'll use it multiple times. We have:
+--
+-- >>> consApp "" (id @(SList Integer))
+consApp :: SymVal a => String -> (SList a -> SList a) -> IO Proven
+consApp top f = lemma (top <> (if null top then "" else ".") <> "consApp")
+                   (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> f ((x .: xs) ++ ys) .== f (x .: (xs ++ ys)))
+                   []
+
+-- | Prove that list append is associative.
 --
 -- We have:
 --
--- >>> concatAssoc
+-- >>> appendAssoc
 -- Axiom: List(a).induction                Admitted.
 -- Lemma: cons_app                         Q.E.D.
--- Lemma: concatAssoc                      Q.E.D.
-concatAssoc :: IO Proven
-concatAssoc = do
-   -- Definition of concat
-   let (++) :: SymVal a => SList a -> SList a -> SList a
-       (++) = smtFunction "concat" $ \xs ys -> ite (SL.null xs) ys (SL.head xs .: SL.tail xs ++ ys)
-       infixr 5 ++
-
+-- Lemma: appendAssoc                      Q.E.D.
+appendAssoc :: String -> IO Proven
+appendAssoc top = do
    -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
        p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
-   -- Do the proof over integers:
+   -- Do the proof over integers. We use 'inductionPrinciple3', since our predicate has 3 arguments.
    induct <- inductionPrinciple3 (p @Integer)
 
-   cons_app <- lemma "cons_app"
-        (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys) -> x .: (xs ++ ys) .== (x .: xs) ++ ys)
-        []
+   -- Get access to consApp
+   lConsApp <- consApp top (id @(SList Integer))
 
-   lemma "concatAssoc"
+   lemma (top <> ".appendAssoc")
          (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
-         [cons_app, induct]
+         [lConsApp , induct]
+
+-- | Prove that reversing a list twice leaves the list unchanged.
+reverseReverse :: IO Proven
+reverseReverse = do
+   -- Definition of reverse
+   let rev :: SymVal a => SList a -> SList a
+       rev = smtFunction "rev" $ \xs -> ite (SL.null xs) SL.nil (rev (SL.tail xs) ++ SL.singleton (SL.head xs))
+
+   let p :: SymVal a => SList a -> SBool
+       p xs = rev (rev xs) .== xs
+
+   -- Do the inductive proof
+   induct <- inductionPrinciple (p @Integer)
+
+   -- We'll also need the lemmas we proved before:
+   lConsApp     <- consApp     "reverseReverse" (rev @Integer)
+   lAppendAssoc <- appendAssoc "reverseReverse"
+   pushCons     <- consApp     "reverseReverse" (rev @Integer)
+
+   -- The usual inductive proof relies on @rev (xs ++ ys) == rev ys ++ rev xs@, so first prove that:
+   revApp <- do
+        let q :: SymVal a => SList a -> SList a -> SBool
+            q xs ys = rev (xs ++ ys) .== rev ys ++ rev xs
+
+        inductQ <- inductionPrinciple2 (q @Integer)
+
+        sorry "revApp"
+           (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> q xs ys)
+           [inductQ, lConsApp, lAppendAssoc, pushCons]
+
+   -- Result now follows from revApp and induction, and associativity of append.
+   lemma "reverseReverse"
+         (\(Forall @"xs" (xs :: SList Integer)) -> p xs)
+         [induct, revApp, pushCons, lConsApp, lAppendAssoc]
