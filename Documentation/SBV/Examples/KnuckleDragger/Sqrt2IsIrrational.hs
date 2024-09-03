@@ -90,13 +90,13 @@ sqrt2IsIrrational = do
     let coPrime :: SInteger -> SInteger -> SBool
         coPrime x y = quantifiedBool (\(Forall @"z" z) -> (x `sEMod` z .== 0 .&& y `sEMod` z .== 0) .=> z .== 1)
 
+    -- Prove that if a is an even number, then its square four times the square of another.
+    evenSquareMult4 <- lemma "evenSquareMult4"
+         (\(Forall @"a" a) -> isEven a .=> quantifiedBool (\(Exists @"b" b) -> a * a .== 4 * b * b))
+         []
+
     -- Prove that square-root of 2 is irrational, by showing for all pairs of integers @a@ and @b@
     -- such that @a*a == 2*b*b@, we can show that @a@ and @b@ are not co-prime:
-    chainTheorem "sqrt2IsIrrational"
+    lemma "sqrt2IsIrrational"
         (\(Forall @"a" a) (Forall @"b" b) -> ((a*a .== 2*b*b) .=> sNot (coPrime a b)))
-        (\(a :: SInteger) (b :: SInteger) ->
-             let c = a `sDiv` 2
-             in [ isEven (a*a) .=> isEven a
-                , a .== 2 * c  .=> a * a .== 4 * c * c
-                ])
-        [evenIfSquareIsEven]
+        [evenIfSquareIsEven, evenSquareMult4]
