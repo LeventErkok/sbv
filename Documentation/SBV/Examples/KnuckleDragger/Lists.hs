@@ -12,6 +12,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
 
@@ -84,6 +85,13 @@ badProof = do
    pure ()
 
 -- | Prove that list concatenation is associative.
+--
+-- We have:
+--
+-- >>> concatAssoc
+-- Axiom: List(a).induction                          Admitted.
+-- Lemma: cons_app                                   Q.E.D.
+-- Lemma: concatAssoc                                Q.E.D.
 concatAssoc :: IO Proven
 concatAssoc = do
    -- Definition of concat
@@ -92,18 +100,16 @@ concatAssoc = do
        infixr 5 ++
 
    -- The classic proof by induction on xs
-   let p :: SymVal a => SList a -> SBool
-       p xs = quantifiedBool $ \(Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
+   let p :: SymVal a => SList a -> SList a -> SList a -> SBool
+       p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
    -- Do the proof over integers:
-   induct <- inductionPrinciple (p :: SList Integer -> SBool)
+   induct <- inductionPrinciple3 (p @Integer)
 
    cons_app <- lemma "cons_app"
         (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys) -> x .: (xs ++ ys) .== (x .: xs) ++ ys)
         []
 
    lemma "concatAssoc"
-         (\(Forall @"xs" (xs :: SList Integer))
-           (Forall @"ys" ys)
-           (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
+         (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
          [cons_app, induct]
