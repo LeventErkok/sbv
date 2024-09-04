@@ -12,9 +12,11 @@
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
 {-# LANGUAGE DefaultSignatures          #-}
+{-# LANGUAGE DeriveAnyClass             #-}
 {-# LANGUAGE DeriveDataTypeable         #-}
 {-# LANGUAGE DeriveFunctor              #-}
 {-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GADTs                      #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -235,7 +237,7 @@ data Op = Plus
         | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
-        | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value
+        | QuantifiedBool [Op] String            -- When we generate a forall/exists (nested etc.) boolean value
         | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
@@ -255,7 +257,7 @@ data Op = Plus
         | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
-        deriving (Eq, Ord, G.Data)
+        deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
 data SpecialRelOp = IsPartialOrder         String
@@ -293,7 +295,7 @@ data FPOp = FP_Cast        Kind Kind SV   -- From-Kind, To-Kind, RoundingMode. T
           | FP_IsNaN
           | FP_IsNegative
           | FP_IsPositive
-          deriving (Eq, Ord, G.Data)
+          deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- Note that the show instance maps to the SMTLib names. We need to make sure
 -- this mapping stays correct through SMTLib changes. The only exception
@@ -340,7 +342,7 @@ data NROp = NR_Sin
           | NR_Exp
           | NR_Log
           | NR_Pow
-          deriving (Eq, Ord, G.Data)
+          deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | The show instance carefully arranges for these to be printed as it can be understood by dreal
 instance Show NROp where
@@ -365,7 +367,7 @@ data PBOp = PB_AtMost  Int        -- ^ At most k
           | PB_Le      [Int] Int  -- ^ At most k,  with coefficients given. Generalizes PB_AtMost
           | PB_Ge      [Int] Int  -- ^ At least k, with coefficients given. Generalizes PB_AtLeast
           | PB_Eq      [Int] Int  -- ^ Exactly k,  with coefficients given. Generalized PB_Exactly
-          deriving (Eq, Ord, Show, G.Data)
+          deriving (Eq, Ord, Show, G.Data, NFData, Generic)
 
 -- | Overflow operations
 data OvOp = PlusOv Bool           -- ^ Addition    overflow.    Bool is True if signed.
@@ -373,7 +375,7 @@ data OvOp = PlusOv Bool           -- ^ Addition    overflow.    Bool is True if 
           | MulOv  Bool           -- ^ Multiplication overflow. Bool is True if signed.
           | DivOv                 -- ^ Division overflow.       Only signed, since unsigned division does not overflow.
           | NegOv                 -- ^ Unary negation overflow. Only signed, since unsigned negation does not overflow.
-          deriving (Eq, Ord, G.Data)
+          deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance. It's important that these follow the SMTLib names.
 instance Show OvOp where
@@ -399,12 +401,12 @@ data StrOp = StrConcat       -- ^ Concatenation of one or more strings
            | StrToCode       -- ^ Equivalent to Haskell's ord
            | StrFromCode     -- ^ Equivalent to Haskell's chr
            | StrInRe RegExp  -- ^ Check if string is in the regular expression
-           deriving (Eq, Ord, G.Data)
+           deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Regular-expression operators. The only thing we can do is to compare for equality/disequality.
 data RegExOp = RegExEq  RegExp RegExp
              | RegExNEq RegExp RegExp
-             deriving (Eq, Ord, G.Data)
+             deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Regular expressions. Note that regular expressions themselves are
 -- concrete, but the 'Data.SBV.RegExp.match' function from the 'Data.SBV.RegExp.RegExpMatchable' class
@@ -428,7 +430,7 @@ data RegExp = Literal String       -- ^ Precisely match the given string
             | Power Int     RegExp -- ^ Exactly @n@ repetitions, i.e., nth power
             | Union [RegExp]       -- ^ Union of regular expressions
             | Inter RegExp RegExp  -- ^ Intersection of regular expressions
-            deriving (Eq, Ord, G.Data)
+            deriving (Eq, Ord, G.Data, Generic, NFData)
 
 -- | With overloaded strings, we can have direct literal regular expressions.
 instance IsString RegExp where
@@ -535,7 +537,7 @@ data SeqOp = SeqConcat            -- ^ See StrConcat
            | SeqFoldLeft  String  -- ^ Folding of sequences
            | SeqFoldLeftI String  -- ^ Folding of sequences with offset
            | SBVReverse Kind      -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
-  deriving (Eq, Ord, G.Data)
+  deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
 instance Show SeqOp where
@@ -570,7 +572,7 @@ data SetOp = SetEqual
            | SetSubset
            | SetDifference
            | SetComplement
-        deriving (Eq, Ord, G.Data)
+        deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- The show instance for 'SetOp' is merely for debugging, we map them separately so
 -- the mapped strings are less important here.
@@ -605,7 +607,7 @@ instance Show Op where
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
-  show (QuantifiedBool i)   = "[quantified boolean] " ++ i
+  show (QuantifiedBool _ i) = "[quantified boolean] " ++ i
 
   show (Label s)            = "[label] " ++ s
 
@@ -806,7 +808,7 @@ instance (MonadQuery m, Monoid w) => MonadQuery (LW.WriterT w m)
 -- | A query is a user-guided mechanism to directly communicate and extract
 -- results from the solver. A generalization of 'Data.SBV.Query'.
 newtype QueryT m a = QueryT { runQueryT :: ReaderT State m a }
-    deriving (Applicative, Functor, Monad, MonadIO, MonadTrans,
+    deriving newtype (Applicative, Functor, Monad, MonadIO, MonadTrans,
               MonadError e, MonadState s, MonadWriter w)
 
 instance Monad m => MonadQuery (QueryT m) where
@@ -1197,10 +1199,12 @@ lookupInput f sv ns
 data SMTDef = SMTDef String           -- ^ Defined functions -- name
                      Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ other definitions it refers to
+                     [Op]             -- ^ ops used in it, in case we need to generate extra defs
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
             | SMTLam Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ Anonymous function -- other definitions it refers to
+                     [Op]             -- ^ ops used in it, in case we need to generate extra defs
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
             deriving G.Data
@@ -1208,8 +1212,8 @@ data SMTDef = SMTDef String           -- ^ Defined functions -- name
 -- | For debug purposes
 instance Show SMTDef where
   show d = case d of
-             SMTDef nm fk frees p body -> shDef (Just nm) fk frees p body
-             SMTLam    fk frees p body -> shDef Nothing   fk frees p body
+             SMTDef nm fk frees _ p body -> shDef (Just nm) fk frees p body
+             SMTLam    fk frees _ p body -> shDef Nothing   fk frees p body
     where shDef mbNm fk frees p body = unlines [ "-- User defined function: " ++ fromMaybe "Anonymous" mbNm
                                                , "-- Final return type    : " ++ show fk
                                                , "-- Refers to            : " ++ intercalate ", " frees
@@ -1220,13 +1224,13 @@ instance Show SMTDef where
 
 -- The name of this definition
 smtDefGivenName :: SMTDef -> Maybe String
-smtDefGivenName (SMTDef n _ _ _ _) = Just n
-smtDefGivenName SMTLam{}           = Nothing
+smtDefGivenName (SMTDef n _ _ _ _ _) = Just n
+smtDefGivenName SMTLam{}             = Nothing
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef n fk frees params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
-  rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTDef n fk frees ops params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf ops `seq` rnf params `seq` rnf body
+  rnf (SMTLam   fk frees ops params body) =             rnf fk `seq` rnf frees `seq` rnf ops `seq` rnf params `seq` rnf body
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext
@@ -1667,7 +1671,7 @@ instance (MonadSymbolic m, Monoid w) => MonadSymbolic (LW.WriterT w m)
 
 -- | A generalization of 'Data.SBV.Symbolic'.
 newtype SymbolicT m a = SymbolicT { runSymbolicT :: ReaderT State m a }
-                   deriving ( Applicative, Functor, Monad, MonadIO, MonadTrans
+                   deriving newtype ( Applicative, Functor, Monad, MonadIO, MonadTrans
                             , MonadError e, MonadState s, MonadWriter w
 #if MIN_VERSION_base(4,11,0)
                             , Fail.MonadFail
@@ -2154,7 +2158,7 @@ uncache = uncacheGen rSVCache
 data ArrayIndex = ArrayIndex { unArrayIndex   :: Int
                              , unArrayContext :: SBVContext
                              }
-               deriving (Eq, Ord, G.Data)
+               deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | We simply show indexes as the underlying integer
 instance Show ArrayIndex where

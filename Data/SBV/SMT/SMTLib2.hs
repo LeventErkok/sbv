@@ -66,7 +66,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
         hasArrayInits  = (not . null) $  [() | (_, (_, _, ArrayFree (Left  (Just _)))) <- arrs]
                                       ++ [() | (_, (_, _, ArrayFree (Right _       ))) <- arrs]
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
-        hasQuantBools  = (not . null) [() | QuantifiedBool _ <- G.universeBi asgnsSeq]
+        hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi asgnsSeq]
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
@@ -241,7 +241,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
-             ++ concatMap (declDef curProgInfo cfg tableMap funcMap) asgns
+             ++ concatMap (declDef curProgInfo cfg tableMap) asgns
              ++ [ "; --- arrayDelayeds ---" ]
              ++ concat arrayDelayeds
              ++ [ "; --- arraySetups ---" ]
@@ -300,9 +300,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
                   | True         = Just $ Left s
 
         -- SBV only functions.
-        funcMap = M.fromList reverses
-          where reverses = zip (nub [op | op@(SeqOp SBVReverse{}) <- G.universeBi asgnsSeq])
-                               ["sbv.reverse_" ++ show i | i <- [(0::Int)..]]
+        funcMap = M.fromList [(op, "|sbv.reverse_" ++ show k ++ "|") | (op, k) <- revs]
+          where revs = nub [(op, k) | op@(SeqOp (SBVReverse k)) <- G.universeBi asgnsSeq]
 
         asgns = F.toList asgnsSeq
 
@@ -485,7 +484,7 @@ cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef curProgInfo cfg tableMap funcMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef curProgInfo cfg tableMap) (F.toList asgnsSeq)
             -- delayed equalities
             ++ concat arrayDelayeds
             -- table setups
@@ -494,11 +493,7 @@ cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq
             ++ concat arraySetups
             -- extra constraints
             ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV v) ++ ")") (F.toList cstrs)
-  where -- The following is not really kosher; if it happens that a "new" variant of a function is used only incrementally.
-        -- But we'll punt on this for now, as it should be rare and can be "worked-around" if necessary.
-        funcMap = M.empty
-
-        rm = roundingMode cfg
+  where rm = roundingMode cfg
 
         newKinds = Set.toList newKs
 
@@ -519,11 +514,11 @@ cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: ProgInfo -> SMTConfig -> TableMap -> FunctionMap -> (SV, SBVExpr) -> [String]
-declDef curProgInfo cfg tableMap funcMap (s, expr) =
+declDef :: ProgInfo -> SMTConfig -> TableMap -> (SV, SBVExpr) -> [String]
+declDef curProgInfo cfg tableMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                                       e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap funcMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                               e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -585,11 +580,11 @@ declFuncs ds = map declGroup sorted
   where mkNode d = (d, getKey d, getDeps d)
 
         getKey (d, _) = case d of
-                         SMTDef n _ _ _ _ -> n
-                         SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+                         SMTDef n _ _ _ _ _ -> n
+                         SMTLam{}           -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
 
-        getDeps (SMTDef _ _ d _ _, _) = d
-        getDeps (l@SMTLam{}, t)       = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
+        getDeps (SMTDef _ _ d _ _ _, _) = d
+        getDeps (l@SMTLam{}, t)         = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
 
         mkDecl Nothing  rt = "() "    ++ rt
         mkDecl (Just p) rt = p ++ " " ++ rt
@@ -603,7 +598,7 @@ declFuncs ds = map declGroup sorted
                                          xs  -> declUserDefMulti xs
 
         declUserDef _ d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
-        declUserDef isRec (SMTDef nm fk deps param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
+        declUserDef isRec (SMTDef nm fk deps _ops param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
@@ -618,7 +613,7 @@ declFuncs ds = map declGroup sorted
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
           where collect d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
-                collect (SMTDef nm fk deps param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
+                collect (SMTDef nm fk deps _ops param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
                   where decl = mkDecl param (smtType fk)
 
                 render defs = intercalate "\n" $
@@ -758,7 +753,6 @@ cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
   where (body, ret) = (init xs, last xs)
 
 type TableMap    = IM.IntMap String
-type FunctionMap = M.Map Op String
 
 -- Present an SV, simply show
 cvtSV :: SV -> String
@@ -772,8 +766,8 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> FunctionMap -> SBVExpr -> String
-cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> String
+cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
   where hasPB       = supportsPseudoBooleans caps
         hasInt2bv   = supportsInt2bv         caps
         hasDistinct = supportsDistinct       caps
@@ -961,8 +955,9 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
 
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp (QuantifiedBool i) [])   = i
-        sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
+
+        sh (SBVApp (QuantifiedBool _ i) [])   = i
+        sh (SBVApp (QuantifiedBool _ i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
         sh a@(SBVApp (SpecialRelOp k o) args)
           | not (null args)
@@ -1045,10 +1040,7 @@ cvtExp curProgInfo caps rm tableMap functionMap expr@(SBVApp _ arguments) = sh e
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse is special, since we need to generate call to the internally generated function
-        sh inp@(SBVApp op@(SeqOp SBVReverse{}) args) = "(" ++ ops ++ " " ++ unwords (map cvtSV args) ++ ")"
-          where ops = case op `M.lookup` functionMap of
-                        Just s  -> s
-                        Nothing -> error $ "*** SBV.SMT.SMTLib2.cvtExp.sh: impossible happened; can't translate: " ++ show inp
+        sh (SBVApp (SeqOp (SBVReverse k)) args) = "(|sbv.reverse_" ++ show k ++ "| " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 

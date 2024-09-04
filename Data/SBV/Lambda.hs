@@ -25,6 +25,7 @@ module Data.SBV.Lambda (
           , constraint,  constraintStr
         ) where
 
+
 import Control.Monad       (join)
 import Control.Monad.Trans (liftIO, MonadIO)
 
@@ -39,13 +40,13 @@ import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 import Data.IORef (readIORef, modifyIORef')
 import Data.List
 
-import qualified Data.Foldable      as F
-import qualified Data.Map.Strict    as M
+import qualified Data.Foldable as F
 
 import qualified Data.Generics.Uniplate.Data as G
 
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
                  (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
+                 [Op]                            -- All ops used in the definition
                  (Int -> String)                 -- Body, given the tab amount.
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
@@ -132,13 +133,13 @@ lambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> convert st 
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTDef
 lambda inState fk = lambdaGen mkLam inState fk
-   where mkLam (Defn frees params body) = SMTLam fk frees (extractAllUniversals <$> params) body
+   where mkLam (Defn frees params ops body) = SMTLam fk frees ops (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
 lambdaStr = lambdaGen mkLam
-   where mkLam (Defn _frees Nothing       body) = body 0
-         mkLam (Defn _frees (Just params) body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+   where mkLam (Defn _frees Nothing       _ops body) = body 0
+         mkLam (Defn _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
@@ -147,26 +148,26 @@ namedLambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> conver
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m SMTDef
 namedLambda inState nm fk = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = SMTDef nm fk frees (extractAllUniversals <$> params) body
+   where mkDef (Defn frees params ops body) = SMTDef nm fk frees ops (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> SBVType -> a -> m String
 namedLambdaStr inState nm t = namedLambdaGen mkDef inState fk
-   where mkDef (Defn frees params body) = concat $ declUserFuns [(SMTDef nm fk frees (extractAllUniversals <$> params) body, t)]
+   where mkDef (Defn frees params ops body) = concat $ declUserFuns [(SMTDef nm fk frees ops (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
 
 -- | Generic constraint generator.
-constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> (Int -> String) -> b) -> State -> a -> m b
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> [Op] -> (Int -> String) -> b) -> State -> a -> m b
 constraintGen trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
-   let mkDef (Defn deps Nothing       body) = trans deps body
-       mkDef (Defn deps (Just params) body) = trans deps $ \i -> unwords (map mkGroup params) ++ "\n"
-                                                              ++ body (i + 2)
-                                                              ++ replicate (length params) ')'
+   let mkDef (Defn deps Nothing       ops body) = trans deps ops body
+       mkDef (Defn deps (Just params) ops body) = trans deps ops $ \i -> unwords (map mkGroup params) ++ "\n"
+                                                                      ++ body (i + 2)
+                                                                      ++ replicate (length params) ')'
        mkGroup (ALL, s) = "(forall " ++ s
        mkGroup (EX,  s) = "(exists " ++ s
 
@@ -180,14 +181,14 @@ instance Constraint Symbolic a => QuantifiedBool a where
 -- | Generate a constraint.
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SV
 constraint st = join . constraintGen mkSV st
-   where mkSV _deps d = liftIO $ newExpr st KBool (SBVApp (QuantifiedBool (d 0)) [])
+   where mkSV _deps ops d = liftIO $ newExpr st KBool (SBVApp (QuantifiedBool ops (d 0)) [])
 
 -- | Generate a constraint, string version
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
 constraintStr = constraintGen toStr
-   where toStr deps body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
-                                            , "(assert " ++ body 2 ++ ")"
-                                            ]
+   where toStr deps _ body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
+                                              , "(assert " ++ body 2 ++ ")"
+                                              ]
 
          depInfo [] = ""
          depInfo ds = "[Refers to: " ++ intercalate ", " ds ++ "]"
@@ -263,6 +264,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
          = res
          where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
                           mbParam
+                          (nub (sort (G.universeBi asgnsSeq)))
                           (intercalate "\n" . body)
 
                params = case is of
@@ -366,8 +368,7 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                                            ++ ")"
 
                mkAsgn (sv, e) = (sv, converter e)
-               converter = cvtExp curProgInfo solverCaps rm tableMap funcMap
+               converter = cvtExp curProgInfo solverCaps rm tableMap
                  where solverCaps = capabilities (solver cfg)
-                       funcMap    = M.empty
 
 {- HLint ignore module "Use second" -}
