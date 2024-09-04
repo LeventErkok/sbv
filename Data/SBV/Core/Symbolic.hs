@@ -74,7 +74,7 @@ import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
-import Data.Char                   (isAlpha, isAlphaNum, toLower)
+import Data.Char                   (isAlpha, isAlphaNum, toLower, isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
@@ -555,7 +555,10 @@ instance Show SeqOp where
   show (SeqFoldLeftI s) = "seq.foldli " ++ s
 
   -- Note: This isn't part of SMTLib, we explicitly handle it
-  show (SBVReverse k) = "sbv.reverse[" ++ show k ++ "]"
+  show (SBVReverse k) = let sk = show k
+                            ssk | any isSpace sk = '(' : sk ++ ")"
+                                | True           = sk
+                        in "sbv.reverse @" ++ ssk ++ ""
 
 -- | Set operations.
 data SetOp = SetEqual
