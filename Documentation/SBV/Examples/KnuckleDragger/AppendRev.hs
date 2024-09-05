@@ -40,6 +40,7 @@ appendNull = lemma "appendNull"
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
 -- We have:
+--
 -- >>> consApp
 -- Lemma: consApp                          Q.E.D.
 consApp :: IO Proven
@@ -50,6 +51,7 @@ consApp = lemma "consApp"
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
 -- We have:
+--
 -- >>> appendAssoc
 -- Axiom: List(a).induction                Admitted.
 -- Lemma: consApp                          Q.E.D.
@@ -71,11 +73,68 @@ appendAssoc = do
          (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
          [lconsApp , induct]
 
+-- | @reverse (xs ++ ys) == reverse ys ++ reverse xs@
+-- We have:
+--
+-- >>> revApp
+-- Lemma: consApp                          Q.E.D.
+-- Axiom: List(a).induction                Admitted.
+-- Lemma: consApp                          Q.E.D.
+-- Lemma: appendAssoc                      Q.E.D.
+-- Lemma: appendNull                       Q.E.D.
+-- Chain: revApp_induction_pre
+--   Lemma: revApp_induction_pre.1         Q.E.D.
+--   Lemma: revApp_induction_pre.2         Q.E.D.
+-- Lemma: revApp_induction_pre             Q.E.D.
+-- Chain: revApp_induction_post
+--   Lemma: revApp_induction_post.1        Q.E.D.
+--   Lemma: revApp_induction_post.2        Q.E.D.
+-- Lemma: revApp_induction_post            Q.E.D.
+-- Axiom: List(a).induction                Admitted.
+-- Sorry: revApp                           Blindly believed.
+revApp :: IO Proven
+revApp = do
+   -- We'll need the consApp and associativity-of-append proof, so get a hold on to them
+   lconsApp     <- consApp
+   lAppendAssoc <- appendAssoc
+   lAppendNull  <- appendNull
+
+   revApp_induction_pre <- chainLemma "revApp_induction_pre"
+      (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
+            -> reverse ((x .: xs) ++ ys) .== (reverse (xs ++ ys)) ++ SL.singleton x)
+      (\(x :: SInteger) xs ys ->
+           [ reverse ((x .: xs) ++ ys)
+           , reverse (x .: (xs ++ ys))
+           , reverse (xs ++ ys) ++ SL.singleton x
+           ]
+      ) [lconsApp]
+
+   revApp_induction_post <- chainLemma "revApp_induction_post"
+      (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
+            -> (reverse ys ++ reverse xs) ++ SL.singleton x .== reverse ys ++ reverse (x .: xs))
+      (\(x :: SInteger) xs ys ->
+          [ (reverse ys ++ reverse xs) ++ SL.singleton x
+          , reverse ys ++ (reverse xs ++ SL.singleton x)
+          , reverse ys ++ reverse (x .: xs)
+          ]
+      ) [lAppendAssoc]
+
+   let q :: SymVal a => SList a -> SList a -> SBool
+       q xs ys = reverse (xs ++ ys) .== (reverse ys ++ reverse xs)
+
+   inductQ <- inductionPrinciple2 (q @Integer)
+
+   sorry "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
+         [revApp_induction_pre, lAppendNull, inductQ, revApp_induction_post]
+
 -- | @reverse (reverse xs) == xs@
 --
 -- We have:
 --
 -- >>> reverseReverse
+-- Axiom: List(a).induction                Admitted.
+-- Lemma: consApp                          Q.E.D.
+-- Lemma: appendAssoc                      Q.E.D.
 -- Lemma: consApp                          Q.E.D.
 -- Axiom: List(a).induction                Admitted.
 -- Lemma: consApp                          Q.E.D.
@@ -95,42 +154,8 @@ appendAssoc = do
 -- Lemma: reverseReverse                   Q.E.D. [Modulo: revApp]
 reverseReverse :: IO Proven
 reverseReverse = do
-   -- We'll need the consApp and associativity-of-append proof, so get a hold on to them
-   lconsApp     <- consApp
    lAppendAssoc <- appendAssoc
-   lAppendNull  <- appendNull
-
-   -- The usual inductive proof relies on @reverse (xs ++ ys) == reverse ys ++ reverse xs@, so first prove that:
-   revApp <- do
-        revApp_induction_pre <- chainLemma "revApp_induction_pre"
-           (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
-                 -> reverse ((x .: xs) ++ ys) .== (reverse (xs ++ ys)) ++ SL.singleton x)
-           (\(x :: SInteger) xs ys ->
-                [ reverse ((x .: xs) ++ ys)
-                , reverse (x .: (xs ++ ys))
-                , reverse (xs ++ ys) ++ SL.singleton x
-                ]
-           ) [lconsApp]
-
-        revApp_induction_post <- chainLemma "revApp_induction_post"
-           (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
-                 -> (reverse ys ++ reverse xs) ++ SL.singleton x .== reverse ys ++ reverse (x .: xs))
-           (\(x :: SInteger) xs ys ->
-               [ (reverse ys ++ reverse xs) ++ SL.singleton x
-               , reverse ys ++ (reverse xs ++ SL.singleton x)
-               , reverse ys ++ reverse (x .: xs)
-               ]
-           ) [lAppendAssoc]
-
-        let q :: SymVal a => SList a -> SList a -> SBool
-            q xs ys = reverse (xs ++ ys) .== (reverse ys ++ reverse xs)
-
-        inductQ <- inductionPrinciple2 (q @Integer)
-
-        sorry "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
-              [revApp_induction_pre, lAppendNull, inductQ, revApp_induction_post]
-
-   -- Result now follows from revApp and induction, and associativity of append.
+   lRevApp      <- revApp
 
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs
@@ -139,4 +164,4 @@ reverseReverse = do
 
    lemma "reverseReverse"
          (\(Forall @"xs" (xs :: SList Integer)) -> p xs)
-         [induct, revApp, lAppendAssoc]
+         [induct, lRevApp, lAppendAssoc]
