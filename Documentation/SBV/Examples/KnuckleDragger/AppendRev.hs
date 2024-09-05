@@ -71,7 +71,7 @@ appendAssoc = do
          (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
          [lconsApp , induct]
 
--- | Prove that reversing a list twice leaves the list unchanged.
+-- | @reverse (reverse xs) == xs@
 --
 -- We have:
 --
