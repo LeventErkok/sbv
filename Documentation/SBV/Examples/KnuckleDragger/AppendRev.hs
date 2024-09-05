@@ -47,7 +47,7 @@ consApp = lemma "consApp"
              (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
              []
 
--- | Prove that list append is associative.
+-- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
 -- We have:
 -- >>> appendAssoc
