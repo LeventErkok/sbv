@@ -97,7 +97,6 @@ revApp = do
    -- We'll need the consApp and associativity-of-append proof, so get a hold on to them
    lconsApp     <- consApp
    lAppendAssoc <- appendAssoc
-   lAppendNull  <- appendNull
 
    revApp_induction_pre <- chainLemma "revApp_induction_pre"
       (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
@@ -125,7 +124,7 @@ revApp = do
    inductQ <- inductionPrinciple2 (q @Integer)
 
    sorry "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
-         [revApp_induction_pre, lAppendNull, inductQ, revApp_induction_post]
+         [revApp_induction_pre, revApp_induction_post, inductQ]
 
 -- | @reverse (reverse xs) == xs@
 --
