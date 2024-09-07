@@ -198,11 +198,12 @@ convert :: MonadIO m => State -> Kind -> SymbolicT m () -> m Defn
 convert st expectedKind comp = do
    ((), res)   <- runSymbolicInState st comp
    curProgInfo <- liftIO $ readIORef (rProgInfo st)
-   pure $ toLambda curProgInfo (stCfg st) expectedKind res
+   level       <- liftIO $ readIORef (rLambdaLevel st)
+   pure $ toLambda level curProgInfo (stCfg st) expectedKind res
 
 -- | Convert the result of a symbolic run to a more abstract representation
-toLambda :: ProgInfo -> SMTConfig -> Kind -> Result -> Defn
-toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
+toLambda :: Int -> ProgInfo -> SMTConfig -> Kind -> Result -> Defn
+toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
        report    = "Please request this as a feature at https://github.com/LeventErkok/sbv/issues"
@@ -288,11 +289,15 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                  = map (tab ++) $   [mkLet sv  | sv <- constBindings]
                                  ++ [mkTable t | t  <- constTables]
                                  ++ walk svBindings nonConstTables
-                                 ++ [show out ++ replicate totalClose ')']
+                                 ++ [shift ++ show out ++ replicate totalClose ')']
 
-                 where tab          = replicate tabAmnt ' '
-                       mkBind l r   = "(let ((" ++ l ++ " " ++ r ++ "))"
+                 where tab  = replicate tabAmnt ' '
+
+                       mkBind l r   = shift ++ "(let ((" ++ l ++ " " ++ r ++ "))"
                        mkLet (s, v) = mkBind (show s) v
+
+                       -- Align according to level.
+                       shift = replicate (24 + 16 * (level - 1)) ' '
 
                        mkTable (((i, ak, rk), elts), _) = mkBind nm (lambdaTable (map (const ' ') nm) ak rk elts)
                           where nm = "table" ++ show i
@@ -312,10 +317,10 @@ toLambda curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} 
                getLLI :: NodeId -> (Int, Int)
                getLLI (NodeId (_, l, i)) = (l, i)
 
-               -- if we have just one definition returning it, simplify
+               -- if we have just one definition returning it, and if the expression itself is simple enough (single-line), simplify
                simpleBody :: [(SV, String)] -> SV -> Maybe String
-               simpleBody [(v, e)] o | v == o = Just e
-               simpleBody _        _          = Nothing
+               simpleBody [(v, e)] o | v == o, '\n' `notElem` e = Just e
+               simpleBody _        _                            = Nothing
 
                assignments = F.toList (pgmAssignments pgm)
 
