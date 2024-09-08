@@ -26,9 +26,9 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Data.List     (intercalate, nub, sort)
+import Data.List (intercalate, sort)
 
-import System.IO     (hFlush, stdout)
+import System.IO (hFlush, stdout)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
@@ -45,13 +45,6 @@ type Proposition a = ( QuantifiedBool a
                      , Skolemize (NegatesTo a)
                      )
 
-
--- | Keeping track of provenance information.
-data Provenance = FromSorry String   -- ^ From a call to 'sorry'
-                | FromAxiom String   -- ^ Created from an axiom/definition
-                | FromLemma String   -- ^ Proven legitimately using the underlying solver
-                deriving (Eq, Ord)
-
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 start :: Bool -> String -> [String] -> IO Int
 start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
@@ -62,77 +55,80 @@ start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         tag    = what ++ ": " ++ intercalate "." nms
         line   = indent ++ tag
 
--- | Finish a proof. First argument is what we got from the call of 'start' above.
-finish :: Provenance -> [Provenance] -> Int -> IO ()
-finish origin parents skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
-  where -- Ideally an aestheticly pleasing length of the line. Perhaps this
-        -- should be configurable, but this is good enough for now.
-        ribbonLength :: Int
-        ribbonLength = 40
-
-        -- If provenance contains a sorry, then we blindly believe..
-        what = case origin of
-                 FromSorry _ -> "Blindly believed."
-                 FromAxiom _ -> "Admitted."
-                 FromLemma _ -> case [nm | FromSorry nm <- parents] of
-                                  [] -> "Q.E.D."
-                                  xs -> "Q.E.D. [Modulo: " ++ intercalate ", " xs ++ "]"
+-- | Keeping track of where the sorry originates from. Used in displaying dependencies.
+data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
+                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
+                 | Prop String -- ^ Trusts a parent that itself trusts something else.
 
 -- | A proven property. This type is left abstract, i.e., the only way to create on is via a
 -- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proven = Proven { provenance :: [Provenance] -- ^ What was used to establish
-                     , getProof :: SBool          -- ^ Get the underlying boolean
+data Proven = Proven { rootOfSorry :: RootOfTrust -- ^ If a node trusts this proof, then this is the reason it trusts it
+                     , getProof    :: SBool       -- ^ Get the underlying boolean
                      }
+
+-- | Finish a proof. First argument is what we got from the call of 'start' above.
+finish :: RootOfTrust -> String -> SBool -> Int -> IO Proven
+finish ros what proof skip = do putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
+                                pure Proven { rootOfSorry = ros
+                                            , getProof    = proof
+                                            }
+  where -- Ideally an aestheticly pleasing length of the line. Perhaps this
+        -- should be configurable, but this is good enough for now.
+        ribbonLength :: Int
+        ribbonLength = 40
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> IO Proven
-axiom nm p = do let origin = FromAxiom nm
-                start False "Axiom" [nm] >>= finish origin []
-                pure Proven{ provenance = [origin]
-                           , getProof   = quantifiedBool p
-                           }
+axiom nm p = start False "Axiom" [nm] >>= finish None "Axiom." (quantifiedBool p)
 
--- | Blindly believe a proposition as a theorem. This is in essence the same as 'axiom', except
--- it serves for documentation purposes that it should be provable. It's useful during development,
--- and also when you hit a theorem that the underlying solver just can't handle.
--- giving meaning to uninterpreted symbols. The list argument is unused, but it makes the
--- signature similar to 'lemma', allowing replacing `lemma` and `sorry` easily during development process.
-sorry :: Proposition a => String -> a -> [b] -> IO Proven
-sorry nm p _u = do let origin = FromSorry nm
-                   start False "Sorry" [nm] >>= finish origin []
-                   pure Proven{ provenance = [origin]
-                              , getProof   = quantifiedBool p
-                              }
+-- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
+-- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
+-- track of the uses of 'sorry' and will print them appropriately while printing proofs.
+sorry :: Proven
+sorry = Proven{ rootOfSorry = Self
+              , getProof    = quantifiedBool sFalse
+              }
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proven] -> IO Proven
-lemmaGen cfg what nms p by = do
+lemmaGen cfg what nms inputProp by = do
     tab <- start (verbose cfg) what nms
 
     let nm = intercalate "." nms
 
-        proposition = quantifiedBool (sAnd (map getProof by) .=> quantifiedBool p)
+        proposition = quantifiedBool (sAnd (map getProof by) .=> quantifiedBool inputProp)
 
-        good = do let origin = FromLemma nm
-                      parent = concatMap provenance by
-                  finish (FromLemma nm) parent tab
-                  pure Proven{ provenance = nub (sort parent) ++ [origin]
-                             , getProof   = quantifiedBool p
-                             }
+        -- What to do if all goes well
+        good = finish ros ("Q.E.D." ++ modulo) (quantifiedBool inputProp) tab
+          where parentRoots = map rootOfSorry by
+                hasSelf     = not $ null [() | Self <- parentRoots]
+                depNames    = sort [p | Prop p <- parentRoots]
 
+                -- We're clean if there's no selves nor any dependents of in the root-of-trust
+                clean = not hasSelf && null depNames
+
+                why | hasSelf = "sorry"
+                    | True    = intercalate ", " depNames
+
+                (ros, modulo)
+                  | clean = (None,    "")
+                  | True  = (Prop nm, " [modulo: " ++ why ++ "]")
+
+        -- What to do if the proof fails
         cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
                   -- Calculate as a sat call on negation, but print as a theorem
                   -- This allows for much better display of results.
-                  SatResult res <- satWith cfg (skolemize (qNot p))
+                  SatResult res <- satWith cfg (skolemize (qNot proposition))
                   print $ ThmResult res
                   error "Failed"
 
+        -- bailing out
         failed r = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
                       print r
                       error "Failed"
