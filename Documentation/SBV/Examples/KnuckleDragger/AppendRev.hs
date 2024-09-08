@@ -123,8 +123,8 @@ revApp = do
 
    inductQ <- inductionPrinciple2 (q @Integer)
 
-   sorry "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
-         [revApp_induction_pre, revApp_induction_post, inductQ]
+   lemmaWith z3{verbose=False} "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
+         [sorry, revApp_induction_pre, inductQ, revApp_induction_post]
 
 -- | @reverse (reverse xs) == xs@
 --
