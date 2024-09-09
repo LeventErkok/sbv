@@ -35,7 +35,6 @@ import qualified Data.SBV.List as SL
 -- We have:
 --
 -- >>> listLengthProof
--- Axiom: List(a).induction                Axiom.
 -- Lemma: length_correct                   Q.E.D.
 listLengthProof :: IO Proven
 listLengthProof = do
@@ -58,7 +57,6 @@ listLengthProof = do
 -- than 5 elements and have 42 in it. We have:
 --
 -- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
--- Axiom: List(a).induction                Axiom.
 -- Lemma: bad
 -- *** Failed to prove bad.
 -- Falsifiable. Counter-example:

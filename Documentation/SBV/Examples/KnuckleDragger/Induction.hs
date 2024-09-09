@@ -26,7 +26,6 @@ import Data.SBV.Tools.KnuckleDragger
 -- We have:
 --
 -- >>> sumProof
--- Axiom: Nat.induction                    Axiom.
 -- Lemma: sum_correct                      Q.E.D.
 sumProof :: IO Proven
 sumProof = do
@@ -48,7 +47,6 @@ sumProof = do
 -- We have:
 --
 -- >>> sumSquareProof
--- Axiom: Nat.induction                    Axiom.
 -- Lemma: sumSquare_correct                Q.E.D.
 sumSquareProof :: IO Proven
 sumSquareProof = do

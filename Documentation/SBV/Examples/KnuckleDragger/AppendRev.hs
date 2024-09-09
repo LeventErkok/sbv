@@ -53,7 +53,6 @@ consApp = lemma "consApp"
 -- We have:
 --
 -- >>> appendAssoc
--- Axiom: List(a).induction                Axiom.
 -- Lemma: consApp                          Q.E.D.
 -- Lemma: appendAssoc                      Q.E.D.
 appendAssoc :: IO Proven
@@ -78,7 +77,6 @@ appendAssoc = do
 --
 -- >>> revApp
 -- Lemma: consApp                          Q.E.D.
--- Axiom: List(a).induction                Axiom.
 -- Lemma: consApp                          Q.E.D.
 -- Lemma: appendAssoc                      Q.E.D.
 -- Chain: revApp_induction_pre
@@ -89,7 +87,6 @@ appendAssoc = do
 --   Lemma: revApp_induction_post.1        Q.E.D.
 --   Lemma: revApp_induction_post.2        Q.E.D.
 -- Lemma: revApp_induction_post            Q.E.D.
--- Axiom: List(a).induction                Axiom.
 -- Lemma: revApp                           Q.E.D. [Modulo: sorry]
 revApp :: IO Proven
 revApp = do
@@ -130,11 +127,9 @@ revApp = do
 -- We have:
 --
 -- >>> reverseReverse
--- Axiom: List(a).induction                Axiom.
 -- Lemma: consApp                          Q.E.D.
 -- Lemma: appendAssoc                      Q.E.D.
 -- Lemma: consApp                          Q.E.D.
--- Axiom: List(a).induction                Axiom.
 -- Lemma: consApp                          Q.E.D.
 -- Lemma: appendAssoc                      Q.E.D.
 -- Chain: revApp_induction_pre
@@ -145,9 +140,7 @@ revApp = do
 --   Lemma: revApp_induction_post.1        Q.E.D.
 --   Lemma: revApp_induction_post.2        Q.E.D.
 -- Lemma: revApp_induction_post            Q.E.D.
--- Axiom: List(a).induction                Axiom.
 -- Lemma: revApp                           Q.E.D. [Modulo: sorry]
--- Axiom: List(a).induction                Axiom.
 -- Lemma: reverseReverse                   Q.E.D. [Modulo: revApp]
 reverseReverse :: IO Proven
 reverseReverse = do
