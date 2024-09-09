@@ -66,14 +66,16 @@ listLengthProof = do
 badProof :: IO ()
 badProof = do
    let length :: SList Integer -> SInteger
-       length = smtFunction "length" $ \xs -> ite (SL.length xs .> 5 .&& 42 `SL.elem` xs) 42
-                                            $ ite (SL.null xs) 0 (1 + length (SL.tail xs))
+       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
+
+       badLength :: SList Integer -> SInteger
+       badLength xs = ite (SL.length xs .> 5 .&& 42 `SL.elem` xs) 42 (length xs)
 
        spec :: SList Integer -> SInteger
        spec = SL.length
 
        p :: SList Integer -> SBool
-       p xs = observe "imp" (length xs) .== observe "spec" (spec xs)
+       p xs = observe "imp" (badLength xs) .== observe "spec" (spec xs)
 
    induct <- inductionPrinciple p
 
