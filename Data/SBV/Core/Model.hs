@@ -799,7 +799,7 @@ observeIf cond m x
   | True
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf x
-        r st = do xsv <- sbvToSV st x
+        r st = do xsv <- sbvToSV st (label ("Observing: " ++ m) x)
                   recordObservable st m (cond . fromCV) xsv
                   return xsv
 
