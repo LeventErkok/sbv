@@ -95,8 +95,6 @@ internalAxiom = axiomGen False
 
 -- | Generate an axiom. We only "display" the user-given axioms, not internal ones.
 axiomGen :: Proposition a => Bool -> String -> a -> IO Proven
-axiomGen isUserAxiom nm p = do when isUserAxiom $
-                                 start False "Axiom" [nm] >>= finish "Axiom."
 axiomGen isUserAxiom nm p = do when isUserAxiom $ start False "Axiom" [nm] >>= finish "Axiom."
 
                                pure Proven{ rootOfTrust = None
