@@ -29,6 +29,7 @@ module Data.SBV.Tools.KDKernel (
 
 import Control.Monad (when)
 
+import Data.List (intercalate, sort, nub)
 
 import System.IO (hFlush, stdout)
 
