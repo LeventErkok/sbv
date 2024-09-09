@@ -9,11 +9,11 @@
 -- Kernel of the KnuckleDragger prover API.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds        #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
+{-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -92,8 +92,15 @@ axiom nm p = start False "Axiom" [nm] >>= finish None "Axiom." (quantifiedBool p
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proven
 sorry = Proven{ rootOfSorry = Self
-              , getProof    = quantifiedBool sFalse
+              , getProof    = quantifiedBool p
               }
+  where -- ideally, I'd rather just use 
+        --   p = sFalse
+        -- but then SBV constant folds the boolean, and the generated script
+        -- doesn't contain the actual contents, as SBV determines unsatisfiability
+        -- itself. By using the following proposition (which is easy for the backend
+        -- solver to determine as false, we avoid the constant folding.
+        p (Forall (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proven] -> IO Proven

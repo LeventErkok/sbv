@@ -15,6 +15,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TupleSections         #-}
 {-# LANGUAGE UndecidableInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -266,7 +267,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
          where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
                           mbParam
                           (nub (sort (G.universeBi asgnsSeq)))
-                          (intercalate "\n" . body)
+                          body
 
                params = case is of
                           ResultTopInps as -> bad [ "Top inputs"
@@ -283,13 +284,13 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                body tabAmnt
                  | null constTables
                  , null nonConstTables
-                 , Just e <- simpleBody (constBindings ++ svBindings) out
-                 = [tab ++ e]
+                 , Just e <- simpleBody (map (, Nothing) constBindings ++ svBindings) out
+                 = tab ++ e
                  | True
-                 = map (tab ++) $   [mkLet sv  | sv <- constBindings]
-                                 ++ [mkTable t | t  <- constTables]
-                                 ++ walk svBindings nonConstTables
-                                 ++ [shift ++ show out ++ replicate totalClose ')']
+                 = intercalate "\n" $ map (tab ++) $  [mkLet sv  | sv <- constBindings]
+                                                   ++ [mkTable t | t  <- constTables]
+                                                   ++ walk svBindings nonConstTables
+                                                   ++ [shift ++ show out ++ replicate totalClose ')']
 
                  where tab  = replicate tabAmnt ' '
 
@@ -309,29 +310,37 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                        walk []  []        = []
                        walk []  remaining = error $ "Data.SBV: Impossible: Ran out of bindings, but tables remain: " ++ show remaining
-                       walk (cur@(SV _ nd, _) : rest)  remaining =  map (mkTable . snd) ready
-                                                                 ++ [mkLet cur]
-                                                                 ++ walk rest notReady
+                       walk (cur@((SV _ nd, _), _) : rest)  remaining =  map (mkTable . snd) ready
+                                                                      ++ [mkLocalBind cur]
+                                                                      ++ walk rest notReady
                           where (ready, notReady) = partition (\(need, _) -> need < getLLI nd) remaining
+                                mkLocalBind (b, Nothing) = mkLet b
+                                mkLocalBind (b, Just l)  = mkLet b ++ " ; " ++ l
 
                getLLI :: NodeId -> (Int, Int)
                getLLI (NodeId (_, l, i)) = (l, i)
 
                -- if we have just one definition returning it, and if the expression itself is simple enough (single-line), simplify
-               simpleBody :: [(SV, String)] -> SV -> Maybe String
-               simpleBody [(v, e)] o | v == o, '\n' `notElem` e = Just e
-               simpleBody _        _                            = Nothing
+               simpleBody :: [((SV, String), Maybe String)] -> SV -> Maybe String
+               simpleBody [((v, e), Nothing)] o | v == o, '\n' `notElem` e = Just e
+               simpleBody _                   _                            = Nothing
 
                assignments = F.toList (pgmAssignments pgm)
 
                constants = filter ((`notElem` [falseSV, trueSV]) . fst) consts
 
-               constBindings, svBindings :: [(SV, String)]
+               constBindings :: [(SV, String)]
                constBindings = map mkConst constants
-               svBindings    = map mkAsgn assignments
+                 where mkConst :: (SV, CV) -> (SV, String)
+                       mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
 
-               mkConst :: (SV, CV) -> (SV, String)
-               mkConst (sv, cv) = (sv, cvToSMTLib (roundingMode cfg) cv)
+               svBindings :: [((SV, String), Maybe String)]
+               svBindings = map mkAsgn assignments
+                 where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, converter e), Just l)
+                       mkAsgn (sv, e)                      = ((sv, converter e), Nothing)
+
+                       converter = cvtExp curProgInfo (capabilities (solver cfg)) rm tableMap
+
 
                out :: SV
                out = case outputs of
@@ -371,9 +380,5 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                            ++ show x ++ space
                                            ++ chain (i+1) xs
                                            ++ ")"
-
-               mkAsgn (sv, e) = (sv, converter e)
-               converter = cvtExp curProgInfo solverCaps rm tableMap
-                 where solverCaps = capabilities (solver cfg)
 
 {- HLint ignore module "Use second" -}
