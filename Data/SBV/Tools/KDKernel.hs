@@ -180,6 +180,7 @@ lemmaGen cfg what nms inputProp by = do
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proven] -> IO Proven
+lemma = lemmaWith defaultSMTCfg
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
@@ -187,6 +188,7 @@ lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proven] -> IO Proven
+theorem = theoremWith defaultSMTCfg
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
