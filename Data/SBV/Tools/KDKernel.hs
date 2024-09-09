@@ -125,7 +125,7 @@ lemmaGen cfg what nms inputProp by = do
 
                 (ros, modulo)
                   | clean = (None,    "")
-                  | True  = (Prop nm, " [modulo: " ++ why ++ "]")
+                  | True  = (Prop nm, " [Modulo: " ++ why ++ "]")
 
         -- What to do if the proof fails
         cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
