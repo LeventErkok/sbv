@@ -62,17 +62,17 @@ x <= y = x + y .== y
 -- We have:
 --
 -- >>> kleeneProofs
--- Axiom: par_assoc                        Admitted.
--- Axiom: par_comm                         Admitted.
--- Axiom: par_idem                         Admitted.
--- Axiom: par_zero                         Admitted.
--- Axiom: seq_assoc                        Admitted.
--- Axiom: seq_zero                         Admitted.
--- Axiom: seq_one                          Admitted.
--- Axiom: rdistrib                         Admitted.
--- Axiom: ldistrib                         Admitted.
--- Axiom: unfold                           Admitted.
--- Axiom: least_fix                        Admitted.
+-- Axiom: par_assoc                        Axiom.
+-- Axiom: par_comm                         Axiom.
+-- Axiom: par_idem                         Axiom.
+-- Axiom: par_zero                         Axiom.
+-- Axiom: seq_assoc                        Axiom.
+-- Axiom: seq_zero                         Axiom.
+-- Axiom: seq_one                          Axiom.
+-- Axiom: rdistrib                         Axiom.
+-- Axiom: ldistrib                         Axiom.
+-- Axiom: unfold                           Axiom.
+-- Axiom: least_fix                        Axiom.
 -- Lemma: par_lzero                        Q.E.D.
 -- Lemma: par_monotone                     Q.E.D.
 -- Lemma: seq_monotone                     Q.E.D.
