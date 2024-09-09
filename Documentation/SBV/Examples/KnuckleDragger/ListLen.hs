@@ -60,9 +60,9 @@ listLengthProof = do
 -- Lemma: bad
 -- *** Failed to prove bad.
 -- Falsifiable. Counter-example:
---   xs   = [42,99,100,101,59,102] :: [Integer]
---   imp  =                     42 :: Integer
---   spec =                      6 :: Integer
+--   xs   = [8,25,26,27,28,42] :: [Integer]
+--   imp  =                 42 :: Integer
+--   spec =                  6 :: Integer
 badProof :: IO ()
 badProof = do
    let length :: SList Integer -> SInteger
