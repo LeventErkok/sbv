@@ -43,9 +43,9 @@ import qualified Data.SBV.List as SL
 -- can ignore it and treat it as anything you can pass to 'prove' or 'sat' in SBV.
 type Proposition a = ( QuantifiedBool a
                      , QNot a
-                     , Satisfiable (SkolemsTo (NegatesTo a))
-                     , Constraint Symbolic (SkolemsTo (NegatesTo a))
                      , Skolemize (NegatesTo a)
+                     , Satisfiable (Symbolic (SkolemsTo (NegatesTo a)))
+                     , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
                      )
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
@@ -145,23 +145,20 @@ lemmaGen cfg what nms inputProp by = do
                 -- Otherwise, mark it accordingly.
                 (ros, modulo)
                    | not hasSelf && null depNames = (None,    "")
-                   | True                         = (Prop nm, "[Modulo: " ++ why ++ "]")
+                   | True                         = (Prop nm, " [Modulo: " ++ why ++ "]")
                    where why | hasSelf = "sorry"
                              | True    = intercalate ", " depNames
 
         -- What to do if the proof fails
         cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                  -- Calculate as a sat call on negation, but print as a theorem
-                  -- This allows for much better display of results. Note that
-                  -- we negate the inputProp here, not the final proposition.
-                  -- Why? The use case for this is that all the parents are
-                  -- already proven; so any counter-example should come
-                  -- from the input-proposition itself that is not implied by the axioms.
-                  let axs = [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom]
-                      prop = case axs of
-                               [] -> sNot (quantifiedBool inputProp)
-                               _  -> sNot (sAnd axs .=> quantifiedBool inputProp)
-                  SatResult res <- satWith cfg (skolemize prop)
+                  -- When trying to get a counter-example, only include in the
+                  -- implication those facts that are user-given axioms. This
+                  -- way our counter-example will be more likely to be relevant
+                  -- to the proposition we're currently proving. (Hopefully.)
+                  -- Remember that we first have to negate, and then skolemize!
+                  SatResult res <- satWith cfg $ do
+                                        mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                        pure $ skolemize (qNot inputProp)
                   print $ ThmResult res
                   error "Failed"
 
