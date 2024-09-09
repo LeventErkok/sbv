@@ -29,7 +29,6 @@ module Data.SBV.Tools.KDKernel (
 
 import Control.Monad (when)
 
-import Data.List (intercalate, sort)
 
 import System.IO (hFlush, stdout)
 
@@ -48,6 +47,22 @@ type Proposition a = ( QuantifiedBool a
                      , Skolemize (NegatesTo a)
                      )
 
+-- | Keeping track of where the sorry originates from. Used in displaying dependencies.
+data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
+                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
+                 | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
+                               --   name of the proposition itself, not the parent that's trusted.
+
+-- | A proven property. This type is left abstract, i.e., the only way to create on is via a
+-- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
+-- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
+-- mechanism ensures we can't create proven things out of thin air, following the standard LCF
+-- methodology.)
+data Proven = Proven { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
+                     , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
+                     , getProof    :: SBool       -- ^ Get the underlying boolean
+                     }
+
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 start :: Bool -> String -> [String] -> IO Int
 start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
@@ -57,21 +72,6 @@ start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         indent = replicate tab ' '
         tag    = what ++ ": " ++ intercalate "." nms
         line   = indent ++ tag
-
--- | Keeping track of where the sorry originates from. Used in displaying dependencies.
-data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
-                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
-                 | Prop String -- ^ Trusts a parent that itself trusts something else.
-
--- | A proven property. This type is left abstract, i.e., the only way to create on is via a
--- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
--- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
--- mechanism ensures we can't create proven things out of thin air, following the standard LCF
--- methodology.)
-data Proven = Proven { rootOfSorry :: RootOfTrust -- ^ If a node trusts this proof, then this is the reason it trusts it
-                     , isUserAxiom :: Bool        -- ^ Was this an given by the user?
-                     , getProof    :: SBool       -- ^ Get the underlying boolean
-                     }
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
 finish :: String -> Int -> IO ()
@@ -97,8 +97,9 @@ internalAxiom = axiomGen False
 axiomGen :: Proposition a => Bool -> String -> a -> IO Proven
 axiomGen isUserAxiom nm p = do when isUserAxiom $
                                  start False "Axiom" [nm] >>= finish "Axiom."
+axiomGen isUserAxiom nm p = do when isUserAxiom $ start False "Axiom" [nm] >>= finish "Axiom."
 
-                               pure Proven{ rootOfSorry = None
+                               pure Proven{ rootOfTrust = None
                                           , isUserAxiom = isUserAxiom
                                           , getProof    = label nm (quantifiedBool p)
                                           }
@@ -107,7 +108,7 @@ axiomGen isUserAxiom nm p = do when isUserAxiom $
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proven
-sorry = Proven{ rootOfSorry = Self
+sorry = Proven{ rootOfTrust = Self
               , isUserAxiom = False
               , getProof    = label "SORRY" (quantifiedBool p)
               }
@@ -130,24 +131,24 @@ lemmaGen cfg what nms inputProp by = do
 
         -- What to do if all goes well
         good = do finish ("Q.E.D." ++ modulo) tab
-                  pure Proven { rootOfSorry = ros
+                  pure Proven { rootOfTrust = ros
                               , isUserAxiom = False
                               , getProof    = label nm (quantifiedBool inputProp)
                               }
 
-          where parentRoots = map rootOfSorry by
+          where parentRoots = map rootOfTrust by
                 hasSelf     = not $ null [() | Self <- parentRoots]
-                depNames    = sort [p | Prop p <- parentRoots]
+                depNames    = nub $ sort [p | Prop p <- parentRoots]
 
-                -- We're clean if there's no selves nor any dependents of in the root-of-trust
-                clean = not hasSelf && null depNames
-
-                why | hasSelf = "sorry"
-                    | True    = intercalate ", " depNames
-
+                -- What's the root-of-trust for this node?
+                -- If there are no "sorry" parents, and no parent nodes
+                -- that are marked with a root of trust, then we don't have it either.
+                -- Otherwise, mark it accordingly.
                 (ros, modulo)
-                  | clean = (None,    "")
-                  | True  = (Prop nm, " [Modulo: " ++ why ++ "]")
+                   | not hasSelf && null depNames = (None,    "")
+                   | True                         = (Prop nm, "[Modulo: " ++ why ++ "]")
+                   where why | hasSelf = "sorry"
+                             | True    = intercalate ", " depNames
 
         -- What to do if the proof fails
         cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
@@ -181,7 +182,6 @@ lemmaGen cfg what nms inputProp by = do
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proven] -> IO Proven
-lemma nm = lemmaGen defaultSMTCfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
@@ -189,7 +189,6 @@ lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proven] -> IO Proven
-theorem nm = lemmaGen defaultSMTCfg "Theorem" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
