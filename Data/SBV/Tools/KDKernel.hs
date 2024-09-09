@@ -12,6 +12,7 @@
 {-# LANGUAGE ConstraintKinds      #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
@@ -25,6 +26,8 @@ module Data.SBV.Tools.KDKernel (
        , Induction(..)
        , sorry
        ) where
+
+import Control.Monad (when)
 
 import Data.List (intercalate, sort)
 
@@ -66,15 +69,13 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
 data Proven = Proven { rootOfSorry :: RootOfTrust -- ^ If a node trusts this proof, then this is the reason it trusts it
+                     , isUserAxiom :: Bool        -- ^ Was this an given by the user?
                      , getProof    :: SBool       -- ^ Get the underlying boolean
                      }
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
-finish :: RootOfTrust -> String -> SBool -> Int -> IO Proven
-finish ros what proof skip = do putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
-                                pure Proven { rootOfSorry = ros
-                                            , getProof    = proof
-                                            }
+finish :: String -> Int -> IO ()
+finish what skip = do putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
   where -- Ideally an aestheticly pleasing length of the line. Perhaps this
         -- should be configurable, but this is good enough for now.
         ribbonLength :: Int
@@ -85,14 +86,30 @@ finish ros what proof skip = do putStrLn $ replicate (ribbonLength - skip) ' ' +
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> IO Proven
-axiom nm p = start False "Axiom" [nm] >>= finish None "Axiom." (quantifiedBool p)
+axiom = axiomGen True
+
+-- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
+-- Not exported.
+internalAxiom :: Proposition a => String -> a -> IO Proven
+internalAxiom = axiomGen False
+
+-- | Generate an axiom. We only "display" the user-given axioms, not internal ones.
+axiomGen :: Proposition a => Bool -> String -> a -> IO Proven
+axiomGen isUserAxiom nm p = do when isUserAxiom $
+                                 start False "Axiom" [nm] >>= finish "Axiom."
+
+                               pure Proven{ rootOfSorry = None
+                                          , isUserAxiom = isUserAxiom
+                                          , getProof    = label nm (quantifiedBool p)
+                                          }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proven
 sorry = Proven{ rootOfSorry = Self
-              , getProof    = quantifiedBool p
+              , isUserAxiom = False
+              , getProof    = label "SORRY" (quantifiedBool p)
               }
   where -- ideally, I'd rather just use 
         --   p = sFalse
@@ -112,7 +129,12 @@ lemmaGen cfg what nms inputProp by = do
         proposition = quantifiedBool (sAnd (map getProof by) .=> quantifiedBool inputProp)
 
         -- What to do if all goes well
-        good = finish ros ("Q.E.D." ++ modulo) (quantifiedBool inputProp) tab
+        good = do finish ("Q.E.D." ++ modulo) tab
+                  pure Proven { rootOfSorry = ros
+                              , isUserAxiom = False
+                              , getProof    = label nm (quantifiedBool inputProp)
+                              }
+
           where parentRoots = map rootOfSorry by
                 hasSelf     = not $ null [() | Self <- parentRoots]
                 depNames    = sort [p | Prop p <- parentRoots]
@@ -130,8 +152,16 @@ lemmaGen cfg what nms inputProp by = do
         -- What to do if the proof fails
         cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
                   -- Calculate as a sat call on negation, but print as a theorem
-                  -- This allows for much better display of results.
-                  SatResult res <- satWith cfg (skolemize (qNot proposition))
+                  -- This allows for much better display of results. Note that
+                  -- we negate the inputProp here, not the final proposition.
+                  -- Why? The use case for this is that all the parents are
+                  -- already proven; so any counter-example should come
+                  -- from the input-proposition itself that is not implied by the axioms.
+                  let axs = [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom]
+                      prop = case axs of
+                               [] -> sNot (quantifiedBool inputProp)
+                               _  -> sNot (sAnd axs .=> quantifiedBool inputProp)
+                  SatResult res <- satWith cfg (skolemize prop)
                   print $ ThmResult res
                   error "Failed"
 
@@ -185,7 +215,6 @@ class Induction a where
   inductionPrinciple3 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c)            -> f a b c)
   inductionPrinciple4 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c) (Forall d) -> f a b c d)
 
-
 -- | Induction over SInteger. We provide various induction principles here: The first one
 -- is over naturals, will only prove predicates that explicitly restrict the argument to >= 0.
 -- The second and third ones are induction over the entire range of integers, two different
@@ -200,7 +229,7 @@ instance Induction SInteger where
                     .=> qb -----------------------------------------------------------
                                       (\(Forall n) -> n .>= 0 .=> p n)
 
-      axiom "Nat.induction" principle
+      internalAxiom "Nat.induction" principle
 
    -- | Induction over integers, using the strategy that @P(n)@ is equivalent to @P(n+1)@
    -- (i.e., not just @P(n) => P(n+1)@), thus covering the entire range.
@@ -211,7 +240,7 @@ instance Induction SInteger where
                     .=> qb ---------------------------------------------
                                     (\(Forall i) -> p i)
 
-      axiom "Integer.induction" principle
+      internalAxiom "Integer.induction" principle
 
    -- | Induction over integers, using the strategy that @P(n) => P(n+1)@ and @P(n) => P(n-1)@.
    inductionPrincipleAlt2 p = do
@@ -221,7 +250,7 @@ instance Induction SInteger where
                     .=> qb ---------------------------------------------------------
                                            (\(Forall i) -> p i)
 
-      axiom "Integer.splitInduction" principle
+      internalAxiom "Integer.splitInduction" principle
 
 -- | Induction over lists
 instance SymVal a => Induction (SList a) where
@@ -232,4 +261,4 @@ instance SymVal a => Induction (SList a) where
                    .=> qb ----------------------------------------------------------------------
                                              (\(Forall xs) -> p xs)
 
-     axiom "List(a).induction" principle
+     internalAxiom "List(a).induction" principle
