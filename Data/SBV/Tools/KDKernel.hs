@@ -157,8 +157,8 @@ lemmaGen cfg what nms inputProp by = do
                   -- to the proposition we're currently proving. (Hopefully.)
                   -- Remember that we first have to negate, and then skolemize!
                   SatResult res <- satWith cfg $ do
-                                        mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
-                                        pure $ skolemize (qNot inputProp)
+                                      mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                      pure $ skolemize (qNot inputProp)
                   print $ ThmResult res
                   error "Failed"
 
