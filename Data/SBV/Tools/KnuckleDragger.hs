@@ -27,8 +27,8 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KnuckleDragger (
-       -- * Propositions and proven statements
-         Proposition, Proven
+       -- * Propositions and their proofs
+         Proposition, Proof
        -- * Adding axioms/definitions
        , axiom
        -- * Basic proofs
@@ -74,16 +74,16 @@ class ChainLemma steps step | steps -> step where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we error-out. A single step in @H@ indicates a user-error, since there's
   -- no sequence of steps to reason about.
-  chainLemma :: Proposition a => String -> a -> steps -> [Proven] -> KD Proven
+  chainLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Same as chainLemma, except tagged as Theorem
-  chainTheorem :: Proposition a => String -> a -> steps -> [Proven] -> KD Proven
+  chainTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
+  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
   makeSteps :: steps -> [step]
@@ -98,7 +98,7 @@ class ChainLemma steps step | steps -> step where
   chainLemmaWith   = chainGeneric False
   chainTheoremWith = chainGeneric True
 
-  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
+  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
   chainGeneric taggedTheorem cfg nm result steps base = do
         liftIO $ putStrLn $ "Chain: " ++ nm
         let proofSteps = makeSteps steps

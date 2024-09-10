@@ -31,7 +31,7 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> runKD sumProof
 -- Lemma: sum_correct                      Q.E.D.
-sumProof :: KD Proven
+sumProof :: KD Proof
 sumProof = do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
@@ -50,7 +50,7 @@ sumProof = do
 --
 -- >>> runKD sumSquareProof
 -- Lemma: sumSquare_correct                Q.E.D.
-sumSquareProof :: KD Proven
+sumSquareProof :: KD Proof
 sumSquareProof = do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .== 0) 0 (n * n + sumSquare (n - 1))

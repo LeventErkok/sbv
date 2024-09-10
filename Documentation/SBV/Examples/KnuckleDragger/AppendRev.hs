@@ -44,7 +44,7 @@ mkUninterpretedSort ''Elt
 --
 -- >>> runKD appendNull
 -- Lemma: appendNull                       Q.E.D.
-appendNull :: KD Proven
+appendNull :: KD Proof
 appendNull = lemma "appendNull"
                    (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
                    []
@@ -55,7 +55,7 @@ appendNull = lemma "appendNull"
 --
 -- >>> runKD consApp
 -- Lemma: consApp                          Q.E.D.
-consApp :: KD Proven
+consApp :: KD Proof
 consApp = lemma "consApp"
                 (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
                 []
@@ -66,7 +66,7 @@ consApp = lemma "consApp"
 --
 -- >>> runKD appendAssoc
 -- Lemma: appendAssoc                      Q.E.D.
-appendAssoc :: KD Proven
+appendAssoc :: KD Proof
 appendAssoc = do
    -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
@@ -81,7 +81,7 @@ appendAssoc = do
 --
 -- >>> runKD revApp
 -- Lemma: revApp                           Q.E.D.
-revApp :: KD Proven
+revApp :: KD Proof
 revApp = do
    let q :: SymVal a => SList a -> SList a -> SBool
        q xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
@@ -96,7 +96,7 @@ revApp = do
 -- >>> runKD reverseReverse
 -- Lemma: revApp                           Q.E.D.
 -- Lemma: reverseReverse                   Q.E.D.
-reverseReverse :: KD Proven
+reverseReverse :: KD Proof
 reverseReverse = do
    lRevApp <- revApp
 

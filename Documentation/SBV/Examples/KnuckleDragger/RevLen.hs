@@ -43,7 +43,7 @@ mkUninterpretedSort ''Elt
 --
 -- >>> runKD revLen
 -- Lemma: revLen                           Q.E.D.
-revLen :: KD Proven
+revLen :: KD Proof
 revLen = do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== length xs

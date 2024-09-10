@@ -19,7 +19,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KDKernel (
-         Proposition,  Proven
+         Proposition,  Proof
        , axiom
        , lemma,        lemmaWith,   lemmaGen
        , theorem,      theoremWith
@@ -54,38 +54,38 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
                  | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
                                --   name of the proposition itself, not the parent that's trusted.
 
--- | A proven property. This type is left abstract, i.e., the only way to create on is via a
+-- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proven = Proven { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
-                     , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
-                     , getProof    :: SBool       -- ^ Get the underlying boolean
-                     }
+data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
+                   , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
+                   , getProof    :: SBool       -- ^ Get the underlying boolean
+                   }
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
-axiom :: Proposition a => String -> a -> KD Proven
+axiom :: Proposition a => String -> a -> KD Proof
 axiom nm p = do start False "Axiom" [nm] >>= finish "Axiom."
 
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 -- Not exported.
-internalAxiom :: Proposition a => String -> a -> Proven
-internalAxiom nm p = Proven { rootOfTrust = None
-                            , isUserAxiom = False
-                            , getProof    = label nm (quantifiedBool p)
-                            }
+internalAxiom :: Proposition a => String -> a -> Proof
+internalAxiom nm p = Proof { rootOfTrust = None
+                           , isUserAxiom = False
+                           , getProof    = label nm (quantifiedBool p)
+                           }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
-sorry :: Proven
-sorry = Proven{ rootOfTrust = Self
+sorry :: Proof
+sorry = Proof { rootOfTrust = Self
               , isUserAxiom = False
               , getProof    = label "SORRY" (quantifiedBool p)
               }
@@ -98,7 +98,7 @@ sorry = Proven{ rootOfTrust = Self
         p (Forall (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proven] -> KD Proven
+lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
 lemmaGen cfg what nms inputProp by = do
     tab <- start (verbose cfg) what nms
 
@@ -106,10 +106,10 @@ lemmaGen cfg what nms inputProp by = do
 
         -- What to do if all goes well
         good = do finish ("Q.E.D." ++ modulo) tab
-                  pure Proven { rootOfTrust = ros
-                              , isUserAxiom = False
-                              , getProof    = label nm (quantifiedBool inputProp)
-                              }
+                  pure Proof { rootOfTrust = ros
+                             , isUserAxiom = False
+                             , getProof    = label nm (quantifiedBool inputProp)
+                             }
 
           where parentRoots = map rootOfTrust by
                 hasSelf     = not $ null [() | Self <- parentRoots]
@@ -133,7 +133,7 @@ lemmaGen cfg what nms inputProp by = do
                            -- to the proposition we're currently proving. (Hopefully.)
                            -- Remember that we first have to negate, and then skolemize!
                            SatResult res <- satWith cfg $ do
-                                               mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                               mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
                                                pure $ skolemize (qNot inputProp)
                            print $ ThmResult res
                            error "Failed"
@@ -156,38 +156,38 @@ lemmaGen cfg what nms inputProp by = do
       ThmResult ProofError{}    -> failed pRes
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
-lemma :: Proposition a => String -> a -> [Proven] -> KD Proven
+lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
 lemma nm f by = do KDConfig{kdSolverConfig} <- ask
                    lemmaWith kdSolverConfig nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven
+lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
-theorem :: Proposition a => String -> a -> [Proven] -> KD Proven
+theorem :: Proposition a => String -> a -> [Proof] -> KD Proof
 theorem nm f by = do KDConfig{kdSolverConfig} <- ask
                      theoremWith kdSolverConfig nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven
+theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
 class Induction a where
-  induct     :: (a -> SBool) -> Proven
-  inductAlt1 :: (a -> SBool) -> Proven
-  inductAlt2 :: (a -> SBool) -> Proven
+  induct     :: (a -> SBool) -> Proof
+  inductAlt1 :: (a -> SBool) -> Proof
+  inductAlt2 :: (a -> SBool) -> Proof
 
   -- The second and third principles are the same as first by default, unless we provide them explicitly.
   inductAlt1 = induct
   inductAlt2 = induct
 
   -- Induction for multiple argument predicates, inducting over the first argument
-  induct2 :: SymVal b                       => (a -> SBV b ->                   SBool) -> Proven
-  induct3 :: (SymVal b, SymVal c)           => (a -> SBV b -> SBV c ->          SBool) -> Proven
-  induct4 :: (SymVal b, SymVal c, SymVal d) => (a -> SBV b -> SBV c -> SBV d -> SBool) -> Proven
+  induct2 :: SymVal b                       => (a -> SBV b ->                   SBool) -> Proof
+  induct3 :: (SymVal b, SymVal c)           => (a -> SBV b -> SBV c ->          SBool) -> Proof
+  induct4 :: (SymVal b, SymVal c, SymVal d) => (a -> SBV b -> SBV c -> SBV d -> SBool) -> Proof
 
 -- | Induction over SInteger. We provide various induction principles here: The first one
 -- is over naturals, will only prove predicates that explicitly restrict the argument to >= 0.

@@ -45,7 +45,7 @@ mkUninterpretedSort ''Elt
 --
 -- >>> runKD listLengthProof
 -- Lemma: length_correct                   Q.E.D.
-listLengthProof :: KD Proven
+listLengthProof :: KD Proof
 listLengthProof = do
    let length :: SList Elt -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
@@ -94,7 +94,7 @@ badProof = do
 --
 -- >>> runKD lenAppend
 -- Lemma: lenAppend                        Q.E.D.
-lenAppend :: KD Proven
+lenAppend :: KD Proof
 lenAppend = lemma "lenAppend"
                    (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
                          SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
@@ -106,7 +106,7 @@ lenAppend = lemma "lenAppend"
 --
 -- >>> runKD lenAppend2
 -- Lemma: lenAppend2                       Q.E.D.
-lenAppend2 :: KD Proven
+lenAppend2 :: KD Proof
 lenAppend2 = lemma "lenAppend2"
                    (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
                              SL.length xs .== SL.length ys

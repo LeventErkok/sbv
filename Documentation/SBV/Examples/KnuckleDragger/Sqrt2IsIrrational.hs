@@ -39,13 +39,13 @@ import Data.SBV.Tools.KnuckleDragger
 --
 --  Using these helpers, we can argue:
 --
---   (a) Start with the premise @a^2 = 2b^2@.
---   (b) Thus, @a^2@ must be even. (Since it equals @2b^2@ by a.)
---   (c) Thus, @a@ must be even. (Using 2 and b.)
---   (d) Thus, @a^2@ must be divisible by @4@. (Using 3 and c. That is, 2b^2 == 4*K for someK.)
---   (e) Thus, @b^2@ must be even. (Using d, b^2 = 2K.)
---   (f) Thus, @b@ must be even. (Using 2 and e.)
---   (g) Since @a@ and @b@ are both even, they cannot be co-prime. (Using c and f.)
+--   (4)  Start with the premise @a^2 = 2b^2@.
+--   (5)  Thus, @a^2@ must be even. (Since it equals @2b^2@ by a.)
+--   (6)  Thus, @a@ must be even. (Using 2 and b.)
+--   (7)  Thus, @a^2@ must be divisible by @4@. (Using 3 and c. That is, 2b^2 == 4*K for someK.)
+--   (8)  Thus, @b^2@ must be even. (Using d, b^2 = 2K.)
+--   (9)  Thus, @b@ must be even. (Using 2 and e.)
+--   (10) Since @a@ and @b@ are both even, they cannot be co-prime. (Using c and f.)
 --
 -- Note that our proof is mostly about the first 3 facts above, then z3 and KnuckleDragger fills in the rest.
 --
@@ -57,7 +57,7 @@ import Data.SBV.Tools.KnuckleDragger
 -- Lemma: evenIfSquareIsEven               Q.E.D.
 -- Lemma: evenSquaredIsMult4               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
-sqrt2IsIrrational :: KD Proven
+sqrt2IsIrrational :: KD Proof
 sqrt2IsIrrational = do
     let even, odd :: SInteger -> SBool
         even = (2 `sDivides`)
