@@ -16,11 +16,12 @@
 {-# LANGUAGE ConstraintKinds            #-}
 {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE TypeAbstractions           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -50,7 +51,8 @@ import Data.SBV
 import Data.SBV.Tools.KDKernel
 import Data.SBV.Tools.KDUtils
 
-import Control.Monad(when)
+import Control.Monad        (when)
+import Control.Monad.Reader (ask)
 
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -87,8 +89,11 @@ class ChainLemma steps step | steps -> step where
   makeSteps :: steps -> [step]
   makeInter :: steps -> step -> step -> SBool
 
-  chainLemma   = chainLemmaWith   defaultSMTCfg
-  chainTheorem = chainTheoremWith defaultSMTCfg
+  chainLemma nm p steps by = do KDConfig{kdSolverConfig} <- ask
+                                chainLemmaWith kdSolverConfig nm p steps by
+
+  chainTheorem nm p steps by = do KDConfig{kdSolverConfig} <- ask
+                                  chainTheoremWith kdSolverConfig nm p steps by
 
   chainLemmaWith   = chainGeneric False
   chainTheoremWith = chainGeneric True

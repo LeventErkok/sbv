@@ -27,7 +27,8 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Control.Monad.Trans (liftIO)
+import Control.Monad.Trans  (liftIO)
+import Control.Monad.Reader (ask)
 
 import Data.List (intercalate, sort, nub)
 
@@ -156,7 +157,8 @@ lemmaGen cfg what nms inputProp by = do
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proven] -> KD Proven
-lemma = lemmaWith defaultSMTCfg
+lemma nm f by = do KDConfig{kdSolverConfig} <- ask
+                   lemmaWith kdSolverConfig nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven
@@ -164,7 +166,8 @@ lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proven] -> KD Proven
-theorem = theoremWith defaultSMTCfg
+theorem nm f by = do KDConfig{kdSolverConfig} <- ask
+                     theoremWith kdSolverConfig nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven

@@ -27,13 +27,18 @@ import Control.Monad.Trans  (MonadIO(liftIO))
 import Data.List (intercalate)
 import System.IO (hFlush, stdout)
 
+import Data.SBV.Core.Symbolic  (SMTConfig)
+import Data.SBV.Provers.Prover (defaultSMTCfg)
+
 -- | Keeping track of KD options/state
-data KDConfig = KDConfig { kdRibbonLength :: Int   -- ^ Lenght of the line as we print the proof
+data KDConfig = KDConfig { kdRibbonLength :: Int        -- ^ Lenght of the line as we print the proof
+                         , kdSolverConfig :: SMTConfig  -- ^ The backend solver to use
                          }
 
 -- | Default KD-config
 defaultKDConfig :: KDConfig
 defaultKDConfig = KDConfig { kdRibbonLength = 40
+                           , kdSolverConfig = defaultSMTCfg
                            }
 
 -- | Monad for running KnuckleDragger proofs in.
