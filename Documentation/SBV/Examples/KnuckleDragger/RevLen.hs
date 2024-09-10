@@ -10,7 +10,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -24,6 +28,10 @@ import Data.SBV.Tools.KnuckleDragger
 
 import Data.SBV.List (reverse, length)
 
+-- | Use an uninterpreted type for the elements
+data Elt
+mkUninterpretedSort ''Elt
+
 -- | @length xs == length (reverse xs)@
 --
 -- We have:
@@ -32,7 +40,7 @@ import Data.SBV.List (reverse, length)
 -- Lemma: revLen                           Q.E.D.
 revLen :: IO Proven
 revLen = do
-   let p :: SList Integer -> SBool
+   let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== length xs
 
    induct <- inductionPrinciple p
