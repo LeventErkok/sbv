@@ -12,12 +12,11 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.RevLen where
 
@@ -27,6 +26,11 @@ import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
 import Data.SBV.List (reverse, length)
+
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception
 
 -- | Use an uninterpreted type for the elements
 data Elt
@@ -46,3 +50,26 @@ revLen = do
    lemma "revLen"
          (\(Forall @"xs" xs) -> p xs)
          [induct p]
+
+-- | An example where we attempt to prove a non-theorem. Notice the counter-example
+-- generated for:
+--
+-- @length xs = 3 + length (reverse xs)@
+--
+-- We have:
+--
+-- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badRevLen
+-- *** Failed to prove badRevLen.
+-- Falsifiable. Counter-example:
+--   xs = [] :: [Elt]
+badRevLen :: IO ()
+badRevLen = do
+   let p :: SList Elt -> SBool
+       p xs = length (reverse xs) .== 3 + length xs
+
+   lemma "badRevLen"
+         (\(Forall @"xs" xs) -> p xs)
+         [induct p]
+
+   pure ()
