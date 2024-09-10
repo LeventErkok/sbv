@@ -1692,7 +1692,7 @@ instance MonadReader r m => MonadReader r (SymbolicT m) where
   ask = lift ask
   local f = mapSymbolicT $ mapReaderT $ local f
 
--- | `Symbolic` is specialization of `SymbolicT` to the `IO` monad. Unless you are using
+-- | 'Symbolic' is specialization of 'SymbolicT' to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
 type Symbolic = SymbolicT IO
 
