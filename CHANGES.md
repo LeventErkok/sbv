@@ -9,6 +9,8 @@
     by the same name: https://github.com/philzook58/knuckledragger.
 
   * Added several KnuckleDragger proof examples, see Documentation.SBV.Examples.KnuckleDragger modules.
+    Amongst the proofs are the irrationality of square-root of 2, several list lemmas, and a few
+    inductive proofs over naturals.
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
     if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
