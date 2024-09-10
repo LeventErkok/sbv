@@ -61,98 +61,44 @@ consApp = lemma "consApp"
 -- We have:
 --
 -- >>> appendAssoc
--- Lemma: consApp                          Q.E.D.
 -- Lemma: appendAssoc                      Q.E.D.
 appendAssoc :: IO Proven
 appendAssoc = do
-
    -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
        p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
-   -- Get a hold on to the consApp lemma that we'll need
-   lconsApp <- consApp
-
    lemma "appendAssoc"
          (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
-         [lconsApp , induct3 (p @Elt)]
+         []
 
 -- | @reverse (xs ++ ys) == reverse ys ++ reverse xs@
 -- We have:
 --
 -- >>> revApp
--- Lemma: consApp                          Q.E.D.
--- Lemma: consApp                          Q.E.D.
--- Lemma: appendAssoc                      Q.E.D.
--- Chain: revApp_induction_pre
---   Lemma: revApp_induction_pre.1         Q.E.D.
---   Lemma: revApp_induction_pre.2         Q.E.D.
--- Lemma: revApp_induction_pre             Q.E.D.
--- Chain: revApp_induction_post
---   Lemma: revApp_induction_post.1        Q.E.D.
---   Lemma: revApp_induction_post.2        Q.E.D.
--- Lemma: revApp_induction_post            Q.E.D.
--- Lemma: revApp                           Q.E.D. [Modulo: sorry]
+-- Lemma: revApp                           Q.E.D.
 revApp :: IO Proven
 revApp = do
-   -- We'll need the consApp and associativity-of-append proof, so get a hold on to them
-   lconsApp     <- consApp
-   lAppendAssoc <- appendAssoc
-
-   revApp_induction_pre <- chainLemma "revApp_induction_pre"
-      (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys)
-            -> reverse ((x .: xs) ++ ys) .== (reverse (xs ++ ys)) ++ SL.singleton x)
-      (\(x :: SElt) xs ys ->
-           [ reverse ((x .: xs) ++ ys)
-           , reverse (x .: (xs ++ ys))
-           , reverse (xs ++ ys) ++ SL.singleton x
-           ]
-      ) [lconsApp]
-
-   revApp_induction_post <- chainLemma "revApp_induction_post"
-      (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys)
-            -> (reverse ys ++ reverse xs) ++ SL.singleton x .== reverse ys ++ reverse (x .: xs))
-      (\(x :: SElt) xs ys ->
-          [ (reverse ys ++ reverse xs) ++ SL.singleton x
-          , reverse ys ++ (reverse xs ++ SL.singleton x)
-          , reverse ys ++ reverse (x .: xs)
-          ]
-      ) [lAppendAssoc]
-
    let q :: SymVal a => SList a -> SList a -> SBool
-       q xs ys = reverse (xs ++ ys) .== (reverse ys ++ reverse xs)
+       q xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
 
-   lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
-         [sorry, revApp_induction_pre, induct2 (q @Elt), revApp_induction_post]
+   lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> q xs ys)
+         [induct2 (q @Elt)]
 
 -- | @reverse (reverse xs) == xs@
 --
 -- We have:
 --
 -- >>> reverseReverse
--- Lemma: consApp                          Q.E.D.
--- Lemma: appendAssoc                      Q.E.D.
--- Lemma: consApp                          Q.E.D.
--- Lemma: consApp                          Q.E.D.
--- Lemma: appendAssoc                      Q.E.D.
--- Chain: revApp_induction_pre
---   Lemma: revApp_induction_pre.1         Q.E.D.
---   Lemma: revApp_induction_pre.2         Q.E.D.
--- Lemma: revApp_induction_pre             Q.E.D.
--- Chain: revApp_induction_post
---   Lemma: revApp_induction_post.1        Q.E.D.
---   Lemma: revApp_induction_post.2        Q.E.D.
--- Lemma: revApp_induction_post            Q.E.D.
--- Lemma: revApp                           Q.E.D. [Modulo: sorry]
--- Lemma: reverseReverse                   Q.E.D. [Modulo: revApp]
+-- Lemma: revApp                           Q.E.D.
+-- Lemma: reverseReverse                   Q.E.D.
 reverseReverse :: IO Proven
 reverseReverse = do
-   lAppendAssoc <- appendAssoc
-   lRevApp      <- revApp
+   lRevApp <- revApp
 
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs
 
    lemma "reverseReverse"
          (\(Forall @"xs" (xs :: SList Elt)) -> p xs)
-         [induct (p @Elt), lRevApp, lAppendAssoc]
+         [induct (p @Elt), lRevApp]
