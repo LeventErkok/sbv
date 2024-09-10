@@ -33,6 +33,7 @@ import qualified Data.SBV.List as SL
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
 
 -- | Use an uninterpreted type for the elements
 data Elt
@@ -42,9 +43,9 @@ mkUninterpretedSort ''Elt
 --
 -- We have:
 --
--- >>> listLengthProof
+-- >>> runKD listLengthProof
 -- Lemma: length_correct                   Q.E.D.
-listLengthProof :: IO Proven
+listLengthProof :: KD Proven
 listLengthProof = do
    let length :: SList Elt -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
@@ -62,14 +63,14 @@ listLengthProof = do
 -- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
 -- than 5 elements and have 42 in it. We have:
 --
--- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
+-- >>> runKD badProof `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: bad
 -- *** Failed to prove bad.
 -- Falsifiable. Counter-example:
 --   xs   = [8,25,26,27,28,42] :: [Integer]
 --   imp  =                 42 :: Integer
 --   spec =                  6 :: Integer
-badProof :: IO ()
+badProof :: KD ()
 badProof = do
    let length :: SList Integer -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
@@ -91,9 +92,9 @@ badProof = do
 --
 -- We have:
 --
--- >>> lenAppend
+-- >>> runKD lenAppend
 -- Lemma: lenAppend                        Q.E.D.
-lenAppend :: IO Proven
+lenAppend :: KD Proven
 lenAppend = lemma "lenAppend"
                    (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
                          SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
@@ -103,9 +104,9 @@ lenAppend = lemma "lenAppend"
 --
 -- We have:
 --
--- >>> lenAppend2
+-- >>> runKD lenAppend2
 -- Lemma: lenAppend2                       Q.E.D.
-lenAppend2 :: IO Proven
+lenAppend2 :: KD Proven
 lenAppend2 = lemma "lenAppend2"
                    (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
                              SL.length xs .== SL.length ys

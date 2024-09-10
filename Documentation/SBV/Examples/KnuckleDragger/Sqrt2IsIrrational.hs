@@ -22,6 +22,10 @@ import Prelude hiding (even, odd)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+
 -- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.
 --
@@ -47,13 +51,13 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- We have:
 --
--- >>> sqrt2IsIrrational
+-- >>> runKD sqrt2IsIrrational
 -- Lemma: expandOddXInSq                   Q.E.D.
 -- Lemma: oddSquaredIsOdd                  Q.E.D.
 -- Lemma: evenIfSquareIsEven               Q.E.D.
 -- Lemma: evenSquaredIsMult4               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
-sqrt2IsIrrational :: IO Proven
+sqrt2IsIrrational :: KD Proven
 sqrt2IsIrrational = do
     let even, odd :: SInteger -> SBool
         even = (2 `sDivides`)

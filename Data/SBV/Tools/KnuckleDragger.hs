@@ -13,13 +13,15 @@
 -- See the directory Documentation.SBV.Examples.KnuckleDragger for various examples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds        #-}
-{-# LANGUAGE DataKinds              #-}
-{-# LANGUAGE MultiParamTypeClasses  #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleContexts       #-}
-{-# LANGUAGE FlexibleInstances      #-}
-{-# LANGUAGE TypeAbstractions       #-}
+{-# LANGUAGE ConstraintKinds            #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE FunctionalDependencies     #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE TypeAbstractions           #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -38,10 +40,15 @@ module Data.SBV.Tools.KnuckleDragger (
        , Induction(..)
        -- * Faking proofs
        , sorry
+       -- * Running KnuckleDragger proofs
+       , KD, runKD, runKDWith
        ) where
+
+import Control.Monad.Trans (liftIO)
 
 import Data.SBV
 import Data.SBV.Tools.KDKernel
+import Data.SBV.Tools.KDUtils
 
 import Control.Monad(when)
 
@@ -65,16 +72,16 @@ class ChainLemma steps step | steps -> step where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we error-out. A single step in @H@ indicates a user-error, since there's
   -- no sequence of steps to reason about.
-  chainLemma :: Proposition a => String -> a -> steps -> [Proven] -> IO Proven
+  chainLemma :: Proposition a => String -> a -> steps -> [Proven] -> KD Proven
 
   -- | Same as chainLemma, except tagged as Theorem
-  chainTheorem :: Proposition a => String -> a -> steps -> [Proven] -> IO Proven
+  chainTheorem :: Proposition a => String -> a -> steps -> [Proven] -> KD Proven
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
 
   -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
+  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
 
   -- | Internal, shouldn't be needed outside the library
   makeSteps :: steps -> [step]
@@ -86,17 +93,20 @@ class ChainLemma steps step | steps -> step where
   chainLemmaWith   = chainGeneric False
   chainTheoremWith = chainGeneric True
 
-  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proven] -> IO Proven
+  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proven] -> KD Proven
   chainGeneric taggedTheorem cfg nm result steps base = do
-        putStrLn $ "Chain: " ++ nm
+        liftIO $ putStrLn $ "Chain: " ++ nm
         let proofSteps = makeSteps steps
             len        = length proofSteps
+
         when (len == 1) $
          error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
                            , "**   There must be either none, or at least two steps."
                            , "**   Was given only one step."
                            ]
+
         go (1 :: Int) base (zipWith (makeInter steps) proofSteps (drop 1 proofSteps))
+
      where go _ sofar []
               | taggedTheorem = theoremWith cfg nm result sofar
               | True          = lemmaWith   cfg nm result sofar

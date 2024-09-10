@@ -27,12 +27,13 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Data.List (intercalate, sort, nub)
+import Control.Monad.Trans (liftIO)
 
-import System.IO (hFlush, stdout)
+import Data.List (intercalate, sort, nub)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
+import Data.SBV.Tools.KDUtils
 
 import qualified Data.SBV.List as SL
 
@@ -62,29 +63,11 @@ data Proven = Proven { rootOfTrust :: RootOfTrust -- ^ Root of trust, described 
                      , getProof    :: SBool       -- ^ Get the underlying boolean
                      }
 
--- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-start :: Bool -> String -> [String] -> IO Int
-start newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
-                            hFlush stdout
-                            return (length line)
-  where tab    = 2 * length (drop 1 nms)
-        indent = replicate tab ' '
-        tag    = what ++ ": " ++ intercalate "." nms
-        line   = indent ++ tag
-
--- | Finish a proof. First argument is what we got from the call of 'start' above.
-finish :: String -> Int -> IO ()
-finish what skip = do putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
-  where -- Ideally an aestheticly pleasing length of the line. Perhaps this
-        -- should be configurable, but this is good enough for now.
-        ribbonLength :: Int
-        ribbonLength = 40
-
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
-axiom :: Proposition a => String -> a -> IO Proven
+axiom :: Proposition a => String -> a -> KD Proven
 axiom nm p = do start False "Axiom" [nm] >>= finish "Axiom."
 
                 pure (internalAxiom nm p) { isUserAxiom = True }
@@ -114,7 +97,7 @@ sorry = Proven{ rootOfTrust = Self
         p (Forall (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proven] -> IO Proven
+lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proven] -> KD Proven
 lemmaGen cfg what nms inputProp by = do
     tab <- start (verbose cfg) what nms
 
@@ -142,24 +125,24 @@ lemmaGen cfg what nms inputProp by = do
                              | True    = intercalate ", " depNames
 
         -- What to do if the proof fails
-        cex  = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                  -- When trying to get a counter-example, only include in the
-                  -- implication those facts that are user-given axioms. This
-                  -- way our counter-example will be more likely to be relevant
-                  -- to the proposition we're currently proving. (Hopefully.)
-                  -- Remember that we first have to negate, and then skolemize!
-                  SatResult res <- satWith cfg $ do
-                                      mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
-                                      pure $ skolemize (qNot inputProp)
-                  print $ ThmResult res
-                  error "Failed"
+        cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                           -- When trying to get a counter-example, only include in the
+                           -- implication those facts that are user-given axioms. This
+                           -- way our counter-example will be more likely to be relevant
+                           -- to the proposition we're currently proving. (Hopefully.)
+                           -- Remember that we first have to negate, and then skolemize!
+                           SatResult res <- satWith cfg $ do
+                                               mapM_ constrain [getProof | Proven{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                               pure $ skolemize (qNot inputProp)
+                           print $ ThmResult res
+                           error "Failed"
 
         -- bailing out
-        failed r = do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                      print r
-                      error "Failed"
+        failed r = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                               print r
+                               error "Failed"
 
-    pRes <- proveWith cfg $ do
+    pRes <- liftIO $ proveWith cfg $ do
                 mapM_ (constrain . getProof) by :: Symbolic ()
                 pure $ skolemize (quantifiedBool inputProp)
 
@@ -172,19 +155,19 @@ lemmaGen cfg what nms inputProp by = do
       ThmResult ProofError{}    -> failed pRes
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
-lemma :: Proposition a => String -> a -> [Proven] -> IO Proven
+lemma :: Proposition a => String -> a -> [Proven] -> KD Proven
 lemma = lemmaWith defaultSMTCfg
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven
 lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
-theorem :: Proposition a => String -> a -> [Proven] -> IO Proven
+theorem :: Proposition a => String -> a -> [Proven] -> KD Proven
 theorem = theoremWith defaultSMTCfg
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> IO Proven
+theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proven] -> KD Proven
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable

@@ -30,6 +30,10 @@ import Data.SBV.Tools.KnuckleDragger
 import Data.SBV.List ((.:), (++), reverse)
 import qualified Data.SBV.List as SL
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+
 -- | Use an uninterpreted type for the elements
 data Elt
 mkUninterpretedSort ''Elt
@@ -38,9 +42,9 @@ mkUninterpretedSort ''Elt
 --
 -- We have:
 --
--- >>> appendNull
+-- >>> runKD appendNull
 -- Lemma: appendNull                       Q.E.D.
-appendNull :: IO Proven
+appendNull :: KD Proven
 appendNull = lemma "appendNull"
                    (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
                    []
@@ -49,9 +53,9 @@ appendNull = lemma "appendNull"
 --
 -- We have:
 --
--- >>> consApp
+-- >>> runKD consApp
 -- Lemma: consApp                          Q.E.D.
-consApp :: IO Proven
+consApp :: KD Proven
 consApp = lemma "consApp"
                 (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
                 []
@@ -60,9 +64,9 @@ consApp = lemma "consApp"
 --
 -- We have:
 --
--- >>> appendAssoc
+-- >>> runKD appendAssoc
 -- Lemma: appendAssoc                      Q.E.D.
-appendAssoc :: IO Proven
+appendAssoc :: KD Proven
 appendAssoc = do
    -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
@@ -75,9 +79,9 @@ appendAssoc = do
 -- | @reverse (xs ++ ys) == reverse ys ++ reverse xs@
 -- We have:
 --
--- >>> revApp
+-- >>> runKD revApp
 -- Lemma: revApp                           Q.E.D.
-revApp :: IO Proven
+revApp :: KD Proven
 revApp = do
    let q :: SymVal a => SList a -> SList a -> SBool
        q xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
@@ -89,10 +93,10 @@ revApp = do
 --
 -- We have:
 --
--- >>> reverseReverse
+-- >>> runKD reverseReverse
 -- Lemma: revApp                           Q.E.D.
 -- Lemma: reverseReverse                   Q.E.D.
-reverseReverse :: IO Proven
+reverseReverse :: KD Proven
 reverseReverse = do
    lRevApp <- revApp
 

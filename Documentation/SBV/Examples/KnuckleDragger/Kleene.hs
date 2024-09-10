@@ -30,6 +30,10 @@ import Prelude hiding((<=))
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene
 mkUninterpretedSort ''Kleene
@@ -61,7 +65,7 @@ x <= y = x + y .== y
 --
 -- We have:
 --
--- >>> kleeneProofs
+-- >>> runKD kleeneProofs
 -- Axiom: par_assoc                        Axiom.
 -- Axiom: par_comm                         Axiom.
 -- Axiom: par_idem                         Axiom.
@@ -87,7 +91,7 @@ x <= y = x + y .== y
 -- Lemma: star_star_2_3                    Q.E.D.
 -- Lemma: star_star_2_1                    Q.E.D.
 -- Lemma: star_star_2                      Q.E.D.
-kleeneProofs :: IO ()
+kleeneProofs :: KD ()
 kleeneProofs = do
 
   -- Kozen axioms

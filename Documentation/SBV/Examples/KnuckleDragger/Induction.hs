@@ -21,13 +21,17 @@ import Prelude hiding (sum, length)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
 -- We have:
 --
--- >>> sumProof
+-- >>> runKD sumProof
 -- Lemma: sum_correct                      Q.E.D.
-sumProof :: IO Proven
+sumProof :: KD Proven
 sumProof = do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
@@ -44,9 +48,9 @@ sumProof = do
 --
 -- We have:
 --
--- >>> sumSquareProof
+-- >>> runKD sumSquareProof
 -- Lemma: sumSquare_correct                Q.E.D.
-sumSquareProof :: IO Proven
+sumSquareProof :: KD Proven
 sumSquareProof = do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .== 0) 0 (n * n + sumSquare (n - 1))
