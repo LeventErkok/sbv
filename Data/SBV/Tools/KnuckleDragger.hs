@@ -41,7 +41,7 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Faking proofs
        , sorry
        -- * Running KnuckleDragger proofs
-       , KD, runKD, runKDWith
+       , KD, runKD, runKDWith, KDConfig(..), defaultKDConfig
        ) where
 
 import Control.Monad.Trans (liftIO)

@@ -11,30 +11,34 @@
 
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns             #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KDUtils (
          KD, runKD, runKDWith
        , start, finish
+       , KDConfig(..), defaultKDConfig
        ) where
 
-import Control.Monad.Reader (ReaderT, runReaderT)
+import Control.Monad.Reader (ReaderT, runReaderT, ask, MonadReader)
 import Control.Monad.Trans  (MonadIO(liftIO))
 
 import Data.List (intercalate)
 import System.IO (hFlush, stdout)
 
 -- | Keeping track of KD options/state
-data KDConfig = KDConfig
+data KDConfig = KDConfig { kdRibbonLength :: Int   -- ^ Lenght of the line as we print the proof
+                         }
 
 -- | Default KD-config
 defaultKDConfig :: KDConfig
-defaultKDConfig = KDConfig
+defaultKDConfig = KDConfig { kdRibbonLength = 40
+                           }
 
 -- | Monad for running KnuckleDragger proofs in.
 newtype KD a = KD (ReaderT KDConfig IO a)
-            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadFail)
+            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDConfig, MonadFail)
 
 -- | Run a KD proof, using the default configuration.
 runKD :: KD a -> IO a
@@ -56,8 +60,5 @@ start newLine what nms = liftIO $ do putStr $ line ++ if newLine then "\n" else 
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
 finish :: String -> Int -> KD ()
-finish what skip = liftIO $ putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
-  where -- Ideally an aestheticly pleasing length of the line. Perhaps this
-        -- should be configurable, but this is good enough for now.
-        ribbonLength :: Int
-        ribbonLength = 40
+finish what skip = do KDConfig{kdRibbonLength} <- ask
+                      liftIO $ putStrLn $ replicate (kdRibbonLength - skip) ' ' ++ what
