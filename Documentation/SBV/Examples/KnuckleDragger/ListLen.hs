@@ -86,3 +86,28 @@ badProof = do
    lemma "bad" (\(Forall @"xs" xs) -> p xs) [induct p]
 
    pure ()
+
+-- | @length (xs ++ ys) == length xs + length ys@
+--
+-- We have:
+--
+-- >>> lenAppend
+-- Lemma: lenAppend                        Q.E.D.
+lenAppend :: IO Proven
+lenAppend = lemma "lenAppend"
+                   (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                         SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
+                   []
+
+-- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
+--
+-- We have:
+--
+-- >>> lenAppend2
+-- Lemma: lenAppend2                       Q.E.D.
+lenAppend2 :: IO Proven
+lenAppend2 = lemma "lenAppend2"
+                   (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                             SL.length xs .== SL.length ys
+                         .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
+                   []
