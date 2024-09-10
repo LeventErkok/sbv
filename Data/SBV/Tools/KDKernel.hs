@@ -120,8 +120,6 @@ lemmaGen cfg what nms inputProp by = do
 
     let nm = intercalate "." nms
 
-        proposition = quantifiedBool (sAnd (map getProof by) .=> quantifiedBool inputProp)
-
         -- What to do if all goes well
         good = do finish ("Q.E.D." ++ modulo) tab
                   pure Proven { rootOfTrust = ros
@@ -161,7 +159,10 @@ lemmaGen cfg what nms inputProp by = do
                       print r
                       error "Failed"
 
-    pRes <- proveWith cfg proposition
+    pRes <- proveWith cfg $ do
+                mapM_ (constrain . getProof) by :: Symbolic ()
+                pure $ skolemize (quantifiedBool inputProp)
+
     case pRes of
       ThmResult Unsatisfiable{} -> good
       ThmResult Satisfiable{}   -> cex
