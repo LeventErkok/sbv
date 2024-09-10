@@ -54,7 +54,7 @@ revLen = do
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
 --
--- @length xs = 3 + length (reverse xs)@
+-- @length xs = ite (length xs .== 3) 5 (length xs)@
 --
 -- We have:
 --
@@ -62,11 +62,11 @@ revLen = do
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
---   xs = [] :: [Elt]
+--   xs = [Elt!val!1,Elt!val!2,Elt!val!1] :: [Elt]
 badRevLen :: IO ()
 badRevLen = do
    let p :: SList Elt -> SBool
-       p xs = length (reverse xs) .== 3 + length xs
+       p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
 
    lemma "badRevLen"
          (\(Forall @"xs" xs) -> p xs)
