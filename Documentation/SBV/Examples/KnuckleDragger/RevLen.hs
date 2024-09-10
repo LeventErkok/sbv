@@ -43,8 +43,6 @@ revLen = do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== length xs
 
-   induct <- inductionPrinciple p
-
    lemma "revLen"
          (\(Forall @"xs" xs) -> p xs)
-         [induct]
+         [induct p]

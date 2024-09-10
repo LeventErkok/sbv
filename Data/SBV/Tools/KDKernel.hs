@@ -27,8 +27,6 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Control.Monad (when)
-
 import Data.List (intercalate, sort, nub)
 
 import System.IO (hFlush, stdout)
@@ -87,21 +85,17 @@ finish what skip = do putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> IO Proven
-axiom = axiomGen True
+axiom nm p = do start False "Axiom" [nm] >>= finish "Axiom."
+
+                pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 -- Not exported.
-internalAxiom :: Proposition a => String -> a -> IO Proven
-internalAxiom = axiomGen False
-
--- | Generate an axiom. We only "display" the user-given axioms, not internal ones.
-axiomGen :: Proposition a => Bool -> String -> a -> IO Proven
-axiomGen isUserAxiom nm p = do when isUserAxiom $ start False "Axiom" [nm] >>= finish "Axiom."
-
-                               pure Proven{ rootOfTrust = None
-                                          , isUserAxiom = isUserAxiom
-                                          , getProof    = label nm (quantifiedBool p)
-                                          }
+internalAxiom :: Proposition a => String -> a -> Proven
+internalAxiom nm p = Proven { rootOfTrust = None
+                            , isUserAxiom = False
+                            , getProof    = label nm (quantifiedBool p)
+                            }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
@@ -195,22 +189,22 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
 class Induction a where
-  inductionPrinciple     :: (a -> SBool) -> IO Proven
-  inductionPrincipleAlt1 :: (a -> SBool) -> IO Proven
-  inductionPrincipleAlt2 :: (a -> SBool) -> IO Proven
+  induct     :: (a -> SBool) -> Proven
+  inductAlt1 :: (a -> SBool) -> Proven
+  inductAlt2 :: (a -> SBool) -> Proven
 
   -- The second and third principles are the same as first by default, unless we provide them explicitly.
-  inductionPrincipleAlt1 = inductionPrinciple
-  inductionPrincipleAlt2 = inductionPrinciple
+  inductAlt1 = induct
+  inductAlt2 = induct
 
   -- Induction for multiple argument predicates, inducting over the first argument
-  inductionPrinciple2 :: SymVal b                       => (a -> SBV b ->                   SBool) -> IO Proven
-  inductionPrinciple3 :: (SymVal b, SymVal c)           => (a -> SBV b -> SBV c ->          SBool) -> IO Proven
-  inductionPrinciple4 :: (SymVal b, SymVal c, SymVal d) => (a -> SBV b -> SBV c -> SBV d -> SBool) -> IO Proven
+  induct2 :: SymVal b                       => (a -> SBV b ->                   SBool) -> Proven
+  induct3 :: (SymVal b, SymVal c)           => (a -> SBV b -> SBV c ->          SBool) -> Proven
+  induct4 :: (SymVal b, SymVal c, SymVal d) => (a -> SBV b -> SBV c -> SBV d -> SBool) -> Proven
 
-  inductionPrinciple2 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b)                       -> f a b)
-  inductionPrinciple3 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c)            -> f a b c)
-  inductionPrinciple4 f = inductionPrinciple $ \a -> quantifiedBool (\(Forall b) (Forall c) (Forall d) -> f a b c d)
+  induct2 f = induct $ \a -> quantifiedBool (\(Forall b)                       -> f a b)
+  induct3 f = induct $ \a -> quantifiedBool (\(Forall b) (Forall c)            -> f a b c)
+  induct4 f = induct $ \a -> quantifiedBool (\(Forall b) (Forall c) (Forall d) -> f a b c d)
 
 -- | Induction over SInteger. We provide various induction principles here: The first one
 -- is over naturals, will only prove predicates that explicitly restrict the argument to >= 0.
@@ -219,43 +213,36 @@ class Induction a where
 instance Induction SInteger where
 
    -- | Induction over naturals. Will prove predicates of the form @\n -> n >= 0 .=> predicate n@.
-   inductionPrinciple p = do
-      let qb = quantifiedBool
+   induct p = internalAxiom "Nat.induction" principle
+      where qb = quantifiedBool
 
-          principle =       p 0 .&& qb (\(Forall n) -> (n .>= 0 .&& p n) .=> p (n+1))
-                    .=> qb -----------------------------------------------------------
-                                      (\(Forall n) -> n .>= 0 .=> p n)
+            principle =       p 0 .&& qb (\(Forall n) -> (n .>= 0 .&& p n) .=> p (n+1))
+                      .=> qb -----------------------------------------------------------
+                                        (\(Forall n) -> n .>= 0 .=> p n)
 
-      internalAxiom "Nat.induction" principle
 
    -- | Induction over integers, using the strategy that @P(n)@ is equivalent to @P(n+1)@
    -- (i.e., not just @P(n) => P(n+1)@), thus covering the entire range.
-   inductionPrincipleAlt1 p = do
-      let qb = quantifiedBool
+   inductAlt1 p = internalAxiom "Integer.induction" principle
+     where qb = quantifiedBool
 
-          principle =       p 0 .&& qb (\(Forall i) -> p i .== p (i+1))
-                    .=> qb ---------------------------------------------
-                                    (\(Forall i) -> p i)
-
-      internalAxiom "Integer.induction" principle
+           principle =       p 0 .&& qb (\(Forall i) -> p i .== p (i+1))
+                     .=> qb ---------------------------------------------
+                                     (\(Forall i) -> p i)
 
    -- | Induction over integers, using the strategy that @P(n) => P(n+1)@ and @P(n) => P(n-1)@.
-   inductionPrincipleAlt2 p = do
-      let qb = quantifiedBool
+   inductAlt2 p = internalAxiom "Integer.splitInduction" principle
+     where qb = quantifiedBool
 
-          principle =       p 0 .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
-                    .=> qb ---------------------------------------------------------
-                                           (\(Forall i) -> p i)
-
-      internalAxiom "Integer.splitInduction" principle
+           principle =       p 0 .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
+                     .=> qb ---------------------------------------------------------
+                                             (\(Forall i) -> p i)
 
 -- | Induction over lists
 instance SymVal a => Induction (SList a) where
-  inductionPrinciple p = do
-     let qb a = quantifiedBool a
+  induct p = internalAxiom "List(a).induction" principle
+    where qb a = quantifiedBool a
 
-         principle =       p SL.nil .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
-                   .=> qb ----------------------------------------------------------------------
-                                             (\(Forall xs) -> p xs)
-
-     internalAxiom "List(a).induction" principle
+          principle =       p SL.nil .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
+                    .=> qb ----------------------------------------------------------------------
+                                              (\(Forall xs) -> p xs)

@@ -10,7 +10,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -30,6 +34,10 @@ import qualified Data.SBV.List as SL
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
 
+-- | Use an uninterpreted type for the elements
+data Elt
+mkUninterpretedSort ''Elt
+
 -- | Prove that the length of a list is one more than the length of its tail.
 --
 -- We have:
@@ -38,22 +46,20 @@ import qualified Data.SBV.List as SL
 -- Lemma: length_correct                   Q.E.D.
 listLengthProof :: IO Proven
 listLengthProof = do
-   let length :: SList Integer -> SInteger
+   let length :: SList Elt -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
 
-       spec :: SList Integer -> SInteger
+       spec :: SList Elt -> SInteger
        spec = SL.length
 
-       p :: SList Integer -> SBool
+       p :: SList Elt -> SBool
        p xs = observe "imp" (length xs) .== observe "spec" (spec xs)
 
-   induct <- inductionPrinciple p
-
-   lemma "length_correct" (\(Forall @"xs" xs) -> p xs) [induct]
+   lemma "length_correct" (\(Forall @"xs" xs) -> p xs) [induct p]
 
 -- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
--- Below, we do a variant of the 'listLengthProof', but with a bad implementation, and see the
--- counter-example. Our implementation returns an incorrect answer if the given list is longer
+-- Below, we do a variant of the 'listLengthProof', but with a bad implementation over integers,
+-- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
 -- than 5 elements and have 42 in it. We have:
 --
 -- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
@@ -77,8 +83,6 @@ badProof = do
        p :: SList Integer -> SBool
        p xs = observe "imp" (badLength xs) .== observe "spec" (spec xs)
 
-   induct <- inductionPrinciple p
-
-   lemma "bad" (\(Forall @"xs" xs) -> p xs) [induct]
+   lemma "bad" (\(Forall @"xs" xs) -> p xs) [induct p]
 
    pure ()

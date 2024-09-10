@@ -38,9 +38,7 @@ sumProof = do
        p :: SInteger -> SBool
        p n = observe "imp" (sum n) .== observe "spec" (spec n)
 
-   induct <- inductionPrinciple p
-
-   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct]
+   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
@@ -59,6 +57,4 @@ sumSquareProof = do
        p :: SInteger -> SBool
        p n = observe "imp" (sumSquare n) .== observe "spec" (spec n)
 
-   induct <- inductionPrinciple p
-
-   lemma "sumSquare_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct]
+   lemma "sumSquare_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]

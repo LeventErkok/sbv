@@ -10,7 +10,11 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
@@ -18,13 +22,17 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.AppendRev where
 
-import Prelude hiding (sum, length, reverse, (++))
+import Prelude hiding (reverse, (++))
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
 import Data.SBV.List ((.:), (++), reverse)
 import qualified Data.SBV.List as SL
+
+-- | Use an uninterpreted type for the elements
+data Elt
+mkUninterpretedSort ''Elt
 
 -- | @xs ++ [] == xs@
 --
@@ -34,8 +42,8 @@ import qualified Data.SBV.List as SL
 -- Lemma: appendNull                       Q.E.D.
 appendNull :: IO Proven
 appendNull = lemma "appendNull"
-                (\(Forall @"xs" (xs :: SList Integer)) -> xs ++ SL.nil .== xs)
-                []
+                   (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
+                   []
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
@@ -45,8 +53,8 @@ appendNull = lemma "appendNull"
 -- Lemma: consApp                          Q.E.D.
 consApp :: IO Proven
 consApp = lemma "consApp"
-             (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
-             []
+                (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
+                []
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
@@ -62,15 +70,12 @@ appendAssoc = do
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
        p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
-   -- Do the proof over integers. We use 'inductionPrinciple3', since our predicate has 3 arguments.
-   induct <- inductionPrinciple3 (p @Integer)
-
    -- Get a hold on to the consApp lemma that we'll need
    lconsApp <- consApp
 
    lemma "appendAssoc"
-         (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
-         [lconsApp , induct]
+         (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
+         [lconsApp , induct3 (p @Elt)]
 
 -- | @reverse (xs ++ ys) == reverse ys ++ reverse xs@
 -- We have:
@@ -95,9 +100,9 @@ revApp = do
    lAppendAssoc <- appendAssoc
 
    revApp_induction_pre <- chainLemma "revApp_induction_pre"
-      (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
+      (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys)
             -> reverse ((x .: xs) ++ ys) .== (reverse (xs ++ ys)) ++ SL.singleton x)
-      (\(x :: SInteger) xs ys ->
+      (\(x :: SElt) xs ys ->
            [ reverse ((x .: xs) ++ ys)
            , reverse (x .: (xs ++ ys))
            , reverse (xs ++ ys) ++ SL.singleton x
@@ -105,9 +110,9 @@ revApp = do
       ) [lconsApp]
 
    revApp_induction_post <- chainLemma "revApp_induction_post"
-      (\(Forall @"x" (x :: SInteger)) (Forall @"xs" xs) (Forall @"ys" ys)
+      (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys)
             -> (reverse ys ++ reverse xs) ++ SL.singleton x .== reverse ys ++ reverse (x .: xs))
-      (\(x :: SInteger) xs ys ->
+      (\(x :: SElt) xs ys ->
           [ (reverse ys ++ reverse xs) ++ SL.singleton x
           , reverse ys ++ (reverse xs ++ SL.singleton x)
           , reverse ys ++ reverse (x .: xs)
@@ -117,10 +122,8 @@ revApp = do
    let q :: SymVal a => SList a -> SList a -> SBool
        q xs ys = reverse (xs ++ ys) .== (reverse ys ++ reverse xs)
 
-   inductQ <- inductionPrinciple2 (q @Integer)
-
-   lemma "revApp" (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
-         [sorry, revApp_induction_pre, inductQ, revApp_induction_post]
+   lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs)
+         [sorry, revApp_induction_pre, induct2 (q @Elt), revApp_induction_post]
 
 -- | @reverse (reverse xs) == xs@
 --
@@ -150,8 +153,6 @@ reverseReverse = do
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs
 
-   induct <- inductionPrinciple (p @Integer)
-
    lemma "reverseReverse"
-         (\(Forall @"xs" (xs :: SList Integer)) -> p xs)
-         [induct, lRevApp, lAppendAssoc]
+         (\(Forall @"xs" (xs :: SList Elt)) -> p xs)
+         [induct (p @Elt), lRevApp, lAppendAssoc]
