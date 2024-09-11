@@ -20,8 +20,8 @@ module Data.SBV.Control.BaseIO where
 import Data.SBV.Control.Query (Assignment)
 import Data.SBV.Control.Types (CheckSatResult, SMTInfoFlag, SMTInfoResponse, SMTOption, SMTReasonUnknown)
 import Data.SBV.Core.Concrete (CV)
-import Data.SBV.Core.Data     (HasKind, Symbolic, SymArray, SymVal, SBool, SBV, SBVType, Lambda(..))
-import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV, Name, SymbolicT)
+import Data.SBV.Core.Data     (HasKind, Symbolic, SymVal, SBool, SBV, SBVType)
+import Data.SBV.Core.Symbolic (Query, QueryContext, QueryState, State, SMTModel, SMTResult, SV, Name)
 
 import qualified Data.SBV.Control.Query as Trans
 import qualified Data.SBV.Control.Utils as Trans
@@ -398,31 +398,6 @@ freshVar_ = Trans.freshVar_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshVar'
 freshVar :: SymVal a => String -> Query (SBV a)
 freshVar = Trans.freshVar
-
--- | Similar to 'freshArray', except creates unnamed array.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshArray_'
-freshArray_ :: (SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> Query (array a b)
-freshArray_ = Trans.freshArray_
-
--- | Create a fresh array in query mode. Again, you should prefer
--- creating arrays before the queries start using 'Data.SBV.newArray', but this
--- method can come in handy in occasional cases where you need a new array
--- after you start the query based interaction.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshArray'
-freshArray :: (SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> Query (array a b)
-freshArray = Trans.freshArray
-
--- | Create a fresh lambda array
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshLambdaArray'
-freshLambdaArray :: (HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b), SymArray array) => String -> (a -> b) -> Query (array a b)
-freshLambdaArray = Trans.freshLambdaArray
-
--- | Create a fresh lambda array, unnamed
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.freshLambdaArray_'
-freshLambdaArray_ :: (HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b), SymArray array) => (a -> b) -> Query (array a b)
-freshLambdaArray_ = Trans.freshLambdaArray_
 
 -- | If 'Data.SBV.verbose' is 'True', print the message, useful for debugging messages
 -- in custom queries. Note that 'Data.SBV.redirectVerbose' will be respected: If a

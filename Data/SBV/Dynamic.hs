@@ -21,8 +21,6 @@ module Data.SBV.Dynamic
   -- *** Abstract symbolic value type
     SVal
   , HasKind(..), Kind(..), CV(..), CVal(..), cvToBool
-  -- *** SMT Arrays of symbolic values
-  , SArr, readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   -- ** Creating a symbolic variable
   , Symbolic
   , Quantifier(..)

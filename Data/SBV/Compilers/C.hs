@@ -208,12 +208,13 @@ specifier cfg sv = case kindOf sv of
                      KChar         -> text "%c"
                      KRational     -> die   "rational sort"
                      KFP{}         -> die   "arbitrary float sort"
-                     KList k       -> die $ "list sort: " ++ show k
-                     KSet  k       -> die $ "set sort: " ++ show k
-                     KUserSort s _ -> die $ "user sort: " ++ s
-                     KTuple k      -> die $ "tuple sort: " ++ show k
+                     KList k       -> die $ "list sort: "   ++ show k
+                     KSet  k       -> die $ "set sort: "    ++ show k
+                     KUserSort s _ -> die $ "user sort: "   ++ s
+                     KTuple k      -> die $ "tuple sort: "  ++ show k
                      KMaybe  k     -> die $ "maybe sort: "  ++ show k
                      KEither k1 k2 -> die $ "either sort: " ++ show (k1, k2)
+                     KArray  k1 k2 -> die $ "array sort: "  ++ show (k1, k2)
   where u8InHex = cgShowU8InHex cfg
 
         spec :: (Bool, Int) -> Doc
@@ -448,7 +449,7 @@ genDriver cfg randVals fn inps outs mbRet = [pre, header, body, post]
 
 -- | Generate the C program
 genCProg :: CgConfig -> String -> Doc -> Result -> [(String, CgVal)] -> [(String, CgVal)] -> Maybe SV -> Doc -> ([Doc], [String])
-genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls arrs _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
+genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preConsts) tbls _uis axioms (SBVPgm asgns) cstrs origAsserts _) inVars outVars mbRet extDecls
   | isNothing (cgInteger cfg) && KUnbounded `Set.member` kindInfo
   = error $ "SBV->C: Unbounded integers are not supported by the C compiler."
           ++ "\nUse 'cgIntegerSize' to specify a fixed size for SInteger representation."
@@ -481,8 +482,6 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
   = error "SBV->C: Cannot compile in the presence of 'smtFunction' definitions, use 'compileToCLib' instead."
   | not (null cstrs)
   = tbd "Explicit constraints"
-  | not (null arrs)
-  = tbd "User specified arrays"
   | True
   = ([pre, header, post], flagsNeeded)
  where notyet m = error $ "SBV->C: " ++ m ++ " are currently not supported by the C compiler. Please get in touch if you'd like support for this feature!"
@@ -545,11 +544,12 @@ genCProg cfg fn proto (Result pinfo kindInfo _tvals _ovals cgs topInps (_, preCo
                       len (KBounded True  n) = 4 + length (show n) -- SIntN
                       len KRational{}        = die   "Rational."
                       len KFP{}              = die   "Arbitrary float."
-                      len (KList s)          = die $ "List sort: " ++ show s
-                      len (KSet  s)          = die $ "Set sort: " ++ show s
-                      len (KTuple s)         = die $ "Tuple sort: " ++ show s
-                      len (KMaybe k)         = die $ "Maybe sort: " ++ show k
+                      len (KList s)          = die $ "List sort: "   ++ show s
+                      len (KSet  s)          = die $ "Set sort: "    ++ show s
+                      len (KTuple s)         = die $ "Tuple sort: "  ++ show s
+                      len (KMaybe k)         = die $ "Maybe sort: "  ++ show k
                       len (KEither k1 k2)    = die $ "Either sort: " ++ show (k1, k2)
+                      len (KArray  k1 k2)    = die $ "Array sort:  " ++ show (k1, k2)
                       len (KUserSort s _)    = die $ "Uninterpreted sort: " ++ s
 
                       getMax 8 _      = 8  -- 8 is the max we can get with SInteger, so don't bother looking any further
@@ -811,11 +811,12 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
                                                KUnbounded      -> case cgInteger cfg of
                                                                     Nothing -> (True, True) -- won't matter, it'll be rejected later
                                                                     Just i  -> (True, canOverflow True i)
-                                               KList     s     -> die $ "List sort " ++ show s
-                                               KSet      s     -> die $ "Set sort " ++ show s
-                                               KTuple    s     -> die $ "Tuple sort " ++ show s
-                                               KMaybe    ek    -> die $ "Maybe sort " ++ show ek
+                                               KList     s     -> die $ "List sort "   ++ show s
+                                               KSet      s     -> die $ "Set sort "    ++ show s
+                                               KTuple    s     -> die $ "Tuple sort "  ++ show s
+                                               KMaybe    ek    -> die $ "Maybe sort "  ++ show ek
                                                KEither   k1 k2 -> die $ "Either sort " ++ show (k1, k2)
+                                               KArray    k1 k2 -> die $ "Array  sort " ++ show (k1, k2)
                                                KUserSort s _   -> die $ "Uninterpreted sort: " ++ s
 
         -- Div/Rem should be careful on 0, in the SBV world x `div` 0 is 0, x `rem` 0 is x

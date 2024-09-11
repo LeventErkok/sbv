@@ -39,7 +39,7 @@ module Data.SBV.Trans (
   -- ** Symbolic lists
   , SList
   -- * Arrays of symbolic values
-  , SymArray(newArray_, newArray, readArray, writeArray, mergeArrays), SArray
+  , readArray, writeArray, SArray
 
   -- * Creating symbolic values
   -- ** Single value

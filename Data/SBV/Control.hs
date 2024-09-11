@@ -22,9 +22,6 @@ module Data.SBV.Control (
      -- * Create a fresh variable
      , freshVar_, freshVar
 
-     -- * Create a fresh array
-     , freshArray_, freshArray
-
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat, ensureSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 
@@ -95,7 +92,7 @@ import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, ge
                                       , getAbduct, getAbductNext
                                       , getAssertions, getAssignment
                                       , mkSMTResult, freshVar_, freshVar
-                                      , freshArray, freshArray_, checkSat, ensureSat
+                                      , checkSat, ensureSat
                                       , checkSatUsing, getValue
                                       , getUninterpretedValue, timeout, io)
 import Data.SBV.Control.Utils (registerUISMTFunction)

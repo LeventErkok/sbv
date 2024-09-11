@@ -204,7 +204,7 @@ module Data.SBV (
   -- ** Sets
   , RCSet(..), SSet
   -- * Arrays of symbolic values
-  , SymArray(readArray, writeArray, mergeArrays, sListArray), newArray_, newArray, SArray, lambdaAsArray
+  , readArray, writeArray, SArray
 
   -- * Creating symbolic values
   -- ** Single value
@@ -434,7 +434,7 @@ import Control.Monad (when)
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
                                         output, symbolic, symbolics, mkSymVal,
-                                        newArray, newArray_, bvExtract, bvDrop, bvTake, (#))
+                                        bvExtract, bvDrop, bvTake, (#))
 import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         solve, sBool, sBool_, sBools, sChar, sChar_, sChars,
                                         sDouble, sDouble_, sDoubles, sFloat, sFloat_, sFloats,

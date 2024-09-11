@@ -34,7 +34,7 @@ module Data.SBV.Core.Data
  , SWord, SInt, WordN, IntN
  , SRational
  , SChar, SString, SList
- , SEither, SMaybe
+ , SEither, SMaybe, SArray
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
@@ -47,7 +47,6 @@ module Data.SBV.Core.Data
  , SVal(..)
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
  , SBV(..), NodeId(..), mkSymSBV
- , ArrayContext(..), ArrayInfo, SymArray(..), SArray(..)
  , sbvToSV, sbvToSymSV, forceSVArg
  , SBVExpr(..), newExpr
  , cache, Cached, uncache, uncacheAI, HasKind(..)
@@ -86,9 +85,6 @@ import Data.Typeable          (Typeable)
 import GHC.Generics (Generic, U1(..), M1(..), (:*:)(..), K1(..), (:+:)(..))
 import qualified GHC.Generics  as G
 import qualified Data.Generics as G (Data(..))
-
-import qualified Data.IORef         as R    (readIORef)
-import qualified Data.IntMap.Strict as IMap (size, insert)
 
 import System.Random
 
@@ -208,6 +204,9 @@ type SEither a b = SBV (Either a b)
 
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
+
+-- | Symbolic 'Array'
+type SArray a b = SBV (a -> b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
 -- both regular sets and complements, i.e., those obtained from the
@@ -675,103 +674,6 @@ instance (Random a, SymVal a) => Random (SBV a) where
                        _                  -> error "SBV.Random: Cannot generate random values with symbolic bounds"
   random         g = let (v, g') = random g in (literal (v :: a) , g')
 
----------------------------------------------------------------------------------
--- * Symbolic Arrays
----------------------------------------------------------------------------------
-
--- | Arrays of symbolic values
--- An @array a b@ is an array indexed by the type @'SBV' a@, with elements of type @'SBV' b@.
---
--- If a default value is supplied, then all the array elements will be initialized to this value.
--- Otherwise, they will be left unspecified, i.e., a read from an unwritten location will produce
--- an uninterpreted constant.
---
--- The reason for this class is rather historic. In the past, SBV provided two different kinds of
--- arrays: an `SArray` abstraction that mapped directly to SMTLib arrays  (which is still available
--- today), and a functional notion of arrays that used internal caching, called @SFunArray@. The latter
--- has been removed as the code turned out to be rather tricky and hard to maintain; so we only
--- have one instance of this class. But end users can add their own instances, if needed.
---
--- NB. 'sListArray' insists on a concrete initializer, because not having one would break
--- referential transparency. See https://github.com/LeventErkok/sbv/issues/553 for details.
-class SymArray array where
-  -- | Generalization of 'Data.SBV.newArray_'
-  newArray_ :: (MonadSymbolic m, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
-
-  -- | Generalization of 'Data.SBV.newArray'
-  newArray  :: (MonadSymbolic m, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
-
-  -- | Create a literal array
-  sListArray :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
-
-  -- | Read the array element at @a@
-  readArray :: array a b -> SBV a -> SBV b
-
-  -- | Update the element at @a@ to be @b@
-  writeArray :: SymVal b => array a b -> SBV a -> SBV b -> array a b
-
-  -- | Merge two given arrays on the symbolic condition
-  -- Intuitively: @mergeArrays cond a b = if cond then a else b@.
-  -- Merging pushes the if-then-else choice down on to elements
-  mergeArrays :: SymVal b => SBV Bool -> array a b -> array a b -> array a b
-
-  -- | Internal function, not exported to the user
-  newArrayInState :: (HasKind a, HasKind b) => Maybe String -> Either (Maybe (SBV b)) String -> State -> IO (array a b)
-
-  {-# MINIMAL readArray, writeArray, mergeArrays, ((newArray_, newArray) | newArrayInState), sListArray #-}
-  newArray_   mbVal = symbolicEnv >>= liftIO . newArrayInState Nothing   (Left mbVal)
-  newArray nm mbVal = symbolicEnv >>= liftIO . newArrayInState (Just nm) (Left mbVal)
-
-  -- Despite our MINIMAL pragma and default implementations for newArray_ and
-  -- newArray, we must provide a dummy implementation for newArrayInState:
-  newArrayInState = error "undefined: newArrayInState"
-
--- | Arrays implemented in terms of SMT-arrays: <https://smt-lib.org/theories-ArraysEx.shtml>
---
---   * Maps directly to SMT-lib arrays
---
---   * Reading from an uninitialized value is OK. If the default value is given in 'newArray', it will
---     be the result. Otherwise, the read yields an uninterpreted constant.
---
---   * Can check for equality of these arrays
---
---   * Cannot be used in code-generation (i.e., compilation to C)
---
---   * Cannot quick-check theorems using @SArray@ values
-newtype SArray a b = SArray { unSArray :: SArr }
-
-instance (HasKind a, HasKind b) => Show (SArray a b) where
-  show SArray{} = "SArray<" ++ showType (Proxy @a) ++ ":" ++ showType (Proxy @b) ++ ">"
-
-instance SymArray SArray where
-  readArray   (SArray arr) (SBV a)               = SBV (readSArr arr a)
-  writeArray  (SArray arr) (SBV a)    (SBV b)    = SArray (writeSArr arr a b)
-  mergeArrays (SBV t)      (SArray a) (SArray b) = SArray (mergeSArr t a b)
-
-  sListArray :: forall a b. (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> SArray a b
-  sListArray initializer = foldl (uncurry . writeArray) arr
-    where arr = SArray $ SArr ks $ cache r
-           where ks   = (kindOf (Proxy @a), kindOf (Proxy @b))
-                 r st = do amap <- R.readIORef (rArrayMap st)
-
-                           let k    = ArrayIndex (IMap.size amap) (sbvContext st)
-                               iVal = literal initializer
-
-                           iSV <- sbvToSV st iVal
-
-                           let upd  = IMap.insert (unArrayIndex k) ("array_" ++ show k, ks, ArrayFree (Left (Just iSV)))
-
-                           k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-                           return k
-
-  newArrayInState :: forall a b. (HasKind a, HasKind b) => Maybe String -> Either (Maybe (SBV b)) String -> State -> IO (SArray a b)
-  newArrayInState mbNm eiVal st = do mapM_ (registerKind st) [aknd, bknd]
-                                     SArray <$> newSArr st (aknd, bknd) (mkNm mbNm) (either (Left . (unSBV <$>)) Right eiVal)
-     where mkNm Nothing   t = "array_" ++ show t
-           mkNm (Just nm) _ = nm
-           aknd = kindOf (Proxy @a)
-           bknd = kindOf (Proxy @b)
-
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
 --
@@ -824,6 +726,13 @@ class EqSymbolic a where
   distinct []     = sTrue
   distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
 
+  x `sElem`    xs = sAny (.== x) xs
+  x `sNotElem` xs = sNot (x `sElem` xs)
+
+  -- Default implementation for '(.==)' if the type is 'Generic'
+  default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
+  (.==) = symbolicEqDefault
+
   -- Default implementation of 'distinctExcept'. Note that we override
   -- this method for the base types to generate better code.
   distinctExcept es ignored = go es
@@ -832,13 +741,6 @@ class EqSymbolic a where
           go []     = sTrue
           go (x:xs) = let xOK  = isIgnored x .|| sAll (\y -> isIgnored y .|| x ./= y) xs
                       in xOK .&& go xs
-
-  x `sElem`    xs = sAny (.== x) xs
-  x `sNotElem` xs = sNot (x `sElem` xs)
-
-  -- Default implementation for '(.==)' if the type is 'Generic'
-  default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
-  (.==) = symbolicEqDefault
 
 -- | Default implementation of symbolic equality, when the underlying type is generic
 -- Not exported, used with automatic deriving.

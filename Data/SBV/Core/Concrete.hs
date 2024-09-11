@@ -89,6 +89,7 @@ data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
           | CTuple    ![CVal]              -- ^ Tuple
           | CMaybe    !(Maybe CVal)        -- ^ Maybe
           | CEither   !(Either CVal CVal)  -- ^ Disjoint union
+          | CArray    !(CVal -> CVal)      -- ^ Arrays are backed by functions concretely
           deriving G.Data
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
@@ -107,6 +108,7 @@ cvRank CUserSort {} = 10
 cvRank CTuple    {} = 11
 cvRank CMaybe    {} = 12
 cvRank CEither   {} = 13
+cvRank CArray    {} = 14
 
 -- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
@@ -311,6 +313,7 @@ liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CArray    _)) = error "Data.SBV: liftCV: Unexpected array constant received. Please report!"
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -370,6 +373,7 @@ mapCV r i f d af ra c s u x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                           CTuple{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with tuples!"
                                                           CMaybe{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with maybe!"
                                                           CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
+                                                          CArray{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with arrays!"
 
 -- | Map a binary function through a 'CV'.
 mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
@@ -479,6 +483,7 @@ mkConstCV k@KSet{}        a = error $ "Unexpected call to mkConstCV (" ++ show k
 mkConstCV k@KTuple{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KMaybe{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KEither{}     a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
+mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
 -- | Generate a random constant value ('CVal') of the correct kind.
 randomCVal :: Kind -> IO CVal
@@ -519,6 +524,7 @@ randomCVal k =
                              if i
                                 then CEither . Left  <$> randomCVal k1
                                 else CEither . Right <$> randomCVal k2
+    KArray _ k2        -> CArray . const <$> randomCVal k2
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

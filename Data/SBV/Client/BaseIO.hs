@@ -24,7 +24,7 @@
 
 module Data.SBV.Client.BaseIO where
 
-import Data.SBV.Core.Data      (HasKind, Kind, Outputtable, Penalty, SymArray,
+import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat, SWord, SInt,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
@@ -278,18 +278,6 @@ symbolics = Trans.symbolics
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.mkSymVal'
 mkSymVal :: SymVal a => VarContext -> Maybe String -> Symbolic (SBV a)
 mkSymVal = Trans.mkSymVal
-
--- | Create a new anonymous array, possibly with a default initial value.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.newArray_'
-newArray_ :: (SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> Symbolic (array a b)
-newArray_ = Trans.newArray_
-
--- | Create a named new array, possibly with a default initial value.
---
--- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.newArray'
-newArray :: (SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> Symbolic (array a b)
-newArray = Trans.newArray
 
 -- Data.SBV.Core.Model:
 

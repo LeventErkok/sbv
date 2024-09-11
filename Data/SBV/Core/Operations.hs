@@ -42,8 +42,6 @@ module Data.SBV.Core.Operations
   , svBlastLE, svBlastBE
   , svAddConstant, svIncrement, svDecrement
   , svFloatAsSWord32, svDoubleAsSWord64, svFloatingPointAsSWord
-  -- ** Basic array operations
-  , SArr(..), readSArr, writeSArr, mergeSArr, newSArr, eqSArr
   -- Utils
   , mkSymOp
   )
@@ -52,9 +50,6 @@ module Data.SBV.Core.Operations
 import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
 import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl')
-
-import qualified Data.IORef         as R    (readIORef)
-import qualified Data.IntMap.Strict as IMap (size, insert)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -1063,91 +1058,6 @@ svMkOverflow2 o x y = SVal KBool (Right (cache r))
     where r st = do sx <- svToSV st x
                     sy <- svToSV st y
                     newExpr st KBool $ SBVApp (OverflowOp o) [sx, sy]
-
----------------------------------------------------------------------------------
--- * Symbolic Arrays
----------------------------------------------------------------------------------
-
--- | Arrays in terms of SMT-Lib arrays
-data SArr = SArr (Kind, Kind) (Cached ArrayIndex)
-
--- | Read the array element at @a@
-readSArr :: SArr -> SVal -> SVal
-readSArr (SArr (_, bk) f) a = SVal bk $ Right $ cache r
-  where r st = do arr <- uncacheAI f st
-                  i   <- svToSV st a
-
-                  let actx = unArrayContext arr
-                  checkCompatibleContext actx (contextOfSV i)
-
-                  newExpr st bk (SBVApp (ArrRead arr) [i])
-
--- | Update the element at @a@ to be @b@
-writeSArr :: SArr -> SVal -> SVal -> SArr
-writeSArr (SArr ainfo f) a b = SArr ainfo $ cache g
-  where g st = do arr  <- uncacheAI f st
-                  addr <- svToSV st a
-                  val  <- svToSV st b
-                  amap <- R.readIORef (rArrayMap st)
-
-                  let actx = unArrayContext arr
-                  checkCompatibleContext actx (contextOfSV addr)
-                  checkCompatibleContext actx (contextOfSV val)
-
-                  let j   = ArrayIndex (IMap.size amap) actx
-                      upd = IMap.insert (unArrayIndex j) ("array_" ++ show j, ainfo, ArrayMutate arr addr val)
-
-                  j `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-                  return j
-
--- | Merge two given arrays on the symbolic condition
--- Intuitively: @mergeArrays cond a b = if cond then a else b@.
--- Merging pushes the if-then-else choice down on to elements
-mergeSArr :: SVal -> SArr -> SArr -> SArr
-mergeSArr t (SArr ainfo a) (SArr _ b) = SArr ainfo $ cache h
-  where h st = do ai <- uncacheAI a st
-                  bi <- uncacheAI b st
-                  ts <- svToSV st t
-
-                  let ctx = sbvContext st
-                  checkCompatibleContext (unArrayContext ai) ctx
-                  checkCompatibleContext (unArrayContext bi) ctx
-                  checkCompatibleContext (contextOfSV    ts) ctx
-
-                  amap <- R.readIORef (rArrayMap st)
-
-                  let k   = ArrayIndex (IMap.size amap) (sbvContext st)
-                      upd = IMap.insert (unArrayIndex k) ("array_" ++ show k, ainfo, ArrayMerge ts ai bi)
-
-                  k `seq` modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-                  return k
-
--- | Create a named new array
-newSArr :: State -> (Kind, Kind) -> (Int -> String) -> Either (Maybe SVal) String -> IO SArr
-newSArr st ainfo mkNm mbVal = do
-    amap <- R.readIORef $ rArrayMap st
-
-    mbSWDef <- case mbVal of
-                 Left mbSV -> case mbSV of
-                                Nothing -> pure (Left Nothing)
-                                Just sv -> Left . Just <$> svToSV st sv
-                 Right lam -> pure (Right lam)
-
-    let i   = ArrayIndex (IMap.size amap) (sbvContext st)
-        nm  = mkNm (unArrayIndex i)
-        upd = IMap.insert (unArrayIndex i) (nm, ainfo, ArrayFree mbSWDef)
-
-    registerLabel "SArray declaration" st nm
-
-    modifyState st rArrayMap upd $ modifyIncState st rNewArrs upd
-    return $ SArr ainfo $ cache $ const $ return i
-
--- | Compare two arrays for equality
-eqSArr :: SArr -> SArr -> SVal
-eqSArr (SArr _ a) (SArr _ b) = SVal KBool $ Right $ cache c
-  where c st = do ai <- uncacheAI a st
-                  bi <- uncacheAI b st
-                  newExpr st KBool (SBVApp (ArrEq ai bi) [])
 
 --------------------------------------------------------------------------------
 -- Utility functions

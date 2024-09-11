@@ -16,6 +16,7 @@
 {-# LANGUAGE DeriveFunctor           #-}
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE FlexibleInstances       #-}
+{-# LANGUAGE InstanceSigs            #-}
 {-# LANGUAGE Rank2Types              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE TypeApplications        #-}
@@ -50,7 +51,8 @@ module Data.SBV.Core.Model (
   , liftQRem, liftDMod, symbolicMergeWithKind
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
-  , sbvQuickCheck, lambdaAsArray
+  , sbvQuickCheck
+  , readArray, writeArray
   )
   where
 
@@ -318,6 +320,18 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
+
+instance (HasKind a, HasKind b, SymVal a, SymVal b, Lambda Symbolic (a -> b)) => SymVal (a -> b) where
+   mkSymVal = genMkSymVar (kindOf (Proxy @(a -> b)))
+
+   literal f = SBV . SVal k . Right $ cache g
+       where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
+
+             g st = do def <- lambdaStr st (kindOf (Proxy @b)) f
+                       newExpr st k (SBVApp (ArrayLambda def) [])
+
+   fromCV (CV _ (CArray f)) i = fromCV $ CV (kindOf (Proxy @b)) (f (toCV i))
+   fromCV bad               _ = error $ "SymVal.fromCV (Array): Malformed array received: " ++ show bad
 
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
@@ -894,8 +908,9 @@ instance EqSymbolic (SBV a) where
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
 
-  -- Custom version of distinctExcept that generates better code for base types
+  -- Custom version of distinctExcept that generates better code for base types with equality
   -- We essentially keep track of an array and count cardinalities as we walk along.
+  distinctExcept :: (Eq a, HasKind a, SymVal a, Lambda Symbolic (a -> Integer)) => [SBV a] -> [SBV a] -> SBool
   distinctExcept []            _       = sTrue
   distinctExcept [_]           _       = sTrue
   distinctExcept es@(firstE:_) ignored
@@ -910,15 +925,14 @@ instance EqSymbolic (SBV a) where
           ek = case firstE of
                  SBV (SVal k _) -> k
 
-          r st = do let zero = 0 :: SInteger
+          r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArray table x)
 
-                    arr <- SArray <$> newSArr st (ek, KUnbounded) (\i -> "array_" ++ show i) (Left (Just (unSBV zero)))
+                        initArray :: SArray a Integer
+                        initArray = literal $ const 0
 
-                    let incr x table = ite (x `sElem` ignored) zero (1 + readArray table x)
+                        finalArray = foldl (\table x -> writeArray table x (incr x table)) initArray es
 
-                        finalArray = foldl (\table x -> writeArray table x (incr x table)) arr es
-
-                    sbvToSV st $ sAll (\e -> readArray finalArray e .<= 1) es
+                    sbvToSV st $ sAll (\e -> readArray finalArray e .<= (1 :: SInteger)) es
 
           -- Sigh, we can't use isConcrete since that requires SymVal
           -- constraint that we don't have here. (To support SBools.)
@@ -963,6 +977,7 @@ smtComparable op x y
       KTuple     {} -> False
       KMaybe     {} -> False
       KEither    {} -> False
+      KArray     {} -> True
  where k    = kindOf x
        nope = error $ "Data.SBV.OrdSymbolic: SMTLib does not support " ++ op ++ " for " ++ show k
 
@@ -1420,6 +1435,7 @@ instance (Ord a, Num (SBV a), SymVal a, Fractional a) => Fractional (SBV a) wher
                       k@KTuple{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KMaybe{}    -> error $ "Unexpected Fractional case for: " ++ show k
                       k@KEither{}   -> error $ "Unexpected Fractional case for: " ++ show k
+                      k@KArray{}    -> error $ "Unexpected Fractional case for: " ++ show k
 
 -- | Define Floating instance on SBV's; only for base types that are already floating; i.e., 'SFloat', 'SDouble', and 'SReal'.
 -- (See the separate definition below for 'SFloatingPoint'.)  Note that unless you use delta-sat via 'Data.SBV.Provers.dReal' on 'SReal', most
@@ -2325,17 +2341,6 @@ instance (SymVal a, Bounded a) => Bounded (SBV a) where
   minBound = literal minBound
   maxBound = literal maxBound
 
--- Arrays
-
--- SArrays are both "EqSymbolic" and "Mergeable"
-instance EqSymbolic (SArray a b) where
-  SArray a .== SArray b = SBV (a `eqSArr` b)
-
--- When merging arrays; we'll ignore the force argument. This is arguably
--- the right thing to do as we've too many things and likely we want to keep it efficient.
-instance SymVal b => Mergeable (SArray a b) where
-  symbolicMerge _ = mergeArrays
-
 -- | SMT definable constants and functions, which can also be uninterpeted.
 -- This class captures functions that we can generate standalone-code for
 -- in the SMT solver. Note that we also allow uninterpreted constants and
@@ -3204,15 +3209,32 @@ instance {-# OVERLAPPABLE #-}
 instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
--- | Using a lambda as an array
-lambdaAsArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
-lambdaAsArray f = SArray $ SArr (kindOf (Proxy @a), kindOf (Proxy @b)) $ cache g
-  where g st = do def  <- lambdaStr st (kindOf (Proxy @b)) f
+-- | Reading a value from an array
+readArray :: forall key val. (SymVal key, SymVal val, HasKind val, Lambda Symbolic (key -> val)) => SArray key val -> SBV key -> SBV val
+readArray array key
+   | Just f <- unliteral array, Just k <- unliteral key
+   = literal (f k)
+   | True
+   = SBV . SVal kb . Right $ cache g
+   where kb = kindOf (Proxy @val)
+         g st = do f <- sbvToSV st array
+                   k <- sbvToSV st key
+                   newExpr st kb (SBVApp ReadArray [f, k])
 
-                  let extract :: SArray a b -> IO ArrayIndex
-                      extract (SArray (SArr _ ci)) = uncacheAI ci st
+-- | Writing a value to an array
+writeArray :: forall key val. (Eq key, HasKind key, SymVal key, SymVal val, HasKind val, Lambda Symbolic (key -> val)) => SArray key val -> SBV key -> SBV val -> SArray key val
+writeArray array key value
+   | Just f <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
+   = literal (\k' -> if k' == keyVal then val else f k')
+   | True
+   = SBV . SVal k . Right $ cache g
+   where kb = kindOf (Proxy @val)
+         k  = KArray (kindOf (Proxy @key)) kb
 
-                  extract =<< newArrayInState Nothing (Right def) st
+         g st = do arr    <- sbvToSV st array
+                   keyVal <- sbvToSV st key
+                   val    <- sbvToSV st value
+                   newExpr st kb (SBVApp WriteArray [arr, keyVal, val])
 
 {- HLint ignore module   "Reduce duplication" -}
 {- HLint ignore module   "Eta reduce"         -}

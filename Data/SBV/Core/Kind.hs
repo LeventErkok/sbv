@@ -68,6 +68,7 @@ data Kind = KBool
           | KMaybe  Kind
           | KRational
           | KEither Kind Kind
+          | KArray  Kind Kind
           deriving (Eq, Ord, G.Data)
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
@@ -91,6 +92,7 @@ instance Show Kind where
   show (KMaybe k)         = "SMaybe "  ++ kindParen (showBaseKind k)
   show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
   show KRational          = "SRational"
+  show (KArray k1 k2)     = "(Array " ++ show k1 ++ " " ++ show k2 ++ ")"
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
@@ -112,6 +114,7 @@ showBaseKind = sh
         sh (KTuple ks)        = "(" ++ intercalate ", " (map sh ks) ++ ")"
         sh (KMaybe k)         = "Maybe "  ++ kindParen (sh k)
         sh (KEither k1 k2)    = "Either " ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
+        sh (KArray  k1 k2)    = "Array "  ++ kindParen (sh k1) ++ " " ++ kindParen (sh k2)
 
         -- Drop the initial S if it's there
         noS ('S':s) = s
@@ -149,6 +152,7 @@ smtType (KTuple kinds)  = "(SBVTuple" ++ show (length kinds) ++ " " ++ unwords (
 smtType KRational       = "SBVRational"
 smtType (KMaybe k)      = "(SBVMaybe " ++ smtType k ++ ")"
 smtType (KEither k1 k2) = "(SBVEither "  ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
+smtType (KArray  k1 k2) = "(Array "      ++ smtType k1 ++ " " ++ smtType k2 ++ ")"
 
 instance Eq  G.DataType where
    a == b = G.tyconUQname (G.dataTypeName a) == G.tyconUQname (G.dataTypeName b)
@@ -174,6 +178,7 @@ kindHasSign = \case KBool        -> False
                     KTuple{}     -> False
                     KMaybe{}     -> False
                     KEither{}    -> False
+                    KArray{}     -> False
 
 -- | Construct an uninterpreted/enumerated kind from a piece of data; we distinguish simple enumerations as those
 -- are mapped to proper SMT-Lib2 data-types; while others go completely uninterpreted
@@ -248,11 +253,12 @@ class HasKind a where
                   KUserSort s _ -> error $ "SBV.HasKind.intSizeOf: Uninterpreted sort: " ++ s
                   KString       -> error "SBV.HasKind.intSizeOf((S)Double)"
                   KChar         -> error "SBV.HasKind.intSizeOf((S)Char)"
-                  KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)" ++ show ek
-                  KSet  ek      -> error $ "SBV.HasKind.intSizeOf((S)Set)"  ++ show ek
-                  KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)" ++ show tys
-                  KMaybe k      -> error $ "SBV.HasKind.intSizeOf((S)Maybe)" ++ show k
+                  KList ek      -> error $ "SBV.HasKind.intSizeOf((S)List)"   ++ show ek
+                  KSet  ek      -> error $ "SBV.HasKind.intSizeOf((S)Set)"    ++ show ek
+                  KTuple tys    -> error $ "SBV.HasKind.intSizeOf((S)Tuple)"  ++ show tys
+                  KMaybe k      -> error $ "SBV.HasKind.intSizeOf((S)Maybe)"  ++ show k
                   KEither k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Either)" ++ show (k1, k2)
+                  KArray  k1 k2 -> error $ "SBV.HasKind.intSizeOf((S)Array)"  ++ show (k1, k2)
 
   isBoolean       (kindOf -> KBool{})      = True
   isBoolean       _                        = False
@@ -368,6 +374,7 @@ hasUninterpretedSorts (KSet k)               = hasUninterpretedSorts k
 hasUninterpretedSorts (KTuple ks)            = any hasUninterpretedSorts ks
 hasUninterpretedSorts (KMaybe k)             = hasUninterpretedSorts k
 hasUninterpretedSorts (KEither k1 k2)        = any hasUninterpretedSorts [k1, k2]
+hasUninterpretedSorts (KArray  k1 k2)        = any hasUninterpretedSorts [k1, k2]
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString
@@ -406,6 +413,9 @@ instance (HasKind a, HasKind b) => HasKind (Either a b) where
 instance HasKind a => HasKind (Maybe a) where
   kindOf _ = KMaybe (kindOf (Proxy @a))
 
+instance (HasKind a, HasKind b) => HasKind (a -> b) where
+  kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
+
 -- | Should we ask the solver to flatten the output? This comes in handy so output is parseable
 -- Essentially, we're being conservative here and simply requesting flattening anything that has
 -- some structure to it.
@@ -426,6 +436,7 @@ needsFlattening KSet{}      = True
 needsFlattening KTuple{}    = True
 needsFlattening KMaybe{}    = True
 needsFlattening KEither{}   = True
+needsFlattening KArray{}    = True
 
 -- | Catch 0-width cases
 type BVZeroWidth = 'Text "Zero-width bit-vectors are not allowed."

@@ -20,9 +20,6 @@ module Data.SBV.Trans.Control (
      -- * Create a fresh variable
      , freshVar_, freshVar
 
-     -- * Create a fresh array
-     , freshArray_, freshArray, freshLambdaArray_, freshLambdaArray
-
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat, ensureSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 

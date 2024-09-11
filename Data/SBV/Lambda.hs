@@ -98,7 +98,6 @@ inSubState inState comp = do
                    , rctr                = fresh rctr
                    , rLambdaLevel        = fresh rLambdaLevel
                    , rtblMap             = fresh rtblMap
-                   , rArrayMap           = fresh rArrayMap
                    , rAICache            = fresh rAICache
                    , rinps               = fresh rinps
                    , rlambdaInps         = fresh rlambdaInps
@@ -229,7 +228,6 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
 
                   tbls          -- Tables
 
-                  _arrs         -- Arrays                : nothing to do with them
                   _uis          -- Uninterpeted constants: nothing to do with them
                   _axs          -- Axioms definitions    : nothing to do with them
 

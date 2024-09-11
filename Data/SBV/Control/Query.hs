@@ -23,7 +23,7 @@ module Data.SBV.Control.Query (
        send, ask, retrieveResponse
      , CheckSatResult(..), checkSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
      , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3, getAbduct, getAbductNext, getAssignment, getOption
-     , freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
+     , freshVar, freshVar_
      , push, pop, getAssertionStackDepth
      , inNewAssertionStack, echo, caseSplit, resetAssertions, exit, getAssertions, getValue, getUninterpretedValue, getModel, getSMTResult
      , getLexicographicOptResults, getIndependentOptResults, getParetoOptResults, getAllSatResult, getUnknownReason, getObservables, ensureSat
@@ -40,11 +40,10 @@ import Control.Monad.IO.Class (MonadIO)
 
 import Data.IORef (readIORef)
 
-import qualified Data.Map.Strict    as M
-import qualified Data.IntMap.Strict as IM
-import qualified Data.Sequence      as S
-import qualified Data.Text          as T
-import qualified Data.Foldable      as F
+import qualified Data.Map.Strict as M
+import qualified Data.Sequence   as S
+import qualified Data.Text       as T
+import qualified Data.Foldable   as F
 
 
 import Data.Char      (toLower)
@@ -484,11 +483,8 @@ restoreTablesAndArrays :: (MonadIO m, MonadQuery m) => m ()
 restoreTablesAndArrays = do st <- queryState
 
                             tCount <- M.size  <$> (io . readIORef) (rtblMap   st)
-                            aCount <- IM.size <$> (io . readIORef) (rArrayMap st)
 
-                            let tInits = [ "table"  ++ show i ++ "_initializer" | i <- [0 .. tCount - 1]]
-                                aInits = [ "array_" ++ show i ++ "_initializer" | i <- [0 .. aCount - 1]]
-                                inits  = tInits ++ aInits
+                            let inits = [ "table"  ++ show i ++ "_initializer" | i <- [0 .. tCount - 1]]
 
                             case inits of
                               []  -> return ()   -- Nothing to do

@@ -33,7 +33,7 @@ import Data.SBV.Core.Kind (smtType, needsFlattening)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
-import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), CnstMap, getUserName', getSV, regExpToSMTString
+import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString
                               , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..)
                               )
 
@@ -43,28 +43,26 @@ import qualified Data.Generics.Uniplate.Data as G
 
 import qualified Data.Graph as DG
 
-tbd :: String -> a
-tbd e = error $ "SBV.SMTLib2: Not-yet-supported: " ++ e
-
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter ([String], [String])
-cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls arrs uis defs (SBVPgm asgnsSeq) cstrs out cfg = (pgm, exportedDefs)
-  where hasInteger     = KUnbounded `Set.member` kindInfo
+cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs out cfg = (pgm, exportedDefs)
+  where allKinds       = Set.toList kindInfo
+
+        hasInteger     = KUnbounded `Set.member` kindInfo
+        hasArrays      = not (null [() | KArray{}     <- allKinds])
+        hasNonBVArrays = not (null [() | KArray k1 k2 <- allKinds, not (isBounded k1 && isBounded k2)])
         hasReal        = KReal      `Set.member` kindInfo
-        hasFP          =  not (null [() | KFP{} <- Set.toList kindInfo])
+        hasFP          =  not (null [() | KFP{} <- allKinds])
                        || KFloat     `Set.member` kindInfo
                        || KDouble    `Set.member` kindInfo
         hasString      = KString     `Set.member` kindInfo
         hasRegExp      = (not . null) [() | (_ :: RegExOp) <- G.universeBi asgnsSeq]
         hasChar        = KChar      `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
-        hasBVs         = not (null [() | KBounded{} <- Set.toList kindInfo])
-        usorts         = [(s, dt) | KUserSort s dt <- Set.toList kindInfo]
+        hasBVs         = not (null [() | KBounded{} <- allKinds])
+        usorts         = [(s, dt) | KUserSort s dt <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
-        hasNonBVArrays = (not . null) [() | (_, (_, (k1, k2), _)) <- arrs, not (isBounded k1 && isBounded k2)]
-        hasArrayInits  = (not . null) $  [() | (_, (_, _, ArrayFree (Left  (Just _)))) <- arrs]
-                                      ++ [() | (_, (_, _, ArrayFree (Right _       ))) <- arrs]
         hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
         hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi asgnsSeq]
         hasList        = any isList kindInfo
@@ -153,7 +151,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
            | hasChar               = setAll "has chars"
            | hasString             = setAll "has strings"
            | hasRegExp             = setAll "has regular expressions"
-           | hasArrayInits         = setAll "has array initializers"
            | hasOverflows          = setAll "has overflow checks"
            | hasQuantBools         = setAll "has quantified booleans"
 
@@ -175,7 +172,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
                                 else ["(set-logic ALL)"] -- fall-thru
           where qs  | not needsQuantifiers  = "QF_"
                     | True                  = ""
-                as  | null arrs             = ""
+                as  | not hasArrays         = ""
                     | True                  = "A"
                 ufs | null uis && null tbls = ""     -- we represent tables as UFs
                     | True                  = "UF"
@@ -232,8 +229,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
              ++ concatMap (uncurry (:) . mkTable) constTables
              ++ [ "; --- non-constant tables ---" ]
              ++ map nonConstTable nonConstTables
-             ++ [ "; --- arrays ---" ]
-             ++ concat arrayConstants
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
@@ -242,10 +237,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
              ++ userDefs
              ++ [ "; --- assignments ---" ]
              ++ concatMap (declDef curProgInfo cfg tableMap) asgns
-             ++ [ "; --- arrayDelayeds ---" ]
-             ++ concat arrayDelayeds
-             ++ [ "; --- arraySetups ---" ]
-             ++ concat arraySetups
              ++ [ "; --- delayedEqualities ---" ]
              ++ map (\s -> "(assert " ++ s ++ ")") delayedEqualities
              ++ [ "; --- formula ---" ]
@@ -261,7 +252,6 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (allConsts, consts) tbls a
 
         (tableMap, constTables, nonConstTables) = constructTables rm consts tbls
 
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
         delayedEqualities = concatMap snd nonConstTables
 
         finalAssert
@@ -463,7 +453,7 @@ declRationals = [ "(declare-datatype SBVRational ((SBV.Rational (sbv.rat.numerat
 -- for a list of what we include, in case something doesn't show up
 -- and you need it!
 cvtInc :: SMTLibIncConverter [String]
-cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq) cstrs cfg =
+cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- any new settings?
                settings
             -- sorts
@@ -477,20 +467,14 @@ cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq
             ++ concatMap (declConst cfg) consts
             -- inputs
             ++ concatMap declInp inps
-            -- arrays
-            ++ concat arrayConstants
             -- uninterpreteds
             ++ concatMap (declUI curProgInfo) uis
             -- table declarations
             ++ tableDecls
             -- expressions
             ++ concatMap (declDef curProgInfo cfg tableMap) (F.toList asgnsSeq)
-            -- delayed equalities
-            ++ concat arrayDelayeds
             -- table setups
             ++ concat tableAssigns
-            -- array setups
-            ++ concat arraySetups
             -- extra constraints
             ++ map (\(isSoft, attr, v) -> "(assert" ++ (if isSoft then "-soft " else " ") ++ addAnnotations attr (cvtSV v) ++ ")") (F.toList cstrs)
   where rm = roundingMode cfg
@@ -498,8 +482,6 @@ cvtInc curProgInfo inps newKs (allConsts, consts) arrs tbls uis (SBVPgm asgnsSeq
         newKinds = Set.toList newKs
 
         declInp (getSV -> s) = declareFun s (SBVType [kindOf s]) Nothing
-
-        (arrayConstants, arrayDelayeds, arraySetups) = unzip3 $ map (declArray cfg allConsts) arrs
 
         (tableMap, allTables) = (tm, ct ++ nct)
             where (tm, ct, nct) = constructTables rm consts tbls
@@ -691,56 +673,6 @@ genTableData rm consts ((i, aknd, _), elts)
 
         constsSet = Set.fromList consts
 
--- Declare arrays
-declArray :: SMTConfig -> CnstMap -> (Int, ArrayInfo) -> ([String], [String], [String])
-declArray cfg consts (i, (_, (aKnd, bKnd), ctx)) = ( adecl : zipWith wrap [(0::Int)..] (map snd pre)
-                                                   , zipWith wrap [lpre..] (map snd post)
-                                                   , setup
-                                                   )
-  where constMapping = M.fromList [(s, c) | (c, s) <- M.assocs consts]
-        constNames   = M.keys constMapping
-        (pre, post) = partition fst ctxInfo
-        nm = "array_" ++ show i
-
-        atyp  = "(Array " ++ smtType aKnd ++ " " ++ smtType bKnd ++ ")"
-
-        adecl = case ctx of
-                  ArrayFree (Right lam)     -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " " ++ lam ++ ")"
-                  ArrayFree (Left (Just v)) -> "(define-fun "  ++ nm ++ " () " ++ atyp ++ " ((as const " ++ atyp ++ ") " ++ constInit v ++ "))"
-                  ArrayFree (Left Nothing)
-                    | bKnd == KChar  ->  -- Can't support yet, because we need to make sure all the elements are length-1 strings. So, punt for now.
-                                         tbd "Free array declarations containing SChars"
-                  _                  -> "(declare-fun " ++ nm ++ " () " ++ atyp ++                                                  ")"
-
-        -- CVC4 chokes if the initializer is not a constant. (Z3 is ok with it.) So, print it as
-        -- a constant if we have it in the constants; otherwise, we merely print it and hope for the best.
-        constInit v = case v `M.lookup` constMapping of
-                        Nothing -> cvtSV v                    -- Z3 will work, CVC4 will choke. Others don't even support this.
-                        Just c  -> cvtCV (roundingMode cfg) c -- Z3 and CVC4 will work. Other's don't support this.
-
-        ctxInfo = case ctx of
-                    ArrayFree _       -> []
-                    ArrayMutate j a b -> [(all (`elem` constNames) [a, b], "(= " ++ nm ++ " (store array_" ++ show j ++ " " ++ cvtSV a ++ " " ++ cvtSV b ++ "))")]
-                    ArrayMerge  t j k -> [(t `elem` constNames,            "(= " ++ nm ++ " (ite " ++ cvtSV t ++ " array_" ++ show j ++ " array_" ++ show k ++ "))")]
-
-        -- Arrange for initializers
-        mkInit idx    = "array_" ++ show i ++ "_initializer_" ++ show (idx :: Int)
-        initializer   = "array_" ++ show i ++ "_initializer"
-
-        wrap index s = "(define-fun " ++ mkInit index ++ " () Bool " ++ s ++ ")"
-
-        lpre          = length pre
-        lAll          = lpre + length post
-
-        setup
-          | lAll == 0 = [ "(define-fun " ++ initializer ++ " () Bool true) ; no initialization needed" ]
-          | lAll == 1 = [ "(define-fun " ++ initializer ++ " () Bool " ++ mkInit 0 ++ ")"
-                        , "(assert " ++ initializer ++ ")"
-                        ]
-          | True      = [ "(define-fun " ++ initializer ++ " () Bool (and " ++ unwords (map mkInit [0..lAll - 1]) ++ "))"
-                        , "(assert " ++ initializer ++ ")"
-                        ]
-
 svType :: SV -> String
 svType s = smtType (kindOf s)
 
@@ -906,6 +838,7 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KBool         -> (2::Integer) > fromIntegral l
                               KBounded _ n  -> (2::Integer)^n > fromIntegral l
                               KUnbounded    -> True
+                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                               KReal         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected real valued index"
                               KFloat        -> error "SBV.SMT.SMTLib2.cvtExp: unexpected float valued index"
                               KDouble       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected double valued index"
@@ -918,7 +851,7 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                               KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued: " ++ show k
                               KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued: " ++ show k
                               KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued: " ++ show (k1, k2)
-                              KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                              KArray  k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected array valued: " ++ show (k1, k2)
 
                 lkUp = "(" ++ getTable tableMap t ++ " " ++ cvtSV i ++ ")"
 
@@ -937,12 +870,13 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                                 KFP{}         -> ("fp.lt", "fp.leq")
                                 KChar         -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
                                 KString       -> error "SBV.SMT.SMTLib2.cvtExp: unexpected string valued index"
+                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
                                 KList k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sequence valued index: " ++ show k
                                 KSet  k       -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected set valued index: " ++ show k
                                 KTuple k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected tuple valued index: " ++ show k
                                 KMaybe k      -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected maybe valued index: " ++ show k
                                 KEither k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected sum valued index: " ++ show (k1, k2)
-                                KUserSort s _ -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected uninterpreted valued index: " ++ s
+                                KArray  k1 k2 -> error $ "SBV.SMT.SMTLib2.cvtExp: unexpected array valued index: " ++ show (k1, k2)
 
                 mkCnst = cvtCV rm . mkConstCV (kindOf i)
                 le0  = "(" ++ less ++ " " ++ cvtSV i ++ " " ++ mkCnst 0 ++ ")"
@@ -1300,6 +1234,11 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                                                 c1 = ["(=> " ++ "((_ is (left_SBVEither ("  ++ smtType k1 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n1 f k1]
                                                 c2 = ["(=> " ++ "((_ is (right_SBVEither (" ++ smtType k2 ++ ") " ++ smtType ke ++ ")) " ++ nm ++ ") " ++ c ++ ")" | c <- walk (d+1) n2 f k2]
                                             in c1 ++ c2
+        walk d  nm f  (KArray k1 k2)
+          | all charRatFree [k1, k2]      = []
+          | True                          = let fnm   = "array" ++ show d
+                                                cstrs = walk (d+1) nm (\sk snm -> ["(=> (select " ++ snm ++ " " ++ fnm ++ ") " ++ c ++ ")" | c <- f sk fnm]) k2
+                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k1 ++ ")) " ++ mkAnd cstrs ++ ")"]
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <https://smt-lib.org/theories-FloatingPoint.shtml>)

@@ -44,7 +44,6 @@ module Data.SBV.Core.Symbolic
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
   , SVal(..)
   , svMkSymVar, sWordN, sWordN_, sIntN, sIntN_
-  , ArrayContext(..), ArrayInfo
   , svToSV, svToSymSV, forceSVArg
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
@@ -99,7 +98,7 @@ import qualified Control.Monad.Writer.Strict as SW
 import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.Generics.Uniplate.Data as G
-import qualified Data.IntMap.Strict          as IMap (IntMap, empty, toAscList, lookup, insertWith)
+import qualified Data.IntMap.Strict          as IMap (IntMap, empty, lookup, insertWith)
 import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
@@ -257,6 +256,9 @@ data Op = Plus
         | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
+        | ArrayLambda String                    -- An array value, created from a lambda
+        | ReadArray                             -- Reading an array value
+        | WriteArray                            -- Writing to an array
         deriving (Eq, Ord, Generic, G.Data, NFData)
 
 -- | Special relations supported by z3
@@ -894,7 +896,6 @@ data Result = Result { progInfo       :: ProgInfo                               
                      , resParams      :: ResultInp                                    -- ^ top-inputs or lambda params
                      , resConsts      :: (CnstMap, [(SV, CV)])                        -- ^ constants
                      , resTables      :: [((Int, Kind, Kind), [SV])]                  -- ^ tables (automatically constructed) (tableno, index-type, result-type) elts
-                     , resArrays      :: [(Int, ArrayInfo)]                           -- ^ arrays (user specified)
                      , resUIConsts    :: [(String, (Bool, Maybe [String], SBVType))]  -- ^ uninterpreted constants
                      , resDefinitions :: [(SMTDef, SBVType)]                          -- ^ definitions created via smtFunction or lambda
                      , resAsgns       :: SBVPgm                                       -- ^ assignments
@@ -912,7 +913,7 @@ instance Show Result where
   show Result{resConsts=(_, cs), resOutputs=[r]}
     | Just c <- r `lookup` cs
     = show c
-  show (Result _ kinds _ _ cgs params (_, cs) ts as uis defns xs cstrs asserts os) = intercalate "\n" $
+  show (Result _ kinds _ _ cgs params (_, cs) ts uis defns xs cstrs asserts os) = intercalate "\n" $
                    (if null usorts then [] else "SORTS" : map ("  " ++) usorts)
                 ++ (case params of
                       ResultTopInps (i, t) -> "INPUTS" : map shn i ++ (if null t then [] else "TRACKER VARS" : map shn t)
@@ -922,8 +923,6 @@ instance Show Result where
                 ++ concatMap shc cs
                 ++ ["TABLES"]
                 ++ map sht ts
-                ++ ["ARRAYS"]
-                ++ map sha as
                 ++ ["UNINTERPRETED CONSTANTS"]
                 ++ map shui uis
                 ++ ["USER GIVEN CODE SEGMENTS"]
@@ -965,12 +964,6 @@ instance Show Result where
 
           shq (q, v) = shn v ++ ", " ++ if q == ALL then "universal" else "existential"
 
-          sha (i, (nm, (ai, bi), ctx)) = "  " ++ ni ++ " :: " ++ show ai ++ " -> " ++ show bi ++ alias
-                                       ++ "\n     Context: "     ++ show ctx
-            where ni = "array_" ++ show i
-                  alias | ni == nm = ""
-                        | True     = ", aliasing " ++ show nm
-
           shui (nm, t) = "  [uninterpreted] " ++ nm ++ " :: " ++ show t
 
           shCstr (isSoft, [], c)               = soft isSoft ++ show c
@@ -988,19 +981,6 @@ instance Show Result where
 #endif
                 stk ++ ": " ++ show p
 
--- | The context of a symbolic array as created
-data ArrayContext = ArrayFree   (Either (Maybe SV) String) -- ^ A new array, the contents are initialized with the given value, if any, or the custom lambda given
-                  | ArrayMutate ArrayIndex SV SV           -- ^ An array created by mutating another array at a given cell
-                  | ArrayMerge  SV ArrayIndex ArrayIndex   -- ^ An array created by symbolically merging two other arrays
-                  deriving G.Data
-
-instance Show ArrayContext where
-  show (ArrayFree (Left Nothing))   = " initialized with random elements"
-  show (ArrayFree (Left (Just sv))) = " initialized with " ++ show sv
-  show (ArrayFree (Right lambda))   = " initialized with " ++ show lambda
-  show (ArrayMutate i a b)   = " cloned from array_" ++ show i ++ " with " ++ show a ++ " :: " ++ show (swKind a) ++ " |-> " ++ show b ++ " :: " ++ show (swKind b)
-  show (ArrayMerge  s i j)   = " merged arrays " ++ show i ++ " and " ++ show j ++ " on condition " ++ show s
-
 -- | Expression map, used for hash-consing
 type ExprMap = Map.Map SBVExpr SV
 
@@ -1012,12 +992,6 @@ type KindSet = Set.Set Kind
 
 -- | Tables generated during a symbolic run
 type TableMap = Map.Map (Kind, Kind, [SV]) Int
-
--- | Representation for symbolic arrays
-type ArrayInfo = (String, (Kind, Kind), ArrayContext)
-
--- | SMT Arrays generated during a symbolic run
-type ArrayMap = IMap.IntMap ArrayInfo
 
 -- | Uninterpreted-constants generated during a symbolic run
 type UIMap = Map.Map String (Bool, Maybe [String], SBVType)   -- If Bool is true, then this is a curried function
@@ -1087,7 +1061,6 @@ isCodeGenMode State{runMode} = do rm <- readIORef runMode
 data IncState = IncState { rNewInps        :: IORef [NamedSymVar]   -- always existential!
                          , rNewKinds       :: IORef KindSet
                          , rNewConsts      :: IORef CnstMap
-                         , rNewArrs        :: IORef ArrayMap
                          , rNewTbls        :: IORef TableMap
                          , rNewUIs         :: IORef UIMap
                          , rNewAsgns       :: IORef SBVPgm
@@ -1100,7 +1073,6 @@ newIncState = do
         is    <- newIORef []
         ks    <- newIORef Set.empty
         nc    <- newIORef Map.empty
-        am    <- newIORef IMap.empty
         tm    <- newIORef Map.empty
         ui    <- newIORef Map.empty
         pgm   <- newIORef (SBVPgm S.empty)
@@ -1108,7 +1080,6 @@ newIncState = do
         return IncState { rNewInps        = is
                         , rNewKinds       = ks
                         , rNewConsts      = nc
-                        , rNewArrs        = am
                         , rNewTbls        = tm
                         , rNewUIs         = ui
                         , rNewAsgns       = pgm
@@ -1255,7 +1226,6 @@ data State  = State { sbvContext          :: SBVContext
                     , spgm                :: IORef SBVPgm
                     , rconstMap           :: IORef CnstMap
                     , rexprMap            :: IORef ExprMap
-                    , rArrayMap           :: IORef ArrayMap
                     , rUIMap              :: IORef UIMap
                     , rUserFuncs          :: IORef (Set.Set String) -- Functions that the user wanted explicit code generation for
                     , rCgMap              :: IORef CgMap
@@ -1546,6 +1516,7 @@ registerKind st k
          KTuple    eks   -> mapM_ (registerKind st) eks
          KMaybe    ke    -> registerKind st ke
          KEither   k1 k2 -> mapM_ (registerKind st) [k1, k2]
+         KArray    k1 k2 -> mapM_ (registerKind st) [k1, k2]
 
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
@@ -1880,7 +1851,6 @@ mkNewState cfg currentRunMode = liftIO $ do
      lambdaInps         <- newIORef mempty
      outs               <- newIORef []
      tables             <- newIORef Map.empty
-     arrays             <- newIORef IMap.empty
      userFuncs          <- newIORef Set.empty
      uis                <- newIORef Map.empty
      cgs                <- newIORef Map.empty
@@ -1917,7 +1887,6 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rtblMap             = tables
                   , spgm                = pgm
                   , rconstMap           = cmap
-                  , rArrayMap           = arrays
                   , rexprMap            = emap
                   , rUserFuncs          = userFuncs
                   , rUIMap              = uis
@@ -1982,7 +1951,7 @@ runSymbolicInState st (SymbolicT c) = do
 -- | Grab the program from a running symbolic simulation state.
 extractSymbolicSimulationState :: State -> IO Result
 extractSymbolicSimulationState st@State{ runMode=rrm
-                                       , spgm=pgm, rinps=inps, rlambdaInps=linps, routs=outs, rtblMap=tables, rArrayMap=arrays
+                                       , spgm=pgm, rinps=inps, rlambdaInps=linps, routs=outs, rtblMap=tables
                                        , rUIMap=uis, rDefns=defns
                                        , rAsserts=asserts, rUsedKinds=usedKinds, rCgMap=cgs, rCInfo=cInfo, rConstraints=cstrs
                                        , rObservables=observes, rProgInfo=progInfo
@@ -2029,7 +1998,6 @@ extractSymbolicSimulationState st@State{ runMode=rrm
    let cnsts = sortBy cmp . map swap . Map.toList $ constMap
 
    tbls  <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef tables
-   arrs  <- IMap.toAscList <$> readIORef arrays
    ds    <- reverse <$> readIORef defns
    unint <- do unints <- Map.toList <$> readIORef uis
                -- drop those that has a definition associated with it
@@ -2046,7 +2014,7 @@ extractSymbolicSimulationState st@State{ runMode=rrm
 
    pinfo <- readIORef progInfo
 
-   return $ Result pinfo knds traceVals observables cgMap inpsO (constMap, cnsts) tbls arrs unint ds (SBVPgm rpgm) extraCstrs assertions outsO
+   return $ Result pinfo knds traceVals observables cgMap inpsO (constMap, cnsts) tbls unint ds (SBVPgm rpgm) extraCstrs assertions outsO
 
 -- | Generalization of 'Data.SBV.addNewSMTOption'
 addNewSMTOption :: MonadSymbolic m => SMTOption -> m ()
@@ -2220,14 +2188,12 @@ instance NFData NamedSymVar where
   rnf (NamedSymVar s n) = rnf s `seq` rnf n
 
 instance NFData Result where
-  rnf (Result hasQuants kindInfo qcInfo obs cgs inps consts tbls arrs uis axs pgm cstr asserts outs)
-        = rnf hasQuants `seq` rnf kindInfo `seq` rnf qcInfo `seq` rnf obs    `seq` rnf cgs
-                        `seq` rnf inps     `seq` rnf consts `seq` rnf tbls
-                        `seq` rnf arrs     `seq` rnf uis    `seq` rnf axs
-                        `seq` rnf pgm      `seq` rnf cstr   `seq` rnf asserts
-                        `seq` rnf outs
+  rnf (Result hasQuants kindInfo qcInfo obs cgs inps consts tbls uis axs pgm cstr asserts outs)
+        = rnf hasQuants `seq` rnf kindInfo `seq` rnf qcInfo  `seq` rnf obs    `seq` rnf cgs
+                        `seq` rnf inps     `seq` rnf consts  `seq` rnf tbls
+                        `seq` rnf uis      `seq` rnf axs     `seq` rnf pgm
+                        `seq` rnf cstr     `seq` rnf asserts `seq` rnf outs
 instance NFData Kind         where rnf a          = seq a ()
-instance NFData ArrayContext where rnf a          = seq a ()
 instance NFData SV           where rnf a          = seq a ()
 instance NFData SBVExpr      where rnf a          = seq a ()
 instance NFData Quantifier   where rnf a          = seq a ()

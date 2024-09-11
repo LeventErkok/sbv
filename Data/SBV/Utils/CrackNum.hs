@@ -54,6 +54,7 @@ instance CrackNum CV where
                                KMaybe     {}  -> Nothing
                                KEither    {}  -> Nothing
                                KRational  {}  -> Nothing
+                               KArray     {}  -> Nothing
 
                                -- Actual crackables
                                KFloat{}       -> Just $ let CFloat   f = cvVal cv in float verbose mbIV f

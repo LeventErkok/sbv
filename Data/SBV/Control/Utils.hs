@@ -33,7 +33,7 @@ module Data.SBV.Control.Utils (
      , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getObservables
      , checkSat, checkSatUsing, getAllSatResult
-     , inNewContext, freshVar, freshVar_, freshArray, freshArray_, freshLambdaArray, freshLambdaArray_
+     , inNewContext, freshVar, freshVar_
      , getTopLevelInputs, parse, unexpected
      , timeout, queryDebug, retrieveResponse, recoverKindedValue, runProofOn, executeQuery
      ) where
@@ -48,7 +48,6 @@ import Data.Proxy
 
 import qualified Data.Foldable      as F (toList)
 import qualified Data.Map.Strict    as Map
-import qualified Data.IntMap.Strict as IMap
 import qualified Data.Sequence      as S
 import qualified Data.Text          as T
 
@@ -68,11 +67,11 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               , HasKind(..), mkConstCV, CVal(..), SMTResult(..)
                               , NamedSymVar, SMTConfig(..), SMTModel(..)
                               , QueryState(..), SVal(..), cache
-                              , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..), SymArray(..)
+                              , newExpr, SBVExpr(..), Op(..), FPOp(..), SBV(..)
                               , SolverContext(..), SBool, Objective(..), SolverCapabilities(..), capabilities
                               , Result(..), SMTProblem(..), trueSV, SymVal(..), SBVPgm(..), SMTSolver(..), SBVRunMode(..)
                               , SBVType(..), forceSVArg, RoundingMode(RoundNearestTiesToEven), (.=>)
-                              , RCSet(..), Lambda(..), QuantifiedBool(..)
+                              , RCSet(..), QuantifiedBool(..)
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
@@ -98,8 +97,6 @@ import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.Lib       (qfsToString)
 import Data.SBV.Utils.SExpr
 import Data.SBV.Utils.PrettyNum (cvToSMTLib)
-
-import Data.SBV.Lambda
 
 import Data.SBV.Control.Types
 
@@ -176,7 +173,6 @@ syncUpSolver progInfo rGlobalConsts is = do
                            arrange (i, (at, rt, es)) = ((i, at, rt), es)
                        inps        <- reverse <$> readIORef (rNewInps is)
                        ks          <- readIORef (rNewKinds is)
-                       arrs        <- IMap.toAscList <$> readIORef (rNewArrs is)
                        tbls        <- map arrange . sortBy cmp . map swap . Map.toList <$> readIORef (rNewTbls is)
                        uis         <- Map.toAscList <$> readIORef (rNewUIs is)
                        as          <- readIORef (rNewAsgns is)
@@ -184,7 +180,7 @@ syncUpSolver progInfo rGlobalConsts is = do
 
                        let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
 
-                       return $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) arrs tbls uis as constraints cfg
+                       return $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
@@ -241,32 +237,6 @@ freshVar_ = inNewContext $ fmap SBV . svMkSymVar QueryVar k Nothing
 freshVar :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => String -> m (SBV a)
 freshVar nm = inNewContext $ fmap SBV . svMkSymVar QueryVar k (Just nm)
   where k = kindOf (Proxy @a)
-
--- | Generalization of 'Data.SBV.Control.freshArray_'
-freshArray_ :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe (SBV b) -> m (array a b)
-freshArray_ = mkFreshArray Nothing
-
--- | Generalization of 'Data.SBV.Control.freshArray'
-freshArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => String -> Maybe (SBV b) -> m (array a b)
-freshArray nm = mkFreshArray (Just nm)
-
--- | Creating arrays, internal use only.
-mkFreshArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b) => Maybe String -> Maybe (SBV b) -> m (array a b)
-mkFreshArray mbNm mbVal = inNewContext $ newArrayInState mbNm (Left mbVal)
-
--- | Generalization of 'Data.SBV.Control.freshLambdaArray_'
-freshLambdaArray_ :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => (a -> b) -> m (array a b)
-freshLambdaArray_ = mkFreshLambdaArray Nothing
-
--- | Generalization of 'Data.SBV.Control.freshLambdaArray'
-freshLambdaArray :: (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => String -> (a -> b) -> m (array a b)
-freshLambdaArray nm = mkFreshLambdaArray (Just nm)
-
--- | Creating arrays, internal use only.
-mkFreshLambdaArray :: forall m array a b. (MonadIO m, MonadQuery m, SymArray array, HasKind a, HasKind b, Lambda (SymbolicT IO) (a -> b)) => Maybe String -> (a -> b) -> m (array a b)
-mkFreshLambdaArray mbNm f = inNewContext $ \st -> do
-                                lam <- lambdaStr st (kindOf (Proxy @b)) f
-                                newArrayInState mbNm (Right lam) st
 
 -- | Generalization of 'Data.SBV.Control.queryDebug'
 queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()
@@ -923,6 +893,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KTuple ks)      = CTuple $ map cvt ks
         cvt (KMaybe _)       = CMaybe Nothing
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
+        cvt (KArray  _  k2)  = CArray (const (cvt k2))
 
         -- Tricky case of uninterpreted
         uninterp _ (Just (c:_)) = CUserSort (Just 1, c)
@@ -985,6 +956,8 @@ recoverKindedValue k e = case k of
                            KMaybe{}                            -> Just $ CV k $ CMaybe $ interpretMaybe k e
 
                            KEither{}                           -> Just $ CV k $ CEither $ interpretEither k e
+
+                           KArray{}                            -> error "This needs to be fixed, obviously!"
 
   where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
         getUIIndex _                        _ = Nothing
@@ -1839,7 +1812,7 @@ unexpected ctx sent expected mbHint received mbReason = do
 
 -- | Convert a query result to an SMT Problem
 runProofOn :: SBVRunMode -> QueryContext -> [String] -> Result -> SMTProblem
-runProofOn rm context comments res@(Result progInfo ki _qcInfo _observables _codeSegs is consts tbls arrs uis defns pgm cstrs _assertions outputs) =
+runProofOn rm context comments res@(Result progInfo ki _qcInfo _observables _codeSegs is consts tbls uis defns pgm cstrs _assertions outputs) =
      let (config, isSat, isSafe, isSetup) = case rm of
                                               SMTMode _ stage s c -> (c, s, isSafetyCheckingIStage stage, isSetupIStage stage)
                                               _                   -> error $ "runProofOn: Unexpected run mode: " ++ show rm
@@ -1857,7 +1830,7 @@ runProofOn rm context comments res@(Result progInfo ki _qcInfo _observables _cod
                                                , "*** Check calls to \"output\", they are typically not needed!"
                                                ]
 
-     in SMTProblem { smtLibPgm = toSMTLib config context progInfo ki isSat comments is consts tbls arrs uis defns pgm cstrs o }
+     in SMTProblem { smtLibPgm = toSMTLib config context progInfo ki isSat comments is consts tbls uis defns pgm cstrs o }
 
 -- | Generalization of 'Data.SBV.Control.executeQuery'
 executeQuery :: forall m a. ExtractIO m => QueryContext -> QueryT m a -> SymbolicT m a

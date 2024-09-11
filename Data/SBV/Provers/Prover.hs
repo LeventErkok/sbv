@@ -62,6 +62,8 @@ import Data.SBV.SMT.Utils (debug, alignPlain)
 import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.TDiff
 
+import Data.SBV.Lambda () -- instances only
+
 import qualified Data.SBV.Trans.Control as Control
 import qualified Data.SBV.Control.Query as Control
 import qualified Data.SBV.Control.Utils as Control
@@ -671,13 +673,6 @@ instance (SymVal a, SatisfiableM m p) => SatisfiableM m (SBV a -> p) where
 
 instance (SymVal a, ProvableM m p) => ProvableM m (SBV a -> p) where
   proofArgReduce fn = mkArg >>= \a -> proofArgReduce $ fn a
-
--- Arrays
-instance (HasKind a, HasKind b, SatisfiableM m p) => SatisfiableM m (SArray a b -> p) where
-  satArgReduce fn = newArray_ Nothing >>= \a -> satArgReduce $ fn a
-
-instance (HasKind a, HasKind b, ProvableM m p) => ProvableM m (SArray a b -> p) where
-  proofArgReduce fn = newArray_ Nothing >>= \a -> proofArgReduce $ fn a
 
 -- 2 Tuple
 instance (SymVal a, SymVal b, SatisfiableM m p) => SatisfiableM m ((SBV a, SBV b) -> p) where
