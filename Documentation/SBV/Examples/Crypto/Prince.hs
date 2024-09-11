@@ -10,6 +10,7 @@
 -- <https://eprint.iacr.org/2012/529.pdf>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE ParallelListComp #-}
 
@@ -23,9 +24,11 @@ import Numeric
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- * Types
 -- | Section 2: Prince is essentially a 64-bit cipher, with 128-bit key, coming in two parts.

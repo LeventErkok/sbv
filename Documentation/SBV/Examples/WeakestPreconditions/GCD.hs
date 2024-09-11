@@ -14,6 +14,7 @@
 -- specifications for WP proofs.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
@@ -36,11 +37,13 @@ import GHC.Generics (Generic)
 import Prelude hiding (gcd)
 import qualified Prelude as P (gcd)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
 -- >>> import Data.SBV.Tools.WeakestPreconditions
+#endif
 
 -- * Program state
 

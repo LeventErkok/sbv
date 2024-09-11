@@ -10,6 +10,8 @@
 -- generating C code.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
@@ -17,9 +19,11 @@ module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -----------------------------------------------------------------------------
 -- * Reference: Slow but /obviously/ correct

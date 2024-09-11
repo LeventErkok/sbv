@@ -10,17 +10,21 @@
 -- prove all come from <http://en.wikipedia.org/wiki/Algebra_of_sets>.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Misc.SetAlgebra where
 
 import Data.SBV hiding (complement)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV hiding (complement)
 -- >>> import Data.SBV.Set
 -- >>> :set -XScopedTypeVariables
+#endif
 
 -- | Abbreviation for set of integers. For convenience only in monomorphising the properties.
 type SI = SSet Integer

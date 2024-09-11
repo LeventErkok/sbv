@@ -10,6 +10,7 @@
 -- Thanks to Eric Seidel for the idea.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -21,9 +22,11 @@ module Documentation.SBV.Examples.Uninterpreted.UISortAllSat where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | A "list-like" data type, but one we plan to uninterpret at the SMT level.
 -- The actual shape is really immaterial for us.

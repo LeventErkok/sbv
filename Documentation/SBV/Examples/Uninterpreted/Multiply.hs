@@ -10,6 +10,7 @@
 -- a simple two-bit multiplier.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-uni-patterns #-}
@@ -18,9 +19,11 @@ module Documentation.SBV.Examples.Uninterpreted.Multiply where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | The uninterpreted implementation of our 2x2 multiplier. We simply
 -- receive two 2-bit values, and return the high and the low bit of the

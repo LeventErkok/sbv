@@ -9,15 +9,18 @@
 -- Demonstrates the extension field (@oo@/@epsilon@) optimization results.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Optimization.ExtField where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Optimization goals where min/max values might require assignments
 -- to values that are infinite (integer case), or infinite/epsilon (real case).

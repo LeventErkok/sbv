@@ -9,6 +9,7 @@
 -- Example use of the KnuckleDragger, for some inductive proofs
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
 
@@ -21,9 +22,11 @@ import Prelude hiding (sum, length)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --

@@ -9,6 +9,7 @@
 -- Example use of the KnuckleDragger, about lenghts of lists
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
@@ -29,11 +30,13 @@ import Data.SBV.Tools.KnuckleDragger
 
 import qualified Data.SBV.List as SL
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- | Use an uninterpreted type for the elements
 data Elt

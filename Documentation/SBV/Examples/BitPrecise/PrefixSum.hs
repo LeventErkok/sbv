@@ -12,6 +12,7 @@
 -- and <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -21,9 +22,11 @@ module Documentation.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 ----------------------------------------------------------------------
 -- * Formalizing power-lists

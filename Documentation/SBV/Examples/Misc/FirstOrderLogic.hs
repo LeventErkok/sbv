@@ -29,10 +29,12 @@ module Documentation.SBV.Examples.Misc.FirstOrderLogic where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only, ignore.
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds -XScopedTypeVariables
+#endif
 
 -- | An uninterpreted sort for demo purposes, named 'U'
 data U

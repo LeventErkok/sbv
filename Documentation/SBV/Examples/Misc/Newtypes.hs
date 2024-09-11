@@ -11,9 +11,11 @@
 -- their wrapped type.
 -----------------------------------------------------------------------------
 
-{-# OPTIONS_GHC -Wall -Werror           #-}
+{-# LANGUAGE CPP                        #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+
+{-# OPTIONS_GHC -Wall -Werror           #-}
 
 module Documentation.SBV.Examples.Misc.Newtypes where
 
@@ -21,9 +23,11 @@ import Prelude hiding (ceiling)
 import Data.SBV
 import qualified Data.SBV.Internals as SI
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | A 'Metres' is a newtype wrapper around 'Integer'.
 newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord)

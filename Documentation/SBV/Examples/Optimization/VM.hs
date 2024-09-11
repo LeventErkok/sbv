@@ -9,15 +9,19 @@
 -- Solves a VM allocation problem using optimization features
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Optimization.VM where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Computer allocation problem:
 --

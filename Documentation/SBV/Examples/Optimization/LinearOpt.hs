@@ -9,15 +9,19 @@
 -- Simple linear optimization example, as found in operations research texts.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Optimization.LinearOpt where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Taken from <http://people.brunel.ac.uk/~mastjjb/jeb/or/morelp.html>
 --

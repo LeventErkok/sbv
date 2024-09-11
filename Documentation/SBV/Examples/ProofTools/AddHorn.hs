@@ -24,6 +24,7 @@
 -- indeed is a sufficient invariant to establish correctness.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP       #-}
 {-# LANGUAGE DataKinds #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -32,9 +33,11 @@ module Documentation.SBV.Examples.ProofTools.AddHorn where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Helper type synonym for the invariant.
 type Inv = (SInteger, SInteger, SInteger, SInteger) -> SBool

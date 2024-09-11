@@ -14,6 +14,8 @@
 -- to demonstrate the usage.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Queries.Interpolants where
@@ -21,10 +23,12 @@ module Documentation.SBV.Examples.Queries.Interpolants where
 import Data.SBV
 import Data.SBV.Control
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
+#endif
 
 -- | MathSAT example. Compute the interpolant for the following sets of formulas:
 --

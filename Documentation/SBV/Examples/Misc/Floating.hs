@@ -17,6 +17,7 @@
 -- the presence of @NaN@ is always something to look out for.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -26,9 +27,11 @@ module Documentation.SBV.Examples.Misc.Floating where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -----------------------------------------------------------------------------
 -- * FP addition is not associative

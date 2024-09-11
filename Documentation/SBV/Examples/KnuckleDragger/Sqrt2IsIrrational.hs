@@ -9,6 +9,7 @@
 -- Prove that square-root of 2 is irrational.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
@@ -22,9 +23,11 @@ import Prelude hiding (even, odd)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.

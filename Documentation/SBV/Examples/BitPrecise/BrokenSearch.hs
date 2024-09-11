@@ -10,6 +10,8 @@
 --     <http://ai.googleblog.com/2006/06/extra-extra-read-all-about-it-nearly.html>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.BitPrecise.BrokenSearch where
@@ -17,9 +19,11 @@ module Documentation.SBV.Examples.BitPrecise.BrokenSearch where
 import Data.SBV
 import Data.SBV.Tools.Overflow
 
+#ifndef HADDOCK
 -- $setup
 -- >>> import Data.SBV
 -- >>> import Data.Int
+#endif
 
 -- | Model the mid-point computation of the binary search, which is broken due to arithmetic overflow.
 -- Note how we use the overflow checking variants of the arithmetic operators. We have:

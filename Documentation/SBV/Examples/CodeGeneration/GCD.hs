@@ -13,6 +13,8 @@
 -- enforce termination by using a recursion depth counter.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.CodeGeneration.GCD where
@@ -20,10 +22,12 @@ module Documentation.SBV.Examples.CodeGeneration.GCD where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Tools.CodeGen
+#endif
 
 -----------------------------------------------------------------------------
 -- * Computing GCD

@@ -52,9 +52,11 @@ import Numeric (showHex)
 
 import Test.QuickCheck hiding (verbose)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -----------------------------------------------------------------------------
 -- * Formalizing GF(2^8)

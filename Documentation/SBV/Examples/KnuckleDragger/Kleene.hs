@@ -11,6 +11,7 @@
 -- Based on <http://www.philipzucker.com/bryzzowski_kat/>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
@@ -30,9 +31,11 @@ import Prelude hiding((<=))
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene

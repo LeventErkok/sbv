@@ -11,6 +11,7 @@
 -- different versions lead to proofs and failures.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
@@ -29,9 +30,11 @@ import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- * Program state
 

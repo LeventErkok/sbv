@@ -9,6 +9,7 @@
 -- Based on <http://github.com/goldfirere/video-resources/blob/main/2022-08-12-java/Haskell.hs>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE DeriveGeneric       #-}
@@ -24,9 +25,11 @@ module Documentation.SBV.Examples.Puzzles.Orangutans where
 import Data.SBV
 import GHC.Generics (Generic)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Orangutans in the puzzle.
 data Orangutan = Merah   | Ofallo  | Quirrel  | Shamir   deriving (Enum, Bounded)

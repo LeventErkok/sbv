@@ -9,6 +9,7 @@
 -- Example use of the KnuckleDragger, on list append and reverses.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
@@ -30,9 +31,11 @@ import Data.SBV.Tools.KnuckleDragger
 import Data.SBV.List ((.:), (++), reverse)
 import qualified Data.SBV.List as SL
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- | Use an uninterpreted type for the elements
 data Elt

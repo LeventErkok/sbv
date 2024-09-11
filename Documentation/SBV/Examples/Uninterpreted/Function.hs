@@ -9,15 +9,19 @@
 -- Demonstrates function counter-examples
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Uninterpreted.Function where
 
 import Data.SBV
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | An uninterpreted function
 f :: SWord8 -> SWord8 -> SWord16

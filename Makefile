@@ -50,7 +50,7 @@ install: tags
 	@$(TIME) cabal new-install --lib
 
 docs:
-	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings | ghc ./buildUtils/simpHaddock.hs -e main
+	cabal new-haddock --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:

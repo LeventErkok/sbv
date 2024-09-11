@@ -11,6 +11,7 @@
 -- an example.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE DeriveTraversable     #-}
@@ -29,11 +30,13 @@ import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
 -- >>> import Data.SBV.Tools.WeakestPreconditions
+#endif
 
 -- * Program state
 

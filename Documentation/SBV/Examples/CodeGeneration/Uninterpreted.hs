@@ -13,6 +13,7 @@
 -- purposes, such as efficiency, or reliability.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -24,9 +25,11 @@ import Data.Maybe (fromMaybe)
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | A definition of shiftLeft that can deal with variable length shifts.
 -- (Note that the ``shiftL`` method from the 'Bits' class requires an 'Int' shift

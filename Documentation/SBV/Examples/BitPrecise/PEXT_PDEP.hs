@@ -35,6 +35,7 @@
 -- do the reverse: We distribute the bits from the bottom of the source to the destination according to the mask.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -47,10 +48,12 @@ module Documentation.SBV.Examples.BitPrecise.PEXT_PDEP where
 import Data.SBV
 import GHC.TypeLits (KnownNat)
 
+#ifndef HADDOCK
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
+#endif
 
 --------------------------------------------------------------------------------------------------
 -- * Parallel extraction
