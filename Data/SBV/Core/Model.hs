@@ -327,6 +327,9 @@ instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) w
   literal (ArrayModel tbl def) = SBV . SVal knd . Left . CV knd $ CArray $ ArrayModel [(toCV k, toCV v) | (k, v) <- tbl] (toCV <$> def)
     where knd = kindOf (Proxy @(ArrayModel a b))
 
+  fromCV (CV (KArray k1 k2) (CArray (ArrayModel assocs def))) = ArrayModel [(fromCV (CV k1 a), fromCV (CV k2 b)) | (a, b) <- assocs]
+                                                                           ((fromCV . CV k2) <$> def)
+
   fromCV bad = error $ "SymVal.fromCV (SArray): Malformed array received: " ++ show bad
 
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
