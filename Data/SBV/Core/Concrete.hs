@@ -428,49 +428,52 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show show show snd shL shS shT shMaybe shEither shArray w ++ kInfo
-      where kw = kindOf w
+showCV shk w               = liftCV show show show show show show show show snd
+                                    (shL wk) (shS wk) (shT wk) (shMaybe wk) (shEither wk) (shArray wk) w ++ kInfo wk
+      where wk = kindOf w
 
-            kInfo | shk  = " :: " ++ showBaseKind kw
-                  | True = ""
+            kInfo kw | shk  = " :: " ++ showBaseKind kw
+                     | True = ""
 
-            shL xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
+            shL kw xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
               where ke = case kw of
                            KList k -> k
                            _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
 
             -- we represent complements as @U - set@. This might be confusing, but is utterly cute!
-            shS :: RCSet CVal -> String
-            shS eru = case eru of
-                        RegularSet    e              -> sh e
-                        ComplementSet e | Set.null e -> "U"
-                                        | True       -> "U - " ++ sh e
+            shS :: Kind -> RCSet CVal -> String
+            shS kw eru = case eru of
+                           RegularSet    e              -> sh e
+                           ComplementSet e | Set.null e -> "U"
+                                           | True       -> "U - " ++ sh e
               where sh xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ "}"
                     ke = case kw of
                            KSet k -> k
                            _      -> error $ "Data.SBV.showCV: Impossible happened, expected set, got: " ++ show kw
 
-            shT :: [CVal] -> String
-            shT xs = "(" ++ intercalate "," xs' ++ ")"
+            shT :: Kind -> [CVal] -> String
+            shT kw xs = "(" ++ intercalate "," xs' ++ ")"
               where xs' = case kw of
                             KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
                             _   -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
 
-            shMaybe :: Maybe CVal -> String
-            shMaybe c = case (c, kw) of
-                          (Nothing, KMaybe{}) -> "Nothing"
-                          (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
-                          _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show kw
+            shMaybe :: Kind -> Maybe CVal -> String
+            shMaybe kw c = case (c, kw) of
+                            (Nothing, KMaybe{}) -> "Nothing"
+                            (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
+                            _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show kw
 
-            shEither :: Either CVal CVal -> String
-            shEither val
+            shEither :: Kind -> Either CVal CVal -> String
+            shEither kw val
               | KEither k1 k2 <- kw = case val of
                                         Left  x -> "Left "  ++ paren (showCV False (CV k1 x))
                                         Right y -> "Right " ++ paren (showCV False (CV k2 y))
               | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
 
-            shArray :: ArrayModel CVal CVal -> String
-            shArray _ = error "how should I display this?"
+            shArray :: Kind -> ArrayModel CVal CVal -> String
+            shArray kw (ArrayModel assocs def)
+              | KArray k1 k2 <- kw = "([" ++ intercalate "," [shT (KTuple [k1, k2]) [a, b] | (a, b) <- assocs] ++ "], " ++ shMaybe (KMaybe k2) def ++ ")"
+              | True               = error $ "Data.SBV.showCV: Impossible happened, expected array, got: " ++ show kw
 
             -- kind of crude, but works ok
             paren v
