@@ -257,7 +257,7 @@ module Data.SBV (
 
   -- * Symbolic Equality and Comparisons
   -- $distinctNote
-  , EqSymbolic(..), OrdSymbolic(..), Equality(..), distinctExcept
+  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
   -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
 

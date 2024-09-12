@@ -703,6 +703,11 @@ class EqSymbolic a where
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
   distinct :: [a] -> SBool
 
+  -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
+  -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
+  -- distinct regardless of repetition.
+  distinctExcept :: [a] -> [a] -> SBool
+
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.
   allEqual :: [a] -> SBool
 
@@ -723,6 +728,15 @@ class EqSymbolic a where
   -- this method for the base types to generate better code.
   distinct []     = sTrue
   distinct (x:xs) = sAll (x ./=) xs .&& distinct xs
+
+  -- Default implementation of 'distinctExcept'. Note that we override
+  -- this method for the base types to generate better code.
+  distinctExcept es ignored = go es
+    where isIgnored = (`sElem` ignored)
+
+          go []     = sTrue
+          go (x:xs) = let xOK  = isIgnored x .|| sAll (\y -> isIgnored y .|| x ./= y) xs
+                      in xOK .&& go xs
 
   x `sElem`    xs = sAny (.== x) xs
   x `sNotElem` xs = sNot (x `sElem` xs)

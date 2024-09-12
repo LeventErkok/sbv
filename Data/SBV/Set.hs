@@ -276,11 +276,11 @@ notMember se ss = sNot $ member se ss
 -- Note how we have to call `Data.SBV.prove` in the last case since dealing
 -- with infinite sets requires a call to the solver and cannot be
 -- constant folded.
-null :: HasKind a => SSet a -> SBool
+null :: (Ord a, SymVal a, HasKind a) => SSet a -> SBool
 null = (.== empty)
 
 -- | Synonym for 'Data.SBV.Set.null'.
-isEmpty :: HasKind a => SSet a -> SBool
+isEmpty :: (Ord a, SymVal a, HasKind a) => SSet a -> SBool
 isEmpty = null
 
 -- | Is this the full set?
@@ -299,11 +299,11 @@ isEmpty = null
 -- Note how we have to call `Data.SBV.prove` in the first case since dealing
 -- with infinite sets requires a call to the solver and cannot be
 -- constant folded.
-isFull :: HasKind a => SSet a -> SBool
+isFull :: (Ord a, SymVal a, HasKind a) => SSet a -> SBool
 isFull = (.== full)
 
 -- | Synonym for 'Data.SBV.Set.isFull'.
-isUniversal :: HasKind a => SSet a -> SBool
+isUniversal :: (Ord a, SymVal a, HasKind a) => SSet a -> SBool
 isUniversal = isFull
 
 -- | Subset test.

@@ -52,7 +52,6 @@ module Data.SBV.Core.Model (
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
   , sbvQuickCheck
-  , distinctExcept
   , readArray, writeArray, lambdaArray
   )
   where
@@ -321,20 +320,6 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe _) (CMaybe Nothing))  = Nothing
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
-
-{-
-instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (a -> b) where
-   mkSymVal = genMkSymVar (kindOf (Proxy @(a -> b)))
-
-   literal f = SBV . SVal k . Right $ cache g
-       where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
-
-             g st = do def <- lambdaStr st (kindOf (Proxy @(SBV b))) f
-                       newExpr st k (SBVApp (ArrayLambda def) [])
-
-   fromCV (CV _ (CArray f)) i = fromCV $ CV (kindOf (Proxy @b)) (f (toCV i))
-   fromCV bad               _ = error $ "SymVal.fromCV (Array): Malformed array received: " ++ show bad
--}
 
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
@@ -884,7 +869,7 @@ for natural reasons..
 -- It is tempting to put in an @Eq a@ superclass here. But doing so
 -- is complicated, as it requires all underlying types to have equality,
 -- which is at best shaky for algebraic reals and sets. So, leave it out.
-instance EqSymbolic (SBV a) where
+instance (HasKind a, SymVal a) => EqSymbolic (SBV a) where
   SBV x .== SBV y = SBV (svEqual x y)
   SBV x ./= SBV y = SBV (svNotEqual x y)
 
@@ -923,34 +908,46 @@ instance EqSymbolic (SBV a) where
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
 
--- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
--- list contains exceptions, i.e., if an element belongs to that set, it will be considered
--- distinct regardless of repetition.
-distinctExcept :: forall a. (Eq a, SymVal a) => [SBV a] -> [SBV a] -> SBool
-distinctExcept []  _       = sTrue
-distinctExcept [_] _       = sTrue
-distinctExcept es  ignored
-  | all isConc (es ++ ignored)
-  = distinct (filter ignoreConc es)
-  | True
-  = SBV (SVal KBool (Right (cache r)))
-  where ignoreConc x = case x `sElem` ignored of
-                         SBV (SVal KBool (Left cv)) -> cvToBool cv
-                         _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
+  -- Custom version of distinctExcept that generates better code for base types
+  distinctExcept []  _       = sTrue
+  distinctExcept [_] _       = sTrue
+  distinctExcept es  ignored
+    | all isConc (es ++ ignored)
+    = distinct (filter ignoreConc es)
+    | True
+    = SBV (SVal KBool (Right (cache r)))
+    where ignoreConc x = case x `sElem` ignored of
+                           SBV (SVal KBool (Left cv)) -> cvToBool cv
+                           _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
 
-        r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArray table x)
+          r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArrayNoEq table x)
 
-                      initArray :: SArray a Integer
-                      initArray = literal ([], Just 0)
+                        initArray :: SArray a Integer
+                        initArray = lambdaArray (const 0)
 
-                      finalArray = foldl (\table x -> writeArray table x (incr x table)) initArray es
+                        finalArray = foldl (\table x -> writeArrayNoKnd table x (incr x table)) initArray es
 
-                  sbvToSV st $ sAll (\e -> readArray finalArray e .<= (1 :: SInteger)) es
+                    sbvToSV st $ sAll (\e -> readArrayNoEq finalArray e .<= (1 :: SInteger)) es
 
-        -- Sigh, we can't use isConcrete since that requires SymVal
-        -- constraint that we don't have here. (To support SBools.)
-        isConc (SBV (SVal _ (Left _))) = True
-        isConc _                       = False
+          -- Sigh, we can't use isConcrete since that requires SymVal
+          -- constraint that we don't have here. (To support SBools.)
+          isConc (SBV (SVal _ (Left _))) = True
+          isConc _                       = False
+
+          -- Version of readArray that doesn't have the Eq constraint, since we don't have it here
+          readArrayNoEq array key = SBV . SVal KUnbounded . Right $ cache g
+             where g st = do f <- sbvToSV st array
+                             k <- sbvToSV st key
+                             newExpr st KUnbounded (SBVApp ReadArray [f, k])
+
+          writeArrayNoKnd :: forall key. HasKind key => SArray key Integer -> SBV key -> SInteger -> SArray key Integer
+          writeArrayNoKnd array key value = SBV . SVal k . Right $ cache g
+              where k  = KArray (kindOf (Proxy @key)) KUnbounded
+
+                    g st = do arr    <- sbvToSV st array
+                              keyVal <- sbvToSV st key
+                              val    <- sbvToSV st value
+                              newExpr st k (SBVApp WriteArray [arr, keyVal, val])
 
 -- | If comparison is over something SMTLib can handle, just translate it. Otherwise desugar.
 instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where
@@ -2511,7 +2508,7 @@ instance HasKind a => SMTDefinable (SBV a) where
                                                         newExpr st ka $ SBVApp (Uninterpreted nm) []
 
 -- Functions of one argument
-instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
+instance (SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \b -> fn b .== fn b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2531,7 +2528,7 @@ instance (SymVal b, HasKind a) => SMTDefinable (SBV b -> SBV a) where
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0]
 
 -- Functions of two arguments
-instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
+instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \c b -> fn c b .== fn c b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2553,7 +2550,7 @@ instance (SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV c -> SBV b -> SBV 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1]
 
 -- Functions of three arguments
-instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \d c b -> fn d c b .== fn d c b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2577,7 +2574,7 @@ instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV d -> SBV
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2]
 
 -- Functions of four arguments
-instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \e d c b -> fn e d c b .== fn e d c b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2603,7 +2600,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SB
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3]
 
 -- Functions of five arguments
-instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \f e d c b -> fn f e d c b .== fn f e d c b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2631,7 +2628,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDef
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4]
 
 -- Functions of six arguments
-instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
+instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable (SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \f g e d c b -> fn g f e d c b .== fn g f e d c b
 
   sbvDefineValue nm mbArgs uiKind = f
@@ -2661,7 +2658,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5]
 
 -- Functions of seven arguments
-instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable (SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \h g f e d c b -> fn h g f e d c b .== fn h g f e d c b
 
@@ -2694,7 +2691,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6]
 
 -- Functions of eight arguments
-instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, SymVal a, HasKind a)
             => SMTDefinable (SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \i h g f e d c b -> fn i h g f e d c b .== fn i h g f e d c b
 
@@ -2729,7 +2726,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7]
 
 -- Functions of nine arguments
-instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable (SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \j i h g f e d c b -> fn j i h g f e d c b .== fn j i h g f e d c b
 
@@ -2766,7 +2763,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8]
 
 -- Functions of ten arguments
-instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable (SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \k j i h g f e d c b -> fn k j i h g f e d c b .== fn k j i h g f e d c b
 
@@ -2805,7 +2802,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9]
 
 -- Functions of eleven arguments
-instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable (SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \l k j i h g f e d c b -> fn l k j i h g f e d c b .== fn l k j i h g f e d c b
 
@@ -2846,7 +2843,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
                                                                newExpr st ka $ SBVApp (Uninterpreted nm) [sw0, sw1, sw2, sw3, sw4, sw5, sw6, sw7, sw8, sw9, sw10]
 
 -- Functions of twelve arguments
-instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable (SBV m -> SBV l -> SBV k -> SBV j -> SBV i -> SBV h -> SBV g -> SBV f -> SBV e -> SBV d -> SBV c -> SBV b -> SBV a) where
   sbv2smt fn = defs2smt $ \m l k j i h g f e d c b -> fn m l k j i h g f e d c b .== fn m l k j i h g f e d c b
 
@@ -2895,20 +2892,20 @@ mkUncurried (UIFun   a) = UIFun   a
 mkUncurried (UICodeC a) = UICodeC a
 
 -- Uncurried functions of two arguments
-instance (SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
+instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (curry <$> mkUncurried uiKind) in uncurry f
 
 -- Uncurried functions of three arguments
-instance (SymVal d, SymVal c, SymVal b, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
+instance (SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc3 <$> mkUncurried uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
 
 -- Uncurried functions of four arguments
-instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2916,7 +2913,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
     where uc4 fn a b c d = fn (a, b, c, d)
 
 -- Uncurried functions of five arguments
-instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2924,7 +2921,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
     where uc5 fn a b c d e = fn (a, b, c, d, e)
 
 -- Uncurried functions of six arguments
-instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2932,7 +2929,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
 
 -- Uncurried functions of seven arguments
-instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2940,7 +2937,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
 
 -- Uncurried functions of eight arguments
-instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2948,7 +2945,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
     where uc8 fn a b c d e f g h = fn (a, b, c, d, e, f, g, h)
 
 -- Uncurried functions of nine arguments
-instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2956,7 +2953,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
     where uc9 fn a b c d e f g h i = fn (a, b, c, d, e, f, g, h, i)
 
 -- Uncurried functions of ten arguments
-instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2964,7 +2961,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
     where uc10 fn a b c d e f g h i j = fn (a, b, c, d, e, f, g, h, i, j)
 
 -- Uncurried functions of eleven arguments
-instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
@@ -2972,7 +2969,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
     where uc11 fn a b c d e f g h i j k = fn (a, b, c, d, e, f, g, h, i, j, k)
 
 -- Uncurried functions of twelve arguments
-instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, HasKind a)
+instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
