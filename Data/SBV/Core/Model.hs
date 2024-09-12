@@ -324,7 +324,7 @@ instance SymVal a => SymVal (Maybe a) where
 instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) where
   mkSymVal = genMkSymVar (KArray (kindOf (Proxy @a)) (kindOf (Proxy @b)))
 
-  literal (ArrayModel tbl def) = SBV . SVal knd . Left . CV knd $ CArray [(toCV k, toCV v) | (k, v) <- tbl] (toCV <$> def)
+  literal (ArrayModel tbl def) = SBV . SVal knd . Left . CV knd $ CArray ([(toCV k, toCV v) | (k, v) <- tbl], toCV <$> def)
     where knd = kindOf (Proxy @(ArrayModel a b))
 
   fromCV bad = error $ "SymVal.fromCV (SArray): Malformed array received: " ++ show bad

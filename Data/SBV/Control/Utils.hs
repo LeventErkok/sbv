@@ -893,7 +893,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KTuple ks)      = CTuple $ map cvt ks
         cvt (KMaybe _)       = CMaybe Nothing
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
-        cvt (KArray  _  k2)  = CArray [] (Just (cvt k2))
+        cvt (KArray  _  k2)  = CArray ([], Just (cvt k2))
 
         -- Tricky case of uninterpreted
         uninterp _ (Just (c:_)) = CUserSort (Just 1, c)
@@ -945,19 +945,13 @@ recoverKindedValue k e = case k of
                            KString     | ECon s      <- e      -> Just $ CV KString $ CString $ interpretString s
                                        | True                  -> Nothing
 
-                           KRational                           -> Just $ CV k $ CRational $ interpretRational e
-
-                           KList ek                            -> Just $ CV k $ CList $ interpretList ek e
-
-                           KSet ek                             -> Just $ CV k $ CSet $ interpretSet ek e
-
-                           KTuple{}                            -> Just $ CV k $ CTuple $ interpretTuple e
-
-                           KMaybe{}                            -> Just $ CV k $ CMaybe $ interpretMaybe k e
-
-                           KEither{}                           -> Just $ CV k $ CEither $ interpretEither k e
-
-                           KArray{}                            -> error "This needs to be fixed, obviously!"
+                           KRational                           -> Just $ CV k $ CRational $ interpretRational       e
+                           KList ek                            -> Just $ CV k $ CList     $ interpretList ek        e
+                           KSet ek                             -> Just $ CV k $ CSet      $ interpretSet ek         e
+                           KTuple{}                            -> Just $ CV k $ CTuple    $ interpretTuple          e
+                           KMaybe{}                            -> Just $ CV k $ CMaybe    $ interpretMaybe    k     e
+                           KEither{}                           -> Just $ CV k $ CEither   $ interpretEither   k     e
+                           KArray k1 k2                        -> Just $ CV k $ CArray    $ interpretArray    k1 k2 e
 
   where getUIIndex (KUserSort  _ (Just xs)) i = i `elemIndex` xs
         getUIIndex _                        _ = Nothing
@@ -1115,6 +1109,28 @@ recoverKindedValue k e = case k of
                 border b (CV KReal (CAlgReal (AlgRational True v))) = pure $ b v
                 border _ other                                      = error $ "Data.SBV.interpretInterval.border: Expected a real-valued sexp, but received: " ++ show other
 
+        -- Essentially treat sets as functions, since we do allow for store associations
+        interpretArray k1 k2 expr = case parseSExprFunction expr of
+                                      Just (Right ascs) -> decode ascs
+                                      _                 -> tbd "Expected a set value, but couldn't decipher the solver output."
+
+           where tbd :: String -> a
+                 tbd w = error $ unlines [ ""
+                                         , "*** Data.SBV.interpretArray: Unable to process solver output."
+                                         , "***"
+                                         , "*** Kind    : " ++ show k
+                                         , "*** Received: " ++ show e
+                                         , "*** Reason  : " ++ w
+                                         , "***"
+                                         , "*** This is either a bug or something SBV currently does not support."
+                                         , "*** Please report this as a feature request!"
+                                         ]
+
+                 decode (args, d) = ([(cvt k1 l, cvt k2 [r]) | (l, r) <- args], Just (cvt k2 [d]))
+                   where cvt ek [v] = case recoverKindedValue ek v of
+                                         Just (CV _ x) -> x
+                                         _             -> tbd $ "Cannot convert value: " ++ show v
+                         cvt _ vs   = tbd $ "Unexpected function-like-value as array index" ++ show vs
 
 -- | Generalization of 'Data.SBV.Control.getValueCV'
 getValueCV :: (MonadIO m, MonadQuery m) => Maybe Int -> SV -> m CV

@@ -89,7 +89,7 @@ data CVal = CAlgReal  !AlgReal                      -- ^ Algebraic real
           | CTuple    ![CVal]                       -- ^ Tuple
           | CMaybe    !(Maybe CVal)                 -- ^ Maybe
           | CEither   !(Either CVal CVal)           -- ^ Disjoint union
-          | CArray    ![(CVal, CVal)] !(Maybe CVal) -- ^ Arrays are backed by look-up tables concretely
+          | CArray    !([(CVal, CVal)], Maybe CVal) -- ^ Arrays are backed by look-up tables concretely
           deriving G.Data
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
@@ -531,7 +531,7 @@ randomCVal k =
                              def <- if d
                                        then Just <$> randomCVal k2
                                        else pure Nothing
-                             return $ CArray (zip ks vs) def
+                             return $ CArray (zip ks vs, def)
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)
