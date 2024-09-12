@@ -204,7 +204,7 @@ module Data.SBV (
   -- ** Sets
   , RCSet(..), SSet
   -- * Arrays of symbolic values
-  , readArray, writeArray, SArray
+  , readArray, writeArray, SArray, sArray, sArray_, sArrays
 
   -- * Creating symbolic values
   -- ** Single value
@@ -257,7 +257,7 @@ module Data.SBV (
 
   -- * Symbolic Equality and Comparisons
   -- $distinctNote
-  , EqSymbolic(..), OrdSymbolic(..), Equality(..)
+  , EqSymbolic(..), OrdSymbolic(..), Equality(..), distinctExcept
   -- * Conditionals: Mergeable values
   , Mergeable(..), ite, iteLazy
 
@@ -450,6 +450,7 @@ import Data.SBV.Core.Model      hiding (assertWithPenalty, minimize, maximize,
                                         sWord8, sWord8_, sWord8s, sWord16, sWord16_, sWord16s,
                                         sWord32, sWord32_, sWord32s, sWord64, sWord64_, sWord64s,
                                         sMaybe, sMaybe_, sMaybes, sEither, sEither_, sEithers, sSet, sSet_, sSets,
+                                        sArray, sArray_, sArrays,
                                         sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend, sObserve)
 
 import qualified Data.SBV.Core.Model as M  (sBarrelRotateLeft, sBarrelRotateRight, zeroExtend, signExtend)

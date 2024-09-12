@@ -43,10 +43,10 @@ module Data.SBV.Trans (
 
   -- * Creating symbolic values
   -- ** Single value
-  , sBool, sWord8, sWord16, sWord32, sWord64, sWord, sInt8, sInt16, sInt32, sInt64, sInt, sInteger, sReal, sFloat, sDouble, sChar, sString, sList
+  , sBool, sWord8, sWord16, sWord32, sWord64, sWord, sInt8, sInt16, sInt32, sInt64, sInt, sInteger, sReal, sFloat, sDouble, sChar, sString, sList, sArray
 
   -- ** List of values
-  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sWords, sInt8s, sInt16s, sInt32s, sInt64s, sInts, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists
+  , sBools, sWord8s, sWord16s, sWord32s, sWord64s, sWords, sInt8s, sInt16s, sInt32s, sInt64s, sInts, sIntegers, sReals, sFloats, sDoubles, sChars, sStrings, sLists, sArrays
 
   -- * Symbolic Equality and Comparisons
   , EqSymbolic(..), OrdSymbolic(..), Equality(..)

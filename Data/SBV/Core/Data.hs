@@ -700,11 +700,6 @@ class EqSymbolic a where
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are different.
   distinct :: [a] -> SBool
 
-  -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
-  -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
-  -- distinct regardless of repetition.
-  distinctExcept :: [a] -> [a] -> SBool
-
   -- | Returns (symbolic) 'sTrue' if all the elements of the given list are the same.
   allEqual :: [a] -> SBool
 
@@ -732,15 +727,6 @@ class EqSymbolic a where
   -- Default implementation for '(.==)' if the type is 'Generic'
   default (.==) :: (G.Generic a, GEqSymbolic (G.Rep a)) => a -> a -> SBool
   (.==) = symbolicEqDefault
-
-  -- Default implementation of 'distinctExcept'. Note that we override
-  -- this method for the base types to generate better code.
-  distinctExcept es ignored = go es
-    where isIgnored = (`sElem` ignored)
-
-          go []     = sTrue
-          go (x:xs) = let xOK  = isIgnored x .|| sAll (\y -> isIgnored y .|| x ./= y) xs
-                      in xOK .&& go xs
 
 -- | Default implementation of symbolic equality, when the underlying type is generic
 -- Not exported, used with automatic deriving.

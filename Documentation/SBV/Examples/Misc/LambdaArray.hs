@@ -29,8 +29,7 @@ memset mem lo hi newVal = literal update
 -- Q.E.D.
 memsetExample :: IO ThmResult
 memsetExample = prove $ do
-   mem  <- newArray "mem" Nothing
-
+   mem  <- sArray   "mem"
    lo   <- sInteger "lo"
    hi   <- sInteger "hi"
    zero <- sInteger "zero"

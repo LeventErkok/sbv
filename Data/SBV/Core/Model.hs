@@ -35,7 +35,7 @@ module Data.SBV.Core.Model (
   , sWord64, sWord64_, sWord64s, sInt8, sInt8_, sInt8s, sInt16, sInt16_, sInt16s, sInt32, sInt32_, sInt32s, sInt64, sInt64_
   , sInt64s, sInteger, sInteger_, sIntegers, sReal, sReal_, sReals, sFloat, sFloat_, sFloats, sDouble, sDouble_, sDoubles
   , sWord, sWord_, sWords, sInt, sInt_, sInts
-  , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads
+  , sFPHalf, sFPHalf_, sFPHalfs, sFPBFloat, sFPBFloat_, sFPBFloats, sFPSingle, sFPSingle_, sFPSingles, sFPDouble, sFPDouble_, sFPDoubles, sFPQuad, sFPQuad_, sFPQuads, sArray, sArray_, sArrays
   , sFloatingPoint, sFloatingPoint_, sFloatingPoints
   , sChar, sChar_, sChars, sString, sString_, sStrings, sList, sList_, sLists
   , sRational, sRational_, sRationals
@@ -52,6 +52,7 @@ module Data.SBV.Core.Model (
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
   , sbvQuickCheck
+  , distinctExcept
   , readArray, writeArray
   )
   where
@@ -698,6 +699,18 @@ sList_ = free_
 sLists :: (SymVal a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
+-- | Generalization of 'Data.SBV.sAray'
+sArray :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => String -> m (SArray a b)
+sArray = symbolic
+
+-- | Generalization of 'Data.SBV.sList_'
+sArray_ :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => m (SArray a b)
+sArray_ = free_
+
+-- | Generalization of 'Data.SBV.sLists'
+sArrays :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => [String] -> m [SArray a b]
+sArrays = symbolics
+
 -- | Identify tuple like things. Note that there are no methods, just instances to control type inference
 class SymTuple a
 instance SymTuple ()
@@ -908,36 +921,34 @@ instance EqSymbolic (SBV a) where
           isBool (SBV (SVal KBool _)) = True
           isBool _                    = False
 
-  -- Custom version of distinctExcept that generates better code for base types with equality
-  -- We essentially keep track of an array and count cardinalities as we walk along.
-  distinctExcept :: (Eq a, HasKind a, SymVal a, Lambda Symbolic (a -> Integer)) => [SBV a] -> [SBV a] -> SBool
-  distinctExcept []            _       = sTrue
-  distinctExcept [_]           _       = sTrue
-  distinctExcept es@(firstE:_) ignored
-    | all isConc (es ++ ignored)
-    = distinct (filter ignoreConc es)
-    | True
-    = SBV (SVal KBool (Right (cache r)))
-    where ignoreConc x = case x `sElem` ignored of
-                           SBV (SVal KBool (Left cv)) -> cvToBool cv
-                           _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
+-- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
+-- list contains exceptions, i.e., if an element belongs to that set, it will be considered
+-- distinct regardless of repetition.
+distinctExcept :: forall a. (Eq a, SymVal a, Lambda Symbolic (a -> Integer)) => [SBV a] -> [SBV a] -> SBool
+distinctExcept []  _       = sTrue
+distinctExcept [_] _       = sTrue
+distinctExcept es  ignored
+  | all isConc (es ++ ignored)
+  = distinct (filter ignoreConc es)
+  | True
+  = SBV (SVal KBool (Right (cache r)))
+  where ignoreConc x = case x `sElem` ignored of
+                         SBV (SVal KBool (Left cv)) -> cvToBool cv
+                         _                          -> error $ "distinctExcept: Impossible happened, concrete sElem failed: " ++ show (es, ignored, x)
 
-          ek = case firstE of
-                 SBV (SVal k _) -> k
+        r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArray table x)
 
-          r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArray table x)
+                      initArray :: SArray a Integer
+                      initArray = literal $ const 0
 
-                        initArray :: SArray a Integer
-                        initArray = literal $ const 0
+                      finalArray = foldl (\table x -> writeArray table x (incr x table)) initArray es
 
-                        finalArray = foldl (\table x -> writeArray table x (incr x table)) initArray es
+                  sbvToSV st $ sAll (\e -> readArray finalArray e .<= (1 :: SInteger)) es
 
-                    sbvToSV st $ sAll (\e -> readArray finalArray e .<= (1 :: SInteger)) es
-
-          -- Sigh, we can't use isConcrete since that requires SymVal
-          -- constraint that we don't have here. (To support SBools.)
-          isConc (SBV (SVal _ (Left _))) = True
-          isConc _                       = False
+        -- Sigh, we can't use isConcrete since that requires SymVal
+        -- constraint that we don't have here. (To support SBools.)
+        isConc (SBV (SVal _ (Left _))) = True
+        isConc _                       = False
 
 -- | If comparison is over something SMTLib can handle, just translate it. Otherwise desugar.
 instance (Ord a, SymVal a) => OrdSymbolic (SBV a) where

@@ -28,8 +28,8 @@ import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat, SWord, SInt,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
-                                SReal, SString, SV, SWord8, SWord16, SWord32,
-                                SWord64, SEither, SRational, SMaybe, SSet, constrain, (.==))
+                                SReal, SString, SV, SWord8, SWord16, SWord32, Lambda,
+                                SWord64, SEither, SRational, SMaybe, SSet, SArray, constrain, (.==))
 import Data.SBV.Core.Sized     (IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model     (Metric(..), SymTuple)
@@ -808,6 +808,24 @@ sSet_ = Trans.sSet_
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sSets'
 sSets :: (Ord a, SymVal a) => [String] -> Symbolic [SSet a]
 sSets = Trans.sSets
+
+-- | Declare a named 'SArray'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArray'
+sArray :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => String -> Symbolic (SArray a b)
+sArray = Trans.sArray
+
+-- | Declare an unnamed 'SArray'
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArray_'
+sArray_ :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => Symbolic (SArray a b)
+sArray_ = Trans.sArray_
+
+-- | Declare a list of 'SArray' values.
+--
+-- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArrays'
+sArrays :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => [String] -> Symbolic [SArray a b]
+sArrays = Trans.sArrays
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
 -- problems with constraints, like the following:
