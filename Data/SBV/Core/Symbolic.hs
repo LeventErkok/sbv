@@ -47,7 +47,6 @@ module Data.SBV.Core.Symbolic
   , svToSV, svToSymSV, forceSVArg
   , SBVExpr(..), newExpr, isCodeGenMode, isSafetyCheckingIStage, isRunIStage, isSetupIStage
   , Cached, cache, uncache, modifyState, modifyIncState
-  , ArrayIndex(..), uncacheAI
   , NamedSymVar(..), Name, UserInputs, Inputs(..), getSV, swNodeId, namedNodeId
   , addInternInput, addUserInput
   , getUserName', getUserName
@@ -232,8 +231,6 @@ data Op = Plus
         | ZeroExtend Int
         | SignExtend Int
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
-        | ArrEq   ArrayIndex ArrayIndex         -- Array equality
-        | ArrRead ArrayIndex
         | KindCast Kind Kind
         | Uninterpreted String
         | QuantifiedBool [Op] String            -- When we generate a forall/exists (nested etc.) boolean value
@@ -603,9 +600,6 @@ instance Show Op where
   show (LkUp (ti, at, rt, l) i e)
         = "lookup(" ++ tinfo ++ ", " ++ show i ++ ", " ++ show e ++ ")"
         where tinfo = "table" ++ show ti ++ "(" ++ show at ++ " -> " ++ show rt ++ ", " ++ show l ++ ")"
-
-  show (ArrEq i j)          = "array_" ++ show i ++ " == array_" ++ show j
-  show (ArrRead i)          = "select array_" ++ show i
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
@@ -1235,7 +1229,6 @@ data State  = State { sbvContext          :: SBVContext
                     , rAsserts            :: IORef [(String, Maybe CallStack, SV)]
                     , rOutstandingAsserts :: IORef Bool            -- Did we send an assert after the last check-sat call?
                     , rSVCache            :: IORef (Cache SV)
-                    , rAICache            :: IORef (Cache ArrayIndex)
                     , rQueryState         :: IORef (Maybe QueryState)
                     , parentState         :: Maybe State  -- Pointer to our parent if we're in a sublevel
                     }
@@ -1856,7 +1849,6 @@ mkNewState cfg currentRunMode = liftIO $ do
      cgs                <- newIORef Map.empty
      defns              <- newIORef []
      swCache            <- newIORef IMap.empty
-     aiCache            <- newIORef IMap.empty
      usedKinds          <- newIORef Set.empty
      usedLbls           <- newIORef Set.empty
      cstrs              <- newIORef S.empty
@@ -1893,7 +1885,6 @@ mkNewState cfg currentRunMode = liftIO $ do
                   , rCgMap              = cgs
                   , rDefns              = defns
                   , rSVCache            = swCache
-                  , rAICache            = aiCache
                   , rConstraints        = cstrs
                   , rPartitionVars      = pvs
                   , rSMTOptions         = smtOpts
@@ -2121,20 +2112,6 @@ cache = Cached
 -- | Uncache a previously cached computation
 uncache :: Cached SV -> State -> IO SV
 uncache = uncacheGen rSVCache
-
--- | An SMT array index is simply an int value, and the context this array was created in
-data ArrayIndex = ArrayIndex { unArrayIndex   :: Int
-                             , unArrayContext :: SBVContext
-                             }
-               deriving (Eq, Ord, G.Data, NFData, Generic)
-
--- | We simply show indexes as the underlying integer
-instance Show ArrayIndex where
-  show = show . unArrayIndex
-
--- | Uncache, retrieving SMT array indexes
-uncacheAI :: Cached ArrayIndex -> State -> IO ArrayIndex
-uncacheAI = uncacheGen rAICache
 
 -- | Generic uncaching. Note that this is entirely safe, since we do it in the IO monad.
 uncacheGen :: (State -> IORef (Cache a)) -> Cached a -> State -> IO a

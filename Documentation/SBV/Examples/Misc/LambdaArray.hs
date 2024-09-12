@@ -52,8 +52,7 @@ memsetExample = prove $ do
 --   idx  = 1 :: Integer
 outOfInit :: IO SatResult
 outOfInit = sat $ do
-   mem  <- newArray "mem" Nothing
-
+   mem  <- sArray "mem"
    lo   <- sInteger "lo"
    hi   <- sInteger "hi"
    zero <- sInteger "zero"

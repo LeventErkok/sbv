@@ -760,8 +760,8 @@ ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
         hd w []    = error $ "Data.SBV.C.ppExpr: Impossible happened: " ++ w ++ ", received empty list!"
 
         p :: Op -> [Doc] -> Doc
-        p (ArrRead _)       _  = tbd "User specified arrays (ArrRead)"
-        p (ArrEq _ _)       _  = tbd "User specified arrays (ArrEq)"
+        p ReadArray{}       _  = tbd "User specified arrays (ReadArray)"
+        p WriteArray{}      _  = tbd "User specified arrays (WriteArray)"
         p (Label s)        [a] = a <+> text "/*" <+> text s <+> text "*/"
         p (IEEEFP w)         as = handleIEEE w  consts (zip opArgs as) var
         p (PseudoBoolean pb) as = handlePB pb as

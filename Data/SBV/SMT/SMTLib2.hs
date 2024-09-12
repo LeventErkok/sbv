@@ -884,8 +884,8 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (cvtSV a)
 
-        sh (SBVApp (ArrEq i j) [])  = "(= array_" ++ show i ++ " array_" ++ show j ++")"
-        sh (SBVApp (ArrRead i) [a]) = "(select array_" ++ show i ++ " " ++ cvtSV a ++ ")"
+        sh (SBVApp ReadArray  [a, i])    = "(select " ++ cvtSV a ++ " " ++ cvtSV i ++ ")"
+        sh (SBVApp WriteArray [a, i, v]) = "(store "  ++ cvtSV a ++ " " ++ cvtSV i ++ " " ++ cvtSV v ++ ")"
 
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"

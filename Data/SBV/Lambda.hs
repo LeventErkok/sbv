@@ -98,7 +98,6 @@ inSubState inState comp = do
                    , rctr                = fresh rctr
                    , rLambdaLevel        = fresh rLambdaLevel
                    , rtblMap             = fresh rtblMap
-                   , rAICache            = fresh rAICache
                    , rinps               = fresh rinps
                    , rlambdaInps         = fresh rlambdaInps
                    , rConstraints        = fresh rConstraints

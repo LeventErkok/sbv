@@ -322,13 +322,13 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
-instance (HasKind a, HasKind b, SymVal a, SymVal b, Lambda Symbolic (a -> b)) => SymVal (a -> b) where
+instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (a -> b) where
    mkSymVal = genMkSymVar (kindOf (Proxy @(a -> b)))
 
    literal f = SBV . SVal k . Right $ cache g
        where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
-             g st = do def <- lambdaStr st (kindOf (Proxy @b)) f
+             g st = do def <- lambdaStr st (kindOf (Proxy @(SBV b))) f
                        newExpr st k (SBVApp (ArrayLambda def) [])
 
    fromCV (CV _ (CArray f)) i = fromCV $ CV (kindOf (Proxy @b)) (f (toCV i))
@@ -700,15 +700,15 @@ sLists :: (SymVal a, MonadSymbolic m) => [String] -> m [SList a]
 sLists = symbolics
 
 -- | Generalization of 'Data.SBV.sAray'
-sArray :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => String -> m (SArray a b)
+sArray :: (SymVal a, SymVal b, MonadSymbolic m) => String -> m (SArray a b)
 sArray = symbolic
 
 -- | Generalization of 'Data.SBV.sList_'
-sArray_ :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => m (SArray a b)
+sArray_ :: (SymVal a, SymVal b, MonadSymbolic m) => m (SArray a b)
 sArray_ = free_
 
 -- | Generalization of 'Data.SBV.sLists'
-sArrays :: (SymVal a, SymVal b, Lambda Symbolic (a -> b), MonadSymbolic m) => [String] -> m [SArray a b]
+sArrays :: (SymVal a, SymVal b, MonadSymbolic m) => [String] -> m [SArray a b]
 sArrays = symbolics
 
 -- | Identify tuple like things. Note that there are no methods, just instances to control type inference
@@ -924,7 +924,7 @@ instance EqSymbolic (SBV a) where
 -- | Returns (symbolic) `sTrue` if all the elements of the given list are different. The second
 -- list contains exceptions, i.e., if an element belongs to that set, it will be considered
 -- distinct regardless of repetition.
-distinctExcept :: forall a. (Eq a, SymVal a, Lambda Symbolic (a -> Integer)) => [SBV a] -> [SBV a] -> SBool
+distinctExcept :: forall a. (Eq a, SymVal a) => [SBV a] -> [SBV a] -> SBool
 distinctExcept []  _       = sTrue
 distinctExcept [_] _       = sTrue
 distinctExcept es  ignored
@@ -3221,7 +3221,7 @@ instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e,
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
 -- | Reading a value from an array
-readArray :: forall key val. (SymVal key, SymVal val, HasKind val, Lambda Symbolic (key -> val)) => SArray key val -> SBV key -> SBV val
+readArray :: forall key val. (SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
 readArray array key
    | Just f <- unliteral array, Just k <- unliteral key
    = literal (f k)
@@ -3233,7 +3233,7 @@ readArray array key
                    newExpr st kb (SBVApp ReadArray [f, k])
 
 -- | Writing a value to an array
-writeArray :: forall key val. (Eq key, HasKind key, SymVal key, SymVal val, HasKind val, Lambda Symbolic (key -> val)) => SArray key val -> SBV key -> SBV val -> SArray key val
+writeArray :: forall key val. (Eq key, HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val
 writeArray array key value
    | Just f <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
    = literal (\k' -> if k' == keyVal then val else f k')

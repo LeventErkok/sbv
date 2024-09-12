@@ -812,19 +812,19 @@ sSets = Trans.sSets
 -- | Declare a named 'SArray'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArray'
-sArray :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => String -> Symbolic (SArray a b)
+sArray :: (SymVal a, SymVal b) => String -> Symbolic (SArray a b)
 sArray = Trans.sArray
 
 -- | Declare an unnamed 'SArray'
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArray_'
-sArray_ :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => Symbolic (SArray a b)
+sArray_ :: (SymVal a, SymVal b) => Symbolic (SArray a b)
 sArray_ = Trans.sArray_
 
 -- | Declare a list of 'SArray' values.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.sArrays'
-sArrays :: (SymVal a, SymVal b, Lambda Symbolic (a -> b)) => [String] -> Symbolic [SArray a b]
+sArrays :: (SymVal a, SymVal b) => [String] -> Symbolic [SArray a b]
 sArrays = Trans.sArrays
 
 -- | Form the symbolic conjunction of a given list of boolean conditions. Useful in expressing
