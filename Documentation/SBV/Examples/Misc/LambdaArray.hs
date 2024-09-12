@@ -18,7 +18,7 @@ import Data.SBV
 -- | Given an array, and bounds on it, initialize it within the bounds to the element given.
 -- Otherwise, leave it untouched.
 memset :: SArray Integer Integer -> SInteger -> SInteger -> SInteger -> SArray Integer Integer
-memset mem lo hi newVal = literal update
+memset mem lo hi newVal = lambdaArray update
   where update :: SInteger -> SInteger
         update idx = let oldVal = readArray mem idx
                      in ite (lo .<= idx .&& idx .<= hi) newVal oldVal

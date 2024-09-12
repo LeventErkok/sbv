@@ -53,7 +53,7 @@ module Data.SBV.Core.Model (
   , zeroExtend, signExtend
   , sbvQuickCheck
   , distinctExcept
-  , readArray, writeArray
+  , readArray, writeArray, lambdaArray
   )
   where
 
@@ -322,6 +322,7 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
+{-
 instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (a -> b) where
    mkSymVal = genMkSymVar (kindOf (Proxy @(a -> b)))
 
@@ -333,6 +334,7 @@ instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (a -> b) where
 
    fromCV (CV _ (CArray f)) i = fromCV $ CV (kindOf (Proxy @b)) (f (toCV i))
    fromCV bad               _ = error $ "SymVal.fromCV (Array): Malformed array received: " ++ show bad
+-}
 
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
@@ -939,7 +941,7 @@ distinctExcept es  ignored
         r st = do let incr x table = ite (x `sElem` ignored) (0 :: SInteger) (1 + readArray table x)
 
                       initArray :: SArray a Integer
-                      initArray = literal $ const 0
+                      initArray = literal ([], Just 0)
 
                       finalArray = foldl (\table x -> writeArray table x (incr x table)) initArray es
 
@@ -3220,11 +3222,12 @@ instance {-# OVERLAPPABLE #-}
 instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, SymVal f, SymVal g, EqSymbolic z) => Equality ((SBV a, SBV b, SBV c, SBV d, SBV e, SBV f, SBV g) -> z) where
   k === l = prove $ \a b c d e f g -> k (a, b, c, d, e, f, g) .== l (a, b, c, d, e, f, g)
 
--- | Reading a value from an array
-readArray :: forall key val. (SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
+-- | Reading a value from an array. In case of a concrete array with no matching write, we resort to a
+-- symbolic read to ensure the result can be freely chosen by the underlying solver.
+readArray :: forall key val. (Eq key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
 readArray array key
-   | Just f <- unliteral array, Just k <- unliteral key
-   = literal (f k)
+   | Just tbl <- unliteral array, Just k <- unliteral key, Just readVal <- lkUp tbl k
+   = literal readVal
    | True
    = SBV . SVal kb . Right $ cache g
    where kb = kindOf (Proxy @val)
@@ -3232,11 +3235,15 @@ readArray array key
                    k <- sbvToSV st key
                    newExpr st kb (SBVApp ReadArray [f, k])
 
--- | Writing a value to an array
-writeArray :: forall key val. (Eq key, HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val
+         -- return the first value, since we don't bother deleting previous writes
+         lkUp :: Eq a => ([(a, b)], Maybe b) -> a -> Maybe b
+         lkUp (xs, def) k = k `lookup` xs `mplus` def
+
+-- | Writing a value to an array. For the concrete case, we don't bother deleting earlier entries, we keep a history.
+writeArray :: forall key val. (HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val
 writeArray array key value
-   | Just f <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
-   = literal (\k' -> if k' == keyVal then val else f k')
+   | Just (tbl, def) <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
+   = literal ((keyVal, val) : tbl, def)
    | True
    = SBV . SVal k . Right $ cache g
    where kb = kindOf (Proxy @val)
@@ -3247,10 +3254,13 @@ writeArray array key value
                    val    <- sbvToSV st value
                    newExpr st kb (SBVApp WriteArray [arr, keyVal, val])
 
--- | Turn a lambda-abstraction into an array value.
-lambdaArray
-                                lam <- lambdaStr st (kindOf (Proxy @b)) f
+-- | Using a lambda as an array.
+lambdaArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
+lambdaArray f = SBV . SVal k . Right $ cache g
+  where k = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
 
+        g st = do def <- lambdaStr st (kindOf (Proxy @b)) f
+                  newExpr st k (SBVApp (ArrayLambda def) [])
 
 {- HLint ignore module   "Reduce duplication" -}
 {- HLint ignore module   "Eta reduce"         -}

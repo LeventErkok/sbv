@@ -28,7 +28,7 @@ import Data.SBV.Core.Data      (Kind, Outputtable, Penalty,
                                 SymVal, SBool, SBV, SChar, SDouble, SFloat, SWord, SInt,
                                 SFPHalf, SFPBFloat, SFPSingle, SFPDouble, SFPQuad, SFloatingPoint,
                                 SInt8, SInt16, SInt32, SInt64, SInteger, SList,
-                                SReal, SString, SV, SWord8, SWord16, SWord32, Lambda,
+                                SReal, SString, SV, SWord8, SWord16, SWord32,
                                 SWord64, SEither, SRational, SMaybe, SSet, SArray, constrain, (.==))
 import Data.SBV.Core.Sized     (IntN, WordN)
 import Data.SBV.Core.Kind      (BVIsNonZero, ValidFloat)

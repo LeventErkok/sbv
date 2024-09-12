@@ -138,7 +138,7 @@ findInjection expr = runSMT $ do
 
     -- Create an initial environment that returns the symbolic
     -- value my_topicid only, and unspecified for all other variables
-    emptyEnv :: SArray String String <- newArray "emptyEnv" Nothing
+    emptyEnv :: SArray String String <- sArray "emptyEnv"
 
     let env = writeArray emptyEnv "my_topicid" badTopic
 

@@ -46,7 +46,7 @@ f = uninterpret "f"
 -- | Correctness theorem. We state it for all values of @x@, @y@, and
 -- the given array @a@. Note that we're being generic in the type of
 -- array we're expecting.
-thm :: SymArray a => SWord32 -> SWord32 -> a Word32 Word32 -> SBool
+thm :: SWord32 -> SWord32 -> SArray Word32 Word32 -> SBool
 thm x y a = lhs .=> rhs
   where lhs = x + 2 .== y
         rhs =     f (readArray (writeArray a x 3) (y - 2))
@@ -60,5 +60,5 @@ proveSArray :: IO ThmResult
 proveSArray = prove $ do
                 x <- free "x"
                 y <- free "y"
-                a :: SArray Word32 Word32 <- newArray_ Nothing
+                a :: SArray Word32 Word32 <- sArray_
                 return $ thm x y a

@@ -207,6 +207,8 @@ type SMaybe a = SBV (Maybe a)
 
 -- | Symbolic 'Array'. The underlying representation is a list of key-value pairs, with a possible
 -- default for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
+-- When we store the array, we do not bother removing earlier writes, so there might be duplicates.
+-- That is, we store the history of the writes.
 type SArray a b = SBV ([(a, b)], Maybe b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports

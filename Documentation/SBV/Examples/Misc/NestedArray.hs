@@ -27,7 +27,7 @@ import Data.SBV.Control
 nestedArray :: IO (Integer, Integer)
 nestedArray = runSMT $ do
   idx <- sInteger "idx"
-  arr <- newArray_ Nothing :: Symbolic (SArray (Integer, Integer) Integer)
+  arr <- sArray_ :: Symbolic (SArray (Integer, Integer) Integer)
 
   -- we'll assert that arr[idx][idx] = 10
   let val = readArray arr (tuple (idx, idx))
