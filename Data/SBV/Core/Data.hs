@@ -34,7 +34,7 @@ module Data.SBV.Core.Data
  , SWord, SInt, WordN, IntN
  , SRational
  , SChar, SString, SList
- , SEither, SMaybe, SArray
+ , SEither, SMaybe, SArray, ArrayModel(..)
  , STuple, STuple2, STuple3, STuple4, STuple5, STuple6, STuple7, STuple8
  , RCSet(..), SSet
  , nan, infinity, sNaN, sInfinity, RoundingMode(..), SRoundingMode
@@ -205,11 +205,18 @@ type SEither a b = SBV (Either a b)
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
--- | Symbolic 'Array'. The underlying representation is a list of key-value pairs, with a possible
--- default for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
+-- | Underlying type for SMTLib arrays, as a list of key-value pairs, with a possible default
+-- for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
 -- When we store the array, we do not bother removing earlier writes, so there might be duplicates.
 -- That is, we store the history of the writes.
-type SArray a b = SBV ([(a, b)], Maybe b)
+data ArrayModel a b = ArrayModel [(a, b)] (Maybe b)
+
+-- | The kind of an ArrayModel
+instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
+   kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
+
+-- | Symbolic 'Array'
+type SArray a b = SBV (ArrayModel a b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
 -- both regular sets and complements, i.e., those obtained from the

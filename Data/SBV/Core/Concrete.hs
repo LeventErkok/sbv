@@ -75,21 +75,21 @@ instance HasKind a => HasKind (RCSet a) where
 -- | A constant value.
 -- Note: If you add a new constructor here, make sure you add the
 -- corresponding equality in the instance "Eq CVal" and "Ord CVal"!
-data CVal = CAlgReal  !AlgReal             -- ^ Algebraic real
-          | CInteger  !Integer             -- ^ Bit-vector/unbounded integer
-          | CFloat    !Float               -- ^ Float
-          | CDouble   !Double              -- ^ Double
-          | CFP       !FP                  -- ^ Arbitrary float
-          | CRational Rational             -- ^ Rational
-          | CChar     !Char                -- ^ Character
-          | CString   !String              -- ^ String
-          | CList     ![CVal]              -- ^ List
-          | CSet      !(RCSet CVal)        -- ^ Set. Can be regular or complemented.
-          | CUserSort !(Maybe Int, String) -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CTuple    ![CVal]              -- ^ Tuple
-          | CMaybe    !(Maybe CVal)        -- ^ Maybe
-          | CEither   !(Either CVal CVal)  -- ^ Disjoint union
-          | CArray    !(CVal -> CVal)      -- ^ Arrays are backed by functions concretely
+data CVal = CAlgReal  !AlgReal                      -- ^ Algebraic real
+          | CInteger  !Integer                      -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float                        -- ^ Float
+          | CDouble   !Double                       -- ^ Double
+          | CFP       !FP                           -- ^ Arbitrary float
+          | CRational Rational                      -- ^ Rational
+          | CChar     !Char                         -- ^ Character
+          | CString   !String                       -- ^ String
+          | CList     ![CVal]                       -- ^ List
+          | CSet      !(RCSet CVal)                 -- ^ Set. Can be regular or complemented.
+          | CUserSort !(Maybe Int, String)          -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CTuple    ![CVal]                       -- ^ Tuple
+          | CMaybe    !(Maybe CVal)                 -- ^ Maybe
+          | CEither   !(Either CVal CVal)           -- ^ Disjoint union
+          | CArray    ![(CVal, CVal)] !(Maybe CVal) -- ^ Arrays are backed by look-up tables concretely
           deriving G.Data
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
@@ -313,7 +313,7 @@ liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CArray    _)) = error "Data.SBV: liftCV: Unexpected array constant received. Please report!"
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ CArray{}     ) = error "Data.SBV: liftCV: Unexpected array constant received. Please report!"
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -524,7 +524,14 @@ randomCVal k =
                              if i
                                 then CEither . Left  <$> randomCVal k1
                                 else CEither . Right <$> randomCVal k2
-    KArray _ k2        -> CArray . const <$> randomCVal k2
+    KArray k1 k2       -> do l  <- randomRIO (0, 100)
+                             ks <- replicateM l (randomCVal k1)
+                             vs <- replicateM l (randomCVal k2)
+                             d  <- randomIO
+                             def <- if d
+                                       then Just <$> randomCVal k2
+                                       else pure Nothing
+                             return $ CArray (zip ks vs) def
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

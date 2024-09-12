@@ -893,7 +893,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KTuple ks)      = CTuple $ map cvt ks
         cvt (KMaybe _)       = CMaybe Nothing
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
-        cvt (KArray  _  k2)  = CArray (const (cvt k2))
+        cvt (KArray  _  k2)  = CArray [] (Just (cvt k2))
 
         -- Tricky case of uninterpreted
         uninterp _ (Just (c:_)) = CUserSort (Just 1, c)

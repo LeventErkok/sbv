@@ -321,6 +321,14 @@ instance SymVal a => SymVal (Maybe a) where
   fromCV (CV (KMaybe k) (CMaybe (Just x))) = Just $ fromCV $ CV k x
   fromCV bad                               = error $ "SymVal.fromCV (Maybe): Malformed sum received: " ++ show bad
 
+instance (HasKind a, HasKind b, SymVal a, SymVal b) => SymVal (ArrayModel a b) where
+  mkSymVal = genMkSymVar (KArray (kindOf (Proxy @a)) (kindOf (Proxy @b)))
+
+  literal (ArrayModel tbl def) = SBV . SVal knd . Left . CV knd $ CArray [(toCV k, toCV v) | (k, v) <- tbl] (toCV <$> def)
+    where knd = kindOf (Proxy @(ArrayModel a b))
+
+  fromCV bad = error $ "SymVal.fromCV (SArray): Malformed array received: " ++ show bad
+
 instance (Ord a, SymVal a) => SymVal (RCSet a) where
   mkSymVal = genMkSymVar (kindOf (Proxy @(RCSet a)))
 
@@ -3233,14 +3241,14 @@ readArray array key
                    newExpr st kb (SBVApp ReadArray [f, k])
 
          -- return the first value, since we don't bother deleting previous writes
-         lkUp :: Eq a => ([(a, b)], Maybe b) -> a -> Maybe b
-         lkUp (xs, def) k = k `lookup` xs `mplus` def
+         lkUp :: Eq a => ArrayModel a b -> a -> Maybe b
+         lkUp (ArrayModel xs def) k = k `lookup` xs `mplus` def
 
 -- | Writing a value to an array. For the concrete case, we don't bother deleting earlier entries, we keep a history.
 writeArray :: forall key val. (HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val
 writeArray array key value
-   | Just (tbl, def) <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
-   = literal ((keyVal, val) : tbl, def)
+   | Just (ArrayModel tbl def) <- unliteral array, Just keyVal <- unliteral key, Just val <- unliteral value
+   = literal $ ArrayModel ((keyVal, val) : tbl) def
    | True
    = SBV . SVal k . Right $ cache g
    where kb = kindOf (Proxy @val)
