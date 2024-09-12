@@ -1217,7 +1217,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
           | charRatFree k                 = []
           | True                          = let fnm   = "seq" ++ show d
                                                 cstrs = walk (d+1) ("(seq.nth " ++ nm ++ " " ++ fnm ++ ")") f k
-                                            in ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) " ++ "(=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ mkAnd cstrs ++ "))"]
+                                            in ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) (=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ mkAnd cstrs ++ "))"]
         walk  d  nm f (KSet k)
           | charRatFree k                 = []
           | True                          = let fnm    = "set" ++ show d
@@ -1237,7 +1237,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
         walk d  nm f  (KArray k1 k2)
           | all charRatFree [k1, k2]      = []
           | True                          = let fnm   = "array" ++ show d
-                                                cstrs = walk (d+1) nm (\sk snm -> ["(=> (select " ++ snm ++ " " ++ fnm ++ ") " ++ c ++ ")" | c <- f sk fnm]) k2
+                                                cstrs = walk (d+1) ("(select " ++ nm ++ " " ++ fnm ++ ")") f k2
                                             in ["(forall ((" ++ fnm ++ " " ++ smtType k1 ++ ")) " ++ mkAnd cstrs ++ ")"]
 
 -----------------------------------------------------------------------------------------------
