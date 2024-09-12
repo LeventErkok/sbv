@@ -1087,7 +1087,7 @@ liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right 
                    opS st k sva
 
 liftSym1B :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> Bool) -> (Integer -> Bool) -> (Float -> Bool) -> (Double -> Bool) -> (FP -> Bool) -> (Rational -> Bool) -> SVal -> SVal
-liftSym1B _   opCR opCI opCF opCD opFP opRA   (SVal _ (Left a)) = svBool (liftCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint noList noSet noTuple noMaybe noEither a)
+liftSym1B _   opCR opCI opCF opCD opFP opRA   (SVal _ (Left a)) = svBool (liftCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint noList noSet noTuple noMaybe noEither noArray a)
 liftSym1B opS _    _    _    _    _    _    a                   = SVal KBool $ Right $ cache c
    where c st = do sva <- svToSV st a
                    opS st KBool sva
@@ -1106,6 +1106,9 @@ noMaybe _m = error $ "Unexpected unary operation called on maybe value"
 
 noEither :: Either CVal CVal -> a
 noEither _e = error "Unexpected unary operation called on either value"
+
+noArray :: ArrayModel CVal CVal -> a
+noArray _e = error "Unexpected unary operation called on an array value"
 
 {- A note on constant folding.
 

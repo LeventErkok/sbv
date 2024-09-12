@@ -72,24 +72,35 @@ compareRCSet (ComplementSet a) (ComplementSet b) = a `compare` b
 instance HasKind a => HasKind (RCSet a) where
   kindOf _ = KSet (kindOf (Proxy @a))
 
+-- | Underlying type for SMTLib arrays, as a list of key-value pairs, with a possible default
+-- for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
+-- When we store the array, we do not bother removing earlier writes, so there might be duplicates.
+-- That is, we store the history of the writes.
+data ArrayModel a b = ArrayModel [(a, b)] (Maybe b)
+                     deriving G.Data
+
+-- | The kind of an ArrayModel
+instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
+   kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
+
 -- | A constant value.
 -- Note: If you add a new constructor here, make sure you add the
 -- corresponding equality in the instance "Eq CVal" and "Ord CVal"!
-data CVal = CAlgReal  !AlgReal                      -- ^ Algebraic real
-          | CInteger  !Integer                      -- ^ Bit-vector/unbounded integer
-          | CFloat    !Float                        -- ^ Float
-          | CDouble   !Double                       -- ^ Double
-          | CFP       !FP                           -- ^ Arbitrary float
-          | CRational Rational                      -- ^ Rational
-          | CChar     !Char                         -- ^ Character
-          | CString   !String                       -- ^ String
-          | CList     ![CVal]                       -- ^ List
-          | CSet      !(RCSet CVal)                 -- ^ Set. Can be regular or complemented.
-          | CUserSort !(Maybe Int, String)          -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
-          | CTuple    ![CVal]                       -- ^ Tuple
-          | CMaybe    !(Maybe CVal)                 -- ^ Maybe
-          | CEither   !(Either CVal CVal)           -- ^ Disjoint union
-          | CArray    !([(CVal, CVal)], Maybe CVal) -- ^ Arrays are backed by look-up tables concretely
+data CVal = CAlgReal  !AlgReal                -- ^ Algebraic real
+          | CInteger  !Integer                -- ^ Bit-vector/unbounded integer
+          | CFloat    !Float                  -- ^ Float
+          | CDouble   !Double                 -- ^ Double
+          | CFP       !FP                     -- ^ Arbitrary float
+          | CRational Rational                -- ^ Rational
+          | CChar     !Char                   -- ^ Character
+          | CString   !String                 -- ^ String
+          | CList     ![CVal]                 -- ^ List
+          | CSet      !(RCSet CVal)           -- ^ Set. Can be regular or complemented.
+          | CUserSort !(Maybe Int, String)    -- ^ Value of an uninterpreted/user kind. The Maybe Int shows index position for enumerations
+          | CTuple    ![CVal]                 -- ^ Tuple
+          | CMaybe    !(Maybe CVal)           -- ^ Maybe
+          | CEither   !(Either CVal CVal)     -- ^ Disjoint union
+          | CArray    !(ArrayModel CVal CVal) -- ^ Arrays are backed by look-up tables concretely
           deriving G.Data
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
@@ -283,37 +294,38 @@ trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
 -- | Lift a unary function through a 'CV'.
-liftCV :: (AlgReal             -> b)
-       -> (Integer             -> b)
-       -> (Float               -> b)
-       -> (Double              -> b)
-       -> (FP                  -> b)
-       -> (Rational            -> b)
-       -> (Char                -> b)
-       -> (String              -> b)
-       -> ((Maybe Int, String) -> b)
-       -> ([CVal]              -> b)
-       -> (RCSet CVal          -> b)
-       -> ([CVal]              -> b)
-       -> (Maybe CVal          -> b)
-       -> (Either CVal CVal    -> b)
+liftCV :: (AlgReal              -> b)
+       -> (Integer              -> b)
+       -> (Float                -> b)
+       -> (Double               -> b)
+       -> (FP                   -> b)
+       -> (Rational             -> b)
+       -> (Char                 -> b)
+       -> (String               -> b)
+       -> ((Maybe Int, String)  -> b)
+       -> ([CVal]               -> b)
+       -> (RCSet CVal           -> b)
+       -> ([CVal]               -> b)
+       -> (Maybe CVal           -> b)
+       -> (Either CVal CVal     -> b)
+       -> (ArrayModel CVal CVal -> b)
        -> CV
        -> b
-liftCV f _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
-liftCV _ _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CRational v)) = f v
-liftCV _ _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CSet      v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CTuple    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CMaybe    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CEither   v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ CArray{}     ) = error "Data.SBV: liftCV: Unexpected array constant received. Please report!"
+liftCV f _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
+liftCV _ f _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
+liftCV _ _ f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
+liftCV _ _ _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
+liftCV _ _ _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
+liftCV _ _ _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CRational v)) = f v
+liftCV _ _ _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
+liftCV _ _ _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CString   v)) = f v
+liftCV _ _ _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CUserSort v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CList     v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CSet      v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CTuple    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CMaybe    v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CEither   v)) = f v
+liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CArray    v)) = f v
 
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal             -> AlgReal             -> b)
@@ -416,7 +428,7 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show show show snd shL shS shT shMaybe shEither w ++ kInfo
+showCV shk w               = liftCV show show show show show show show show snd shL shS shT shMaybe shEither shArray w ++ kInfo
       where kw = kindOf w
 
             kInfo | shk  = " :: " ++ showBaseKind kw
@@ -456,6 +468,9 @@ showCV shk w               = liftCV show show show show show show show show snd 
                                         Left  x -> "Left "  ++ paren (showCV False (CV k1 x))
                                         Right y -> "Right " ++ paren (showCV False (CV k2 y))
               | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
+
+            shArray :: ArrayModel CVal CVal -> String
+            shArray _ = error "how should I display this?"
 
             -- kind of crude, but works ok
             paren v
@@ -531,7 +546,7 @@ randomCVal k =
                              def <- if d
                                        then Just <$> randomCVal k2
                                        else pure Nothing
-                             return $ CArray (zip ks vs, def)
+                             return $ CArray $ ArrayModel (zip ks vs) def
   where
     bounds :: Bool -> Int -> (Integer, Integer)
     bounds False w = (0, 2^w - 1)

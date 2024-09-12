@@ -205,16 +205,6 @@ type SEither a b = SBV (Either a b)
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
--- | Underlying type for SMTLib arrays, as a list of key-value pairs, with a possible default
--- for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
--- When we store the array, we do not bother removing earlier writes, so there might be duplicates.
--- That is, we store the history of the writes.
-data ArrayModel a b = ArrayModel [(a, b)] (Maybe b)
-
--- | The kind of an ArrayModel
-instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
-   kindOf _ = KArray (kindOf (Proxy @a)) (kindOf (Proxy @b))
-
 -- | Symbolic 'Array'
 type SArray a b = SBV (ArrayModel a b)
 
