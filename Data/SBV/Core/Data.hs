@@ -205,8 +205,9 @@ type SEither a b = SBV (Either a b)
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
--- | Symbolic 'Array'
-type SArray a b = SBV (a -> b)
+-- | Symbolic 'Array'. The underlying representation is a list of key-value pairs, with a possible
+-- default for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
+type SArray a b = SBV ([(a, b)], Maybe b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
 -- both regular sets and complements, i.e., those obtained from the

@@ -3247,5 +3247,10 @@ writeArray array key value
                    val    <- sbvToSV st value
                    newExpr st kb (SBVApp WriteArray [arr, keyVal, val])
 
+-- | Turn a lambda-abstraction into an array value.
+lambdaArray
+                                lam <- lambdaStr st (kindOf (Proxy @b)) f
+
+
 {- HLint ignore module   "Reduce duplication" -}
 {- HLint ignore module   "Eta reduce"         -}
