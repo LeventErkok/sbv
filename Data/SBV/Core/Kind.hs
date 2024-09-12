@@ -237,6 +237,7 @@ class HasKind a where
   isTuple     :: a -> Bool
   isMaybe     :: a -> Bool
   isEither    :: a -> Bool
+  isArray     :: a -> Bool
   showType    :: a -> String
   -- defaults
   hasSign x = kindHasSign (kindOf x)
@@ -307,6 +308,9 @@ class HasKind a where
 
   isEither        (kindOf -> KEither{})    = True
   isEither        _                        = False
+
+  isArray         (kindOf -> KArray{})     = True
+  isArray         _                        = False
 
   showType = show . kindOf
 

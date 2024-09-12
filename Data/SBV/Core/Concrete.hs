@@ -121,7 +121,7 @@ cvRank CMaybe    {} = 12
 cvRank CEither   {} = 13
 cvRank CArray    {} = 14
 
--- | Eq instance for CVVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
+-- | Eq instance for CVal. Note that we cannot simply derive Eq/Ord, since CVAlgReal doesn't have proper
 -- instances for these when values are infinitely precise reals. However, we do
 -- need a structural eq/ord for Map indexes; so define custom ones here:
 instance Eq CVal where
@@ -139,6 +139,10 @@ instance Eq CVal where
   CTuple    a == CTuple    b = a == b
   CMaybe    a == CMaybe    b = a == b
   CEither   a == CEither   b = a == b
+
+  -- This is legit since we don't use this equality for actual semantic" equality, but rather as an index into maps
+  CArray    (ArrayModel a1 d1) == CArray (ArrayModel a2 d2) = (a1, d1) == (a2, d2)
+
   a           == b           = if cvRank a == cvRank b
                                   then error $ unlines [ ""
                                                        , "*** Data.SBV.Eq.CVal: Impossible happened: same rank in comparison fallthru"
@@ -149,7 +153,7 @@ instance Eq CVal where
                                                        ]
                                   else False
 
--- | Ord instance for VWVal. Same comments as the 'Eq' instance why this cannot be derived.
+-- | Ord instance for CVal. Same comments as the 'Eq' instance why this cannot be derived.
 instance Ord CVal where
   CAlgReal  a `compare` CAlgReal  b = a `algRealStructuralCompare` b
   CInteger  a `compare` CInteger  b = a `compare`                  b
@@ -165,6 +169,10 @@ instance Ord CVal where
   CTuple    a `compare` CTuple    b = a `compare`                  b
   CMaybe    a `compare` CMaybe    b = a `compare`                  b
   CEither   a `compare` CEither   b = a `compare`                  b
+
+  -- This is legit since we don't use this equality for actual semantic order, but rather as an index into maps
+  CArray    (ArrayModel a1 d1) `compare` CArray (ArrayModel a2 d2) = (a1, d1) `compare` (a2, d2)
+
   a           `compare` b           = let ra = cvRank a
                                           rb = cvRank b
                                       in if ra == rb
@@ -328,35 +336,35 @@ liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CEither   v)) = f v
 liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CArray    v)) = f v
 
 -- | Lift a binary function through a 'CV'.
-liftCV2 :: (AlgReal             -> AlgReal             -> b)
-        -> (Integer             -> Integer             -> b)
-        -> (Float               -> Float               -> b)
-        -> (Double              -> Double              -> b)
-        -> (FP                  -> FP                  -> b)
-        -> (Rational            -> Rational            -> b)
-        -> (Char                -> Char                -> b)
-        -> (String              -> String              -> b)
-        -> ([CVal]              -> [CVal]              -> b)
-        -> ([CVal]              -> [CVal]              -> b)
-        -> (Maybe CVal          -> Maybe CVal          -> b)
-        -> (Either CVal CVal    -> Either CVal CVal    -> b)
-        -> ((Maybe Int, String) -> (Maybe Int, String) -> b)
-        -> CV                   -> CV                  -> b
+liftCV2 :: (AlgReal              -> AlgReal              -> b)
+        -> (Integer              -> Integer              -> b)
+        -> (Float                -> Float                -> b)
+        -> (Double               -> Double               -> b)
+        -> (FP                   -> FP                   -> b)
+        -> (Rational             -> Rational             -> b)
+        -> (Char                 -> Char                 -> b)
+        -> (String               -> String               -> b)
+        -> ([CVal]               -> [CVal]               -> b)
+        -> ([CVal]               -> [CVal]               -> b)
+        -> (Maybe CVal           -> Maybe CVal           -> b)
+        -> (Either CVal CVal     -> Either CVal CVal     -> b)
+        -> ((Maybe Int, String)  -> (Maybe Int, String)  -> b)
+        -> CV                    -> CV                   -> b
 liftCV2 r i f d af ra c s u v m e w x y = case (cvVal x, cvVal y) of
-                                           (CAlgReal   a, CAlgReal   b) -> r  a b
-                                           (CInteger   a, CInteger   b) -> i  a b
-                                           (CFloat     a, CFloat     b) -> f  a b
-                                           (CDouble    a, CDouble    b) -> d  a b
-                                           (CFP        a, CFP        b) -> af a b
-                                           (CRational  a, CRational  b) -> ra a b
-                                           (CChar      a, CChar      b) -> c  a b
-                                           (CString    a, CString    b) -> s  a b
-                                           (CList      a, CList      b) -> u  a b
-                                           (CTuple     a, CTuple     b) -> v  a b
-                                           (CMaybe     a, CMaybe     b) -> m  a b
-                                           (CEither    a, CEither    b) -> e  a b
-                                           (CUserSort  a, CUserSort  b) -> w  a b
-                                           _                            -> error $ "SBV.liftCV2: impossible, incompatible args received: " ++ show (x, y)
+                                            (CAlgReal   a, CAlgReal   b) -> r  a b
+                                            (CInteger   a, CInteger   b) -> i  a b
+                                            (CFloat     a, CFloat     b) -> f  a b
+                                            (CDouble    a, CDouble    b) -> d  a b
+                                            (CFP        a, CFP        b) -> af a b
+                                            (CRational  a, CRational  b) -> ra a b
+                                            (CChar      a, CChar      b) -> c  a b
+                                            (CString    a, CString    b) -> s  a b
+                                            (CList      a, CList      b) -> u  a b
+                                            (CTuple     a, CTuple     b) -> v  a b
+                                            (CMaybe     a, CMaybe     b) -> m  a b
+                                            (CEither    a, CEither    b) -> e  a b
+                                            (CUserSort  a, CUserSort  b) -> w  a b
+                                            _                            -> error $ "SBV.liftCV2: impossible, incompatible/unexpected args received: " ++ show (x, y)
 
 -- | Map a unary function through a 'CV'.
 mapCV :: (AlgReal             -> AlgReal)

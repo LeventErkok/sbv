@@ -314,8 +314,10 @@ eqOptBool op w x y
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
 svEqual a b
-  | isSet a && isSet b
+  | isSet a
   = svSetEqual a b
+  | isArray a
+  = svArrEqual a b
   | True
   = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
 
@@ -340,7 +342,7 @@ svImplies a b
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
 svNotEqual a b
-  | isSet a && isSet b
+  | isSet a || isArray b
   = svNot $ svEqual a b
   | True
   = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) a b
@@ -363,6 +365,15 @@ svSetEqual sa sb
         r st = do sva <- svToSV st sa
                   svb <- svToSV st sb
                   newExpr st KBool $ SBVApp (SetOp SetEqual) [sva, svb]
+
+-- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check
+-- in all but trivial cases.
+svArrEqual :: SVal -> SVal -> SVal
+svArrEqual sa sb
+ | not (isArray sa && isArray sb && kindOf sa == kindOf sb)
+ = error $ "Data.SBV.svArrEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
+ | True
+ = undefined
 
 -- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
 -- Otherwise equivalent to `svEqual`.
@@ -1174,22 +1185,22 @@ liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
 liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA noCharLift2 noStringLift2 noUnint2 a b
 liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
-liftSym2B :: (State -> Kind -> SV -> SV -> IO SV)
-          -> (CV                  -> CV                  -> Bool)
-          -> (AlgReal             -> AlgReal             -> Bool)
-          -> (Integer             -> Integer             -> Bool)
-          -> (Float               -> Float               -> Bool)
-          -> (Double              -> Double              -> Bool)
-          -> (FP                  -> FP                  -> Bool)
-          -> (Rational            -> Rational            -> Bool)
-          -> (Char                -> Char                -> Bool)
-          -> (String              -> String              -> Bool)
-          -> ([CVal]              -> [CVal]              -> Bool)
-          -> ([CVal]              -> [CVal]              -> Bool)
-          -> (Maybe  CVal         -> Maybe  CVal         -> Bool)
-          -> (Either CVal CVal    -> Either CVal CVal    -> Bool)
-          -> ((Maybe Int, String) -> (Maybe Int, String) -> Bool)
-          -> SVal                 -> SVal                -> SVal
+liftSym2B :: (State -> Kind -> SV  -> SV -> IO SV)
+          -> (CV                   -> CV                  -> Bool)
+          -> (AlgReal              -> AlgReal             -> Bool)
+          -> (Integer              -> Integer             -> Bool)
+          -> (Float                -> Float               -> Bool)
+          -> (Double               -> Double              -> Bool)
+          -> (FP                   -> FP                  -> Bool)
+          -> (Rational             -> Rational            -> Bool)
+          -> (Char                 -> Char                -> Bool)
+          -> (String               -> String              -> Bool)
+          -> ([CVal]               -> [CVal]              -> Bool)
+          -> ([CVal]               -> [CVal]              -> Bool)
+          -> (Maybe  CVal          -> Maybe  CVal         -> Bool)
+          -> (Either CVal CVal     -> Either CVal CVal    -> Bool)
+          -> ((Maybe Int, String)  -> (Maybe Int, String) -> Bool)
+          -> SVal                  -> SVal                -> SVal
 liftSym2B _   okCV opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI a b)
 liftSym2B opS _    _    _    _    _    _    _    _    _    _      _      _        _         _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
 
