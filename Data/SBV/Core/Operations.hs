@@ -1091,7 +1091,7 @@ noCharLift2 x y = error $ "Unexpected binary operation called on chars: " ++ sho
 noStringLift2 :: String -> String -> a
 noStringLift2 x y = error $ "Unexpected binary operation called on strings: " ++ show (x, y)
 
-liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) ->(Rational -> Rational) -> SVal -> SVal
+liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> (Rational -> Rational) -> SVal -> SVal
 liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint a
 liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
