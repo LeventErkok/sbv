@@ -497,6 +497,7 @@ parseStoreAssociations e                                           = Right <$> (
           vals _                                                                        = Nothing
 
 -- | Turn a sequence of left-right chain assignments (condition + free) into a single chain
+-- NB. We make sure the results here are unique, i.e., there's only one assignment to each unique entry
 chainAssigns :: [Either ([SExpr], SExpr) SExpr] -> Maybe ([([SExpr], SExpr)], SExpr)
 chainAssigns chain = regroup $ partitionEithers chain
   where regroup (vs, [d]) = Just (checkDup vs, d)
@@ -509,6 +510,8 @@ chainAssigns chain = regroup $ partitionEithers chain
         -- then we need to drop the 1->2 assignment!
         --
         -- The way we parse these, the first assignment wins.
+        -- NB. I'm not sure if solvers actually would return duplicate assignments, but just being safe here. (i.e.,
+        -- this duplication may actually never happen in practice.)
         checkDup :: [([SExpr], SExpr)] -> [([SExpr], SExpr)]
         checkDup []              = []
         checkDup (a@(key, _):as) = a : checkDup [r | r@(key', _) <- as, not (key `sameKey` key')]
@@ -521,15 +524,16 @@ chainAssigns chain = regroup $ partitionEithers chain
         -- We don't want to derive Eq; as this is more careful on floats and such
         same :: SExpr -> SExpr -> Bool
         same x y = case (x, y) of
-                     (ECon a,      ECon b)       -> a == b
-                     (ENum (i, _), ENum (j, _))  -> i == j
-                     (EReal a,     EReal b)      -> algRealStructuralEqual a b
-                     (EFloat  f1,  EFloat  f2)   -> fpIsEqualObjectH f1 f2
-                     (EDouble d1,  EDouble d2)   -> fpIsEqualObjectH d1 d2
-                     (EApp as,     EApp bs)      -> length as == length bs && and (zipWith same as bs)
-                     (e1,          e2)           -> if eRank e1 == eRank e2
-                                                    then error $ "Data.SBV: You've found a bug in SBV! Please report: SExpr(same): " ++ show (e1, e2)
-                                                    else False
+                     (ECon a,            ECon b)            -> a == b
+                     (ENum (i, _),       ENum (j, _))       -> i == j
+                     (EReal a,           EReal b)           -> algRealStructuralEqual a b
+                     (EFloat  f1,        EFloat  f2)        -> fpIsEqualObjectH f1 f2
+                     (EDouble d1,        EDouble d2)        -> fpIsEqualObjectH d1 d2
+                     (EFloatingPoint a1, EFloatingPoint a2) -> fpIsEqualObjectH a1 a2
+                     (EApp as,           EApp bs)           -> length as == length bs && and (zipWith same as bs)
+                     (e1,                e2)                -> if eRank e1 == eRank e2
+                                                               then error $ "Data.SBV: You've found a bug in SBV! Please report: SExpr(same): " ++ show (e1, e2)
+                                                          else False
         -- Defensive programming: It's too long to list all pair up, so we use this function and
         -- GHC's pattern-match completion warning to catch cases we might've forgotten. If
         -- you ever get the error line above fire, because you must've disabled the pattern-match

@@ -72,11 +72,12 @@ compareRCSet (ComplementSet a) (ComplementSet b) = a `compare` b
 instance HasKind a => HasKind (RCSet a) where
   kindOf _ = KSet (kindOf (Proxy @a))
 
--- | Underlying type for SMTLib arrays, as a list of key-value pairs, with a possible default
--- for unmapped elements. Note that this type matches the typical models returned by SMT-solvers.
+-- | Underlying type for SMTLib arrays, as a list of key-value pairs, with a default for unmapped
+-- elements. Note that this type matches the typical models returned by SMT-solvers.
 -- When we store the array, we do not bother removing earlier writes, so there might be duplicates.
--- That is, we store the history of the writes.
-data ArrayModel a b = ArrayModel [(a, b)] (Maybe b)
+-- That is, we store the history of the writes. The earlier a pair is in the list, the "later" it
+-- is done, i.e., it takes precedence over the latter entries.
+data ArrayModel a b = ArrayModel [(a, b)] b
                      deriving G.Data
 
 -- | The kind of an ArrayModel
@@ -480,7 +481,7 @@ showCV shk w               = liftCV show show show show show show show show snd
 
             shArray :: Kind -> ArrayModel CVal CVal -> String
             shArray kw (ArrayModel assocs def)
-              | KArray k1 k2 <- kw = "([" ++ intercalate "," [shT (KTuple [k1, k2]) [a, b] | (a, b) <- assocs] ++ "], " ++ shMaybe (KMaybe k2) def ++ ")"
+              | KArray k1 k2 <- kw = "([" ++ intercalate "," [shT (KTuple [k1, k2]) [a, b] | (a, b) <- assocs] ++ "], " ++ showCV False (CV k2 def) ++ ")"
               | True               = error $ "Data.SBV.showCV: Impossible happened, expected array, got: " ++ show kw
 
             -- kind of crude, but works ok
@@ -550,13 +551,10 @@ randomCVal k =
                              if i
                                 then CEither . Left  <$> randomCVal k1
                                 else CEither . Right <$> randomCVal k2
-    KArray k1 k2       -> do l  <- randomRIO (0, 100)
-                             ks <- replicateM l (randomCVal k1)
-                             vs <- replicateM l (randomCVal k2)
-                             d  <- randomIO
-                             def <- if d
-                                       then Just <$> randomCVal k2
-                                       else pure Nothing
+    KArray k1 k2       -> do l   <- randomRIO (0, 100)
+                             ks  <- replicateM l (randomCVal k1)
+                             vs  <- replicateM l (randomCVal k2)
+                             def <- randomCVal k2
                              return $ CArray $ ArrayModel (zip ks vs) def
   where
     bounds :: Bool -> Int -> (Integer, Integer)

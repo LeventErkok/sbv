@@ -893,7 +893,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KTuple ks)      = CTuple $ map cvt ks
         cvt (KMaybe _)       = CMaybe Nothing
         cvt (KEither k1 _)   = CEither . Left $ cvt k1     -- why not?
-        cvt (KArray  _  k2)  = CArray $ ArrayModel [] (Just (cvt k2))
+        cvt (KArray  _  k2)  = CArray $ ArrayModel [] (cvt k2)
 
         -- Tricky case of uninterpreted
         uninterp _ (Just (c:_)) = CUserSort (Just 1, c)
@@ -1126,7 +1126,7 @@ recoverKindedValue k e = case k of
                                          , "*** Please report this as a feature request!"
                                          ]
 
-                 decode (args, d) = ArrayModel ([(cvt k1 l, cvt k2 [r]) | (l, r) <- args]) (Just (cvt k2 [d]))
+                 decode (args, d) = ArrayModel [(cvt k1 l, cvt k2 [r]) | (l, r) <- args] (cvt k2 [d])
                    where cvt ek [v] = case recoverKindedValue ek v of
                                          Just (CV _ x) -> x
                                          _             -> tbd $ "Cannot convert value: " ++ show v

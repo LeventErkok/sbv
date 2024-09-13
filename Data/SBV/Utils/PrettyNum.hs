@@ -437,6 +437,9 @@ cvToSMTLib rm x
   | isMaybe x        , CMaybe mc        <- cvVal x = smtLibMaybe  (kindOf x) mc
   | isEither x       , CEither ec       <- cvVal x = smtLibEither (kindOf x) ec
 
+  -- Arrays become sequence of stores
+  | isArray x        , CArray ac       <- cvVal x = smtLibArray (kindOf x) ac
+
   | True = error $ "SBV.cvtCV: Impossible happened: Kind/Value disagreement on: " ++ show (kindOf x, x)
   where roundModeConvert s = fromMaybe s (listToMaybe [smtRoundingMode m | m <- [minBound .. maxBound] :: [RoundingMode], show m == s])
         -- Carefully code hex numbers, SMTLib is picky about lengths of hex constants. For the time
@@ -489,6 +492,19 @@ cvToSMTLib rm x
         smtLibEither ke@(KEither  k _) (Left c)  = dtConstructor "left_SBVEither"  [cvToSMTLib rm (CV k c)] ke
         smtLibEither ke@(KEither  _ k) (Right c) = dtConstructor "right_SBVEither" [cvToSMTLib rm (CV k c)] ke
         smtLibEither k                 _         = error $ "SBV.cvToSMTLib: Impossible case (smtLibEither), received kind: " ++ show k
+
+        -- Remember that in an ArrayModel we keep a history; i.e., the earlier elements are written later. So, we reverse the assocs
+        smtLibArray :: Kind -> ArrayModel CVal CVal -> String
+        smtLibArray k@(KArray k1 k2) (ArrayModel assocs def) = mkStoreChain k k1 k2 (reverse assocs) def
+        smtLibArray k              _                         = error $ "SBV.cvToSMTLib: Impossible case (smtLibArray), received non-matching kind: " ++ show k
+
+        mkStoreChain k k1 k2 writes def = walk writes base
+          where base = "((as const " ++ smtType k ++ ") " ++ cvToSMTLib rm (CV k2 def) ++ ")"
+
+                walk []                  sofar = sofar
+                walk ((key, val) : rest) sofar = walk rest (store key val sofar)
+
+                store key val sofar = "(store " ++ sofar ++ " " ++ cvToSMTLib rm (CV k1 key) ++ " " ++ cvToSMTLib rm (CV k2 val) ++ ")"
 
         -- anomaly at the 2's complement min value! Have to use binary notation here
         -- as there is no positive value we can provide to make the bvneg work.. (see above)
