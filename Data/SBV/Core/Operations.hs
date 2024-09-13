@@ -63,6 +63,9 @@ import Data.SBV.Utils.Numeric (fpIsEqualObjectH, floatToWord, doubleToWord)
 
 import LibBF
 
+tODO :: a
+tODO = error "not yet"
+
 --------------------------------------------------------------------------------
 -- Basic constructors
 
@@ -307,7 +310,7 @@ svEqual a b
   | isArray a
   = svArrEqual a b
   | True
-  = undefined
+  = tODO
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
@@ -317,7 +320,7 @@ svNotEqual a b
   | isArray a
   = svNot $ svArrEqual a b
   | True
-  = undefined
+  = tODO
 
 -- | Implication. Only for booleans.
 svImplies :: SVal -> SVal -> SVal
@@ -358,7 +361,7 @@ svArrEqual sa sb
  | not (isArray sa && isArray sb && kindOf sa == kindOf sb)
  = error $ "Data.SBV.svArrEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
  | True
- = undefined
+ = tODO
 
 -- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
 -- Otherwise equivalent to `svEqual`.
@@ -405,12 +408,12 @@ compareSV op x y
       (CRational    a, CRational b) -> svBool $ a `cOp` b
       (CChar        a, CChar     b) -> svBool $ a `cOp` b
       (CString      a, CString   b) -> svBool $ a `cOp` b
-      (CList        a, CList     b) -> undefined a b
+      (CList        a, CList     b) -> tODO a b
       (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
       (CUserSort    a, CUserSort b) -> svBool $ uiLift (show op) cOp a b
-      (CTuple       a, CTuple    b) -> undefined a b
-      (CMaybe       a, CMaybe    b) -> undefined a b
-      (CEither      a, CEither   b) -> undefined a b
+      (CTuple       a, CTuple    b) -> tODO a b
+      (CMaybe       a, CMaybe    b) -> tODO a b
+      (CEither      a, CEither   b) -> tODO a b
       (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
       _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
    | True
