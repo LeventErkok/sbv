@@ -299,16 +299,6 @@ svRem x y
 svQuotRem :: SVal -> SVal -> (SVal, SVal)
 svQuotRem x y = (x `svQuot` y, x `svRem` y)
 
--- | Optimize away x == true and x /= false to x; otherwise just do eqOpt
-eqOptBool :: Op -> SV -> SV -> SV -> Maybe SV
-eqOptBool op w x y
-  | k == KBool && op == Equal    && x == trueSV  = Just y         -- true  .== y     --> y
-  | k == KBool && op == Equal    && y == trueSV  = Just x         -- x     .== true  --> x
-  | k == KBool && op == NotEqual && x == falseSV = Just y         -- false ./= y     --> y
-  | k == KBool && op == NotEqual && y == falseSV = Just x         -- x     ./= false --> x
-  | True                                         = eqOpt w x y    -- fallback
-  where k = swKind x
-
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
 svEqual a b
@@ -317,7 +307,17 @@ svEqual a b
   | isArray a
   = svArrEqual a b
   | True
-  = liftSym2B (mkSymOpSC (eqOptBool Equal trueSV) Equal) rationalCheck (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) (==) a b
+  = undefined
+
+-- | Inequality.
+svNotEqual :: SVal -> SVal -> SVal
+svNotEqual a b
+  | isSet a || isArray b
+  = svNot $ svEqual a b
+  | isArray a
+  = svNot $ svArrEqual a b
+  | True
+  = undefined
 
 -- | Implication. Only for booleans.
 svImplies :: SVal -> SVal -> SVal
@@ -331,14 +331,6 @@ svImplies a b
   where c st = do sva <- svToSV st a
                   svb <- svToSV st b
                   newExpr st KBool (SBVApp Implies [sva, svb])
-
--- | Inequality.
-svNotEqual :: SVal -> SVal -> SVal
-svNotEqual a b
-  | isSet a || isArray b
-  = svNot $ svEqual a b
-  | True
-  = liftSym2B (mkSymOpSC (eqOptBool NotEqual falseSV) NotEqual) rationalCheck (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) (/=) a b
 
 -- | Set equality. Note that we only do constant folding if we get both a regular or both a
 -- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
@@ -389,33 +381,68 @@ svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool 
                   sy <- svToSV st y
                   newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sx, sy])
 
+-- Comparisons have to be careful in making sure we don't rely on CVal ord/eq instance.
+compareSV :: Op -> SVal -> SVal -> SVal
+compareSV op x y
+  | op `notElem` [LessThan, GreaterThan, LessEq, GreaterEq]   = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
+  | kindOf x /= kindOf y                                      = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
+  | op == LessThan,    isConcreteMax x                        = svFalse   -- MAX <  _
+  | op == LessThan,    isConcreteMin y                        = svFalse   -- _   <  MIN
+  | op == GreaterThan, isConcreteMin x                        = svFalse   -- MIN >  _
+  | op == GreaterThan, isConcreteMax y                        = svFalse   -- _   > MAX
+  | op == LessEq,      isConcreteMin x                        = svTrue    -- MIN <= _
+  | op == LessEq,      isConcreteMax y                        = svTrue    -- _   <= MAX
+  | op == GreaterEq,   isConcreteMax x                        = svTrue    -- MAX >= _
+  | op == GreaterEq,   isConcreteMin y                        = svTrue    -- _   >= MIN
+  | SVal _ (Left cvx@(CV _ xv)) <- x, SVal _ (Left cvy@(CV _ yv)) <- y
+  = case (xv, yv) of
+      (CAlgReal     a, CAlgReal  b) | rationalCheck cvx cvy -> svBool $ a `cOp` b
+                                    | True                  -> symResult
+      (CInteger     a, CInteger  b) -> svBool $ a `cOp` b
+      (CFloat       a, CFloat    b) -> svBool $ a `cOp` b
+      (CDouble      a, CDouble   b) -> svBool $ a `cOp` b
+      (CFP          a, CFP       b) -> svBool $ a `cOp` b
+      (CRational    a, CRational b) -> svBool $ a `cOp` b
+      (CChar        a, CChar     b) -> svBool $ a `cOp` b
+      (CString      a, CString   b) -> svBool $ a `cOp` b
+      (CList        a, CList     b) -> undefined a b
+      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
+      (CUserSort    a, CUserSort b) -> svBool $ uiLift (show op) cOp a b
+      (CTuple       a, CTuple    b) -> undefined a b
+      (CMaybe       a, CMaybe    b) -> undefined a b
+      (CEither      a, CEither   b) -> undefined a b
+      (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
+      _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
+   | True
+   = symResult
+   where symResult = SVal KBool $ Right $ cache r
+         r st = do svx <- svToSV st x
+                   svy <- svToSV st y
+                   newExpr st KBool (SBVApp op [svx, svy])
+
+         cOp :: Ord a => a -> a -> Bool
+         cOp = case op of
+                LessThan    -> (<)
+                GreaterThan -> (>)
+                LessEq      -> (<=)
+                GreaterEq   -> (>=)
+                _           -> error $ "Unexpected operator in comparison: " ++ show op
+
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
-svLessThan x y
-  | isConcreteMax x = svFalse
-  | isConcreteMin y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) LessThan) rationalCheck (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (<) (uiLift "<" (<)) x y
+svLessThan = compareSV LessThan
 
 -- | Greater than.
 svGreaterThan :: SVal -> SVal -> SVal
-svGreaterThan x y
-  | isConcreteMin x = svFalse
-  | isConcreteMax y = svFalse
-  | True            = liftSym2B (mkSymOpSC (eqOpt falseSV) GreaterThan) rationalCheck (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (>) (uiLift ">"  (>)) x y
+svGreaterThan = compareSV GreaterThan
 
 -- | Less than or equal to.
 svLessEq :: SVal -> SVal -> SVal
-svLessEq x y
-  | isConcreteMin x = svTrue
-  | isConcreteMax y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) LessEq) rationalCheck (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (<=) (uiLift "<=" (<=)) x y
+svLessEq = compareSV LessEq
 
 -- | Greater than or equal to.
 svGreaterEq :: SVal -> SVal -> SVal
-svGreaterEq x y
-  | isConcreteMax x = svTrue
-  | isConcreteMin y = svTrue
-  | True            = liftSym2B (mkSymOpSC (eqOpt trueSV) GreaterEq) rationalCheck (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (>=) (uiLift ">=" (>=)) x y
+svGreaterEq = compareSV GreaterEq
 
 -- | Bitwise and.
 svAnd :: SVal -> SVal -> SVal
@@ -1066,7 +1093,13 @@ svMkOverflow2 o x y = SVal KBool (Right (cache r))
 --------------------------------------------------------------------------------
 -- Utility functions
 
-liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> (Rational -> Rational) -> SVal -> SVal
+liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal  -> AlgReal)
+                                           -> (Integer  -> Integer)
+                                           -> (Float    -> Float)
+                                           -> (Double   -> Double)
+                                           -> (FP       -> FP)
+                                           -> (Rational -> Rational)
+                                           -> SVal      -> SVal
 liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA a
 liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
@@ -1136,25 +1169,6 @@ liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
 liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA a b
 liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
-liftSym2B :: (State -> Kind -> SV  -> SV -> IO SV)
-          -> (CV                   -> CV                  -> Bool)
-          -> (AlgReal              -> AlgReal             -> Bool)
-          -> (Integer              -> Integer             -> Bool)
-          -> (Float                -> Float               -> Bool)
-          -> (Double               -> Double              -> Bool)
-          -> (FP                   -> FP                  -> Bool)
-          -> (Rational             -> Rational            -> Bool)
-          -> (Char                 -> Char                -> Bool)
-          -> (String               -> String              -> Bool)
-          -> ([CVal]               -> [CVal]              -> Bool)
-          -> ([CVal]               -> [CVal]              -> Bool)
-          -> (Maybe  CVal          -> Maybe  CVal         -> Bool)
-          -> (Either CVal CVal     -> Either CVal CVal    -> Bool)
-          -> ((Maybe Int, String)  -> (Maybe Int, String) -> Bool)
-          -> SVal                  -> SVal                -> SVal
-liftSym2B _   okCV opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI (SVal _ (Left a)) (SVal _ (Left b)) | okCV a b = svBool (liftCV2 opCR opCI opCF opCD opAF opAR opCC opCS opCSeq opCTup opCMaybe opCEither opUI a b)
-liftSym2B opS _    _    _    _    _    _    _    _    _    _      _      _        _         _    a                 b                            = SVal KBool $ Right $ liftSV2 opS KBool a b
-
 -- | Create a symbolic two argument operation; with shortcut optimizations
 mkSymOpSC :: (SV -> SV -> Maybe SV) -> Op -> State -> Kind -> SV -> SV -> IO SV
 mkSymOpSC shortCut op st k a b = maybe (newExpr st k (SBVApp op [a, b])) return (shortCut a b)
@@ -1168,17 +1182,6 @@ mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (sho
 
 mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
-
--- | eqOpt says the references are to the same SV, thus we can optimize. Note that
--- we explicitly disallow KFloat/KDouble/KFloat here. Why? Because it's *NOT* true that
--- NaN == NaN, NaN >= NaN, and so-forth. So, we have to make sure we don't optimize
--- floats and doubles, in case the argument turns out to be NaN.
-eqOpt :: SV -> SV -> SV -> Maybe SV
-eqOpt w x y = case swKind x of
-                KFloat  -> Nothing
-                KDouble -> Nothing
-                KFP{}   -> Nothing
-                _       -> if x == y then Just w else Nothing
 
 -- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
 uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool

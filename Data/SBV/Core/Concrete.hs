@@ -302,37 +302,6 @@ falseCV = CV KBool (CInteger 0)
 trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
--- | Lift a binary function through a 'CV'.
-liftCV2 :: (AlgReal              -> AlgReal              -> b)
-        -> (Integer              -> Integer              -> b)
-        -> (Float                -> Float                -> b)
-        -> (Double               -> Double               -> b)
-        -> (FP                   -> FP                   -> b)
-        -> (Rational             -> Rational             -> b)
-        -> (Char                 -> Char                 -> b)
-        -> (String               -> String               -> b)
-        -> ([CVal]               -> [CVal]               -> b)
-        -> ([CVal]               -> [CVal]               -> b)
-        -> (Maybe CVal           -> Maybe CVal           -> b)
-        -> (Either CVal CVal     -> Either CVal CVal     -> b)
-        -> ((Maybe Int, String)  -> (Maybe Int, String)  -> b)
-        -> CV                    -> CV                   -> b
-liftCV2 r i f d af ra c s u v m e w x y = case (cvVal x, cvVal y) of
-                                            (CAlgReal   a, CAlgReal   b) -> r  a b
-                                            (CInteger   a, CInteger   b) -> i  a b
-                                            (CFloat     a, CFloat     b) -> f  a b
-                                            (CDouble    a, CDouble    b) -> d  a b
-                                            (CFP        a, CFP        b) -> af a b
-                                            (CRational  a, CRational  b) -> ra a b
-                                            (CChar      a, CChar      b) -> c  a b
-                                            (CString    a, CString    b) -> s  a b
-                                            (CList      a, CList      b) -> u  a b
-                                            (CTuple     a, CTuple     b) -> v  a b
-                                            (CMaybe     a, CMaybe     b) -> m  a b
-                                            (CEither    a, CEither    b) -> e  a b
-                                            (CUserSort  a, CUserSort  b) -> w  a b
-                                            _                            -> error $ "SBV.liftCV2: impossible, incompatible/unexpected args received: " ++ show (x, y)
-
 -- | Map a unary function through a 'CV'.
 mapCV :: (AlgReal             -> AlgReal)
       -> (Integer             -> Integer)

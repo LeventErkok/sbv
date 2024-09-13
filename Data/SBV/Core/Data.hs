@@ -42,7 +42,7 @@ module Data.SBV.Core.Data
  , sRNE, sRNA, sRTP, sRTN, sRTZ
  , SymVal(..)
  , CV(..), CVal(..), AlgReal(..), AlgRealPoly(..), ExtCV(..), GeneralizedCV(..), isRegularCV, cvSameType, cvToBool
- , mkConstCV ,liftCV2, mapCV, mapCV2
+ , mkConstCV , mapCV, mapCV2
  , SV(..), trueSV, falseSV, trueCV, falseCV, normCV
  , SVal(..)
  , sTrue, sFalse, sNot, (.&&), (.||), (.<+>), (.~&), (.~|), (.=>), (.<=>), sAnd, sOr, sAny, sAll, fromBool
