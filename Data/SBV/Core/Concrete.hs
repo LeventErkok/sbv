@@ -403,27 +403,26 @@ mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
        -> (Double              -> Double              -> Double)
        -> (FP                  -> FP                  -> FP)
        -> (Rational            -> Rational            -> Rational)
-       -> (Char                -> Char                -> Char)
-       -> (String              -> String              -> String)
-       -> ((Maybe Int, String) -> (Maybe Int, String) -> (Maybe Int, String))
-       -> CV
-       -> CV
-       -> CV
-mapCV2 r i f d af ra c s u x y = case (cvSameType x y, cvVal x, cvVal y) of
-                                  (True, CAlgReal  a, CAlgReal  b) -> normCV $ CV (kindOf x) (CAlgReal  (r  a b))
-                                  (True, CInteger  a, CInteger  b) -> normCV $ CV (kindOf x) (CInteger  (i  a b))
-                                  (True, CFloat    a, CFloat    b) -> normCV $ CV (kindOf x) (CFloat    (f  a b))
-                                  (True, CDouble   a, CDouble   b) -> normCV $ CV (kindOf x) (CDouble   (d  a b))
-                                  (True, CFP       a, CFP       b) -> normCV $ CV (kindOf x) (CFP       (af a b))
-                                  (True, CRational a, CRational b) -> normCV $ CV (kindOf x) (CRational (ra a b))
-                                  (True, CChar     a, CChar     b) -> normCV $ CV (kindOf x) (CChar     (c  a b))
-                                  (True, CString   a, CString   b) -> normCV $ CV (kindOf x) (CString   (s  a b))
-                                  (True, CUserSort a, CUserSort b) -> normCV $ CV (kindOf x) (CUserSort (u  a b))
-                                  (True, CList{},     CList{})     -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with lists!"
-                                  (True, CTuple{},    CTuple{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with tuples!"
-                                  (True, CMaybe{},    CMaybe{})    -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with maybes!"
-                                  (True, CEither{},   CEither{})   -> error "Data.SBV.mapCV2: Unexpected call through mapCV2 with eithers!"
-                                  _                                -> error $ "Data.SBV.mapCV2: impossible, incompatible args received: " ++ show (x, y)
+       -> CV                   -> CV                  -> CV
+mapCV2 r i f d af ra x y = case (cvSameType x y, cvVal x, cvVal y) of
+                            (True, CAlgReal  a, CAlgReal  b) -> normCV $ CV (kindOf x) (CAlgReal  (r  a b))
+                            (True, CInteger  a, CInteger  b) -> normCV $ CV (kindOf x) (CInteger  (i  a b))
+                            (True, CFloat    a, CFloat    b) -> normCV $ CV (kindOf x) (CFloat    (f  a b))
+                            (True, CDouble   a, CDouble   b) -> normCV $ CV (kindOf x) (CDouble   (d  a b))
+                            (True, CFP       a, CFP       b) -> normCV $ CV (kindOf x) (CFP       (af a b))
+                            (True, CRational a, CRational b) -> normCV $ CV (kindOf x) (CRational (ra a b))
+                            (True, CChar{},     CChar{})     -> unexpected "chars!"
+                            (True, CString{},   CString{})   -> unexpected "strings!"
+                            (True, CUserSort{}, CUserSort{}) -> unexpected "uninterpreted constants!"
+                            (True, CList{},     CList{})     -> unexpected "lists!"
+                            (True, CTuple{},    CTuple{})    -> unexpected "tuples!"
+                            (True, CMaybe{},    CMaybe{})    -> unexpected "maybes!"
+                            (True, CEither{},   CEither{})   -> unexpected "eithers!"
+                            _                                -> unexpected $ "incompatible args: " ++ show (x, y)
+   where unexpected w = error $ unlines [ ""
+                                        , "*** Data.SBV.mapCV2: Unexpected call through mapCV2 with " ++ w
+                                        , "*** Please report this as a bug!"
+                                        ]
 
 -- | Show instance for 'CV'.
 instance Show CV where

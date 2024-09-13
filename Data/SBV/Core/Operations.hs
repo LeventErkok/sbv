@@ -1076,20 +1076,11 @@ svMkOverflow2 o x y = SVal KBool (Right (cache r))
 noUnint  :: (Maybe Int, String) -> a
 noUnint x = error $ "Unexpected operation called on uninterpreted/enumerated value: " ++ show x
 
-noUnint2 :: (Maybe Int, String) -> (Maybe Int, String) -> a
-noUnint2 x y = error $ "Unexpected binary operation called on uninterpreted/enumerated values: " ++ show (x, y)
-
 noCharLift :: Char -> a
 noCharLift x = error $ "Unexpected operation called on char: " ++ show x
 
 noStringLift :: String -> a
 noStringLift x = error $ "Unexpected operation called on string: " ++ show x
-
-noCharLift2 :: Char -> Char -> a
-noCharLift2 x y = error $ "Unexpected binary operation called on chars: " ++ show (x, y)
-
-noStringLift2 :: String -> String -> a
-noStringLift2 x y = error $ "Unexpected binary operation called on strings: " ++ show (x, y)
 
 liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> (Rational -> Rational) -> SVal -> SVal
 liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint a
@@ -1182,7 +1173,7 @@ liftSym2 :: (State -> Kind -> SV -> SV -> IO SV)
          -> (FP       -> FP      -> FP)
          -> (Rational -> Rational-> Rational)
          -> SVal      -> SVal    -> SVal
-liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA noCharLift2 noStringLift2 noUnint2 a b
+liftSym2 _   okCV opCR opCI opCF opCD opFP opRA (SVal k (Left a)) (SVal _ (Left b)) | and [f a b | f <- okCV] = SVal k . Left  $! mapCV2 opCR opCI opCF opCD opFP opRA a b
 liftSym2 opS _    _    _    _    _    _  _      a@(SVal k _)      b                                           = SVal k $ Right $  liftSV2 opS k a b
 
 liftSym2B :: (State -> Kind -> SV  -> SV -> IO SV)
