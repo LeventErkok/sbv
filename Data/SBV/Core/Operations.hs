@@ -322,20 +322,15 @@ svEqual a b
 -- | Implication. Only for booleans.
 svImplies :: SVal -> SVal -> SVal
 svImplies a b
-  |    isConcreteZero a -- false implies everything
-    || isConcreteOne  b -- true is implied by everything
-  = svTrue
-  | any (\x -> kindOf x /= KBool) [a, b]
-  = bad
-  | True
-  = liftSym2B (mkSymOpSC (eqOpt trueSV) Implies) rationalCheck bad imp bad bad bad bad bad bad bad bad bad bad bad a b
-  where bad = error $ "Data.SBV.svImplies: Unexpected arguments: " ++ show (a, kindOf a, b, kindOf b)
-        imp :: Integer -> Integer -> Bool
-        imp 0 0 = True
-        imp 0 1 = True
-        imp 1 0 = False
-        imp 1 1 = True
-        imp x y = error $ "Data.SBV.svImplies: Called on unreduced arguments: " ++ show (x, y, a, kindOf a, b, kindOf b)
+  | any (\x -> kindOf x /= KBool) [a, b] = error $ "Data.SBV.svImplies: Unexpected arguments: " ++ show (a, kindOf a, b, kindOf b)
+  | isConcreteZero a                     = svTrue  -- F -> _ = T
+  |                     isConcreteOne  b = svTrue  -- _ -> T = T
+  | isConcreteOne  a && isConcreteZero b = svFalse -- T -> F = F
+  | isConcreteOne  a && isConcreteOne  b = svTrue  -- T -> T = T
+  | True                                 = SVal KBool $ Right $ cache c
+  where c st = do sva <- svToSV st a
+                  svb <- svToSV st b
+                  newExpr st KBool (SBVApp Implies [sva, svb])
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
