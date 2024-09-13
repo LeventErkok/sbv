@@ -1083,7 +1083,7 @@ noStringLift :: String -> a
 noStringLift x = error $ "Unexpected operation called on string: " ++ show x
 
 liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> (Rational -> Rational) -> SVal -> SVal
-liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint a
+liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA a
 liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
                    opS st k sva
