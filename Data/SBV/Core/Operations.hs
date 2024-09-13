@@ -199,13 +199,11 @@ svDivide = liftSym2 (mkSymOp Quot) [rationalCheck] (/) idiv (/) (/) (/) (/)
 svDivides :: Integer -> SVal -> SVal
 svDivides n v
   | n <= 0 = error $ "svDivides: The first argument must be a strictly positive number, received: " ++ show n
-  | True   = liftSym1B (mkSymOp1 (Divides n))
-                       (noRealUnary "divides")
-                       (\x -> x `mod` n == 0)
-                       (noFloatUnary  "divides")
-                       (noDoubleUnary "divides")
-                       (noFPUnary     "divides")
-                       (noRatUnary    "divides") v
+  | True   = case v of
+              SVal KUnbounded (Left (CV KUnbounded (CInteger val))) -> svBool (val `mod` n == 0)
+              _                                                     -> SVal KBool $ Right $ cache c
+  where c st = do sva <- svToSV st v
+                  newExpr st KBool (SBVApp (Divides n) [sva])
 
 -- | Exponentiation.
 svExp :: SVal -> SVal -> SVal
@@ -1073,44 +1071,11 @@ svMkOverflow2 o x y = SVal KBool (Right (cache r))
 --------------------------------------------------------------------------------
 -- Utility functions
 
-noUnint  :: (Maybe Int, String) -> a
-noUnint x = error $ "Unexpected operation called on uninterpreted/enumerated value: " ++ show x
-
-noCharLift :: Char -> a
-noCharLift x = error $ "Unexpected operation called on char: " ++ show x
-
-noStringLift :: String -> a
-noStringLift x = error $ "Unexpected operation called on string: " ++ show x
-
 liftSym1 :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> AlgReal) -> (Integer -> Integer) -> (Float -> Float) -> (Double -> Double) -> (FP -> FP) -> (Rational -> Rational) -> SVal -> SVal
 liftSym1 _   opCR opCI opCF opCD opFP opRA   (SVal k (Left a)) = SVal k . Left  $! mapCV opCR opCI opCF opCD opFP opRA a
 liftSym1 opS _    _    _    _    _    _    a@(SVal k _)        = SVal k $ Right $ cache c
    where c st = do sva <- svToSV st a
                    opS st k sva
-
-liftSym1B :: (State -> Kind -> SV -> IO SV) -> (AlgReal -> Bool) -> (Integer -> Bool) -> (Float -> Bool) -> (Double -> Bool) -> (FP -> Bool) -> (Rational -> Bool) -> SVal -> SVal
-liftSym1B _   opCR opCI opCF opCD opFP opRA   (SVal _ (Left a)) = svBool (liftCV opCR opCI opCF opCD opFP opRA noCharLift noStringLift noUnint noList noSet noTuple noMaybe noEither noArray a)
-liftSym1B opS _    _    _    _    _    _    a                   = SVal KBool $ Right $ cache c
-   where c st = do sva <- svToSV st a
-                   opS st KBool sva
-
-noList :: [CVal] -> a
-noList _xs = error "Unexpected unary operation called on list value"
-
-noTuple :: [CVal] -> a
-noTuple _xs = error "Unexpected unary operation called on tuple value"
-
-noSet :: RCSet CVal -> a
-noSet _s = error "Unexpected unary operation called on set value"
-
-noMaybe :: Maybe CVal -> a
-noMaybe _m = error $ "Unexpected unary operation called on maybe value"
-
-noEither :: Either CVal CVal -> a
-noEither _e = error "Unexpected unary operation called on either value"
-
-noArray :: ArrayModel CVal CVal -> a
-noArray _e = error "Unexpected unary operation called on an array value"
 
 {- A note on constant folding.
 
