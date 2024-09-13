@@ -302,40 +302,6 @@ falseCV = CV KBool (CInteger 0)
 trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
--- | Lift a unary function through a 'CV'.
-liftCV :: (AlgReal              -> b)
-       -> (Integer              -> b)
-       -> (Float                -> b)
-       -> (Double               -> b)
-       -> (FP                   -> b)
-       -> (Rational             -> b)
-       -> (Char                 -> b)
-       -> (String               -> b)
-       -> ((Maybe Int, String)  -> b)
-       -> ([CVal]               -> b)
-       -> (RCSet CVal           -> b)
-       -> ([CVal]               -> b)
-       -> (Maybe CVal           -> b)
-       -> (Either CVal CVal     -> b)
-       -> (ArrayModel CVal CVal -> b)
-       -> CV
-       -> b
-liftCV f _ _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CAlgReal  v)) = f v
-liftCV _ f _ _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CInteger  v)) = f v
-liftCV _ _ f _ _ _ _ _ _ _ _ _ _ _ _ (CV _ (CFloat    v)) = f v
-liftCV _ _ _ f _ _ _ _ _ _ _ _ _ _ _ (CV _ (CDouble   v)) = f v
-liftCV _ _ _ _ f _ _ _ _ _ _ _ _ _ _ (CV _ (CFP       v)) = f v
-liftCV _ _ _ _ _ f _ _ _ _ _ _ _ _ _ (CV _ (CRational v)) = f v
-liftCV _ _ _ _ _ _ f _ _ _ _ _ _ _ _ (CV _ (CChar     v)) = f v
-liftCV _ _ _ _ _ _ _ f _ _ _ _ _ _ _ (CV _ (CString   v)) = f v
-liftCV _ _ _ _ _ _ _ _ f _ _ _ _ _ _ (CV _ (CUserSort v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ f _ _ _ _ _ (CV _ (CList     v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ f _ _ _ _ (CV _ (CSet      v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ f _ _ _ (CV _ (CTuple    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ f _ _ (CV _ (CMaybe    v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ f _ (CV _ (CEither   v)) = f v
-liftCV _ _ _ _ _ _ _ _ _ _ _ _ _ _ f (CV _ (CArray    v)) = f v
-
 -- | Lift a binary function through a 'CV'.
 liftCV2 :: (AlgReal              -> AlgReal              -> b)
         -> (Integer              -> Integer              -> b)
@@ -432,60 +398,75 @@ instance Show GeneralizedCV where
 -- | Show a CV, with kind info if bool is True
 showCV :: Bool -> CV -> String
 showCV shk w | isBoolean w = show (cvToBool w) ++ (if shk then " :: Bool" else "")
-showCV shk w               = liftCV show show show show show show show show snd
-                                    (shL wk) (shS wk) (shT wk) (shMaybe wk) (shEither wk) (shArray wk) w ++ kInfo wk
-      where wk = kindOf w
+showCV shk w = sh (cvVal w) ++ kInfo
+  where kInfo | shk  = " :: " ++ showBaseKind wk
+              | True = ""
 
-            kInfo kw | shk  = " :: " ++ showBaseKind kw
-                     | True = ""
+        wk = kindOf w
 
-            shL kw xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
-              where ke = case kw of
-                           KList k -> k
-                           _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show kw
+        sh (CAlgReal  v) = show v
+        sh (CInteger  v) = show v
+        sh (CFloat    v) = show v
+        sh (CDouble   v) = show v
+        sh (CFP       v) = show v
+        sh (CRational v) = show v
+        sh (CChar     v) = show v
+        sh (CString   v) = show v
+        sh (CUserSort v) = snd  v
+        sh (CList     v) = shL  v
+        sh (CSet      v) = shS  v
+        sh (CTuple    v) = shT  v
+        sh (CMaybe    v) = shM  v
+        sh (CEither   v) = shE  v
+        sh (CArray    v) = shA  v
 
-            -- we represent complements as @U - set@. This might be confusing, but is utterly cute!
-            shS :: Kind -> RCSet CVal -> String
-            shS kw eru = case eru of
-                           RegularSet    e              -> sh e
-                           ComplementSet e | Set.null e -> "U"
-                                           | True       -> "U - " ++ sh e
-              where sh xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ "}"
-                    ke = case kw of
-                           KSet k -> k
-                           _      -> error $ "Data.SBV.showCV: Impossible happened, expected set, got: " ++ show kw
+        shL xs = "[" ++ intercalate "," (map (showCV False . CV ke) xs) ++ "]"
+          where ke = case wk of
+                       KList k -> k
+                       _       -> error $ "Data.SBV.showCV: Impossible happened, expected list, got: " ++ show wk
 
-            shT :: Kind -> [CVal] -> String
-            shT kw xs = "(" ++ intercalate "," xs' ++ ")"
-              where xs' = case kw of
-                            KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
-                            _   -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show kw
+        -- we represent complements as @U - set@. This might be confusing, but is utterly cute!
+        shS :: RCSet CVal -> String
+        shS eru = case eru of
+                    RegularSet    e              -> set e
+                    ComplementSet e | Set.null e -> "U"
+                                    | True       -> "U - " ++ set e
+          where set xs = "{" ++ intercalate "," (map (showCV False . CV ke) (Set.toList xs)) ++ "}"
+                ke = case wk of
+                       KSet k -> k
+                       _      -> error $ "Data.SBV.showCV: Impossible happened, expected set, got: " ++ show wk
 
-            shMaybe :: Kind -> Maybe CVal -> String
-            shMaybe kw c = case (c, kw) of
-                            (Nothing, KMaybe{}) -> "Nothing"
-                            (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
-                            _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show kw
+        shT :: [CVal] -> String
+        shT xs = "(" ++ intercalate "," xs' ++ ")"
+          where xs' = case wk of
+                        KTuple ks | length ks == length xs -> zipWith (\k x -> showCV False (CV k x)) ks xs
+                        _   -> error $ "Data.SBV.showCV: Impossible happened, expected tuple (of length " ++ show (length xs) ++ "), got: " ++ show wk
 
-            shEither :: Kind -> Either CVal CVal -> String
-            shEither kw val
-              | KEither k1 k2 <- kw = case val of
-                                        Left  x -> "Left "  ++ paren (showCV False (CV k1 x))
-                                        Right y -> "Right " ++ paren (showCV False (CV k2 y))
-              | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show kw
+        shM :: Maybe CVal -> String
+        shM c = case (c, wk) of
+                  (Nothing, KMaybe{}) -> "Nothing"
+                  (Just x,  KMaybe k) -> "Just " ++ paren (showCV False (CV k x))
+                  _                   -> error $ "Data.SBV.showCV: Impossible happened, expected maybe, got: " ++ show wk
 
-            shArray :: Kind -> ArrayModel CVal CVal -> String
-            shArray kw (ArrayModel assocs def)
-              | KArray k1 k2 <- kw = "([" ++ intercalate "," [shT (KTuple [k1, k2]) [a, b] | (a, b) <- assocs] ++ "], " ++ showCV False (CV k2 def) ++ ")"
-              | True               = error $ "Data.SBV.showCV: Impossible happened, expected array, got: " ++ show kw
+        shE :: Either CVal CVal -> String
+        shE val
+          | KEither k1 k2 <- wk = case val of
+                                    Left  x -> "Left "  ++ paren (showCV False (CV k1 x))
+                                    Right y -> "Right " ++ paren (showCV False (CV k2 y))
+          | True                = error $ "Data.SBV.showCV: Impossible happened, expected sum, got: " ++ show wk
 
-            -- kind of crude, but works ok
-            paren v
-              | needsParen = '(' : v ++ ")"
-              | True       = v
-              where needsParen = case dropWhile isSpace v of
-                                   []         -> False
-                                   rest@(x:_) -> x == '-' || (any isSpace rest && x `notElem` "{[(")
+        shA :: ArrayModel CVal CVal -> String
+        shA (ArrayModel assocs def)
+          | KArray k1 k2 <- wk = "([" ++ intercalate "," [showCV False (CV (KTuple [k1, k2]) (CTuple [a, b])) | (a, b) <- assocs] ++ "], " ++ showCV False (CV k2 def) ++ ")"
+          | True               = error $ "Data.SBV.showCV: Impossible happened, expected array, got: " ++ show wk
+
+        -- kind of crude, but works ok
+        paren v
+          | needsParen = '(' : v ++ ")"
+          | True       = v
+          where needsParen = case dropWhile isSpace v of
+                               []         -> False
+                               rest@(x:_) -> x == '-' || (any isSpace rest && x `notElem` "{[(")
 
 -- | Create a constant word from an integral.
 mkConstCV :: Integral a => Kind -> a -> CV
