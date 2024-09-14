@@ -314,13 +314,7 @@ svEqual a b
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
-svNotEqual a b
-  | isSet a || isArray b
-  = svNot $ svEqual a b
-  | isArray a
-  = svNot $ svArrEqual a b
-  | True
-  = tODO
+svNotEqual a b = svNot (a `svEqual` b)
 
 -- | Implication. Only for booleans.
 svImplies :: SVal -> SVal -> SVal
