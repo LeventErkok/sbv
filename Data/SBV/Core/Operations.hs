@@ -336,9 +336,9 @@ svSetEqual sa sb
   | not (isSet sa && isSet sb && kindOf sa == kindOf sb)
   = error $ "Data.SBV.svSetEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
   | Just (RegularSet a)    <- getSet sa, Just (RegularSet b)    <- getSet sb
-  = svBool (a == b)
+  = tODO "Don't rely on CVal eq/ord" $ svBool (a == b)
   | Just (ComplementSet a) <- getSet sa, Just (ComplementSet b) <- getSet sb
-  = svBool (a == b)
+  = tODO "Don't rely on CVal eq/ord" $ svBool (a == b)
   | True
   = SVal KBool $ Right $ cache r
   where getSet (SVal _ (Left (CV _ (CSet s)))) = Just s
