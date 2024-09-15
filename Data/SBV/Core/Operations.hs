@@ -23,7 +23,7 @@ module Data.SBV.Core.Operations
   -- ** Basic operations
   , svPlus, svTimes, svMinus, svUNeg, svAbs, svSignum
   , svDivide, svQuot, svRem, svQuotRem, svDivides
-  , svEqual, svNotEqual, svStrongEqual, svImplies, svSetEqual
+  , svEqual, svNotEqual, svStrongEqual, svImplies
   , svLessThan, svGreaterThan, svLessEq, svGreaterEq, svStructuralLessThan
   , svAnd, svOr, svXOr, svNot
   , svShl, svShr, svRol, svRor
@@ -49,7 +49,7 @@ module Data.SBV.Core.Operations
 
 import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
-import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl')
+import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -62,9 +62,6 @@ import Data.Ratio
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, floatToWord, doubleToWord)
 
 import LibBF
-
-tODO :: a
-tODO = error "not yet"
 
 --------------------------------------------------------------------------------
 -- Basic constructors
@@ -302,20 +299,6 @@ svRem x y
 svQuotRem :: SVal -> SVal -> (SVal, SVal)
 svQuotRem x y = (x `svQuot` y, x `svRem` y)
 
--- | Equality.
-svEqual :: SVal -> SVal -> SVal
-svEqual a b
-  | isSet a
-  = svSetEqual a b
-  | isArray a
-  = svArrEqual a b
-  | True
-  = tODO
-
--- | Inequality.
-svNotEqual :: SVal -> SVal -> SVal
-svNotEqual a b = svNot (a `svEqual` b)
-
 -- | Implication. Only for booleans.
 svImplies :: SVal -> SVal -> SVal
 svImplies a b
@@ -328,6 +311,108 @@ svImplies a b
   where c st = do sva <- svToSV st a
                   svb <- svToSV st b
                   newExpr st KBool (SBVApp Implies [sva, svb])
+
+-- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
+-- Otherwise equivalent to `svEqual`.
+svStrongEqual :: SVal -> SVal -> SVal
+svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isDouble x, Just f1 <- getD x,  Just f2 <- getD y  = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isFP x,     Just f1 <- getFP x, Just f2 <- getFP y = svBool $ f1 `fpIsEqualObjectH` f2
+                  | isFloat x || isDouble x || isFP x                  = SVal KBool $ Right $ cache r
+                  | True                                               = svEqual x y
+  where getF (SVal _ (Left (CV _ (CFloat f)))) = Just f
+        getF _                                 = Nothing
+
+        getD (SVal _ (Left (CV _ (CDouble d)))) = Just d
+        getD _                                  = Nothing
+
+        getFP (SVal _ (Left (CV _ (CFP f))))    = Just f
+        getFP _                                 = Nothing
+
+        r st = do sx <- svToSV st x
+                  sy <- svToSV st y
+                  newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sx, sy])
+
+-- Comparisons have to be careful in making sure we don't rely on CVal ord/eq instance.
+compareSV :: Op -> SVal -> SVal -> SVal
+compareSV op x y
+  -- Make sure we don't get anything we can't handle or expect
+  | op `notElem` [Equal, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
+  | kindOf x /= kindOf y                                           = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
+
+  -- Boolean equality optimizations
+  | k == KBool, op == Equal, SVal _ (Left xv) <- x, xv == trueCV  = y         -- true  .== y     --> y
+  | k == KBool, op == Equal, SVal _ (Left yv) <- y, yv == trueCV  = x         -- x     .== true  --> x
+  | k == KBool, op == Equal, SVal _ (Left xv) <- x, xv == falseCV = svNot y   -- false .== y     --> svNot y
+  | k == KBool, op == Equal, SVal _ (Left yv) <- y, yv == falseCV = svNot x   -- x     .== false --> svNot x
+
+  -- Comparison optimizations if one operans is min/max bit-vector
+  | op == LessThan,    isConcreteMax x = svFalse   -- MAX <  _
+  | op == LessThan,    isConcreteMin y = svFalse   -- _   <  MIN
+
+  | op == GreaterThan, isConcreteMin x = svFalse   -- MIN >  _
+  | op == GreaterThan, isConcreteMax y = svFalse   -- _   > MAX
+
+  | op == LessEq,      isConcreteMin x = svTrue    -- MIN <= _
+  | op == LessEq,      isConcreteMax y = svTrue    -- _   <= MAX
+
+  | op == GreaterEq,   isConcreteMax x = svTrue    -- MAX >= _
+  | op == GreaterEq,   isConcreteMin y = svTrue    -- _   >= MIN
+
+  -- General constant folding, but be careful not to be too smart here.
+  | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
+  = case xv `cCompare` yv of
+      Nothing -> symResult
+      Just r  -> svBool $ case op of
+                            Equal       -> r == EQ
+                            LessThan    -> r == LT
+                            GreaterThan -> r == GT
+                            LessEq      -> r `elem` [EQ, LT]
+                            GreaterEq   -> r `elem` [EQ, GT]
+                            _           -> error $ "Unexpected call to compareSV: " ++ show (op, x, y)
+
+   -- No constant folding opportunities, turn symbolic
+   | True
+   = symResult
+   where k = kindOf x
+
+         symResult = SVal KBool $ Right $ cache res
+          where res st = do svx <- svToSV st x
+                            svy <- svToSV st y
+                            newExpr st KBool (SBVApp op [svx, svy])
+
+-- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated
+cCompare :: CV -> CV -> Maybe Ordering
+cCompare x y =
+    case (cvVal x, cvVal y) of
+
+      -- Simple cases
+      (CInteger     a, CInteger  b) -> Just $ a `compare` b
+      (CFloat       a, CFloat    b) -> Just $ a `compare` b
+      (CDouble      a, CDouble   b) -> Just $ a `compare` b
+      (CFP          a, CFP       b) -> Just $ a `compare` b
+      (CRational    a, CRational b) -> Just $ a `compare` b
+      (CChar        a, CChar     b) -> Just $ a `compare` b
+      (CString      a, CString   b) -> Just $ a `compare` b
+
+      -- We can handle algreal, so long as they are exact-rationals
+      (CAlgReal     a, CAlgReal  b) | rationalCheck x y -> Just $ a `compare` b
+                                    | True              -> Nothing
+
+      {-
+      (CList        a, CList     b) -> svBool $ lexicographic a b
+      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
+      (CUserSort    a, CUserSort b) -> svBool $ uiLift (show op) cOp a b
+      (CTuple       a, CTuple    b) -> svBool $ lexicographic a b
+      (CMaybe       a, CMaybe    b) -> tODO a b
+      (CEither      a, CEither   b) -> tODO a b
+      (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
+      _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
+
+-- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
+uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
+uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
+uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
 -- | Set equality. Note that we only do constant folding if we get both a regular or both a
 -- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
@@ -357,73 +442,22 @@ svArrEqual sa sb
  | True
  = tODO
 
--- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
--- Otherwise equivalent to `svEqual`.
-svStrongEqual :: SVal -> SVal -> SVal
-svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool $ f1 `fpIsEqualObjectH` f2
-                  | isDouble x, Just f1 <- getD x,  Just f2 <- getD y  = svBool $ f1 `fpIsEqualObjectH` f2
-                  | isFP x,     Just f1 <- getFP x, Just f2 <- getFP y = svBool $ f1 `fpIsEqualObjectH` f2
-                  | isFloat x || isDouble x || isFP x                  = SVal KBool $ Right $ cache r
-                  | True                                               = svEqual x y
-  where getF (SVal _ (Left (CV _ (CFloat f)))) = Just f
-        getF _                                 = Nothing
+      -}
+      _ -> error $ unlines [ ""
+                           , "*** Data.SBV.cCompare: Impossible happened: same rank in comparison fallthru"
+                           , "***"
+                           , "***   Received: " ++ show (x, y)
+                           , "***"
+                           , "*** Please report this as a bug!"
+                           ]
 
-        getD (SVal _ (Left (CV _ (CDouble d)))) = Just d
-        getD _                                  = Nothing
+-- | Equality.
+svEqual :: SVal -> SVal -> SVal
+svEqual = compareSV Equal
 
-        getFP (SVal _ (Left (CV _ (CFP f))))    = Just f
-        getFP _                                 = Nothing
-
-        r st = do sx <- svToSV st x
-                  sy <- svToSV st y
-                  newExpr st KBool (SBVApp (IEEEFP FP_ObjEqual) [sx, sy])
-
--- Comparisons have to be careful in making sure we don't rely on CVal ord/eq instance.
-compareSV :: Op -> SVal -> SVal -> SVal
-compareSV op x y
-  | op `notElem` [LessThan, GreaterThan, LessEq, GreaterEq]   = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
-  | kindOf x /= kindOf y                                      = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
-  | op == LessThan,    isConcreteMax x                        = svFalse   -- MAX <  _
-  | op == LessThan,    isConcreteMin y                        = svFalse   -- _   <  MIN
-  | op == GreaterThan, isConcreteMin x                        = svFalse   -- MIN >  _
-  | op == GreaterThan, isConcreteMax y                        = svFalse   -- _   > MAX
-  | op == LessEq,      isConcreteMin x                        = svTrue    -- MIN <= _
-  | op == LessEq,      isConcreteMax y                        = svTrue    -- _   <= MAX
-  | op == GreaterEq,   isConcreteMax x                        = svTrue    -- MAX >= _
-  | op == GreaterEq,   isConcreteMin y                        = svTrue    -- _   >= MIN
-  | SVal _ (Left cvx@(CV _ xv)) <- x, SVal _ (Left cvy@(CV _ yv)) <- y
-  = case (xv, yv) of
-      (CAlgReal     a, CAlgReal  b) | rationalCheck cvx cvy -> svBool $ a `cOp` b
-                                    | True                  -> symResult
-      (CInteger     a, CInteger  b) -> svBool $ a `cOp` b
-      (CFloat       a, CFloat    b) -> svBool $ a `cOp` b
-      (CDouble      a, CDouble   b) -> svBool $ a `cOp` b
-      (CFP          a, CFP       b) -> svBool $ a `cOp` b
-      (CRational    a, CRational b) -> svBool $ a `cOp` b
-      (CChar        a, CChar     b) -> svBool $ a `cOp` b
-      (CString      a, CString   b) -> svBool $ a `cOp` b
-      (CList        a, CList     b) -> tODO a b
-      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
-      (CUserSort    a, CUserSort b) -> svBool $ uiLift (show op) cOp a b
-      (CTuple       a, CTuple    b) -> tODO a b
-      (CMaybe       a, CMaybe    b) -> tODO a b
-      (CEither      a, CEither   b) -> tODO a b
-      (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
-      _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
-   | True
-   = symResult
-   where symResult = SVal KBool $ Right $ cache r
-         r st = do svx <- svToSV st x
-                   svy <- svToSV st y
-                   newExpr st KBool (SBVApp op [svx, svy])
-
-         cOp :: Ord a => a -> a -> Bool
-         cOp = case op of
-                LessThan    -> (<)
-                GreaterThan -> (>)
-                LessEq      -> (<=)
-                GreaterEq   -> (>=)
-                _           -> error $ "Unexpected operator in comparison: " ++ show op
+-- | Inequality.
+svNotEqual :: SVal -> SVal -> SVal
+svNotEqual a b = svNot (a `svEqual` b)
 
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
@@ -1179,11 +1213,6 @@ mkSymOp1SC shortCut op st k a = maybe (newExpr st k (SBVApp op [a])) return (sho
 
 mkSymOp1 :: Op -> State -> Kind -> SV -> IO SV
 mkSymOp1 = mkSymOp1SC (const Nothing)
-
--- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
-uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
-uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
-uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
 -- | Predicate to check if a value is concrete
 isConcrete :: SVal -> Bool
