@@ -414,9 +414,10 @@ cCompare x y =
       (CUserSort    a, CUserSort b) -> case (a, b) of
                                          ((Just i, _), (Just j, _)) -> Just $ i `compare` j
                                          _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (a, b)
+
+      (CList        a, CList b)     -> lexCmp a b
+      (CTuple       a, CTuple b)    -> lexCmp a b
 {----------------
-      (CList        a, CList     b) -> svBool $ lexicographic a b
-      (CTuple       a, CTuple    b) -> svBool $ lexicographic a b
       (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
       (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
       _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
@@ -457,6 +458,14 @@ svArrEqual sa sb
                            , "***"
                            , "*** Please report this as a bug!"
                            ]
+  where -- lexicographic
+        lexCmp :: [CVal] -> [CVal] -> Maybe Ordering
+        lexCmp []     []     = Just EQ
+        lexCmp []     (_:_)  = Just LT
+        lexCmp (_:_)  []     = Just GT
+        lexCmp (a:as) (b:bs) = case a `cCompare` b of
+                                 Just EQ -> as `lexCmp` bs
+                                 other   -> other
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
