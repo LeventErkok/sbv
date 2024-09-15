@@ -361,7 +361,7 @@ compareSV op x y
 
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
-  = case xv `cCompare` yv of
+  = case cvVal xv `cCompare` cvVal yv of
       Nothing -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
@@ -382,9 +382,9 @@ compareSV op x y
                             newExpr st KBool (SBVApp op [svx, svy])
 
 -- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated
-cCompare :: CV -> CV -> Maybe Ordering
+cCompare :: CVal -> CVal -> Maybe Ordering
 cCompare x y =
-    case (cvVal x, cvVal y) of
+    case (x, y) of
 
       -- Simple cases
       (CInteger     a, CInteger  b) -> Just $ a `compare` b
@@ -396,23 +396,30 @@ cCompare x y =
       (CString      a, CString   b) -> Just $ a `compare` b
 
       -- We can handle algreal, so long as they are exact-rationals
-      (CAlgReal     a, CAlgReal  b) | rationalCheck x y -> Just $ a `compare` b
-                                    | True              -> Nothing
+      (CAlgReal     a, CAlgReal  b) | isExactRational a && isExactRational b -> Just $ a `compare` b
+                                    | True                                   -> Nothing
 
-      {-
+      (CMaybe       a, CMaybe    b) -> case (a, b) of
+                                         (Nothing, Nothing) -> Just EQ
+                                         (Nothing, Just{})  -> Just LT
+                                         (Just{},  Nothing) -> Just GT
+                                         (Just av, Just bv) -> av `cCompare` bv
+
+      (CEither      a, CEither   b) -> case (a, b) of
+                                         (Left{},   Right{})  -> Just LT
+                                         (Right{},  Left{})   -> Just GT
+                                         (Left av,  Left  bv) -> av `cCompare` bv
+                                         (Right av, Right bv) -> av `cCompare` bv
+
+      (CUserSort    a, CUserSort b) -> case (a, b) of
+                                         ((Just i, _), (Just j, _)) -> Just $ i `compare` j
+                                         _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (a, b)
+{----------------
       (CList        a, CList     b) -> svBool $ lexicographic a b
-      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
-      (CUserSort    a, CUserSort b) -> svBool $ uiLift (show op) cOp a b
       (CTuple       a, CTuple    b) -> svBool $ lexicographic a b
-      (CMaybe       a, CMaybe    b) -> tODO a b
-      (CEither      a, CEither   b) -> tODO a b
+      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
       (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
       _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
-
--- For uninterpreted/enumerated values, we carefully lift through the constructor index for comparisons:
-uiLift :: String -> (Int -> Int -> Bool) -> (Maybe Int, String) -> (Maybe Int, String) -> Bool
-uiLift _ cmp (Just i, _) (Just j, _) = i `cmp` j
-uiLift w _   a           b           = error $ "Data.SBV.Core.Operations: Impossible happened while trying to lift " ++ w ++ " over " ++ show (a, b)
 
 -- | Set equality. Note that we only do constant folding if we get both a regular or both a
 -- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
@@ -442,11 +449,11 @@ svArrEqual sa sb
  | True
  = tODO
 
-      -}
+-----------------}
       _ -> error $ unlines [ ""
                            , "*** Data.SBV.cCompare: Impossible happened: same rank in comparison fallthru"
                            , "***"
-                           , "***   Received: " ++ show (x, y)
+                           , "***   Ranks Received: " ++ show (cvRank x, cvRank y)
                            , "***"
                            , "*** Please report this as a bug!"
                            ]
