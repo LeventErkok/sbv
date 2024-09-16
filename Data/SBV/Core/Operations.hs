@@ -50,7 +50,7 @@ module Data.SBV.Core.Operations
 
 import Prelude hiding (Foldable(..))
 import Data.Bits (Bits(..))
-import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem)
+import Data.List (genericIndex, genericLength, genericTake, foldr, length, foldl', elem, nub, sort)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Kind
@@ -523,11 +523,14 @@ svSetEqual k sa sb
 -- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check in all but trivial cases.
 -- Also, see the note above for 'svSetEqual'.
 svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
-svArrEqual k1 k2 sa sb
+svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
  | any (not . canDoEqChecks) [k1, k2]
  = Nothing
  | True
- = error "TODO"
+ -- We can be a bit better here since if keys cover everything then defs don't need to match; but let's not be too
+ -- agressive to do this optimization where it hardly will ever come up.
+ = Just $  def1 == def2
+        && and [k `lookup` asc1 == k `lookup` asc2 | k <- nub (sort (map fst (asc1 ++ asc2)))]
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
