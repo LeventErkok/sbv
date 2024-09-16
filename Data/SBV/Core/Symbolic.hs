@@ -151,7 +151,7 @@ instance Eq NodeId where
      | True
      = n1 == n2
 
--- | A symbolic word, tracking it's signedness and size.
+-- | A symbolic word, tracking its kind and node representing it
 data SV = SV !Kind !NodeId
         deriving G.Data
 

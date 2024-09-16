@@ -337,14 +337,19 @@ svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool 
 compareSV :: Op -> SVal -> SVal -> SVal
 compareSV op x y
   -- Make sure we don't get anything we can't handle or expect
-  | op `notElem` [Equal, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
-  | kindOf x /= kindOf y                                           = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
+  | op `notElem` [Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
+  | kindOf x /= kindOf y                                                     = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
 
   -- Boolean equality optimizations
-  | k == KBool, op == Equal, SVal _ (Left xv) <- x, xv == trueCV  = y         -- true  .== y     --> y
-  | k == KBool, op == Equal, SVal _ (Left yv) <- y, yv == trueCV  = x         -- x     .== true  --> x
-  | k == KBool, op == Equal, SVal _ (Left xv) <- x, xv == falseCV = svNot y   -- false .== y     --> svNot y
-  | k == KBool, op == Equal, SVal _ (Left yv) <- y, yv == falseCV = svNot x   -- x     .== false --> svNot x
+  | k == KBool, op == Equal,    SVal _ (Left xv) <- x, xv == trueCV  = y         -- true  .== y     --> y
+  | k == KBool, op == Equal,    SVal _ (Left yv) <- y, yv == trueCV  = x         -- x     .== true  --> x
+  | k == KBool, op == Equal,    SVal _ (Left xv) <- x, xv == falseCV = svNot y   -- false .== y     --> svNot y
+  | k == KBool, op == Equal,    SVal _ (Left yv) <- y, yv == falseCV = svNot x   -- x     .== false --> svNot x
+
+  | k == KBool, op == NotEqual, SVal _ (Left xv) <- x, xv == trueCV  = svNot y   -- true  ./= y     --> svNot y
+  | k == KBool, op == NotEqual, SVal _ (Left yv) <- y, yv == trueCV  = svNot x   -- x     ./= true  --> svNot x
+  | k == KBool, op == NotEqual, SVal _ (Left xv) <- x, xv == falseCV = y         -- false ./= y     --> y
+  | k == KBool, op == NotEqual, SVal _ (Left yv) <- y, yv == falseCV = x         -- x     ./= false --> x
 
   -- Comparison optimizations if one operans is min/max bit-vector
   | op == LessThan,    isConcreteMax x = svFalse   -- MAX <  _
@@ -365,6 +370,7 @@ compareSV op x y
       Nothing -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
+                            NotEqual    -> r /= EQ
                             LessThan    -> r == LT
                             GreaterThan -> r == GT
                             LessEq      -> r `elem` [EQ, LT]
@@ -473,7 +479,7 @@ svEqual = compareSV Equal
 
 -- | Inequality.
 svNotEqual :: SVal -> SVal -> SVal
-svNotEqual a b = svNot (a `svEqual` b)
+svNotEqual = compareSV NotEqual
 
 -- | Less than.
 svLessThan :: SVal -> SVal -> SVal
