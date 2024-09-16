@@ -240,13 +240,13 @@ The other way we can have a bad measure is if it fails to decrease through the l
 Following proof obligations failed:
 ===================================
   Measure for loop "i < n" is negative:
-    State  : SumS {n = -1, i = -2, s = 1}
-    Measure: -3
+    State  : SumS {n = 0, i = -1, s = 0}
+    Measure: -1
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = -1, i = -2, s = 1}
-    Measure: -3
-    After  : SumS {n = -1, i = -1, s = 0}
-    Measure: -2
+    Before : SumS {n = 0, i = -1, s = 0}
+    Measure: -1
+    After  : SumS {n = 0, i = 0, s = 0}
+    Measure: 0
 
 Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that in this case the counterexample has
 @i@ and @n@ as a negative value, as the SMT solver finds a counter-example to induction, not
