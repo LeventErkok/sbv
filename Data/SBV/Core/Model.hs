@@ -3255,8 +3255,7 @@ writeArray array key value
    = literal $ ArrayModel ((keyVal, val) : tbl) def  -- It's important that we "cons" the value here, since it takes precedence in a read
    | True
    = SBV . SVal k . Right $ cache g
-   where kb = kindOf (Proxy @val)
-         k  = KArray (kindOf (Proxy @key)) kb
+   where k  = KArray (kindOf (Proxy @key)) (kindOf (Proxy @val))
 
          g st = do arr    <- sbvToSV st array
                    keyVal <- sbvToSV st key
