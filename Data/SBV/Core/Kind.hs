@@ -28,6 +28,7 @@ module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
+        , expandKinds
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
@@ -41,7 +42,7 @@ import Data.SBV.Core.AlgReals
 import Data.Proxy
 import Data.Kind
 
-import Data.List (isPrefixOf, intercalate)
+import Data.List (isPrefixOf, intercalate, nub, sort)
 
 import Data.Typeable (Typeable)
 import Data.Type.Bool
@@ -70,6 +71,28 @@ data Kind = KBool
           | KEither Kind Kind
           | KArray  Kind Kind
           deriving (Eq, Ord, G.Data)
+
+-- Expand such that the resulting list has all the kinds we touch
+expandKinds :: Kind -> [Kind]
+expandKinds top = nub $ sort $ go top []
+  where go :: Kind -> [Kind] -> [Kind]
+        go k@KBool         sofar =              k : sofar
+        go k@KBounded{}    sofar =              k : sofar
+        go k@KUnbounded    sofar =              k : sofar
+        go k@KReal         sofar =              k : sofar
+        go k@KUserSort{}   sofar =              k : sofar
+        go k@KFloat        sofar =              k : sofar
+        go k@KDouble       sofar =              k : sofar
+        go k@KFP{}         sofar =              k : sofar
+        go k@KChar         sofar =              k : sofar
+        go k@KString       sofar =              k : sofar
+        go k@KRational     sofar =              k : sofar
+        go k@(KList  ke)   sofar =       go ke (k : sofar)
+        go k@(KSet   ke)   sofar =       go ke (k : sofar)
+        go k@(KTuple ks)   sofar = foldr go    (k : sofar) ks
+        go k@(KMaybe ke)   sofar =       go ke (k : sofar)
+        go k@(KEither l r) sofar = foldr go    (k : sofar) [l, r]
+        go k@(KArray  i e) sofar = foldr go    (k : sofar) [i, e]
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
@@ -361,24 +384,27 @@ intOfProxy p
 
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool
-hasUninterpretedSorts KBool                  = False
-hasUninterpretedSorts KBounded{}             = False
-hasUninterpretedSorts KUnbounded             = False
-hasUninterpretedSorts KReal                  = False
-hasUninterpretedSorts (KUserSort _ (Just _)) = False  -- These are the enumerated sorts, and they are perfectly fine
-hasUninterpretedSorts (KUserSort _ Nothing)  = True   -- These are the completely uninterpreted sorts, which we are looking for here
-hasUninterpretedSorts KFloat                 = False
-hasUninterpretedSorts KDouble                = False
-hasUninterpretedSorts KFP{}                  = False
-hasUninterpretedSorts KRational              = False
-hasUninterpretedSorts KChar                  = False
-hasUninterpretedSorts KString                = False
-hasUninterpretedSorts (KList k)              = hasUninterpretedSorts k
-hasUninterpretedSorts (KSet k)               = hasUninterpretedSorts k
-hasUninterpretedSorts (KTuple ks)            = any hasUninterpretedSorts ks
-hasUninterpretedSorts (KMaybe k)             = hasUninterpretedSorts k
-hasUninterpretedSorts (KEither k1 k2)        = any hasUninterpretedSorts [k1, k2]
-hasUninterpretedSorts (KArray  k1 k2)        = any hasUninterpretedSorts [k1, k2]
+hasUninterpretedSorts = any check . expandKinds
+  where check (KUserSort _ Nothing)  = True   -- These are the completely uninterpreted sorts, which we are looking for here
+        check (KUserSort _ (Just{})) = False  -- These are the enumerated sorts, and they are perfectly fine
+
+        -- everything else is OK
+        check KBool                  = False
+        check KBounded{}             = False
+        check KUnbounded             = False
+        check KReal                  = False
+        check KFloat                 = False
+        check KDouble                = False
+        check KFP{}                  = False
+        check KChar                  = False
+        check KString                = False
+        check KRational              = False
+        check KList{}                = False
+        check KSet{}                 = False
+        check KTuple{}               = False
+        check KMaybe{}               = False
+        check KEither{}              = False
+        check KArray{}               = False
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString
@@ -424,23 +450,26 @@ instance (HasKind a, HasKind b) => HasKind (a -> b) where
 -- Essentially, we're being conservative here and simply requesting flattening anything that has
 -- some structure to it.
 needsFlattening :: Kind -> Bool
-needsFlattening KBool       = False
-needsFlattening KBounded{}  = False
-needsFlattening KUnbounded  = False
-needsFlattening KReal       = False
-needsFlattening KUserSort{} = False
-needsFlattening KFloat      = False
-needsFlattening KDouble     = False
-needsFlattening KFP{}       = False
-needsFlattening KRational   = False
-needsFlattening KChar       = False
-needsFlattening KString     = False
-needsFlattening KList{}     = True
-needsFlattening KSet{}      = True
-needsFlattening KTuple{}    = True
-needsFlattening KMaybe{}    = True
-needsFlattening KEither{}   = True
-needsFlattening KArray{}    = True
+needsFlattening = any check . expandKinds
+  where check KList{}     = True
+        check KSet{}      = True
+        check KTuple{}    = True
+        check KMaybe{}    = True
+        check KEither{}   = True
+        check KArray{}    = True
+
+        -- no need to expand bases
+        check KBool       = False
+        check KBounded{}  = False
+        check KUnbounded  = False
+        check KReal       = False
+        check KUserSort{} = False
+        check KFloat      = False
+        check KDouble     = False
+        check KFP{}       = False
+        check KChar       = False
+        check KString     = False
+        check KRational   = False
 
 -- | Catch 0-width cases
 type BVZeroWidth = 'Text "Zero-width bit-vectors are not allowed."

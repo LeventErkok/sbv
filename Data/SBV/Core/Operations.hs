@@ -9,7 +9,8 @@
 -- Constructors and basic operations on symbolic values
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE TupleSections #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -367,7 +368,7 @@ compareSV op x y
 
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
-  = case cCompare op (cvVal xv) (cvVal yv) of
+  = case cCompare k op (cvVal xv) (cvVal yv) of
       Nothing -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
@@ -391,8 +392,8 @@ compareSV op x y
                             newExpr st KBool (SBVApp op [svx, svy])
 
 -- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated
-cCompare :: Op -> CVal -> CVal -> Maybe Ordering
-cCompare op x y =
+cCompare :: Kind -> Op -> CVal -> CVal -> Maybe Ordering
+cCompare k op x y =
     case (x, y) of
 
       -- Simple cases
@@ -413,13 +414,18 @@ cCompare op x y =
                                          (Nothing, Nothing) -> Just EQ
                                          (Nothing, Just{})  -> Just LT
                                          (Just{},  Nothing) -> Just GT
-                                         (Just av, Just bv) -> cCompare op av bv
+                                         (Just av, Just bv) -> case k of
+                                                                 KMaybe ke -> cCompare ke op av bv
+                                                                 _         -> error $ "Unexpected kind in cCompare for maybe's: " ++ show k
 
-      (CEither      a, CEither   b) -> case (a, b) of
-                                         (Left{},   Right{})  -> Just LT
-                                         (Right{},  Left{})   -> Just GT
-                                         (Left av,  Left  bv) -> cCompare op av bv
-                                         (Right av, Right bv) -> cCompare op av bv
+      (CEither      a, CEither   b) -> let (kl, kr) = case k of
+                                                        KEither l r -> (l, r)
+                                                        _           -> error $ "Unexpected kind in cCompare for either's: " ++ show k
+                                       in case (a, b) of
+                                            (Left{},   Right{})  -> Just LT
+                                            (Right{},  Left{})   -> Just GT
+                                            (Left av,  Left  bv) -> cCompare kl op av bv
+                                            (Right av, Right bv) -> cCompare kr op av bv
 
       -- Uninterpreted sorts use the index
       (CUserSort    a, CUserSort b) -> case (a, b) of
@@ -427,27 +433,33 @@ cCompare op x y =
                                          _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (op, a, b)
 
       -- Lists and tuples use lexicographic ordering
-      (CList        a, CList b) -> lexCmp a b
+      (CList        a, CList b) -> case k of
+                                     KList ke -> lexCmp (map (ke,) a) (map (ke,) b)
+                                     _        -> error $ "cCompare: Unexpected kind in cCompare for List: " ++ show k
 
-      (CTuple       a, CTuple b) | length a == length b -> lexCmp a b
-                                 | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (op, length a, length b)
+      (CTuple       a, CTuple b) | length a == length b -> case k of
+                                                             KTuple ks | length ks == length a -> lexCmp (zip ks a) (zip ks b)
+                                                             _                                 -> error $ "cCompare: Unexpected kind in cCompare for tuples"
+                                 | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (op, length a, length b, k)
 
       -- Arrays and sets only support equality/inequality
-      (CSet a, CSet b)     | op `elem` [Equal, NotEqual] -> case a `svSetEqual` b of
-                                                              Nothing    -> Nothing  -- We don't know
-                                                              Just True  -> Just EQ  -- They're equal
-                                                              Just False -> Just $ if op == Equal
-                                                                                   then GT  -- Pick GT, So equality    test will fail
-                                                                                   else EQ  -- Pick EQ, So in-equality test will fail
-                           | True                        -> error $ "cCompare: Received unexpected set comparison: " ++ show op
+      (CSet a, CSet b)     | op `elem` [Equal, NotEqual]
+                           , KSet ke <- k      -> case svSetEqual ke a b of
+                                                    Nothing    -> Nothing  -- We don't know
+                                                    Just True  -> Just EQ  -- They're equal
+                                                    Just False -> Just $ if op == Equal
+                                                                            then GT  -- Pick GT, So equality    test will fail
+                                                                            else EQ  -- Pick EQ, So in-equality test will fail
+                           | True              -> error $ "cCompare: Received unexpected set comparison: " ++ show op
 
-      (CArray a, CArray b) | op `elem` [Equal, NotEqual] -> case a `svArrEqual` b of
-                                                              Nothing    -> Nothing  -- We don't know
-                                                              Just True  -> Just EQ  -- They're equal
-                                                              Just False -> Just $ if op == Equal
-                                                                                   then GT  -- Pick GT, So equality    test will fail
-                                                                                   else EQ  -- Pick EQ, So in-equality test will fail
-                           | True                        -> error $ "cCompare: Received unexpected array comparison: " ++ show op
+      (CArray a, CArray b) | op `elem` [Equal, NotEqual]
+                           , KArray k1 k2 <- k -> case svArrEqual k1 k2 a b of
+                                                   Nothing    -> Nothing  -- We don't know
+                                                   Just True  -> Just EQ  -- They're equal
+                                                   Just False -> Just $ if op == Equal
+                                                                        then GT  -- Pick GT, So equality    test will fail
+                                                                        else EQ  -- Pick EQ, So in-equality test will fail
+                           | True             -> error $ "cCompare: Received unexpected array comparison: " ++ show op
 
       _ -> error $ unlines [ ""
                            , "*** Data.SBV.cCompare: Bug in SBV: Unhandled rank in comparison fallthru"
@@ -457,28 +469,65 @@ cCompare op x y =
                            , "*** Please report this as a bug!"
                            ]
   where -- lexicographic
-        lexCmp :: [CVal] -> [CVal] -> Maybe Ordering
+        lexCmp :: [(Kind, CVal)] -> [(Kind, CVal)] -> Maybe Ordering
         lexCmp []     []     = Just EQ
         lexCmp []     (_:_)  = Just LT
         lexCmp (_:_)  []     = Just GT
-        lexCmp (a:as) (b:bs) = case cCompare op a b of
-                                 Just EQ -> as `lexCmp` bs
-                                 other   -> other
+        lexCmp ((k1, a):as) ((k2, b):bs)
+          | k1 == k2
+          = case cCompare k1 op a b of
+              Just EQ -> as `lexCmp` bs
+              other   -> other
+          | True
+          = error $ "Mismatching kinds in lexicographic comparison: " ++ show (k1, k2)
+
+-- Is this a simple plain kind? What I mean by this is that what's stored inside is sufficiently
+-- simple so that I can rely on equality checks to be legit for these guys. Note that this function
+-- is called on the ELEMENTS of a set or index/element kinds of an array, so
+-- if we find a complicated index in an array, we stop.
+canDoEqChecks :: Kind -> Bool
+canDoEqChecks = all check . expandKinds
+  where check KBool       = True
+        check KBounded{}  = True
+        check KUnbounded  = True
+        check KUserSort{} = True
+        check KFloat      = True
+        check KDouble     = True
+        check KFP{}       = True
+        check KChar       = True
+        check KString     = True
+        check KMaybe{}    = True
+        check KRational   = True
+        check KEither{}   = True
+
+        check KReal       = False -- In case we have an algebraic real, we can't do the check in CV-land. Unlikely, but possible.
+        check KList{}     = False -- Let's not deal with anything that's recursive
+        check KSet{}      = False -- Ditto
+        check KTuple{}    = False -- Ditto
+        check KArray{}    = False -- Ditto
 
 -- | Set equality. We return Nothing if the result is too complicated for us to concretely calculate.
-svSetEqual :: RCSet CVal -> RCSet CVal -> Maybe Bool
-svSetEqual sa sb
-  | RegularSet a <- sa, RegularSet b <- sb
-  = error "Don't rely on CVal eq/ord" a b
+-- Why? Because the Eq instance of CVal is a bit iffy; it's designed to work as an index into maps, not as
+-- a means of checking this sort of equality
+svSetEqual :: Kind -> RCSet CVal -> RCSet CVal -> Maybe Bool
+svSetEqual k sa sb
+  | not (canDoEqChecks k)
+  = Nothing
+  | RegularSet a    <- sa, RegularSet b    <- sb
+  = Just $ a == b
   | ComplementSet a <- sa, ComplementSet b <- sb
-  = error "Don't rely on CVal eq/ord" a b
+  = Just $ a == b
   | True
   = Nothing
 
 -- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check in all but trivial cases.
-svArrEqual :: ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
-svArrEqual sa sb
- = error "" sa sb
+-- Also, see the note above for 'svSetEqual'.
+svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
+svArrEqual k1 k2 sa sb
+ | any (not . canDoEqChecks) [k1, k2]
+ = Nothing
+ | True
+ = error "TODO"
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
