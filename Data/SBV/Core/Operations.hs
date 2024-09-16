@@ -369,7 +369,27 @@ compareSV op x y
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
   = case cCompare k op (cvVal xv) (cvVal yv) of
-      Nothing -> symResult
+      Nothing -> -- cCompare is conservative on floats. Give those one more chance, if (mostly) at the top-level. (i.e., if they're recursively
+                 -- deep under, we'll simply resort to symbolic result.
+                 let res = xv `cOp` yv
+                     isEasy KFloat       = True
+                     isEasy KDouble      = True
+                     isEasy KFP{}        = True
+                     isEasy KBool{}      = True
+                     isEasy KBounded{}   = True
+                     isEasy KUnbounded   = True
+                     isEasy KUserSort{}  = True
+                     isEasy KChar        = True
+                     isEasy KRational    = True
+                     isEasy KString      = True
+                     isEasy _            = False
+                 in case k of
+                      _             | isEasy k               -> svBool res
+                      KMaybe  ke    | isEasy ke              -> svBool res
+                      KEither kl kr | isEasy kl && isEasy kr -> svBool res -- Missed opportunity: when only one side is easy and we're on that. Oh well.
+                      KList   ke    | isEasy ke              -> svBool res
+                      KTuple  ks    | all isEasy ks          -> svBool res
+                      _                                      -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
                             NotEqual    -> r /= EQ
@@ -391,16 +411,33 @@ compareSV op x y
                             svy <- svToSV st y
                             newExpr st KBool (SBVApp op [svx, svy])
 
--- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated
+         a `cOp` b = case op of
+                      Equal       -> a == b
+                      NotEqual    -> a /= b
+                      LessThan    -> a <  b
+                      GreaterThan -> a >  b
+                      LessEq      -> a <= b
+                      GreaterEq   -> a >= b
+                      _           -> error $ "Unexpected call to cOp: " ++ show op
+
+-- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated.
 cCompare :: Kind -> Op -> CVal -> CVal -> Maybe Ordering
 cCompare k op x y =
     case (x, y) of
 
+      -- The presence of NaN's throw this off. Why? Because @NaN `compare` x = GT@ in Haskell. But that's just the wrong thing to do here.
+      -- So protect against NaN's.
+      (CFloat       a, CFloat    b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
+                                    | True                     -> Nothing
+
+      (CDouble      a, CDouble   b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
+                                    | True                     -> Nothing
+
+      (CFP          a, CFP       b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
+                                    | True                     -> Nothing
+
       -- Simple cases
       (CInteger     a, CInteger  b) -> Just $ a `compare` b
-      (CFloat       a, CFloat    b) -> Just $ a `compare` b
-      (CDouble      a, CDouble   b) -> Just $ a `compare` b
-      (CFP          a, CFP       b) -> Just $ a `compare` b
       (CRational    a, CRational b) -> Just $ a `compare` b
       (CChar        a, CChar     b) -> Just $ a `compare` b
       (CString      a, CString   b) -> Just $ a `compare` b
@@ -491,9 +528,6 @@ canDoEqChecks = all check . expandKinds
         check KBounded{}  = True
         check KUnbounded  = True
         check KUserSort{} = True
-        check KFloat      = True
-        check KDouble     = True
-        check KFP{}       = True
         check KChar       = True
         check KString     = True
         check KMaybe{}    = True
@@ -505,6 +539,9 @@ canDoEqChecks = all check . expandKinds
         check KSet{}      = False -- Ditto
         check KTuple{}    = False -- Ditto
         check KArray{}    = False -- Ditto
+        check KFloat      = False -- Let's not bother with NaN, +/-0 etc., and defer to the solver
+        check KDouble     = False -- Ditto
+        check KFP{}       = False -- Ditto
 
 -- | Set equality. We return Nothing if the result is too complicated for us to concretely calculate.
 -- Why? Because the Eq instance of CVal is a bit iffy; it's designed to work as an index into maps, not as
