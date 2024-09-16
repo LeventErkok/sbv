@@ -35,7 +35,7 @@ import Data.SBV.Internals hiding (Range, free_)
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
--- >>> :set -XScopedTypeVariables
+-- >>> :set -XScopedTypeVariables -XDataKinds
 
 -- | A boundary value
 data Boundary a = Unbounded -- ^ Unbounded
