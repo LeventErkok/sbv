@@ -45,11 +45,12 @@ memsetExample = prove $ do
 --
 -- >>> outOfInit
 -- Satisfiable. Model:
---   Read = 1 :: Integer
---   lo   = 0 :: Integer
---   hi   = 0 :: Integer
---   zero = 0 :: Integer
---   idx  = 1 :: Integer
+--   Read =       1 :: Integer
+--   mem  = ([], 1) :: Array Integer Integer
+--   lo   =       0 :: Integer
+--   hi   =       0 :: Integer
+--   zero =       0 :: Integer
+--   idx  =       1 :: Integer
 outOfInit :: IO SatResult
 outOfInit = sat $ do
    mem  <- sArray "mem"
