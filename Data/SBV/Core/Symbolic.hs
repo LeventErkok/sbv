@@ -639,10 +639,13 @@ instance Show Op where
   show (MaybeIs          k False)       = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
   show (MaybeIs          k True )       = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
   show MaybeAccess                      = "get_just_SBVMaybe"
+  show (ArrayLambda s)                  = s
+  show ReadArray                        = "select"
+  show WriteArray                       = "store"
 
   show op
     | Just s <- op `lookup` syms = s
-    | True                       = error "impossible happened; can't find op!"
+    | True                       = error "impossible happened; can't find op!" -- NB. Can't display the OP here! it's the show instance after all.
     where syms = [ (Plus, "+"), (Times, "*"), (Minus, "-"), (UNeg, "-"), (Abs, "abs")
                  , (Quot, "quot")
                  , (Rem,  "rem")
