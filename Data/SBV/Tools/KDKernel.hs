@@ -14,7 +14,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -209,38 +208,43 @@ instance Induction SInteger where
    inductAlt1 p = internalAxiom "Integer.inductAlt1" principle
      where qb = quantifiedBool
 
-           principle =       p 0 .&& qb (\(Forall i) -> p i .== p (i+1))
-                     .=> qb ---------------------------------------------
-                                     (\(Forall i) -> p i)
+           principle =           p 0
+                             .&& qb (\(Forall i) -> p i .== p (i+1))
+                     .=> qb -----------------------------------------
+                                 (\(Forall i) -> p i)
 
    -- | Induction over integers, using the strategy that @P(n) => P(n+1)@ and @P(n) => P(n-1)@.
    inductAlt2 p = internalAxiom "Integer.inductAlt2" principle
      where qb = quantifiedBool
 
-           principle =       p 0 .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
-                     .=> qb ---------------------------------------------------------
-                                             (\(Forall i) -> p i)
+           principle =           p 0
+                             .&& qb (\(Forall i) -> p i .=> p (i+1) .&& p (i-1))
+                     .=> qb -----------------------------------------------------
+                                 (\(Forall i) -> p i)
 
    induct2 p = internalAxiom "Nat.induct2" principle
       where qb a = quantifiedBool a
 
-            principle =       qb (\(Forall a) -> p 0 a) .&& qb (\(Forall n) (Forall a) -> (n .>= 0 .&& p n a) .=> p (n+1) a)
-                      .=> qb ------------------------------------------------------------------------------------------------
-                                                  (\(Forall n) (Forall a) -> n .>= 0 .=> p n a)
+            principle =           qb (\(Forall a) -> p 0 a)
+                              .&& qb (\(Forall n) (Forall a) -> (n .>= 0 .&& p n a) .=> p (n+1) a)
+                      .=> qb ----------------------------------------------------------------------
+                                  (\(Forall n) (Forall a) -> n .>= 0 .=> p n a)
 
    induct3 p = internalAxiom "Nat.induct3" principle
       where qb a = quantifiedBool a
 
-            principle =       qb (\(Forall a) (Forall b) -> p 0 a b) .&& qb (\(Forall n) (Forall a) (Forall b) -> (n .>= 0 .&& p n a b) .=> p (n+1) a b)
-                      .=> qb ----------------------------------------------------------------------------------------------------------------------------
-                                                        (\(Forall n) (Forall a) (Forall b) -> n .>= 0 .=> p n a b)
+            principle =           qb (\(Forall a) (Forall b) -> p 0 a b)
+                              .&& qb (\(Forall n) (Forall a) (Forall b) -> (n .>= 0 .&& p n a b) .=> p (n+1) a b)
+                      .=> qb -------------------------------------------------------------------------------------
+                                  (\(Forall n) (Forall a) (Forall b) -> n .>= 0 .=> p n a b)
 
    induct4 p = internalAxiom "Nat.induct4" principle
       where qb a = quantifiedBool a
 
-            principle =       qb (\(Forall a) (Forall b) (Forall c) -> p 0 a b c) .&& qb (\(Forall n) (Forall a) (Forall b) (Forall c) -> (n .>= 0 .&& p n a b c) .=> p (n+1) a b c)
-                      .=> qb --------------------------------------------------------------------------------------------------------------------------------------------------------
-                                                                (\(Forall n) (Forall a) (Forall b) (Forall c) -> n .>= 0 .=> p n a b c)
+            principle =           qb (\(Forall a) (Forall b) (Forall c) -> p 0 a b c)
+                              .&& qb (\(Forall n) (Forall a) (Forall b) (Forall c) -> (n .>= 0 .&& p n a b c) .=> p (n+1) a b c)
+                      .=> qb ----------------------------------------------------------------------------------------------------
+                                  (\(Forall n) (Forall a) (Forall b) (Forall c) -> n .>= 0 .=> p n a b c)
 
 
 -- | Induction over lists
@@ -248,27 +252,33 @@ instance SymVal a => Induction (SList a) where
   induct p = internalAxiom "List(a).induct1" principle
     where qb a = quantifiedBool a
 
-          principle =       p SL.nil .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
-                    .=> qb ----------------------------------------------------------------------
-                                              (\(Forall xs) -> p xs)
+          principle =           p SL.nil
+                            .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
+                    .=> qb -------------------------------------------------------------
+                                (\(Forall xs) -> p xs)
 
   induct2 p = internalAxiom "List(a).induct2" principle
     where qb a = quantifiedBool a
 
-          principle =       qb (\(Forall a) -> p SL.nil a) .&& qb (\(Forall x) (Forall xs) (Forall a) -> p xs a .=> p (x SL..: xs) a)
-                    .=> qb ------------------------------------------------------------------------------------------------------------
-                                                         (\(Forall xs) (Forall a) -> p xs a)
+          principle =           qb (\(Forall a) -> p SL.nil a)
+                            .&& qb (\(Forall x) (Forall xs) (Forall a) -> p xs a .=> p (x SL..: xs) a)
+                    .=> qb ----------------------------------------------------------------------------
+                                (\(Forall xs) (Forall a) -> p xs a)
 
   induct3 p = internalAxiom "List(a).induct3" principle
     where qb a = quantifiedBool a
 
-          principle =       qb (\(Forall a) (Forall b) -> p SL.nil a b) .&& qb (\(Forall x) (Forall xs) (Forall a) (Forall b) -> p xs a b .=> p (x SL..: xs) a b)
-                    .=> qb ---------------------------------------------------------------------------------------------------------------------------------------
-                                                             (\(Forall xs) (Forall a) (Forall b) -> p xs a b)
+          principle =           qb (\(Forall a) (Forall b) -> p SL.nil a b)
+                            .&& qb (\(Forall x) (Forall xs) (Forall a) (Forall b) -> p xs a b .=> p (x SL..: xs) a b)
+                    .=> qb -------------------------------------------------------------------------------------------
+                                (\(Forall xs) (Forall a) (Forall b) -> p xs a b)
 
   induct4 p = internalAxiom "List(a).induct4" principle
     where qb a = quantifiedBool a
 
-          principle =       qb (\(Forall a) (Forall b) (Forall c) -> p SL.nil a b c) .&& qb (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) -> p xs a b c .=> p (x SL..: xs) a b c)
-                    .=> qb -------------------------------------------------------------------------------------------------------------------------------------------------------------------
-                                                                       (\(Forall xs) (Forall a) (Forall b) (Forall c) -> p xs a b c)
+          principle =           qb (\(Forall a) (Forall b) (Forall c) -> p SL.nil a b c)
+                            .&& qb (\(Forall x) (Forall xs) (Forall a) (Forall b) (Forall c) -> p xs a b c .=> p (x SL..: xs) a b c)
+                    .=> qb ----------------------------------------------------------------------------------------------------------
+                                (\(Forall xs) (Forall a) (Forall b) (Forall c) -> p xs a b c)
+
+{- HLint ignore module "Eta reduce" -}

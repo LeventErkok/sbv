@@ -14,14 +14,13 @@
 [GOOD] (declare-fun s0 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+[GOOD] (define-fun s1 () Bool (= s0 s0))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
+[GOOD] (assert s1)
 *** Solver   : Z3
 *** Exit code: ExitFailure (-15)
 
@@ -31,4 +30,4 @@
 *** Use "sat" for plain satisfaction
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Provers/Prover.hs:261:27 in sbv-10.12-inplace:Data.SBV.Provers.Prover
+  error, called at ./Data/SBV/Provers/Prover.hs:263:27 in sbv-11.0-inplace:Data.SBV.Provers.Prover

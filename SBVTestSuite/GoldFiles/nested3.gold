@@ -14,12 +14,9 @@
 [GOOD] (declare-fun s0 () Bool) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 *** Solver   : Z3
@@ -37,4 +34,4 @@ Data.SBV: Mismatched contexts detected.
 *** See https://github.com/LeventErkok/sbv/issues/71 for several examples.
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Core/Symbolic.hs:1938:48 in sbv-10.12-inplace:Data.SBV.Core.Symbolic
+  error, called at ./Data/SBV/Core/Symbolic.hs:1906:48 in sbv-11.0-inplace:Data.SBV.Core.Symbolic

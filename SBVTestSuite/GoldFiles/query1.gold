@@ -29,14 +29,11 @@
 [GOOD] (declare-fun s5 () (_ BitVec 8))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s7 () Bool (> s0 s6))
 [GOOD] (define-fun s8 () Bool (> s1 s6))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert (! s7 :named |a > 0|))

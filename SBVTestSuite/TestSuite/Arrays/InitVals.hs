@@ -60,8 +60,8 @@ tests =
   testGroup "Arrays.InitVals"
     [ testCase "readDef_SArray"              $ assertIsThm readDef
     , testCase "readDef2_SArray2"            $ assertIsSat readNoDef
-    , goldenCapturedIO "constArr_SArray"     $ t
-    , goldenCapturedIO "constArr2_SArray"    $ t2
+    , goldenCapturedIO "constArr_SArray"     t
+    , goldenCapturedIO "constArr2_SArray"    t2
     ]
     where t  goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} constArr
                            appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")

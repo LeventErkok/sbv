@@ -2,8 +2,8 @@ CAUGHT EXCEPTION
 
 Data.SBV: Mismatched contexts detected.
 ***
-*** Current context: SBVContext (-7749304166575005736)
-*** Mixed with     : SBVContext (-531973508589804280)
+*** Current context: SBVContext (-531973508589804280)
+*** Mixed with     : SBVContext (-7749304166575005736)
 ***
 *** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc.
 *** while another one is in execution, or use results from one such call in another.
@@ -11,4 +11,4 @@ Data.SBV: Mismatched contexts detected.
 *** See https://github.com/LeventErkok/sbv/issues/71 for several examples.
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Core/Symbolic.hs:1938:48 in sbv-10.12-inplace:Data.SBV.Core.Symbolic
+  error, called at ./Data/SBV/Core/Symbolic.hs:1906:48 in sbv-11.0-inplace:Data.SBV.Core.Symbolic

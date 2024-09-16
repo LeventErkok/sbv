@@ -559,7 +559,7 @@ instance Show SeqOp where
   show (SBVReverse k) = let sk = show k
                             ssk | any isSpace sk = '(' : sk ++ ")"
                                 | True           = sk
-                        in "sbv.reverse @" ++ ssk ++ ""
+                        in "sbv.reverse @" ++ ssk
 
 -- | Set operations.
 data SetOp = SetEqual

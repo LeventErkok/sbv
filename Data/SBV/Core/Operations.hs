@@ -439,7 +439,7 @@ cCompare k op x y =
 
       (CTuple       a, CTuple b) | length a == length b -> case k of
                                                              KTuple ks | length ks == length a -> lexCmp (zip ks a) (zip ks b)
-                                                             _                                 -> error $ "cCompare: Unexpected kind in cCompare for tuples"
+                                                             _                                 -> error "cCompare: Unexpected kind in cCompare for tuples"
                                  | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (op, length a, length b, k)
 
       -- Arrays and sets only support equality/inequality
@@ -524,7 +524,7 @@ svSetEqual k sa sb
 -- Also, see the note above for 'svSetEqual'.
 svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
 svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
- | any (not . canDoEqChecks) [k1, k2]
+ | not (all canDoEqChecks [k1, k2])
  = Nothing
  | True
  -- We can be a bit better here since if keys cover everything then defs don't need to match; but let's not be too

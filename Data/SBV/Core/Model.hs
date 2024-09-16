@@ -1897,7 +1897,7 @@ sDivides n v
   | n < 0
   = error $ "svDivides: First argument must be a strictly positive integer. Received: " ++ show n
   | Just x <- unliteral v
-  = if (x `mod` n == 0) then sTrue else sFalse
+  = if x `mod` n == 0 then sTrue else sFalse
   | True
   = SBV $ svDivides n (unSBV v)
 

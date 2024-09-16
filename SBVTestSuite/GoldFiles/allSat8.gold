@@ -13,19 +13,16 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun f (Int) Int)
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Int))
-         (let ((l1_s2 1))
-         (let ((l1_s1 (f l1_s0)))
-         (let ((l1_s3 (+ l1_s0 l1_s2)))
-         (let ((l1_s4 (= l1_s1 l1_s3)))
-         l1_s4))))))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+                                 (let ((l1_s2 1))
+                                 (let ((l1_s1 (f l1_s0)))
+                                 (let ((l1_s3 (+ l1_s0 l1_s2)))
+                                 (let ((l1_s4 (= l1_s1 l1_s3)))
+                                 l1_s4))))))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)
@@ -63,4 +60,4 @@ EXCEPTION CAUGHT:
 *** NB. If this is a use case you'd like SBV to support, please get in touch!
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Control/Utils.hs:1660:57 in sbv-10.12-inplace:Data.SBV.Control.Utils
+  error, called at ./Data/SBV/Control/Utils.hs:1649:57 in sbv-11.0-inplace:Data.SBV.Control.Utils
