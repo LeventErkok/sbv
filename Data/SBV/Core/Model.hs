@@ -3261,7 +3261,7 @@ writeArray array key value
          g st = do arr    <- sbvToSV st array
                    keyVal <- sbvToSV st key
                    val    <- sbvToSV st value
-                   newExpr st kb (SBVApp WriteArray [arr, keyVal, val])
+                   newExpr st k (SBVApp WriteArray [arr, keyVal, val])
 
 -- | Using a lambda as an array.
 lambdaArray :: forall a b. (SymVal a, HasKind b) => (SBV a -> SBV b) -> SArray a b
