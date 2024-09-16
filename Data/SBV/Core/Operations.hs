@@ -337,8 +337,9 @@ svStrongEqual x y | isFloat x,  Just f1 <- getF x,  Just f2 <- getF y  = svBool 
 compareSV :: Op -> SVal -> SVal -> SVal
 compareSV op x y
   -- Make sure we don't get anything we can't handle or expect
-  | op `notElem` [Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "         ++ show (op, x, y)
-  | kindOf x /= kindOf y                                                     = error $ "Mismatched kinds in call to compareSV:" ++ show (op, x, kindOf x, kindOf y)
+  | op `notElem` [Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq] = error $ "Unexpected call to compareSV: "              ++ show (op, x, y)
+  | kx /= ky                                                                 = error $ "Mismatched kinds in call to compareSV:"      ++ show (op, x, kindOf x, kindOf y)
+  | (isSet kx || isArray ky) && op `notElem` [Equal, NotEqual]               = error $ "Unexpected Set/Array not-equal comparison: " ++ show (op, x, k)
 
   -- Boolean equality optimizations
   | k == KBool, op == Equal,    SVal _ (Left xv) <- x, xv == trueCV  = y         -- true  .== y     --> y
@@ -366,7 +367,7 @@ compareSV op x y
 
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
-  = case cvVal xv `cCompare` cvVal yv of
+  = case cCompare op (cvVal xv) (cvVal yv) of
       Nothing -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
@@ -380,7 +381,9 @@ compareSV op x y
    -- No constant folding opportunities, turn symbolic
    | True
    = symResult
-   where k = kindOf x
+   where kx = kindOf x
+         ky = kindOf y
+         k  = kx       -- only used after we ensured kx == ky
 
          symResult = SVal KBool $ Right $ cache res
           where res st = do svx <- svToSV st x
@@ -388,8 +391,8 @@ compareSV op x y
                             newExpr st KBool (SBVApp op [svx, svy])
 
 -- Compare two CVals; if we can. We're being conservative here and deferring to a symbolic result if we get something complicated
-cCompare :: CVal -> CVal -> Maybe Ordering
-cCompare x y =
+cCompare :: Op -> CVal -> CVal -> Maybe Ordering
+cCompare op x y =
     case (x, y) of
 
       -- Simple cases
@@ -405,62 +408,49 @@ cCompare x y =
       (CAlgReal     a, CAlgReal  b) | isExactRational a && isExactRational b -> Just $ a `compare` b
                                     | True                                   -> Nothing
 
+      -- Structural cases
       (CMaybe       a, CMaybe    b) -> case (a, b) of
                                          (Nothing, Nothing) -> Just EQ
                                          (Nothing, Just{})  -> Just LT
                                          (Just{},  Nothing) -> Just GT
-                                         (Just av, Just bv) -> av `cCompare` bv
+                                         (Just av, Just bv) -> cCompare op av bv
 
       (CEither      a, CEither   b) -> case (a, b) of
                                          (Left{},   Right{})  -> Just LT
                                          (Right{},  Left{})   -> Just GT
-                                         (Left av,  Left  bv) -> av `cCompare` bv
-                                         (Right av, Right bv) -> av `cCompare` bv
+                                         (Left av,  Left  bv) -> cCompare op av bv
+                                         (Right av, Right bv) -> cCompare op av bv
 
+      -- Uninterpreted sorts use the index
       (CUserSort    a, CUserSort b) -> case (a, b) of
                                          ((Just i, _), (Just j, _)) -> Just $ i `compare` j
-                                         _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (a, b)
+                                         _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (op, a, b)
 
-      (CList        a, CList b)     -> lexCmp a b
+      -- Lists and tuples use lexicographic ordering
+      (CList        a, CList b) -> lexCmp a b
 
       (CTuple       a, CTuple b) | length a == length b -> lexCmp a b
-                                 | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (length a, length b)
-{----------------
-      (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
-      (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
-      _                             -> error $ "Impossible happened: Mismatching values/kinds in call to compareSV: " ++ show (op, x, y)
+                                 | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (op, length a, length b)
 
--- | Set equality. Note that we only do constant folding if we get both a regular or both a
--- complement set. Otherwise we get a symbolic value even if they might be completely concrete.
-svSetEqual :: SVal -> SVal -> SVal
-svSetEqual sa sb
-  | not (isSet sa && isSet sb && kindOf sa == kindOf sb)
-  = error $ "Data.SBV.svSetEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
-  | Just (RegularSet a)    <- getSet sa, Just (RegularSet b)    <- getSet sb
-  = tODO "Don't rely on CVal eq/ord" $ svBool (a == b)
-  | Just (ComplementSet a) <- getSet sa, Just (ComplementSet b) <- getSet sb
-  = tODO "Don't rely on CVal eq/ord" $ svBool (a == b)
-  | True
-  = SVal KBool $ Right $ cache r
-  where getSet (SVal _ (Left (CV _ (CSet s)))) = Just s
-        getSet _                               = Nothing
+      -- Arrays and sets only support equality/inequality
+      (CSet a, CSet b)     | op `elem` [Equal, NotEqual] -> case a `svSetEqual` b of
+                                                              Nothing    -> Nothing  -- We don't know
+                                                              Just True  -> Just EQ  -- They're equal
+                                                              Just False -> Just $ if op == Equal
+                                                                                   then GT  -- Pick GT, So equality    test will fail
+                                                                                   else EQ  -- Pick EQ, So in-equality test will fail
+                           | True                        -> error $ "cCompare: Received unexpected set comparison: " ++ show op
 
-        r st = do sva <- svToSV st sa
-                  svb <- svToSV st sb
-                  newExpr st KBool $ SBVApp (SetOp SetEqual) [sva, svb]
+      (CArray a, CArray b) | op `elem` [Equal, NotEqual] -> case a `svArrEqual` b of
+                                                              Nothing    -> Nothing  -- We don't know
+                                                              Just True  -> Just EQ  -- They're equal
+                                                              Just False -> Just $ if op == Equal
+                                                                                   then GT  -- Pick GT, So equality    test will fail
+                                                                                   else EQ  -- Pick EQ, So in-equality test will fail
+                           | True                        -> error $ "cCompare: Received unexpected array comparison: " ++ show op
 
--- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check
--- in all but trivial cases.
-svArrEqual :: SVal -> SVal -> SVal
-svArrEqual sa sb
- | not (isArray sa && isArray sb && kindOf sa == kindOf sb)
- = error $ "Data.SBV.svArrEqual: Called on ill-typed args: " ++ show (kindOf sa, kindOf sb)
- | True
- = tODO
-
------------------}
       _ -> error $ unlines [ ""
-                           , "*** Data.SBV.cCompare: Impossible happened: same rank in comparison fallthru"
+                           , "*** Data.SBV.cCompare: Bug in SBV: Unhandled rank in comparison fallthru"
                            , "***"
                            , "***   Ranks Received: " ++ show (cvRank x, cvRank y)
                            , "***"
@@ -471,9 +461,24 @@ svArrEqual sa sb
         lexCmp []     []     = Just EQ
         lexCmp []     (_:_)  = Just LT
         lexCmp (_:_)  []     = Just GT
-        lexCmp (a:as) (b:bs) = case a `cCompare` b of
+        lexCmp (a:as) (b:bs) = case cCompare op a b of
                                  Just EQ -> as `lexCmp` bs
                                  other   -> other
+
+-- | Set equality. We return Nothing if the result is too complicated for us to concretely calculate.
+svSetEqual :: RCSet CVal -> RCSet CVal -> Maybe Bool
+svSetEqual sa sb
+  | RegularSet a <- sa, RegularSet b <- sb
+  = error "Don't rely on CVal eq/ord" a b
+  | ComplementSet a <- sa, ComplementSet b <- sb
+  = error "Don't rely on CVal eq/ord" a b
+  | True
+  = Nothing
+
+-- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check in all but trivial cases.
+svArrEqual :: ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
+svArrEqual sa sb
+ = error "" sa sb
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
