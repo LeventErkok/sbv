@@ -40,6 +40,7 @@ common common-settings
                      DeriveFunctor
                      DeriveGeneric
                      DeriveTraversable
+                     DerivingStrategies
                      ExistentialQuantification
                      FlexibleContexts
                      FlexibleInstances
@@ -71,6 +72,7 @@ common common-settings
                      TypeApplications
                      TypeFamilies
                      TypeOperators
+                     TypeSynonymInstances
                      UndecidableInstances
                      ViewPatterns
 
