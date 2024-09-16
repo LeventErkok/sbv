@@ -422,7 +422,9 @@ cCompare x y =
                                          _                          -> error $ "cCompare: Impossible happened while trying to compare: " ++ show (a, b)
 
       (CList        a, CList b)     -> lexCmp a b
-      (CTuple       a, CTuple b)    -> lexCmp a b
+
+      (CTuple       a, CTuple b) | length a == length b -> lexCmp a b
+                                 | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (length a, length b)
 {----------------
       (CSet         _, CSet      _) -> error $ "Unexpected comparison called on set values: " ++ show (op, x, y)
       (CArray       _, CArray    _) -> error $ "Unexpected comparison called on array values: " ++ show (op, x, y)
