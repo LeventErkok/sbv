@@ -1,7 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 10.12.5, Not yet released
+### Version 11.0, Not yet released
+
+  * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying
+    their use with all the other symbolic types. This required some back-wards compatibility
+    changes, mostly around replacing calls to newArray with sArray. I expect there to be
+    no semantic changes, only syntactic ones. Please do get in touch if you have trouble
+    porting your old code using arrays to the new API.
 
   * Turn on support for floats and uninterpreted sorts/functions in Bitwuzla.
 
