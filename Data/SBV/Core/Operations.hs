@@ -369,27 +369,12 @@ compareSV op x y
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
   = case cCompare k op (cvVal xv) (cvVal yv) of
-      Nothing -> -- cCompare is conservative on floats. Give those one more chance, if (mostly) at the top-level. (i.e., if they're recursively
-                 -- deep under, we'll simply resort to symbolic result.
-                 let res = xv `cOp` yv
-                     isEasy KFloat       = True
-                     isEasy KDouble      = True
-                     isEasy KFP{}        = True
-                     isEasy KBool{}      = True
-                     isEasy KBounded{}   = True
-                     isEasy KUnbounded   = True
-                     isEasy KUserSort{}  = True
-                     isEasy KChar        = True
-                     isEasy KRational    = True
-                     isEasy KString      = True
-                     isEasy _            = False
-                 in case k of
-                      _             | isEasy k               -> svBool res
-                      KMaybe  ke    | isEasy ke              -> svBool res
-                      KEither kl kr | isEasy kl && isEasy kr -> svBool res -- Missed opportunity: when only one side is easy and we're on that. Oh well.
-                      KList   ke    | isEasy ke              -> svBool res
-                      KTuple  ks    | all isEasy ks          -> svBool res
-                      _                                      -> symResult
+      Nothing -> -- cCompare is conservative on floats. Give those one more chance, only at the top-level. (i.e., if stored under a Maybe/Either/List etc., we'll resort to a symbolic result.)
+                 case (k, cvVal xv, cvVal yv) of
+                    (KFloat,     CFloat  a, CFloat  b) -> svBool (a `cOp` b)
+                    (KDouble,    CDouble a, CDouble b) -> svBool (a `cOp` b)
+                    (KFP{}  ,    CFP     a, CFP     b) -> svBool (a `cOp` b)
+                    _                                  -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
                             NotEqual    -> r /= EQ
