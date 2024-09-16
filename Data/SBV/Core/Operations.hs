@@ -427,20 +427,20 @@ cCompare k op x y =
 
       -- The presence of NaN's throw this off. Why? Because @NaN `compare` x = GT@ in Haskell. But that's just the wrong thing to do here.
       -- So protect against NaN's.
-      (CFloat       a, CFloat    b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
-                                    | True                     -> Nothing
+      (CFloat  a, CFloat  b) | not (any isNaN [a, b]) -> Just $ a `compare` b
+                             | True                   -> Nothing
 
-      (CDouble      a, CDouble   b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
-                                    | True                     -> Nothing
+      (CDouble a, CDouble b) | not (any isNaN [a, b]) -> Just $ a `compare` b
+                             | True                   -> Nothing
 
-      (CFP          a, CFP       b) | all (not . isNaN) [a, b] -> Just $ a `compare` b
-                                    | True                     -> Nothing
+      (CFP     a, CFP     b) | not (any isNaN [a, b]) -> Just $ a `compare` b
+                             | True                   -> Nothing
 
       -- Simple cases
-      (CInteger     a, CInteger  b) -> Just $ a `compare` b
-      (CRational    a, CRational b) -> Just $ a `compare` b
-      (CChar        a, CChar     b) -> Just $ a `compare` b
-      (CString      a, CString   b) -> Just $ a `compare` b
+      (CInteger  a, CInteger  b) -> Just $ a `compare` b
+      (CRational a, CRational b) -> Just $ a `compare` b
+      (CChar     a, CChar     b) -> Just $ a `compare` b
+      (CString   a, CString   b) -> Just $ a `compare` b
 
       -- We can handle algreal, so long as they are exact-rationals
       (CAlgReal     a, CAlgReal  b) | isExactRational a && isExactRational b -> Just $ a `compare` b
