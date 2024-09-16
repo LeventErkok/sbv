@@ -9,7 +9,8 @@
 -- Testing arrays with initializers
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types          #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -17,55 +18,54 @@ module TestSuite.Arrays.InitVals(tests) where
 
 import Utils.SBVTestFramework
 
-readDef :: forall m. SymArray m => m Integer Integer -> Predicate
-readDef proxy = do c <- free "c"
-                   i <- free "i"
-                   j <- free "j"
-                   a <- newArray_ (Just c) `asTypeOf` return proxy
+readDef :: Predicate
+readDef = do c :: SInteger <- free "c"
+             i :: SInteger <- free "i"
+             j <- free "j"
+             let a = lambdaArray (const c)
 
-                   let a' = writeArray a j 32
+             let a' = writeArray a j 32
 
-                   return $ ite (i ./= j) (readArray a' i .== c)
-                                          (readArray a' i .== 32)
+             return $ ite (i ./= j) (readArray a' i .== c)
+                                    (readArray a' i .== 32)
 
-readNoDef :: forall m. SymArray m => m Integer Integer -> Predicate
-readNoDef proxy = do i <- free "i"
-                     j <- free "j"
+readNoDef :: Predicate
+readNoDef = do i :: SInteger <- free "i"
+               j :: SInteger <- free "j"
 
-                     a <- newArray_ Nothing `asTypeOf` return proxy
+               a <- sArray_
 
-                     return $ readArray a i .== j
+               return $ readArray a i .== j
 
+constArr :: Predicate
+constArr = do i :: SInteger <- sInteger "i"
+              j :: SInteger <- sInteger "j"
 
-constArr :: forall m. SymArray m => m Integer Integer -> Predicate
-constArr proxy = do i <- sInteger "i"
-                    j <- sInteger "j"
+              constrain $ i .< j
+              constrain $ i `sElem` [1, 2, 3, 75]
+              pure $ readArray myArray i .== readArray myArray j
+  where myArray = listArray [(1, 12), (2, 5) , (3, 6), (75, 5)] (7 :: Integer)
 
-                    constrain $ i .< j
-                    constrain $ i `sElem` [1, 2, 3, 75]
-                    pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
-  where myArray = sListArray 7 [(1, 12), (2, 5) , (3, 6), (75, 5)]
+constArr2 :: Predicate
+constArr2 = do i :: SInteger <- sInteger "i"
+               j :: SInteger <- sInteger "j"
 
-constArr2 :: forall m. SymArray m => m Integer Integer -> Predicate
-constArr2 proxy = do i <- sInteger "i"
-                     j <- sInteger "j"
-
-                     constrain $ i .< j
-                     constrain $ i `sElem` [1, 2, 3, 75]
-                     pure $ readArray myArray i .== readArray (myArray `asTypeOf` proxy) j
-  where myArray = sListArray 2 [(1, 12), (2, 5) , (3, 6), (75, 5)]
+               constrain $ i .< j
+               constrain $ i `sElem` [1, 2, 3, 75]
+               pure $ readArray myArray i .== readArray myArray j
+  where myArray = listArray [(1, 12), (2, 5) , (3, 6), (75, 5)] (2 :: Integer)
 
 tests :: TestTree
 tests =
   testGroup "Arrays.InitVals"
-    [ testCase "readDef_SArray"              $ assertIsThm (readDef   (undefined :: SArray Integer Integer))
-    , testCase "readDef2_SArray2"            $ assertIsSat (readNoDef (undefined :: SArray Integer Integer))
-    , goldenCapturedIO "constArr_SArray"     $ t                      (undefined :: SArray Integer Integer)
-    , goldenCapturedIO "constArr2_SArray"    $ t2                     (undefined :: SArray Integer Integer)
+    [ testCase "readDef_SArray"              $ assertIsThm readDef
+    , testCase "readDef2_SArray2"            $ assertIsSat readNoDef
+    , goldenCapturedIO "constArr_SArray"     $ t
+    , goldenCapturedIO "constArr2_SArray"    $ t2
     ]
-    where t p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr p)
-                            appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
-          t2 p goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} (constArr2 p)
-                             appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+    where t  goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} constArr
+                           appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+          t2 goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} constArr2
+                           appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 {- HLint ignore module "Reduce duplication" -}

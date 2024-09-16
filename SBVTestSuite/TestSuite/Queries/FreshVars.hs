@@ -86,13 +86,14 @@ fv = do a <- sInteger "a"
                    constrain $ sNot $ vQuad `fpIsEqualObject` wQuad
                    constrain $ fpIsPositive vQuad
 
-                   vSArray  :: SArray    Integer Integer <- freshArray "vSArray" Nothing
+                   vSArray  :: SArray    Integer Integer <- freshVar "vSArray"
                    vi1                                   <- freshVar "i1"
                    vi2                                   <- freshVar "i2"
                    constrain $ readArray vSArray vi1 .== 2
 
-                   viSArray  :: SArray    Integer Integer <- freshArray "viSArray" (Just (literal 42))
-                   mustBe42                               <- freshVar "mustBe42"
+                   let viSArray  :: SArray Integer Integer
+                       viSArray = lambdaArray (const 42)
+                   mustBe42                              <- freshVar "mustBe42"
 
                    constrain $ readArray viSArray 96     .== mustBe42
                    constrain $ vi1 .== 1

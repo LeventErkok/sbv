@@ -32,6 +32,6 @@ testQuery rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=Ju
                   appendFile rf ("\n FINAL:" ++ show r ++ "\nDONE!\n")
 
 t1 :: Symbolic Integer
-t1 = do a :: SArray Integer Integer <- newArray "a" Nothing
+t1 = do a :: SArray Integer Integer <- sArray "a"
         query $ do ensureSat
                    getValue (readArray (writeArray a 1 2) 1)

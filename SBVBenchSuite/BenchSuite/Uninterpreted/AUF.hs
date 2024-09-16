@@ -26,5 +26,5 @@ benchmarks = rGroup
   ]
   where array = do x <- free "x"
                    y <- free "y"
-                   a :: SArray Word32 Word32 <- newArray_ Nothing
+                   a :: SArray Word32 Word32 <- sArray_
                    return $ thm x y a

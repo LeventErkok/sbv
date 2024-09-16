@@ -52,7 +52,7 @@ module Data.SBV.Core.Model (
   , genLiteral, genFromCV, genMkSymVar
   , zeroExtend, signExtend
   , sbvQuickCheck
-  , readArray, writeArray, lambdaArray
+  , readArray, writeArray, lambdaArray, listArray
   )
   where
 
@@ -66,7 +66,9 @@ import qualified GHC.Generics as G
 import GHC.Stack
 import GHC.TypeLits hiding (SChar)
 
-import Data.Array  (Array, Ix, listArray, elems, bounds, rangeSize)
+import Data.Array  (Array, Ix, elems, bounds, rangeSize)
+import qualified Data.Array as DA (listArray)
+
 import Data.Bits   (Bits(..))
 import Data.Int    (Int8, Int16, Int32, Int64)
 import Data.Kind   (Type)
@@ -2172,7 +2174,7 @@ instance (Mergeable a, Mergeable b) => Mergeable (Either a b) where
 -- Arrays
 instance (Ix a, Mergeable b) => Mergeable (Array a b) where
   symbolicMerge f t a b
-    | ba == bb = listArray ba (zipWith (symbolicMerge f t) (elems a) (elems b))
+    | ba == bb = DA.listArray ba (zipWith (symbolicMerge f t) (elems a) (elems b))
     | True     = cannotMerge "'Array' values"
                              ("Branches produce different ranges: " ++ show (k ba, k bb))
                              "Consider using SBV's native 'SArray' abstraction."
@@ -3269,5 +3271,9 @@ lambdaArray f = SBV . SVal k . Right $ cache g
         g st = do def <- lambdaStr st (kindOf (Proxy @b)) f
                   newExpr st k (SBVApp (ArrayLambda def) [])
 
-{- HLint ignore module   "Reduce duplication" -}
-{- HLint ignore module   "Eta reduce"         -}
+-- | Turn a constant association-list and a default into a symbolic array.
+listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b
+listArray ascs def = literal $ ArrayModel ascs def
+
+{- HLint ignore module "Reduce duplication" -}
+{- HLint ignore module "Eta reduce"         -}

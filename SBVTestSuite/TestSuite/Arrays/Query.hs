@@ -37,7 +37,7 @@ tests =
                              appendFile goldFile ("\n FINAL:" ++ show r ++ "\nDONE!\n")
 
 q1 :: Symbolic (Word8, Word8, Int8)
-q1 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
+q1 = do m  :: SArray Word8 Int8 <- sArray "a"
 
         a1 <- sWord8 "a1"
         a2 <- sWord8 "a2"
@@ -88,7 +88,7 @@ q4 = do i <- sWord8 "i"
                    return (iv, jv)
 
 q5 :: Symbolic (Maybe (Word8, Int8))
-q5 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
+q5 = do m  :: SArray Word8 Int8 <- sArray "a"
 
         a <- sWord8 "a"
         v <- sInt8  "v"
@@ -109,7 +109,7 @@ q5 = do m  :: SArray Word8 Int8 <- newArray "a" Nothing
                                   return $ Just (av, vv)
 
 q6 :: Symbolic [Integer]
-q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
+q6 = do (a :: SArray Integer Integer) <- sArray "a"
 
         query $ loop (writeArray a 1 1) []
 
@@ -127,7 +127,7 @@ q6 = do (a :: SArray Integer Integer) <- newArray "a" Nothing
 
 
 q7 :: Symbolic (CheckSatResult, CheckSatResult)
-q7 = do x :: SArray Integer Integer <- newArray "x" Nothing
+q7 = do x :: SArray Integer Integer <- sArray "x"
         let y = writeArray x 0 1
 
         query $ do constrain $ readArray y 0 .== 2
@@ -141,7 +141,7 @@ q7 = do x :: SArray Integer Integer <- newArray "x" Nothing
                    pure (r1, r2)
 
 q8 :: Symbolic (CheckSatResult, CheckSatResult)
-q8 = query $ do x :: SArray Integer Integer <- freshArray "x" Nothing
+q8 = query $ do x :: SArray Integer Integer <- freshVar "x"
                 let y = writeArray x 0 1
 
                 constrain $ readArray y 0 .== 2

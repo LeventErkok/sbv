@@ -21,6 +21,6 @@ import Utils.SBVTestFramework
 tests :: TestTree
 tests =
   testGroup "Uninterpreted.AUF"
-    [ goldenVsStringShow "auf-1" $ runSAT      $ newArray "a" Nothing >>= \a -> free "x" >>= \x -> free "y" >>= \y -> pure (thm x y (a :: SArray     Word32 Word32))
-    , testCase "tc_auf-0"        $ assertIsThm $ newArray "a" Nothing >>= \a -> free "x" >>= \x -> free "y" >>= \y -> return (thm x y (a :: SArray     Word32 Word32))
+    [ goldenVsStringShow "auf-1" $ runSAT      $ free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> pure (thm x y (a :: SArray Word32 Word32))
+    , testCase "tc_auf-0"        $ assertIsThm $ free "a" >>= \a -> free "x" >>= \x -> free "y" >>= \y -> pure (thm x y (a :: SArray Word32 Word32))
     ]

@@ -17,7 +17,7 @@
 module TestSuite.Basics.BasicTests(tests) where
 
 import Data.SBV.Control
-import Data.SBV.Internals hiding (free, output, newArray_)
+import Data.SBV.Internals hiding (free, output)
 import Utils.SBVTestFramework
 
 import Control.Monad       (void)
@@ -132,7 +132,7 @@ nested3 cfg = proveWith cfg $ do
 
 nested4 :: SMTConfig -> IO Bool
 nested4 cfg = do
-  d1 <- runSMT (newArray_ Nothing :: Symbolic (SArray Bool Bool))
+  d1 <- runSMT (sArray_ :: Symbolic (SArray Bool Bool))
 
   let sboolOfInterest = readArray d1 sTrue
 

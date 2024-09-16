@@ -205,7 +205,7 @@ type SEither a b = SBV (Either a b)
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
--- | Symbolic 'Array'
+-- | Symbolic arrays
 type SArray a b = SBV (ArrayModel a b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
