@@ -128,6 +128,7 @@ fv = do a <- sInteger "a"
                                vRealVal    <- getValue vReal
                                vIntegerVal <- getValue vInteger
                                vBinOpVal   <- getValue vBinOp
+                               vSArrayVal  <- getValue vSArray
                                vi1Val      <- getValue vi1
                                vi2Val      <- getValue vi2
                                mustBe42Val <- getValue mustBe42
@@ -154,6 +155,7 @@ fv = do a <- sInteger "a"
                                            , vReal      |-> vRealVal
                                            , vInteger   |-> vIntegerVal
                                            , vBinOp     |-> vBinOpVal
+                                           , vSArray    |-> vSArrayVal
                                            , vi1        |-> vi1Val
                                            , vi2        |-> vi2Val
                                            , mustBe42   |-> mustBe42Val
