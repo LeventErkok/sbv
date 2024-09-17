@@ -9,8 +9,9 @@
 -- Constructors and basic operations on symbolic values
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE BangPatterns  #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections       #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -392,9 +393,19 @@ compareSV op x y
          k  = kx       -- only used after we ensured kx == ky
 
          symResult = SVal KBool $ Right $ cache res
-          where res st = do svx <- svToSV st x
-                            svy <- svToSV st y
-                            newExpr st KBool (SBVApp op [svx, svy])
+          where res st = do svx :: SV <- svToSV st x
+                            svy :: SV <- svToSV st y
+
+                            if svx == svy
+                               then case op of
+                                       Equal       -> pure trueSV
+                                       LessEq      -> pure trueSV
+                                       GreaterEq   -> pure trueSV
+                                       NotEqual    -> pure falseSV
+                                       LessThan    -> pure falseSV
+                                       GreaterThan -> pure falseSV
+                                       _           -> error $ "Unexpected call to compareSV, equal SV case: " ++ show (op, svx)
+                               else newExpr st KBool (SBVApp op [svx, svy])
 
          a `cOp` b = case op of
                       Equal       -> a == b
