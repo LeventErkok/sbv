@@ -712,8 +712,8 @@ instance Show SBVExpr where
 showOpInfix :: Op -> Bool
 showOpInfix = (`elem` infixOps)
   where infixOps = [ Plus, Times, Minus, Quot, Rem, Implies
-                   , NotEqual, LessThan, GreaterThan, LessEq, GreaterEq
-                   , And, Or, XOr
+                   , Equal, NotEqual, LessThan, GreaterThan, LessEq, GreaterEq
+                   , And, Or, XOr, Join
                    ]
 
 -- | A program is a sequence of assignments
