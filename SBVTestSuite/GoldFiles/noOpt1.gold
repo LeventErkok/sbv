@@ -17,10 +17,8 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool (= s0 s0))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s1)
 *** Solver   : Z3
 *** Exit code: ExitFailure (-15)
 

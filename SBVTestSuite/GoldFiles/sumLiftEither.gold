@@ -22,7 +22,6 @@
 [GOOD] (assert (= 1 (str.len s1)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -32,8 +31,6 @@
 [GOOD] (define-fun s5 () (SBVEither Int String) ((as right_SBVEither (SBVEither Int String)) s1))
 [GOOD] (define-fun s6 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s5))
 [GOOD] (define-fun s7 () Bool (ite s6 false true))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

@@ -13,7 +13,6 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun p () Bool)
 [GOOD] (declare-fun q () Bool)
@@ -22,8 +21,6 @@
 [GOOD] (define-fun s0 () Bool p)
 [GOOD] (define-fun s1 () Bool q)
 [GOOD] (define-fun s2 () Bool (or s0 s1))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)
@@ -36,7 +33,7 @@ Fast allSat, Looking for solution 1
 [SEND] (get-value (s1))
 [RECV] ((s1 false))
 [GOOD] (push 1)
-[GOOD] (define-fun s3 () Bool (distinct true s0))
+[GOOD] (define-fun s3 () Bool (not s0))
 [GOOD] (assert s3)
 Fast allSat, Looking for solution 2
 [SEND] (check-sat)
@@ -52,10 +49,9 @@ Fast allSat, Looking for solution 3
 [RECV] unsat
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (define-fun s4 () Bool (distinct true s1))
+[GOOD] (define-fun s4 () Bool (not s1))
 [GOOD] (assert s4)
-[GOOD] (define-fun s5 () Bool (= false s0))
-[GOOD] (assert s5)
+[GOOD] (assert s3)
 Fast allSat, Looking for solution 3
 [SEND] (check-sat)
 [RECV] unsat
