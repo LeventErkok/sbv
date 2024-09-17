@@ -312,7 +312,10 @@ svImplies a b
   | True                                 = SVal KBool $ Right $ cache c
   where c st = do sva <- svToSV st a
                   svb <- svToSV st b
-                  newExpr st KBool (SBVApp Implies [sva, svb])
+                  -- One final optimization, equal args is just True!
+                  if sva == svb
+                     then pure trueSV
+                     else newExpr st KBool (SBVApp Implies [sva, svb])
 
 -- | Strong equality. Only matters on floats, where it says @NaN@ equals @NaN@ and @+0@ and @-0@ are different.
 -- Otherwise equivalent to `svEqual`.
