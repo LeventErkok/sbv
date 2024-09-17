@@ -19,14 +19,11 @@
 [GOOD] (declare-fun s1 () (Array Int Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () Bool (= s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
@@ -44,16 +41,16 @@
 [RECV] ((s7 false))
 [GOOD] (define-fun s8 () (Array Int Bool) (complement s1))
 [GOOD] (define-fun s9 () (Array Int Bool) (intersection s0 s8))
-[GOOD] (define-fun s10 () Bool (= s9 s6))
+[GOOD] (define-fun s10 () Bool (= s6 s9))
 [SEND] (get-value (s10))
 [RECV] ((s10 true))
 [GOOD] (define-fun s11 () (Array Int Bool) (complement s0))
 [GOOD] (define-fun s12 () (Array Int Bool) (intersection s11 s1))
-[GOOD] (define-fun s13 () Bool (= s12 s6))
+[GOOD] (define-fun s13 () Bool (= s6 s12))
 [SEND] (get-value (s13))
 [RECV] ((s13 true))
 [GOOD] (define-fun s14 () (Array Int Bool) (intersection s11 s8))
-[GOOD] (define-fun s15 () Bool (= s14 s6))
+[GOOD] (define-fun s15 () Bool (= s6 s14))
 [SEND] (get-value (s15))
 [RECV] ((s15 false))
 *** Solver   : Z3
