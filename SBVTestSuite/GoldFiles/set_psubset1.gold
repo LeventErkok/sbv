@@ -19,14 +19,11 @@
 [GOOD] (declare-fun s1 () (Array Int Bool)) ; tracks user variable "b"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () Bool (= s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
@@ -38,31 +35,27 @@
 [SEND] (get-value (s1))
 [RECV] ((s1 (store ((as const (Array Int Bool)) false) 0 true)))
 [GOOD] (define-fun s5 () Bool (subset s0 s1))
-[GOOD] (define-fun s6 () Bool (= s0 s1))
-[GOOD] (define-fun s7 () Bool (not s6))
-[GOOD] (define-fun s8 () Bool (and s5 s7))
-[SEND] (get-value (s8))
-[RECV] ((s8 false))
-[GOOD] (define-fun s9 () (Array Int Bool) (complement s1))
-[GOOD] (define-fun s10 () Bool (subset s0 s9))
-[GOOD] (define-fun s11 () Bool (= s0 s9))
-[GOOD] (define-fun s12 () Bool (not s11))
-[GOOD] (define-fun s13 () Bool (and s10 s12))
-[SEND] (get-value (s13))
-[RECV] ((s13 false))
-[GOOD] (define-fun s14 () (Array Int Bool) (complement s0))
-[GOOD] (define-fun s15 () Bool (subset s14 s1))
-[GOOD] (define-fun s16 () Bool (= s14 s1))
-[GOOD] (define-fun s17 () Bool (not s16))
-[GOOD] (define-fun s18 () Bool (and s15 s17))
+[GOOD] (define-fun s6 () Bool (distinct s0 s1))
+[GOOD] (define-fun s7 () Bool (and s5 s6))
+[SEND] (get-value (s7))
+[RECV] ((s7 false))
+[GOOD] (define-fun s8 () (Array Int Bool) (complement s1))
+[GOOD] (define-fun s9 () Bool (subset s0 s8))
+[GOOD] (define-fun s10 () Bool (distinct s0 s8))
+[GOOD] (define-fun s11 () Bool (and s9 s10))
+[SEND] (get-value (s11))
+[RECV] ((s11 false))
+[GOOD] (define-fun s12 () (Array Int Bool) (complement s0))
+[GOOD] (define-fun s13 () Bool (subset s12 s1))
+[GOOD] (define-fun s14 () Bool (distinct s1 s12))
+[GOOD] (define-fun s15 () Bool (and s13 s14))
+[SEND] (get-value (s15))
+[RECV] ((s15 false))
+[GOOD] (define-fun s16 () Bool (subset s12 s8))
+[GOOD] (define-fun s17 () Bool (distinct s8 s12))
+[GOOD] (define-fun s18 () Bool (and s16 s17))
 [SEND] (get-value (s18))
 [RECV] ((s18 false))
-[GOOD] (define-fun s19 () Bool (subset s14 s9))
-[GOOD] (define-fun s20 () Bool (= s14 s9))
-[GOOD] (define-fun s21 () Bool (not s20))
-[GOOD] (define-fun s22 () Bool (and s19 s21))
-[SEND] (get-value (s22))
-[RECV] ((s22 false))
 *** Solver   : Z3
 *** Exit code: ExitSuccess
 

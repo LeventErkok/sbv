@@ -14,7 +14,6 @@
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; bar :: SInteger -> SInteger, foo :: SInteger -> SInteger
@@ -22,22 +21,20 @@
          ((bar ((l2_s0 Int)) Int)
           (foo ((l1_s0 Int)) Int))
          (; Definition of: bar :: SInteger -> SInteger. [Refers to: foo]
-          (let ((l2_s2 1))
-          (let ((l2_s1 (foo l2_s0)))
-          (let ((l2_s3 (+ l2_s1 l2_s2)))
-          l2_s3)))
+                                                  (let ((l2_s2 1))
+                                                  (let ((l2_s1 (foo l2_s0)))
+                                                  (let ((l2_s3 (+ l2_s1 l2_s2)))
+                                                  l2_s3)))
           ; Definition of: foo :: SInteger -> SInteger. [Refers to: bar]
-          (let ((l1_s2 1))
-          (let ((l1_s1 (bar l1_s0)))
-          (let ((l1_s3 (+ l1_s1 l1_s2)))
-          l1_s3)))))
+                                  (let ((l1_s2 1))
+                                  (let ((l1_s1 (bar l1_s0)))
+                                  (let ((l1_s3 (+ l1_s1 l1_s2)))
+                                  l1_s3)))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (foo s0))
 [GOOD] (define-fun s2 () Int (bar s0))
 [GOOD] (define-fun s3 () Int (+ s1 s2))
 [GOOD] (define-fun s4 () Bool (= s0 s3))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

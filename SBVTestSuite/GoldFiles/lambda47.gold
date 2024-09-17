@@ -16,26 +16,23 @@
 [GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; sumToN :: SInteger -> SInteger [Recursive]
 [GOOD] (define-fun-rec sumToN ((l1_s0 Int)) Int
-         (let ((l1_s1 0))
-         (let ((l1_s3 1))
-         (let ((l1_s2 (<= l1_s0 l1_s1)))
-         (let ((l1_s4 (- l1_s0 l1_s3)))
-         (let ((l1_s5 (sumToN l1_s4)))
-         (let ((l1_s6 (+ l1_s0 l1_s5)))
-         (let ((l1_s7 (ite l1_s2 l1_s1 l1_s6)))
-         l1_s7))))))))
+                                 (let ((l1_s1 0))
+                                 (let ((l1_s3 1))
+                                 (let ((l1_s2 (<= l1_s0 l1_s1)))
+                                 (let ((l1_s4 (- l1_s0 l1_s3)))
+                                 (let ((l1_s5 (sumToN l1_s4)))
+                                 (let ((l1_s6 (+ l1_s0 l1_s5)))
+                                 (let ((l1_s7 (ite l1_s2 l1_s1 l1_s6)))
+                                 l1_s7))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () Int (sumToN s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] (define-fun s6 () Bool (and s3 s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s6)

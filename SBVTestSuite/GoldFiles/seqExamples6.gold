@@ -19,7 +19,6 @@
 [GOOD] (declare-fun s2 () (Seq Int)) ; tracks user variable "c"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -27,8 +26,6 @@
 [GOOD] (define-fun s4 () Bool (seq.contains s1 s2))
 [GOOD] (define-fun s5 () Bool (seq.contains s0 s2))
 [GOOD] (define-fun s6 () Bool (not s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

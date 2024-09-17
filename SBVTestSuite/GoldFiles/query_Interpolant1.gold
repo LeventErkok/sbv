@@ -17,7 +17,6 @@
 [GOOD] (declare-fun s3 () Int) ; tracks user variable "d"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -28,8 +27,6 @@
 [GOOD] (define-fun s8 () Bool (= s2 s3))
 [GOOD] (define-fun s9 () Bool (not s8))
 [GOOD] (define-fun s10 () Bool (and s7 s9))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert (! s6 :interpolation-group |c1|))

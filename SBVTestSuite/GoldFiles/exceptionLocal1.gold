@@ -14,7 +14,6 @@
 [GOOD] (declare-fun s0 () (_ BitVec 32)) ; tracks user variable "x"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---

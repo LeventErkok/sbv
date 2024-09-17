@@ -26,13 +26,12 @@
 [GOOD] (declare-fun s2 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec sbv.reverse_0 ((lst (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec |sbv.reverse_[SInteger]| ((lst (Seq Int))) (Seq Int)
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
-                            (seq.++ (sbv.reverse_0 (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
+                            (seq.++ (|sbv.reverse_[SInteger]| (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
@@ -47,17 +46,15 @@
 [GOOD] (define-fun s16 () (Seq (SBVTuple2 Int Int)) (seq.mapi (lambda ((l1_s0 Int) (l1_s1 Int))
          ((as mkSBVTuple2 (SBVTuple2 Int Int)) l1_s0 l1_s1)) s7 s15))
 [GOOD] (define-fun s17 () (Seq Int) (seq.map (lambda ((l1_s0 (SBVTuple2 Int Int)))
-         (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
-         (let ((l1_s2 (proj_1_SBVTuple2 l1_s0)))
-         (let ((l1_s3 (seq.nth s1 l1_s2)))
-         (let ((l1_s4 (+ l1_s1 l1_s3)))
-         l1_s4))))) s16))
-[GOOD] (define-fun s18 () (Seq Int) (sbv.reverse_0 s17))
+                                 (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
+                                 (let ((l1_s2 (proj_1_SBVTuple2 l1_s0)))
+                                 (let ((l1_s3 (seq.nth s1 l1_s2)))
+                                 (let ((l1_s4 (+ l1_s1 l1_s3)))
+                                 l1_s4))))) s16))
+[GOOD] (define-fun s18 () (Seq Int) (|sbv.reverse_[SInteger]| s17))
 [GOOD] (define-fun s19 () Int (seq.foldl (lambda ((l1_s0 Int) (l1_s1 Int))
          (+ l1_s0 l1_s1)) s7 s18))
 [GOOD] (define-fun s20 () Bool (= s2 s19))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

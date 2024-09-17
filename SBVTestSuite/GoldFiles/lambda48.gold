@@ -19,28 +19,25 @@
 [GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; list_length :: [SInteger] -> SInteger [Recursive]
 [GOOD] (define-fun-rec list_length ((l1_s0 (Seq Int))) Int
-         (let ((l1_s2 0))
-         (let ((l1_s4 1))
-         (let ((l1_s1 (seq.len l1_s0)))
-         (let ((l1_s3 (= l1_s1 l1_s2)))
-         (let ((l1_s5 (- l1_s1 l1_s4)))
-         (let ((l1_s6 (seq.extract l1_s0 l1_s4 l1_s5)))
-         (let ((l1_s7 (list_length l1_s6)))
-         (let ((l1_s8 (+ l1_s4 l1_s7)))
-         (let ((l1_s9 (ite l1_s3 l1_s2 l1_s8)))
-         l1_s9))))))))))
+                                 (let ((l1_s2 0))
+                                 (let ((l1_s4 1))
+                                 (let ((l1_s1 (seq.len l1_s0)))
+                                 (let ((l1_s3 (= l1_s1 l1_s2)))
+                                 (let ((l1_s5 (- l1_s1 l1_s4)))
+                                 (let ((l1_s6 (seq.extract l1_s0 l1_s4 l1_s5)))
+                                 (let ((l1_s7 (list_length l1_s6)))
+                                 (let ((l1_s8 (+ l1_s4 l1_s7)))
+                                 (let ((l1_s9 (ite l1_s3 l1_s2 l1_s8)))
+                                 l1_s9))))))))))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () Int (list_length s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] (define-fun s6 () Bool (and s3 s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s6)

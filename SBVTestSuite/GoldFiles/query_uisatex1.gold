@@ -49,7 +49,6 @@
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun q1 (Int) Int)
 [GOOD] (declare-fun q2 (Bool Int) Int)
@@ -94,8 +93,6 @@
 [GOOD] (define-fun s63 () Bool (= s61 s62))
 [GOOD] (define-fun s66 () Int (q5 s64 s65))
 [GOOD] (define-fun s68 () Bool (= s66 s67))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

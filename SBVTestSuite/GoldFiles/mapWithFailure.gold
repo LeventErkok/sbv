@@ -23,7 +23,6 @@
 [GOOD] (declare-fun s0 () (Seq Int)) ; tracks user variable "ints"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -176,8 +175,6 @@
 [GOOD] (define-fun s153 () Bool (not s3))
 [GOOD] (define-fun s154 () Bool (and s152 s153))
 [GOOD] (define-fun s155 () Bool (=> s94 s154))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s155)

@@ -34,7 +34,6 @@
 [GOOD] (declare-fun s9 () Bool) ; tracks user variable "b9"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -61,8 +60,6 @@
 [GOOD] (define-fun s41 () Bool (= s29 s40))
 [GOOD] (define-fun s42 () Bool (= s10 s41))
 [GOOD] (define-fun s43 () Bool (not s42))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s43)

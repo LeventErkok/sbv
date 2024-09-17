@@ -21,7 +21,6 @@
 [GOOD] (declare-fun s2 () Int) ; tracks user variable "c"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -54,8 +53,6 @@
 [GOOD] (define-fun s31 () Int (+ s0 s1))
 [GOOD] (define-fun s32 () Int (+ s2 s31))
 [GOOD] (define-fun s33 () Bool (= s30 s32))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

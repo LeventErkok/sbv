@@ -16,14 +16,11 @@
 [ISSUE] (declare-fun s1 () (_ BitVec 32)) ; tracks user variable "b"
 [ISSUE] ; --- constant tables ---
 [ISSUE] ; --- non-constant tables ---
-[ISSUE] ; --- arrays ---
 [ISSUE] ; --- uninterpreted constants ---
 [ISSUE] ; --- user defined functions ---
 [ISSUE] ; --- assignments ---
 [ISSUE] (define-fun s3 () Bool (bvsgt s0 s2))
 [ISSUE] (define-fun s4 () Bool (bvsgt s1 s2))
-[ISSUE] ; --- arrayDelayeds ---
-[ISSUE] ; --- arraySetups ---
 [ISSUE] ; --- delayedEqualities ---
 [ISSUE] ; --- formula ---
 [ISSUE] (assert s3)

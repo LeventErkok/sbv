@@ -15,14 +15,16 @@
 [GOOD] (declare-fun s1 () (_ BitVec 16))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+[GOOD] (define-fun s2 () Bool (= s0 s0))
+[GOOD] (define-fun s3 () Bool (= s1 s1))
+[GOOD] (define-fun s4 () Bool (and s2 s3))
+[GOOD] (define-fun s5 () Bool (not s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
+[GOOD] (assert (not s5))
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))

@@ -24,7 +24,6 @@
 [GOOD] (assert (forall ((seq0 Int)) (=> (and (>= seq0 0) (< seq0 (seq.len s0))) (=> ((_ is (right_SBVEither (String) (SBVEither Int String))) (seq.nth s0 seq0)) (= 1 (str.len (get_right_SBVEither (seq.nth s0 seq0))))))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -38,8 +37,6 @@
 [GOOD] (define-fun s11 () (SBVEither Int String) (seq.nth s10 s4))
 [GOOD] (define-fun s12 () Bool ((_ is (left_SBVEither (Int) (SBVEither Int String))) s11))
 [GOOD] (define-fun s13 () Bool (ite s12 false true))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

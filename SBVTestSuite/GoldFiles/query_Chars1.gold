@@ -17,15 +17,12 @@
 [GOOD] (assert (= 1 (str.len s0)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (str.to_code s0))
 [GOOD] (define-fun s3 () Bool (>= s1 s2))
 [GOOD] (define-fun s5 () Bool (< s1 s4))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

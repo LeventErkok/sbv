@@ -20,7 +20,6 @@
 [GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -28,8 +27,6 @@
 [GOOD] (define-fun s5 () Int (seq.foldl (lambda ((l1_s0 Int) (l1_s1 Int))
          (* l1_s0 l1_s1)) s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

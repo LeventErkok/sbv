@@ -13,23 +13,20 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun R (Int Int) Bool)
 [GOOD] (declare-fun __internal_sbv_IsPartialOrder__poR_ (Int Int) Bool)
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Int) (l1_s1 Int))
-         (let ((l1_s2 (R l1_s0 l1_s1)))
-         (let ((l1_s3 (__internal_sbv_IsPartialOrder__poR_ l1_s0 l1_s1)))
-         (let ((l1_s4 (= l1_s2 l1_s3)))
-         l1_s4)))))
+                                 (let ((l1_s2 (R l1_s0 l1_s1)))
+                                 (let ((l1_s3 (__internal_sbv_IsPartialOrder__poR_ l1_s0 l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 l1_s4)))))
 [GOOD] (define-fun s1 () Bool (forall ((x Int) (y Int)) (= (__internal_sbv_IsPartialOrder__poR_ x y) ((_ partial-order 0) x y))))
 [GOOD] (define-fun s2 () Bool (forall ((l1_s0 Int))
          (R l1_s0 l1_s0)))
 [GOOD] (define-fun s3 () Bool (=> s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

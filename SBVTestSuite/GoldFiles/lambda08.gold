@@ -19,18 +19,15 @@
 [GOOD] (declare-fun s1 () (Seq (_ FloatingPoint  8 24)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
 [GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (seq.map (lambda ((l1_s0 (_ FloatingPoint  8 24)))
-         (let ((l1_s1 ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))))
-         (let ((l1_s2 (fp.add roundNearestTiesToEven l1_s0 l1_s1)))
-         l1_s2))) s0))
+                                 (let ((l1_s1 ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))))
+                                 (let ((l1_s2 (fp.add roundNearestTiesToEven l1_s0 l1_s1)))
+                                 l1_s2))) s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

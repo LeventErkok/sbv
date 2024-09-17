@@ -18,7 +18,6 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] (declare-fun table0 ((_ BitVec 64)) (_ BitVec 64))
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -111,8 +110,6 @@
 [GOOD] (define-fun s90 () (_ BitVec 64) ((_ rotate_right 63) s0))
 [GOOD] (define-fun s92 () (_ BitVec 64) (ite (bvule #x0000000000000040 s3) s91 (table0 s3)))
 [GOOD] (define-fun s93 () Bool (= s28 s92))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] (assert (= (table0 #x0000000000000000) s0))
 [GOOD] (assert (= (table0 #x0000000000000001) s17))

@@ -13,17 +13,14 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 (_ BitVec 8))) (exists ((l1_s1 (_ BitVec 8)))
-         (let ((l1_s2 #x01))
-         (let ((l1_s3 (bvadd l1_s1 l1_s2)))
-         (let ((l1_s4 (= l1_s0 l1_s3)))
-         l1_s4))))))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+                                 (let ((l1_s2 #x01))
+                                 (let ((l1_s3 (bvadd l1_s1 l1_s2)))
+                                 (let ((l1_s4 (= l1_s0 l1_s3)))
+                                 l1_s4))))))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

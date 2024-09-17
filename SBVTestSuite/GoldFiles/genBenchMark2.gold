@@ -11,14 +11,11 @@
 (declare-fun s0 () (_ BitVec 8))
 ; --- constant tables ---
 ; --- non-constant tables ---
-; --- arrays ---
 ; --- uninterpreted constants ---
 ; --- user defined functions ---
 ; --- assignments ---
 (define-fun s2 () (_ BitVec 8) (bvadd s0 s1))
 (define-fun s3 () Bool (= s0 s2))
-; --- arrayDelayeds ---
-; --- arraySetups ---
 ; --- delayedEqualities ---
 ; --- formula ---
 (assert s3)

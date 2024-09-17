@@ -13,21 +13,18 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun F (Int) Int)
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Int))
-         (let ((l1_s2 2))
-         (let ((l1_s4 3))
-         (let ((l1_s1 (F l1_s0)))
-         (let ((l1_s3 (* l1_s0 l1_s2)))
-         (let ((l1_s5 (+ l1_s3 l1_s4)))
-         (let ((l1_s6 (= l1_s1 l1_s5)))
-         l1_s6))))))))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+                                 (let ((l1_s2 2))
+                                 (let ((l1_s4 3))
+                                 (let ((l1_s1 (F l1_s0)))
+                                 (let ((l1_s3 (* l1_s0 l1_s2)))
+                                 (let ((l1_s5 (+ l1_s3 l1_s4)))
+                                 (let ((l1_s6 (= l1_s1 l1_s5)))
+                                 l1_s6))))))))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

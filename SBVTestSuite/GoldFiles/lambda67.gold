@@ -13,7 +13,6 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun U ((_ BitVec 8) (_ BitVec 8)) Bool)
 [GOOD] (declare-fun __internal_sbv__TransitiveClosure_tcU_ ((_ BitVec 8) (_ BitVec 8)) Bool)
@@ -22,19 +21,17 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)))
-         (let ((l1_s2 (U l1_s0 l1_s1)))
-         (let ((l1_s3 (__internal_sbv__TransitiveClosure_tcU_ l1_s0 l1_s1)))
-         (let ((l1_s4 (= l1_s2 l1_s3)))
-         l1_s4)))))
+                                 (let ((l1_s2 (U l1_s0 l1_s1)))
+                                 (let ((l1_s3 (__internal_sbv__TransitiveClosure_tcU_ l1_s0 l1_s1)))
+                                 (let ((l1_s4 (= l1_s2 l1_s3)))
+                                 l1_s4)))))
 [GOOD] (define-fun s1 () Bool (forall ((l1_s0 (_ BitVec 8)) (l1_s1 (_ BitVec 8)) (l1_s2 (_ BitVec 8)))
-         (let ((l1_s3 (U l1_s0 l1_s1)))
-         (let ((l1_s4 (U l1_s1 l1_s2)))
-         (let ((l1_s5 (and l1_s3 l1_s4)))
-         (let ((l1_s6 (tcU l1_s0 l1_s2)))
-         (let ((l1_s7 (=> l1_s5 l1_s6)))
-         l1_s7)))))))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+                                 (let ((l1_s3 (U l1_s0 l1_s1)))
+                                 (let ((l1_s4 (U l1_s1 l1_s2)))
+                                 (let ((l1_s5 (and l1_s3 l1_s4)))
+                                 (let ((l1_s6 (tcU l1_s0 l1_s2)))
+                                 (let ((l1_s7 (=> l1_s5 l1_s6)))
+                                 l1_s7)))))))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

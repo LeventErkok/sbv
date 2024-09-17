@@ -1,6 +1,6 @@
 ; user defined axiom: 
 (assert (forall ((l1_s0 Int) (l1_s1 Bool))
-    (let ((l1_s2 0))
-    (let ((l1_s3 (= l1_s0 l1_s2)))
-    (let ((l1_s4 (or l1_s1 l1_s3)))
-    l1_s4)))))
+                            (let ((l1_s2 0))
+                            (let ((l1_s3 (= l1_s0 l1_s2)))
+                            (let ((l1_s4 (or l1_s1 l1_s3)))
+                            l1_s4)))))

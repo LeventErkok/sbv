@@ -13,15 +13,13 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (exists ((l1_s0 Bool))
-         (exists ((l2_s0 Bool))
+                                 (let ((l1_s1 (exists ((l2_s0 Bool))
          (or l1_s0 l2_s0))))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+                                 l1_s1)))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

@@ -19,7 +19,6 @@
 [GOOD] (declare-fun s1 () (Seq (Seq Int)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -27,8 +26,6 @@
 [GOOD] (define-fun s4 () (Seq (Seq Int)) (seq.map (lambda ((l1_s0 Int))
          (seq.unit l1_s0)) s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

@@ -15,19 +15,16 @@
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; add1 :: SInteger -> SInteger
 [GOOD] (define-fun add1 ((l1_s0 Int)) Int
-         (let ((l1_s1 1))
-         (let ((l1_s2 (+ l1_s0 l1_s1)))
-         l1_s2)))
+                                 (let ((l1_s1 1))
+                                 (let ((l1_s2 (+ l1_s0 l1_s1)))
+                                 l1_s2)))
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Int (add1 s0))
 [GOOD] (define-fun s3 () Bool (= s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

@@ -16,15 +16,12 @@
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s2 () Bool (= s0 s1))
 [GOOD] (define-fun s4 () Bool (> s0 s3))
 [GOOD] (define-fun s5 () Bool (not s4))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (push 1)

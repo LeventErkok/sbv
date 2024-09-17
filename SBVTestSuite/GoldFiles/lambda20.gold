@@ -20,22 +20,19 @@
 [GOOD] (declare-fun s1 () Int)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec sbv.reverse_0 ((lst (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec |sbv.reverse_[SInteger]| ((lst (Seq Int))) (Seq Int)
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
-                            (seq.++ (sbv.reverse_0 (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
+                            (seq.++ (|sbv.reverse_[SInteger]| (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () (Seq Int) (sbv.reverse_0 s0))
+[GOOD] (define-fun s5 () (Seq Int) (|sbv.reverse_[SInteger]| s0))
 [GOOD] (define-fun s6 () Int (seq.foldl (lambda ((l1_s0 Int) (l1_s1 Int))
          (* l1_s0 l1_s1)) s4 s5))
 [GOOD] (define-fun s7 () Bool (= s1 s6))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

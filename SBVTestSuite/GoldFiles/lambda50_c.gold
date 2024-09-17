@@ -14,18 +14,15 @@
 [GOOD] (declare-fun s0 () Bool)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s1 () Bool (= false s0))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
+[GOOD] (define-fun s1 () Bool (not s0))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s1)
 [GOOD] (declare-fun s2 () Bool)
-[GOOD] (define-fun s3 () Bool (= false s2))
+[GOOD] (define-fun s3 () Bool (not s2))
 [GOOD] (assert s3)
 [SEND] (check-sat)
 [RECV] sat
