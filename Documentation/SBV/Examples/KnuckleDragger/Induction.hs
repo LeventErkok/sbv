@@ -28,6 +28,25 @@ import Data.SBV.Tools.KnuckleDragger
 -- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
 #endif
 
+-- | Prove that sum of constants @c@ from @0@ to @n@ is @n*c@.
+--
+-- We have:
+--
+-- >>> runKD sumConstProof
+-- Lemma: sumConst_correct                 Q.E.D.
+sumConstProof :: KD Proof
+sumConstProof = do
+   let sum :: SInteger -> SInteger -> SInteger
+       sum = smtFunction "sum" $ \n c -> ite (n .== 0) 0 (c + sum (n-1) c)
+
+       spec :: SInteger -> SInteger -> SInteger
+       spec n c = n * c
+
+       p :: SInteger -> SInteger -> SBool
+       p n c = observe "imp" (sum n c) .== observe "spec" (spec n c)
+
+   lemma "sumConst_correct" (\(Forall @"n" n) (Forall @"c" c) -> n .>= 0 .=> p n c) [induct2 p]
+
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
 -- We have:
