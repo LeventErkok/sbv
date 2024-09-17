@@ -15,7 +15,6 @@
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array String Int)) ; tracks user variable "x"
-[GOOD] (assert (forall ((array0 String)) true))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---

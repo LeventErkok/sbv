@@ -1198,9 +1198,9 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                 cstr KRational nm = ["(< 0 (sbv.rat.denominator " ++ nm ++ "))"]
                 cstr _         _  = []
 
-        mkAnd []  = "true"
-        mkAnd [c] = c
-        mkAnd cs  = "(and " ++ unwords cs ++ ")"
+        mkAnd [] _context = []
+        mkAnd [c] context = context c
+        mkAnd cs  context = context $ "(and " ++ unwords cs ++ ")"
 
         walk :: Int -> String -> (Kind -> String -> [String]) -> Kind -> [String]
         walk _d nm f k@KBool     {}         = f k nm
@@ -1218,12 +1218,12 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
           | charRatFree k                 = []
           | True                          = let fnm   = "seq" ++ show d
                                                 cstrs = walk (d+1) ("(seq.nth " ++ nm ++ " " ++ fnm ++ ")") f k
-                                            in ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) (=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ mkAnd cstrs ++ "))"]
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" ++ fnm ++ " " ++ smtType KUnbounded ++ ")) (=> (and (>= " ++ fnm ++ " 0) (< " ++ fnm ++ " (seq.len " ++ nm ++ "))) " ++ hole ++ "))"]
         walk  d  nm f (KSet k)
           | charRatFree k                 = []
           | True                          = let fnm    = "set" ++ show d
                                                 cstrs  = walk (d+1) nm (\sk snm -> ["(=> (select " ++ snm ++ " " ++ fnm ++ ") " ++ c ++ ")" | c <- f sk fnm]) k
-                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ mkAnd cstrs ++ ")"]
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" ++ fnm ++ " " ++ smtType k ++ ")) " ++ hole ++ ")"]
         walk  d  nm  f (KTuple ks)        = let tt        = "SBVTuple" ++ show (length ks)
                                                 project i = "(proj_" ++ show i ++ "_" ++ tt ++ " " ++ nm ++ ")"
                                                 nmks      = [(project i, k) | (i, k) <- zip [1::Int ..] ks]
@@ -1239,7 +1239,7 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
           | all charRatFree [k1, k2]      = []
           | True                          = let fnm   = "array" ++ show d
                                                 cstrs = walk (d+1) ("(select " ++ nm ++ " " ++ fnm ++ ")") f k2
-                                            in ["(forall ((" ++ fnm ++ " " ++ smtType k1 ++ ")) " ++ mkAnd cstrs ++ ")"]
+                                            in mkAnd cstrs $ \hole -> ["(forall ((" ++ fnm ++ " " ++ smtType k1 ++ ")) " ++ hole ++ ")"]
 
 -----------------------------------------------------------------------------------------------
 -- Casts supported by SMTLib. (From: <https://smt-lib.org/theories-FloatingPoint.shtml>)

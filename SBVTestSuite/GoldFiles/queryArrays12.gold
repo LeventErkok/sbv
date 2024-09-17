@@ -60,7 +60,6 @@
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Array SBVRational Int)) ; tracks user variable "x"
-[GOOD] (assert (forall ((array0 SBVRational)) true))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
