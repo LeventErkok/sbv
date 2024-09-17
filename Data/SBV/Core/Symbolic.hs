@@ -697,15 +697,24 @@ reorder s = case s of
 
 -- Show instance for 'SBVExpr'. Again, only for debugging purposes.
 instance Show SBVExpr where
-  show (SBVApp Ite [t, a, b])             = unwords ["if", show t, "then", show a, "else", show b]
-  show (SBVApp Shl     [a, i])            = unwords [show a, "<<", show i]
-  show (SBVApp Shr     [a, i])            = unwords [show a, ">>", show i]
-  show (SBVApp (Rol i) [a])               = unwords [show a, "<<<", show i]
-  show (SBVApp (Ror i) [a])               = unwords [show a, ">>>", show i]
-  show (SBVApp (PseudoBoolean pb) args)   = unwords (show pb : map show args)
-  show (SBVApp (OverflowOp op)    args)   = unwords (show op : map show args)
-  show (SBVApp op                 [a, b]) = unwords [show a, show op, show b]
-  show (SBVApp op                 args)   = unwords (show op : map show args)
+  show (SBVApp Ite [t, a, b])           = unwords ["if", show t, "then", show a, "else", show b]
+  show (SBVApp Shl     [a, i])          = unwords [show a, "<<", show i]
+  show (SBVApp Shr     [a, i])          = unwords [show a, ">>", show i]
+  show (SBVApp (Rol i) [a])             = unwords [show a, "<<<", show i]
+  show (SBVApp (Ror i) [a])             = unwords [show a, ">>>", show i]
+  show (SBVApp (PseudoBoolean pb) args) = unwords (show pb : map show args)
+  show (SBVApp (OverflowOp op)    args) = unwords (show op : map show args)
+
+  show (SBVApp op args) | showOpInfix op, length args == 2 = unwords (map show (take 1 args) ++ show op : map show (drop 1 args))
+                        | True                             = unwords (show op : map show args)
+
+-- | Should we display this Op infix?
+showOpInfix :: Op -> Bool
+showOpInfix = (`elem` infixOps)
+  where infixOps = [ Plus, Times, Minus, Quot, Rem, Implies
+                   , NotEqual, LessThan, GreaterThan, LessEq, GreaterEq
+                   , And, Or, XOr
+                   ]
 
 -- | A program is a sequence of assignments
 newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SV, SBVExpr)}
