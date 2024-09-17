@@ -35,6 +35,8 @@ import qualified Data.SBV.Char   as SC
 import qualified Data.SBV.String as SS
 import qualified Data.SBV.List   as SL
 
+import Data.SBV.Rational
+
 -- Test suite
 tests :: TestTree
 tests =
@@ -82,6 +84,7 @@ tests =
      ++ genChars
      ++ genStrings
      ++ genLists
+     ++ misc
      )
 
 genExtends :: [TestTree]
@@ -873,5 +876,12 @@ se = [Left 3, Right 5]
 
 st :: [(Integer, Integer)]
 st = [(1, 2), (-1, -5), (0, 9), (5, 5)]
+
+misc :: [TestTree]
+misc = [ testCase "misc-t1" $ assertIsSat t1
+       ]
+ where -- https://stackoverflow.com/questions/69033969/trivial-rationals-problems-without-variables-in-sbv-solver-in-haskell
+       t1 = do _xs <- sRationals []
+               constrain $ (5.%1:: SRational) .<= (5.%1:: SRational)
 
 {- HLint ignore module "Reduce duplication" -}
