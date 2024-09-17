@@ -23,7 +23,6 @@
 [GOOD] (assert (= 1 (str.len s1)))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun cf4 (Int String) (Seq (SBVTuple2 (SBVTuple2 String String) (Seq Int))))
 [GOOD] (assert (forall ((a1 Int) (a2 String))
@@ -35,8 +34,6 @@
 [GOOD] (define-fun s2 () (Seq (SBVTuple2 (SBVTuple2 String String) (Seq Int))) (cf4 s0 s1))
 [GOOD] (define-fun s3 () Int (seq.len s2))
 [GOOD] (define-fun s5 () Bool (= s3 s4))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s5)

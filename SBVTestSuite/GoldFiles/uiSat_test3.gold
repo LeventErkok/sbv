@@ -13,7 +13,6 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun q1 (Bool) Bool)
 [GOOD] (declare-fun q2 (Bool Bool) Bool)
@@ -21,8 +20,6 @@
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (q1 false))
 [GOOD] (define-fun s1 () Bool (q2 false false))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 *** Checking Satisfiability, all solutions..

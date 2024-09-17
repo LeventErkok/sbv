@@ -21,7 +21,6 @@
 [GOOD] (declare-fun s1 () (SBVTuple2 Int Int))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -38,8 +37,6 @@
 [GOOD] (define-fun s12 () Bool (< s7 s6))
 [GOOD] (define-fun s13 () Bool (and s5 s12))
 [GOOD] (define-fun s14 () Bool (or s11 s13))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s10)

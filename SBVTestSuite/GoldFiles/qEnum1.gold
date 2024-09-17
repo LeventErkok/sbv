@@ -20,15 +20,12 @@
 [GOOD] (declare-fun s2 () BinOp) ; tracks user variable "t"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (<= (BinOp_constrIndex s0) (BinOp_constrIndex s1)))
 [GOOD] (define-fun s4 () Bool (<= (BinOp_constrIndex s1) (BinOp_constrIndex s2)))
 [GOOD] (define-fun s5 () Bool (distinct s0 s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

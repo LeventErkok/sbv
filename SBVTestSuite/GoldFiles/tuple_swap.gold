@@ -26,7 +26,6 @@
 [GOOD] (declare-fun s1 () (SBVTuple3 Int Int Int)) ; tracks user variable "bay"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -42,8 +41,6 @@
 [GOOD] (define-fun s14 () Bool (= s12 s13))
 [GOOD] (define-fun s15 () Int (proj_3_SBVTuple3 s1))
 [GOOD] (define-fun s17 () Bool (= s15 s16))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)

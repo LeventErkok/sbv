@@ -18,7 +18,6 @@
 [GOOD] (declare-fun s5 () Thing)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun thingCompare (Thing Thing) Bool)
 [GOOD] (declare-fun thingMerge (Thing Thing) Thing)
@@ -27,15 +26,13 @@
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Thing))
          (thingCompare l1_s0 l1_s0)))
 [GOOD] (define-fun s1 () Bool (forall ((l1_s0 Thing) (l1_s1 Thing))
-         (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
-         (let ((l1_s3 (distinct l1_s0 l1_s2)))
-         l1_s3))))
+                                 (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
+                                 (let ((l1_s3 (distinct l1_s0 l1_s2)))
+                                 l1_s3))))
 [GOOD] (define-fun s3 () Thing (thingMerge s2 s2))
 [GOOD] (define-fun s6 () Bool (= s4 s5))
 [GOOD] (define-fun s7 () Bool (thingCompare s4 s5))
 [GOOD] (define-fun s8 () Bool (=> s6 s7))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

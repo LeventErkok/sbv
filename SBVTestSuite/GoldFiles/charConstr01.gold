@@ -15,7 +15,6 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun cf (Int) String)
 [GOOD] (assert (forall ((a1 Int))
@@ -26,8 +25,6 @@
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () String (cf s0))
 [GOOD] (define-fun s3 () Bool (distinct s1 s2))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)

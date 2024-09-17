@@ -17,26 +17,23 @@
 [GOOD] (declare-fun s2 () Bitstring) ; tracks user variable "k"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun a (Bitstring) Bool)
 [GOOD] (declare-fun e (Bitstring Bitstring) Bitstring)
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s0 () Bool (forall ((l1_s0 Bitstring) (l1_s1 Bitstring))
-         (let ((l1_s2 (a l1_s1)))
-         (let ((l1_s3 (a l1_s0)))
-         (let ((l1_s4 (and l1_s2 l1_s3)))
-         (let ((l1_s5 (e l1_s1 l1_s0)))
-         (let ((l1_s6 (a l1_s5)))
-         (let ((l1_s7 (=> l1_s4 l1_s6)))
-         l1_s7))))))))
+                                 (let ((l1_s2 (a l1_s1)))
+                                 (let ((l1_s3 (a l1_s0)))
+                                 (let ((l1_s4 (and l1_s2 l1_s3)))
+                                 (let ((l1_s5 (e l1_s1 l1_s0)))
+                                 (let ((l1_s6 (a l1_s5)))
+                                 (let ((l1_s7 (=> l1_s4 l1_s6)))
+                                 l1_s7))))))))
 [GOOD] (define-fun s3 () Bool (a s1))
 [GOOD] (define-fun s4 () Bool (a s2))
 [GOOD] (define-fun s5 () Bitstring (e s2 s1))
 [GOOD] (define-fun s6 () Bool (a s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)

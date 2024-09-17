@@ -15,7 +15,6 @@
 [GOOD] ; --- top level inputs ---
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun c () Q)
 [GOOD] (declare-fun d () Q)
@@ -24,8 +23,6 @@
 [GOOD] (define-fun s0 () Q c)
 [GOOD] (define-fun s1 () Q d)
 [GOOD] (define-fun s2 () Bool (distinct s0 s1))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s2)

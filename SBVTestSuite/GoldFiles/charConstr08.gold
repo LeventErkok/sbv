@@ -20,7 +20,6 @@
 [GOOD] (assert (forall ((set0 String)) (=> (select s0 set0) (= 1 (str.len set0)))))
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -28,8 +27,6 @@
 [GOOD] (define-fun s4 () Bool (select s0 s3))
 [GOOD] (define-fun s5 () Bool (not s4))
 [GOOD] (define-fun s6 () Bool (and s2 s5))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s6)

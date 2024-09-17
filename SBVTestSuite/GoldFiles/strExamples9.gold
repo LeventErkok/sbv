@@ -15,15 +15,12 @@
 [GOOD] (declare-fun s0 () String) ; tracks user variable "a"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s1 () Bool (str.in.re s0 ((_ re.loop 1 3) (str.to.re "ab"))))
 [GOOD] (define-fun s2 () Int (str.len s0))
 [GOOD] (define-fun s4 () Bool (= s2 s3))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s1)

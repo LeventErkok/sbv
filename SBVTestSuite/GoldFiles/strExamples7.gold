@@ -16,7 +16,6 @@
 [GOOD] (declare-fun s2 () String) ; tracks user variable "c"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
-[GOOD] ; --- arrays ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
@@ -26,8 +25,6 @@
 [GOOD] (define-fun s6 () Bool (not s5))
 [GOOD] (define-fun s7 () Bool (str.contains s2 s1))
 [GOOD] (define-fun s8 () Bool (not s7))
-[GOOD] ; --- arrayDelayeds ---
-[GOOD] ; --- arraySetups ---
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
