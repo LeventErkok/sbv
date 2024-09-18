@@ -16,6 +16,7 @@
 
 module TestSuite.Arrays.InitVals(tests) where
 
+import Data.SBV
 import Utils.SBVTestFramework
 
 readDef :: Predicate
@@ -56,16 +57,19 @@ constArr2 = do i :: SInteger <- sInteger "i"
   where myArray = listArray [(1, 12), (2, 5) , (3, 6), (75, 5)] (2 :: Integer)
 
 tests :: TestTree
-tests =
-  testGroup "Arrays.InitVals"
-    [ testCase "readDef_SArray"              $ assertIsThm readDef
-    , testCase "readDef2_SArray2"            $ assertIsSat readNoDef
-    , goldenCapturedIO "constArr_SArray"     t
-    , goldenCapturedIO "constArr2_SArray"    t2
-    ]
-    where t  goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} constArr
-                           appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
-          t2 goldFile = do r <- satWith defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} constArr2
-                           appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+tests = testGroup "Arrays" [
+    testGroup "Arrays.InitVals"
+      [ testCase "readDef_SArray"           $ assertIsThm readDef
+      , testCase "readDef2_SArray2"         $ assertIsSat readNoDef
+      , goldenCapturedIO "constArr_SArray"  $ t satWith constArr
+      , goldenCapturedIO "constArr2_SArray" $ t satWith constArr2
+      ]
+  , testGroup "Arrays.Misc"
+      [ goldenCapturedIO "array_misc_1" $ t proveWith $ \i -> readArray (listArray [(True,1),(False,0)] 3) i .<= (1::SInteger)
+      , goldenCapturedIO "array_misc_2" $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 -> readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
+      ]
+  ]
+    where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
+                              appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
 {- HLint ignore module "Reduce duplication" -}
