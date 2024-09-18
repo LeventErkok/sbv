@@ -580,32 +580,39 @@ genQRems = map mkTest $  [("divMod",  show x, show y, mkThm2 sDivMod  x y (x `di
         noOverflow x y = not (x == minBound && y == -1)
 
 genChars :: [TestTree]
-genChars = map mkTest $  [("ord",           show c, mkThm SC.ord             cord            c) | c <- cs]
-                      ++ [("toLower",       show c, mkThm SC.toLowerL1       C.toLower       c) | c <- cs]
-                      ++ [("toUpper",       show c, mkThm SC.toUpperL1       C.toUpper       c) | c <- cs, toUpperExceptions c]
-                      ++ [("digitToInt",    show c, mkThm SC.digitToInt      dig2Int         c) | c <- cs, digitToIntRange c]
-                      ++ [("intToDigit",    show c, mkThm SC.intToDigit      int2Dig         c) | c <- [0 .. 15]]
-                      ++ [("isControl",     show c, mkThm SC.isControlL1     C.isControl     c) | c <- cs]
-                      ++ [("isSpace",       show c, mkThm SC.isSpaceL1       C.isSpace       c) | c <- cs]
-                      ++ [("isLower",       show c, mkThm SC.isLowerL1       C.isLower       c) | c <- cs]
-                      ++ [("isUpper",       show c, mkThm SC.isUpperL1       C.isUpper       c) | c <- cs]
-                      ++ [("isAlpha",       show c, mkThm SC.isAlphaL1       C.isAlpha       c) | c <- cs]
-                      ++ [("isAlphaNum",    show c, mkThm SC.isAlphaNumL1    C.isAlphaNum    c) | c <- cs]
-                      ++ [("isPrint",       show c, mkThm SC.isPrintL1       C.isPrint       c) | c <- cs]
-                      ++ [("isDigit",       show c, mkThm SC.isDigit         C.isDigit       c) | c <- cs]
-                      ++ [("isOctDigit",    show c, mkThm SC.isOctDigit      C.isOctDigit    c) | c <- cs]
-                      ++ [("isHexDigit",    show c, mkThm SC.isHexDigit      C.isHexDigit    c) | c <- cs]
-                      ++ [("isLetter",      show c, mkThm SC.isLetterL1      C.isLetter      c) | c <- cs]
-                      ++ [("isMark",        show c, mkThm SC.isMarkL1        C.isMark        c) | c <- cs]
-                      ++ [("isNumber",      show c, mkThm SC.isNumberL1      C.isNumber      c) | c <- cs]
-                      ++ [("isPunctuation", show c, mkThm SC.isPunctuationL1 C.isPunctuation c) | c <- cs]
-                      ++ [("isSymbol",      show c, mkThm SC.isSymbolL1      C.isSymbol      c) | c <- cs]
-                      ++ [("isSeparator",   show c, mkThm SC.isSeparatorL1   C.isSeparator   c) | c <- cs]
-                      ++ [("isAscii",       show c, mkThm SC.isAscii         C.isAscii       c) | c <- cs]
-                      ++ [("isLatin1",      show c, mkThm SC.isLatin1        C.isLatin1      c) | c <- cs]
-                      ++ [("isAsciiUpper",  show c, mkThm SC.isAsciiUpper    C.isAsciiUpper  c) | c <- cs]
-                      ++ [("isAsciiLower",  show c, mkThm SC.isAsciiLower    C.isAsciiLower  c) | c <- cs]
-  where toUpperExceptions = (`notElem` "\181\255")
+genChars = [ testCase "solver_genChars" (assert (isTheorem t)) ]
+  where t = do a <- free "a"
+               i <- free "i"
+
+               let chk  sop cop v = (a .== literal v) .=> sop a .== literal (cop v)
+                   chkI sop cop v = (i .== literal v) .=> sop i .== literal (cop v)
+
+               pure $ sAnd $  [chk  SC.ord             cord            c | c <- cs]
+                           ++ [chk  SC.toLowerL1       C.toLower       c | c <- cs]
+                           ++ [chk  SC.toUpperL1       C.toUpper       c | c <- cs]
+                           ++ [chk  SC.digitToInt      dig2Int         c | c <- cs, digitToIntRange c]
+                           ++ [chkI SC.intToDigit      int2Dig         c | c <- [0 .. 15]]
+                           ++ [chk  SC.isControlL1     C.isControl     c | c <- cs]
+                           ++ [chk  SC.isSpaceL1       C.isSpace       c | c <- cs]
+                           ++ [chk  SC.isLowerL1       C.isLower       c | c <- cs]
+                           ++ [chk  SC.isUpperL1       C.isUpper       c | c <- cs]
+                           ++ [chk  SC.isAlphaL1       C.isAlpha       c | c <- cs]
+                           ++ [chk  SC.isAlphaNumL1    C.isAlphaNum    c | c <- cs]
+                           ++ [chk  SC.isPrintL1       C.isPrint       c | c <- cs]
+                           ++ [chk  SC.isDigit         C.isDigit       c | c <- cs]
+                           ++ [chk  SC.isOctDigit      C.isOctDigit    c | c <- cs]
+                           ++ [chk  SC.isHexDigit      C.isHexDigit    c | c <- cs]
+                           ++ [chk  SC.isLetterL1      C.isLetter      c | c <- cs]
+                           ++ [chk  SC.isMarkL1        C.isMark        c | c <- cs]
+                           ++ [chk  SC.isNumberL1      C.isNumber      c | c <- cs]
+                           ++ [chk  SC.isPunctuationL1 C.isPunctuation c | c <- cs]
+                           ++ [chk  SC.isSymbolL1      C.isSymbol      c | c <- cs]
+                           ++ [chk  SC.isSeparatorL1   C.isSeparator   c | c <- cs]
+                           ++ [chk  SC.isAscii         C.isAscii       c | c <- cs]
+                           ++ [chk  SC.isLatin1        C.isLatin1      c | c <- cs]
+                           ++ [chk  SC.isAsciiUpper    C.isAsciiUpper  c | c <- cs]
+                           ++ [chk  SC.isAsciiLower    C.isAsciiLower  c | c <- cs]
+
         digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
         cord :: Char -> Integer
         cord = fromIntegral . C.ord
@@ -613,10 +620,6 @@ genChars = map mkTest $  [("ord",           show c, mkThm SC.ord             cor
         dig2Int = fromIntegral . C.digitToInt
         int2Dig :: Integer -> Char
         int2Dig = C.intToDigit . fromIntegral
-        mkTest (nm, x, t) = testCase ("genChars-" ++ nm ++ "." ++ x) (assert t)
-        mkThm sop cop arg = isTheorem $ do a <- free "a"
-                                           constrain $ a .== literal arg
-                                           return $ literal (cop arg) .== sop a
 
 genStrings :: [TestTree]
 genStrings = map mkTest1 (  [("length",        show s,                   mkThm1 SS.length        strLen        s      ) | s <- ss                                                       ]

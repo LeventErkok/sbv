@@ -462,7 +462,7 @@ genFloats = bTests ++ uTests ++ fpTests1 ++ fpTests2 ++ converts
 genChars :: [TestTree]
 genChars = map mkTest $  [("ord",           show c, check SC.ord             cord            c) | c <- cs]
                       ++ [("toLower",       show c, check SC.toLowerL1       C.toLower       c) | c <- cs]
-                      ++ [("toUpper",       show c, check SC.toUpperL1       C.toUpper       c) | c <- cs, toUpperExceptions c]
+                      ++ [("toUpper",       show c, check SC.toUpperL1       C.toUpper       c) | c <- cs]
                       ++ [("digitToInt",    show c, check SC.digitToInt      dig2Int         c) | c <- cs, digitToIntRange c]
                       ++ [("intToDigit",    show c, check SC.intToDigit      int2Dig         c) | c <- [0 .. 15]]
                       ++ [("isControl",     show c, check SC.isControlL1     C.isControl     c) | c <- cs]
@@ -485,8 +485,7 @@ genChars = map mkTest $  [("ord",           show c, check SC.ord             cor
                       ++ [("isLatin1",      show c, check SC.isLatin1        C.isLatin1      c) | c <- cs]
                       ++ [("isAsciiUpper",  show c, check SC.isAsciiUpper    C.isAsciiUpper  c) | c <- cs]
                       ++ [("isAsciiLower",  show c, check SC.isAsciiLower    C.isAsciiLower  c) | c <- cs]
-  where toUpperExceptions = (`notElem` "\181\255")
-        digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
+  where digitToIntRange   = (`elem` "0123456789abcdefABCDEF")
         cord :: Char -> Integer
         cord = fromIntegral . C.ord
         dig2Int :: Char -> Integer
