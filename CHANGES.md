@@ -12,11 +12,11 @@
   * Turn on support for floats and uninterpreted sorts/functions in Bitwuzla.
 
   * Add Data.SBV.Tools.KnuckleDragger, inspired by and modeled after Philip Zucker's tool
-    by the same name: https://github.com/philzook58/knuckledragger.
+    (https://github.com/philzook58/knuckledragger) by the same name.
 
   * Added several KnuckleDragger proof examples, see Documentation.SBV.Examples.KnuckleDragger modules.
     Amongst the proofs are the irrationality of square-root of 2, several list lemmas, and a few
-    inductive proofs over naturals.
+    inductive proofs over naturals, amongst others.
 
   * Add sDivides, which takes a concrete integer and a (possibly symbolic), and returns sTrue
     if the first argument divides the second. It is essentially equivalent to @a `sMod` n .== 0`,
