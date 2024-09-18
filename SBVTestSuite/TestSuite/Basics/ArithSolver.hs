@@ -148,6 +148,8 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                    ++ [(show x, show y, mkThm2M x y (x `op` y)) |                             x <- sm,        y <- sm       ]
                                    ++ [(show x, show y, mkThm2E x y (x `op` y)) |                             x <- se,        y <- se       ]
                                    ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- st,        y <- st       ]
+                                   ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- fs,        y <- fs       ]
+                                   ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- ds,        y <- ds       ]
   where -- Currently Z3 doesn't allow for list comparisons, so only test equals and distinct
         -- And there's no way for us to desugar this like we do for tuple/maybe etc; since the datatype itself is recursive.
         allowedListComps = ["==", "/="]
