@@ -185,6 +185,7 @@ module Data.SBV (
   , SFPSingle, FPSingle
   , SFPDouble, FPDouble
   , SFPQuad, FPQuad
+  , fpFromInteger
   -- ** Rationals
   , SRational
   -- ** Algebraic reals
