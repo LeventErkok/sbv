@@ -94,16 +94,15 @@ tests = testGroup "Arrays" [
 
       , testCase         "array_misc_10" $                   (write (empty 0) [(i, i+1) | i <- [0 .. (3 :: WordN 2)]]
                                                           .== write (empty 0) [(i, i  ) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "False"
-
       ]
   ]
-    where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
-                              appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+  where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
+                            appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
-          empty :: (SymVal a, SymVal b) => b -> SArray a b
-          empty = listArray []
+        empty :: (SymVal a, SymVal b) => b -> SArray a b
+        empty = listArray []
 
-          write :: (SymVal a, SymVal b) => SArray a b -> [(a, b)] -> SArray a b
-          write = foldr (\(k, v) a -> writeArray a (literal k) (literal v))
+        write :: (SymVal a, SymVal b) => SArray a b -> [(a, b)] -> SArray a b
+        write = foldr (\(k, v) a -> writeArray a (literal k) (literal v))
 
 {- HLint ignore module "Reduce duplication" -}
