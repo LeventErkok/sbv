@@ -81,7 +81,7 @@ tests = testGroup "Arrays" [
                                                          .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
 
       , testCase         "array_misc_6" $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
-                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "True"
+                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "<symbolic> :: SBool"
 
       ]
   ]
