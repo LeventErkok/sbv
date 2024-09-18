@@ -94,9 +94,9 @@ Fast allSat, Looking for solution 8
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
-[RECV] ((s0 ((as const (Array E Bool)) true)))
+[RECV] ((s0 (store (store (store ((as const (Array E Bool)) false) C true) B true) A true)))
 [GOOD] (push 1)
-[GOOD] (define-fun s15 () (Array E Bool) ((as const (Array E Bool)) true))
+[GOOD] (define-fun s15 () (Array E Bool) (store (store (store ((as const (Array E Bool)) false) C true) B true) A true))
 [GOOD] (define-fun s16 () Bool (distinct s0 s15))
 [GOOD] (assert s16)
 Fast allSat, Looking for solution 9
@@ -115,7 +115,7 @@ Fast allSat, Looking for solution 9
 
 FINAL:
 Solution #1:
-  s0 = U :: {E}
+  s0 = {A,B,C} :: {E}
 Solution #2:
   s0 = U - {A,B} :: {E}
 Solution #3:
