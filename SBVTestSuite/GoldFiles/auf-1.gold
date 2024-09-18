@@ -1,5 +1,5 @@
 INPUTS
-  s0 :: (Array SWord32 SWord32), aliasing "a"
+  s0 :: SArray Word32 Word32, aliasing "a"
   s1 :: SWord32, aliasing "x"
   s2 :: SWord32, aliasing "y"
 CONSTANTS
@@ -14,7 +14,7 @@ AXIOMS-DEFINITIONS
 DEFINE
   s4 :: SWord32 = s1 + s3
   s5 :: SBool = s2 == s4
-  s7 :: (Array SWord32 SWord32) = store s0 s1 s6
+  s7 :: SArray Word32 Word32 = store s0 s1 s6
   s8 :: SWord32 = s2 - s3
   s9 :: SWord32 = select s7 s8
   s10 :: SWord64 = [uninterpreted] f s9
