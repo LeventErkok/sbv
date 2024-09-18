@@ -77,8 +77,9 @@ tests = testGroup "Arrays" [
       , testCase         "array_misc_4"  $                   (write (empty False) [(True, True), (False, False)]
                                                           .== write (empty True)  [(True, True), (False, False)]) `showsAs` "True"
 
-      , goldenCapturedIO "array_misc_5"  $ t proveWith $      write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
-                                                          .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+      , goldenCapturedIO "array_misc_5"  $ t proveWith $ do setLogic Logic_ALL
+                                                            pure $ (    write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                                    .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) :: Symbolic SBool
 
       , testCase         "array_misc_6"  $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
                                                           .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "<symbolic> :: SBool"
