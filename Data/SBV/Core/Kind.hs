@@ -112,10 +112,10 @@ instance Show Kind where
   show (KList e)          = "[" ++ show e ++ "]"
   show (KSet  e)          = "{" ++ show e ++ "}"
   show (KTuple m)         = "(" ++ intercalate ", " (show <$> m) ++ ")"
+  show KRational          = "SRational"
   show (KMaybe k)         = "SMaybe "  ++ kindParen (showBaseKind k)
   show (KEither k1 k2)    = "SEither " ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
-  show KRational          = "SRational"
-  show (KArray k1 k2)     = "(Array " ++ show k1 ++ " " ++ show k2 ++ ")"
+  show (KArray k1 k2)     = "SArray "  ++ kindParen (showBaseKind k1) ++ " " ++ kindParen (showBaseKind k2)
 
 -- | A version of show for kinds that says Bool instead of SBool
 showBaseKind :: Kind -> String
