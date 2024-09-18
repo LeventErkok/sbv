@@ -143,13 +143,13 @@ genBoolTest nm op opS = map mkTest $  [(show x, show y, mkThm2  x y (x `op` y)) 
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- i64s,      y <- i64s     ]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- iUBs,      y <- iUBs     ]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- reducedCS, y <- reducedCS]
+                                   ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- fs,        y <- fs       ]
+                                   ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- ds,        y <- ds       ]
                                    ++ [(show x, show y, mkThm2  x y (x `op` y)) |                             x <- ss,        y <- ss       ]
                                    ++ [(show x, show y, mkThm2L x y (x `op` y)) | nm `elem` allowedListComps, x <- sl,        y <- sl       ]
                                    ++ [(show x, show y, mkThm2M x y (x `op` y)) |                             x <- sm,        y <- sm       ]
                                    ++ [(show x, show y, mkThm2E x y (x `op` y)) |                             x <- se,        y <- se       ]
                                    ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- st,        y <- st       ]
-                                   ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- fs,        y <- fs       ]
-                                   ++ [(show x, show y, mkThm2T x y (x `op` y)) |                             x <- ds,        y <- ds       ]
   where -- Currently Z3 doesn't allow for list comparisons, so only test equals and distinct
         -- And there's no way for us to desugar this like we do for tuple/maybe etc; since the datatype itself is recursive.
         allowedListComps = ["==", "/="]
