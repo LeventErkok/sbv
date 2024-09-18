@@ -100,7 +100,24 @@ tests = testGroup "Arrays" [
       , goldenCapturedIO "array_misc_12" $ t satWith $ \(a :: SArray Integer (Integer, Integer)) -> readArray a 3 .== literal (1, 2)
 
       , goldenCapturedIO "array_misc_13" $ t satWith $ \(a :: SArray (Integer, Integer) (Integer, Integer)) -> readArray a (literal (1, 2)) .== literal (1, 2)
-      , goldenCapturedIO "array_misc_14" $ t satWith $ \(a :: SArray Integer Float) -> fpIsNaN (readArray a 2)
+      , goldenCapturedIO "array_misc_14" $ t satWith $ \(a :: SArray Integer Float)   -> fpIsNaN (readArray a 2)
+      , goldenCapturedIO "array_misc_15" $ t satWith $ \(a :: SArray Float   Integer) -> readArray a (0/0) .== 3
+
+      , goldenCapturedIO "array_misc_16" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray Float                Integer) 0)
+      , goldenCapturedIO "array_misc_17" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray Double               Integer) 0)
+      , goldenCapturedIO "array_misc_18" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (0 :: SFloatingPoint 10 4))
+
+      , goldenCapturedIO "array_misc_19" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray Float                Integer) (-0))
+      , goldenCapturedIO "array_misc_20" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray Double               Integer) (-0))
+      , goldenCapturedIO "array_misc_21" $ t satWith (.== readArray (listArray [(0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (-(0 :: SFloatingPoint 10 4)))
+
+      , goldenCapturedIO "array_misc_22" $ t satWith (.== readArray (listArray [(0/0, 12)] 3 :: SArray Float                Integer) (0/0))
+      , goldenCapturedIO "array_misc_23" $ t satWith (.== readArray (listArray [(0/0, 12)] 3 :: SArray Double               Integer) (0/0))
+      , goldenCapturedIO "array_misc_24" $ t satWith (.== readArray (listArray [(0/0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (0/0))
+
+      , goldenCapturedIO "array_misc_25" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Float                Integer) (1/0))
+      , goldenCapturedIO "array_misc_26" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Double               Integer) (1/0))
+      , goldenCapturedIO "array_misc_27" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (1/0))
       ]
   ]
   where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
