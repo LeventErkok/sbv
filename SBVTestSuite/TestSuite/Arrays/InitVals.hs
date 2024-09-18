@@ -98,6 +98,8 @@ tests = testGroup "Arrays" [
 
       , goldenCapturedIO "array_misc_11" $ t satWith $ \(a :: SArray (Integer, Integer) Integer) -> readArray a (literal (1, 2)) .== 3
       , goldenCapturedIO "array_misc_12" $ t satWith $ \(a :: SArray Integer (Integer, Integer)) -> readArray a 3 .== literal (1, 2)
+
+      , goldenCapturedIO "array_misc_13" $ t satWith $ \(a :: SArray (Integer, Integer) (Integer, Integer)) -> readArray a (literal (1, 2)) .== literal (1, 2)
       ]
   ]
   where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
