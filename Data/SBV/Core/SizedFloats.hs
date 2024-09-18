@@ -263,13 +263,13 @@ bfSignum r | BF.bfIsNaN  r = r
 
 -- | Num instance for big-floats
 instance Num FP where
-  (+)         = lift2 BF.bfAdd
-  (-)         = lift2 BF.bfSub
-  (*)         = lift2 BF.bfMul
-  abs         = lift1 BF.bfAbs
-  signum      = lift1 bfSignum
-  fromInteger = error "FP.fromInteger: Not supported for arbitrary floats. Use fpFromInteger instead, specifying the precision"
-  negate      = lift1 BF.bfNeg
+  (+)           = lift2 BF.bfAdd
+  (-)           = lift2 BF.bfSub
+  (*)           = lift2 BF.bfMul
+  abs           = lift1 BF.bfAbs
+  signum        = lift1 bfSignum
+  fromInteger i = error $ "FP.fromInteger: Not supported for arbitrary floats. Use fpFromInteger instead, specifying the precision. Called on: " ++ show i
+  negate        = lift1 BF.bfNeg
 
 -- | Fractional instance for big-floats
 instance Fractional FP where
