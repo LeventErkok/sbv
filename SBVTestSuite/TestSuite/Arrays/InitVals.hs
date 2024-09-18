@@ -9,6 +9,7 @@
 -- Testing arrays with initializers
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -70,20 +71,27 @@ tests = testGroup "Arrays" [
       , goldenCapturedIO "array_misc_2" $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 ->
                                                                 readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
 
-      , goldenCapturedIO "array_misc_3" $ t proveWith $      write (emptyBool False) [(True, True), (False, False)]
-                                                         .== write (emptyBool True)  [(True, True), (False, False)]
+      , goldenCapturedIO "array_misc_3" $ t proveWith $      write (empty False) [(True, True), (False, False)]
+                                                         .== write (empty True)  [(True, True), (False, False)]
 
-      , testCase         "array_misc_4" $                   (write (emptyBool False) [(True, True), (False, False)]
-                                                         .== write (emptyBool True)  [(True, True), (False, False)]) `showsAs` "True"
+      , testCase         "array_misc_4" $                   (write (empty False) [(True, True), (False, False)]
+                                                         .== write (empty True)  [(True, True), (False, False)]) `showsAs` "True"
+
+      , goldenCapturedIO "array_misc_5" $ t proveWith $      write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+
+      , testCase         "array_misc_6" $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "True"
 
       ]
   ]
     where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
                               appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
 
-          emptyBool :: (SymVal a, SymVal b) => b -> SArray a b
-          emptyBool = listArray []
+          empty :: (SymVal a, SymVal b) => b -> SArray a b
+          empty = listArray []
 
+          write :: (SymVal a, SymVal b) => SArray a b -> [(a, b)] -> SArray a b
           write = foldr (\(k, v) a -> writeArray a (literal k) (literal v))
 
 {- HLint ignore module "Reduce duplication" -}
