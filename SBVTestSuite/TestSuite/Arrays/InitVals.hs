@@ -66,22 +66,34 @@ tests = testGroup "Arrays" [
       , goldenCapturedIO "constArr2_SArray" $ t satWith constArr2
       ]
   , testGroup "Arrays.Misc"
-      [ goldenCapturedIO "array_misc_1" $ t proveWith $ \i -> readArray (listArray [(True,1),(False,0)] 3) i .<= (1::SInteger)
+      [ goldenCapturedIO "array_misc_1"  $ t proveWith $ \i -> readArray (listArray [(True,1),(False,0)] 3) i .<= (1::SInteger)
 
-      , goldenCapturedIO "array_misc_2" $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 ->
-                                                                readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
+      , goldenCapturedIO "array_misc_2"  $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 ->
+                                                                 readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
 
-      , goldenCapturedIO "array_misc_3" $ t proveWith $      write (empty False) [(True, True), (False, False)]
-                                                         .== write (empty True)  [(True, True), (False, False)]
+      , goldenCapturedIO "array_misc_3"  $ t proveWith $      write (empty False) [(True, True), (False, False)]
+                                                          .== write (empty True)  [(True, True), (False, False)]
 
-      , testCase         "array_misc_4" $                   (write (empty False) [(True, True), (False, False)]
-                                                         .== write (empty True)  [(True, True), (False, False)]) `showsAs` "True"
+      , testCase         "array_misc_4"  $                   (write (empty False) [(True, True), (False, False)]
+                                                          .== write (empty True)  [(True, True), (False, False)]) `showsAs` "True"
 
-      , goldenCapturedIO "array_misc_5" $ t proveWith $      write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
-                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+      , goldenCapturedIO "array_misc_5"  $ t proveWith $      write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
 
-      , testCase         "array_misc_6" $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
-                                                         .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "<symbolic> :: SBool"
+      , testCase         "array_misc_6"  $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 1) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "<symbolic> :: SBool"
+
+      , goldenCapturedIO "array_misc_7"  $ t proveWith $      write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+
+      , testCase         "array_misc_8"  $                   (write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 0) [(i, i) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "True"
+
+      , goldenCapturedIO "array_misc_9"   $ t proveWith $     write (empty 0) [(i, i+1) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 0) [(i, i)   | i <- [0 .. (3 :: WordN 2)]]
+
+      , testCase         "array_misc_10" $                   (write (empty 0) [(i, i+1) | i <- [0 .. (3 :: WordN 2)]]
+                                                          .== write (empty 0) [(i, i  ) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "False"
 
       ]
   ]
