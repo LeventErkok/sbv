@@ -399,7 +399,11 @@ compareSV op x y
           where res st = do svx :: SV <- svToSV st x
                             svy :: SV <- svToSV st y
 
-                            if svx == svy
+                            -- We might be able to further optimize if we
+                            -- know these are the same nodes, provided we
+                            -- don't have a float case. (Recall that NaN doesn't
+                            -- compare equal to itself, so avoid that.)
+                            if svx == svy && not (isFloat k || isDouble k || isFP k)
                                then case op of
                                        Equal       -> pure trueSV
                                        LessEq      -> pure trueSV

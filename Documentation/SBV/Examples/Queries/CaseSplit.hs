@@ -52,7 +52,7 @@ csDemo1 = runSMT $ do
                                         ]
 
                   case mbR of
-                    Nothing     -> error "Cannot find a FP number x such that x == x + 1"  -- Won't happen!
+                    Nothing     -> error "Cannot find a FP number x such that x /= x"  -- Won't happen!
                     Just (s, _) -> do xv <- getValue x
                                       return (s, xv)
 
