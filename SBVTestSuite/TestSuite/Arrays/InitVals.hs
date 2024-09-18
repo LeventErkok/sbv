@@ -95,6 +95,9 @@ tests = testGroup "Arrays" [
 
       , testCase         "array_misc_10" $                   (write (empty 0) [(i, i+1) | i <- [0 .. (3 :: WordN 2)]]
                                                           .== write (empty 0) [(i, i  ) | i <- [0 .. (3 :: WordN 2)]]) `showsAs` "False"
+
+      , goldenCapturedIO "array_misc_11" $ t satWith $ \(a :: SArray (Integer, Integer) Integer) -> readArray a (literal (1, 2)) .== 3
+      , goldenCapturedIO "array_misc_12" $ t satWith $ \(a :: SArray Integer (Integer, Integer)) -> readArray a 3 .== literal (1, 2)
       ]
   ]
   where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
