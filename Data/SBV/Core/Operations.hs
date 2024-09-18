@@ -567,10 +567,20 @@ svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
  | not (all canDoEqChecks [k1, k2])
  = Nothing
  | True
- -- We can be a bit better here since if keys cover everything then defs don't need to match; but let's not be too
- -- agressive to do this optimization where it hardly will ever come up.
- = Just $  def1 == def2
-        && and [k `lookup` asc1 == k `lookup` asc2 | k <- nub (sort (map fst (asc1 ++ asc2)))]
+ = let keysMatch = and [k `lookup` asc1 == k `lookup` asc2 | k <- nub (sort (map fst (asc1 ++ asc2)))]
+       defsMatch = def1 == def2
+
+       -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
+       -- For the time being, we're retricting ourselves to bool only. Might want to extend this later.
+       complete  = case k1 of
+                     KBool -> all (\k -> k `elem` map fst asc1 && k `elem` map fst asc2) (map (cvVal . mkConstCV KBool) [0, 1 :: Integer])
+                     _     -> False
+
+   in case (keysMatch, defsMatch, complete) of
+        (False, _   ,  _)    -> Just False -- keys mismatch. Nothing else matters.
+        (True,  True,  _)    -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
+        (True,  False, True) -> Just True  -- keys match, but defs don't. But we keys are complete, so def mismatch is OK
+        _                    -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal
