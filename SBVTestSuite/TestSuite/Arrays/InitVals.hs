@@ -118,6 +118,10 @@ tests = testGroup "Arrays" [
       , goldenCapturedIO "array_misc_25" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Float                Integer) (1/0))
       , goldenCapturedIO "array_misc_26" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Double               Integer) (1/0))
       , goldenCapturedIO "array_misc_27" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (1/0))
+
+      , goldenCapturedIO "array_misc_28" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Float                Integer) (-1/0))
+      , goldenCapturedIO "array_misc_29" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray Double               Integer) (-1/0))
+      , goldenCapturedIO "array_misc_30" $ t satWith (.== readArray (listArray [(1/0, 12)] 3 :: SArray (FloatingPoint 10 4) Integer) (-1/0))
       ]
   ]
   where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
