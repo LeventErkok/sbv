@@ -66,10 +66,24 @@ tests = testGroup "Arrays" [
       ]
   , testGroup "Arrays.Misc"
       [ goldenCapturedIO "array_misc_1" $ t proveWith $ \i -> readArray (listArray [(True,1),(False,0)] 3) i .<= (1::SInteger)
-      , goldenCapturedIO "array_misc_2" $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 -> readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
+
+      , goldenCapturedIO "array_misc_2" $ t satWith   $ \(x :: SArray Integer Integer) i1 i2 i3 ->
+                                                                readArray x i1 .== 4 .&& readArray x i2 .== 5 .&& readArray x i3 .== 12
+
+      , goldenCapturedIO "array_misc_3" $ t proveWith $      write (emptyBool False) [(True, True), (False, False)]
+                                                         .== write (emptyBool True)  [(True, True), (False, False)]
+
+      , testCase         "array_misc_4" $                   (write (emptyBool False) [(True, True), (False, False)]
+                                                         .== write (emptyBool True)  [(True, True), (False, False)]) `showsAs` "True"
+
       ]
   ]
     where t p f goldFile = do r <- p defaultSMTCfg{verbose=True, redirectVerbose = Just goldFile} f
                               appendFile goldFile ("\nFINAL OUTPUT:\n" ++ show r ++ "\n")
+
+          emptyBool :: (SymVal a, SymVal b) => b -> SArray a b
+          emptyBool = listArray []
+
+          write = foldr (\(k, v) a -> writeArray a (literal k) (literal v))
 
 {- HLint ignore module "Reduce duplication" -}
