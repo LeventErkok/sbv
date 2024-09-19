@@ -23,6 +23,13 @@
     but it translates to the built-in divisibility predicate in SMTLib, which (might) perform better.
     Note that the @n@ argument is concrete, and must be > 0.
 
+  * Clarified SSet, SList, and SArray: keys/contents: In SMTLib, the semantics of these containers
+    use object-equality. In Haskell, they use instances of the Eq class. Usually this is just fine,
+    except when it isn't: Floats! Since NaN /= NaN, and +0 is distinguished from -0, what holds
+    in Haskell doesn't in the SMTLib logic. So, we define the semantics of equality to follow
+    the SMTLib semantics. If you are not using floats, then this doesn't matter. If you do, bear
+    in mind that the values will be treated with object equality; which (honestly) is easier to understand.
+
 ### Version 10.12, 2024-08-11
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
