@@ -5,12 +5,16 @@
 [GOOD] (set-option :smtlib2_compliant true)
 [GOOD] (set-option :diagnostic-output-channel "stdout")
 [GOOD] (set-option :produce-models true)
+[GOOD] (set-option :pp.max_depth      4294967295)
+[GOOD] (set-option :pp.min_alias_size 4294967295)
+[GOOD] (set-option :model.inline_def  true      )
 [GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s1 () Int 12)
+[GOOD] (define-fun s1 () (Array (_ FloatingPoint 10 4) Int) (store ((as const (Array (_ FloatingPoint 10 4) Int)) 3) (_ +oo 10 4) 12))
+[GOOD] (define-fun s2 () (_ FloatingPoint 10 4) (_ +oo 10 4))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () Int)
 [GOOD] ; --- constant tables ---
@@ -18,10 +22,11 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s2 () Bool (= s0 s1))
+[GOOD] (define-fun s3 () Int (select s1 s2))
+[GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
-[GOOD] (assert s2)
+[GOOD] (assert s4)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))

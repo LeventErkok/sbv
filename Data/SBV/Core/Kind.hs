@@ -28,7 +28,7 @@ module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
-        , expandKinds
+        , eqCheckIsObjectEq
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
@@ -52,6 +52,8 @@ import GHC.TypeLits
 
 import Data.SBV.Utils.Lib (isKString)
 
+import qualified Data.Generics.Uniplate.Data as G
+
 -- | Kind of symbolic value
 data Kind = KBool
           | KBounded !Bool !Int
@@ -74,25 +76,7 @@ data Kind = KBool
 
 -- Expand such that the resulting list has all the kinds we touch
 expandKinds :: Kind -> [Kind]
-expandKinds top = nub $ sort $ go top []
-  where go :: Kind -> [Kind] -> [Kind]
-        go k@KBool         sofar =              k : sofar
-        go k@KBounded{}    sofar =              k : sofar
-        go k@KUnbounded    sofar =              k : sofar
-        go k@KReal         sofar =              k : sofar
-        go k@KUserSort{}   sofar =              k : sofar
-        go k@KFloat        sofar =              k : sofar
-        go k@KDouble       sofar =              k : sofar
-        go k@KFP{}         sofar =              k : sofar
-        go k@KChar         sofar =              k : sofar
-        go k@KString       sofar =              k : sofar
-        go k@KRational     sofar =              k : sofar
-        go k@(KList  ke)   sofar =       go ke (k : sofar)
-        go k@(KSet   ke)   sofar =       go ke (k : sofar)
-        go k@(KTuple ks)   sofar = foldr go    (k : sofar) ks
-        go k@(KMaybe ke)   sofar =       go ke (k : sofar)
-        go k@(KEither l r) sofar = foldr go    (k : sofar) [l, r]
-        go k@(KArray  i e) sofar = foldr go    (k : sofar) [i, e]
+expandKinds = nub . sort . G.universe
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of
@@ -382,29 +366,22 @@ intOfProxy p
         r :: Int
         r  = fromEnum iv
 
+-- | Is this a type we can safely do equality on? Essentially it avoids floats (@NaN@ /= @NaN@, @+0 = -0@), and reals (due
+-- to the possible presence of non-exact rationals.
+eqCheckIsObjectEq :: Kind -> Bool
+eqCheckIsObjectEq = not . any bad . expandKinds
+  where bad KFloat  = True
+        bad KDouble = True
+        bad KFP{}   = True
+        bad KReal   = True
+        bad _       = False
+
 -- | Do we have a completely uninterpreted sort lying around anywhere?
 hasUninterpretedSorts :: Kind -> Bool
 hasUninterpretedSorts = any check . expandKinds
   where check (KUserSort _ Nothing)  = True   -- These are the completely uninterpreted sorts, which we are looking for here
         check (KUserSort _ (Just{})) = False  -- These are the enumerated sorts, and they are perfectly fine
-
-        -- everything else is OK
-        check KBool                  = False
-        check KBounded{}             = False
-        check KUnbounded             = False
-        check KReal                  = False
-        check KFloat                 = False
-        check KDouble                = False
-        check KFP{}                  = False
-        check KChar                  = False
-        check KString                = False
-        check KRational              = False
-        check KList{}                = False
-        check KSet{}                 = False
-        check KTuple{}               = False
-        check KMaybe{}               = False
-        check KEither{}              = False
-        check KArray{}               = False
+        check _                      = False
 
 instance (Typeable a, HasKind a) => HasKind [a] where
    kindOf x | isKString @[a] x = KString

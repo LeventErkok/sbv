@@ -48,6 +48,7 @@ import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
                        notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
 import qualified Prelude as P
 
+import Data.SBV.Core.Kind
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
 
@@ -80,7 +81,7 @@ import Data.Proxy
 -- >>> prove $ \(l1 :: SList Word16) (l2 :: SList Word16) -> length l1 + length l2 .== length (l1 ++ l2)
 -- Q.E.D.
 length :: SymVal a => SList a -> SInteger
-length = lift1 SeqLen (Just (fromIntegral . P.length))
+length = lift1 False SeqLen (Just (fromIntegral . P.length))
 
 -- | @`null` s@ is True iff the list is empty
 --
@@ -139,7 +140,7 @@ init l
 -- >>> prove $ \(x :: SInteger) -> length (singleton x) .== 1
 -- Q.E.D.
 singleton :: SymVal a => SBV a -> SList a
-singleton = lift1 SeqUnit (Just (: []))
+singleton = lift1 False SeqUnit (Just (: []))
 
 -- | @`listToListAt` l offset@. List of length 1 at @offset@ in @l@. Unspecified if
 -- index is out of bounds.
@@ -162,7 +163,7 @@ elemAt l i
   | Just xs <- unliteral l, Just ci <- unliteral i, ci >= 0, ci < genericLength xs, let x = xs `genericIndex` ci
   = literal x
   | True
-  = lift2 SeqNth Nothing l i
+  = lift2 False SeqNth Nothing l i
 
 -- | Short cut for 'elemAt'
 (!!) :: SymVal a => SList a -> SInteger -> SBV a
@@ -206,7 +207,7 @@ infixr 5 ++
 (++) :: SymVal a => SList a -> SList a -> SList a
 x ++ y | isConcretelyEmpty x = y
        | isConcretelyEmpty y = x
-       | True                = lift2 SeqConcat (Just (P.++)) x y
+       | True                = lift2 False SeqConcat (Just (P.++)) x y
 
 -- | @`elem` e l@. Does @l@ contain the element @e@?
 elem :: (Eq a, SymVal a) => SBV a -> SList a -> SBool
@@ -227,7 +228,7 @@ sub `isInfixOf` l
   | isConcretelyEmpty sub
   = literal True
   | True
-  = lift2 SeqContains (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
+  = lift2 True SeqContains (Just (flip L.isInfixOf)) l sub -- NB. flip, since `SeqContains` takes args in rev order!
 
 -- | @`isPrefixOf` pre l@. Is @pre@ a prefix of @l@?
 --
@@ -240,7 +241,7 @@ pre `isPrefixOf` l
   | isConcretelyEmpty pre
   = literal True
   | True
-  = lift2 SeqPrefixOf (Just L.isPrefixOf) pre l
+  = lift2 True SeqPrefixOf (Just L.isPrefixOf) pre l
 
 -- | @`isSuffixOf` suf l@. Is @suf@ a suffix of @l@?
 --
@@ -253,7 +254,7 @@ suf `isSuffixOf` l
   | isConcretelyEmpty suf
   = literal True
   | True
-  = lift2 SeqSuffixOf (Just L.isSuffixOf) suf l
+  = lift2 True SeqSuffixOf (Just L.isSuffixOf) suf l
 
 -- | @`take` len l@. Corresponds to Haskell's `take` on symbolic lists.
 --
@@ -300,7 +301,7 @@ subList l offset len
   , valid $ o + sz                           -- we don't overrun
   = literal $ genericTake sz $ genericDrop o c
   | True                                     -- either symbolic, or something is out-of-bounds
-  = lift3 SeqSubseq Nothing l offset len
+  = lift3 False SeqSubseq Nothing l offset len
 
 -- | @`replace` l src dst@. Replace the first occurrence of @src@ by @dst@ in @s@
 --
@@ -308,21 +309,24 @@ subList l offset len
 -- Q.E.D.
 -- >>> prove $ \(l1 :: SList Integer) l2 l3 -> length l2 .> length l1 .=> replace l1 l2 l3 .== l1
 -- Q.E.D.
-replace :: (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
+replace :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SList a -> SList a
 replace l src dst
   | Just b <- unliteral src, P.null b   -- If src is null, simply prepend
   = dst ++ l
-  | Just a <- unliteral l
+  | eqCheckIsObjectEq ka
+  , Just a <- unliteral l
   , Just b <- unliteral src
   , Just c <- unliteral dst
   = literal $ walk a b c
   | True
-  = lift3 SeqReplace Nothing l src dst
+  = lift3 True SeqReplace Nothing l src dst
   where walk haystack needle newNeedle = go haystack   -- note that needle is guaranteed non-empty here.
            where go []       = []
                  go i@(c:cs)
                   | needle `L.isPrefixOf` i = newNeedle P.++ genericDrop (genericLength needle :: Integer) i
                   | True                    = c : go cs
+
+        ka = kindOf (Proxy @a)
 
 -- | @`indexOf` l sub@. Retrieves first position of @sub@ in @l@, @-1@ if there are no occurrences.
 -- Equivalent to @`offsetIndexOf` l sub 0@.
@@ -341,9 +345,10 @@ indexOf s sub = offsetIndexOf s sub 0
 -- Q.E.D.
 -- >>> prove $ \(l :: SList Int8) sub i -> i .> length l .=> offsetIndexOf l sub i .== -1
 -- Q.E.D.
-offsetIndexOf :: (Eq a, SymVal a) => SList a -> SList a -> SInteger -> SInteger
+offsetIndexOf :: forall a. (Eq a, SymVal a) => SList a -> SList a -> SInteger -> SInteger
 offsetIndexOf s sub offset
-  | Just c <- unliteral s        -- a constant list
+  | eqCheckIsObjectEq ka
+  , Just c <- unliteral s        -- a constant list
   , Just n <- unliteral sub      -- a constant search pattern
   , Just o <- unliteral offset   -- at a constant offset
   , o >= 0, o <= genericLength c        -- offset is good
@@ -351,7 +356,8 @@ offsetIndexOf s sub offset
       (i:_) -> literal i
       _     -> -1
   | True
-  = lift3 SeqIndexOf Nothing s sub offset
+  = lift3 True SeqIndexOf Nothing s sub offset
+  where ka = kindOf (Proxy @a)
 
 -- | @`reverse` s@ reverses the sequence.
 --
@@ -578,9 +584,9 @@ filter :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
 filter f = foldl (\sofar e -> sofar ++ ite (f e) (singleton e) []) []
 
 -- | Lift a unary operator over lists.
-lift1 :: forall a b. (SymVal a, SymVal b) => SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
-lift1 w mbOp a
-  | Just cv <- concEval1 mbOp a
+lift1 :: forall a b. (SymVal a, SymVal b) => Bool -> SeqOp -> Maybe (a -> b) -> SBV a -> SBV b
+lift1 simpleEq w mbOp a
+  | Just cv <- concEval1 simpleEq mbOp a
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -589,9 +595,9 @@ lift1 w mbOp a
                   newExpr st k (SBVApp (SeqOp w) [sva])
 
 -- | Lift a binary operator over lists.
-lift2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => SeqOp -> Maybe (a -> b -> c) -> SBV a -> SBV b -> SBV c
-lift2 w mbOp a b
-  | Just cv <- concEval2 mbOp a b
+lift2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => Bool -> SeqOp -> Maybe (a -> b -> c) -> SBV a -> SBV b -> SBV c
+lift2 simpleEq w mbOp a b
+  | Just cv <- concEval2 simpleEq mbOp a b
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -601,9 +607,9 @@ lift2 w mbOp a b
                   newExpr st k (SBVApp (SeqOp w) [sva, svb])
 
 -- | Lift a ternary operator over lists.
-lift3 :: forall a b c d. (SymVal a, SymVal b, SymVal c, SymVal d) => SeqOp -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> SBV d
-lift3 w mbOp a b c
-  | Just cv <- concEval3 mbOp a b c
+lift3 :: forall a b c d. (SymVal a, SymVal b, SymVal c, SymVal d) => Bool -> SeqOp -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> SBV d
+lift3 simpleEq w mbOp a b c
+  | Just cv <- concEval3 simpleEq mbOp a b c
   = cv
   | True
   = SBV $ SVal k $ Right $ cache r
@@ -614,16 +620,22 @@ lift3 w mbOp a b c
                   newExpr st k (SBVApp (SeqOp w) [sva, svb, svc])
 
 -- | Concrete evaluation for unary ops
-concEval1 :: (SymVal a, SymVal b) => Maybe (a -> b) -> SBV a -> Maybe (SBV b)
-concEval1 mbOp a = literal <$> (mbOp <*> unliteral a)
+concEval1 :: forall a b. (SymVal a, SymVal b) => Bool -> Maybe (a -> b) -> SBV a -> Maybe (SBV b)
+concEval1 simpleEq mbOp a
+  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a)
+  | True                                            = Nothing
 
 -- | Concrete evaluation for binary ops
-concEval2 :: (SymVal a, SymVal b, SymVal c) => Maybe (a -> b -> c) -> SBV a -> SBV b -> Maybe (SBV c)
-concEval2 mbOp a b = literal <$> (mbOp <*> unliteral a <*> unliteral b)
+concEval2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => Bool -> Maybe (a -> b -> c) -> SBV a -> SBV b -> Maybe (SBV c)
+concEval2 simpleEq mbOp a b
+  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b)
+  | True                                            = Nothing
 
 -- | Concrete evaluation for ternary ops
-concEval3 :: (SymVal a, SymVal b, SymVal c, SymVal d) => Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
-concEval3 mbOp a b c = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
+concEval3 :: forall a b c d. (SymVal a, SymVal b, SymVal c, SymVal d) => Bool -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
+concEval3 simpleEq mbOp a b c
+  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
+  | True                                            = Nothing
 
 -- | Is the list concretely known empty?
 isConcretelyEmpty :: SymVal a => SList a -> Bool

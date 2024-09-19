@@ -3239,22 +3239,16 @@ instance {-# OVERLAPPABLE #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e,
 -- | Reading a value from an array.
 readArray :: forall key val. (Eq key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val
 readArray array key
-   | Just (ArrayModel tbl def) <- unliteral array, Just k <- unliteral key, all safe (key : map (literal . fst) tbl)
+   | eqCheckIsObjectEq ka, Just (ArrayModel tbl def) <- unliteral array, Just k <- unliteral key
    = literal $ fromMaybe def (k `lookup` tbl) -- return the first value, since we don't bother deleting previous writes
    | True
-   = SBV . SVal kb . Right $ cache g
-   where kb = kindOf (Proxy @val)
+   = symRes
+   where symRes = SBV . SVal kb . Right $ cache g
+         ka = kindOf (Proxy @key)
+         kb = kindOf (Proxy @val)
          g st = do f <- sbvToSV st array
                    k <- sbvToSV st key
                    newExpr st kb (SBVApp ReadArray [f, k])
-
-         -- If the key is NaN, do not do the look-up! Why? Because NaN /= NaN (which we don't want to distinguish), and also +0 = -0 (which
-         -- we do want to distinguish.) Sigh.
-         safe :: SBV a -> Bool
-         safe (SBV (SVal KFloat  (Left (CV KFloat      (CFloat  f))))) = not (isNaN f || f == 0)
-         safe (SBV (SVal KDouble (Left (CV KDouble     (CDouble f))))) = not (isNaN f || f == 0)
-         safe (SBV (SVal KFP{}   (Left (CV (KFP eb sb) (CFP     f))))) = not (isNaN f || f == fpFromInteger eb sb 0)
-         safe _                                                        = True
 
 -- | Writing a value to an array. For the concrete case, we don't bother deleting earlier entries, we keep a history. The earlier a value is in the list, the "later" it happened; in a stack fashion.
 writeArray :: forall key val. (HasKind key, SymVal key, SymVal val, HasKind val) => SArray key val -> SBV key -> SBV val -> SArray key val

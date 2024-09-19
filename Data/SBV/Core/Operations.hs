@@ -357,7 +357,7 @@ compareSV op x y
   | k == KBool, op == NotEqual, SVal _ (Left xv) <- x, xv == falseCV = y         -- false ./= y     --> y
   | k == KBool, op == NotEqual, SVal _ (Left yv) <- y, yv == falseCV = x         -- x     ./= false --> x
 
-  -- Comparison optimizations if one operans is min/max bit-vector
+  -- Comparison optimizations if one operand is min/max bit-vector
   | op == LessThan,    isConcreteMax x = svFalse   -- MAX <  _
   | op == LessThan,    isConcreteMin y = svFalse   -- _   <  MIN
 
@@ -373,11 +373,12 @@ compareSV op x y
   -- General constant folding, but be careful not to be too smart here.
   | SVal _ (Left xv) <- x, SVal _ (Left yv) <- y
   = case cCompare k op (cvVal xv) (cvVal yv) of
-      Nothing -> -- cCompare is conservative on floats. Give those one more chance, only at the top-level. (i.e., if stored under a Maybe/Either/List etc., we'll resort to a symbolic result.)
+      Nothing -> -- cCompare is conservative on floats. Give those one more chance, only at the top-level.
+                 -- (i.e., if stored under a Maybe/Either/List etc., we'll resort to a symbolic result.)
                  case (k, cvVal xv, cvVal yv) of
-                    (KFloat,     CFloat  a, CFloat  b) -> svBool (a `cOp` b)
-                    (KDouble,    CDouble a, CDouble b) -> svBool (a `cOp` b)
-                    (KFP{}  ,    CFP     a, CFP     b) -> svBool (a `cOp` b)
+                    (KFloat,   CFloat  a, CFloat  b) -> svBool (a `cOp` b)
+                    (KDouble,  CDouble a, CDouble b) -> svBool (a `cOp` b)
+                    (KFP{}  ,  CFP     a, CFP     b) -> svBool (a `cOp` b)
                     _                                  -> symResult
       Just r  -> svBool $ case op of
                             Equal       -> r == EQ
@@ -429,15 +430,15 @@ cCompare k op x y =
     case (x, y) of
 
       -- The presence of NaN's throw this off. Why? Because @NaN `compare` x = GT@ in Haskell. But that's just the wrong thing to do here.
-      -- So protect against NaN's.
-      (CFloat  a, CFloat  b) | not (any isNaN [a, b]) -> Just $ a `compare` b
-                             | True                   -> Nothing
+      -- So protect against NaN's. And a similar story for -0/0.
+      (CFloat  a, CFloat  b) | any (nanOrZero k) [x, y] -> Nothing
+                             | True                     -> Just $ a `compare` b
 
-      (CDouble a, CDouble b) | not (any isNaN [a, b]) -> Just $ a `compare` b
-                             | True                   -> Nothing
+      (CDouble a, CDouble b) | any (nanOrZero k) [x, y] -> Nothing
+                             | True                     -> Just $ a `compare` b
 
-      (CFP     a, CFP     b) | not (any isNaN [a, b]) -> Just $ a `compare` b
-                             | True                   -> Nothing
+      (CFP     a, CFP     b) | any (nanOrZero k) [x, y] -> Nothing
+                             | True                      -> Just $ a `compare` b
 
       -- Simple cases
       (CInteger  a, CInteger  b) -> Just $ a `compare` b
@@ -482,24 +483,29 @@ cCompare k op x y =
                                                              _                                 -> error "cCompare: Unexpected kind in cCompare for tuples"
                                  | True                 -> error $ "cCompare: Received tuples of differing size: " ++ show (op, length a, length b, k)
 
-      -- Arrays and sets only support equality/inequality
+      -- Arrays and sets only support equality/inequality. And they have object-equality semantics. So
+      -- if there are any floats or non-exact-rationals down in the index or element kinds, we bail
       (CSet a, CSet b)     | op `elem` [Equal, NotEqual]
-                           , KSet ke <- k      -> case svSetEqual ke a b of
-                                                    Nothing    -> Nothing  -- We don't know
-                                                    Just True  -> Just EQ  -- They're equal
-                                                    Just False -> Just $ if op == Equal
-                                                                            then GT  -- Pick GT, So equality    test will fail
-                                                                            else EQ  -- Pick EQ, So in-equality test will fail
-                           | True              -> error $ "cCompare: Received unexpected set comparison: " ++ show op
+                           , KSet ke <- k
+                           -> case svSetEqual ke a b of
+                                 Nothing    -> Nothing  -- We don't know
+                                 Just True  -> Just EQ  -- They're equal
+                                 Just False -> Just $ if op == Equal
+                                                         then GT  -- Pick GT, So equality    test will fail
+                                                         else EQ  -- Pick EQ, So in-equality test will fail
+                           | True
+                           -> error $ "cCompare: Received unexpected set comparison: " ++ show (op, k)
 
       (CArray a, CArray b) | op `elem` [Equal, NotEqual]
-                           , KArray k1 k2 <- k -> case svArrEqual k1 k2 a b of
-                                                   Nothing    -> Nothing  -- We don't know
-                                                   Just True  -> Just EQ  -- They're equal
-                                                   Just False -> Just $ if op == Equal
-                                                                        then GT  -- Pick GT, So equality    test will fail
-                                                                        else EQ  -- Pick EQ, So in-equality test will fail
-                           | True             -> error $ "cCompare: Received unexpected array comparison: " ++ show op
+                           , KArray k1 k2 <- k
+                           -> case svArrEqual k1 k2 a b of
+                                Nothing    -> Nothing  -- We don't know
+                                Just True  -> Just EQ  -- They're equal
+                                Just False -> Just $ if op == Equal
+                                                        then GT  -- Pick GT, So equality    test will fail
+                                                        else EQ  -- Pick EQ, So in-equality test will fail
+                           | True
+                           -> error $ "cCompare: Received unexpected array comparison: " ++ show (op, k)
 
       _ -> error $ unlines [ ""
                            , "*** Data.SBV.cCompare: Bug in SBV: Unhandled rank in comparison fallthru"
@@ -521,66 +527,41 @@ cCompare k op x y =
           | True
           = error $ "Mismatching kinds in lexicographic comparison: " ++ show (k1, k2)
 
--- Is this a simple plain kind? What I mean by this is that what's stored inside is sufficiently
--- simple so that I can rely on equality checks to be legit for these guys. Note that this function
--- is called on the ELEMENTS of a set or index/element kinds of an array, so
--- if we find a complicated index in an array, we stop.
-canDoEqChecks :: Kind -> Bool
-canDoEqChecks = all check . expandKinds
-  where check KBool       = True
-        check KBounded{}  = True
-        check KUnbounded  = True
-        check KUserSort{} = True
-        check KChar       = True
-        check KString     = True
-        check KMaybe{}    = True
-        check KRational   = True
-        check KEither{}   = True
+        nanOrZero KFloat      (CFloat  v) = isNaN v || v == 0
+        nanOrZero KDouble     (CDouble v) = isNaN v || v == 0
+        nanOrZero (KFP eb sb) (CFP     v) = isNaN v || v == fpFromInteger eb sb 0
+        nanOrZero knd         _           = error $ "Unexpected arguments to nanOrZero: " ++ show knd
 
-        check KReal       = False -- In case we have an algebraic real, we can't do the check in CV-land. Unlikely, but possible.
-        check KList{}     = False -- Let's not deal with anything that's recursive
-        check KSet{}      = False -- Ditto
-        check KTuple{}    = False -- Ditto
-        check KArray{}    = False -- Ditto
-        check KFloat      = False -- Let's not bother with NaN, +/-0 etc., and defer to the solver
-        check KDouble     = False -- Ditto
-        check KFP{}       = False -- Ditto
+        -- | Set equality. We return Nothing if the result is too complicated for us to concretely calculate.
+        -- Why? Because the Eq instance of CVal is a bit iffy; it's designed to work as an index into maps, not as
+        -- a means of checking this sort of equality
+        svSetEqual :: Kind -> RCSet CVal -> RCSet CVal -> Maybe Bool
+        svSetEqual ek sa sb
+          | eqCheckIsObjectEq ek, RegularSet a    <- sa, RegularSet b    <- sb = Just $ a == b
+          | eqCheckIsObjectEq ek, ComplementSet a <- sa, ComplementSet b <- sb = Just $ a == b
+          | True                                                               = Nothing
 
--- | Set equality. We return Nothing if the result is too complicated for us to concretely calculate.
--- Why? Because the Eq instance of CVal is a bit iffy; it's designed to work as an index into maps, not as
--- a means of checking this sort of equality
-svSetEqual :: Kind -> RCSet CVal -> RCSet CVal -> Maybe Bool
-svSetEqual k sa sb
-  | not (canDoEqChecks k)
-  = Nothing
-  | RegularSet a    <- sa, RegularSet b    <- sb
-  = Just $ a == b
-  | ComplementSet a <- sa, ComplementSet b <- sb
-  = Just $ a == b
-  | True
-  = Nothing
+        -- | Array equality. See above comments.
+        svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
+        svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
+         | not (all eqCheckIsObjectEq [k1, k2])
+         = Nothing
+         | True
+         = let -- Use of lookup is safe here, because we already made sure equality is *not* problematic above
+               keysMatch = and [key `lookup` asc1 == key `lookup` asc2 | key <- nub (sort (map fst (asc1 ++ asc2)))]
+               defsMatch = def1 == def2
 
--- | Array equality. Since we don't store arrays concretely, we turn this into a symbolic check in all but trivial cases.
--- Also, see the note above for 'svSetEqual'.
-svArrEqual :: Kind -> Kind -> ArrayModel CVal CVal -> ArrayModel CVal CVal -> Maybe Bool
-svArrEqual k1 k2 (ArrayModel asc1 def1) (ArrayModel asc2 def2)
- | not (all canDoEqChecks [k1, k2])
- = Nothing
- | True
- = let keysMatch = and [k `lookup` asc1 == k `lookup` asc2 | k <- nub (sort (map fst (asc1 ++ asc2)))]
-       defsMatch = def1 == def2
+               -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
+               -- For the time being, we're retricting ourselves to bool only. Might want to extend this later.
+               complete  = case k1 of
+                             KBool -> all (\key -> key `elem` map fst asc1 && key `elem` map fst asc2) (map (cvVal . mkConstCV KBool) [0, 1 :: Integer])
+                             _     -> False
 
-       -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
-       -- For the time being, we're retricting ourselves to bool only. Might want to extend this later.
-       complete  = case k1 of
-                     KBool -> all (\k -> k `elem` map fst asc1 && k `elem` map fst asc2) (map (cvVal . mkConstCV KBool) [0, 1 :: Integer])
-                     _     -> False
-
-   in case (keysMatch, defsMatch, complete) of
-        (False, _   ,  _)    -> Just False -- keys mismatch. Nothing else matters.
-        (True,  True,  _)    -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
-        (True,  False, True) -> Just True  -- keys match, but defs don't. But we keys are complete, so def mismatch is OK
-        _                    -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
+           in case (keysMatch, defsMatch, complete) of
+                (False, _   ,  _)    -> Just False -- keys mismatch. Nothing else matters.
+                (True,  True,  _)    -> Just True  -- keys match, def matches; so all is good. Complete doesn't matter.
+                (True,  False, True) -> Just True  -- keys match, but defs don't. But we keys are complete, so def mismatch is OK
+                _                    -> Nothing    -- otherwise, we don't really know. So, remain symbolic.
 
 -- | Equality.
 svEqual :: SVal -> SVal -> SVal

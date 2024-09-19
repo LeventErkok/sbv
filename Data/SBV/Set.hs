@@ -54,6 +54,8 @@ import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 import Data.SBV.Core.Symbolic (SetOp(..))
 
+import Data.SBV.Core.Kind
+
 import qualified Data.Generics.Uniplate.Data as G
 
 -- $setup
@@ -123,13 +125,11 @@ complement ss
                     , "*** If you run into this issue, please comment on the above ticket for"
                     , "*** possible improvements."
                     ]
-  | Just (RegularSet rs) <- unliteral ss
-  = literal $ ComplementSet rs
-  | Just (ComplementSet cs) <- unliteral ss
-  = literal $ RegularSet cs
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where k = KSet (kindOf (Proxy @a))
+  | eqCheckIsObjectEq ek, Just (RegularSet rs)    <- unliteral ss = literal $ ComplementSet rs
+  | eqCheckIsObjectEq ek, Just (ComplementSet cs) <- unliteral ss = literal $ RegularSet cs
+  | True                                                          = SBV $ SVal k $ Right $ cache r
+  where ek = kindOf (Proxy @a)
+        k  = KSet ek
 
         r st = do svs <- sbvToSV st ss
                   newExpr st k $ SBVApp (SetOp SetComplement) [svs]
@@ -160,11 +160,11 @@ complement ss
 insert :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SSet a
 insert se ss
   -- Case 1: Constant regular set, just add it:
-  | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
   = literal $ RegularSet $ e `Set.insert` rs
 
   -- Case 2: Constant complement set, with element in the complement, just remove it:
-  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.member` cs
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.member` cs
   = literal $ ComplementSet $ e `Set.delete` cs
 
   -- Otherwise, go symbolic
@@ -203,11 +203,11 @@ insert se ss
 delete :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SSet a
 delete se ss
   -- Case 1: Constant regular set, just remove it:
-  | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
   = literal $ RegularSet $ e `Set.delete` rs
 
   -- Case 2: Constant complement set, with element missing in the complement, just add it:
-  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.notMember` cs
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss, e `Set.notMember` cs
   = literal $ ComplementSet $ e `Set.insert` cs
 
   -- Otherwise, go symbolic
@@ -230,14 +230,14 @@ delete se ss
 --
 -- >>> prove $ \x -> x `member` (full :: SSet Integer)
 -- Q.E.D.
-member :: (Ord a, SymVal a) => SBV a -> SSet a -> SBool
+member :: forall a. (Ord a, SymVal a) => SBV a -> SSet a -> SBool
 member se ss
   -- Case 1: Constant regular set, just check:
-  | Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (RegularSet rs) <- unliteral ss
   = literal $ e `Set.member` rs
 
   -- Case 2: Constant complement set, check for non-member
-  | Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss
+  | eqCheckIsObjectEq ka, Just e <- unliteral se, Just (ComplementSet cs) <- unliteral ss
   = literal $ e `Set.notMember` cs
 
   -- Otherwise, go symbolic
@@ -246,6 +246,8 @@ member se ss
   where r st = do svs <- sbvToSV st ss
                   sve <- sbvToSV st se
                   newExpr st KBool $ SBVApp (SetOp SetMember) [sve, svs]
+
+        ka = kindOf (Proxy @a)
 
 -- | Test for non-membership.
 --
@@ -316,14 +318,14 @@ isUniversal = isFull
 --
 -- >>> prove $ \x (s :: SSet Integer) -> (x `delete` s) `isSubsetOf` s
 -- Q.E.D.
-isSubsetOf :: (Ord a, SymVal a) => SSet a -> SSet a -> SBool
+isSubsetOf :: forall a. (Ord a, SymVal a) => SSet a -> SSet a -> SBool
 isSubsetOf sa sb
   -- Case 1: Constant regular sets, just check:
-  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
   = literal $ a `Set.isSubsetOf` b
 
   -- Case 2: Constant complement sets, check in the reverse direction:
-  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ b `Set.isSubsetOf` a
 
   -- Otherwise, go symbolic
@@ -332,6 +334,8 @@ isSubsetOf sa sb
   where r st = do sva <- sbvToSV st sa
                   svb <- sbvToSV st sb
                   newExpr st KBool $ SBVApp (SetOp SetSubset) [sva, svb]
+
+        ka = kindOf (Proxy @a)
 
 -- | Proper subset test.
 --
@@ -395,14 +399,14 @@ disjoint a b = a `intersection` b .== empty
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) -> a `union` complement a .== full
 -- Q.E.D.
-union :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+union :: forall a. (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 union sa sb
   -- Case 1: Constant regular sets, just compute
-  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
   = literal $ RegularSet $ a `Set.union` b
 
   -- Case 2: Constant complement sets, complement the intersection:
-  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ ComplementSet $ a `Set.intersection` b
 
   -- Otherwise, go symbolic
@@ -412,6 +416,8 @@ union sa sb
         r st = do sva <- sbvToSV st sa
                   svb <- sbvToSV st sb
                   newExpr st k $ SBVApp (SetOp SetUnion) [sva, svb]
+
+        ka = kindOf (Proxy @a)
 
 -- | Unions. Equivalent to @'foldr' 'union' 'empty'@.
 --
@@ -436,14 +442,14 @@ unions = foldr union empty
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) b -> a `disjoint` b .=> a `intersection` b .== empty
 -- Q.E.D.
-intersection :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+intersection :: forall a. (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 intersection sa sb
   -- Case 1: Constant regular sets, just compute
-  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
   = literal $ RegularSet $ a `Set.intersection` b
 
   -- Case 2: Constant complement sets, complement the union:
-  | Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (ComplementSet a) <- unliteral sa, Just (ComplementSet b) <- unliteral sb
   = literal $ ComplementSet $ a `Set.union` b
 
   -- Otherwise, go symbolic
@@ -453,6 +459,8 @@ intersection sa sb
         r st = do sva <- sbvToSV st sa
                   svb <- sbvToSV st sb
                   newExpr st k $ SBVApp (SetOp SetIntersect) [sva, svb]
+
+        ka = kindOf (Proxy @a)
 
 -- | Intersections. Equivalent to @'foldr' 'intersection' 'full'@. Note that
 -- Haskell's 'Data.Set' does not support this operation as it does not have a
@@ -473,10 +481,10 @@ intersections = foldr intersection full
 -- Q.E.D.
 -- >>> prove $ \(a :: SSet Integer) -> a `difference` a .== empty
 -- Q.E.D.
-difference :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
+difference :: forall a. (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 difference sa sb
   -- Only constant fold the regular case, others are left symbolic
-  | Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
+  | eqCheckIsObjectEq ka, Just (RegularSet a) <- unliteral sa, Just (RegularSet b) <- unliteral sb
   = literal $ RegularSet $ a `Set.difference` b
 
   -- Otherwise, go symbolic
@@ -486,6 +494,8 @@ difference sa sb
         r st = do sva <- sbvToSV st sa
                   svb <- sbvToSV st sb
                   newExpr st k $ SBVApp (SetOp SetDifference) [sva, svb]
+
+        ka = kindOf (Proxy @a)
 
 -- | Synonym for 'Data.SBV.Set.difference'.
 infixl 9 \\
