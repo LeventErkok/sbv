@@ -622,20 +622,20 @@ lift3 simpleEq w mbOp a b c
 -- | Concrete evaluation for unary ops
 concEval1 :: forall a b. (SymVal a, SymVal b) => Bool -> Maybe (a -> b) -> SBV a -> Maybe (SBV b)
 concEval1 simpleEq mbOp a
-  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a)
-  | True                                            = Nothing
+  | not simpleEq || eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a)
+  | True                                                  = Nothing
 
 -- | Concrete evaluation for binary ops
 concEval2 :: forall a b c. (SymVal a, SymVal b, SymVal c) => Bool -> Maybe (a -> b -> c) -> SBV a -> SBV b -> Maybe (SBV c)
 concEval2 simpleEq mbOp a b
-  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b)
-  | True                                            = Nothing
+  | not simpleEq || eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b)
+  | True                                                  = Nothing
 
 -- | Concrete evaluation for ternary ops
 concEval3 :: forall a b c d. (SymVal a, SymVal b, SymVal c, SymVal d) => Bool -> Maybe (a -> b -> c -> d) -> SBV a -> SBV b -> SBV c -> Maybe (SBV d)
 concEval3 simpleEq mbOp a b c
-  | simpleEq, eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
-  | True                                            = Nothing
+  | not simpleEq || eqCheckIsObjectEq (kindOf (Proxy @a)) = literal <$> (mbOp <*> unliteral a <*> unliteral b <*> unliteral c)
+  | True                                                  = Nothing
 
 -- | Is the list concretely known empty?
 isConcretelyEmpty :: SymVal a => SList a -> Bool
