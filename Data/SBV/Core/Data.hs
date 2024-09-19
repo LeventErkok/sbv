@@ -205,12 +205,20 @@ type SEither a b = SBV (Either a b)
 -- | Symbolic 'Maybe'
 type SMaybe a = SBV (Maybe a)
 
--- | Symbolic arrays
+-- | Symbolic arrays. A symbolic array is more akin to a function in SMTLib (and thus in SBV),
+-- as opposed to contagious-storage with a finite range as found in many programming languages.
+-- Additionally, the domain uses object-equality in the SMTLib semantics. Object equality is
+-- the same as regular equality for most types, except for IEEE-Floats, where @NaN@ doesn't compare
+-- equal to itself and @+0@ and @-0@ are not distinguished. So, if your index type is a float,
+-- then @NaN@ can be stored correctly, and @0@ and @-0@ will be distinguished. If you don't use
+-- floats, then you can treat this the same as regular equality in Haskell.
 type SArray a b = SBV (ArrayModel a b)
 
 -- | Symbolic 'Data.Set'. Note that we use 'RCSet', which supports
 -- both regular sets and complements, i.e., those obtained from the
--- universal set (of the right type) by removing elements.
+-- universal set (of the right type) by removing elements. Similar to 'SArray'
+-- the contents are stored with object equality, which makes a difference if the
+-- underlying type contains IEEE Floats.
 type SSet a = SBV (RCSet a)
 
 -- | Symbolic 2-tuple. NB. 'STuple' and 'STuple2' are equivalent.
