@@ -685,6 +685,18 @@ instance (Random a, SymVal a) => Random (SBV a) where
 -- | Symbolic Equality. Note that we can't use Haskell's 'Eq' class since Haskell insists on returning Bool
 -- Comparing symbolic values will necessarily return a symbolic value.
 --
+-- NB. Equality is a built-in notion in SMTLib, and is object-equality. While this mostly matches Haskell's
+-- notion of equality, the correspondence isn't exact. This mostly shows up in containers with floats inside,
+-- such as sequences of floats, sets of doubles, and arrays of doubles. While SBV tries to maintain Haskell
+-- semantics, it does resort to container equality for compound types. For instance, for an IEEE-float,
+-- -0 == 0. But for an SMTLib sequence, equals is done over objects. i.e., @[0] == [-0]@ in Haskell, but
+-- @literal [0] ./= literal [-0]@ when used as SMTLib sequences. The rabbit-hole goes deep here, especially
+-- when @NaN@ is involved, which does not compare equal to itself per IEEE-semantics.
+--
+-- If you are not using floats, then you can ignore all this. If you do, then SBV will do the right thing for
+-- them when checking equality directly, but not when you use containers with floating-point elements. In the
+-- latter case, object-equality will be used.
+--
 -- Minimal complete definition: None, if the type is instance of @Generic@. Otherwise '(.==)'.
 infix 4 .==, ./=, .===, ./==
 class EqSymbolic a where
