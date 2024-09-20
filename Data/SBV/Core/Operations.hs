@@ -554,7 +554,9 @@ cCompare k op x y =
                -- Check if keys cover everything. Clearly, we can't do this for all kinds; but only finite ones
                -- For the time being, we're retricting ourselves to bool only. Might want to extend this later.
                complete  = case k1 of
-                             KBool -> all (\key -> key `elem` map fst asc1 && key `elem` map fst asc2) (map (cvVal . mkConstCV KBool) [0, 1 :: Integer])
+                             KBool -> let bools       = map cvVal [falseCV, trueCV]
+                                          covered asc = all (`elem` map fst asc) bools
+                                      in covered asc1 && covered asc2
                              _     -> False
 
            in case (keysMatch, defsMatch, complete) of
