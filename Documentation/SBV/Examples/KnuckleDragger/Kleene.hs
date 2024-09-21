@@ -31,12 +31,6 @@ import Prelude hiding((<=))
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
-#endif
-
 -- | An uninterpreted sort, corresponding to the type of Kleene algebra strings.
 data Kleene
 mkUninterpretedSort ''Kleene
@@ -68,7 +62,7 @@ x <= y = x + y .== y
 --
 -- We have:
 --
--- >>> runKD kleeneProofs
+-- >>> kleeneProofs
 -- Axiom: par_assoc                        Axiom.
 -- Axiom: par_comm                         Axiom.
 -- Axiom: par_idem                         Axiom.
@@ -94,8 +88,8 @@ x <= y = x + y .== y
 -- Lemma: star_star_2_3                    Q.E.D.
 -- Lemma: star_star_2_1                    Q.E.D.
 -- Lemma: star_star_2                      Q.E.D.
-kleeneProofs :: KD ()
-kleeneProofs = do
+kleeneProofs :: IO ()
+kleeneProofs = runKD $ do
 
   -- Kozen axioms
   par_assoc <- axiom "par_assoc" $ \(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x + (y + z) .== (x + y) + z

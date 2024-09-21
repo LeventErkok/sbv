@@ -35,7 +35,6 @@ import qualified Data.SBV.List as SL
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
 #endif
 
 -- | Use an uninterpreted type for the elements
@@ -46,11 +45,11 @@ mkUninterpretedSort ''Elt
 --
 -- We have:
 --
--- >>> runKD listLengthProof
+-- >>> listLengthProof
 -- Lemma: length_correct                   Q.E.D.
 -- [Proven] length_correct
-listLengthProof :: KD Proof
-listLengthProof = do
+listLengthProof :: IO Proof
+listLengthProof = runKD $ do
    let length :: SList Elt -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
 
@@ -67,15 +66,15 @@ listLengthProof = do
 -- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
 -- than 5 elements and have 42 in it. We have:
 --
--- >>> runKD badProof `catch` (\(_ :: SomeException) -> pure ())
+-- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: bad
 -- *** Failed to prove bad.
 -- Falsifiable. Counter-example:
 --   xs   = [8,25,26,27,28,42] :: [Integer]
 --   imp  =                 42 :: Integer
 --   spec =                  6 :: Integer
-badProof :: KD ()
-badProof = do
+badProof :: IO ()
+badProof = runKD $ do
    let length :: SList Integer -> SInteger
        length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
 
@@ -96,25 +95,25 @@ badProof = do
 --
 -- We have:
 --
--- >>> runKD lenAppend
+-- >>> lenAppend
 -- Lemma: lenAppend                        Q.E.D.
 -- [Proven] lenAppend
-lenAppend :: KD Proof
-lenAppend = lemma "lenAppend"
-                   (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                         SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
-                   []
+lenAppend :: IO Proof
+lenAppend = runKD $ lemma "lenAppend"
+                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                                 SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
+                           []
 
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
 -- We have:
 --
--- >>> runKD lenAppend2
+-- >>> lenAppend2
 -- Lemma: lenAppend2                       Q.E.D.
 -- [Proven] lenAppend2
-lenAppend2 :: KD Proof
-lenAppend2 = lemma "lenAppend2"
-                   (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                             SL.length xs .== SL.length ys
-                         .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
-                   []
+lenAppend2 :: IO Proof
+lenAppend2 = runKD $ lemma "lenAppend2"
+                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                                     SL.length xs .== SL.length ys
+                                 .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
+                           []

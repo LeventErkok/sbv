@@ -33,7 +33,6 @@ import Data.SBV.List (reverse, length)
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
 #endif
 
 -- | Use an uninterpreted type for the elements
@@ -44,11 +43,11 @@ mkUninterpretedSort ''Elt
 --
 -- We have:
 --
--- >>> runKD revLen
+-- >>> revLen
 -- Lemma: revLen                           Q.E.D.
 -- [Proven] revLen
-revLen :: KD Proof
-revLen = do
+revLen :: IO Proof
+revLen = runKD $ do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== length xs
 
@@ -63,13 +62,13 @@ revLen = do
 --
 -- We have:
 --
--- >>> runKD badRevLen `catch` (\(_ :: SomeException) -> pure ())
+-- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
 --   xs = [Elt!val!1,Elt!val!2,Elt!val!1] :: [Elt]
-badRevLen :: KD ()
-badRevLen = do
+badRevLen :: IO ()
+badRevLen = runKD $ do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
 

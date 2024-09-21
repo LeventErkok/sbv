@@ -31,12 +31,6 @@ import Data.SBV.Tools.KnuckleDragger
 import Data.SBV.List ((.:), (++), reverse)
 import qualified Data.SBV.List as SL
 
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
-#endif
-
 -- | Use an uninterpreted type for the elements
 data Elt
 mkUninterpretedSort ''Elt
@@ -45,35 +39,35 @@ mkUninterpretedSort ''Elt
 --
 -- We have:
 --
--- >>> runKD appendNull
+-- >>> appendNull
 -- Lemma: appendNull                       Q.E.D.
 -- [Proven] appendNull
-appendNull :: KD Proof
-appendNull = lemma "appendNull"
-                   (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
-                   []
+appendNull :: IO Proof
+appendNull = runKD $ lemma "appendNull"
+                           (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
+                           []
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
 -- We have:
 --
--- >>> runKD consApp
+-- >>> consApp
 -- Lemma: consApp                          Q.E.D.
 -- [Proven] consApp
-consApp :: KD Proof
-consApp = lemma "consApp"
-                (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
-                []
+consApp :: IO Proof
+consApp = runKD $ lemma "consApp"
+                        (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
+                        []
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
 -- We have:
 --
--- >>> runKD appendAssoc
+-- >>> appendAssoc
 -- Lemma: appendAssoc                      Q.E.D.
 -- [Proven] appendAssoc
-appendAssoc :: KD Proof
-appendAssoc = do
+appendAssoc :: IO Proof
+appendAssoc = runKD $ do
    -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
        p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
@@ -82,35 +76,27 @@ appendAssoc = do
          (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
          []
 
--- | @reverse (xs ++ ys) == reverse ys ++ reverse xs@
--- We have:
---
--- >>> runKD revApp
--- Lemma: revApp                           Q.E.D.
--- [Proven] revApp
-revApp :: KD Proof
-revApp = do
-   let q :: SymVal a => SList a -> SList a -> SBool
-       q xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
-
-   lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> q xs ys)
-         [induct (q @Elt)]
-
 -- | @reverse (reverse xs) == xs@
 --
 -- We have:
 --
--- >>> runKD reverseReverse
+-- >>> reverseReverse
 -- Lemma: revApp                           Q.E.D.
 -- Lemma: reverseReverse                   Q.E.D.
 -- [Proven] reverseReverse
-reverseReverse :: KD Proof
-reverseReverse = do
-   lRevApp <- revApp
+reverseReverse :: IO Proof
+reverseReverse = runKD $ do
+
+   -- Helper lemma: @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
+   let ra :: SymVal a => SList a -> SList a -> SBool
+       ra xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
+
+   revApp <- lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> ra xs ys)
+                   [induct (ra @Elt)]
 
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs
 
    lemma "reverseReverse"
          (\(Forall @"xs" (xs :: SList Elt)) -> p xs)
-         [induct (p @Elt), lRevApp]
+         [induct (p @Elt), revApp]
