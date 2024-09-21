@@ -46,7 +46,7 @@ sumConstProof = do
        p :: SInteger -> SInteger -> SBool
        p n c = observe "imp" (sum n c) .== observe "spec" (spec n c)
 
-   lemma "sumConst_correct" (\(Forall @"n" n) (Forall @"c" c) -> n .>= 0 .=> p n c) [induct2 p]
+   lemma "sumConst_correct" (\(Forall @"n" n) (Forall @"c" c) -> n .>= 0 .=> p n c) [induct p]
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --

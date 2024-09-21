@@ -94,7 +94,7 @@ revApp = do
        q xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
 
    lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> q xs ys)
-         [induct2 (q @Elt)]
+         [induct (q @Elt)]
 
 -- | @reverse (reverse xs) == xs@
 --
