@@ -23,12 +23,6 @@ import Prelude hiding (even, odd)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
-#endif
-
 -- | Prove that square-root of @2@ is irrational. That is, we can never find @a@ and @b@ such that
 -- @sqrt 2 == a / b@ and @a@ and @b@ are co-prime.
 --
@@ -54,15 +48,19 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- We have:
 --
--- >>> runKD sqrt2IsIrrational
--- Lemma: expandOddXInSq                   Q.E.D.
+-- >>> sqrt2IsIrrational
+-- Chain: oddSquaredIsOdd
+--   Lemma: oddSquaredIsOdd.1              Q.E.D.
+--   Lemma: oddSquaredIsOdd.2              Q.E.D.
 -- Lemma: oddSquaredIsOdd                  Q.E.D.
--- Lemma: evenIfSquareIsEven               Q.E.D.
+-- Lemma: squareEvenImpliesEven            Q.E.D.
+-- Chain: evenSquaredIsMult4
+--   Lemma: evenSquaredIsMult4.1           Q.E.D.
 -- Lemma: evenSquaredIsMult4               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
-sqrt2IsIrrational :: KD Proof
-sqrt2IsIrrational = do
+sqrt2IsIrrational :: IO Proof
+sqrt2IsIrrational = runKD $ do
     let even, odd :: SInteger -> SBool
         even = (2 `sDivides`)
         odd  = sNot . even
@@ -71,34 +69,36 @@ sqrt2IsIrrational = do
         sq x = x * x
 
     -- Prove that an odd number squared gives you an odd number.
+    -- We need to help the solver by guiding it through how it can
+    -- be decomposed as @2k+1@.
+    --
     -- Interestingly, the solver doesn't need the analogous theorem that even number
     -- squared is even, possibly because the even/odd definition above is enough for
     -- it to deduce that fact automatically.
-    oddSquaredIsOdd <- do
-
-        -- Help the solver by explicitly proving  that if @x@ is odd, then it can be written as @2k+1@.
-        -- We do need to do this in a bit of a round about way, proving @sq x@ is the square
-        -- of another odd number, as that seems to help z3 do better quantifier instantiation.
-        --
-        -- Note that, instead of using an existential quantifier for k, we actually tell
-        -- the solver what the witness is, which makes the proof go through.
-        expandOddXInSq <- lemma "expandOddXInSq"
-            (\(Forall @"x" x) -> odd x .=> sq x .== sq (2 * (x `sDiv` 2) + 1))
-            []
-
-        lemma "oddSquaredIsOdd"
-            (\(Forall @"x" x) -> odd x .=> odd (sq x))
-            [expandOddXInSq]
+    oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
+                                  (\(Forall @"a" a) -> odd a .=> odd (sq a))
+                                  (\a -> let k = a `sDiv` 2
+                                         in [ odd a
+                                            , sq a .== sq (2 * k + 1)
+                                            , a .== 2 * k + 1
+                                            ])
+                                  []
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
     -- is enough to establish this.
-    evenIfSquareIsEven <- lemma "evenIfSquareIsEven" (\(Forall @"x" x) -> even (sq x) .=> even x) [oddSquaredIsOdd]
+    squareEvenImpliesEven <- lemma "squareEvenImpliesEven"
+                                   (\(Forall @"a" a) -> even (sq a) .=> even a)
+                                   [oddSquaredIsOdd]
 
     -- Prove that if @a@ is an even number, then its square is four times the square of another.
-    -- Happily, z3 needs no helpers to establish this all on its own.
-    evenSquaredIsMult4 <- lemma "evenSquaredIsMult4"
-        (\(Forall @"a" a) -> even a .=> quantifiedBool (\(Exists @"b" b) -> sq a .== 4 * sq b))
-        []
+    -- Happily, z3 needs nchainLemma helpers to establish this all on its own.
+    evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
+                                      (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
+                                      (\a -> let k = a `sDiv` 2
+                                             in [ even a
+                                                , sq a .== sq (k * 2)
+                                                ])
+                                      []
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.
@@ -109,4 +109,4 @@ sqrt2IsIrrational = do
     -- such that @a*a == 2*b*b@, it must be the case that @a@ and @b@ are not be co-prime:
     lemma "sqrt2IsIrrational"
         (\(Forall @"a" a) (Forall @"b" b) -> ((sq a .== 2 * sq b) .=> sNot (coPrime a b)))
-        [evenIfSquareIsEven, evenSquaredIsMult4]
+        [squareEvenImpliesEven, evenSquaredIsMult4]
