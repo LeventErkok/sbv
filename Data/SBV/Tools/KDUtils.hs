@@ -31,16 +31,18 @@ import Data.SBV.Core.Symbolic  (SMTConfig)
 import Data.SBV.Provers.Prover (defaultSMTCfg, z3, cvc5)
 
 -- | Keeping track of KD options/state
-data KDConfig = KDConfig { kdRibbonLength :: Int        -- ^ Lenght of the line as we print the proof
-                         , kdVerbose      :: Bool       -- ^ Run verbose
-                         , kdSolverConfig :: SMTConfig  -- ^ The backend solver to use
+data KDConfig = KDConfig { kdRibbonLength    :: Int        -- ^ Lenght of the line as we print the proof
+                         , kdVerbose         :: Bool       -- ^ Run verbose
+                         , kdExtraSolverArgs :: [String]   -- ^ Extra command line arguments to pass to the solver
+                         , kdSolverConfig    :: SMTConfig  -- ^ The backend solver to use
                          }
 
 -- | Default KD-config uses the default SBV config (which is z3)
 defaultKDConfig :: KDConfig
-defaultKDConfig = KDConfig { kdRibbonLength = 40
-                           , kdVerbose      = False
-                           , kdSolverConfig = defaultSMTCfg
+defaultKDConfig = KDConfig { kdRibbonLength    = 40
+                           , kdVerbose         = False
+                           , kdExtraSolverArgs = []
+                           , kdSolverConfig    = defaultSMTCfg
                            }
 
 -- | Run KD proof with z3 configuration.

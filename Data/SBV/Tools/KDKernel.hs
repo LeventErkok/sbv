@@ -102,7 +102,9 @@ lemmaGen cfg what nms inputProp by = do
     tab <- start (kdVerbose cfg) what nms
 
     let underlyingSolver = kdSolverConfig cfg
-        solver           = underlyingSolver{verbose = verbose underlyingSolver || kdVerbose cfg}
+        solver           = underlyingSolver{ verbose   = verbose   underlyingSolver || kdVerbose cfg
+                                           , extraArgs = extraArgs underlyingSolver ++ kdExtraSolverArgs cfg
+                                           }
 
         nm = intercalate "." nms
 
