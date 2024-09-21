@@ -46,6 +46,7 @@ mkUninterpretedSort ''Elt
 --
 -- >>> runKD revLen
 -- Lemma: revLen                           Q.E.D.
+-- [Proven] revLen
 revLen :: KD Proof
 revLen = do
    let p :: SList Elt -> SBool

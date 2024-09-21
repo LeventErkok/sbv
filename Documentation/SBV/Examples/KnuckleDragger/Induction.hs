@@ -34,6 +34,7 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> runKD sumConstProof
 -- Lemma: sumConst_correct                 Q.E.D.
+-- [Proven] sumConst_correct
 sumConstProof :: KD Proof
 sumConstProof = do
    let sum :: SInteger -> SInteger -> SInteger
@@ -53,6 +54,7 @@ sumConstProof = do
 --
 -- >>> runKD sumProof
 -- Lemma: sum_correct                      Q.E.D.
+-- [Proven] sum_correct
 sumProof :: KD Proof
 sumProof = do
    let sum :: SInteger -> SInteger
@@ -72,6 +74,7 @@ sumProof = do
 --
 -- >>> runKD sumSquareProof
 -- Lemma: sumSquare_correct                Q.E.D.
+-- [Proven] sumSquare_correct
 sumSquareProof :: KD Proof
 sumSquareProof = do
    let sumSquare :: SInteger -> SInteger

@@ -66,7 +66,7 @@ data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described ab
 
 -- | Show instance for 'Proof'
 instance Show Proof where
-  show Proof{rootOfTrust, isUserAxiom, proofName} = '(' : tag ++ ") " ++ proofName
+  show Proof{rootOfTrust, isUserAxiom, proofName} = '[' : tag ++ "] " ++ proofName
      where tag | isUserAxiom = "Axiom"
                | True        = case rootOfTrust of
                                  None   -> "Proven"

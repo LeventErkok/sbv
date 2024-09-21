@@ -45,6 +45,7 @@ z3NoAutoConfig = z3KD{kdExtraSolverArgs = ["auto_config=false"]}
 --   Lemma: case_n_mod_3_eq_2.2            Q.E.D.
 -- Lemma: case_n_mod_3_eq_2                Q.E.D.
 -- Lemma: notDiv3                          Q.E.D.
+-- [Proven] notDiv3
 notDiv3 :: IO Proof
 notDiv3 = runKDWith z3NoAutoConfig $ do
 

@@ -60,6 +60,7 @@ import Data.SBV.Tools.KnuckleDragger
 -- Lemma: evenIfSquareIsEven               Q.E.D.
 -- Lemma: evenSquaredIsMult4               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
+-- [Proven] sqrt2IsIrrational
 sqrt2IsIrrational :: KD Proof
 sqrt2IsIrrational = do
     let even, odd :: SInteger -> SBool
