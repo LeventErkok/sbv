@@ -9,7 +9,6 @@
 -- Example use of the KnuckleDragger, for some inductive proofs
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
 

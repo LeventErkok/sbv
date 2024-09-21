@@ -9,7 +9,6 @@
 -- Prove that square-root of 2 is irrational.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}

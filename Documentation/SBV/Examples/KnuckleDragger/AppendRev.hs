@@ -9,7 +9,6 @@
 -- Example use of the KnuckleDragger, on list append and reverses.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}

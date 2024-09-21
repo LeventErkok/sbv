@@ -9,7 +9,6 @@
 -- Use KnuckleDragger to prove @2n^2 + n + 1@ is never divisible by @3@.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
 

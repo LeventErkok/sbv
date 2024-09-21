@@ -11,7 +11,6 @@
 -- Based on <http://www.philipzucker.com/bryzzowski_kat/>
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
