@@ -18,7 +18,7 @@
 module Data.SBV.Tools.KDUtils (
          KD, runKD, runKDWith
        , start, finish
-       , KDConfig(..), defaultKDConfig
+       , KDConfig(..), defaultKDConfig, z3KD, cvc5KD
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, ask, MonadReader)
@@ -28,18 +28,28 @@ import Data.List (intercalate)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Symbolic  (SMTConfig)
-import Data.SBV.Provers.Prover (defaultSMTCfg)
+import Data.SBV.Provers.Prover (defaultSMTCfg, z3, cvc5)
 
 -- | Keeping track of KD options/state
 data KDConfig = KDConfig { kdRibbonLength :: Int        -- ^ Lenght of the line as we print the proof
+                         , kdVerbose      :: Bool       -- ^ Run verbose
                          , kdSolverConfig :: SMTConfig  -- ^ The backend solver to use
                          }
 
--- | Default KD-config
+-- | Default KD-config uses the default SBV config (which is z3)
 defaultKDConfig :: KDConfig
 defaultKDConfig = KDConfig { kdRibbonLength = 40
+                           , kdVerbose      = False
                            , kdSolverConfig = defaultSMTCfg
                            }
+
+-- | Run KD proof with z3 configuration.
+z3KD :: KDConfig
+z3KD = defaultKDConfig{kdSolverConfig = z3}
+
+-- | Run KD proof with z3 configuration.
+cvc5KD :: KDConfig
+cvc5KD = defaultKDConfig{kdSolverConfig = cvc5}
 
 -- | Monad for running KnuckleDragger proofs in.
 newtype KD a = KD (ReaderT KDConfig IO a)

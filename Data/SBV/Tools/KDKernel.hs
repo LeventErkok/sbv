@@ -97,11 +97,14 @@ sorry = Proof { rootOfTrust = Self
         p (Forall (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
+lemmaGen :: Proposition a => KDConfig -> String -> [String] -> a -> [Proof] -> KD Proof
 lemmaGen cfg what nms inputProp by = do
-    tab <- start (verbose cfg) what nms
+    tab <- start (kdVerbose cfg) what nms
 
-    let nm = intercalate "." nms
+    let underlyingSolver = kdSolverConfig cfg
+        solver           = underlyingSolver{verbose = verbose underlyingSolver || kdVerbose cfg}
+
+        nm = intercalate "." nms
 
         -- What to do if all goes well
         good = do finish ("Q.E.D." ++ modulo) tab
@@ -126,14 +129,16 @@ lemmaGen cfg what nms inputProp by = do
 
         -- What to do if the proof fails
         cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+
                            -- When trying to get a counter-example, only include in the
                            -- implication those facts that are user-given axioms. This
                            -- way our counter-example will be more likely to be relevant
                            -- to the proposition we're currently proving. (Hopefully.)
                            -- Remember that we first have to negate, and then skolemize!
-                           SatResult res <- satWith cfg $ do
+                           SatResult res <- satWith solver $ do
                                                mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
                                                pure $ skolemize (qNot inputProp)
+
                            print $ ThmResult res
                            error "Failed"
 
@@ -142,7 +147,7 @@ lemmaGen cfg what nms inputProp by = do
                                print r
                                error "Failed"
 
-    pRes <- liftIO $ proveWith cfg $ do
+    pRes <- liftIO $ proveWith solver $ do
                 mapM_ (constrain . getProof) by :: Symbolic ()
                 pure $ skolemize (quantifiedBool inputProp)
 
@@ -156,20 +161,20 @@ lemmaGen cfg what nms inputProp by = do
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
-lemma nm f by = do KDConfig{kdSolverConfig} <- ask
-                   lemmaWith kdSolverConfig nm f by
+lemma nm f by = do cfg <- ask
+                   lemmaWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
-lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
+lemmaWith :: Proposition a => KDConfig -> String -> a -> [Proof] -> KD Proof
 lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proof] -> KD Proof
-theorem nm f by = do KDConfig{kdSolverConfig} <- ask
-                     theoremWith kdSolverConfig nm f by
+theorem nm f by = do cfg <- ask
+                     theoremWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
-theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
+theoremWith :: Proposition a => KDConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
