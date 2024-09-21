@@ -61,7 +61,17 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
 data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
                    , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
                    , getProof    :: SBool       -- ^ Get the underlying boolean
+                   , proofName   :: String      -- ^ User given name
                    }
+
+-- | Show instance for 'Proof'
+instance Show Proof where
+  show Proof{rootOfTrust, isUserAxiom, proofName} = '(' : tag ++ ") " ++ proofName
+     where tag | isUserAxiom = "Axiom"
+               | True        = case rootOfTrust of
+                                 None   -> "Proven"
+                                 Self   -> "Sorry"
+                                 Prop s -> "Modulo: " ++ s
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -78,6 +88,7 @@ internalAxiom :: Proposition a => String -> a -> Proof
 internalAxiom nm p = Proof { rootOfTrust = None
                            , isUserAxiom = False
                            , getProof    = label nm (quantifiedBool p)
+                           , proofName   = nm
                            }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
@@ -86,7 +97,8 @@ internalAxiom nm p = Proof { rootOfTrust = None
 sorry :: Proof
 sorry = Proof { rootOfTrust = Self
               , isUserAxiom = False
-              , getProof    = label "SORRY" (quantifiedBool p)
+              , getProof    = label "sorry" (quantifiedBool p)
+              , proofName   = "sorry"
               }
   where -- ideally, I'd rather just use 
         --   p = sFalse
@@ -113,6 +125,7 @@ lemmaGen cfg what nms inputProp by = do
                   pure Proof { rootOfTrust = ros
                              , isUserAxiom = False
                              , getProof    = label nm (quantifiedBool inputProp)
+                             , proofName   = nm
                              }
 
           where parentRoots = map rootOfTrust by
