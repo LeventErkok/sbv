@@ -155,6 +155,7 @@ Library
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
                   , Documentation.SBV.Examples.KnuckleDragger.AppendRev
+                  , Documentation.SBV.Examples.KnuckleDragger.Basics
                   , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Induction
