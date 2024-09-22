@@ -116,14 +116,14 @@ existsDisjunction = runKD $ do
 -- *** Failed to prove forallConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: T -> Bool
---   p T!val!2 = True
---   p T!val!0 = True
---   p _       = False
+--   p T_2 = True
+--   p T_0 = True
+--   p _   = False
 -- <BLANKLINE>
 --   q :: T -> Bool
---   q T!val!2 = False
---   q T!val!0 = False
---   q _       = True
+--   q T_2 = False
+--   q T_0 = False
+--   q _   = True
 --
 -- Note how @p@ assigns two selected values to @True@ and everything else to @False@, while @q@ does the exact opposite.
 -- So, there is no common value that satisfies both, providing a counter-example. (It's not clear why the solver finds
@@ -153,12 +153,12 @@ forallDisjunctionNot = runKD $ do
 -- *** Failed to prove existsConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: T -> Bool
---   p T!val!1 = False
---   p _       = True
+--   p T_1 = False
+--   p _   = True
 -- <BLANKLINE>
 --   q :: T -> Bool
---   q T!val!1 = True
---   q _       = False
+--   q T_1 = True
+--   q _   = False
 --
 -- In this case, we again have a predicate That disagree at every point, providing a counter-example.
 existsConjunctionNot :: IO ()

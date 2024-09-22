@@ -66,7 +66,7 @@ revLen = runKD $ do
 -- Lemma: badRevLen
 -- *** Failed to prove badRevLen.
 -- Falsifiable. Counter-example:
---   xs = [Elt!val!1,Elt!val!2,Elt!val!1] :: [Elt]
+--   xs = [Elt_1,Elt_2,Elt_1] :: [Elt]
 badRevLen :: IO ()
 badRevLen = runKD $ do
    let p :: SList Elt -> SBool

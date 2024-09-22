@@ -929,7 +929,7 @@ recoverKindedValue k e = case k of
                                        | EReal i     <- e      -> Just $ CV KReal (CAlgReal i)
                                        | True                  -> interpretInterval e
 
-                           KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, s)
+                           KUserSort{} | ECon s <- e           -> Just $ CV k $ CUserSort (getUIIndex k s, trim s)
                                        | True                  -> Nothing
 
                            KFloat      | ENum (i, _) <- e      -> Just $ mkConstCV k i
@@ -964,6 +964,11 @@ recoverKindedValue k e = case k of
         getUIIndex _                        _ = Nothing
 
         stringLike xs = length xs >= 2 && "\"" `isPrefixOf` xs && "\"" `isSuffixOf` xs
+
+        -- z3 prints uninterpreted values like this: T!val!4. Turn that into T_4
+        trim "" = ""
+        trim ('!':'v':'a':'l':'!':rest) = '_' : trim rest
+        trim (c:cs) = c : trim cs
 
         -- Make sure strings are really strings
         interpretString xs

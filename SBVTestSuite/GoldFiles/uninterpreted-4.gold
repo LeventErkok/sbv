@@ -36,6 +36,6 @@
 *** Exit code: ExitSuccess
 
  FINAL:Satisfiable. Model:
-  c = Q!val!0 :: Q
-  d = Q!val!1 :: Q
+  c = Q_0 :: Q
+  d = Q_1 :: Q
 DONE!

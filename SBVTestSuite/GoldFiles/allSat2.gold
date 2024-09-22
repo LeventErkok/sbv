@@ -1,9 +1,9 @@
 Solution #1:
-  x = Q!val!0 :: Q
-  y = Q!val!0 :: Q
-  z = Q!val!1 :: Q
+  x = Q_0 :: Q
+  y = Q_0 :: Q
+  z = Q_1 :: Q
 Solution #2:
-  x = Q!val!0 :: Q
-  y = Q!val!0 :: Q
-  z = Q!val!0 :: Q
+  x = Q_0 :: Q
+  y = Q_0 :: Q
+  z = Q_0 :: Q
 Found 2 different solutions.

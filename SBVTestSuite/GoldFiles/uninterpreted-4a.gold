@@ -46,7 +46,7 @@ Looking for solution 1
 *** Exit code: ExitSuccess
 
  FINAL:Solution #1:
-  c = Q!val!0 :: Q
-  d = Q!val!1 :: Q
+  c = Q_0 :: Q
+  d = Q_1 :: Q
 This is the only solution.
 DONE!

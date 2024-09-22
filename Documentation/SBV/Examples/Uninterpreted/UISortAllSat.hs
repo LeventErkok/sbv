@@ -54,35 +54,35 @@ classify = uninterpret "classify"
 --
 -- >>> allSat genLs
 -- Solution #1:
---   l  = L!val!2 :: L
---   l0 = L!val!0 :: L
---   l1 = L!val!1 :: L
---   l2 = L!val!2 :: L
+--   l  = L_2 :: L
+--   l0 = L_0 :: L
+--   l1 = L_1 :: L
+--   l2 = L_2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
---   classify L!val!1 = 1
---   classify _       = 0
+--   classify L_2 = 2
+--   classify L_1 = 1
+--   classify _   = 0
 -- Solution #2:
---   l  = L!val!1 :: L
---   l0 = L!val!0 :: L
---   l1 = L!val!1 :: L
---   l2 = L!val!2 :: L
+--   l  = L_1 :: L
+--   l0 = L_0 :: L
+--   l1 = L_1 :: L
+--   l2 = L_2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
---   classify L!val!1 = 1
---   classify _       = 0
+--   classify L_2 = 2
+--   classify L_1 = 1
+--   classify _   = 0
 -- Solution #3:
---   l  = L!val!0 :: L
---   l0 = L!val!0 :: L
---   l1 = L!val!1 :: L
---   l2 = L!val!2 :: L
+--   l  = L_0 :: L
+--   l0 = L_0 :: L
+--   l1 = L_1 :: L
+--   l2 = L_2 :: L
 -- <BLANKLINE>
 --   classify :: L -> Integer
---   classify L!val!2 = 2
---   classify L!val!1 = 1
---   classify _       = 0
+--   classify L_2 = 2
+--   classify L_1 = 1
+--   classify _   = 0
 -- Found 3 different solutions.
 genLs :: Predicate
 genLs = do [l, l0, l1, l2] <- symbolics ["l", "l0", "l1", "l2"]

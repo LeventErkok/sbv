@@ -132,20 +132,20 @@ We have:
 >>> prove $ (qe (\(Forall x) -> p x) .|| qe (\(Forall x) -> q x)) .<=> qe (\(Forall x) -> p x .|| q x)
 Falsifiable. Counter-example:
   P :: U -> Bool
-  P U!val!2 = True
-  P U!val!0 = True
-  P _       = False
+  P U_2 = True
+  P U_0 = True
+  P _   = False
 <BLANKLINE>
   Q :: U -> Bool
-  Q U!val!2 = False
-  Q U!val!0 = False
-  Q _       = True
+  Q U_2 = False
+  Q U_0 = False
+  Q _   = True
 
 The solver found us a falsifying instance: Pick a domain with at least three elements. We'll call
-the first element @U!val!2@, and the second element @U!val!0@, without naming the others. (Unfortunately the solver picks nonintuitive names, but you can substitute better names if you like. They're just names of two distinct
+the first element @U_2@, and the second element @U_0@, without naming the others. (Unfortunately the solver picks nonintuitive names, but you can substitute better names if you like. They're just names of two distinct
 objects that belong to the domain \(U\) with no other meaning.)
 
-Arrange so that \(P\) is true on @U!val!2@ and @U!val!0@, but false for everything else.
+Arrange so that \(P\) is true on @U_2@ and @U_0@, but false for everything else.
 Also arrange so that \(Q\) is false on these two elements, but true for everything else.
 
 With this
