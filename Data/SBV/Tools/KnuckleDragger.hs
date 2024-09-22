@@ -120,27 +120,27 @@ class ChainLemma steps step | steps -> step where
             = do step <- lemmaGen cfg "Lemma" ([nm, show i]) p sofar
                  go (i+1) (step : sofar) ps
 
--- | Chaining lemmas that depend on a single quantified varible.
+-- | Chaining lemmas that depend on a single quantified variable.
 instance (SymVal a, EqSymbolic z) => ChainLemma (SBV a -> [z]) (SBV a -> z) where
    makeSteps steps = [\a -> steps a !! i | i <- [0 .. length (steps undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) -> x a .== y a
 
--- | Chaining lemmas that depend on two quantified varibles.
+-- | Chaining lemmas that depend on two quantified variables.
 instance (SymVal a, SymVal b, EqSymbolic z) => ChainLemma (SBV a -> SBV b -> [z]) (SBV a -> SBV b -> z) where
    makeSteps steps = [\a b -> steps a b !! i | i <- [0 .. length (steps undefined undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) -> x a b .== y a b
 
--- | Chaining lemmas that depend on three quantified varibles.
+-- | Chaining lemmas that depend on three quantified variables.
 instance (SymVal a, SymVal b, SymVal c, EqSymbolic z) => ChainLemma (SBV a -> SBV b -> SBV c -> [z]) (SBV a -> SBV b -> SBV c -> z) where
    makeSteps steps = [\a b c -> steps a b c !! i | i <- [0 .. length (steps undefined undefined undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> x a b c .== y a b c
 
--- | Chaining lemmas that depend on four quantified varibles.
+-- | Chaining lemmas that depend on four quantified variables.
 instance (SymVal a, SymVal b, SymVal c, SymVal d, EqSymbolic z) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    makeSteps steps = [\a b c d -> steps a b c d !! i | i <- [0 .. length (steps undefined undefined undefined undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"d" d) -> x a b c d .== y a b c d
 
--- | Chaining lemmas that depend on five quantified varibles.
+-- | Chaining lemmas that depend on five quantified variables.
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, EqSymbolic z) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    makeSteps steps = [\a b c d e -> steps a b c d e !! i | i <- [0 .. length (steps undefined undefined undefined undefined undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"d" d) (Forall @"e" e) -> x a b c d e .== y a b c d e
