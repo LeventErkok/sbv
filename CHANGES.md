@@ -30,6 +30,9 @@
     the SMTLib semantics. If you are not using floats, then this doesn't matter. If you do, bear
     in mind that the values will be treated with object equality; which (honestly) is easier to understand.
 
+  * SBV now prints the elements of uninterpreted sorts more simply for z3. Previously, we simply used the
+    name z3 produced, which looked like @T!val!i@ for the uninterpreted type @T@, we know convert it to @T_i@.
+
 ### Version 10.12, 2024-08-11
 
   * Fix a few custom-floating-point format conversion bugs. Thanks to Sirui Lu for the patch.
