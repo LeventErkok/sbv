@@ -69,7 +69,11 @@ class ChainLemma steps step | steps -> step where
   --    * Prove: @H && A == B && B == C && C == D -> P@
   --    * If all of the above steps succeed, conclude @P@.
   --
-  -- So, chain-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning.
+  -- Note that if the type of steps (i.e., @A@ .. @D@ above) is 'SBool', then we use implication
+  -- as opposed to equality; which better captures line of reasoning.
+  --
+  -- So, chain-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning in the case of
+  -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we error-out. A single step in @H@ indicates a user-error, since there's
@@ -144,3 +148,28 @@ instance (SymVal a, SymVal b, SymVal c, SymVal d, EqSymbolic z) => ChainLemma (S
 instance (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e, EqSymbolic z) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    makeSteps steps = [\a b c d e -> steps a b c d e !! i | i <- [0 .. length (steps undefined undefined undefined undefined undefined) - 1]]
    makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"d" d) (Forall @"e" e) -> x a b c d e .== y a b c d e
+
+-- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
+instance {-# OVERLAPPING #-} SymVal a => ChainLemma (SBV a -> [SBool]) (SBV a -> SBool) where
+   makeSteps steps = [\a -> steps a !! i | i <- [0 .. length (steps undefined) - 1]]
+   makeInter _ x y = quantifiedBool $ \(Forall @"a" a) -> x a .=> y a
+
+-- | Chaining lemmas that depend on two quantified variables. Overlapping version for 'SBool' that uses implication.
+instance {-# OVERLAPPING #-} (SymVal a, SymVal b) => ChainLemma (SBV a -> SBV b -> [SBool]) (SBV a -> SBV b -> SBool) where
+   makeSteps steps = [\a b -> steps a b !! i | i <- [0 .. length (steps undefined undefined) - 1]]
+   makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) -> x a b .=> y a b
+
+-- | Chaining lemmas that depend on three quantified variables. Overlapping version for 'SBool' that uses implication.
+instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c) => ChainLemma (SBV a -> SBV b -> SBV c -> [SBool]) (SBV a -> SBV b -> SBV c -> SBool) where
+   makeSteps steps = [\a b c -> steps a b c !! i | i <- [0 .. length (steps undefined undefined undefined) - 1]]
+   makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> x a b c .=> y a b c
+
+-- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
+instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c, SymVal d) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
+   makeSteps steps = [\a b c d -> steps a b c d !! i | i <- [0 .. length (steps undefined undefined undefined undefined) - 1]]
+   makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"d" d) -> x a b c d .=> y a b c d
+
+-- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
+instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
+   makeSteps steps = [\a b c d e -> steps a b c d e !! i | i <- [0 .. length (steps undefined undefined undefined undefined undefined) - 1]]
+   makeInter _ x y = quantifiedBool $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) (Forall @"d" d) (Forall @"e" e) -> x a b c d e .=> y a b c d e
