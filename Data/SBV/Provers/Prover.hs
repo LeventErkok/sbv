@@ -621,6 +621,9 @@ instance ExtractIO m => ProvableM    m (SymbolicT m SBool) where proofArgReduce 
 instance ExtractIO m => SatisfiableM m SBool where satArgReduce   = return
 instance ExtractIO m => ProvableM    m SBool where proofArgReduce = return
 
+instance {-# OVERLAPPABLE #-} (ExtractIO m, SatisfiableM m a) => SatisfiableM m (SymbolicT m a) where satArgReduce   a = a >>= satArgReduce
+instance {-# OVERLAPPABLE #-} (ExtractIO m, ProvableM    m a) => ProvableM    m (SymbolicT m a) where proofArgReduce a = a >>= proofArgReduce
+
 instance (ExtractIO m, SymVal a, Constraint Symbolic r, SatisfiableM m r) => SatisfiableM m (Forall nm a -> r) where
   satArgReduce = satArgReduce . quantifiedBool
 
