@@ -60,4 +60,4 @@ EXCEPTION CAUGHT:
 *** NB. If this is a use case you'd like SBV to support, please get in touch!
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Control/Utils.hs:1656:57 in sbv-11.0-inplace:Data.SBV.Control.Utils
+  error, called at ./Data/SBV/Control/Utils.hs:1661:57 in sbv-11.0-inplace:Data.SBV.Control.Utils
