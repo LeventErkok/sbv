@@ -2273,6 +2273,7 @@ data SMTConfig = SMTConfig {
        , solverSetOptions            :: [SMTOption]         -- ^ Options to set as we start the solver
        , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
+       , kdRibbonLength              :: Int                 -- ^ Line length for KD proofs
        }
 
 -- | Ignore internal names and those the user told us to

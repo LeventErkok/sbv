@@ -23,8 +23,8 @@ import Data.SBV.Tools.KnuckleDragger
 
 -- | The default settings for z3 have trouble running this proof out-of-the-box.
 -- We have to pass auto_config=false to z3!
-z3NoAutoConfig :: KDConfig
-z3NoAutoConfig = z3KD{kdExtraSolverArgs = ["auto_config=false"]}
+z3NoAutoConfig :: SMTConfig
+z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
 
 -- | Prove that @2n^2 + n + 1@ is not divisible by @3@.
 --

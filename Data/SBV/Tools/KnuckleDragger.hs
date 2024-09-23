@@ -42,7 +42,7 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Faking proofs
        , sorry
        -- * Running KnuckleDragger proofs
-       , KD, runKD, runKDWith, KDConfig(..), defaultKDConfig, z3KD, cvc5KD
+       , KD, runKD, runKDWith
        ) where
 
 import Control.Monad.Trans (liftIO)
@@ -84,10 +84,10 @@ class ChainLemma steps step | steps -> step where
   chainTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => KDConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => KDConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
   makeSteps :: steps -> [step]
@@ -102,7 +102,7 @@ class ChainLemma steps step | steps -> step where
   chainLemmaWith   = chainGeneric False
   chainTheoremWith = chainGeneric True
 
-  chainGeneric :: Proposition a => Bool -> KDConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
   chainGeneric taggedTheorem cfg nm result steps base = do
         liftIO $ putStrLn $ "Chain: " ++ nm
         let proofSteps = makeSteps steps
