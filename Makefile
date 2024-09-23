@@ -35,6 +35,13 @@ else
     TESTHIDE   = --hide-successes
 endif
 
+# how many quick-check tests to run (default of 100 might be too slow)
+ifdef QC
+    QCCOUNT = ${QC}
+else
+    QCCOUNT = 100
+endif
+
 # How long to wait for each doctest to run (in seconds)
 DOCTESTTIMEOUT = 300
 
@@ -137,7 +144,7 @@ else
 endif
 
 test:
-	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests 100
+	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
 
 checkLinks:
 	@brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
