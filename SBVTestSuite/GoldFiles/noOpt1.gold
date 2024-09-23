@@ -28,4 +28,4 @@
 *** Use "sat" for plain satisfaction
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Provers/Prover.hs:263:27 in sbv-11.0-inplace:Data.SBV.Provers.Prover
+  error, called at ./Data/SBV/Provers/Prover.hs:264:27 in sbv-11.0-inplace:Data.SBV.Provers.Prover
