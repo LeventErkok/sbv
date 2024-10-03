@@ -28,7 +28,7 @@ source-repository head
 common common-settings
    default-language: Haskell2010
    ghc-options     : -Wall
-   build-depends   : base >= 4.16 && < 5
+   build-depends   : base >= 4.19 && < 5
    other-extensions: BangPatterns
                      CPP
                      ConstrainedClassMethods
