@@ -82,7 +82,8 @@ sumSquareProof = runKD $ do
    lemma "sumSquare_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
 
 -- | Prove that @11^n - 4^n@ is always divisible by 7. Note that power operator is hard for
--- SMT solvers to deal with due to non-linearity, so we use an axiomatization of it instead.
+-- SMT solvers to deal with due to non-linearity. For this example, we use cvc5 to discharge
+-- the final goal, where z3 can't converge on it.
 --
 -- We have:
 --
@@ -94,12 +95,12 @@ sumSquareProof = runKD $ do
 elevenMinusFour :: IO Proof
 elevenMinusFour = runKD $ do
    let pow :: SInteger -> SInteger -> SInteger
-       pow = uninterpret "pow"
+       pow = smtFunction "pow" $ \x y -> ite (y .== 0) 1 (x * pow x (y - 1))
 
        emf :: SInteger -> SBool
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)
 
-   pow0 <- axiom "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)
-   powN <- axiom "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n)
+   pow0 <- lemma "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)             []
+   powN <- lemma "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
 
-   lemma "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN, induct emf]
+   lemmaWith cvc5 "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN, induct emf]
