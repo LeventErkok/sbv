@@ -99,7 +99,7 @@ elevenMinusFour = runKD $ do
        emf :: SInteger -> SBool
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)
 
-   pow0 <- axiom "pow0" (\(Forall @"x" x)                 -> x `pow` 0     .== 1)
-   powN <- axiom "powN" (\(Forall @"x" x) (Forall @"n" n) -> x `pow` (n+1) .== x * x `pow` n)
+   pow0 <- axiom "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)
+   powN <- axiom "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n)
 
    lemma "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN, induct emf]
