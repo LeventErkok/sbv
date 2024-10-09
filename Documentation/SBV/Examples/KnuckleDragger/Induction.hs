@@ -31,15 +31,15 @@ import Data.SBV.Tools.KnuckleDragger
 sumConstProof :: IO Proof
 sumConstProof = runKD $ do
    let sum :: SInteger -> SInteger -> SInteger
-       sum = smtFunction "sum" $ \n c -> ite (n .== 0) 0 (c + sum (n-1) c)
+       sum = smtFunction "sum" $ \c n -> ite (n .== 0) 0 (c + sum c (n-1))
 
        spec :: SInteger -> SInteger -> SInteger
-       spec n c = n * c
+       spec c n = c * n
 
        p :: SInteger -> SInteger -> SBool
-       p n c = observe "imp" (sum n c) .== observe "spec" (spec n c)
+       p c n = observe "imp" (sum c n) .== observe "spec" (spec c n)
 
-   lemma "sumConst_correct" (\(Forall @"n" n) (Forall @"c" c) -> n .>= 0 .=> p n c) [induct p]
+   lemma "sumConst_correct" (\(Forall @"c" c) (Forall @"n" n) -> n .>= 0 .=> p c n) [induct p]
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
@@ -88,8 +88,8 @@ sumSquareProof = runKD $ do
 -- We have:
 --
 -- >>> elevenMinusFour
--- Axiom: pow0                             Axiom.
--- Axiom: powN                             Axiom.
+-- Lemma: pow0                             Q.E.D.
+-- Lemma: powN                             Q.E.D.
 -- Lemma: elevenMinusFour                  Q.E.D.
 -- [Proven] elevenMinusFour
 elevenMinusFour :: IO Proof

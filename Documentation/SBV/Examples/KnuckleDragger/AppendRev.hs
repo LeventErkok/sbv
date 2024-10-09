@@ -67,7 +67,6 @@ consApp = runKD $ lemma "consApp"
 -- [Proven] appendAssoc
 appendAssoc :: IO Proof
 appendAssoc = runKD $ do
-   -- The classic proof by induction on xs
    let p :: SymVal a => SList a -> SList a -> SList a -> SBool
        p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
 
@@ -91,7 +90,8 @@ reverseReverse = runKD $ do
        ra xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
 
    revApp <- lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> ra xs ys)
-                   [induct (ra @Elt)]
+                   -- induction is always done on the last argument, so flip to make sure we induct on xs
+                   [induct (flip (ra @Elt))]
 
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs
