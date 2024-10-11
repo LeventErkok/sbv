@@ -237,18 +237,14 @@ The other way we can have a bad measure is if it fails to decrease through the l
 >>> let invariant SumS{n, i, s} = s .== (i*(i+1)) `sDiv` 2 .&& i .<= n
 >>> let measure   SumS{n, i}    = [n + i]
 >>> void $ correctness invariant (Just measure)
-Following proof obligations failed:
-===================================
-  Measure for loop "i < n" is negative:
-    State  : SumS {n = 0, i = -1, s = 0}
-    Measure: -1
+Following proof obligation failed:
+==================================
   Measure for loop "i < n" does not decrease:
-    Before : SumS {n = 0, i = -1, s = 0}
-    Measure: -1
-    After  : SumS {n = 0, i = 0, s = 0}
-    Measure: 0
+    Before : SumS {n = 1, i = 0, s = 0}
+    Measure: 1
+    After  : SumS {n = 1, i = 1, s = 1}
+    Measure: 2
 
-Clearly, as @i@ increases, so does our bogus measure @n+i@. Note that in this case the counterexample has
-@i@ and @n@ as a negative value, as the SMT solver finds a counter-example to induction, not
-necessarily a reachable state. Obviously, all such failures need to be addressed for the full proof.
+Clearly, as @i@ increases, so does our bogus measure @n+i@. (Note that in this case the counterexample might have @i@ and @n@ as negative values, as the SMT solver finds a counter-example to induction, not
+necessarily a reachable state. Obviously, all such failures need to be addressed for the full proof.)
 -}
