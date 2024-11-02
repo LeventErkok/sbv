@@ -63,10 +63,10 @@ problem lim initial = bmc (Just lim) True setup initial trans goal
 
         -- Transition relation: At each step we either
         -- get to increase @x@ by 2, or decrement @y@ by 4:
-        trans :: S SInteger -> [S SInteger]
-        trans S{x, y} = [ S { x = x + 2, y = y     }
-                        , S { x = x,     y = y - 4 }
-                        ]
+        trans :: S SInteger -> S SInteger -> SBool
+        trans S{x, y} next = next `sElem` [ S { x = x + 2, y = y     }
+                                          , S { x = x,     y = y - 4 }
+                                          ]
 
         -- Goal state is when @x@ equals @y@:
         goal :: S SInteger -> SBool

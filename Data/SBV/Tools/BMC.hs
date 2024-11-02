@@ -35,7 +35,7 @@ bmc :: (EqSymbolic st, Queriable IO st, res ~ QueryResult st)
     -> Bool                                 -- ^ Verbose: prints iteration count
     -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
     -> (st -> SBool)                        -- ^ Initial condition
-    -> (st -> [st])                         -- ^ Transition relation
+    -> (st -> st -> SBool)                  -- ^ Transition relation
     -> (st -> SBool)                        -- ^ Goal to cover, i.e., we find a set of transitions that satisfy this predicate.
     -> IO (Either String (Int, [res]))      -- ^ Either a result, or a satisfying path of given length and intermediate observations.
 bmc = bmcWith defaultSMTCfg
@@ -47,7 +47,7 @@ bmcWith :: (EqSymbolic st, Queriable IO st, res ~ QueryResult st)
         -> Bool
         -> Symbolic ()
         -> (st -> SBool)
-        -> (st -> [st])
+        -> (st -> st -> SBool)
         -> (st -> SBool)
         -> IO (Either String (Int, [res]))
 bmcWith cfg mbLimit chatty setup initial trans goal
@@ -71,5 +71,5 @@ bmcWith cfg mbLimit chatty setup initial trans goal
                                                  return $ Left $ "BMC: Solver said unknown in iteration " ++ show i
                                     Unsat  -> do pop 1
                                                  nextState <- create
-                                                 constrain $ sAny (nextState .==) (trans curState)
+                                                 constrain $ curState `trans` nextState
                                                  go (i+1) nextState (curState : sofar)
