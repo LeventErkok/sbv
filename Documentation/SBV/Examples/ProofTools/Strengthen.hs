@@ -57,7 +57,7 @@ instance Fresh IO (S SInteger) where
 
 -- | We parameterize over the transition relation and the strengthenings to
 -- investigate various combinations.
-problem :: (S SInteger -> [S SInteger]) -> [(String, S SInteger -> SBool)] -> IO (InductionResult (S Integer))
+problem :: (S SInteger -> S SInteger -> SBool) -> [(String, S SInteger -> SBool)] -> IO (InductionResult (S Integer))
 problem trans strengthenings = induct chatty setup initial trans strengthenings inv goal
   where -- Set this to True for SBV to print steps as it proceeds
         -- through the inductive proof
@@ -83,12 +83,12 @@ problem trans strengthenings = induct chatty setup initial trans strengthenings 
         goal _ = (sTrue, sTrue)
 
 -- | The first program, coded as a transition relation:
-pgm1 :: S SInteger -> [S SInteger]
-pgm1 S{x, y} = [S{x = x+1, y = y+x}]
+pgm1 :: S SInteger -> S SInteger -> SBool
+pgm1 S{x, y} S{x = x', y = y'} = x' .== x+1 .&& y' .== y+x
 
 -- | The second program, coded as a transition relation:
-pgm2 :: S SInteger -> [S SInteger]
-pgm2 S{x, y} = [S{x = x+y, y = y+x}]
+pgm2 :: S SInteger -> S SInteger -> SBool
+pgm2 S{x, y} S{x = x', y = y'} = x' .== x+y .&& y' .== y+x
 
 -- * Examples
 
@@ -97,7 +97,7 @@ pgm2 S{x, y} = [S{x = x+y, y = y+x}]
 -- >>> ex1
 -- Failed while establishing consecution.
 -- Counter-example to inductiveness:
---   S {x = -1, y = 1}
+--   (S {x = -1, y = 1},S {x = 0, y = 0})
 ex1 :: IO (InductionResult (S Integer))
 ex1 = problem pgm1 strengthenings
   where strengthenings :: [(String, S SInteger -> SBool)]
@@ -117,7 +117,7 @@ ex2 = problem pgm1 strengthenings
 -- >>> ex3
 -- Failed while establishing consecution.
 -- Counter-example to inductiveness:
---   S {x = -1, y = 1}
+--   (S {x = -1, y = 1},S {x = 0, y = 0})
 ex3 :: IO (InductionResult (S Integer))
 ex3 = problem pgm2 strengthenings
   where strengthenings :: [(String, S SInteger -> SBool)]
@@ -128,7 +128,7 @@ ex3 = problem pgm2 strengthenings
 -- >>> ex4
 -- Failed while establishing consecution for strengthening "x >= 0".
 -- Counter-example to inductiveness:
---   S {x = 0, y = -1}
+--   (S {x = 0, y = -1},S {x = -1, y = -1})
 ex4 :: IO (InductionResult (S Integer))
 ex4 = problem pgm2 strengthenings
   where strengthenings :: [(String, S SInteger -> SBool)]
@@ -139,7 +139,7 @@ ex4 = problem pgm2 strengthenings
 -- >>> ex5
 -- Failed while establishing consecution for strengthening "x >= 0".
 -- Counter-example to inductiveness:
---   S {x = 0, y = -1}
+--   (S {x = 0, y = -1},S {x = -1, y = -1})
 --
 -- Note how this was sufficient in 'ex2' to establish the invariant for the first
 -- program, but fails for the second.

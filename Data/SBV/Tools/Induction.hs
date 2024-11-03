@@ -69,7 +69,7 @@ instance Show InductionStep where
 --    * A 'Failed' result in a 'PartialCorrectness' step means that the invariant holds, but assuming the
 --      termination condition the goal still does not follow. That is, the partial correctness
 --      does not hold.
-data InductionResult a = Failed InductionStep a
+data InductionResult a = Failed InductionStep (a, a)
                        | Proven
 
 -- | Show instance for 'InductionResult', diagnostic purposes only.
@@ -86,7 +86,7 @@ induct :: (Show res, Queriable IO st, res ~ QueryResult st)
        => Bool                             -- ^ Verbose mode
        -> Symbolic ()                      -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
        -> (st -> SBool)                    -- ^ Initial condition
-       -> (st -> [st])                     -- ^ Transition relation
+       -> (st -> st -> SBool)              -- ^ Transition relation
        -> [(String, st -> SBool)]          -- ^ Strengthenings, if any. The @String@ is a simple tag.
        -> (st -> SBool)                    -- ^ Invariant that ensures the goal upon termination
        -> (st -> (SBool, SBool))           -- ^ Termination condition and the goal to establish
@@ -99,21 +99,21 @@ inductWith :: (Show res, Queriable IO st, res ~ QueryResult st)
            -> Bool
            -> Symbolic ()
            -> (st -> SBool)
-           -> (st -> [st])
+           -> (st -> st -> SBool)
            -> [(String, st -> SBool)]
            -> (st -> SBool)
            -> (st -> (SBool, SBool))
            -> IO (InductionResult res)
 inductWith cfg chatty setup initial trans strengthenings inv goal =
      try "Proving initiation"
-         (\s -> initial s .=> inv s)
+         (\s _ -> initial s .=> inv s)
          (Failed (Initiation Nothing))
          $ strengthen strengthenings
          $ try "Proving consecution"
-               (\s -> sAnd (inv s : [st s | (_, st) <- strengthenings]) .=> sAll inv (trans s))
+               (\s s' -> sAnd (inv s : s `trans` s' : [st s | (_, st) <- strengthenings]) .=> inv s')
                (Failed (Consecution Nothing))
                $ try "Proving partial correctness"
-                     (\s -> let (term, result) = goal s in inv s .&& term .=> result)
+                     (\s _ -> let (term, result) = goal s in inv s .&& term .=> result)
                      (Failed PartialCorrectness)
                      (msg "Done" >> return Proven)
 
@@ -127,24 +127,28 @@ inductWith cfg chatty setup initial trans strengthenings inv goal =
 
         check p = runSMTWith cfg $ do
                         setup
-                        query $ do st <- create
-                                   constrain $ sNot (p st)
+                        query $ do s  <- create
+                                   s' <- create
+                                   constrain $ sNot (p s s')
 
                                    cs <- checkSat
                                    case cs of
                                      Unk    -> error "Solver said unknown"
                                      DSat{} -> error "Solver returned a delta-sat result"
                                      Unsat  -> return Nothing
-                                     Sat    -> do io $ msg "Failed:"
-                                                  ex <- project st
-                                                  io $ msg $ show ex
-                                                  return $ Just ex
+                                     Sat    -> do io $ msg "Failed in state:"
+                                                  exS  <- project s
+                                                  io $ msg $ show exS
+                                                  io $ msg "Transitioning to:"
+                                                  exS' <- project s'
+                                                  io $ msg $ show exS'
+                                                  return $ Just (exS, exS')
 
         strengthen []             cont = cont
         strengthen ((nm, st):sts) cont = try ("Proving strengthening initiation  : " ++ nm)
-                                             (\s -> initial s .=> st s)
+                                             (\s _ -> initial s .=> st s)
                                              (Failed (Initiation (Just nm)))
                                              $ try ("Proving strengthening consecution: " ++ nm)
-                                                   (\s -> st s .=> sAll st (trans s))
+                                                   (\s s' -> sAnd [st s, s `trans` s'] .=> st s')
                                                    (Failed (Consecution (Just nm)))
                                                    (strengthen sts cont)

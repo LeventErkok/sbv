@@ -81,11 +81,10 @@ fibCorrect = induct chatty setup initial trans strengthenings inv goal
         initial S{i, k, m, n} = i .== 0 .&& k .== 1 .&& m .== 0 .&& n .>= 0
 
         -- We code the algorithm almost literally in SBV notation:
-        trans :: S SInteger -> [S SInteger]
-        trans st@S{i, k, m, n} = [ite (i .< n)
-                                      st { i = i + 1, k = m + k, m = k }
-                                      st
-                                 ]
+        trans :: S SInteger -> S SInteger -> SBool
+        trans S{i, k, m, n} S{i = i', k = k', m = m', n = n'} = (i', k', m', n') .== ite (i .< n)
+                                                                                         (i+1, m+k, k, n)
+                                                                                         (i,   k,   m, n)
 
         -- No strengthenings needed for this problem!
         strengthenings :: [(String, S SInteger -> SBool)]

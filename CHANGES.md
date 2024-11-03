@@ -33,11 +33,12 @@
   * SBV now prints the elements of uninterpreted sorts more simply for z3. Previously, we simply used the
     name z3 produced, which looked like @T!val!i@ for the uninterpreted type @T@, we know convert it to @T_i@.
 
-  * [BACKWARDS COMPATIBILITY] Changed the signature of the functions bmc (and bmcWith) so they take
-    the transition as a relation, instead of a function returning multiple values. This generalizes
-    the use cases, and it is easy to translate from existing applications. Simply change your old
+  * [BACKWARDS COMPATIBILITY] Changed the signature of the functions bmc (and bmcWith), induct (and inductWith)
+    functions, so they take the transition as a relation, instead of a function returning multiple values. This
+    generalizes the use cases, and it is easy to translate from existing applications. Simply change your old
     'State -> [State]' function to 'State -> State -> SBool', which can be achieved by 
-    'newTrans s1 s2 = s2 `sElem` oldTrans s1'.
+    'newTrans s1 s2 = s2 `sElem` oldTrans s1', though you probably want to code this in a more readable way
+    depending on the actual transition relation you want to model.
 
 ### Version 10.12, 2024-08-11
 

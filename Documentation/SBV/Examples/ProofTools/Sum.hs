@@ -70,11 +70,10 @@ sumCorrect = induct chatty setup initial trans strengthenings inv goal
         initial S{s, i, n} = s .== 0 .&& i .== 0 .&& n .>= 0
 
         -- We code the algorithm almost literally in SBV notation:
-        trans :: S SInteger -> [S SInteger]
-        trans st@S{s, i, n} = [ite (i .<= n)
-                                   st { s = s+i, i = i+1 }
-                                   st
-                              ]
+        trans :: S SInteger -> S SInteger -> SBool
+        trans S{s, i, n} S{s = s', i = i', n = n'} = (s', i', n') .== ite (i .<= n)
+                                                                          (s+i, i+1, n)
+                                                                          (s  , i  , n)
 
         -- No strengthenings needed for this problem!
         strengthenings :: [(String, S SInteger -> SBool)]
