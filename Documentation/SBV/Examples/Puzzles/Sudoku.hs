@@ -175,8 +175,7 @@ puzzle5 = [ [ 0, 9, 0,   7, 0, 0,   8, 6, 0]
           , [ 0, 2, 0,   6, 0, 0,   3, 5, 0]
           , [ 0, 5, 4,   0, 0, 8,   0, 7, 0] ]
 
--- | The following is nefarious according to
--- <http://haskell.org/haskellwiki/Sudoku>
+-- | Another example
 puzzle6 :: Puzzle
 puzzle6 = [ [0, 0, 0,   0, 6, 0,   0, 8, 0]
           , [0, 2, 0,   0, 0, 0,   0, 0, 0]
