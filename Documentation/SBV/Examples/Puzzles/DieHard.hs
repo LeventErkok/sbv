@@ -58,8 +58,8 @@ instance Queriable IO SState where
 
   create                            = State <$> freshVar_    <*> freshVar_      <*> freshVar_
   project State{big, small, action} = State <$> getValue big <*> getValue small <*> getValue action
-  embed   State{big, small, action} = pure $ State { big   = literal big
-                                                   , small = literal small
+  embed   State{big, small, action} = pure $ State { big    = literal big
+                                                   , small  = literal small
                                                    , action = literal action
                                                    }
 
