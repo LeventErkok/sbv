@@ -30,7 +30,7 @@ import Control.Monad (when)
 --
 -- Note that the BMC engine does *not* guarantee that the solution is unique. However, if it does
 -- find a solution at depth @i@, it is guaranteed that there are no shorter solutions.
-bmc :: (EqSymbolic st, Queriable IO st, res ~ QueryResult st)
+bmc :: (Queriable IO st, res ~ QueryResult st)
     => Maybe Int                            -- ^ Optional bound
     -> Bool                                 -- ^ Verbose: prints iteration count
     -> Symbolic ()                          -- ^ Setup code, if necessary. (Typically used for 'Data.SBV.setOption' calls. Pass @return ()@ if not needed.)
@@ -41,7 +41,7 @@ bmc :: (EqSymbolic st, Queriable IO st, res ~ QueryResult st)
 bmc = bmcWith defaultSMTCfg
 
 -- | Bounded model checking, configurable with the solver
-bmcWith :: (EqSymbolic st, Queriable IO st, res ~ QueryResult st)
+bmcWith :: (Queriable IO st, res ~ QueryResult st)
         => SMTConfig
         -> Maybe Int
         -> Bool
