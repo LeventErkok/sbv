@@ -33,6 +33,9 @@
   * SBV now prints the elements of uninterpreted sorts more simply for z3. Previously, we simply used the
     name z3 produced, which looked like @T!val!i@ for the uninterpreted type @T@, we know convert it to @T_i@.
 
+  * Added Documentation/SBV/Examples/Puzzles/DieHard.hs, which solves the die-hard jug-water problem using
+    a BMC style search.
+
   * [BACKWARDS COMPATIBILITY] Changed the signature of the functions bmc (and bmcWith), induct (and inductWith)
     functions, so they take the transition as a relation, instead of a function returning multiple values. This
     generalizes the use cases, and it is easy to translate from existing applications. Simply change your old
