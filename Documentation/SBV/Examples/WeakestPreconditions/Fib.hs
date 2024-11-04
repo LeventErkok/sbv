@@ -19,6 +19,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -55,9 +56,13 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (FibS (SBV a)) where
    show (FibS n i k m) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", k = " ++ sh k ++ ", m = " ++ sh m ++ "}"
      where sh v = maybe "<symbolic>" show (unliteral v)
 
--- | 'Fresh' instance for the program state
-instance SymVal a => Fresh IO (FibS (SBV a)) where
-  fresh = FibS <$> freshVar_  <*> freshVar_  <*> freshVar_ <*> freshVar_
+-- | 'Queriable instance for our state
+instance Queriable IO (FibS SInteger) where
+  type QueryResult (FibS SInteger) = FibS Integer
+
+  create  = FibS <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Helper type synonym
 type F = FibS SInteger

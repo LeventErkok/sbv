@@ -19,6 +19,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -49,9 +50,13 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SqrtS (SBV a)) where
    show (SqrtS x sqrt i j) = "{x = " ++ sh x ++ ", sqrt = " ++ sh sqrt ++ ", i = " ++ sh i ++ ", j = " ++ sh j ++ "}"
      where sh v = maybe "<symbolic>" show (unliteral v)
 
--- | 'Fresh' instance for the program state
-instance SymVal a => Fresh IO (SqrtS (SBV a)) where
-  fresh = SqrtS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
+-- | 'Queriable instance for the program state
+instance SymVal a => Queriable IO (SqrtS (SBV a)) where
+  type QueryResult (SqrtS (SBV a)) = SqrtS a
+
+  create  = SqrtS <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Helper type synonym
 type S = SqrtS SInteger

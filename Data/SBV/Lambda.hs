@@ -35,7 +35,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
-import           Data.SBV.Core.Symbolic hiding   (mkNewState, fresh)
+import           Data.SBV.Core.Symbolic hiding   (mkNewState)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
 import Data.IORef (readIORef, modifyIORef')

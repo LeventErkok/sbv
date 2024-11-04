@@ -27,6 +27,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -44,9 +45,13 @@ import GHC.Generics hiding (S)
 -- over the type so we can put in both concrete and symbolic values.
 data S a = S { s :: a, i :: a, n :: a } deriving (Show, Mergeable, Generic, Functor, Foldable, Traversable)
 
--- | 'Fresh' instance for our state
-instance Fresh IO (S SInteger) where
-  fresh  = S <$> freshVar_  <*> freshVar_  <*> freshVar_
+-- | 'Queriable instance for our state
+instance Queriable IO (S SInteger) where
+  type QueryResult (S SInteger) = S Integer
+
+  create  = S <$> freshVar_ <*> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

@@ -17,7 +17,7 @@ module Data.SBV.Control (
      -- $queryIntro
 
      -- * User queries
-       ExtractIO(..), MonadQuery(..), Queriable(..), Fresh(..), Query, query
+       ExtractIO(..), MonadQuery(..), Queriable(..), Query, query
 
      -- * Create a fresh variable
      , freshVar_, freshVar
@@ -76,7 +76,7 @@ module Data.SBV.Control (
      , SMTOption(..)
      ) where
 
-import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Queriable(..), Fresh(..), Symbolic, QueryContext(..))
+import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Queriable(..), Symbolic, QueryContext(..))
 
 import Data.SBV.Control.BaseIO
 import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, getObservables

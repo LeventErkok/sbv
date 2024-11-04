@@ -33,6 +33,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -49,9 +50,13 @@ import Data.SBV.Control
 data S a = S { x :: a, y :: a }
          deriving (Show, Functor, Foldable, Traversable)
 
--- | 'Fresh' instance for our state
-instance Fresh IO (S SInteger) where
-  fresh = S <$> freshVar_ <*> freshVar_
+-- | 'Queriable instance for our state
+instance Queriable IO (S SInteger) where
+  type QueryResult (S SInteger) = S Integer
+
+  create  = S <$> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- * Encoding the problem
 

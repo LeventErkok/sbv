@@ -21,6 +21,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -61,9 +62,13 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (GCDS (SBV a)) where
    show (GCDS x y i j) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ ", i = " ++ sh i ++ ", j = " ++ sh j ++ "}"
      where sh v = maybe "<symbolic>" show (unliteral v)
 
--- | 'Fresh' instance for the program state
-instance SymVal a => Fresh IO (GCDS (SBV a)) where
-  fresh = GCDS <$> freshVar_  <*> freshVar_  <*> freshVar_ <*> freshVar_
+-- | 'Queriable instance for our state
+instance Queriable IO (GCDS SInteger) where
+  type QueryResult (GCDS SInteger) = GCDS Integer
+
+  create  = GCDS <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Helper type synonym
 type G = GCDS SInteger

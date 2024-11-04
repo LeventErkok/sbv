@@ -18,6 +18,7 @@
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -51,9 +52,13 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
    show (SumS n i s) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", s = " ++ sh s ++ "}"
      where sh v = maybe "<symbolic>" show (unliteral v)
 
--- | 'Fresh' instance for the program state
-instance SymVal a => Fresh IO (SumS (SBV a)) where
-  fresh = SumS <$> freshVar_  <*> freshVar_  <*> freshVar_
+-- | 'Queriable instance for our state
+instance Queriable IO (SumS SInteger) where
+  type QueryResult (SumS SInteger) = SumS Integer
+
+  create  = SumS <$> freshVar_ <*> freshVar_ <*> freshVar_
+  project = mapM getValue
+  embed   = return . fmap literal
 
 -- | Helper type synonym
 type S = SumS SInteger
