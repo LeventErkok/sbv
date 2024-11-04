@@ -200,6 +200,7 @@ Library
                   , Documentation.SBV.Examples.Puzzles.Birthday
                   , Documentation.SBV.Examples.Puzzles.Coins
                   , Documentation.SBV.Examples.Puzzles.Counts
+                  , Documentation.SBV.Examples.Puzzles.DieHard
                   , Documentation.SBV.Examples.Puzzles.DogCatMouse
                   , Documentation.SBV.Examples.Puzzles.Drinker
                   , Documentation.SBV.Examples.Puzzles.Euler185
