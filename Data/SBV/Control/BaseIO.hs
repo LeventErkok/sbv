@@ -28,8 +28,6 @@ import qualified Data.SBV.Control.Utils as Trans
 
 import Data.SBV.Utils.SExpr (SExpr)
 
--- Data.SBV.Control.Query
-
 -- | Ask solver for info.
 --
 -- NB. For a version which generalizes over the underlying monad, see 'Data.SBV.Trans.Control.getInfo'

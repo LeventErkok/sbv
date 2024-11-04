@@ -60,7 +60,7 @@ module Data.SBV.Core.Symbolic
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
-  , MonadQuery(..), QueryT(..), Query, Queriable(..), QueryState(..), QueryContext(..)
+  , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
   , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), SMTEngine
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
   ) where
@@ -79,7 +79,6 @@ import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
-import Data.Kind                   (Type)
 
 import Data.Time (getCurrentTime, UTCTime)
 
@@ -825,20 +824,6 @@ instance Monad m => MonadQuery (QueryT m) where
 mapQueryT :: (ReaderT State m a -> ReaderT State n b) -> QueryT m a -> QueryT n b
 mapQueryT f = QueryT . f . runQueryT
 {-# INLINE mapQueryT #-}
-
--- | An queriable value: Mapping between concrete/symbolic values.
-class Queriable m a where
-  type QueryResult a :: Type
-
-  -- | ^ Create a new symbolic value of type @a@
-  create  :: QueryT m a
-
-  -- | ^ Extract the current value in a SAT context
-  project :: a -> QueryT m (QueryResult a)
-
-  -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
-  -- via the 'QueryT' monad transformer.
-  embed   :: QueryResult a -> QueryT m a
 
 -- Have to define this one by hand, because we use ReaderT in the implementation
 instance MonadReader r m => MonadReader r (QueryT m) where

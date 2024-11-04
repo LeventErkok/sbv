@@ -75,7 +75,7 @@ import Data.SBV.Core.Data     ( SV(..), trueSV, falseSV, CV(..), trueCV, falseCV
                               )
 
 import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV, symbolicEnv, SymbolicT
-                              , MonadQuery(..), QueryContext(..), Queriable(..), VarContext(..)
+                              , MonadQuery(..), QueryContext(..), VarContext(..)
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
                               , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
@@ -213,13 +213,6 @@ inNewContext act = do st@State{rconstMap, rProgInfo} <- queryState
                       progInfo <- io $ readIORef rProgInfo
                       syncUpSolver progInfo rconstMap is
                       return r
-
--- | Generic 'Queriable' instance for 'SymVal' values
-instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
-  type QueryResult (SBV a) = a
-  create  = freshVar_
-  project = getValue
-  embed   = return . literal
 
 -- | Generalization of 'Data.SBV.Control.freshVar_'
 freshVar_ :: forall a m. (MonadIO m, MonadQuery m, SymVal a) => m (SBV a)

@@ -9,7 +9,10 @@
 -- Control sublanguage for interacting with SMT solvers.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -76,34 +79,44 @@ module Data.SBV.Control (
      , SMTOption(..)
      ) where
 
-import Data.SBV.Core.Symbolic (MonadQuery(..), Query, Queriable(..), Symbolic, QueryContext(..))
+import Data.SBV.Core.Symbolic (Symbolic, QueryContext(..))
 
-import Data.SBV.Control.BaseIO
-import Data.SBV.Control.Query hiding (  getInfo, getOption, getUnknownReason, getObservables
-                                      , getSMTResult, getLexicographicOptResults
-                                      , getIndependentOptResults
-                                      , getParetoOptResults, getModel
-                                      , checkSatAssuming
-                                      , checkSatAssumingWithUnsatisfiableSet
-                                      , getAssertionStackDepth
-                                      , inNewAssertionStack, push, pop
-                                      , caseSplit, resetAssertions, echo, exit
-                                      , getUnsatCore, getProof, getInterpolantMathSAT, getInterpolantZ3
-                                      , getAbduct, getAbductNext
-                                      , getAssertions, getAssignment
-                                      , mkSMTResult, freshVar_, freshVar
-                                      , checkSat, ensureSat
-                                      , checkSatUsing, getValue
-                                      , getUninterpretedValue, timeout, io)
+import Data.SBV.Trans.Control hiding (query)
 import Data.SBV.Control.Utils (registerUISMTFunction, registerSMTType)
 
-import Data.SBV.Utils.ExtractIO (ExtractIO(..))
-
 import qualified Data.SBV.Control.Utils as Trans
+
+import Data.SBV.Core.Data (SymVal, SBV, literal)
+
+import Control.Monad.Trans (MonadIO)
+import Data.Kind (Type)
+
 
 -- | Run a custom query
 query :: Query a -> Symbolic a
 query = Trans.executeQuery QueryExternal
+
+-- | An queriable value: Mapping between concrete/symbolic values.
+class Queriable m a where
+  type QueryResult a :: Type
+
+  -- | ^ Create a new symbolic value of type @a@
+  create  :: QueryT m a
+
+  -- | ^ Extract the current value in a SAT context
+  project :: a -> QueryT m (QueryResult a)
+
+  -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
+  -- via the 'QueryT' monad transformer.
+  embed   :: QueryResult a -> QueryT m a
+
+-- | Generic 'Queriable' instance for 'SymVal' values
+instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
+  type QueryResult (SBV a) = a
+
+  create  = freshVar_
+  project = getValue
+  embed   = return . literal
 
 {- $queryIntro
 In certain cases, the user might want to take over the communication with the solver, programmatically
