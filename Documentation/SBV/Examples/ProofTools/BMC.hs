@@ -18,7 +18,6 @@
 -- What if @y@ starts at @11@?
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -36,7 +35,6 @@ import Data.SBV.Control
 
 -- | System state, containing the two integers.
 data S a = S { x :: a, y :: a }
-         deriving (Functor, Foldable, Traversable)
 
 -- | Show the state as a pair
 instance Show a => Show (S a) where
@@ -50,9 +48,9 @@ instance EqSymbolic a => EqSymbolic (S a) where
 instance Queriable IO (S SInteger) where
   type QueryResult (S SInteger) = S Integer
 
-  create  = S <$> freshVar_ <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+  create          = S <$> freshVar_ <*> freshVar_
+  project S{x, y} = getValue x >>= \vx -> getValue y >>= \vy -> pure S{x = vx, y = vy}
+  embed   S{x, y} = pure S{x = literal x, y = literal y}
 
 -- * Encoding the problem
 

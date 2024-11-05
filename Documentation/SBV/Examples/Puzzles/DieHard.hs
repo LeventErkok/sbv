@@ -13,7 +13,6 @@
 
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveDataTypeable    #-}
-{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -61,15 +60,15 @@ instance Queriable IO SState where
   project State{big, small, action} = do b <- getValue big
                                          s <- getValue small
                                          a <- getValue action
-                                         pure $ State { big    = b
-                                                      , small  = s
-                                                      , action = a
-                                                      }
+                                         pure State{ big    = b
+                                                   , small  = s
+                                                   , action = a
+                                                   }
 
-  embed State{big, small, action} = pure $ State { big    = literal big
-                                                 , small  = literal small
-                                                 , action = literal action
-                                                 }
+  embed State{big, small, action} = pure State{ big    = literal big
+                                              , small  = literal small
+                                              , action = literal action
+                                              }
 
 -- | Solve the problem using a BMC search. We have:
 --

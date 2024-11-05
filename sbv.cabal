@@ -39,7 +39,6 @@ common common-settings
                      DeriveDataTypeable
                      DeriveFunctor
                      DeriveGeneric
-                     DeriveTraversable
                      DerivingStrategies
                      ExistentialQuantification
                      FlexibleContexts

@@ -21,9 +21,6 @@
 -- @s@ is the sum of all numbers up to and including @n@ upon termination.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DeriveAnyClass        #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -37,21 +34,19 @@ import Data.SBV
 import Data.SBV.Tools.Induction
 import Data.SBV.Control
 
-import GHC.Generics hiding (S)
-
 -- * System state
 
 -- | System state. We simply have two components, parameterized
 -- over the type so we can put in both concrete and symbolic values.
-data S a = S { s :: a, i :: a, n :: a } deriving (Show, Mergeable, Generic, Functor, Foldable, Traversable)
+data S a = S { s :: a, i :: a, n :: a } deriving Show
 
 -- | 'Queriable instance for our state
 instance Queriable IO (S SInteger) where
   type QueryResult (S SInteger) = S Integer
 
-  create  = S <$> freshVar_ <*> freshVar_ <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+  create             = S <$> freshVar_ <*> freshVar_ <*> freshVar_
+  project S{s, i, n} = getValue s >>= \vs -> getValue i >>= \vi -> getValue n >>= \vn -> pure S{s = vs, i = vi, n = vn}
+  embed   S{s, i, n} = pure S{s = literal s, i = literal i, n = literal n}
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

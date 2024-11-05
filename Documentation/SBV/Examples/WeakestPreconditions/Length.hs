@@ -34,39 +34,27 @@ import GHC.Generics (Generic)
 -- * Program state
 
 -- | The state of the length program, paramaterized over the element type @a@
-data LenS a = LenS { xs :: SList a  -- ^ The input list
-                   , ys :: SList a  -- ^ Copy of input
-                   , l  :: SInteger -- ^ Running length
-                   }
-                   deriving (Generic, Mergeable)
-
--- | The concrete counterpart to 'LenS'. Note that we can no longer use the duality
--- between @SBV a@ and @a@ as in other examples and just use one datatype for both.
--- This is because @SList a@ and @[a]@ are fundamentally different types. This can
--- be a bit confusing at first, but the point is that it is the list that is symbolic
--- in case of an @SList a@, not that we have a concrete list with symbolic elements
--- in it. Subtle difference, but it is important to keep these two separate.
-data LenC a = LenC [a] [a] Integer
+data LenS a b = LenS { xs :: a  -- ^ The input list
+                     , ys :: a  -- ^ Copy of input
+                     , l  :: b  -- ^ Running length
+                     }
+                     deriving (Generic, Mergeable)
 
 -- | Show instance: A simplified version of what would otherwise be generated.
-instance (SymVal a, Show a) => Show (LenS a) where
-  show (LenS xs ys l) = "{xs = " ++ sh xs ++ ", ys = " ++ sh ys ++ ", l = " ++ sh l ++ "}"
-    where sh v = maybe "<symbolic>" show (unliteral v)
-
--- | Show instance: Similarly, we want to be a bit more concise here.
-instance Show a => Show (LenC a) where
-  show (LenC xs ys l) = "{xs = " ++ show xs ++ ", ys = " ++ show ys ++ ", l = " ++ show l ++ "}"
+instance (SymVal a, Show (f a), Show b) => Show (LenS (f a) b) where
+  show LenS{xs, ys, l} = "{xs = " ++ show xs ++ ", ys = " ++ show ys ++ ", l = " ++ show l ++ "}"
 
 -- | We have to write the bijection between 'LenS' and 'LenC' explicitly. Luckily, the
 -- definition is more or less boilerplate.
-instance Queriable IO (LenS Integer) where
-  type QueryResult (LenS Integer) = LenC Integer
-  create                 = LenS <$> freshVar_   <*> freshVar_   <*> freshVar_
-  project (LenS xs ys l) = LenC <$> getValue xs <*> getValue ys <*> getValue l
-  embed   (LenC xs ys l) = return $ LenS (literal xs) (literal ys) (literal l)
+instance Queriable IO (LenS (SList Integer) SInteger) where
+  type QueryResult (LenS (SList Integer) SInteger) = LenS [Integer] Integer
+
+  create                  = LenS <$> freshVar_   <*> freshVar_   <*> freshVar_
+  project LenS{xs, ys, l} = getValue xs >>= \vxs -> getValue ys >>= \vys -> getValue l >>= \vl -> pure LenS{xs = vxs, ys = vys, l = vl}
+  embed   LenS{xs, ys, l} = pure LenS{xs = literal xs, ys = literal ys, l = literal l}
 
 -- | Helper type synonym
-type S = LenS Integer
+type S = LenS (SList Integer) SInteger
 
 -- * The algorithm
 

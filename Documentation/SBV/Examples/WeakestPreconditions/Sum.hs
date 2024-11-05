@@ -14,7 +14,6 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -44,7 +43,7 @@ data SumS a = SumS { n :: a    -- ^ The input value
                    , i :: a    -- ^ Loop counter
                    , s :: a    -- ^ Running sum
                    }
-                   deriving (Show, Generic, Mergeable, Functor, Foldable, Traversable)
+                   deriving (Show, Generic, Mergeable)
 
 -- | Show instance for 'SumS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -56,9 +55,9 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
 instance Queriable IO (SumS SInteger) where
   type QueryResult (SumS SInteger) = SumS Integer
 
-  create  = SumS <$> freshVar_ <*> freshVar_ <*> freshVar_
-  project = mapM getValue
-  embed   = return . fmap literal
+  create                = SumS <$> freshVar_ <*> freshVar_ <*> freshVar_
+  project SumS{n, i, s} = getValue n >>= \vn -> getValue i >>= \vi -> getValue s >>= \vs -> pure SumS{n = vn, i = vi, s = vs}
+  embed   SumS{n, i, s} = pure SumS{n = literal n, i = literal i, s = literal s}
 
 -- | Helper type synonym
 type S = SumS SInteger

@@ -39,36 +39,27 @@ import GHC.Generics (Generic)
 -- * Program state
 
 -- | The state of the length program, paramaterized over the element type @a@
-data AppS a = AppS { xs :: SList a  -- ^ The first input list
-                   , ys :: SList a  -- ^ The second input list
-                   , ts :: SList a  -- ^ Temporary variable
-                   , zs :: SList a  -- ^ Output
+data AppS a = AppS { xs :: a  -- ^ The first input list
+                   , ys :: a  -- ^ The second input list
+                   , ts :: a  -- ^ Temporary variable
+                   , zs :: a  -- ^ Output
                    }
                    deriving (Generic, Mergeable)
 
--- | The concrete counterpart of 'AppS'. Again, we can't simply use the duality between
--- @SBV a@ and @a@ due to the difference between @SList a@ and @[a]@.
-data AppC a = AppC [a] [a] [a] [a]
-
--- | Show instance for 'AppS'. The above deriving clause would work just as well,
--- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
-instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (AppS a) where
-  show (AppS xs ys ts zs) = "{xs = " P.++ sh xs P.++ ", ys = " P.++ sh ys P.++ ", ts = " P.++ sh ts P.++ ", zs = " P.++ sh zs P.++ "}"
-    where sh v = maybe "<symbolic>" show (unliteral v)
-
 -- | Show instance, a bit more prettier than what would be derived:
-instance Show a => Show (AppC a) where
-  show (AppC xs ys ts zs) = "{xs = " P.++ show xs P.++ ", ys = " P.++ show ys P.++ ", ts = " P.++ show ts P.++ ", zs = " P.++ show zs P.++ "}"
+instance Show (f a) => Show (AppS (f a)) where
+  show AppS{xs, ys, ts, zs} = "{xs = " P.++ show xs P.++ ", ys = " P.++ show ys P.++ ", ts = " P.++ show ts P.++ ", zs = " P.++ show zs P.++ "}"
 
 -- | 'Queriable' instance for the program state
-instance Queriable IO (AppS Integer) where
-  type QueryResult (AppS Integer) = AppC Integer
-  create                     = AppS <$> freshVar_   <*> freshVar_   <*> freshVar_   <*> freshVar_
-  project (AppS xs ys ts zs) = AppC <$> getValue xs <*> getValue ys <*> getValue ts <*> getValue zs
-  embed   (AppC xs ys ts zs) = return $ AppS (literal xs) (literal ys) (literal ts) (literal zs)
+instance Queriable IO (AppS (SList Integer)) where
+  type QueryResult (AppS (SList Integer)) = AppS [Integer]
+
+  create                       = AppS <$> freshVar_  <*> freshVar_  <*> freshVar_  <*> freshVar_
+  project AppS{xs, ys, ts, zs} = getValue xs >>= \vxs -> getValue ys >>= \vxy -> getValue ts >>= \vts -> getValue zs >>= \vzs -> pure AppS{xs = vxs, ys = vxy, ts = vts, zs = vzs}
+  embed   AppS{xs, ys, ts, zs} = pure AppS{xs = literal xs, ys = literal ys, ts = literal ts, zs = literal zs}
 
 -- | Helper type synonym
-type A = AppS Integer
+type A = AppS (SList Integer)
 
 -- * The algorithm
 
@@ -122,5 +113,5 @@ imperativeAppend = Program { setup         = return ()
 -- >>> correctness
 -- Total correctness is established.
 -- Q.E.D.
-correctness :: IO (ProofResult (AppC Integer))
+correctness :: IO (ProofResult (AppS [Integer]))
 correctness = wpProveWith defaultWPCfg{wpVerbose=True} imperativeAppend
