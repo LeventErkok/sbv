@@ -74,14 +74,14 @@ instance Queriable IO SState where
 -- | Solve the problem using a BMC search. We have:
 --
 -- >>> dieHard
--- BMC: Iteration: 0
--- BMC: Iteration: 1
--- BMC: Iteration: 2
--- BMC: Iteration: 3
--- BMC: Iteration: 4
--- BMC: Iteration: 5
--- BMC: Iteration: 6
--- BMC: Solution found at iteration 6
+-- BMC Cover: Iteration: 0
+-- BMC Cover: Iteration: 1
+-- BMC Cover: Iteration: 2
+-- BMC Cover: Iteration: 3
+-- BMC Cover: Iteration: 4
+-- BMC Cover: Iteration: 5
+-- BMC Cover: Iteration: 6
+-- BMC Cover: Solution found at iteration 6
 -- Big: 0, Small: 0 (Initial)
 -- Big: 5, Small: 0 (FillBig)
 -- Big: 2, Small: 3 (BigToSmall)
@@ -90,7 +90,7 @@ instance Queriable IO SState where
 -- Big: 5, Small: 2 (FillBig)
 -- Big: 4, Small: 3 (BigToSmall)
 dieHard :: IO ()
-dieHard = display =<< bmc Nothing True (pure ()) initial trans goal
+dieHard = display =<< bmcCover Nothing True (pure ()) initial trans goal
   where -- we start from empty jugs, and try to reach a state where big has 4 gallons
         initial State{big, small, action} = (big, small, action) .== (0, 0, sInitial)
         goal    State{big}                = big .== 4

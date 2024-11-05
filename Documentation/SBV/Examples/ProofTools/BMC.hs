@@ -58,7 +58,7 @@ instance Queriable IO (S SInteger) where
 
 -- | We parameterize over the initial state for different variations.
 problem :: Int -> (S SInteger -> SBool) -> IO (Either String (Int, [S Integer]))
-problem lim initial = bmc (Just lim) True setup initial trans goal
+problem lim initial = bmcCover (Just lim) True setup initial trans goal
   where
         -- This is where we would put solver options, typically via
         -- calls to 'Data.SBV.setOption'. We do not need any for this problem,
@@ -82,11 +82,11 @@ problem lim initial = bmc (Just lim) True setup initial trans goal
 -- | Example 1: We start from @x=0@, @y=10@, and search up to depth @10@. We have:
 --
 -- >>> ex1
--- BMC: Iteration: 0
--- BMC: Iteration: 1
--- BMC: Iteration: 2
--- BMC: Iteration: 3
--- BMC: Solution found at iteration 3
+-- BMC Cover: Iteration: 0
+-- BMC Cover: Iteration: 1
+-- BMC Cover: Iteration: 2
+-- BMC Cover: Iteration: 3
+-- BMC Cover: Solution found at iteration 3
 -- Right (3,[(0,10),(0,6),(0,2),(2,2)])
 --
 -- As expected, there's a solution in this case. Furthermore, since the BMC engine
@@ -102,17 +102,17 @@ ex1 = problem 10 isInitial
 -- | Example 2: We start from @x=0@, @y=11@, and search up to depth @10@. We have:
 --
 -- >>> ex2
--- BMC: Iteration: 0
--- BMC: Iteration: 1
--- BMC: Iteration: 2
--- BMC: Iteration: 3
--- BMC: Iteration: 4
--- BMC: Iteration: 5
--- BMC: Iteration: 6
--- BMC: Iteration: 7
--- BMC: Iteration: 8
--- BMC: Iteration: 9
--- Left "BMC limit of 10 reached"
+-- BMC Cover: Iteration: 0
+-- BMC Cover: Iteration: 1
+-- BMC Cover: Iteration: 2
+-- BMC Cover: Iteration: 3
+-- BMC Cover: Iteration: 4
+-- BMC Cover: Iteration: 5
+-- BMC Cover: Iteration: 6
+-- BMC Cover: Iteration: 7
+-- BMC Cover: Iteration: 8
+-- BMC Cover: Iteration: 9
+-- Left "BMC Cover limit of 10 reached. Cover can't be established."
 --
 -- As expected, there's no solution in this case. While SBV (and BMC) cannot establish
 -- that there is no solution at a larger depth, you can see that this will never be the

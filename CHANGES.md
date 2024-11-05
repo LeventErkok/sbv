@@ -41,7 +41,8 @@
     generalizes the use cases, and it is easy to translate from existing applications. Simply change your old
     'State -> [State]' function to 'State -> State -> SBool', which can be achieved by 
     'newTrans s1 s2 = s2 `sElem` oldTrans s1', though you probably want to code this in a more readable way
-    depending on the actual transition relation you want to model.
+    depending on the actual transition relation you want to model. Furthermore, the function bmc is now
+    split into two bmcRefute and bmcCover, to indicate use cases more clearly.
 
   * [BACKWARDS COMPATIBILITY] Removed the Fresh class, which was used as a proxy for the Queriable class as
     an easier to instantiate version. The extra functionality unfortunately made writing custom Queriable
