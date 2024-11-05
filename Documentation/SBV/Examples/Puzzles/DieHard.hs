@@ -80,7 +80,7 @@ instance Queriable IO SState where
 -- BMC Cover: Iteration: 4
 -- BMC Cover: Iteration: 5
 -- BMC Cover: Iteration: 6
--- BMC Cover: Solution found at iteration 6
+-- BMC Cover: Satisfying state found at iteration 6
 -- Big: 0, Small: 0 (Initial)
 -- Big: 5, Small: 0 (FillBig)
 -- Big: 2, Small: 3 (BigToSmall)

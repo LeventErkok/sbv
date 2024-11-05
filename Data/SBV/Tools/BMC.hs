@@ -95,9 +95,9 @@ bmcWith kind cfg mbLimit chatty setup initial trans goal
                         query $ do state <- create
                                    constrain $ initial state
                                    go 0 state []
-   where (what, badResult) = case kind of
-                              Cover  -> ("BMC Cover",  "Cover can't be established.")
-                              Refute -> ("BMC Refute", "Cannot refute the claim.")
+   where (what, badResult, goodResult) = case kind of
+                                           Cover  -> ("BMC Cover",  "Cover can't be established.", "Satisfying")
+                                           Refute -> ("BMC Refute", "Cannot refute the claim.",    "Failing")
 
          go i _ _
           | Just l <- mbLimit, i >= l
@@ -116,7 +116,7 @@ bmcWith kind cfg mbLimit chatty setup initial trans goal
 
                                   case cs of
                                     DSat{} -> error $ what ++ ": Solver returned an unexpected delta-sat result."
-                                    Sat    -> do when chatty $ io $ putStrLn $ what ++ ": Solution found at iteration " ++ show i
+                                    Sat    -> do when chatty $ io $ putStrLn $ what ++ ": " ++ goodResult ++ " state found at iteration " ++ show i
                                                  ms <- mapM project (curState : sofar)
                                                  return $ Right (i, reverse ms)
                                     Unk    -> do when chatty $ io $ putStrLn $ what ++ ": Backend solver said unknown at iteration " ++ show  i
