@@ -47,9 +47,9 @@ instance (SymVal a, Show (f a), Show b) => Show (LenS (f a) b) where
 instance Queriable IO (LenS (SList Integer) SInteger) where
   type QueryResult (LenS (SList Integer) SInteger) = LenS [Integer] Integer
 
-  create                  = LenS <$> freshVar_   <*> freshVar_   <*> freshVar_
-  project LenS{xs, ys, l} = getValue xs >>= \vxs -> getValue ys >>= \vys -> getValue l >>= \vl -> pure LenS{xs = vxs, ys = vys, l = vl}
-  embed   LenS{xs, ys, l} = pure LenS{xs = literal xs, ys = literal ys, l = literal l}
+  create                 = LenS <$> freshVar_  <*> freshVar_  <*> freshVar_
+  project (LenS xs ys l) = LenS <$> project xs <*> project ys <*> project l
+  embed   (LenS xs ys l) = LenS <$> embed   xs <*> embed   ys <*> embed   l
 
 -- | Helper type synonym
 type S = LenS (SList Integer) SInteger

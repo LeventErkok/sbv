@@ -1777,10 +1777,10 @@ class Queriable m a where
   embed   :: QueryResult a -> QueryT m a
 
   default project :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => a -> QueryT m (QueryResult a)
-  project = mapM getValue
+  project = mapM project
 
   default embed :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => QueryResult a -> QueryT m a
-  embed = pure . fmap literal
+  embed = mapM embed
   {-# MINIMAL create #-}
 
 -- | Generic 'Queriable' instance for 'SymVal' values

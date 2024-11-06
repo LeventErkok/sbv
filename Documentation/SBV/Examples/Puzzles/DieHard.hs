@@ -54,20 +54,9 @@ type CState = State Integer Action
 instance Queriable IO SState where
   type QueryResult SState = CState
 
-  create = State <$> freshVar_ <*> freshVar_ <*> freshVar_
-
-  project State{big, small, action} = do b <- getValue big
-                                         s <- getValue small
-                                         a <- getValue action
-                                         pure State{ big    = b
-                                                   , small  = s
-                                                   , action = a
-                                                   }
-
-  embed State{big, small, action} = pure State{ big    = literal big
-                                              , small  = literal small
-                                              , action = literal action
-                                              }
+  create                = State <$> freshVar_ <*> freshVar_ <*> freshVar_
+  project (State b s a) = State <$> project b <*> project s <*> project a
+  embed   (State b s a) = State <$> embed   b <*> embed   s <*> embed   a
 
 -- | Solve the problem using a BMC search. We have:
 --
