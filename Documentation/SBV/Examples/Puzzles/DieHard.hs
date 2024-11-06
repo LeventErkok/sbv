@@ -26,7 +26,6 @@
 module Documentation.SBV.Examples.Puzzles.DieHard where
 
 import Data.SBV
-import Data.SBV.Control
 import Data.SBV.Tools.BMC
 
 -- | Possible actions

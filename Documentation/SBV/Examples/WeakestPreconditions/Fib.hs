@@ -26,8 +26,6 @@
 module Documentation.SBV.Examples.WeakestPreconditions.Fib where
 
 import Data.SBV
-import Data.SBV.Control
-
 import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)

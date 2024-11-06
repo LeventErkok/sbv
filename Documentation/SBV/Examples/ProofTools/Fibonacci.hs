@@ -34,7 +34,6 @@ module Documentation.SBV.Examples.ProofTools.Fibonacci where
 
 import Data.SBV
 import Data.SBV.Tools.Induction
-import Data.SBV.Control
 
 -- * System state
 

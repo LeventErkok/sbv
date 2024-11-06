@@ -30,7 +30,6 @@ module Documentation.SBV.Examples.ProofTools.BMC where
 
 import Data.SBV
 import Data.SBV.Tools.BMC
-import Data.SBV.Control
 
 -- * System state
 

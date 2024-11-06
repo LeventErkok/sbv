@@ -145,13 +145,15 @@
 -- get in touch if there is a solver you'd like to see included.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE FlexibleContexts     #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TypeApplications     #-}
-{-# LANGUAGE TypeFamilies         #-}
-{-# LANGUAGE TypeOperators        #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DefaultSignatures     #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -421,6 +423,9 @@ module Data.SBV (
   , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
 
+  -- * Queriable values
+  , Queriable(..), freshVar, freshVar_, getValue
+
   -- * Module exports
   -- $moduleExportIntro
 
@@ -430,7 +435,8 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.Monad (when)
+import Control.Monad       (when)
+import Control.Monad.Trans (MonadIO)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data       hiding (free, free_, mkFreeVars,
@@ -488,11 +494,14 @@ import Data.Ratio
 import Data.Word
 
 import Data.SBV.SMT.Utils (SBVException(..))
+
 import Data.SBV.Control.Types (SMTReasonUnknown(..), Logic(..))
+import Data.SBV.Control.Utils (getValue, freshVar, freshVar_)
 
 import qualified Data.SBV.Utils.CrackNum as CN
 
 import Data.Proxy (Proxy(..))
+import Data.Kind  (Type)
 import GHC.TypeLits (KnownNat, type (<=), type (+), type (-))
 
 import Prelude hiding((+), (-)) -- to avoid the haddock ambiguity
@@ -1751,5 +1760,35 @@ optIndependentWith config p = do
      IndependentResult r -> pure r
      _                   -> error $ "An independent optimization call resulted in a bad result:"
                                   ++ "\n" ++ show res
+
+-- | An queriable value: Mapping between concrete/symbolic values. If your type is traversable and simply embeds
+-- symbolic equivalents for one type, then you can simply define 'create'. (Which is the most common case.)
+class Queriable m a where
+  type QueryResult a :: Type
+
+  -- | ^ Create a new symbolic value of type @a@
+  create  :: QueryT m a
+
+  -- | ^ Extract the current value in a SAT context
+  project :: a -> QueryT m (QueryResult a)
+
+  -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
+  -- via the 'QueryT' monad transformer.
+  embed   :: QueryResult a -> QueryT m a
+
+  default project :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => a -> QueryT m (QueryResult a)
+  project = mapM getValue
+
+  default embed :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => QueryResult a -> QueryT m a
+  embed = pure . fmap literal
+  {-# MINIMAL create #-}
+
+-- | Generic 'Queriable' instance for 'SymVal' values
+instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
+  type QueryResult (SBV a) = a
+
+  create  = freshVar_
+  project = getValue
+  embed   = return . literal
 
 {- HLint ignore module "Use import/export shortcut" -}

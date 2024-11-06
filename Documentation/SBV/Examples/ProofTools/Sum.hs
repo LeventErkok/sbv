@@ -33,7 +33,6 @@ module Documentation.SBV.Examples.ProofTools.Sum where
 
 import Data.SBV
 import Data.SBV.Tools.Induction
-import Data.SBV.Control
 
 -- * System state
 

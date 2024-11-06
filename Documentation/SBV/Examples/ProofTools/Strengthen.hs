@@ -41,7 +41,6 @@ module Documentation.SBV.Examples.ProofTools.Strengthen where
 
 import Data.SBV
 import Data.SBV.Tools.Induction
-import Data.SBV.Control
 
 -- * System state
 

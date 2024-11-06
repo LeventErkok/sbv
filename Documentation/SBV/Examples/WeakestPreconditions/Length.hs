@@ -23,11 +23,9 @@
 module Documentation.SBV.Examples.WeakestPreconditions.Length where
 
 import Data.SBV
-import Data.SBV.Control
+import Data.SBV.Tools.WeakestPreconditions
 
 import qualified Data.SBV.List as L
-
-import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 

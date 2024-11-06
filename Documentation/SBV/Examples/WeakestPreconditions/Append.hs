@@ -25,15 +25,13 @@
 module Documentation.SBV.Examples.WeakestPreconditions.Append where
 
 import Data.SBV
-import Data.SBV.Control
+import Data.SBV.Tools.WeakestPreconditions
 
 import Prelude hiding ((++))
 import qualified Prelude as P
 
 import           Data.SBV.List ((++))
 import qualified Data.SBV.List as L
-
-import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
