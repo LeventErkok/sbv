@@ -13,6 +13,7 @@
 
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -44,7 +45,7 @@ data AppS a = AppS { xs :: a  -- ^ The first input list
                    , ts :: a  -- ^ Temporary variable
                    , zs :: a  -- ^ Output
                    }
-                   deriving (Generic, Mergeable)
+                   deriving (Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance, a bit more prettier than what would be derived:
 instance Show (f a) => Show (AppS (f a)) where
@@ -53,10 +54,7 @@ instance Show (f a) => Show (AppS (f a)) where
 -- | 'Queriable' instance for the program state
 instance Queriable IO (AppS (SList Integer)) where
   type QueryResult (AppS (SList Integer)) = AppS [Integer]
-
-  create                       = AppS <$> freshVar_  <*> freshVar_  <*> freshVar_  <*> freshVar_
-  project AppS{xs, ys, ts, zs} = getValue xs >>= \vxs -> getValue ys >>= \vxy -> getValue ts >>= \vts -> getValue zs >>= \vzs -> pure AppS{xs = vxs, ys = vxy, ts = vts, zs = vzs}
-  embed   AppS{xs, ys, ts, zs} = pure AppS{xs = literal xs, ys = literal ys, ts = literal ts, zs = literal zs}
+  create = AppS <$> freshVar_  <*> freshVar_  <*> freshVar_  <*> freshVar_
 
 -- | Helper type synonym
 type A = AppS (SList Integer)

@@ -17,6 +17,7 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -53,7 +54,7 @@ data GCDS a = GCDS { x :: a    -- ^ First value
                    , i :: a    -- ^ Copy of x to be modified
                    , j :: a    -- ^ Copy of y to be modified
                    }
-                   deriving (Show, Generic, Mergeable)
+                   deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance for 'GCDS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -64,10 +65,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (GCDS (SBV a)) where
 -- | 'Queriable instance for our state
 instance Queriable IO (GCDS SInteger) where
   type QueryResult (GCDS SInteger) = GCDS Integer
-
-  create                   = GCDS <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-  project GCDS{x, y, i, j} = getValue x >>= \vx -> getValue y >>= \vy -> getValue i >>= \vi -> getValue j >>= \vj -> pure GCDS{x = vx, y = vy, i = vi, j = vj}
-  embed   GCDS{x, y, i, j} = pure GCDS{x = literal x, y = literal y, i = literal i, j = literal j}
+  create = GCDS <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Helper type synonym
 type G = GCDS SInteger

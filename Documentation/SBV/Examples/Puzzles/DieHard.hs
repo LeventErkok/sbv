@@ -49,7 +49,7 @@ instance (Show a, Show b) => Show (State a b) where
 type SState = State SInteger SAction
 
 -- | Fully concrete state
-type CState = State Integer  Action
+type CState = State Integer Action
 
 -- | 'Queriable' instance needed for running bmc
 instance Queriable IO SState where

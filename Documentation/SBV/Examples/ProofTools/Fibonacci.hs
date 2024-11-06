@@ -22,6 +22,7 @@
 -- uninterpreted function.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -39,15 +40,12 @@ import Data.SBV.Control
 
 -- | System state. We simply have two components, parameterized
 -- over the type so we can put in both concrete and symbolic values.
-data S a = S { i :: a, k :: a, m :: a, n :: a } deriving Show
+data S a = S { i :: a, k :: a, m :: a, n :: a } deriving (Show, Traversable, Functor, Foldable)
 
 -- | 'Queriable instance for our state
 instance Queriable IO (S SInteger) where
   type QueryResult (S SInteger) = S Integer
-
-  create                = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
-  project S{i, k, m, n} = getValue i >>= \vi -> getValue k >>= \vk -> getValue m >>= \vm -> getValue n >>= \vn -> pure S{i = vi, k = vk, m = vm, n = vn}
-  embed   S{i, k, m, n} = pure S{i = literal i, k = literal k, m = literal m, n = literal n}
+  create = S <$> freshVar_ <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Encoding partial correctness of the sum algorithm. We have:
 --

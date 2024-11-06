@@ -15,6 +15,7 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -47,7 +48,7 @@ data FibS a = FibS { n :: a    -- ^ The input value
                    , k :: a    -- ^ tracks @fib (i+1)@
                    , m :: a    -- ^ tracks @fib i@
                    }
-                   deriving (Show, Generic, Mergeable)
+                   deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance for 'FibS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -58,10 +59,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (FibS (SBV a)) where
 -- | 'Queriable instance for our state
 instance Queriable IO (FibS SInteger) where
   type QueryResult (FibS SInteger) = FibS Integer
-
-  create                   = FibS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
-  project FibS{n, i, k, m} = getValue n >>= \vn -> getValue i >>= \vi -> getValue k >>= \vk -> getValue m >>= \vm -> pure FibS{n = vn, i = vi, k = vk, m = vm}
-  embed   FibS{n, i, k, m} = pure FibS{n = literal n, i = literal i, k = literal k, m = literal m}
+  create = FibS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Helper type synonym
 type F = FibS SInteger

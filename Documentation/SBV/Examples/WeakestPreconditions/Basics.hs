@@ -14,6 +14,7 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -44,7 +45,7 @@ import GHC.Generics (Generic)
 data IncS a = IncS { x :: a    -- ^ Input value
                    , y :: a    -- ^ Output
                    }
-                   deriving (Show, Generic, Mergeable)
+                   deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance for 'IncS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -55,10 +56,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (IncS (SBV a)) where
 -- | 'Queriable instance for our state
 instance Queriable IO (IncS SInteger) where
   type QueryResult (IncS SInteger) = IncS Integer
-
-  create             = IncS <$> freshVar_ <*> freshVar_
-  project IncS{x, y} = getValue x >>= \vx -> getValue y >>= \vy -> pure IncS{x = vx, y = vy}
-  embed   IncS{x, y} = pure IncS{x = literal x, y = literal y}
+  create = IncS <$> freshVar_ <*> freshVar_
 
 -- | Helper type synonym
 type I = IncS SInteger

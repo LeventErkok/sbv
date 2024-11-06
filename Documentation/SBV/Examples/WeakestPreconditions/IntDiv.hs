@@ -13,6 +13,7 @@
 
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -37,7 +38,7 @@ data DivS a = DivS { x :: a   -- ^ The dividend
                    , q :: a   -- ^ The quotient
                    , r :: a   -- ^ The remainder
                    }
-                   deriving (Show, Generic, Mergeable)
+                   deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance for 'DivS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -48,10 +49,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (DivS (SBV a)) where
 -- | 'Queriable' instance for the program state
 instance SymVal a => Queriable IO (DivS (SBV a)) where
   type QueryResult (DivS (SBV a)) = DivS a
-
-  create                   = DivS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
-  project DivS{x, y, q, r} = getValue x >>= \vx -> getValue y >>= \vy -> getValue q >>= \vq -> getValue r >>= \vr -> pure DivS{x = vx, y = vy, q = vq, r = vr}
-  embed   DivS{x, y, q, r} = pure DivS{x = literal x, y = literal y, q = literal q, r = literal r}
+  create = DivS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Helper type synonym
 type D = DivS SInteger

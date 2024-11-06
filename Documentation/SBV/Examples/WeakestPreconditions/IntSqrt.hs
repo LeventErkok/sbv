@@ -15,6 +15,7 @@
 
 {-# LANGUAGE DeriveAnyClass        #-}
 {-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE DeriveTraversable     #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns        #-}
@@ -41,7 +42,7 @@ data SqrtS a = SqrtS { x    :: a   -- ^ The input
                      , i    :: a   -- ^ Successive squares, as the sum of j's
                      , j    :: a   -- ^ Successive odds
                      }
-                     deriving (Show, Generic, Mergeable)
+                     deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
 -- | Show instance for 'SqrtS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
@@ -52,10 +53,7 @@ instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SqrtS (SBV a)) where
 -- | 'Queriable instance for the program state
 instance SymVal a => Queriable IO (SqrtS (SBV a)) where
   type QueryResult (SqrtS (SBV a)) = SqrtS a
-
-  create                       = SqrtS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
-  project SqrtS{x, sqrt, i, j} = getValue x >>= \vx -> getValue sqrt >>= \vsqrt -> getValue i >>= \vi -> getValue j >>= \vj -> pure SqrtS{x = vx, sqrt = vsqrt, i = vi, j = vj}
-  embed   SqrtS{x, sqrt, i, j} = pure SqrtS{x = literal x, sqrt = literal sqrt, i = literal i, j = literal j}
+  create = SqrtS <$> freshVar_  <*> freshVar_ <*> freshVar_ <*> freshVar_
 
 -- | Helper type synonym
 type S = SqrtS SInteger
