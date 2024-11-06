@@ -109,6 +109,6 @@ dieHard = display =<< bmcCover Nothing True (pure ()) initial trans goal
                                                    in st{big = st.big + xfer, small = st.small - xfer}
                           ]
 
-        display :: Either String (Int, [State Integer Action]) -> IO ()
+        display :: Either String (Int, [CState]) -> IO ()
         display (Left e)        = error e
         display (Right (_, as)) = mapM_ print as
