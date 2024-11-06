@@ -25,5 +25,5 @@ import BenchSuite.Bench.Bench as B
 benchmarks :: Runner
 benchmarks = runIO "Sum.Correctness" sumCorrect
 
-instance NFData a => NFData (S a)
+instance NFData a => NFData (S a) where rnf a = seq a ()
 instance NFData a => NFData (InductionResult a) where rnf a = seq a ()

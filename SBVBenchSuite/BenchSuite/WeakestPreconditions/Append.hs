@@ -22,7 +22,7 @@ import BenchSuite.WeakestPreconditions.Instances()
 
 
 -- | orphaned instance for benchmarks
-instance NFData a => NFData (AppC a) where rnf x = seq x ()
+instance NFData a => NFData (AppS a) where rnf x = seq x ()
 
 benchmarks :: Runner
 benchmarks = runIO "Correctness.Append" correctness

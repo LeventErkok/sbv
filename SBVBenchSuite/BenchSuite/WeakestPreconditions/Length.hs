@@ -16,12 +16,8 @@ module BenchSuite.WeakestPreconditions.Length(benchmarks) where
 
 import Documentation.SBV.Examples.WeakestPreconditions.Length
 
-import Control.DeepSeq
 import BenchSuite.Bench.Bench
 import BenchSuite.WeakestPreconditions.Instances()
-
-instance NFData a => NFData (LenS a)
-
 
 benchmarks :: Runner
 benchmarks = runIO "Correctness.Length" correctness
