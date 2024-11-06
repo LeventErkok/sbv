@@ -17,15 +17,12 @@ module Data.SBV.Control (
      -- * User queries
        ExtractIO(..), MonadQuery(..), Query, query
 
-     -- * Create a fresh variable
-     , freshVar_, freshVar
-
      -- * Checking satisfiability
      , CheckSatResult(..), checkSat, ensureSat, checkSatUsing, checkSatAssuming, checkSatAssumingWithUnsatisfiableSet
 
      -- * Querying the solver
      -- ** Extracting values
-     , getValue, registerUISMTFunction, registerSMTType, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
+     , registerUISMTFunction, registerSMTType, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore
