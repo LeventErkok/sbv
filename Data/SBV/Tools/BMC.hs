@@ -81,14 +81,7 @@ bmcCoverWith = bmcWith Cover
 
 -- | Bounded model checking, configurable with the solver. Not exported; use 'bmcCover', 'bmcRefute' and their "with" variants.
 bmcWith :: (Queriable IO st, res ~ QueryResult st)
-        => BMCKind
-        -> SMTConfig
-        -> Maybe Int
-        -> Bool
-        -> Symbolic ()
-        -> (st -> SBool)
-        -> (st -> st -> SBool)
-        -> (st -> SBool)
+        => BMCKind -> SMTConfig -> Maybe Int -> Bool -> Symbolic () -> (st -> SBool) -> (st -> st -> SBool) -> (st -> SBool)
         -> IO (Either String (Int, [res]))
 bmcWith kind cfg mbLimit chatty setup initial trans goal
   = runSMTWith cfg $ do setup
