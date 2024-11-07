@@ -46,9 +46,9 @@
 
   * [BACKWARDS COMPATIBILITY] Removed the Fresh class, which was used as a proxy for the Queriable class as
     an easier to instantiate version. The extra functionality unfortunately made writing custom Queriable
-    instances harder, and it is usually not harder to write Queriable in the first place, which is the
-    more generalized version. If you were using the Fresh class, instead define Queriable, the definition
-    should be fairly simple. Please contact if you have difficulty using the Queriable interface.
+    instances harder, and it is usually not harder to write Queriable in the first place.
+    If you were using the Fresh class, instead define Queriable, the definition should be fairly
+    simple. Please contact if you have difficulty using the Queriable interface.
 
 ### Version 10.12, 2024-08-11
 
