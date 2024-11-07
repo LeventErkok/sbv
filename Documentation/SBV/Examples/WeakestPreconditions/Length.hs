@@ -42,8 +42,7 @@ data LenS a b = LenS { xs :: a  -- ^ The input list
 instance (SymVal a, Show (f a), Show b) => Show (LenS (f a) b) where
   show LenS{xs, ys, l} = "{xs = " ++ show xs ++ ", ys = " ++ show ys ++ ", l = " ++ show l ++ "}"
 
--- | We have to write the bijection between 'LenS' and 'LenC' explicitly. Luckily, the
--- definition is more or less boilerplate.
+-- | Injection/projection from concrete and symbolic values.
 instance Queriable IO (LenS (SList Integer) SInteger) where
   type QueryResult (LenS (SList Integer) SInteger) = LenS [Integer] Integer
 
