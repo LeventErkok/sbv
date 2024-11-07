@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.0, Not yet released
+### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying
     their use with all the other symbolic types. This required some back-wards compatibility
