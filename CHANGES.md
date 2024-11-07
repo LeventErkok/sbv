@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 11.0.5, Not yet released
+
+  * Generalize the signatures of the default project-embed implementations of the Queriable class.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying

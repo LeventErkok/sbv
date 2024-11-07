@@ -1776,14 +1776,16 @@ class Queriable m a where
   -- via the 'QueryT' monad transformer.
   embed   :: QueryResult a -> QueryT m a
 
-  default project :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => a -> QueryT m (QueryResult a)
+  default project :: (a ~ t e, QueryResult (t e) ~ t (QueryResult e), Traversable t, Monad m, Queriable m e) =>  a -> QueryT m (QueryResult a)
   project = mapM project
 
-  default embed :: (a ~ t (SBV e), QueryResult a ~ t e, Traversable t, MonadIO m, SymVal e) => QueryResult a -> QueryT m a
+  default embed   :: (a ~ t e, QueryResult (t e) ~ t (QueryResult e), Traversable t, Monad m, Queriable m e) => QueryResult a -> QueryT m a
   embed = mapM embed
   {-# MINIMAL create #-}
 
--- | Generic 'Queriable' instance for 'SymVal' values
+-- | Generic 'Queriable' instance for 'SymVal' values. This provides the base case for the generic definitions for project and embed
+-- when we automatically derive them. We make this instance overlappable should the user have a different mapping in mind, for instance
+-- mapping a symbolic boolean to a concrete integer for whatever reason.
 instance {-# OVERLAPPABLE #-} (MonadIO m, SymVal a) => Queriable m (SBV a) where
   type QueryResult (SBV a) = a
 
