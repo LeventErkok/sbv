@@ -561,8 +561,15 @@ concat = foldl (++) []
 -- True
 -- >>> all isEven [2, 4, 6, 1, 8, 10 :: Integer]
 -- False
-all :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
-all f = foldl (\sofar e -> sofar .&& f e) sTrue
+all :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
+all f l
+ | Just l' <- unliteral l
+ = sAll f (P.map literal l')
+ | True
+ = SBV $ SVal KBool $ Right $ cache r
+ where r st = do sva <- sbvToSV st l
+                 lam <- lambdaStr st KBool f
+                 newExpr st KBool (SBVApp (SeqOp (SBVSeqAll (kindOf (Proxy @a)) lam)) [sva])
 
 -- | Check some element satisfies the predicate.
 -- --
@@ -571,8 +578,15 @@ all f = foldl (\sofar e -> sofar .&& f e) sTrue
 -- False
 -- >>> any isEven [2, 4, 6, 1, 8, 10 :: Integer]
 -- True
-any :: SymVal a => (SBV a -> SBool) -> SList a -> SBool
-any f = foldl (\sofar e -> sofar .|| f e) sFalse
+any :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SBool
+any f l
+ | Just l' <- unliteral l
+ = sAny f (P.map literal l')
+ | True
+ = SBV $ SVal KBool $ Right $ cache r
+ where r st = do sva <- sbvToSV st l
+                 lam <- lambdaStr st KBool f
+                 newExpr st KBool (SBVApp (SeqOp (SBVSeqAny (kindOf (Proxy @a)) lam)) [sva])
 
 -- | @filter f xs@ filters the list with the given predicate.
 --
@@ -580,8 +594,20 @@ any f = foldl (\sofar e -> sofar .|| f e) sFalse
 -- [2,4,6,8,10] :: [SInteger]
 -- >>> filter (\x -> x `sMod` 2 ./= 0) [1 .. 10 :: Integer]
 -- [1,3,5,7,9] :: [SInteger]
-filter :: SymVal a => (SBV a -> SBool) -> SList a -> SList a
-filter f = foldl (\sofar e -> sofar ++ ite (f e) (singleton e) []) []
+filter :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> SList a
+filter f l
+  | Just l' <- unliteral l, Just concResult <- concreteFilter l'
+  = literal concResult
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where concreteFilter l' = case P.map (unliteral . f . literal) l' of
+                              xs | P.any isNothing xs -> Nothing
+                                 | True               -> Just [e | (True, e) <- P.zip (catMaybes xs) l']
+
+        k = kindOf (Proxy @(SList a))
+        r st = do sva <- sbvToSV st l
+                  lam <- lambdaStr st KBool f
+                  newExpr st k (SBVApp (SeqOp (SBVSeqFilter (kindOf (Proxy @a)) lam)) [sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => Bool -> SeqOp -> Maybe (a -> b) -> SBV a -> SBV b

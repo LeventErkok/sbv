@@ -520,21 +520,24 @@ instance Show RegExOp where
   show (RegExNEq r1 r2) = "(distinct " ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
 
 -- | Sequence operations.
-data SeqOp = SeqConcat            -- ^ See StrConcat
-           | SeqLen               -- ^ See StrLen
-           | SeqUnit              -- ^ See StrUnit
-           | SeqNth               -- ^ See StrNth
-           | SeqSubseq            -- ^ See StrSubseq
-           | SeqIndexOf           -- ^ See StrIndexOf
-           | SeqContains          -- ^ See StrContains
-           | SeqPrefixOf          -- ^ See StrPrefixOf
-           | SeqSuffixOf          -- ^ See StrSuffixOf
-           | SeqReplace           -- ^ See StrReplace
-           | SeqMap       String  -- ^ Mapping over sequences
-           | SeqMapI      String  -- ^ Mapping over sequences with offset
-           | SeqFoldLeft  String  -- ^ Folding of sequences
-           | SeqFoldLeftI String  -- ^ Folding of sequences with offset
-           | SBVReverse Kind      -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
+data SeqOp = SeqConcat                  -- ^ See StrConcat
+           | SeqLen                     -- ^ See StrLen
+           | SeqUnit                    -- ^ See StrUnit
+           | SeqNth                     -- ^ See StrNth
+           | SeqSubseq                  -- ^ See StrSubseq
+           | SeqIndexOf                 -- ^ See StrIndexOf
+           | SeqContains                -- ^ See StrContains
+           | SeqPrefixOf                -- ^ See StrPrefixOf
+           | SeqSuffixOf                -- ^ See StrSuffixOf
+           | SeqReplace                 -- ^ See StrReplace
+           | SeqMap       String        -- ^ Mapping over sequences
+           | SeqMapI      String        -- ^ Mapping over sequences with offset
+           | SeqFoldLeft  String        -- ^ Folding of sequences
+           | SeqFoldLeftI String        -- ^ Folding of sequences with offset
+           | SBVReverse   Kind          -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
+           | SBVSeqFilter Kind  String  -- ^ filter the list. Kind is the element type
+           | SBVSeqAll    Kind  String  -- ^ map the function and reduce via and, with base true.  Kind is the element type.
+           | SBVSeqAny    Kind  String  -- ^ map the function and reduce via or,  with base false. Kind is the element type.
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -554,11 +557,18 @@ instance Show SeqOp where
   show (SeqFoldLeft  s) = "seq.foldl "  ++ s
   show (SeqFoldLeftI s) = "seq.foldli " ++ s
 
-  -- Note: This isn't part of SMTLib, we explicitly handle it
-  show (SBVReverse k) = let sk = show k
-                            ssk | any isSpace sk = '(' : sk ++ ")"
-                                | True           = sk
-                        in "sbv.reverse @" ++ ssk
+  -- Note: The followings aren't part of SMTLib, we explicitly handle it
+  show (SBVReverse k)     = funcWithKind "sbv.reverse"   k Nothing
+  show (SBVSeqFilter k s) = funcWithKind "sbv.seqFilter" k (Just s)
+  show (SBVSeqAll    k s) = funcWithKind "sbv.seqAll"    k (Just s)
+  show (SBVSeqAny    k s) = funcWithKind "sbv.seqAny"    k (Just s)
+
+-- helper for above
+funcWithKind :: String -> Kind -> Maybe String -> String
+funcWithKind f k mbExtra = f ++ " @" ++ ssk ++ maybe "" (' ':) mbExtra
+  where sk  = show k
+        ssk | any isSpace sk = '(' : sk ++ ")"
+            | True           = sk
 
 -- | Set operations.
 data SetOp = SetEqual

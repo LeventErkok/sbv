@@ -232,11 +232,11 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
-             ++ concat [ declSBVFunc op nm | (op, nm) <- M.toAscList funcMap ]
+             ++ concat [declSBVFunc op nm | (op, nm) <- M.toAscList funcMap]
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
-             ++ concatMap (declDef curProgInfo cfg tableMap) asgns
+             ++ concatMap (declDef curProgInfo cfg tableMap funcMap) asgns
              ++ [ "; --- delayedEqualities ---" ]
              ++ map (\s -> "(assert " ++ s ++ ")") delayedEqualities
              ++ [ "; --- formula ---" ]
@@ -290,8 +290,22 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                   | True         = Just $ Left s
 
         -- SBV only functions.
-        funcMap = M.fromList [(op, "|sbv.reverse_" ++ show k ++ "|") | (op, k) <- revs]
-          where revs = nub [(op, k) | op@(SeqOp (SBVReverse k)) <- G.universeBi asgnsSeq]
+        funcMap = M.fromList $  [(op, "|sbv.reverse_"   ++ show k ++          "|") | (op@(SeqOp (SBVReverse   k  )), _) <- specials]
+                             ++ [(op, "|sbv.seqFilter_" ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqFilter k _)), i) <- specials]
+                             ++ [(op, "|sbv.seqAll_"    ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqAll    k _)), i) <- specials]
+                             ++ [(op, "|sbv.seqAny_"    ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqAny    k _)), i) <- specials]
+          where specials = zip (nub [op | op@(SeqOp so) <- G.universeBi asgnsSeq, isSpecial so]) [0..]
+
+                isSpecial SBVReverse{}   = True
+                isSpecial SBVSeqFilter{} = True
+                isSpecial SBVSeqAll{}    = True
+                isSpecial SBVSeqAny{}    = True
+                isSpecial _              = False
+
+                -- if index 0, then ignore it; other wise add it. This distinguishes different functions passed to all/any
+                idx :: Int -> String
+                idx 0 = ""
+                idx i = show i
 
         asgns = F.toList asgnsSeq
 
@@ -305,6 +319,9 @@ declSBVFunc :: Op -> String -> [String]
 declSBVFunc op nm = case op of
                       SeqOp (SBVReverse KString)   -> mkStringRev
                       SeqOp (SBVReverse (KList k)) -> mkSeqRev (KList k)
+                      SeqOp (SBVSeqFilter ek f)    -> mkFilter ek f
+                      SeqOp (SBVSeqAll    ek f)    -> mkAnyAll True  ek f
+                      SeqOp (SBVSeqAny    ek f)    -> mkAnyAll False ek f
                       _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
   where mkStringRev = [ "(define-fun-rec " ++ nm ++ " ((str String)) String"
                       , "                (ite (= str \"\")"
@@ -320,6 +337,24 @@ declSBVFunc op nm = case op of
                      , "                     (seq.++ (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))"
                      ]
           where t = smtType k
+
+        mkAnyAll isAll ek f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) Bool"
+                              , "                (ite (= lst (as seq.empty " ++ t ++ "))"
+                              , "                     " ++ base
+                              , "                     (" ++ conn ++ " (select " ++ f ++ " (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
+                              ]
+          where t = smtType (KList ek)
+                (base, conn) | isAll = ("true",  "and")
+                             | True  = ("false", "or")
+
+        mkFilter k f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
+                       , "                (ite (= lst (as seq.empty " ++ t ++ "))"
+                       , "                     (as seq.empty " ++ t ++ ")"
+                       , "                     (ite (select " ++ f ++ " (seq.nth lst 0))"
+                       , "                          (seq.++ (seq.unit (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))"
+                       , "                                                             (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
+                       ]
+          where t = smtType (KList k)
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -472,7 +507,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef curProgInfo cfg tableMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef curProgInfo cfg tableMap funcMap) (F.toList asgnsSeq)
             -- table setups
             ++ concat tableAssigns
             -- extra constraints
@@ -488,6 +523,10 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 
         (tableDecls, tableAssigns) = unzip $ map mkTable allTables
 
+        -- This isn't super kosher, since we might refer to an internal function in
+        -- the incremental context. But let's cross that bridge when we come to it.
+        funcMap = M.empty
+
         -- If we need flattening in models, do emit the required lines if preset
         settings
           | any needsFlattening newKinds
@@ -496,11 +535,11 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
           = []
           where solverCaps = capabilities (solver cfg)
 
-declDef :: ProgInfo -> SMTConfig -> TableMap -> (SV, SBVExpr) -> [String]
-declDef curProgInfo cfg tableMap (s, expr) =
+declDef :: ProgInfo -> SMTConfig -> TableMap -> FuncMap -> (SV, SBVExpr) -> [String]
+declDef curProgInfo cfg tableMap funcMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                               e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                                       e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap funcMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -684,7 +723,8 @@ cvtType (SBVType []) = error "SBV.SMT.SMTLib2.cvtType: internal: received an emp
 cvtType (SBVType xs) = "(" ++ unwords (map smtType body) ++ ") " ++ smtType ret
   where (body, ret) = (init xs, last xs)
 
-type TableMap    = IM.IntMap String
+type TableMap = IM.IntMap String
+type FuncMap  = M.Map Op String
 
 -- Present an SV, simply show
 cvtSV :: SV -> String
@@ -698,8 +738,8 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> String
-cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> FuncMap -> SBVExpr -> String
+cvtExp curProgInfo caps rm tableMap funcMap expr@(SBVApp _ arguments) = sh expr
   where hasPB       = supportsPseudoBooleans caps
         hasInt2bv   = supportsInt2bv         caps
         hasDistinct = supportsDistinct       caps
@@ -787,6 +827,15 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
           | KUserSort s (Just _) <- kindOf (hd "unintComp" arguments)
           = let idx v = "(" ++ s ++ "_constrIndex " ++ v ++ ")" in "(" ++ o ++ " " ++ idx a ++ " " ++ idx b ++ ")"
         unintComp o sbvs = error $ "SBV.SMT.SMTLib2.sh.unintComp: Unexpected arguments: "   ++ show (o, sbvs, map kindOf arguments)
+
+        getFuncName op = case op `M.lookup` funcMap of
+                           Just n  -> n
+                           Nothing -> error $ unlines [ ""
+                                                      , "*** Cannot translate operator: " ++ show op
+                                                      , "***"
+                                                      , "*** Note that this operator isn't currently supported in incremental query mode."
+                                                      , "*** If you are not in query mode, or would like support for this feature, please report!"
+                                                      ]
 
         stringOrChar KString = True
         stringOrChar KChar   = True
@@ -974,8 +1023,11 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExEq{})  []) = show o
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
-        -- Reverse is special, since we need to generate call to the internally generated function
-        sh (SBVApp (SeqOp (SBVReverse k)) args) = "(|sbv.reverse_" ++ show k ++ "| " ++ unwords (map cvtSV args) ++ ")"
+        -- Reverse and higher order functions are special
+        sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVSeqFilter{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVSeqAll{} )   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVSeqAny{} )   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
