@@ -51,6 +51,7 @@ import qualified Prelude as P
 import Data.SBV.Core.Kind
 import Data.SBV.Core.Data hiding (StrOp(..))
 import Data.SBV.Core.Model
+import Data.SBV.Core.Symbolic (registerSpecialFunction)
 
 import Data.SBV.Lambda
 import Data.SBV.Tuple
@@ -378,7 +379,9 @@ reverse l
   = SBV $ SVal k $ Right $ cache r
   where k = kindOf l
         r st = do sva <- sbvToSV st l
-                  newExpr st k (SBVApp (SeqOp (SBVReverse k)) [sva])
+                  let op = SeqOp (SBVReverse k)
+                  registerSpecialFunction st op
+                  newExpr st k (SBVApp op [sva])
 
 -- | @`map` op s@ maps the operation on to sequence.
 --
@@ -569,7 +572,9 @@ all f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st KBool f
-                 newExpr st KBool (SBVApp (SeqOp (SBVSeqAll (kindOf (Proxy @a)) lam)) [sva])
+                 let op = SeqOp (SBVSeqAll (kindOf (Proxy @a)) lam)
+                 registerSpecialFunction st op
+                 newExpr st KBool (SBVApp op [sva])
 
 -- | Check some element satisfies the predicate.
 -- --
@@ -586,7 +591,9 @@ any f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st KBool f
-                 newExpr st KBool (SBVApp (SeqOp (SBVSeqAny (kindOf (Proxy @a)) lam)) [sva])
+                 let op = SeqOp (SBVSeqAny (kindOf (Proxy @a)) lam)
+                 registerSpecialFunction st op
+                 newExpr st KBool (SBVApp op [sva])
 
 -- | @filter f xs@ filters the list with the given predicate.
 --
@@ -607,7 +614,9 @@ filter f l
         k = kindOf (Proxy @(SList a))
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st KBool f
-                  newExpr st k (SBVApp (SeqOp (SBVSeqFilter (kindOf (Proxy @a)) lam)) [sva])
+                  let op = SeqOp (SBVSeqFilter (kindOf (Proxy @a)) lam)
+                  registerSpecialFunction st op
+                  newExpr st k (SBVApp op [sva])
 
 -- | Lift a unary operator over lists.
 lift1 :: forall a b. (SymVal a, SymVal b) => Bool -> SeqOp -> Maybe (a -> b) -> SBV a -> SBV b

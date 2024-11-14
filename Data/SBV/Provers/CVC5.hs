@@ -49,6 +49,7 @@ cvc5 = SMTSolver {
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
                               , supportsFoldAndMap         = False
+                              , supportsLambdas            = True
                               , supportsSpecialRels        = False
                               , supportsDirectAccessors    = True
                               , supportsFlattenedModels    = Nothing

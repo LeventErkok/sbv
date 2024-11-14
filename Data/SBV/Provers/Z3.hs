@@ -47,6 +47,7 @@ z3 = SMTSolver {
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
                               , supportsFoldAndMap         = True
+                              , supportsLambdas            = True
                               , supportsSpecialRels        = True
                               , supportsDirectAccessors    = False -- Needs ascriptions. (See the CVC4 version of this)
                               , supportsFlattenedModels    = Just [ "(set-option :pp.max_depth      4294967295)"

@@ -11,6 +11,7 @@
 
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE PatternGuards       #-}
+{-# LANGUAGE ParallelListComp    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
 
@@ -79,15 +80,21 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                              isFoldMap SeqFoldLeftI{} = True
                              isFoldMap _              = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
+        hasLambdas     = let needsLambda SBVSeqFilter{} = True
+                             needsLambda SBVSeqAll{}    = True
+                             needsLambda SBVSeqAny{}    = True
+                             needsLambda _              = False
+                         in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, needsLambda o]
 
-        (needsQuantifiers, needsSpecialRels) = case curProgInfo of
-           ProgInfo hasQ srs tcs -> (hasQ, not (null srs && null tcs))
+        (needsQuantifiers, needsSpecialRels, specialFuncs) = case curProgInfo of
+           ProgInfo hasQ srs tcs sf -> (hasQ, not (null srs && null tcs), sf)
 
         -- Is there a reason why we can't handle this problem?
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
            where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe)
                           , ("folds and maps",         supportsFoldAndMap,         hasFoldMap)
+                          , ("needs lambds",           supportsLambdas,            hasLambdas)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -102,8 +109,14 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                           , "***     But the chosen solver (" ++ show (name (solver cfg)) ++ ") doesn't support this feature."
                           ]
 
-        -- Some cases require all, some require none. Sigh..
-        setAll reason = ["(set-logic ALL) ; "  ++ reason ++ ", using catch-all."]
+        -- Some cases require all, some require none. Sigh.. Also, if there're lambdas CVC5 needs HO_ALL
+        setAll reason = ["(set-logic " ++ allName ++ ") ; "  ++ reason ++ ", using catch-all."]
+          where allName | hasLambdas && isCVC5 = "HO_ALL"
+                        | True                 = "ALL"
+
+                isCVC5 = case name (solver cfg) of
+                           CVC5 -> True
+                           _    -> False
 
         -- Determining the logic is surprisingly tricky!
         logic
@@ -138,6 +151,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
            | needsSpecialRels      = ["; has special relations, no logic set."]
 
            -- Things that require ALL
+           | hasLambdas            = setAll "has lambda expressions"
            | hasInteger            = setAll "has unbounded values"
            | hasRational           = setAll "has rational values"
            | hasReal               = setAll "has algebraic reals"
@@ -232,7 +246,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- SBV Function definitions" | not (null funcMap) ]
-             ++ concat [declSBVFunc op nm | (op, nm) <- M.toAscList funcMap]
+             ++ concat [declSBVFunc cfg op nm | (op, nm) <- M.toAscList funcMap]
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
@@ -290,19 +304,11 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                   | True         = Just $ Left s
 
         -- SBV only functions.
-        funcMap = M.fromList $  [(op, "|sbv.reverse_"   ++ show k ++          "|") | (op@(SeqOp (SBVReverse   k  )), _) <- specials]
-                             ++ [(op, "|sbv.seqFilter_" ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqFilter k _)), i) <- specials]
-                             ++ [(op, "|sbv.seqAll_"    ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqAll    k _)), i) <- specials]
-                             ++ [(op, "|sbv.seqAny_"    ++ show k ++ idx i ++ "|") | (op@(SeqOp (SBVSeqAny    k _)), i) <- specials]
-          where specials = zip (nub [op | op@(SeqOp so) <- G.universeBi asgnsSeq, isSpecial so]) [0..]
-
-                isSpecial SBVReverse{}   = True
-                isSpecial SBVSeqFilter{} = True
-                isSpecial SBVSeqAll{}    = True
-                isSpecial SBVSeqAny{}    = True
-                isSpecial _              = False
-
-                -- if index 0, then ignore it; other wise add it. This distinguishes different functions passed to all/any
+        funcMap = M.fromList $  [(op, "|sbv.reverse_"   ++ show k ++          "|") | op@(SeqOp (SBVReverse   k  )) <- specialFuncs]
+                             ++ [(op, "|sbv.seqFilter_" ++ show k ++ idx i ++ "|") | op@(SeqOp (SBVSeqFilter k _)) <- specialFuncs | i <- [0..]]
+                             ++ [(op, "|sbv.seqAll_"    ++ show k ++ idx i ++ "|") | op@(SeqOp (SBVSeqAll    k _)) <- specialFuncs | i <- [0..]]
+                             ++ [(op, "|sbv.seqAny_"    ++ show k ++ idx i ++ "|") | op@(SeqOp (SBVSeqAny    k _)) <- specialFuncs | i <- [0..]]
+          where -- if index 0, then ignore it; other wise add it. This distinguishes different functions passed to all/any
                 idx :: Int -> String
                 idx 0 = ""
                 idx i = show i
@@ -315,14 +321,14 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                         _                     -> Nothing
 
 -- Declare "known" SBV functions here
-declSBVFunc :: Op -> String -> [String]
-declSBVFunc op nm = case op of
-                      SeqOp (SBVReverse KString)   -> mkStringRev
-                      SeqOp (SBVReverse (KList k)) -> mkSeqRev (KList k)
-                      SeqOp (SBVSeqFilter ek f)    -> mkFilter ek f
-                      SeqOp (SBVSeqAll    ek f)    -> mkAnyAll True  ek f
-                      SeqOp (SBVSeqAny    ek f)    -> mkAnyAll False ek f
-                      _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
+declSBVFunc :: SMTConfig -> Op -> String -> [String]
+declSBVFunc cfg op nm = case op of
+                          SeqOp (SBVReverse KString)   -> mkStringRev
+                          SeqOp (SBVReverse (KList k)) -> mkSeqRev (KList k)
+                          SeqOp (SBVSeqFilter ek f)    -> mkFilter ek f
+                          SeqOp (SBVSeqAll    ek f)    -> mkAnyAll True  ek f
+                          SeqOp (SBVSeqAny    ek f)    -> mkAnyAll False ek f
+                          _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
   where mkStringRev = [ "(define-fun-rec " ++ nm ++ " ((str String)) String"
                       , "                (ite (= str \"\")"
                       , "                     \"\""
@@ -338,10 +344,19 @@ declSBVFunc op nm = case op of
                      ]
           where t = smtType k
 
+        -- in Z3, lambdas are applied with select. In CVC5, it's @. This might change with higher-order features being added to SMTLib in v3
+        hoApply
+          | isCVC5 = "@"
+          | True   = "select"
+
+        isCVC5 = case name (solver cfg) of
+                   CVC5 -> True
+                   _    -> False
+
         mkAnyAll isAll ek f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) Bool"
                               , "                (ite (= lst (as seq.empty " ++ t ++ "))"
                               , "                     " ++ base
-                              , "                     (" ++ conn ++ " (select " ++ f ++ " (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
+                              , "                     (" ++ conn ++ " (" ++ hoApply ++ " " ++ f ++ " (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
                               ]
           where t = smtType (KList ek)
                 (base, conn) | isAll = ("true",  "and")
@@ -350,7 +365,7 @@ declSBVFunc op nm = case op of
         mkFilter k f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
                        , "                (ite (= lst (as seq.empty " ++ t ++ "))"
                        , "                     (as seq.empty " ++ t ++ ")"
-                       , "                     (ite (select " ++ f ++ " (seq.nth lst 0))"
+                       , "                     (ite (" ++ hoApply ++ " " ++ f ++ " (seq.nth lst 0))"
                        , "                          (seq.++ (seq.unit (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))"
                        , "                                                             (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
                        ]

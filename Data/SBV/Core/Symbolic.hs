@@ -54,7 +54,7 @@ module Data.SBV.Core.Symbolic
   , getTableIndex, sObserve
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..)
-  , registerKind, registerLabel, recordObservable
+  , registerKind, registerLabel, registerSpecialFunction, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
@@ -872,11 +872,12 @@ instance NFData ResultInp where
 data ProgInfo = ProgInfo { hasQuants         :: Bool
                          , progSpecialRels   :: [SpecialRelOp]
                          , progTransClosures :: [(String, String)]
+                         , progSpecialFuncs  :: [Op]                -- functions that need to be generated, like list reverse/all/any/filter
                          }
                          deriving G.Data
 
 instance NFData ProgInfo where
-   rnf (ProgInfo a b c) = rnf a `seq` rnf b `seq` rnf c
+   rnf (ProgInfo a b c d) = rnf a `seq` rnf b `seq` rnf c `seq` rnf d
 
 deriving instance G.Data CallStack
 deriving instance G.Data SrcLoc
@@ -1528,6 +1529,13 @@ registerLabel whence st nm
 
   where err w = error $ "SBV (" ++ whence ++ "): " ++ show nm ++ " " ++ w
 
+-- We need to auto-generate certain functions, so keep track of them here
+registerSpecialFunction :: State -> Op -> IO ()
+registerSpecialFunction st o =
+  do progInfo <- readIORef (rProgInfo st)
+     let upd  p@ProgInfo{progSpecialFuncs} = p{progSpecialFuncs = o : progSpecialFuncs}
+     when (o `notElem` progSpecialFuncs progInfo) $ modifyState st rProgInfo upd (pure ())
+
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CV -> IO SV
 newConst st c = do
@@ -1827,6 +1835,7 @@ mkNewState cfg currentRunMode = liftIO $ do
      progInfo           <- newIORef ProgInfo { hasQuants         = False
                                              , progSpecialRels   = []
                                              , progTransClosures = []
+                                             , progSpecialFuncs  = []
                                              }
      rm                 <- newIORef currentRunMode
      ctr                <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
@@ -2213,6 +2222,7 @@ data SolverCapabilities = SolverCapabilities {
        , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
        , supportsFoldAndMap         :: Bool           -- ^ Does it support fold and map?
+       , supportsLambdas            :: Bool           -- ^ Does it support lambdas?
        , supportsSpecialRels        :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
        , supportsDirectAccessors    :: Bool           -- ^ Supports data-type accessors without full ascription?
        , supportsFlattenedModels    :: Maybe [String] -- ^ Supports flattened model output? (With given config lines.)
