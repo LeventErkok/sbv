@@ -160,6 +160,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Induction
                   , Documentation.SBV.Examples.KnuckleDragger.ListLen
+                  , Documentation.SBV.Examples.KnuckleDragger.Lists
                   , Documentation.SBV.Examples.KnuckleDragger.RevLen
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
                   , Documentation.SBV.Examples.KnuckleDragger.Tao
