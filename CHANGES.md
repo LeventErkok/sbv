@@ -5,6 +5,14 @@
 
   * Generalize the signatures of the default project-embed implementations of the Queriable class.
 
+  * Generalize support for higher-order functions. These are still experimental, as SMTLib's higher-order
+    function support is nascent. (Version 3 of SMTLib will have proper support for such functions, which
+    is not released yet.) Currently, SBV can handle higher order versions of any, all, and filter, all
+    exported from Data.SBV.List module. These functions take as arguments lambda-functions, and SBV
+    translates them carefully for Z3 and CVC5 which has preliminary support. Proof-support in backend
+    solvers for higher-order functions is still quite weak, though KnuckleDragger makes things easier.
+    See Documentation.SBV.Examples.KnuckleDragger.Lists for several examples.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying
