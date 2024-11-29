@@ -35,8 +35,6 @@ import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
-import qualified Data.Map.Strict as M
-
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
@@ -338,7 +336,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                  where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, converter e), Just l)
                        mkAsgn (sv, e)                      = ((sv, converter e), Nothing)
 
-                       converter = cvtExp curProgInfo (capabilities (solver cfg)) rm tableMap funcMap
+                       converter = cvtExp curProgInfo (capabilities (solver cfg)) rm tableMap
 
 
                out :: SV
@@ -349,10 +347,6 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                   ]
 
                rm = roundingMode cfg
-
-               -- NB. The following isn't really kosher since a lambda might refer to an SBV function
-               -- like reverse/any/all etc. But let's cross that bridge when we get to it
-               funcMap = M.empty
 
                -- NB. The following is dead-code, since we ensure tbls is empty
                -- We used to support this, but there are issues, so dropping support
