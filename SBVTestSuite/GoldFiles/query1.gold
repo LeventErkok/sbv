@@ -56,9 +56,8 @@
 [SEND] (get-option :produce-proofs)
 [RECV] true
 [SEND] (get-option :produce-unsat-assumptions)
-[RECV] unsupported
+[RECV] true
 [SEND] (get-option :produce-unsat-cores)
-[SKIP] ; :produce-unsat-assumptions line: 40 position: 0
 [RECV] true
 [SEND] (get-option :random-seed)
 [RECV] 123
