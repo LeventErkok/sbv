@@ -30,4 +30,4 @@
 *** Use "optimize"/"optimizeWith" to calculate optimal satisfaction!
 
 CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Provers/Prover.hs:611:33 in sbv-11.0-inplace:Data.SBV.Provers.Prover
+  error, called at ./Data/SBV/Provers/Prover.hs:611:33 in sbv-11.0.5-inplace:Data.SBV.Provers.Prover
