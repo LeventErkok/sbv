@@ -47,7 +47,8 @@ filterEx :: IO Proof
 filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
   where p xs = (2 :: SInteger) `L.notElem` xs .=> (L.filter (.> 2) xs .== L.filter (.>= 2) xs)
 
--- | The 'filterEx' example above, except we get a counter-example if `2` can be in the list. We have:
+-- | The 'filterEx' example above, except we get a counter-example if `2` can be in the list. Note that
+-- we don't even need the induction tactic here. (Though having it wouldn't hurt.) We have:
 --
 -- >>> filterEx2 `catch` (\(_ :: SomeException) -> pure ())
 -- Lemma: filterEx
@@ -59,6 +60,6 @@ filterEx2 = runKD $ do
         let p :: SList Integer -> SBool
             p xs = L.filter (.> 2) xs .== L.filter (.>= 2) xs
 
-        lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
+        lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
 
         pure ()
