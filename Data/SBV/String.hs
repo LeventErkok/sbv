@@ -41,8 +41,9 @@ import Prelude hiding (head, tail, init, length, take, drop, concat, null, rever
 import qualified Prelude as P
 
 import Data.SBV.Core.Data hiding (SeqOp(..))
-import Data.SBV.Core.Data (SeqOp(SBVReverse))
 import Data.SBV.Core.Model
+import Data.SBV.Core.Data (SeqOp(SBVReverse))
+import Data.SBV.Core.Symbolic (registerSpecialFunction)
 
 import qualified Data.Char as C
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
@@ -350,7 +351,9 @@ reverse s
   | True
   = SBV $ SVal KString $ Right $ cache r
   where r st = do sva <- sbvToSV st s
-                  newExpr st KString (SBVApp (SeqOp (SBVReverse KString)) [sva])
+                  let op = SeqOp (SBVReverse KString)
+                  registerSpecialFunction st op
+                  newExpr st KString (SBVApp op [sva])
 
 -- | @`strToNat` s@. Retrieve integer encoded by string @s@ (ground rewriting only).
 -- Note that by definition this function only works when @s@ only contains digits,
