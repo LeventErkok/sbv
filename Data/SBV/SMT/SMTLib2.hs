@@ -11,7 +11,6 @@
 
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE PatternGuards       #-}
-{-# LANGUAGE ParallelListComp    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns        #-}
 
