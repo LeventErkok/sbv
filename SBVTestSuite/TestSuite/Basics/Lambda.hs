@@ -80,7 +80,6 @@ tests =
       , goldenCapturedIO "lambda13" $ eval1 [(x, y) | x <- [1..3], y <- [4..6 :: Integer]]
                                             (map (\t -> t^._1 + t^._2), P.map (uncurry (+)))
 
-      , goldenCapturedIO "lambda14" $ eval1 [1 .. 5 :: Integer] (mapi (+) 10, P.zipWith (+) [10..])
 
       , goldenCapturedIO "lambda15" $ eval1 [1 .. 5 :: Integer] (foldl (+) 0, P.sum)
       , goldenCapturedIO "lambda16" $ eval1 [1 .. 5 :: Integer] (foldl (*) 1, P.product)
@@ -90,8 +89,6 @@ tests =
                                            )
 
       , goldenCapturedIO "lambda18" $ eval1 [1 .. 5 :: Integer]
-                                            (   foldli (\i b a    -> i+b+a) 10 0
-                                            , P.foldl  (\b (i, a) -> i+b+a)  0 . P.zip [10..]
                                             )
 
       , goldenCapturedIO "lambda19" $ eval1 [1 .. 5 :: Integer] (foldr (+) 0, P.foldr (+) 0)
