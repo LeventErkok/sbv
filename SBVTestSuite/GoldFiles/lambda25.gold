@@ -24,16 +24,16 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.foldr_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| ((base Int) (lst (Seq Int))) Int
-                       (ite (= lst (as seq.empty (Seq Int)))
-                            base
-                            (select (lambda ((l1_s0 Int) (l1_s1 Int))
-         (+ l1_s0 l1_s1)) (seq.nth lst 0) (|sbv.foldr_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| base (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] (define-fun-rec |sbv.zipWith_@((SInteger,_SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq Int)
                       (ite (or (= lst1 (as seq.empty (Seq Int))) (= lst2 (as seq.empty (Seq Int))))
                            (as seq.empty (Seq Int))
                            (seq.++ (seq.unit (select (lambda ((l1_s0 Int) (l1_s1 Int))
          (+ l1_s0 l1_s1)) (seq.nth lst1 0) (seq.nth lst2 0))) (|sbv.zipWith_@((SInteger,_SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
+[GOOD] (define-fun-rec |sbv.foldr_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| ((base Int) (lst (Seq Int))) Int
+                       (ite (= lst (as seq.empty (Seq Int)))
+                            base
+                            (select (lambda ((l1_s0 Int) (l1_s1 Int))
+         (+ l1_s0 l1_s1)) (seq.nth lst 0) (|sbv.foldr_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| base (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))

@@ -256,7 +256,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- SBV Function definitions" | not (null specialFuncs) ]
-             ++ concat [declSBVFunc cfg op | op <- specialFuncs]
+             ++ concat [declSBVFunc cfg op | op <- reverse specialFuncs]
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
