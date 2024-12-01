@@ -48,7 +48,6 @@ mathSAT = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
-                              , supportsFoldAndMap         = False
                               , supportsLambdas            = False
                               , supportsSpecialRels        = False
                               , supportsDirectAccessors    = True

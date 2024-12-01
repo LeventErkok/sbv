@@ -46,7 +46,6 @@ abc = SMTSolver {
                               , supportsCustomQueries      = False
                               , supportsGlobalDecls        = False
                               , supportsDataTypes          = False
-                              , supportsFoldAndMap         = False
                               , supportsLambdas            = False
                               , supportsSpecialRels        = False
                               , supportsDirectAccessors    = False

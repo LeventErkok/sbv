@@ -2221,7 +2221,6 @@ data SolverCapabilities = SolverCapabilities {
        , supportsCustomQueries      :: Bool           -- ^ Supports interactive queries per SMT-Lib?
        , supportsGlobalDecls        :: Bool           -- ^ Supports global declarations? (Needed for push-pop.)
        , supportsDataTypes          :: Bool           -- ^ Supports datatypes?
-       , supportsFoldAndMap         :: Bool           -- ^ Does it support fold and map?
        , supportsLambdas            :: Bool           -- ^ Does it support lambdas?
        , supportsSpecialRels        :: Bool           -- ^ Does it support special relations (orders, transitive closure etc.)
        , supportsDirectAccessors    :: Bool           -- ^ Supports data-type accessors without full ascription?

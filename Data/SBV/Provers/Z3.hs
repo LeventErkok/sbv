@@ -46,7 +46,6 @@ z3 = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = True
-                              , supportsFoldAndMap         = True
                               , supportsLambdas            = True
                               , supportsSpecialRels        = True
                               , supportsDirectAccessors    = False -- Needs ascriptions. (See the CVC4 version of this)

@@ -44,7 +44,6 @@ boolector = SMTSolver {
                               , supportsCustomQueries      = True
                               , supportsGlobalDecls        = True
                               , supportsDataTypes          = False
-                              , supportsFoldAndMap         = False
                               , supportsLambdas            = False
                               , supportsSpecialRels        = False
                               , supportsDirectAccessors    = False
