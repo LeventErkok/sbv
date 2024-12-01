@@ -135,8 +135,8 @@ lambda inState fk = lambdaGen mkLam inState fk
    where mkLam (Defn frees params ops body) = SMTLam fk frees ops (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
-lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m String
-lambdaStr = lambdaGen mkLam
+lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTLambda
+lambdaStr st k a = SMTLambda <$> lambdaGen mkLam st k a
    where mkLam (Defn _frees Nothing       _ops body) = body 0
          mkLam (Defn _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 

@@ -13,6 +13,9 @@
     solvers for higher-order functions is still quite weak, though KnuckleDragger makes things easier.
     See Documentation.SBV.Examples.KnuckleDragger.Lists for several examples.
 
+  * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
+    can now be defined by the user as we have proper support for fold and map using lambdas.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying

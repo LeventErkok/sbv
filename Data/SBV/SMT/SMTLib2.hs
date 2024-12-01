@@ -35,7 +35,7 @@ import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
 import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString
-                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..)
+                              , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), SMTLambda(..)
                               )
 
 import Data.SBV.Utils.PrettyNum (smtRoundingMode, cvToSMTLib)
@@ -45,10 +45,11 @@ import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.Graph as DG
 
 -- | A globally (hopefully!) unique name for the operator
+-- TODO: Perhaps replace this with a simpler hash?
 getFuncName :: Op -> String
-getFuncName o = map clean $ "|" ++ compress (show o) ++ "|"
-  where clean c | isSpace c = '_'
-                | True      = c
+getFuncName o = "|" ++ map clean (compress (show o)) ++ "|"
+  where clean c | isSpace c || c == '|' = '_'
+                | True                  = c
 
         compress (x:y:rest)
           | all isSpace [x, y] =     compress (y:rest)
@@ -86,16 +87,14 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         hasRational    = any isRational kindInfo
         rm             = roundingMode cfg
         solverCaps     = capabilities (solver cfg)
-        hasFoldMap     = let isFoldMap SeqMap{}       = True
-                             isFoldMap SeqMapI{}      = True
-                             isFoldMap SeqFoldLeft{}  = True
-                             isFoldMap SeqFoldLeftI{} = True
-                             isFoldMap _              = False
-                         in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, isFoldMap o]
-        hasLambdas     = let needsLambda SBVSeqFilter{} = True
-                             needsLambda SBVSeqAll{}    = True
-                             needsLambda SBVSeqAny{}    = True
-                             needsLambda _              = False
+        hasLambdas     = let needsLambda SBVZipWith{} = True
+                             needsLambda SBVMap{}     = True
+                             needsLambda SBVFoldl{}   = True
+                             needsLambda SBVFoldr{}   = True
+                             needsLambda SBVFilter{}  = True
+                             needsLambda SBVAll{}     = True
+                             needsLambda SBVAny{}     = True
+                             needsLambda _            = False
                          in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, needsLambda o]
 
         (needsQuantifiers, needsSpecialRels, specialFuncs) = case curProgInfo of
@@ -105,8 +104,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
         -- NB. There's probably a lot more checking we can do here, but this is a start:
         doesntHandle = listToMaybe [nope w | (w, have, need) <- checks, need && not (have solverCaps)]
            where checks = [ ("data types",             supportsDataTypes,          hasTuples || hasEither || hasMaybe)
-                          , ("folds and maps",         supportsFoldAndMap,         hasFoldMap)
-                          , ("needs lambds",           supportsLambdas,            hasLambdas)
+                          , ("needs lambdas",          supportsLambdas,            hasLambdas)
                           , ("set operations",         supportsSets,               hasSets)
                           , ("bit vectors",            supportsBitVectors,         hasBVs)
                           , ("special relations",      supportsSpecialRels,        needsSpecialRels)
@@ -325,13 +323,36 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 -- Declare "known" SBV functions here
 declSBVFunc :: SMTConfig -> Op -> [String]
 declSBVFunc cfg op = case op of
-                       SeqOp (SBVReverse KString)   -> mkStringRev
-                       SeqOp (SBVReverse (KList k)) -> mkSeqRev (KList k)
-                       SeqOp (SBVSeqFilter ek f)    -> mkFilter ek f
-                       SeqOp (SBVSeqAll    ek f)    -> mkAnyAll True  ek f
-                       SeqOp (SBVSeqAny    ek f)    -> mkAnyAll False ek f
-                       _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
+                       SeqOp (SBVReverse KString)                -> mkStringRev
+                       SeqOp (SBVReverse (KList k))              -> mkSeqRev  (KList k)
+                       SeqOp (SBVZip     k1 k2)                  -> mkZip     k1 k2 Nothing
+                       SeqOp (SBVZipWith k1 k2 k3 (SMTLambda f)) -> mkZip     k1 k2 (Just (k3, f))
+                       SeqOp (SBVMap     k1 k2    (SMTLambda f)) -> mkMap     k1 k2 f
+                       SeqOp (SBVFoldl   k1 k2    (SMTLambda f)) -> mkFoldl   k1 k2 f
+                       SeqOp (SBVFoldr   k1 k2    (SMTLambda f)) -> mkFoldr   k1 k2 f
+                       SeqOp (SBVFilter  ek       (SMTLambda f)) -> mkFilter  ek    f
+                       SeqOp (SBVAll     ek       (SMTLambda f)) -> mkAnyAll  True  ek f
+                       SeqOp (SBVAny     ek       (SMTLambda f)) -> mkAnyAll  False ek f
+                       _                                         -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: "
+                                                                          ++ show (op, nm)
   where nm = getFuncName op
+
+        -- in Z3, lambdas are applied with select. In CVC5, it's @. This might change with higher-order features being added to SMTLib in v3
+        par x = "(" ++ x ++ ")"
+        app f args = par $ unwords $ f : args
+
+        happ f args | isCVC5 = app "@"      (f : args)
+                    | True   = app "select" (f : args)
+
+        hd l = app "seq.nth"     [l, "0"]
+        tl l = app "seq.extract" [l, "1", app "-" [app "seq.len" [l], "1"]]
+
+        empty   typ     = app "as seq.empty" [typ]
+        isEmpty arg typ = app "=" [arg, empty typ]
+
+        isCVC5 = case name (solver cfg) of
+                   CVC5 -> True
+                   _    -> False
 
         mkStringRev = [ "(define-fun-rec " ++ nm ++ " ((str String)) String"
                       , "                (ite (= str \"\")"
@@ -342,38 +363,78 @@ declSBVFunc cfg op = case op of
 
 
         mkSeqRev k = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
-                     , "                (ite (= lst (as seq.empty " ++ t ++ "))"
-                     , "                     (as seq.empty " ++ t ++ ")"
-                     , "                     (seq.++ (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))) (seq.unit (seq.nth lst 0)))))"
+                     , "                (ite " ++ isEmpty "lst" t
+                     , "                     " ++ empty t
+                     , "                     (seq.++ " ++ app nm [tl "lst"] ++ " (seq.unit " ++ hd "lst" ++ "))))"
                      ]
           where t = smtType k
 
-        -- in Z3, lambdas are applied with select. In CVC5, it's @. This might change with higher-order features being added to SMTLib in v3
-        hoApply
-          | isCVC5 = "@"
-          | True   = "select"
+        -- [a] -> [b] -> [(a, b)]
+        -- [a] -> [b] -> (a -> b -> c) -> [c]
+        mkZip a b mbcF = [ "(define-fun-rec " ++ nm ++ " ((lst1 " ++ tla ++ ") (lst2 " ++ tlb ++ ")) " ++ tlr
+                         , "               (ite " ++ app "or" [isEmpty "lst1" tla, isEmpty "lst2" tlb]
+                         , "                    " ++ empty tlr
+                         , "                    (seq.++ (seq.unit " ++ mkTup (hd "lst1") (hd "lst2") ++ ") " ++ app nm [tl "lst1", tl "lst2"] ++ ")))"
+                         ]
+         where tla = smtType (KList a)
+               tlb = smtType (KList b)
+               tlr = case mbcF of
+                       Nothing     -> smtType (KList (KTuple [a, b]))
+                       Just (c, _) -> smtType (KList c)
 
-        isCVC5 = case name (solver cfg) of
-                   CVC5 -> True
-                   _    -> False
+               mkTup x y = case mbcF of
+                             Just (_, f) -> happ f   [x, y]
+                             Nothing     -> app  tup [x, y]
+               tup = app "as" ["mkSBVTuple2", app "SBVTuple2" [smtType a, smtType b]]
 
-        mkAnyAll isAll ek f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) Bool"
-                              , "                (ite (= lst (as seq.empty " ++ t ++ "))"
-                              , "                     " ++ base
-                              , "                     (" ++ conn ++ " (" ++ hoApply ++ " " ++ f ++ " (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
-                              ]
-          where t = smtType (KList ek)
+        -- (b -> a -> b) -> b -> [a] -> b
+        mkFoldl a b f = [ "(define-fun-rec " ++ nm ++ " ((base " ++ tb ++ ") (lst " ++ tla ++ ")) " ++ tb
+                        , "                (ite " ++ isEmpty "lst" tla
+                        , "                     base"
+                        , "                     " ++ app nm [happ f ["base", hd "lst"], tl "lst"] ++ "))"
+                        ]
+           where tla = smtType (KList a)
+                 tb  = smtType b
+
+        -- (a -> b -> b) -> b -> [a] -> b
+        mkFoldr a b f = [ "(define-fun-rec " ++ nm ++ " ((base " ++ tb ++ ") (lst " ++ tla ++ ")) " ++ tb
+                        , "                (ite " ++ isEmpty "lst" tla
+                        , "                     base"
+                        , "                     " ++ happ f [hd "lst", app nm ["base", tl "lst"]] ++ "))"
+                        ]
+           where tla = smtType (KList a)
+                 tb  = smtType b
+
+        -- (a -> b) -> [a] -> [b]
+        mkMap a b f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ tla ++ ")) " ++ tlb
+                      , "              (ite " ++ isEmpty "lst" tla
+                      , "                   " ++ empty tlb
+                      , "                   (seq.++ (seq.unit " ++ happ f [hd "lst"] ++ ")"
+                      , "                           " ++ app nm [tl "lst"] ++ ")))"
+                      ]
+           where tla = smtType (KList a)
+                 tlb = smtType (KList b)
+
+        -- (a -> Bool) -> [a] -> [a]
+        mkFilter a f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ tla ++ ")) " ++ tla
+                       , "                (ite " ++ isEmpty "lst" tla
+                       , "                     " ++ empty tla
+                       , "                     (let ((rest (" ++ nm ++ " " ++ tl "lst" ++ ")))"
+                       , "                          (ite " ++ happ f [hd "lst"]
+                       , "                               (seq.++ (seq.unit " ++ hd "lst" ++ ") rest)"
+                       , "                                       rest))))"
+                       ]
+          where tla = smtType (KList a)
+
+        -- (a -> Bool) -> [a] -> Bool
+        mkAnyAll isAll a f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ tla ++ ")) Bool"
+                             , "                (ite " ++ isEmpty "lst" tla
+                             , "                     " ++ base
+                             , "                     " ++ app conn [happ f [hd "lst"], app nm [tl "lst"]] ++ "))"
+                             ]
+          where tla = smtType (KList a)
                 (base, conn) | isAll = ("true",  "and")
                              | True  = ("false", "or")
-
-        mkFilter k f = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ t ++ ")) " ++ t
-                       , "                (ite (= lst (as seq.empty " ++ t ++ "))"
-                       , "                     (as seq.empty " ++ t ++ ")"
-                       , "                     (ite (" ++ hoApply ++ " " ++ f ++ " (seq.nth lst 0))"
-                       , "                          (seq.++ (seq.unit (seq.nth lst 0)) (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))"
-                       , "                                                             (" ++ nm ++ " (seq.extract lst 1 (- (seq.len lst) 1))))))"
-                       ]
-          where t = smtType (KList k)
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -938,7 +999,7 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (cvtSV a)
 
-        sh (SBVApp (ArrayLambda s) [])        = s
+        sh (SBVApp (ArrayLambda s) [])        = show s
         sh (SBVApp ReadArray       [a, i])    = "(select " ++ cvtSV a ++ " " ++ cvtSV i ++ ")"
         sh (SBVApp WriteArray      [a, i, e]) = "(store "  ++ cvtSV a ++ " " ++ cvtSV i ++ " " ++ cvtSV e ++ ")"
 
@@ -1029,10 +1090,16 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse and higher order functions are special
-        sh (SBVApp o@(SeqOp SBVReverse{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVSeqFilter{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVSeqAll{} )   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVSeqAny{} )   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZip{})     args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZipWith{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVMap{})     args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldl{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldr{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFilter{})  args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAll{} )    args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAny{} )    args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 

@@ -38,7 +38,7 @@ module Data.SBV.Core.Symbolic
   ( NodeId(..)
   , SV(..), swKind, trueSV, falseSV, contextOfSV
   , Op(..), PBOp(..), OvOp(..), FPOp(..), NROp(..), StrOp(..), RegExOp(..), SeqOp(..), SetOp(..), SpecialRelOp(..)
-  , RegExp(..), regExpToSMTString
+  , RegExp(..), regExpToSMTString, SMTLambda(..)
   , Quantifier(..), needsExistentials, SBVContext(..), checkCompatibleContext, VarContext(..)
   , RoundingMode(..)
   , SBVType(..), svUninterpreted, svUninterpretedNamedArgs, newUninterpreted
@@ -252,7 +252,7 @@ data Op = Plus
         | MaybeConstructor Kind Bool            -- Construct a maybe value; False: Nothing, True: Just
         | MaybeIs Kind Bool                     -- Maybe tester; False: nothing, True: just
         | MaybeAccess                           -- Maybe branch access; grab the contents of the just
-        | ArrayLambda String                    -- An array value, created from a lambda
+        | ArrayLambda SMTLambda                 -- An array value, created from a lambda
         | ReadArray                             -- Reading an array value
         | WriteArray                            -- Writing to an array
         deriving (Eq, Ord, Generic, G.Data, NFData)
@@ -519,25 +519,37 @@ instance Show RegExOp where
   show (RegExEq  r1 r2) = "(= "        ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
   show (RegExNEq r1 r2) = "(distinct " ++ regExpToSMTString r1 ++ " " ++ regExpToSMTString r2 ++ ")"
 
+-- | For now, we represent lambda functions in op with their SMTLib equivalent strings.
+-- This might change in the future.
+newtype SMTLambda = SMTLambda String
+                  deriving (Eq, Ord, G.Data, Generic)
+                  deriving newtype NFData
+
+-- | Simple show instance for SMTLambda
+instance Show SMTLambda where
+  show (SMTLambda s) = s
+
 -- | Sequence operations.
-data SeqOp = SeqConcat                  -- ^ See StrConcat
-           | SeqLen                     -- ^ See StrLen
-           | SeqUnit                    -- ^ See StrUnit
-           | SeqNth                     -- ^ See StrNth
-           | SeqSubseq                  -- ^ See StrSubseq
-           | SeqIndexOf                 -- ^ See StrIndexOf
-           | SeqContains                -- ^ See StrContains
-           | SeqPrefixOf                -- ^ See StrPrefixOf
-           | SeqSuffixOf                -- ^ See StrSuffixOf
-           | SeqReplace                 -- ^ See StrReplace
-           | SeqMap       String        -- ^ Mapping over sequences
-           | SeqMapI      String        -- ^ Mapping over sequences with offset
-           | SeqFoldLeft  String        -- ^ Folding of sequences
-           | SeqFoldLeftI String        -- ^ Folding of sequences with offset
-           | SBVReverse   Kind          -- ^ Reversal of sequences. NB. Also works for strings; hence the name.
-           | SBVSeqFilter Kind  String  -- ^ filter the list. Kind is the element type
-           | SBVSeqAll    Kind  String  -- ^ map the function and reduce via and, with base true.  Kind is the element type.
-           | SBVSeqAny    Kind  String  -- ^ map the function and reduce via or,  with base false. Kind is the element type.
+data SeqOp = SeqConcat                           -- ^ See StrConcat
+           | SeqLen                              -- ^ See StrLen
+           | SeqUnit                             -- ^ See StrUnit
+           | SeqNth                              -- ^ See StrNth
+           | SeqSubseq                           -- ^ See StrSubseq
+           | SeqIndexOf                          -- ^ See StrIndexOf
+           | SeqContains                         -- ^ See StrContains
+           | SeqPrefixOf                         -- ^ See StrPrefixOf
+           | SeqSuffixOf                         -- ^ See StrSuffixOf
+           | SeqReplace                          -- ^ See StrReplace
+           -- Polymorphic and higher order functions
+           | SBVReverse Kind                     -- ^ reverse k.       Where k is either [a] or String. Reverses the argument, accordingly.
+           | SBVZip     Kind Kind                -- ^ zip k1 k2.       Where we zip [k1] and [k2] to produce [(k1, k2)]
+           | SBVZipWith Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
+           | SBVMap     Kind Kind SMTLambda      -- ^ map    a b fun.  Where fun :: a -> b,      and map    :: (a -> b) -> [a] -> [b]
+           | SBVFoldl   Kind Kind SMTLambda      -- ^ foldl  a b fun.  Where fun :: b -> a -> b, and foldl  :: (b -> a -> b) -> b -> [a] -> b
+           | SBVFoldr   Kind Kind SMTLambda      -- ^ foldr  a b fun.  Where fun :: a -> b -> b, and foldr  :: (a -> b -> b) -> b -> [a] -> b
+           | SBVFilter  Kind      SMTLambda      -- ^ filter a fun.    Where fun :: a -> Bool,   and filter :: (a -> Bool) -> [a] -> [a]
+           | SBVAll     Kind      SMTLambda      -- ^ all    a fun.    Where fun :: a -> Bool,   and all    :: (a -> Bool) -> [a] -> Bool
+           | SBVAny     Kind      SMTLambda      -- ^ any    a fun.    Where fun :: a -> Bool,   and any    :: (a -> Bool) -> [a] -> Bool
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -552,20 +564,21 @@ instance Show SeqOp where
   show SeqPrefixOf      = "seq.prefixof"
   show SeqSuffixOf      = "seq.suffixof"
   show SeqReplace       = "seq.replace"
-  show (SeqMap       s) = "seq.map "    ++ s
-  show (SeqMapI      s) = "seq.mapi "   ++ s
-  show (SeqFoldLeft  s) = "seq.foldl "  ++ s
-  show (SeqFoldLeftI s) = "seq.foldli " ++ s
 
-  -- Note: The followings aren't part of SMTLib, we explicitly handle it
-  show (SBVReverse k)     = funcWithKind "sbv.reverse"   k Nothing
-  show (SBVSeqFilter k s) = funcWithKind "sbv.seqFilter" k (Just s)
-  show (SBVSeqAll    k s) = funcWithKind "sbv.seqAll"    k (Just s)
-  show (SBVSeqAny    k s) = funcWithKind "sbv.seqAny"    k (Just s)
+  -- Note: The followings aren't part of SMTLib, we explicitly handle them
+  show (SBVReverse a)       = funcWithKind "sbv.reverse" a                  Nothing
+  show (SBVZip     a b)     = funcWithKind "sbv.zip"     (KTuple [a, b])    Nothing
+  show (SBVZipWith a b c f) = funcWithKind "sbv.zipWith" (KTuple [a, b, c]) (Just f)
+  show (SBVMap     a b   f) = funcWithKind "sbv.map"     (KTuple [a, b])    (Just f)
+  show (SBVFoldl   a b   f) = funcWithKind "sbv.foldl"   (KTuple [a, b])    (Just f)
+  show (SBVFoldr   a b   f) = funcWithKind "sbv.foldr"   (KTuple [a, b])    (Just f)
+  show (SBVFilter  a     f) = funcWithKind "sbv.filter"  a                  (Just f)
+  show (SBVAll     a     f) = funcWithKind "sbv.all"     a                  (Just f)
+  show (SBVAny     a     f) = funcWithKind "sbv.any"     a                  (Just f)
 
 -- helper for above
-funcWithKind :: String -> Kind -> Maybe String -> String
-funcWithKind f k mbExtra = f ++ " @" ++ ssk ++ maybe "" (' ':) mbExtra
+funcWithKind :: String -> Kind -> Maybe SMTLambda -> String
+funcWithKind f k mbExtra = f ++ " @" ++ ssk ++ maybe "" (\l -> ' ' : show l) mbExtra
   where sk  = show k
         ssk | any isSpace sk = '(' : sk ++ ")"
             | True           = sk
@@ -648,7 +661,7 @@ instance Show Op where
   show (MaybeIs          k False)       = "(_ is (nothing_SBVMaybe () "              ++ show (KMaybe k) ++ "))"
   show (MaybeIs          k True )       = "(_ is (just_SBVMaybe (" ++ show k ++ ") " ++ show (KMaybe k) ++ "))"
   show MaybeAccess                      = "get_just_SBVMaybe"
-  show (ArrayLambda s)                  = s
+  show (ArrayLambda s)                  = show s
   show ReadArray                        = "select"
   show WriteArray                       = "store"
 

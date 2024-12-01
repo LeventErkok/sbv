@@ -18,8 +18,6 @@
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s3 () (Seq Int) (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7) (seq.unit 8) (seq.unit 9) (seq.unit 10)))
 [GOOD] (define-fun s5 () (Seq Int) (seq.++ (seq.unit 11) (seq.unit 12) (seq.unit 13) (seq.unit 14) (seq.unit 15) (seq.unit 16) (seq.unit 17) (seq.unit 18) (seq.unit 19) (seq.unit 20)))
-[GOOD] (define-fun s7 () Int 0)
-[GOOD] (define-fun s10 () (Seq Int) (as seq.empty (Seq Int)))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq Int))
 [GOOD] (declare-fun s1 () (Seq Int))
@@ -27,31 +25,22 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
+[GOOD] ; --- SBV Function definitions
+[GOOD] (define-fun-rec |sbv.zip_@((SInteger,_SInteger))| ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq (SBVTuple2 Int Int))
+                      (ite (or (= lst1 (as seq.empty (Seq Int))) (= lst2 (as seq.empty (Seq Int))))
+                           (as seq.empty (Seq (SBVTuple2 Int Int)))
+                           (seq.++ (seq.unit ((as mkSBVTuple2 (SBVTuple2 Int Int)) (seq.nth lst1 0) (seq.nth lst2 0))) (|sbv.zip_@((SInteger,_SInteger))| (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] (define-fun s8 () Int (seq.len s1))
-[GOOD] (define-fun s9 () Bool (<= s8 s7))
-[GOOD] (define-fun s11 () Int (seq.len s0))
-[GOOD] (define-fun s12 () Bool (>= s8 s11))
-[GOOD] (define-fun s13 () (Seq Int) (seq.extract s0 s7 s8))
-[GOOD] (define-fun s14 () (Seq Int) (ite s12 s0 s13))
-[GOOD] (define-fun s15 () (Seq Int) (ite s9 s10 s14))
-[GOOD] (define-fun s16 () (Seq (SBVTuple2 Int Int)) (seq.mapi (lambda ((l1_s0 Int) (l1_s1 Int))
-         ((as mkSBVTuple2 (SBVTuple2 Int Int)) l1_s0 l1_s1)) s7 s15))
-[GOOD] (define-fun s17 () (Seq (SBVTuple2 Int Int)) (seq.map (lambda ((l1_s0 (SBVTuple2 Int Int)))
-                                 (let ((l1_s1 (proj_2_SBVTuple2 l1_s0)))
-                                 (let ((l1_s2 (proj_1_SBVTuple2 l1_s0)))
-                                 (let ((l1_s3 (seq.nth s1 l1_s2)))
-                                 (let ((l1_s4 ((as mkSBVTuple2 (SBVTuple2 Int Int)) l1_s1 l1_s3)))
-                                 l1_s4))))) s16))
-[GOOD] (define-fun s18 () Bool (= s2 s17))
+[GOOD] (define-fun s7 () (Seq (SBVTuple2 Int Int)) (|sbv.zip_@((SInteger,_SInteger))| s0 s1))
+[GOOD] (define-fun s8 () Bool (= s2 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s4)
 [GOOD] (assert s6)
-[GOOD] (assert s18)
+[GOOD] (assert s8)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s2))

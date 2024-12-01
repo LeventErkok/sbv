@@ -8,7 +8,7 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
+[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] (declare-datatypes ((SBVTuple2 2)) ((par (T1 T2)
@@ -23,14 +23,20 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- user defined functions ---
-[GOOD] ; --- assignments ---
-[GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (seq.map (lambda ((l1_s0 (SBVTuple2 Int Int)))
+[GOOD] ; --- SBV Function definitions
+[GOOD] (define-fun-rec |sbv.map_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_(SBVTuple2_Int_Int)))_(let_((l1_s1_(proj_1_SBVTuple2_l1_s0)))_(let_((l1_s2_(proj_2_SBVTuple2_l1_s0)))_(let_((l1_s3_(+_l1_s1_l1_s2)))_l1_s3))))| ((lst (Seq (SBVTuple2 Int Int)))) (Seq Int)
+                     (ite (= lst (as seq.empty (Seq (SBVTuple2 Int Int))))
+                          (as seq.empty (Seq Int))
+                          (seq.++ (seq.unit (select (lambda ((l1_s0 (SBVTuple2 Int Int)))
                                  (let ((l1_s1 (proj_1_SBVTuple2 l1_s0)))
                                  (let ((l1_s2 (proj_2_SBVTuple2 l1_s0)))
                                  (let ((l1_s3 (+ l1_s1 l1_s2)))
-                                 l1_s3)))) s0))
+                                 l1_s3)))) (seq.nth lst 0)))
+                                  (|sbv.map_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_(SBVTuple2_Int_Int)))_(let_((l1_s1_(proj_1_SBVTuple2_l1_s0)))_(let_((l1_s2_(proj_2_SBVTuple2_l1_s0)))_(let_((l1_s3_(+_l1_s1_l1_s2)))_l1_s3))))| (seq.extract lst 1 (- (seq.len lst) 1))))))
+[GOOD] ; --- user defined functions ---
+[GOOD] ; --- assignments ---
+[GOOD] (define-fun s3 () Bool (= s0 s2))
+[GOOD] (define-fun s4 () (Seq Int) (|sbv.map_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_(SBVTuple2_Int_Int)))_(let_((l1_s1_(proj_1_SBVTuple2_l1_s0)))_(let_((l1_s2_(proj_2_SBVTuple2_l1_s0)))_(let_((l1_s3_(+_l1_s1_l1_s2)))_l1_s3))))| s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

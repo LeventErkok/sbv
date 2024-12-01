@@ -33,9 +33,9 @@ module Data.SBV.List (
         -- * Reverse
         , reverse
         -- * Mapping
-        , map, mapi
+        , map
         -- * Folding
-        , foldl, foldr, foldli, foldri
+        , foldl, foldr
         -- * Zipping
         , zip, zipWith
         -- * Filtering
@@ -54,7 +54,6 @@ import Data.SBV.Core.Model
 import Data.SBV.Core.Symbolic (registerSpecialFunction)
 
 import Data.SBV.Lambda
-import Data.SBV.Tuple
 
 import Data.Maybe (isNothing, catMaybes)
 
@@ -383,7 +382,7 @@ reverse l
                   registerSpecialFunction st op
                   newExpr st k (SBVApp op [sva])
 
--- | @`map` op s@ maps the operation on to sequence.
+-- | @`map` f s@ maps the operation on to sequence.
 --
 -- >>> map (+1) [1 .. 5 :: Integer]
 -- [2,3,4,5,6] :: [SInteger]
@@ -402,51 +401,25 @@ reverse l
 -- Satisfiable. Model:
 --   s0 = [0,1,2] :: [Integer]
 map :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b) -> SList a -> SList b
-map op l
+map f l
   | Just l' <- unliteral l, Just concResult <- concreteMap l'
   = literal concResult
   | True
-  = SBV $ SVal k $ Right $ cache r
-  where concreteMap l' = case P.map (unliteral . op . literal) l' of
+  = SBV $ SVal klb $ Right $ cache r
+  where concreteMap l' = case P.map (unliteral . f . literal) l' of
                            xs | P.any isNothing xs -> Nothing
                               | True               -> Just (catMaybes xs)
 
-        k = kindOf (Proxy @(SList b))
+        ka  = kindOf (Proxy @a)
+        kb  = kindOf (Proxy @b)
+        klb = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st (kindOf (Proxy @b)) op
-                  newExpr st k (SBVApp (SeqOp (SeqMap lam)) [sva])
+                  lam <- lambdaStr st kb f
+                  let op = SeqOp (SBVMap ka kb lam)
+                  registerSpecialFunction st op
+                  newExpr st klb (SBVApp op [sva])
 
--- | @`mapi` op s@ maps the operation on to sequence, with the counter given at each element, starting
--- at the given value. In Haskell terms, it is:
---
--- @
---    mapi :: (Integer -> a -> b) -> Integer -> [a] -> [b]
---    mapi f i xs = zipWith f [i..] xs
--- @
---
--- Note that `mapi` is definable in terms of `Data.SBV.List.zipWith`, with extra coding. The reason why SBV provides
--- this function natively is because it maps to a native function in the underlying solver. So, hopefully it'll perform
--- better in terms being decidable.
---
--- >>> mapi (+) 10 [1 .. 5 :: Integer]
--- [11,13,15,17,19] :: [SInteger]
-mapi :: forall a b. (SymVal a, SymVal b) => (SInteger -> SBV a -> SBV b) -> SInteger -> SList a -> SList b
-mapi op i l
-  | Just l' <- unliteral l, Just i' <- unliteral i, Just concResult <- concMapi i' l'
-  = literal concResult
-  | True
-  = SBV $ SVal k $ Right $ cache r
-  where concMapi b xs = case P.zipWith (\o e -> unliteral (op (literal o) (literal e))) [b ..] xs of
-                          vs | P.any isNothing vs -> Nothing
-                             | True               -> Just (catMaybes vs)
-
-        k = kindOf (Proxy @(SList b))
-        r st = do svi <- sbvToSV st i
-                  svl <- sbvToSV st l
-                  lam <- lambdaStr st (kindOf (Proxy @b)) op
-                  newExpr st k (SBVApp (SeqOp (SeqMapI lam)) [svi, svl])
-
--- | @`foldl` op base s@ folds the from the left.
+-- | @`foldl` f base s@ folds the from the left.
 --
 -- >>> foldl (+) 0 [1 .. 5 :: Integer]
 -- 15 :: SInteger
@@ -460,55 +433,27 @@ mapi op i l
 -- >>> sat $ \l -> foldl (\soFar elt -> singleton elt ++ soFar) ([] :: SList Integer) l .== [5, 4, 3, 2, 1 :: Integer]
 -- Satisfiable. Model:
 --   s0 = [1,2,3,4,5] :: [Integer]
-foldl :: (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
-foldl op base l
+foldl :: forall a b. (SymVal a, SymVal b) => (SBV b -> SBV a -> SBV b) -> SBV b -> SList a -> SBV b
+foldl f base l
   | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldl base' l'
   = literal concResult
   | True
-  = SBV $ SVal k $ Right $ cache r
+  = SBV $ SVal kb $ Right $ cache r
   where concreteFoldl b []     = Just b
-        concreteFoldl b (e:es) = case unliteral (op (literal b) (literal e)) of
+        concreteFoldl b (e:es) = case unliteral (literal b `f` literal e) of
                                    Nothing -> Nothing
                                    Just b' -> concreteFoldl b' es
 
-        k = kindOf base
+        ka = kindOf (Proxy @a)
+        kb = kindOf (Proxy @b)
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  lam <- lambdaStr st k op
-                  newExpr st k (SBVApp (SeqOp (SeqFoldLeft lam)) [svb, svl])
+                  lam <- lambdaStr st kb f
+                  let op = SeqOp (SBVFoldl ka kb lam)
+                  registerSpecialFunction st op
+                  newExpr st kb (SBVApp op [svb, svl])
 
--- | @`foldli` op i base s@ folds the sequence, with the counter given at each element, starting
--- at the given value. In Haskell terms, it is:
---
--- @
---   foldli :: (Integer -> b -> a -> b) -> Integer -> b -> [a] -> b
---   foldli f c e xs = foldl (\b (i, a) -> f i b a) e (zip [c..] xs)
--- @
---
--- While this function is rather odd looking, it maps directly to the implementation in the underlying solver,
--- and proofs involving it might have better decidability.
---
--- >>> foldli (\i b a -> i+b+a) 10 0 [1 .. 5 :: Integer]
--- 75 :: SInteger
-foldli :: (SymVal a, SymVal b) => (SInteger -> SBV b -> SBV a -> SBV b) -> SInteger -> SBV b -> SList a -> SBV b
-foldli op baseI baseE l
-   | Just l' <- unliteral l, Just baseI' <- unliteral baseI, Just baseE' <- unliteral baseE, Just concResult <- concreteFoldli baseI' baseE' l'
-   = literal concResult
-   | True
-   = SBV $ SVal k $ Right $ cache r
-  where concreteFoldli _ b []     = Just b
-        concreteFoldli c b (e:es) = case unliteral (op (literal c) (literal b) (literal e)) of
-                                      Nothing -> Nothing
-                                      Just b' -> concreteFoldli (c+1) b' es
-
-        k = kindOf baseE
-        r st = do svi <- sbvToSV st baseI
-                  sve <- sbvToSV st baseE
-                  sva <- sbvToSV st l
-                  lam <- lambdaStr st k op
-                  newExpr st k (SBVApp (SeqOp (SeqFoldLeftI lam)) [svi, sve, sva])
-
--- | @`foldr` op base s@ folds the sequence from the right.
+-- | @`foldr` f base s@ folds the sequence from the right.
 --
 -- >>> foldr (+) 0 [1 .. 5 :: Integer]
 -- 15 :: SInteger
@@ -516,13 +461,25 @@ foldli op baseI baseE l
 -- 120 :: SInteger
 -- >>> foldr (\elt soFar -> soFar ++ singleton elt) ([] :: SList Integer) [1 .. 5 :: Integer]
 -- [5,4,3,2,1] :: [SInteger]
-foldr :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
-foldr op b = foldl (flip op) b . reverse
+foldr :: forall a b. (SymVal a, SymVal b) => (SBV a -> SBV b -> SBV b) -> SBV b -> SList a -> SBV b
+foldr f base l
+  | Just l' <- unliteral l, Just base' <- unliteral base, Just concResult <- concreteFoldr base' l'
+  = literal concResult
+  | True
+  = SBV $ SVal kb $ Right $ cache r
+  where concreteFoldr b []     = Just b
+        concreteFoldr b (e:es) = case concreteFoldr b es of
+                                   Nothing  -> Nothing
+                                   Just res -> unliteral (literal e `f` literal res)
 
--- | @`foldri` op base i s@ folds the sequence from the right, with the counter given at each element, starting
--- at the given value. This function is provided as a parallel to `foldli`.
-foldri :: (SymVal a, SymVal b) => (SBV a -> SBV b -> SInteger -> SBV b) -> SBV b -> SInteger -> SList a -> SBV b
-foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
+        ka = kindOf (Proxy @a)
+        kb = kindOf (Proxy @b)
+        r st = do svb <- sbvToSV st base
+                  svl <- sbvToSV st l
+                  lam <- lambdaStr st kb f
+                  let op = SeqOp (SBVFoldr ka kb lam)
+                  registerSpecialFunction st op
+                  newExpr st kb (SBVApp op [svb, svl])
 
 -- | @`zip` xs ys@ zips the lists to give a list of pairs. The length of the final list is
 -- the minumum of the lengths of the given lists.
@@ -532,9 +489,21 @@ foldri op baseE baseI = foldli (\a b i -> op i b a) baseI baseE . reverse
 -- >>> import Data.SBV.Tuple
 -- >>> foldr (+) 0 (map (\t -> t^._1+t^._2::SInteger) (zip [1..10::Integer] [10, 9..1::Integer]))
 -- 110 :: SInteger
-zip :: (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
-zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
-                (mapi (curry tuple) 0 (take (length ys) xs))
+zip :: forall a b. (SymVal a, SymVal b) => SList a -> SList b -> SList (a, b)
+zip xs ys
+ | Just xs' <- unliteral xs, Just ys' <- unliteral ys
+ = literal $ P.zip xs' ys'
+ | True
+ = SBV $ SVal kr $ Right $ cache r
+ where ka = kindOf (Proxy @a)
+       kb = kindOf (Proxy @b)
+       kr = KList $ KTuple [ka, kb]
+
+       r st = do svxs <- sbvToSV st xs
+                 svys <- sbvToSV st ys
+                 let op = SeqOp (SBVZip ka kb)
+                 registerSpecialFunction st op
+                 newExpr st kr (SBVApp op [svxs, svys])
 
 -- | @`zipWith` f xs ys@ zips the lists to give a list of pairs, applying the function to each pair of elements.
 -- The length of the final list is the minumum of the lengths of the given lists.
@@ -543,9 +512,27 @@ zip xs ys = map (\t -> tuple (t^._2, ys `elemAt` (t^._1)))
 -- [12,14,16,18,20,22,24,26,28,30] :: [SInteger]
 -- >>> foldr (+) 0 (zipWith (+) [1..10::Integer] [10, 9..1::Integer])
 -- 110 :: SInteger
-zipWith :: (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
-zipWith f xs ys = map (\t -> f (t^._2) (ys `elemAt` (t^._1)))
-                      (mapi (curry tuple) 0 (take (length ys) xs))
+zipWith :: forall a b c. (SymVal a, SymVal b, SymVal c) => (SBV a -> SBV b -> SBV c) -> SList a -> SList b -> SList c
+zipWith f xs ys
+ | Just xs' <- unliteral xs, Just ys' <- unliteral ys, Just concResult <- concreteZipWith xs' ys'
+ = literal concResult
+ | True
+ = SBV $ SVal kr $ Right $ cache r
+ where concreteZipWith []     _      = Just []
+       concreteZipWith _      []     = Just []
+       concreteZipWith (a:as) (b:bs) = (:) <$> unliteral (literal a `f` literal b) <*> concreteZipWith as bs
+
+       ka = kindOf (Proxy @a)
+       kb = kindOf (Proxy @b)
+       kc = kindOf (Proxy @c)
+       kr = KList kc
+
+       r st = do svxs <- sbvToSV st xs
+                 svys <- sbvToSV st ys
+                 lam <- lambdaStr st kb f
+                 let op = SeqOp (SBVZipWith ka kb kc lam)
+                 registerSpecialFunction st op
+                 newExpr st kr (SBVApp op [svxs, svys])
 
 -- | Concatenate list of lists.
 --
@@ -572,7 +559,7 @@ all f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st KBool f
-                 let op = SeqOp (SBVSeqAll (kindOf (Proxy @a)) lam)
+                 let op = SeqOp (SBVAll (kindOf (Proxy @a)) lam)
                  registerSpecialFunction st op
                  newExpr st KBool (SBVApp op [sva])
 
@@ -591,7 +578,7 @@ any f l
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
                  lam <- lambdaStr st KBool f
-                 let op = SeqOp (SBVSeqAny (kindOf (Proxy @a)) lam)
+                 let op = SeqOp (SBVAny (kindOf (Proxy @a)) lam)
                  registerSpecialFunction st op
                  newExpr st KBool (SBVApp op [sva])
 
@@ -614,7 +601,7 @@ filter f l
         k = kindOf (Proxy @(SList a))
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st KBool f
-                  let op = SeqOp (SBVSeqFilter (kindOf (Proxy @a)) lam)
+                  let op = SeqOp (SBVFilter (kindOf (Proxy @a)) lam)
                   registerSpecialFunction st op
                   newExpr st k (SBVApp op [sva])
 
