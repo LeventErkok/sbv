@@ -54,9 +54,9 @@ drinker = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" $ [
-        goldenCapturedIO "lambda01" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (2             :: SInteger)
-      , goldenCapturedIO "lambda02" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
-      , goldenCapturedIO "lambda03" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
+        goldenCapturedIO "lambda01" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInteger)) (2             :: SInteger)
+      , goldenCapturedIO "lambda02" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
+      , goldenCapturedIO "lambda03" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
 
       , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
       , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
@@ -123,9 +123,9 @@ tests =
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
-      , goldenCapturedIO "lambda33" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (0           :: SInt8)
-      , goldenCapturedIO "lambda34" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
-      , goldenCapturedIO "lambda35" $ record $ \st -> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
+      , goldenCapturedIO "lambda33" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInt8)) (0           :: SInt8)
+      , goldenCapturedIO "lambda34" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
+      , goldenCapturedIO "lambda35" $ record $ \st -> show <$> lambdaStr st (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
       , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st $ \(Forall (_ :: SBool))  -> sTrue
       , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st $ \(Forall b)             -> sNot b
