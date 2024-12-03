@@ -25,15 +25,17 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.zip_@((SInteger,_SInteger))| ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq (SBVTuple2 Int Int))
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: zip :: [SInteger] -> [SInteger] -> [(SInteger, SInteger)]
+[GOOD] (define-fun-rec sbv.zip_88576a ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq (SBVTuple2 Int Int))
                       (ite (or (= lst1 (as seq.empty (Seq Int))) (= lst2 (as seq.empty (Seq Int))))
                            (as seq.empty (Seq (SBVTuple2 Int Int)))
-                           (seq.++ (seq.unit ((as mkSBVTuple2 (SBVTuple2 Int Int)) (seq.nth lst1 0) (seq.nth lst2 0))) (|sbv.zip_@((SInteger,_SInteger))| (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
-[GOOD] (define-fun-rec |sbv.foldl_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_(SBVTuple2_Int_Int)))_(let_((l1_s2_(proj_1_SBVTuple2_l1_s1)))_(let_((l1_s3_(+_l1_s0_l1_s2)))_(let_((l1_s4_(proj_2_SBVTuple2_l1_s1)))_(let_((l1_s5_(+_l1_s3_l1_s4)))_l1_s5)))))| ((base Int) (lst (Seq (SBVTuple2 Int Int)))) Int
+                           (seq.++ (seq.unit ((as mkSBVTuple2 (SBVTuple2 Int Int)) (seq.nth lst1 0) (seq.nth lst2 0))) (sbv.zip_88576a (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
+[GOOD] ; Firstified function: foldl :: (SInteger -> (SInteger, SInteger) -> SInteger) -> SInteger -> [(SInteger, SInteger)] -> SInteger
+[GOOD] (define-fun-rec sbv.foldl_8e9127 ((base Int) (lst (Seq (SBVTuple2 Int Int)))) Int
                        (ite (= lst (as seq.empty (Seq (SBVTuple2 Int Int))))
                             base
-                            (|sbv.foldl_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_(SBVTuple2_Int_Int)))_(let_((l1_s2_(proj_1_SBVTuple2_l1_s1)))_(let_((l1_s3_(+_l1_s0_l1_s2)))_(let_((l1_s4_(proj_2_SBVTuple2_l1_s1)))_(let_((l1_s5_(+_l1_s3_l1_s4)))_l1_s5)))))| (select (lambda ((l1_s0 Int) (l1_s1 (SBVTuple2 Int Int)))
+                            (sbv.foldl_8e9127 (select (lambda ((l1_s0 Int) (l1_s1 (SBVTuple2 Int Int)))
                                  (let ((l1_s2 (proj_1_SBVTuple2 l1_s1)))
                                  (let ((l1_s3 (+ l1_s0 l1_s2)))
                                  (let ((l1_s4 (proj_2_SBVTuple2 l1_s1)))
@@ -42,8 +44,8 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s6 () (Seq (SBVTuple2 Int Int)) (|sbv.zip_@((SInteger,_SInteger))| s5 s0))
-[GOOD] (define-fun s7 () Int (|sbv.foldl_@(((SInteger,_SInteger),_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_(SBVTuple2_Int_Int)))_(let_((l1_s2_(proj_1_SBVTuple2_l1_s1)))_(let_((l1_s3_(+_l1_s0_l1_s2)))_(let_((l1_s4_(proj_2_SBVTuple2_l1_s1)))_(let_((l1_s5_(+_l1_s3_l1_s4)))_l1_s5)))))| s4 s6))
+[GOOD] (define-fun s6 () (Seq (SBVTuple2 Int Int)) (sbv.zip_88576a s5 s0))
+[GOOD] (define-fun s7 () Int (sbv.foldl_8e9127 s4 s6))
 [GOOD] (define-fun s8 () Bool (= s1 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

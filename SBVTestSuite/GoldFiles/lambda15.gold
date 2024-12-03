@@ -21,16 +21,17 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.foldl_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| ((base Int) (lst (Seq Int))) Int
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: foldl :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
+[GOOD] (define-fun-rec sbv.foldl_929914 ((base Int) (lst (Seq Int))) Int
                        (ite (= lst (as seq.empty (Seq Int)))
                             base
-                            (|sbv.foldl_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| (select (lambda ((l1_s0 Int) (l1_s1 Int))
+                            (sbv.foldl_929914 (select (lambda ((l1_s0 Int) (l1_s1 Int))
          (+ l1_s0 l1_s1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () Int (|sbv.foldl_@((SInteger,_SInteger))_(lambda_((l1_s0_Int)_(l1_s1_Int))_(+_l1_s0_l1_s1))| s4 s0))
+[GOOD] (define-fun s5 () Int (sbv.foldl_929914 s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

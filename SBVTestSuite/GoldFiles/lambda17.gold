@@ -21,18 +21,19 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.foldl_@((SInteger,_[SInteger]))_(lambda_((l1_s0_(Seq_Int))_(l1_s1_Int))_(let_((l1_s2_(seq.unit_l1_s1)))_(let_((l1_s3_(seq.++_l1_s2_l1_s0)))_l1_s3)))| ((base (Seq Int)) (lst (Seq Int))) (Seq Int)
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: foldl :: ([SInteger] -> SInteger -> [SInteger]) -> [SInteger] -> [SInteger] -> [SInteger]
+[GOOD] (define-fun-rec sbv.foldl_16a081 ((base (Seq Int)) (lst (Seq Int))) (Seq Int)
                        (ite (= lst (as seq.empty (Seq Int)))
                             base
-                            (|sbv.foldl_@((SInteger,_[SInteger]))_(lambda_((l1_s0_(Seq_Int))_(l1_s1_Int))_(let_((l1_s2_(seq.unit_l1_s1)))_(let_((l1_s3_(seq.++_l1_s2_l1_s0)))_l1_s3)))| (select (lambda ((l1_s0 (Seq Int)) (l1_s1 Int))
+                            (sbv.foldl_16a081 (select (lambda ((l1_s0 (Seq Int)) (l1_s1 Int))
                                  (let ((l1_s2 (seq.unit l1_s1)))
                                  (let ((l1_s3 (seq.++ l1_s2 l1_s0)))
                                  l1_s3))) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () (Seq Int) (|sbv.foldl_@((SInteger,_[SInteger]))_(lambda_((l1_s0_(Seq_Int))_(l1_s1_Int))_(let_((l1_s2_(seq.unit_l1_s1)))_(let_((l1_s3_(seq.++_l1_s2_l1_s0)))_l1_s3)))| s4 s0))
+[GOOD] (define-fun s5 () (Seq Int) (sbv.foldl_16a081 s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

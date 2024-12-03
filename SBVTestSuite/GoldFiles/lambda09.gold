@@ -20,19 +20,20 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.map_@((SInt8,_SInt8))_(lambda_((l1_s0_(__BitVec_8)))_(let_((l1_s1_#x01))_(let_((l1_s2_(bvadd_l1_s0_l1_s1)))_l1_s2)))| ((lst (Seq (_ BitVec 8)))) (Seq (_ BitVec 8))
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: map :: (SInt8 -> SInt8) -> [SInt8] -> [SInt8]
+[GOOD] (define-fun-rec sbv.map_f39867 ((lst (Seq (_ BitVec 8)))) (Seq (_ BitVec 8))
                      (ite (= lst (as seq.empty (Seq (_ BitVec 8))))
                           (as seq.empty (Seq (_ BitVec 8)))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 (_ BitVec 8)))
                                  (let ((l1_s1 #x01))
                                  (let ((l1_s2 (bvadd l1_s0 l1_s1)))
                                  l1_s2))) (seq.nth lst 0)))
-                                  (|sbv.map_@((SInt8,_SInt8))_(lambda_((l1_s0_(__BitVec_8)))_(let_((l1_s1_#x01))_(let_((l1_s2_(bvadd_l1_s0_l1_s1)))_l1_s2)))| (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_f39867 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq (_ BitVec 8)) (|sbv.map_@((SInt8,_SInt8))_(lambda_((l1_s0_(__BitVec_8)))_(let_((l1_s1_#x01))_(let_((l1_s2_(bvadd_l1_s0_l1_s1)))_l1_s2)))| s0))
+[GOOD] (define-fun s4 () (Seq (_ BitVec 8)) (sbv.map_f39867 s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

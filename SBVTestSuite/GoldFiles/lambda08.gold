@@ -20,19 +20,20 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.map_@((SFloat,_SFloat))_(lambda_((l1_s0_(__FloatingPoint_8_24)))_(let_((l1_s1_((__to_fp_8_24)_roundNearestTiesToEven_(/_1.0_1.0))))_(let_((l1_s2_(fp.add_roundNearestTiesToEven_l1_s0_l1_s1)))_l1_s2)))| ((lst (Seq (_ FloatingPoint  8 24)))) (Seq (_ FloatingPoint  8 24))
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: map :: (SFloat -> SFloat) -> [SFloat] -> [SFloat]
+[GOOD] (define-fun-rec sbv.map_172e96 ((lst (Seq (_ FloatingPoint  8 24)))) (Seq (_ FloatingPoint  8 24))
                      (ite (= lst (as seq.empty (Seq (_ FloatingPoint  8 24))))
                           (as seq.empty (Seq (_ FloatingPoint  8 24)))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 (_ FloatingPoint  8 24)))
                                  (let ((l1_s1 ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))))
                                  (let ((l1_s2 (fp.add roundNearestTiesToEven l1_s0 l1_s1)))
                                  l1_s2))) (seq.nth lst 0)))
-                                  (|sbv.map_@((SFloat,_SFloat))_(lambda_((l1_s0_(__FloatingPoint_8_24)))_(let_((l1_s1_((__to_fp_8_24)_roundNearestTiesToEven_(/_1.0_1.0))))_(let_((l1_s2_(fp.add_roundNearestTiesToEven_l1_s0_l1_s1)))_l1_s2)))| (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_172e96 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (|sbv.map_@((SFloat,_SFloat))_(lambda_((l1_s0_(__FloatingPoint_8_24)))_(let_((l1_s1_((__to_fp_8_24)_roundNearestTiesToEven_(/_1.0_1.0))))_(let_((l1_s2_(fp.add_roundNearestTiesToEven_l1_s0_l1_s1)))_l1_s2)))| s0))
+[GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (sbv.map_172e96 s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

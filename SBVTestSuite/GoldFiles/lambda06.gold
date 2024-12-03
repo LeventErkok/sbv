@@ -20,8 +20,9 @@
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
-[GOOD] ; --- SBV Function definitions
-[GOOD] (define-fun-rec |sbv.map_@((SInteger,_SInteger))_(lambda_((l1_s0_Int))_(let_((l1_s1_(*_l1_s0_l1_s0)))_(let_((l1_s2_(+_l1_s0_l1_s1)))_(let_((l1_s3_(*_l1_s0_l1_s1)))_(let_((l1_s4_(+_l1_s2_l1_s3)))_(let_((l1_s5_(*_l1_s1_l1_s1)))_(let_((l1_s6_(+_l1_s4_l1_s5)))_(let_((l1_s7_(*_l1_s0_l1_s5)))_(let_((l1_s8_(+_l1_s6_l1_s7)))_(let_((l1_s9_(*_l1_s1_l1_s5)))_(let_((l1_s10_(+_l1_s8_l1_s9)))_(let_((l1_s11_(*_l1_s0_l1_s9)))_(let_((l1_s12_(+_l1_s10_l1_s11)))_(let_((l1_s13_(*_l1_s5_l1_s5)))_(let_((l1_s14_(+_l1_s12_l1_s13)))_(let_((l1_s15_(*_l1_s0_l1_s13)))_(let_((l1_s16_(+_l1_s14_l1_s15)))_(let_((l1_s17_(*_l1_s1_l1_s13)))_(let_((l1_s18_(+_l1_s16_l1_s17)))_l1_s18)))))))))))))))))))| ((lst (Seq Int))) (Seq Int)
+[GOOD] ; --- Firstified function definitions
+[GOOD] ; Firstified function: map :: (SInteger -> SInteger) -> [SInteger] -> [SInteger]
+[GOOD] (define-fun-rec sbv.map_8f5bf3 ((lst (Seq Int))) (Seq Int)
                      (ite (= lst (as seq.empty (Seq Int)))
                           (as seq.empty (Seq Int))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 Int))
@@ -44,11 +45,11 @@
                                  (let ((l1_s17 (* l1_s1 l1_s13)))
                                  (let ((l1_s18 (+ l1_s16 l1_s17)))
                                  l1_s18))))))))))))))))))) (seq.nth lst 0)))
-                                  (|sbv.map_@((SInteger,_SInteger))_(lambda_((l1_s0_Int))_(let_((l1_s1_(*_l1_s0_l1_s0)))_(let_((l1_s2_(+_l1_s0_l1_s1)))_(let_((l1_s3_(*_l1_s0_l1_s1)))_(let_((l1_s4_(+_l1_s2_l1_s3)))_(let_((l1_s5_(*_l1_s1_l1_s1)))_(let_((l1_s6_(+_l1_s4_l1_s5)))_(let_((l1_s7_(*_l1_s0_l1_s5)))_(let_((l1_s8_(+_l1_s6_l1_s7)))_(let_((l1_s9_(*_l1_s1_l1_s5)))_(let_((l1_s10_(+_l1_s8_l1_s9)))_(let_((l1_s11_(*_l1_s0_l1_s9)))_(let_((l1_s12_(+_l1_s10_l1_s11)))_(let_((l1_s13_(*_l1_s5_l1_s5)))_(let_((l1_s14_(+_l1_s12_l1_s13)))_(let_((l1_s15_(*_l1_s0_l1_s13)))_(let_((l1_s16_(+_l1_s14_l1_s15)))_(let_((l1_s17_(*_l1_s1_l1_s13)))_(let_((l1_s18_(+_l1_s16_l1_s17)))_l1_s18)))))))))))))))))))| (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_8f5bf3 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (|sbv.map_@((SInteger,_SInteger))_(lambda_((l1_s0_Int))_(let_((l1_s1_(*_l1_s0_l1_s0)))_(let_((l1_s2_(+_l1_s0_l1_s1)))_(let_((l1_s3_(*_l1_s0_l1_s1)))_(let_((l1_s4_(+_l1_s2_l1_s3)))_(let_((l1_s5_(*_l1_s1_l1_s1)))_(let_((l1_s6_(+_l1_s4_l1_s5)))_(let_((l1_s7_(*_l1_s0_l1_s5)))_(let_((l1_s8_(+_l1_s6_l1_s7)))_(let_((l1_s9_(*_l1_s1_l1_s5)))_(let_((l1_s10_(+_l1_s8_l1_s9)))_(let_((l1_s11_(*_l1_s0_l1_s9)))_(let_((l1_s12_(+_l1_s10_l1_s11)))_(let_((l1_s13_(*_l1_s5_l1_s5)))_(let_((l1_s14_(+_l1_s12_l1_s13)))_(let_((l1_s15_(*_l1_s0_l1_s13)))_(let_((l1_s16_(+_l1_s14_l1_s15)))_(let_((l1_s17_(*_l1_s1_l1_s13)))_(let_((l1_s18_(+_l1_s16_l1_s17)))_l1_s18)))))))))))))))))))| s0))
+[GOOD] (define-fun s4 () (Seq Int) (sbv.map_8f5bf3 s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
