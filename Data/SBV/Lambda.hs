@@ -26,7 +26,6 @@ module Data.SBV.Lambda (
           , constraint,  constraintStr
         ) where
 
-
 import Control.Monad       (join)
 import Control.Monad.Trans (liftIO, MonadIO)
 
@@ -46,6 +45,7 @@ import qualified Data.Foldable as F
 import qualified Data.Generics.Uniplate.Data as G
 
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
+                 [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
                  (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
                  [Op]                            -- All ops used in the definition
                  (Int -> String)                 -- Body, given the tab amount.
@@ -128,7 +128,7 @@ extractAllUniversals other      = error $ unlines [ ""
 -- | Generic creator for anonymous lamdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
 lambdaGen allowFreeVars trans inState fk f = inSubState inState $ \st -> handle <$> convert st fk (mkLambda st f)
-  where handle d@(Defn frees _ _ _)
+  where handle d@(Defn _ frees _ _ _)
           | allowFreeVars || null frees
           = trans d
           | True
@@ -136,7 +136,7 @@ lambdaGen allowFreeVars trans inState fk f = inSubState inState $ \st -> handle 
                             , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
                             , "***"
                             , "***  Free vars : " ++ unwords frees
-                            , "***  Definition: " ++ sh d
+                            , "***  Definition: " ++ shift (lines (sh d))
                             , "***"
                             , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
                             , "***"
@@ -144,19 +144,23 @@ lambdaGen allowFreeVars trans inState fk f = inSubState inState $ \st -> handle 
                             , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
                             ]
 
-        sh (Defn _unints Nothing       _ops body) = body 0
-        sh (Defn _unints (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+        sh (Defn _unints _frees Nothing       _ops body) = body 0
+        sh (Defn _unints _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+
+        shift []     = []
+        shift (x:xs) = intercalate "\n" (x : map tab xs)
+          where tab s = "***              " ++ s
 
 -- | Create an SMTLib lambda, in the given state.
 lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTDef
 lambda inState allowFreeVars fk = lambdaGen allowFreeVars mkLam inState fk
-   where mkLam (Defn unints params ops body) = SMTLam fk unints ops (extractAllUniversals <$> params) body
+   where mkLam (Defn unints _frees params ops body) = SMTLam fk unints ops (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
 lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTLambda
 lambdaStr st allowFreeVars k a = SMTLambda <$> lambdaGen allowFreeVars mkLam st k a
-   where mkLam (Defn _unints Nothing       _ops body) = body 0
-         mkLam (Defn _unints (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
+   where mkLam (Defn _unints _frees Nothing       _ops body) = body 0
+         mkLam (Defn _unints _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
 namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
@@ -165,12 +169,12 @@ namedLambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> conver
 -- | Create a named SMTLib function, in the given state.
 namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m SMTDef
 namedLambda inState nm fk = namedLambdaGen mkDef inState fk
-   where mkDef (Defn unints params ops body) = SMTDef nm fk unints ops (extractAllUniversals <$> params) body
+   where mkDef (Defn unints _frees params ops body) = SMTDef nm fk unints ops (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
 namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> SBVType -> a -> m String
 namedLambdaStr inState nm t = namedLambdaGen mkDef inState fk
-   where mkDef (Defn unints params ops body) = concat $ declUserFuns [(SMTDef nm fk unints ops (extractAllUniversals <$> params) body, t)]
+   where mkDef (Defn unints _frees params ops body) = concat $ declUserFuns [(SMTDef nm fk unints ops (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
@@ -181,10 +185,10 @@ constraintGen trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
-   let mkDef (Defn deps Nothing       ops body) = trans deps ops body
-       mkDef (Defn deps (Just params) ops body) = trans deps ops $ \i -> unwords (map mkGroup params) ++ "\n"
-                                                                      ++ body (i + 2)
-                                                                      ++ replicate (length params) ')'
+   let mkDef (Defn deps _frees Nothing       ops body) = trans deps ops body
+       mkDef (Defn deps _frees (Just params) ops body) = trans deps ops $ \i -> unwords (map mkGroup params) ++ "\n"
+                                                                        ++ body (i + 2)
+                                                                        ++ replicate (length params) ')'
        mkGroup (ALL, s) = "(forall " ++ s
        mkGroup (EX,  s) = "(exists " ++ s
 
@@ -280,6 +284,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
          | True
          = res
          where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
+                          frees
                           mbParam
                           (nub (sort (G.universeBi asgnsSeq)))
                           body
@@ -289,6 +294,11 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                                   , "   Saw: " ++ show as
                                                   ]
                           ResultLamInps xs -> map (\(q, v) -> (q, getSV v)) xs
+
+               frees = map show $ nub $ allUses \\ allDefs
+                 where (defs, uses) = unzip [(d, u) | (d, SBVApp _ u) <- F.toList asgnsSeq]
+                       allDefs      = defs ++ map snd params ++ map fst constants
+                       allUses      = concat uses
 
                mbParam
                  | null params = Nothing
