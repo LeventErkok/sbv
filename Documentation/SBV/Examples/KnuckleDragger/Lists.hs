@@ -71,9 +71,11 @@ filterEx2 = runKD $ do
 
         pure ()
 
+-- | Data declaration for an uninterpreted source type.
 data A
 mkUninterpretedSort ''A
 
+-- | Data declaration for an uninterpreted target type.
 data B
 mkUninterpretedSort ''B
 
