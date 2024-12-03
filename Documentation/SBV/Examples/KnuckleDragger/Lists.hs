@@ -79,10 +79,6 @@ mkUninterpretedSort ''A
 data B
 mkUninterpretedSort ''B
 
--- | An uninterpreted function, for use as a witness in the following higher-order proofs.
-f :: SA -> SB
-f = uninterpret "f"
-
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runKD revCons
@@ -104,6 +100,10 @@ mapAppend :: KD Proof
 mapAppend = do
    let p :: (SA -> SB) -> SList A -> SList A -> SBool
        p g xs ys = map g (xs ++ ys) .== map g xs ++ map g ys
+
+       -- For an arbitrary uninterpreted function 'f':
+       f :: SA -> SB
+       f = uninterpret "f"
 
    lemma "mapAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
@@ -128,6 +128,10 @@ mapReverse :: KD Proof
 mapReverse = do
      let p :: (SA -> SB) -> SList A -> SBool
          p g xs = reverse (map g xs) .== map g (reverse xs)
+
+         -- For an arbitrary uninterpreted function 'f':
+         f :: SA -> SB
+         f = uninterpret "f"
 
      rCons <- revCons
      mApp  <- mapAppend
