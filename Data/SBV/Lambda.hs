@@ -295,7 +295,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                                   ]
                           ResultLamInps xs -> map (\(q, v) -> (q, getSV v)) xs
 
-               frees = map show $ nub $ allUses \\ allDefs
+               frees = map show $ nub allUses \\ nub allDefs
                  where (defs, uses) = unzip [(d, u) | (d, SBVApp _ u) <- F.toList asgnsSeq]
                        allDefs      = defs ++ map snd params ++ map fst constants
                        allUses      = concat uses
