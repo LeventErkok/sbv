@@ -1,0 +1,16 @@
+CAUGHT EXCEPTION
+
+
+*** Data.SBV.Lambda: Detected free variables passed to a lambda.
+***
+***  Free vars : l1_s0
+***  Definition: (lambda ((l2_s0 Int))
+***                (+ l1_s0 l2_s0))
+***
+*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in.
+***
+*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
+*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
+
+CallStack (from HasCallStack):
+  error, called at ./Data/SBV/Lambda.hs:135:13 in sbv-11.0.5-inplace:Data.SBV.Lambda

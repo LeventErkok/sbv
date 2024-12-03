@@ -27,7 +27,7 @@ module TestSuite.Basics.Lambda(tests)  where
 import Prelude hiding((++), map, foldl, foldr, sum, length, zip, zipWith, all, any, concat, filter)
 import qualified Prelude as P
 
-import Control.Monad (unless)
+import Control.Monad (unless, void)
 import qualified Control.Exception as C
 
 import Data.SBV.Control
@@ -231,6 +231,7 @@ tests =
 
       , goldenCapturedIO "lambda79" $ \f -> sbv2smt def_t1 >>= writeFile f
       , goldenCapturedIO "lambda80" $ \f -> sbv2smt def_t2 >>= writeFile f
+      , goldenCapturedIO "lambda81" $ errorOut freeVar1
       ]
    P.++ qc1 "lambdaQC1" P.sum (foldr (+) (0::SInteger))
    P.++ qc2 "lambdaQC2" (+)  (smtFunction "sadd" ((+) :: SInteger -> SInteger -> SInteger))
@@ -362,6 +363,19 @@ eval2 cArg1 cArg2 (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirect
                               getModel
                     _ -> error $ "Unexpected output: " P.++ show cs
 
+-- Tests that error out
+errorOut :: (SMTConfig -> IO a) -> FilePath -> IO ()
+errorOut t rf = void (t z3{verbose=True, redirectVerbose=Just rf})
+                    `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
+                                                          appendFile rf (show e)
+
+-- Don't allow free variables in higher-order functions. Firstification can't handle these.
+freeVar1 :: SMTConfig -> IO SatResult
+freeVar1 cfg = satWith cfg $ do
+        zs <- free_
+        xs <- free_
+        constrain $ xs .== literal [1,2,3::Integer]
+        pure $ zs .== map (\x -> map (\y -> x+y) (literal [3,4,5])) xs
 
 {- HLint ignore module "Use map once"   -}
 {- HLint ignore module "Use sum"        -}
