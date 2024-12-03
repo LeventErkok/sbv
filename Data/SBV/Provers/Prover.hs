@@ -107,6 +107,7 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
                                             , kdRibbonLength              = 40
+                                            , firstifyUniqueLen           = 6
                                             }
 
 -- | If supported, this makes all output go to stdout, which works better with SBV

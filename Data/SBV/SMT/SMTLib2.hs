@@ -18,8 +18,11 @@
 
 module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtCV, cvtInc, declUserFuns, constructTables) where
 
+import Crypto.Hash.SHA512 (hash)
+import qualified Data.ByteString.Base16 as B
+import qualified Data.ByteString.Char8  as BC
+
 import Data.Bits  (bit)
-import Data.Char  (isSpace)
 import Data.List  (intercalate, partition, nub, elemIndex)
 import Data.Maybe (listToMaybe, catMaybes)
 
@@ -44,18 +47,26 @@ import qualified Data.Generics.Uniplate.Data as G
 
 import qualified Data.Graph as DG
 
--- | A globally (hopefully!) unique name for the operator
--- TODO: Perhaps replace this with a simpler hash?
-getFuncName :: Op -> String
-getFuncName o = "|" ++ map clean (compress (show o)) ++ "|"
-  where clean c | isSpace c || c == '|' = '_'
-                | True                  = c
-
-        compress (x:y:rest)
-          | all isSpace [x, y] =     compress (y:rest)
-          | True               = x : compress (y:rest)
-        compress (x:rest)      = x : compress rest
-        compress ""            = ""
+-- | For higher-order functions, we firstify them. This requires a uniqu name creation. Here,
+-- we create a firstified name based on the operation. The suffix appended will have at most uniqLen length.
+firstify :: Int -> Op -> String
+firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash (BC.pack (show o)))))
+  where prefix (SeqOp SBVReverse {}) = "sbv.reverse"
+        prefix (SeqOp SBVZip     {}) = "sbv.zip"
+        prefix (SeqOp SBVZipWith {}) = "sbv.zipWith"
+        prefix (SeqOp SBVMap     {}) = "sbv.map"
+        prefix (SeqOp SBVFoldl   {}) = "sbv.foldl"
+        prefix (SeqOp SBVFoldr   {}) = "sbv.foldr"
+        prefix (SeqOp SBVFilter  {}) = "sbv.filter"
+        prefix (SeqOp SBVAll     {}) = "sbv.all"
+        prefix (SeqOp SBVAny     {}) = "sbv.any"
+        prefix _                     = error $ unlines [ "***"
+                                                       , "*** Data.SBV.firstify: Didn't expect firstification to be called."
+                                                       , "***"
+                                                       , "***   Operator: " ++ show o
+                                                       , "***"
+                                                       , "*** Please report this as a bug."
+                                                       ]
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter ([String], [String])
@@ -255,8 +266,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ map nonConstTable nonConstTables
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
-             ++ [ "; --- SBV Function definitions" | not (null specialFuncs) ]
-             ++ concat [declSBVFunc cfg op | op <- reverse specialFuncs]
+             ++ [ "; --- Firstified function definitions" | not (null specialFuncs) ]
+             ++ concat firstifiedFuncs
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
@@ -266,7 +277,40 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
-        userDefs     = declUserFuns defs
+
+        firstifiedFuncs
+           = case dup res of
+               Nothing         -> map (snd . snd) res
+               Just (o, o', n) -> let curLen = firstifyUniqueLen cfg
+                                  in error $ unlines [ ""
+                                                     , "*** Data.SBV: Insufficient unique length in firstification."
+                                                     , "***"
+                                                     , "***   Operator 1 : " ++ show o
+                                                     , "***   Operator 2 : " ++ show o'
+                                                     , "***   Mapped name: " ++ n
+                                                     , "***   Unique len : " ++ show curLen
+                                                     , "***"
+                                                     , "*** Such collisions should be rare, but looks like you ran into one!"
+                                                     , "*** Try running with an increased unique-length:"
+                                                     , "***"
+                                                     , "***     solver{firstifyUniqueLen = N}"
+                                                     , "***"
+                                                     , "*** where N is larger than " ++ show curLen
+                                                     , "***"
+                                                     , "*** For instance:"
+                                                     , "***"
+                                                     , "***     satWith z3{firstUniqueLen = " ++ show (curLen + 1) ++ "}"
+                                                     , "***"
+                                                     , "*** If that doesn't resolve the problem, or if you believe this is caused by some"
+                                                     , "*** other problem, please report his as a bug."
+                                                     ]
+           where res = [(op, declSBVFunc cfg op) | op <- reverse specialFuncs]
+                 dup []                = Nothing
+                 dup ((o, (n, _)): xs) = case [o' | (o', (n', _)) <- xs, n == n'] of
+                                           []       -> dup xs
+                                           (o' : _) -> Just (o, o', n)
+
+        userDefs = declUserFuns defs
         exportedDefs
           | null userDefs
           = ["; No calls to 'smtFunction' found."]
@@ -321,21 +365,45 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                         _                     -> Nothing
 
 -- Declare "known" SBV functions here
-declSBVFunc :: SMTConfig -> Op -> [String]
-declSBVFunc cfg op = case op of
-                       SeqOp (SBVReverse KString)                -> mkStringRev
-                       SeqOp (SBVReverse (KList k))              -> mkSeqRev  (KList k)
-                       SeqOp (SBVZip     k1 k2)                  -> mkZip     k1 k2 Nothing
-                       SeqOp (SBVZipWith k1 k2 k3 (SMTLambda f)) -> mkZip     k1 k2 (Just (k3, f))
-                       SeqOp (SBVMap     k1 k2    (SMTLambda f)) -> mkMap     k1 k2 f
-                       SeqOp (SBVFoldl   k1 k2    (SMTLambda f)) -> mkFoldl   k1 k2 f
-                       SeqOp (SBVFoldr   k1 k2    (SMTLambda f)) -> mkFoldr   k1 k2 f
-                       SeqOp (SBVFilter  ek       (SMTLambda f)) -> mkFilter  ek    f
-                       SeqOp (SBVAll     ek       (SMTLambda f)) -> mkAnyAll  True  ek f
-                       SeqOp (SBVAny     ek       (SMTLambda f)) -> mkAnyAll  False ek f
-                       _                                         -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: "
+declSBVFunc :: SMTConfig -> Op -> (String, [String])
+declSBVFunc cfg op = (nm, comment ++ body)
+  where nm = firstify (firstifyUniqueLen cfg) op
+
+        comment = ["; Firstified function: " ++ htyp]
+
+        body = case op of
+                 SeqOp (SBVReverse KString)                -> mkStringRev
+                 SeqOp (SBVReverse (KList k))              -> mkSeqRev  (KList k)
+                 SeqOp (SBVZip     k1 k2)                  -> mkZip     k1 k2 Nothing
+                 SeqOp (SBVZipWith k1 k2 k3 (SMTLambda f)) -> mkZip     k1 k2 (Just (k3, f))
+                 SeqOp (SBVMap     k1 k2    (SMTLambda f)) -> mkMap     k1 k2 f
+                 SeqOp (SBVFoldl   k1 k2    (SMTLambda f)) -> mkFoldl   k1 k2 f
+                 SeqOp (SBVFoldr   k1 k2    (SMTLambda f)) -> mkFoldr   k1 k2 f
+                 SeqOp (SBVFilter  ek       (SMTLambda f)) -> mkFilter  ek    f
+                 SeqOp (SBVAll     ek       (SMTLambda f)) -> mkAnyAll  True  ek f
+                 SeqOp (SBVAny     ek       (SMTLambda f)) -> mkAnyAll  False ek f
+                 _                                         -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: "
                                                                           ++ show (op, nm)
-  where nm = getFuncName op
+
+        shf :: String -> [Kind] -> Kind -> String
+        shf f args rt = f ++ " :: " ++ intercalate " -> " (map show (args ++ [rt]))
+
+        shh :: String -> ([Kind], Kind) -> ([Kind], Kind) -> String
+        shh f (fargs, fret) (args, rt) = f ++ " :: (" ++ intercalate " -> " (map show (fargs ++ [fret])) ++ ") -> "
+                                           ++ intercalate " -> " (map show (args ++ [rt]))
+
+        htyp = case op of
+                 SeqOp (SBVReverse KString)   -> shf "reverse" [KString] KString
+                 SeqOp (SBVReverse k@KList{}) -> shf "reverse" [k] k
+                 SeqOp (SBVZip     a b)       -> shf "zip"     [KList a, KList b] (KList (KTuple [a, b]))
+                 SeqOp (SBVZipWith a b c _)   -> shh "zipWith" ([a, b], c)  ([KList a, KList b], KList c)
+                 SeqOp (SBVMap     a b   _)   -> shh "map"     ([a], b)     ([KList a], KList b)
+                 SeqOp (SBVFoldl   a b   _)   -> shh "foldl"   ([b, a], b)  ([b, KList a], b)
+                 SeqOp (SBVFoldr   a b   _)   -> shh "foldr"   ([a, b], b)  ([b, KList a], b)
+                 SeqOp (SBVFilter  a     _)   -> shh "filter"  ([a], KBool) ([KList a], KList a)
+                 SeqOp (SBVAll     a     _)   -> shh "all"     ([a], KBool) ([KList a], KBool)
+                 SeqOp (SBVAny     a     _)   -> shh "any"     ([a], KBool) ([KList a], KBool)
+                 _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
 
         -- in Z3, lambdas are applied with select. In CVC5, it's @. This might change with higher-order features being added to SMTLib in v3
         par x = "(" ++ x ++ ")"
@@ -614,8 +682,8 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
 declDef :: ProgInfo -> SMTConfig -> TableMap -> (SV, SBVExpr) -> [String]
 declDef curProgInfo cfg tableMap (s, expr) =
         case expr of
-          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                               e) (Just m)
-          e                     -> defineFun cfg (s, cvtExp curProgInfo caps rm tableMap e) Nothing
+          SBVApp  (Label m) [e] -> defineFun cfg (s, cvtSV                                   e) (Just m)
+          e                     -> defineFun cfg (s, cvtExp cfg curProgInfo caps rm tableMap e) Nothing
   where caps = capabilities (solver cfg)
         rm   = roundingMode cfg
 
@@ -813,8 +881,8 @@ getTable m i
   | Just tn <- i `IM.lookup` m = tn
   | True                       = "table" ++ show i  -- constant tables are always named this way
 
-cvtExp :: ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> String
-cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
+cvtExp :: SMTConfig -> ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> String
+cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
   where hasPB       = supportsPseudoBooleans caps
         hasInt2bv   = supportsInt2bv         caps
         hasDistinct = supportsDistinct       caps
@@ -943,6 +1011,8 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
           where dResult = "(_ is " ++ fld ++ ")"
                 ps      = " (" ++ unwords (map smtType params) ++ ") "
                 aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
+
+        firstifiedName = firstify (firstifyUniqueLen cfg)
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ cvtSV a ++ " " ++ cvtSV b ++ " " ++ cvtSV c ++ ")"
 
@@ -1090,16 +1160,16 @@ cvtExp curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (RegExOp o@RegExNEq{}) []) = show o
 
         -- Reverse and higher order functions are special
-        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZip{})     args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVZipWith{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVMap{})     args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldl{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFoldr{})   args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVFilter{})  args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAll{} )    args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
-        sh (SBVApp o@(SeqOp SBVAny{} )    args) = "(" ++ getFuncName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZip{})     args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVZipWith{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVReverse{}) args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVMap{})     args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldl{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFoldr{})   args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVFilter{})  args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAll{} )    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVAny{} )    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 

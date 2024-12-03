@@ -541,15 +541,15 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SeqSuffixOf                         -- ^ See StrSuffixOf
            | SeqReplace                          -- ^ See StrReplace
            -- Polymorphic and higher order functions
-           | SBVReverse Kind                     -- ^ reverse k.       Where k is either [a] or String. Reverses the argument, accordingly.
-           | SBVZip     Kind Kind                -- ^ zip k1 k2.       Where we zip [k1] and [k2] to produce [(k1, k2)]
+           | SBVReverse Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
+           | SBVZip     Kind Kind                -- ^ zip k1 k2.         Where we zip [k1] and [k2] to produce [(k1, k2)]
            | SBVZipWith Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-           | SBVMap     Kind Kind SMTLambda      -- ^ map    a b fun.  Where fun :: a -> b,      and map    :: (a -> b) -> [a] -> [b]
-           | SBVFoldl   Kind Kind SMTLambda      -- ^ foldl  a b fun.  Where fun :: b -> a -> b, and foldl  :: (b -> a -> b) -> b -> [a] -> b
-           | SBVFoldr   Kind Kind SMTLambda      -- ^ foldr  a b fun.  Where fun :: a -> b -> b, and foldr  :: (a -> b -> b) -> b -> [a] -> b
-           | SBVFilter  Kind      SMTLambda      -- ^ filter a fun.    Where fun :: a -> Bool,   and filter :: (a -> Bool) -> [a] -> [a]
-           | SBVAll     Kind      SMTLambda      -- ^ all    a fun.    Where fun :: a -> Bool,   and all    :: (a -> Bool) -> [a] -> Bool
-           | SBVAny     Kind      SMTLambda      -- ^ any    a fun.    Where fun :: a -> Bool,   and any    :: (a -> Bool) -> [a] -> Bool
+           | SBVMap     Kind Kind SMTLambda      -- ^ map    a b fun.    Where fun :: a -> b,      and map    :: (a -> b) -> [a] -> [b]
+           | SBVFoldl   Kind Kind SMTLambda      -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl  :: (b -> a -> b) -> b -> [a] -> b
+           | SBVFoldr   Kind Kind SMTLambda      -- ^ foldr  a b fun.    Where fun :: a -> b -> b, and foldr  :: (a -> b -> b) -> b -> [a] -> b
+           | SBVFilter  Kind      SMTLambda      -- ^ filter a fun.      Where fun :: a -> Bool,   and filter :: (a -> Bool) -> [a] -> [a]
+           | SBVAll     Kind      SMTLambda      -- ^ all    a fun.      Where fun :: a -> Bool,   and all    :: (a -> Bool) -> [a] -> Bool
+           | SBVAny     Kind      SMTLambda      -- ^ any    a fun.      Where fun :: a -> Bool,   and any    :: (a -> Bool) -> [a] -> Bool
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -2284,6 +2284,7 @@ data SMTConfig = SMTConfig {
        , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
        , kdRibbonLength              :: Int                 -- ^ Line length for KD proofs
+       , firstifyUniqueLen           :: Int                 -- ^ Unique length used for firstified names.
        }
 
 -- | Ignore internal names and those the user told us to

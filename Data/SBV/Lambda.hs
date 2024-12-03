@@ -126,17 +126,35 @@ extractAllUniversals other      = error $ unlines [ ""
 
 
 -- | Generic creator for anonymous lamdas.
-lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
-lambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> convert st fk (mkLambda st f)
+lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
+lambdaGen allowFreeVars trans inState fk f = inSubState inState $ \st -> handle <$> convert st fk (mkLambda st f)
+  where handle d@(Defn frees _ _ _)
+          | allowFreeVars || null frees
+          = trans d
+          | True
+          = error $ unlines [ ""
+                            , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
+                            , "***"
+                            , "***  Free vars : " ++ unwords frees
+                            , "***  Definition: " ++ sh d
+                            , "***"
+                            , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
+                            , "***"
+                            , "*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible."
+                            , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
+                            ]
+
+        sh (Defn _frees Nothing       _ops body) = body 0
+        sh (Defn _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Create an SMTLib lambda, in the given state.
-lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTDef
-lambda inState fk = lambdaGen mkLam inState fk
+lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTDef
+lambda inState allowFreeVars fk = lambdaGen allowFreeVars mkLam inState fk
    where mkLam (Defn frees params ops body) = SMTLam fk frees ops (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
-lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Kind -> a -> m SMTLambda
-lambdaStr st k a = SMTLambda <$> lambdaGen mkLam st k a
+lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTLambda
+lambdaStr st allowFreeVars k a = SMTLambda <$> lambdaGen allowFreeVars mkLam st k a
    where mkLam (Defn _frees Nothing       _ops body) = body 0
          mkLam (Defn _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
@@ -336,7 +354,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                  where mkAsgn (sv, e@(SBVApp (Label l) _)) = ((sv, converter e), Just l)
                        mkAsgn (sv, e)                      = ((sv, converter e), Nothing)
 
-                       converter = cvtExp curProgInfo (capabilities (solver cfg)) rm tableMap
+                       converter = cvtExp cfg curProgInfo (capabilities (solver cfg)) rm tableMap
 
 
                out :: SV
