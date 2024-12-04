@@ -58,9 +58,10 @@ tokenize inp = go inp []
        go (':':cs) sofar = case break (`elem` stopper) cs of
                             (pre, rest) -> go rest ((':':pre) : sofar)
 
-       go ('|':r) sofar = case span (/= '|') r of
-                            (pre, '|':rest) -> go rest (pre : sofar)
-                            (pre, rest)     -> go rest (pre : sofar)
+       go ('|':r) sofar = let wrap s = '|' : s ++ "|"
+                          in case span (/= '|') r of
+                               (pre, '|':rest) -> go rest (wrap pre : sofar)
+                               (pre, rest)     -> go rest (wrap pre : sofar)
 
        go ('"':r) sofar = go rest (finalStr : sofar)
            where grabString []             acc = (reverse acc, [])         -- Strictly speaking, this is the unterminated string case; but let's ignore
