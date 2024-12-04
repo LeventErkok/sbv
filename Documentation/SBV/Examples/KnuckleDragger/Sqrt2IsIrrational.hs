@@ -13,7 +13,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational where
 
