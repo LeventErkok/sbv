@@ -160,6 +160,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.AppendRev
                   , Documentation.SBV.Examples.KnuckleDragger.Basics
                   , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
+                  , Documentation.SBV.Examples.KnuckleDragger.FoldrFoldl
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Induction
                   , Documentation.SBV.Examples.KnuckleDragger.ListLen
