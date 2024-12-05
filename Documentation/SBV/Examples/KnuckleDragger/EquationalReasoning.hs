@@ -1,14 +1,14 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.FoldrLaws
+-- Module    : Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Various fold related laws, inspired by Section 4.6 of Richard Bird's
--- classic book "Introduction to Functional Programming using Haskell,"
--- second edition.
+-- Various equalities that arise in functional-programming. A good source
+-- is the classic book "Introduction to Functional Programming using Haskell,"
+-- second edition. (Section 4.6 and others.)
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                #-}
@@ -21,22 +21,101 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.FoldLaws where
+module Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning where
 
-import Prelude hiding (foldl, foldr, (<>))
+import Prelude hiding (map, foldl, foldr, (<>))
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
 
--- | Data declaration for an uninterpreted source type.
+-- | Data declaration for an uninterpreted type, usually indicating source.
 data A
 mkUninterpretedSort ''A
 
--- | Data declaration for an uninterpreted target type.
+-- | Data declaration for an uninterpreted type, usually indicating target.
 data B
 mkUninterpretedSort ''B
 
+-- | Data declaration for an uninterpreted type, usually indicating an intermediate value.
+data C
+mkUninterpretedSort ''C
+
+-- * Fold-map fusion
+
+-- | Fold-map fusion: @foldr f a . map g = foldr (f . g) a@
+--
+-- We have:
+--
+-- >>> foldMapFusion
+-- Lemma: foldMapFusion                    Q.E.D.
+-- [Proven] foldMapFusion
+foldMapFusion :: IO Proof
+foldMapFusion = runKD $ do
+  let a :: SA
+      a = uninterpret "a"
+
+      g :: SC -> SB
+      g = uninterpret "g"
+
+      f :: SB -> SA -> SA
+      f = uninterpret "f"
+
+      p xs = foldr f a (map g xs) .== foldr (f . g) a xs
+
+  lemma "foldMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
+
+
+{---------------------
+ --- Can't converge
+
+-- | Fusion for foldr:
+--
+-- @
+--   Given f a = b and f (g x y) = h x (f y), for all x and y
+--   We have: f . foldr g a = foldr h b
+-- @
+--
+-- We have:
+--
+-- >>> foldrFusion
+foldrFusion :: IO Proof
+foldrFusion = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       b :: SB
+       b = uninterpret "b"
+
+       f :: SA -> SB
+       f = uninterpret "f"
+
+       g :: SC -> SA -> SA
+       g = uninterpret "g"
+
+       h :: SC -> SB -> SB
+       h = uninterpret "h"
+
+       p xs = f (foldr g a xs) .== foldr h b xs
+
+   -- f a == b
+   h1 <- axiom "f a == b" $ f a .== b
+
+   -- forall x, y: f (g x) = h x (f y)
+   h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
+
+   chainLemmaWith z3{transcript = Just "bad.smt2"} "foldrFusion"
+              (\(Forall @"xs" xs) -> p xs)
+              (\x xs -> [ f (foldr g a (x .: xs))
+                        , f (g x (foldr g a xs))
+                        , h x (f (foldr g a xs))
+                        , h x (foldr h b xs)
+                        , foldr h b (x .: xs)
+                        ])
+              [h1, h2, induct p]
+-}
+
+{----------------
 -- TODO: Can't converge on this either..
 -- | First duality theorem. Given:
 --
@@ -85,6 +164,7 @@ firstDuality  = runKD $ do
                  [axm1, axm2, induct hp]
 
    lemma "firstDuality" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, axm3, h, induct p]
+-}
 
 ----------------------------------------------------------------------------------------
 {- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
