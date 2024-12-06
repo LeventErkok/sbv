@@ -90,10 +90,12 @@ foldrOverAppend = runKD $ do
           [induct (flip p)]
 
 {-
+ --- Can't converge
 -- * Bookkeeping law
 
--- | @foldr f a . concat == foldr f a . map (foldr f a)@, provided @f@ is associative and @a@ is its
--- left-unit.
+-- | Provided @f@ is associative and @a@ is its right-unit: we have:
+--
+-- | @foldr f a . concat == foldr f a . map (foldr f a)@
 --
 -- We have:
 --
@@ -109,15 +111,24 @@ bookKeeping = runKD $ do
        p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
 
    assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   unit  <- axiom "a is left-unit"   (\(Forall @"x" x) -> a `f` x .== x)
+   unit  <- axiom "a is right-unit"   (\(Forall @"x" x) -> x `f` a .== x)
+
+   foa <- use foldrOverAppend
 
    chainLemma "bookKeeping"
               (\(Forall @"xss" xss) -> p xss)
-              (\xs xss -> [ foldr f a (concat (xs .: xss))
-                        , foldr f a (xs ++ concat xss)
-                        , foldr f (foldr f a (concat xss)) xs
-                        ])
-              [assoc, unit, induct p]
+              (\xs xss -> [ -- foldr f a (concat (xs .: xss))
+                          -- , foldr f a (xs ++ concat xss)
+                          -- , foldr f (foldr f a (concat xss)) xs
+                          -- , foldr f (foldr f a (map (foldr f a) xss)) xs
+
+                            f (foldr f a xs) (foldr f a (map (foldr f a) xss))
+                          , foldr f (foldr f a (map (foldr f a) xss)) (singleton (foldr f a xs))
+                          , foldr f a (singleton (foldr f a xs) ++ map (foldr f a) xss)
+                          , foldr f a (foldr f a xs .: map (foldr f a) xss)
+                          , foldr f a (map (foldr f a) (xs .: xss))
+                          ])
+              [assoc, unit, foa, induct p]
 -}
 
 {---------------------
