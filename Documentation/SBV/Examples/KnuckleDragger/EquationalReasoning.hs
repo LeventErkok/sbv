@@ -43,7 +43,7 @@ mkUninterpretedSort ''C
 
 -- * Fold-map fusion
 
--- | Fold-map fusion: @foldr f a . map g = foldr (f . g) a@
+-- | @foldr f a . map g = foldr (f . g) a@
 --
 -- We have:
 --
