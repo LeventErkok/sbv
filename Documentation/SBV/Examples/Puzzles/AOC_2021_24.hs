@@ -24,7 +24,7 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE NegativeLiterals #-}
 
-#if __GLASGOW_HASKELL__ >= 914
+#if __GLASGOW_HASKELL__ >= 913
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-record-selectors #-}
 #else
 {-# OPTIONS_GHC -Wall -Werror #-}
