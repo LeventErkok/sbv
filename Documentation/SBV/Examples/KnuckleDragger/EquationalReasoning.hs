@@ -23,11 +23,14 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning where
 
-import Prelude hiding (concat, map, foldl, foldr, (<>), (++))
+import Prelude hiding (concat, map, foldl, foldr, reverse, (<>), (++))
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+
+-- currently unused
+-- import Documentation.SBV.Examples.KnuckleDragger.Lists (revCons)
 
 -- | Data declaration for an uninterpreted type, usually indicating source.
 data A
@@ -89,6 +92,65 @@ foldrOverAppend = runKD $ do
           -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
           [induct (flip p)]
 
+{- Can't converge
+-- * Foldl over append
+
+-- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
+--
+-- We have:
+--
+-- >>> foldlOverAppend
+-- Lemma: foldrOverAppend                  Q.E.D.
+-- [Proven] foldrOverAppend
+foldlOverAppend :: IO Proof
+foldlOverAppend = runKD $ do
+   let f :: SA -> SA -> SA
+       f = uninterpret "f"
+
+       p a xs ys = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
+
+   chainLemma "foldlOverAppend"
+               (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) -> p a xs ys)
+               (\a x xs ys -> [ foldl f a ((x .: xs) ++ ys)
+                              , foldl f a (x .: (xs ++ ys))
+                              , foldl f (a `f` x) (xs ++ ys)
+                              , foldl f (foldl f (a `f` x) xs) ys
+                              ])
+               -- Induction is done on the last element. Here we want to induct on xs, hence the rearrangement below
+               [induct (flip . p)]
+-}
+
+{- can't converge
+-- * Foldr-foldl correspondence
+
+-- | @foldr f e xs == foldl (flip f) e (reverse xs)@
+--
+-- We have:
+--
+-- >> foldrFoldlReverse
+foldrFoldlReverse :: IO Proof
+foldrFoldlReverse = runKD $ do
+   let e :: SB
+       e = uninterpret "e"
+
+       f :: SA -> SB -> SB
+       f = uninterpret "f"
+
+       p xs = foldr f e xs .== foldl (flip f) e (reverse xs)
+
+   rc <- use $ runKD revCons
+
+   chainLemma "foldrFoldlDuality"
+              (\(Forall @"xs" xs) -> p xs)
+              (\x xs -> [ -- foldr f e (x .: xs)
+                        -- , x `f` foldr f e xs
+                          foldl (flip f) e (reverse (x .: xs))
+                        , foldl (flip f) e (reverse xs ++ singleton x)
+                        , x `f` foldl (flip f) e (reverse xs)
+                        ])
+              [rc, induct p]
+-}
+
 {-
  --- Can't converge
 -- * Bookkeeping law
@@ -131,9 +193,7 @@ bookKeeping = runKD $ do
               [assoc, unit, foa, induct p]
 -}
 
-{---------------------
- --- Can't converge
-
+{- no convergence
 -- | Fusion for foldr:
 --
 -- @
@@ -166,10 +226,10 @@ foldrFusion = runKD $ do
    -- f a == b
    h1 <- axiom "f a == b" $ f a .== b
 
-   -- forall x, y: f (g x) = h x (f y)
+   -- forall x, y: f (g x y) = h x (f y)
    h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
-   chainLemmaWith z3{transcript = Just "bad.smt2"} "foldrFusion"
+   chainLemma "foldrFusion"
               (\(Forall @"xs" xs) -> p xs)
               (\x xs -> [ f (foldr g a (x .: xs))
                         , f (g x (foldr g a xs))
