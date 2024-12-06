@@ -24,7 +24,7 @@
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE NegativeLiterals #-}
 
-#if MIN_VERSION_base(4,20,0)
+#if __GLASGOW_HASKELL__ >= 914
 {-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-record-selectors #-}
 #else
 {-# OPTIONS_GHC -Wall -Werror #-}
