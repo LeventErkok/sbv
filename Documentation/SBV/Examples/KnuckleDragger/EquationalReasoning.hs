@@ -23,7 +23,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning where
 
-import Prelude hiding (map, foldl, foldr, (<>))
+import Prelude hiding (concat, map, foldl, foldr, (<>), (++))
 
 import Data.SBV
 import Data.SBV.List
@@ -65,6 +65,60 @@ foldMapFusion = runKD $ do
 
   lemma "foldMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
 
+-- * Foldr over append
+
+-- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
+--
+-- We have:
+--
+-- >>> foldrOverAppend
+-- Lemma: foldrOverAppend                  Q.E.D.
+-- [Proven] foldrOverAppend
+foldrOverAppend :: IO Proof
+foldrOverAppend = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       f :: SA -> SA -> SA
+       f = uninterpret "f"
+
+       p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
+
+   lemma "foldrOverAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
+          -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
+          [induct (flip p)]
+
+{-
+-- * Bookkeeping law
+
+-- | @foldr f a . concat == foldr f a . map (foldr f a)@, provided @f@ is associative and @a@ is its
+-- left-unit.
+--
+-- We have:
+--
+-- >>> bookKeeping
+bookKeeping :: IO Proof
+bookKeeping = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       f :: SA -> SA -> SA
+       f = uninterpret "f"
+
+       p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
+
+   assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
+   unit  <- axiom "a is left-unit"   (\(Forall @"x" x) -> a `f` x .== x)
+
+   chainLemma "bookKeeping"
+              (\(Forall @"xss" xss) -> p xss)
+              (\xs xss -> [ foldr f a (concat (xs .: xss))
+                        , foldr f a (xs ++ concat xss)
+                        , foldr f (foldr f a (concat xss)) xs
+                        ])
+              [assoc, unit, induct p]
+-}
 
 {---------------------
  --- Can't converge
@@ -166,7 +220,6 @@ firstDuality  = runKD $ do
    lemma "firstDuality" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, axm3, h, induct p]
 -}
 
-----------------------------------------------------------------------------------------
 {- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
    instantiation of the inductive hypothesis, which I can't get through. Perhaps we need proper
    support for patterns.
