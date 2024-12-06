@@ -29,9 +29,6 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
 
--- currently unused
--- import Documentation.SBV.Examples.KnuckleDragger.Lists (revCons)
-
 -- | Data declaration for an uninterpreted type, usually indicating source.
 data A
 mkUninterpretedSort ''A
@@ -44,17 +41,17 @@ mkUninterpretedSort ''B
 data C
 mkUninterpretedSort ''C
 
--- * Fold-map fusion
+-- * Foldr-map fusion
 
 -- | @foldr f a . map g = foldr (f . g) a@
 --
 -- We have:
 --
--- >>> foldMapFusion
--- Lemma: foldMapFusion                    Q.E.D.
--- [Proven] foldMapFusion
-foldMapFusion :: IO Proof
-foldMapFusion = runKD $ do
+-- >>> foldrMapFusion
+-- Lemma: foldrMapFusion                   Q.E.D.
+-- [Proven] foldrMapFusion
+foldrMapFusion :: IO Proof
+foldrMapFusion = runKD $ do
   let a :: SA
       a = uninterpret "a"
 
@@ -66,7 +63,51 @@ foldMapFusion = runKD $ do
 
       p xs = foldr f a (map g xs) .== foldr (f . g) a xs
 
-  lemma "foldMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
+  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
+
+-- * Foldr-foldr fusion
+
+-- |
+--
+-- @
+--   Given f a = b and f (g x y) = h x (f y), for all x and y
+--   We have: f . foldr g a = foldr h b
+-- @
+--
+-- Note that, as of Dec 2024, z3 can't converge on this proof, but cvc5 gets it almost
+-- instantaneously. We have:
+--
+-- >>> foldrFusion
+-- Axiom: f a == b                         Axiom.
+-- Axiom: f (g x) = h x (f y)              Axiom.
+-- Lemma: foldrFusion                      Q.E.D.
+-- [Proven] foldrFusion
+foldrFusion :: IO Proof
+foldrFusion = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       b :: SB
+       b = uninterpret "b"
+
+       f :: SA -> SB
+       f = uninterpret "f"
+
+       g :: SC -> SA -> SA
+       g = uninterpret "g"
+
+       h :: SC -> SB -> SB
+       h = uninterpret "h"
+
+       p xs = f (foldr g a xs) .== foldr h b xs
+
+   -- f a == b
+   h1 <- axiom "f a == b" $ f a .== b
+
+   -- forall x, y: f (g x y) = h x (f y)
+   h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
+
+   lemmaWith cvc5 "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
 
 -- * Foldr over append
 
@@ -191,53 +232,6 @@ bookKeeping = runKD $ do
                           , foldr f a (map (foldr f a) (xs .: xss))
                           ])
               [assoc, unit, foa, induct p]
--}
-
-{- no convergence
--- | Fusion for foldr:
---
--- @
---   Given f a = b and f (g x y) = h x (f y), for all x and y
---   We have: f . foldr g a = foldr h b
--- @
---
--- We have:
---
--- >>> foldrFusion
-foldrFusion :: IO Proof
-foldrFusion = runKD $ do
-   let a :: SA
-       a = uninterpret "a"
-
-       b :: SB
-       b = uninterpret "b"
-
-       f :: SA -> SB
-       f = uninterpret "f"
-
-       g :: SC -> SA -> SA
-       g = uninterpret "g"
-
-       h :: SC -> SB -> SB
-       h = uninterpret "h"
-
-       p xs = f (foldr g a xs) .== foldr h b xs
-
-   -- f a == b
-   h1 <- axiom "f a == b" $ f a .== b
-
-   -- forall x, y: f (g x y) = h x (f y)
-   h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
-
-   chainLemma "foldrFusion"
-              (\(Forall @"xs" xs) -> p xs)
-              (\x xs -> [ f (foldr g a (x .: xs))
-                        , f (g x (foldr g a xs))
-                        , h x (f (foldr g a xs))
-                        , h x (foldr h b xs)
-                        , foldr h b (x .: xs)
-                        ])
-              [h1, h2, induct p]
 -}
 
 {----------------
