@@ -20,10 +20,15 @@
 -- should provide a template for other similar programs.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE NamedFieldPuns   #-}
 {-# LANGUAGE NegativeLiterals #-}
 
+#if MIN_VERSION_base(4,20,0)
+{-# OPTIONS_GHC -Wall -Werror -Wno-incomplete-record-selectors #-}
+#else
 {-# OPTIONS_GHC -Wall -Werror #-}
+#endif
 
 module Documentation.SBV.Examples.Puzzles.AOC_2021_24 where
 
