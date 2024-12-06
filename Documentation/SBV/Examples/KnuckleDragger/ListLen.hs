@@ -23,7 +23,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.ListLen where
 
-import Prelude hiding (sum, length, reverse, (++))
+import Prelude hiding (length, (++))
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
