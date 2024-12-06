@@ -42,17 +42,20 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Faking proofs
        , sorry
        -- * Running KnuckleDragger proofs
-       , KD, runKD, runKDWith
+       , KD, runKD, runKDWith, use
        ) where
-
-import Control.Monad.Trans (liftIO)
 
 import Data.SBV
 import Data.SBV.Tools.KDKernel
 import Data.SBV.Tools.KDUtils
 
 import Control.Monad        (when)
+import Control.Monad.Trans  (liftIO)
 import Control.Monad.Reader (ask)
+
+-- | Bring an IO proof into current proof context.
+use :: IO Proof -> KD Proof
+use = liftIO
 
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
