@@ -86,12 +86,10 @@ reverseReverse :: IO Proof
 reverseReverse = runKD $ do
 
    -- Helper lemma: @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
-   let ra :: SymVal a => SList a -> SList a -> SBool
-       ra xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
+   let ra :: SymVal a => SList a -> SBool
+       ra xs = quantifiedBool $ \(Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs
 
-   revApp <- lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> ra xs ys)
-                   -- induction is always done on the last argument, so flip to make sure we induct on xs
-                   [induct (flip (ra @Elt))]
+   revApp <- lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) -> ra xs) [induct (ra @Elt)]
 
    let p :: SymVal a => SList a -> SBool
        p xs = reverse (reverse xs) .== xs

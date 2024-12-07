@@ -126,12 +126,9 @@ foldrOverAppend = runKD $ do
        f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
+       p xs = quantifiedBool $ \(Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
 
-   lemma "foldrOverAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-          -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
-          [induct (flip p)]
+   lemma "foldrOverAppend" (\(Forall @"xs" xs) -> p xs) [induct p]
 
 {- Can't converge
 -- * Foldl over append

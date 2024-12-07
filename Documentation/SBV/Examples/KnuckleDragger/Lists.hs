@@ -32,7 +32,6 @@ import Prelude hiding(reverse, (++), any, all, notElem, filter, map)
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
--- >>> import Data.SBV.Tools.KnuckleDragger
 #endif
 
 -- | A list of booleans is not all true, if any of them is false. We have:
@@ -81,11 +80,11 @@ mkUninterpretedSort ''B
 
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
--- >>> runKD revCons
+-- >>> revCons
 -- Lemma: revCons                          Q.E.D.
 -- [Proven] revCons
-revCons :: KD Proof
-revCons = do
+revCons :: IO Proof
+revCons = runKD $ do
     let p :: SA -> SList A -> SBool
         p x xs = reverse (x .: xs) .== reverse xs ++ singleton x
 
@@ -93,26 +92,19 @@ revCons = do
 
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
--- >>> runKD mapAppend
+-- >>> mapAppend (uninterpret "f")
 -- Lemma: mapAppend                        Q.E.D.
 -- [Proven] mapAppend
-mapAppend :: KD Proof
-mapAppend = do
-   let p :: (SA -> SB) -> SList A -> SList A -> SBool
-       p g xs ys = map g (xs ++ ys) .== map g xs ++ map g ys
+mapAppend :: (SA -> SB) -> IO Proof
+mapAppend f = runKD $ do
+   let p :: SList A -> SBool
+       p xs = quantifiedBool $ \(Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys
 
-       -- For an arbitrary uninterpreted function 'f':
-       f :: SA -> SB
-       f = uninterpret "f"
-
-   lemma "mapAppend"
-         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
-         -- induction is done on the last argument, so flip to do it on xs
-         [induct (flip (p f))]
+   lemma "mapAppend" (\(Forall @"xs" xs) -> p xs) [induct p]
 
 -- | @map f . reverse == reverse . map f@
 --
--- >>> runKD mapReverse
+-- >>> mapReverse
 -- Lemma: revCons                          Q.E.D.
 -- Lemma: mapAppend                        Q.E.D.
 -- Chain: mapReverse
@@ -124,20 +116,22 @@ mapAppend = do
 --   Lemma: mapReverse.6                   Q.E.D.
 -- Lemma: mapReverse                       Q.E.D.
 -- [Proven] mapReverse
-mapReverse :: KD Proof
-mapReverse = do
-     let p :: (SA -> SB) -> SList A -> SBool
-         p g xs = reverse (map g xs) .== map g (reverse xs)
-
-         -- For an arbitrary uninterpreted function 'f':
-         f :: SA -> SB
+mapReverse :: IO Proof
+mapReverse = runKD $ do
+     let f :: SA -> SB
          f = uninterpret "f"
 
-     rCons <- revCons
-     mApp  <- mapAppend
+the problem here is that the mapAppend now has a nested quantifier, which messes things up..
+hmm.
+
+         p :: SList A -> SBool
+         p xs = reverse (map f xs) .== map f (reverse xs)
+
+     rCons <- use revCons
+     mApp  <- use (mapAppend f)
 
      chainLemma "mapReverse"
-                (\(Forall @"xs" xs) -> p f xs)
+                (\(Forall @"xs" xs) -> p xs)
                 (\x xs -> [ reverse (map f (x .: xs))
                           , reverse (f x .: map f xs)
                           , reverse (map f xs) ++ singleton (f x)
@@ -146,4 +140,4 @@ mapReverse = do
                           , map f (reverse xs ++ singleton x)
                           , map f (reverse (x .: xs))
                           ])
-                [induct (p f), rCons, mApp]
+                [induct p, rCons, mApp]

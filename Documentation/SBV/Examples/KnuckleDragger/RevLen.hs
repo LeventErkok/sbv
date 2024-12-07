@@ -51,9 +51,7 @@ revLen = runKD $ do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== length xs
 
-   lemma "revLen"
-         (\(Forall @"xs" xs) -> p xs)
-         [induct p]
+   lemma "revLen" (\(Forall @"xs" xs) -> p xs) [induct p]
 
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
@@ -72,8 +70,6 @@ badRevLen = runKD $ do
    let p :: SList Elt -> SBool
        p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
 
-   lemma "badRevLen"
-         (\(Forall @"xs" xs) -> p xs)
-         [induct p]
+   lemma "badRevLen" (\(Forall @"xs" xs) -> p xs) [induct p]
 
    pure ()

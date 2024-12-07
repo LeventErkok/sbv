@@ -233,37 +233,6 @@ instance Induction (SInteger -> SBool) where
                      .=> qb -----------------------------------------------------
                                  (\(Forall i) -> p i)
 
--- | Induction over two argument predicates, with the last argument SInteger.
-instance SymVal a => Induction (SBV a -> SInteger -> SBool) where
-  induct p = internalAxiom "Nat.induct2" principle
-     where qb a = quantifiedBool a
-
-           principle =           qb (\(Forall a) -> p a 0)
-                             .&& qb (\(Forall a) (Forall n) -> (n .>= 0 .&& p a n) .=> p a (n+1))
-                     .=> qb ----------------------------------------------------------------------
-                                 (\(Forall a) (Forall n) -> n .>= 0 .=> p a n)
-
--- | Induction over three argument predicates, with last argument SInteger.
-instance (SymVal a, SymVal b) => Induction (SBV a -> SBV b -> SInteger -> SBool) where
-  induct p = internalAxiom "Nat.induct3" principle
-     where qb a = quantifiedBool a
-
-           principle =           qb (\(Forall a) (Forall b) -> p a b 0)
-                             .&& qb (\(Forall a) (Forall b) (Forall n) -> (n .>= 0 .&& p a b n) .=> p a b (n+1))
-                     .=> qb -------------------------------------------------------------------------------------
-                                 (\(Forall a) (Forall b) (Forall n) -> n .>= 0 .=> p a b n)
-
--- | Induction over four argument predicates, with last argument SInteger.
-instance (SymVal a, SymVal b, SymVal c) => Induction (SBV a -> SBV b -> SBV c -> SInteger -> SBool) where
-  induct p = internalAxiom "Nat.induct4" principle
-     where qb a = quantifiedBool a
-
-           principle =           qb (\(Forall a) (Forall b) (Forall c) -> p a b c 0)
-                             .&& qb (\(Forall a) (Forall b) (Forall c) (Forall n) -> (n .>= 0 .&& p a b c n) .=> p a b c (n+1))
-                     .=> qb ----------------------------------------------------------------------------------------------------
-                                 (\(Forall a) (Forall b) (Forall c) (Forall n) -> n .>= 0 .=> p a b c n)
-
-
 -- | Induction over lists
 instance SymVal a => Induction (SList a -> SBool) where
   induct p = internalAxiom "List(a).induct" principle
@@ -273,35 +242,5 @@ instance SymVal a => Induction (SList a -> SBool) where
                             .&& qb (\(Forall x) (Forall xs) -> p xs .=> p (x SL..: xs))
                     .=> qb -------------------------------------------------------------
                                 (\(Forall xs) -> p xs)
-
--- | Induction over two argument predicates, with last argument a list.
-instance (SymVal a, SymVal e) => Induction (SBV a -> SList e -> SBool) where
-  induct p = internalAxiom "List(a).induct2" principle
-    where qb a = quantifiedBool a
-
-          principle =           qb (\(Forall a) -> p a SL.nil)
-                            .&& qb (\(Forall a) (Forall e) (Forall es) -> p a es .=> p a (e SL..: es))
-                    .=> qb ------------------------------------------------------------------------------
-                                (\(Forall a) (Forall es) -> p a es)
-
--- | Induction over three argument predicates, with last argument a list.
-instance (SymVal a, SymVal b, SymVal e) => Induction (SBV a -> SBV b -> SList e -> SBool) where
-  induct p = internalAxiom "List(a).induct3" principle
-    where qb a = quantifiedBool a
-
-          principle =           qb (\(Forall a) (Forall b) -> p a b SL.nil)
-                            .&& qb (\(Forall a) (Forall b) (Forall e) (Forall es) -> p a b es .=> p a b (e SL..: es))
-                    .=> qb -------------------------------------------------------------------------------------------
-                                (\(Forall a) (Forall b) (Forall xs) -> p a b xs)
-
--- | Induction over four argument predicates, with last argument a list.
-instance (SymVal a, SymVal b, SymVal c, SymVal e) => Induction (SBV a -> SBV b -> SBV c -> SList e -> SBool) where
-  induct p = internalAxiom "List(a).induct4" principle
-    where qb a = quantifiedBool a
-
-          principle =           qb (\(Forall a) (Forall b) (Forall c) -> p a b c SL.nil)
-                            .&& qb (\(Forall a) (Forall b) (Forall c) (Forall e) (Forall es) -> p a b c es .=> p a b c (e SL..: es))
-                    .=> qb ----------------------------------------------------------------------------------------------------------
-                                (\(Forall a) (Forall b) (Forall c) (Forall xs) -> p a b c xs)
 
 {- HLint ignore module "Eta reduce" -}

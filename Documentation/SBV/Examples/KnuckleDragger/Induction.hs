@@ -36,10 +36,10 @@ sumConstProof = runKD $ do
        spec :: SInteger -> SInteger -> SInteger
        spec c n = c * n
 
-       p :: SInteger -> SInteger -> SBool
-       p c n = observe "imp" (sum c n) .== observe "spec" (spec c n)
+       p :: SInteger -> SBool
+       p n = quantifiedBool $ \(Forall @"c" c) -> observe "imp" (sum c n) .== observe "spec" (spec c n)
 
-   lemma "sumConst_correct" (\(Forall @"c" c) (Forall @"n" n) -> n .>= 0 .=> p c n) [induct p]
+   lemma "sumConst_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
