@@ -321,8 +321,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                  getFuncs :: Op -> Op -> Maybe (SMTLambda, SMTLambda)
                  getFuncs (SeqOp (SBVZipWith a b c f)) (SeqOp (SBVZipWith x y z g)) | [a, b, c] == [x, y, z] = Just (f, g)
                  getFuncs (SeqOp (SBVMap     a b   f)) (SeqOp (SBVMap     x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
-                 getFuncs (SeqOp (SBVFoldl   a b   f)) (SeqOp (SBVMap     x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
-                 getFuncs (SeqOp (SBVFoldr   a b   f)) (SeqOp (SBVMap     x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
+                 getFuncs (SeqOp (SBVFoldl   a b   f)) (SeqOp (SBVFoldl   x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
+                 getFuncs (SeqOp (SBVFoldr   a b   f)) (SeqOp (SBVFoldr   x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
                  getFuncs (SeqOp (SBVFilter  a     f)) (SeqOp (SBVFilter  x     g)) | [a      ] == [x      ] = Just (f, g)
                  getFuncs (SeqOp (SBVAll     a     f)) (SeqOp (SBVAll     x     g)) | [a      ] == [x      ] = Just (f, g)
                  getFuncs (SeqOp (SBVAny     a     f)) (SeqOp (SBVAny     x     g)) | [a      ] == [x      ] = Just (f, g)
@@ -340,8 +340,8 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
                             paramsOf (SeqOp (SBVZipWith k1 k2 _ _)) = [("xs", KList k1), ("ys", KList k2)]
                             paramsOf (SeqOp (SBVMap     k1    _ _)) = [("xs", KList k1)]
-                            paramsOf (SeqOp (SBVFoldl   k1 _    _)) = [("xs", KList k1)]
-                            paramsOf (SeqOp (SBVFoldr   k1 _    _)) = [("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldl   k1 k2   _)) = [("b", k2), ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldr   k1 k2   _)) = [("b", k2), ("xs", KList k1)]
                             paramsOf (SeqOp (SBVFilter  k1      _)) = [("xs", KList k1)]
                             paramsOf (SeqOp (SBVAll     k1      _)) = [("xs", KList k1)]
                             paramsOf (SeqOp (SBVAny     k1      _)) = [("xs", KList k1)]

@@ -29,6 +29,8 @@ import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
 
+import Documentation.SBV.Examples.KnuckleDragger.Lists(revCons)
+
 -- | Data declaration for an uninterpreted type, usually indicating source.
 data A
 mkUninterpretedSort ''A
@@ -130,7 +132,6 @@ foldrOverAppend = runKD $ do
 
    lemma "foldrOverAppend" (\(Forall @"xs" xs) -> p xs) [induct p]
 
-{- Can't converge
 -- * Foldl over append
 
 -- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
@@ -145,20 +146,10 @@ foldlOverAppend = runKD $ do
    let f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p a xs ys = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
+       p xs = quantifiedBool $ \(Forall @"a" a) (Forall @"ys" ys) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
 
-   chainLemma "foldlOverAppend"
-               (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) -> p a xs ys)
-               (\a x xs ys -> [ foldl f a ((x .: xs) ++ ys)
-                              , foldl f a (x .: (xs ++ ys))
-                              , foldl f (a `f` x) (xs ++ ys)
-                              , foldl f (foldl f (a `f` x) xs) ys
-                              ])
-               -- Induction is done on the last element. Here we want to induct on xs, hence the rearrangement below
-               [induct (flip . p)]
--}
+   lemma "foldlOverAppend" (\(Forall @"xs" xs) -> p xs) [induct p]
 
-{- can't converge
 -- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
@@ -176,18 +167,15 @@ foldrFoldlReverse = runKD $ do
 
        p xs = foldr f e xs .== foldl (flip f) e (reverse xs)
 
-   rc <- use $ runKD revCons
+   rc <- use revCons
 
    chainLemma "foldrFoldlDuality"
               (\(Forall @"xs" xs) -> p xs)
-              (\x xs -> [ -- foldr f e (x .: xs)
-                        -- , x `f` foldr f e xs
-                          foldl (flip f) e (reverse (x .: xs))
-                        , foldl (flip f) e (reverse xs ++ singleton x)
+              (\x xs -> [ foldr f e (x .: xs)
+                        , x `f` foldr f e xs
                         , x `f` foldl (flip f) e (reverse xs)
                         ])
               [rc, induct p]
--}
 
 {-
  --- Can't converge
