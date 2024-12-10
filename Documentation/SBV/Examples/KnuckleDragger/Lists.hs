@@ -97,10 +97,15 @@ revCons = runKD $ do
 -- [Proven] mapAppend
 mapAppend :: (SA -> SB) -> IO Proof
 mapAppend f = runKD $ do
-   let p :: SList A -> SBool
-       p xs = quantifiedBool $ \(Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys
+   let p :: SList A -> SList A -> SBool
+       p xs ys = map f (xs ++ ys) .== map f xs ++ map f ys
 
-   lemma "mapAppend" (\(Forall @"xs" xs) -> p xs) [induct p]
+       genP :: SList A -> SBool
+       genP xs = quantifiedBool $ \(Forall @"ys" ys) -> p xs ys
+
+   gma <- lemma "genMapAppend" (\(Forall @"xs" xs) -> genP xs) [induct genP]
+
+   lemma "genAppend" (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) [gma]
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -120,9 +125,6 @@ mapReverse :: IO Proof
 mapReverse = runKD $ do
      let f :: SA -> SB
          f = uninterpret "f"
-
-the problem here is that the mapAppend now has a nested quantifier, which messes things up..
-hmm.
 
          p :: SList A -> SBool
          p xs = reverse (map f xs) .== map f (reverse xs)
