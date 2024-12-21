@@ -119,8 +119,7 @@ init s
  | True
  = subStr s 0 (length s - 1)
 
--- | @`singleton` c@ is the string of length 1 that contains the only character
--- whose value is the 8-bit value @c@.
+-- | @`singleton` c@ is the string of length 1 that contains the only character @c@.
 --
 -- >>> prove $ \c -> c .== literal 'A' .=> singleton c .== "A"
 -- Q.E.D.
@@ -141,7 +140,7 @@ singleton = lift1 StrUnit (Just wrap)
 strToStrAt :: SString -> SInteger -> SString
 strToStrAt s offset = subStr s offset 1
 
--- | @`strToCharAt` s i@ is the 8-bit value stored at location @i@. Unspecified if
+-- | @`strToCharAt` s i@ is the character stored at location @i@. Unspecified if
 -- index is out of bounds.
 --
 -- >>> prove $ \i -> i .>= 0 .&& i .<= 4 .=> "AAAAA" `strToCharAt` i .== literal 'A'
