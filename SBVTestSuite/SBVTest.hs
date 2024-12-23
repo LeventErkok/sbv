@@ -28,7 +28,6 @@ import qualified TestSuite.Basics.ArithSolver
 import qualified TestSuite.Basics.Assert
 import qualified TestSuite.Basics.BasicTests
 import qualified TestSuite.Basics.BarrelRotate
-import qualified TestSuite.Basics.BoundedList
 import qualified TestSuite.Basics.DynSign
 import qualified TestSuite.Basics.Exceptions
 import qualified TestSuite.Basics.EqSym
@@ -140,7 +139,6 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Basics.Assert.tests
                       , TestSuite.Basics.BarrelRotate.tests
                       , TestSuite.Basics.BasicTests.tests
-                      , TestSuite.Basics.BoundedList.tests
                       , TestSuite.Basics.DynSign.tests
                       , TestSuite.Basics.EqSym.tests
                       , TestSuite.Basics.Exceptions.testsLocal
