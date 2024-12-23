@@ -45,15 +45,18 @@ endif
 # How long to wait for each doctest to run (in seconds)
 DOCTESTTIMEOUT = 300
 
+# Allow newer versions
+CABAL_OPTS=--allow-newer
+
 .PHONY: install docs testsuite release tags clean veryclean timeRelease
 
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-install --lib --allow-newer --force-reinstalls
+	@$(TIME) cabal new-install --lib ${CABAL_OPTS} --force-reinstalls
 	
 install: tags
-	@$(TIME) cabal new-configure --enable-tests --allow-newer --ghc-options=$(CONFIGOPTS)
+	@$(TIME) cabal new-configure --enable-tests ${CABAL_OPTS} --ghc-options=$(CONFIGOPTS)
 	@$(TIME) cabal new-install --lib --force-reinstalls
 
 docs:
@@ -66,38 +69,38 @@ hackage-docs:
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 
 ghci:
-	cabal new-repl --repl-options=-Wno-unused-packages
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
 
 ghcid:
 ifdef TGT
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
 else
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
 endif
 
 ghci_SBVTest:
-	cabal new-repl --repl-options=-Wno-unused-packages SBVTest
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
 
 ghcid_SBVTest:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVTest"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest"
 
 ghci_SBVDocTest:
-	cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest
 
 ghcid_SBVDocTest:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVDocTest"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest"
 
 ghci_HLint:
-	cabal new-repl --repl-options=-Wno-unused-packages SBVHLint
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint
 
 ghcid_HLint:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVHLint"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint"
 
 ghci_Bench:
-	cabal new-repl --repl-options=-Wno-unused-packages SBVBench
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench
 
 ghcid_Bench:
-	ghcid --command="cabal new-repl --repl-options=-Wno-unused-packages SBVBench"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench"
 
 bench:
 	cabal new-bench
@@ -137,10 +140,10 @@ ifdef TGT
 ifdef FAST
 	cabal-docspec --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 else
-	cabal new-run SBVDocTest --allow-newer -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+	cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 endif
 else
-	@$(TIME) cabal new-run SBVDocTest --allow-newer -- --timeout ${DOCTESTTIMEOUT}
+	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT}
 endif
 
 test:
