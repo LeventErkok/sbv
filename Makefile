@@ -50,7 +50,7 @@ DOCTESTTIMEOUT = 300
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-install --lib --force-reinstalls
+	@$(TIME) cabal new-install --lib --allow-newer --force-reinstalls
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests --allow-newer --ghc-options=$(CONFIGOPTS)
@@ -137,10 +137,10 @@ ifdef TGT
 ifdef FAST
 	cabal-docspec --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 else
-	cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+	cabal new-run SBVDocTest --allow-newer -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 endif
 else
-	@$(TIME) cabal new-run SBVDocTest -- --timeout ${DOCTESTTIMEOUT}
+	@$(TIME) cabal new-run SBVDocTest --allow-newer -- --timeout ${DOCTESTTIMEOUT}
 endif
 
 test:
