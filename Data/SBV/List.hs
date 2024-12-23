@@ -530,7 +530,7 @@ zipWith f xs ys
 
        r st = do svxs <- sbvToSV st xs
                  svys <- sbvToSV st ys
-                 lam <- lambdaStr st False kb f
+                 lam <- lambdaStr st False kc f
                  let op = SeqOp (SBVZipWith ka kb kc lam)
                  registerSpecialFunction st op
                  newExpr st kr (SBVApp op [svxs, svys])
