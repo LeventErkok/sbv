@@ -41,11 +41,12 @@ module Data.SBV.List (
         -- * Filtering
         , filter
         -- * Other list functions
-        , all, any
+        , all, any, and, or
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
-                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
+                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter,
+                       all, any, and, or)
 import qualified Prelude as P
 
 import Data.SBV.Core.Kind
@@ -578,6 +579,14 @@ any f l
                  let op = SeqOp (SBVAny (kindOf (Proxy @a)) lam)
                  registerSpecialFunction st op
                  newExpr st KBool (SBVApp op [sva])
+
+-- | Conjunction of all the elements.
+and :: SList Bool -> SBool
+and = all id
+
+-- | Disjunction of all the elements.
+or :: SList Bool -> SBool
+or = any id
 
 -- | @filter f xs@ filters the list with the given predicate.
 --
