@@ -19,6 +19,11 @@
   * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
     can now be defined by the user as we have proper support for fold and map using lambdas.
 
+  * [BACKWARDS COMPATIBILITY] Removed "Data/SBV/Tools/BoundedFix.hs", and "Data/SBV/Tools/BoundedList.hs", which
+    were relatively unused and are more or less obsolete with SBV's new support for sequences and recursive
+    functions. If you were using these functions you could easily recreate them. Please get in touch if you
+    need this old functionality.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying

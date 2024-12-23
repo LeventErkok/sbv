@@ -121,10 +121,8 @@ Library
                   , Data.SBV.Tuple
                   , Data.SBV.RegExp
                   , Data.SBV.Tools.BMC
-                  , Data.SBV.Tools.BoundedList
                   , Data.SBV.Tools.BVOptimize
                   , Data.SBV.Tools.Induction
-                  , Data.SBV.Tools.BoundedFix
                   , Data.SBV.Tools.CodeGen
                   , Data.SBV.Tools.GenTest
                   , Data.SBV.Tools.KnuckleDragger
@@ -321,7 +319,6 @@ Test-Suite SBVTest
                   , TestSuite.Basics.Assert
                   , TestSuite.Basics.BarrelRotate
                   , TestSuite.Basics.BasicTests
-                  , TestSuite.Basics.BoundedList
                   , TestSuite.Basics.DynSign
                   , TestSuite.Basics.EqSym
                   , TestSuite.Basics.Exceptions
