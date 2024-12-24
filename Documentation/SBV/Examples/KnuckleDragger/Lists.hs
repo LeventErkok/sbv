@@ -474,37 +474,34 @@ foldlOverAppend = runKD $ do
          -- Induction is done on the last element. Here we want to induct on xs, hence the flip below
          [induct (flip p)]
 
-{- can't converge
+{- CAN'T CONVERGE
 -- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
 --
 -- We have:
 --
--- >> foldrFoldlReverse
-foldrFoldlReverse :: IO Proof
-foldrFoldlReverse = runKD $ do
-   let e :: SB
-       e = uninterpret "e"
-
-       f :: SA -> SB -> SB
+-- >>> foldrFoldlDuality
+foldrFoldlDuality :: IO Proof
+foldrFoldlDuality = runKD $ do
+   let f :: SA -> SB -> SB
        f = uninterpret "f"
 
-       p xs = foldr f e xs .== foldl (flip f) e (reverse xs)
+       p xs = quantifiedBool $ \(Forall e) -> foldr f e xs .== foldl (flip f) e (reverse xs)
 
-   rc <- use $ runKD revCons
+   -- An instance of foldlOverAppend above, except for our chosen f here which has a different type:
+   fa <- let ap xs ys = quantifiedBool $ \(Forall e) -> foldl (flip f) e (xs ++ ys) .== foldl (flip f) (foldl (flip f) e xs) ys
+         in  lemma "foldlOverAppend"
+                   (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
+                   [induct (flip ap)]
 
    chainLemma "foldrFoldlDuality"
               (\(Forall @"xs" xs) -> p xs)
-              (\x xs -> [ -- foldr f e (x .: xs)
-                        -- , x `f` foldr f e xs
-                          foldl (flip f) e (reverse (x .: xs))
-                        , foldl (flip f) e (reverse xs ++ singleton x)
-                        , x `f` foldl (flip f) e (reverse xs)
-                        ])
-              [rc, induct p]
-
- --- Can't converge
+              (\e x xs -> [ foldl (flip f) e (reverse (x .: xs))
+                          , foldl (flip f) e (reverse xs ++ singleton x)
+                          , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)
+                          ])
+              [fa, induct p]
 -- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its right-unit: we have:
@@ -525,22 +522,21 @@ bookKeeping = runKD $ do
        p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
 
    assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   unit  <- axiom "a is right-unit"   (\(Forall @"x" x) -> x `f` a .== x)
+   unit  <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
 
    foa <- use foldrOverAppend
 
    chainLemma "bookKeeping"
               (\(Forall @"xss" xss) -> p xss)
-              (\xs xss -> [ -- foldr f a (concat (xs .: xss))
-                          -- , foldr f a (xs ++ concat xss)
-                          -- , foldr f (foldr f a (concat xss)) xs
-                          -- , foldr f (foldr f a (map (foldr f a) xss)) xs
-
-                            f (foldr f a xs) (foldr f a (map (foldr f a) xss))
-                          , foldr f (foldr f a (map (foldr f a) xss)) (singleton (foldr f a xs))
-                          , foldr f a (singleton (foldr f a xs) ++ map (foldr f a) xss)
-                          , foldr f a (foldr f a xs .: map (foldr f a) xss)
-                          , foldr f a (map (foldr f a) (xs .: xss))
+              (\xs xss -> [ foldr f a (concat (xs .: xss))
+                          , foldr f a (xs ++ concat xss)
+                          , foldr f (foldr f a (concat xss)) xs
+                          , foldr f (foldr f a (map (foldr f a) xss)) xs
+                          -- , f (foldr f a xs) (foldr f a (map (foldr f a) xss))
+                          -- , foldr f (foldr f a (map (foldr f a) xss)) (singleton (foldr f a xs))
+                          -- , foldr f a (singleton (foldr f a xs) ++ map (foldr f a) xss)
+                          -- , foldr f a (foldr f a xs .: map (foldr f a) xss)
+                          -- , foldr f a (map (foldr f a) (xs .: xss))
                           ])
               [assoc, unit, foa, induct p]
 
