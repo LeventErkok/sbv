@@ -155,15 +155,11 @@ Library
                   , Documentation.SBV.Examples.Lists.Fibonacci
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
-                  , Documentation.SBV.Examples.KnuckleDragger.AppendRev
                   , Documentation.SBV.Examples.KnuckleDragger.Basics
                   , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
-                  , Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
-                  , Documentation.SBV.Examples.KnuckleDragger.Induction
-                  , Documentation.SBV.Examples.KnuckleDragger.ListLen
                   , Documentation.SBV.Examples.KnuckleDragger.Lists
-                  , Documentation.SBV.Examples.KnuckleDragger.RevLen
+                  , Documentation.SBV.Examples.KnuckleDragger.Numeric
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
                   , Documentation.SBV.Examples.KnuckleDragger.Tao
                   , Documentation.SBV.Examples.Misc.Definitions

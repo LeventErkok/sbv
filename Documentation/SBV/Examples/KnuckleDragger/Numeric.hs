@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Induction
+-- Module    : Documentation.SBV.Examples.KnuckleDragger.Numeric
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Example use of the KnuckleDragger, for some inductive proofs
+-- Example use of the KnuckleDragger, for some inductive proofs over integers
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
@@ -14,7 +14,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.Induction where
+module Documentation.SBV.Examples.KnuckleDragger.Numeric where
 
 import Prelude hiding (sum, length)
 

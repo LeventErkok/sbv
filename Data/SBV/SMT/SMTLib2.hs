@@ -267,7 +267,9 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- uninterpreted constants ---" ]
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- Firstified function definitions" | not (null specialFuncs) ]
-             ++ concat firstifiedFuncs
+             ++ concat firstifiedDefs
+             ++ [ "; --- Firstified equivalences"         | not (null firstifiedEqualities) ]
+             ++ concat firstifiedEqualities
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
@@ -277,10 +279,9 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
-
-        firstifiedFuncs
+        (firstifiedDefs, firstifiedFuncs)
            = case dup res of
-               Nothing         -> map (snd . snd) res
+               Nothing         -> ([def | (_, (_, def)) <- res], [(op, nm) | (op, (nm, _)) <- res])
                Just (o, o', n) -> let curLen = firstifyUniqueLen cfg
                                   in error $ unlines [ ""
                                                      , "*** Data.SBV: Insufficient unique length in firstification."
@@ -309,6 +310,41 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                  dup ((o, (n, _)): xs) = case [o' | (o', (n', _)) <- xs, n == n'] of
                                            []       -> dup xs
                                            (o' : _) -> Just (o, o', n)
+
+        firstifiedEqualities = map equate $ combs firstifiedFuncs
+           where combs :: [(Op, String)] -> [(Op, (String, SMTLambda), (String, SMTLambda))]
+                 combs []             = []
+                 combs ((o1, nm1):fs) = [(o1, (nm1, l1), (nm2, l2)) | (o2, nm2) <- fs, Just (l1, l2) <- [getFuncs o1 o2]] ++ combs fs
+
+                 -- same if the same op sans the lambda
+                 getFuncs :: Op -> Op -> Maybe (SMTLambda, SMTLambda)
+                 getFuncs (SeqOp (SBVZipWith a b c f)) (SeqOp (SBVZipWith x y z g)) | [a, b, c] == [x, y, z] = Just (f, g)
+                 getFuncs (SeqOp (SBVMap     a b   f)) (SeqOp (SBVMap     x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
+                 getFuncs (SeqOp (SBVFoldl   a b   f)) (SeqOp (SBVFoldl   x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
+                 getFuncs (SeqOp (SBVFoldr   a b   f)) (SeqOp (SBVFoldr   x y   g)) | [a, b   ] == [x, y   ] = Just (f, g)
+                 getFuncs (SeqOp (SBVFilter  a     f)) (SeqOp (SBVFilter  x     g)) | [a      ] == [x      ] = Just (f, g)
+                 getFuncs (SeqOp (SBVAll     a     f)) (SeqOp (SBVAll     x     g)) | [a      ] == [x      ] = Just (f, g)
+                 getFuncs (SeqOp (SBVAny     a     f)) (SeqOp (SBVAny     x     g)) | [a      ] == [x      ] = Just (f, g)
+                 getFuncs _                            _                                                     = Nothing
+
+                 equate :: (Op, (String, SMTLambda), (String, SMTLambda)) -> [String]
+                 equate (o, (nm1, f), (nm2, g)) = [ "; Equality for " ++ nm1 ++ " vs. " ++ nm2
+                                                  , "(assert (forall (" ++ decls ++ ")"
+                                                  , "                (=> (= " ++ show f ++ " " ++ show g ++ ")"
+                                                  , "                    (= (" ++ nm1 ++ " " ++ args ++ ") (" ++ nm2 ++ " " ++ args ++ ")))))"
+                                                  ]
+                      where params = paramsOf o
+                            args   = unwords $ map fst params
+                            decls  = unwords ['(' : n ++ " " ++ smtType k ++ ")" | (n, k) <- params]
+
+                            paramsOf (SeqOp (SBVZipWith k1 k2 _ _)) = [           ("xs", KList k1), ("ys", KList k2)]
+                            paramsOf (SeqOp (SBVMap     k1    _ _)) = [           ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldl   k1 k2   _)) = [("b", k2), ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFoldr   k1 k2   _)) = [("b", k2), ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVFilter  k1      _)) = [           ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVAll     k1      _)) = [           ("xs", KList k1)]
+                            paramsOf (SeqOp (SBVAny     k1      _)) = [           ("xs", KList k1)]
+                            paramsOf op                             = error $ "Data.SBV.firstifiedEqualities: Unexpected op: " ++ show op
 
         userDefs = declUserFuns defs
         exportedDefs
