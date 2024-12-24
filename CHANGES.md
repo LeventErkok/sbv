@@ -14,7 +14,7 @@
     future, as SMTLib gains support for more higher-order features itself.) Proof-support in backend solvers
     for higher-order functions is still quite weak, though KnuckleDragger makes things easier.
 
-  * New examples added: Documentation.SBV.Examples.KnuckleDragger.{Lists|EquationalReasoning}.
+  * Reworked KnuckleDragger examples, consolidating and improving the theorem statements.
 
   * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
     can now be defined by the user as we have proper support for fold and map using lambdas.
