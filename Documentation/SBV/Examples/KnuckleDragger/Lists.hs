@@ -467,7 +467,7 @@ foldlOverAppend = runKD $ do
    let f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p xs ys = quantifiedBool (\(Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys)
+       p xs ys = quantifiedBool $ \(Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
 
    lemma "foldlOverAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
