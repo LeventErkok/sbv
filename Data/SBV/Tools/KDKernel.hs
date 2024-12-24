@@ -240,8 +240,8 @@ instance SymVal a => Induction (SBV a -> SInteger -> SBool) where
      where qb a = quantifiedBool a
 
            principle =          qb (\(Forall a) -> p a 0)
-                            .&& qb (\(Forall n) -> qb (\(Forall a) -> p a n) .=> qb (\(Forall a) -> p a (n+1)))
-                     .=> qb -----------------------------------------------------------------------------------
+                            .&& qb (\(Forall a) (Forall n) -> (n .>= 0 .&& p a n) .=> p a (n+1))
+                     .=> qb --------------------------------------------------------------------
                                 (\(Forall a) (Forall n) -> n .>= 0 .=> p a n)
 
 -- | Induction over three argument predicates, with last argument SInteger.
@@ -250,8 +250,8 @@ instance (SymVal a, SymVal b) => Induction (SBV a -> SBV b -> SInteger -> SBool)
      where qb a = quantifiedBool a
 
            principle =          qb (\(Forall a) (Forall b) -> p a b 0)
-                            .&& qb (\(Forall a) (Forall n) -> qb (\(Forall b) -> p a b n) .=> qb (\(Forall b) -> p a b (n+1)))
-                     .=> qb --------------------------------------------------------------------------------------------------
+                            .&& qb (\(Forall a) (Forall b) (Forall n) -> (n .>= 0 .&& p a b n) .=> p a b (n+1))
+                     .=> qb -----------------------------------------------------------------------------------
                                 (\(Forall a) (Forall b) (Forall n) -> n .>= 0 .=> p a b n)
 
 -- | Induction over four argument predicates, with last argument SInteger.
@@ -260,8 +260,8 @@ instance (SymVal a, SymVal b, SymVal c) => Induction (SBV a -> SBV b -> SBV c ->
      where qb a = quantifiedBool a
 
            principle =          qb (\(Forall a) (Forall b) (Forall c) -> p a b c 0)
-                            .&& qb (\(Forall a) (Forall b) (Forall n) -> qb (\(Forall c) -> n .>= 0 .=> p a b c n) .=> qb (\(Forall c) -> n .>= 0 .=> p a b c (n+1)))
-                     .=> qb -----------------------------------------------------------------------------------------------------------------------------------------
+                            .&& qb (\(Forall a) (Forall b) (Forall c) (Forall n) -> (n .>= 0 .&& p a b c n) .=> p a b c (n+1))
+                     .=> qb --------------------------------------------------------------------------------------------------
                                 (\(Forall a) (Forall b) (Forall c) (Forall n) -> n .>= 0 .=> p a b c n)
 
 
@@ -281,8 +281,8 @@ instance (SymVal a, SymVal e) => Induction (SBV a -> SList e -> SBool) where
     where qb a = quantifiedBool a
 
           principle =          qb (\(Forall a) -> p a SL.nil)
-                           .&& qb (\(Forall e) (Forall es) -> qb (\(Forall a) -> p a es) .=> qb (\(Forall a) -> p a (e SL..: es)))
-                    .=> qb -------------------------------------------------------------------------------------------------------
+                           .&& qb (\(Forall a) (Forall e) (Forall es) -> p a es .=> p a (e SL..: es))
+                    .=> qb --------------------------------------------------------------------------
                                (\(Forall a) (Forall es) -> p a es)
 
 -- | Induction over three argument predicates, with last argument a list.
@@ -291,8 +291,8 @@ instance (SymVal a, SymVal b, SymVal e) => Induction (SBV a -> SBV b -> SList e 
     where qb a = quantifiedBool a
 
           principle =          qb (\(Forall a) (Forall b) -> p a b SL.nil)
-                           .&& qb (\(Forall a) (Forall e) (Forall es) -> qb (\(Forall b) -> p a b es) .=> qb (\(Forall b) -> p a b (e SL..: es)))
-                    .=> qb ----------------------------------------------------------------------------------------------------------------------
+                           .&& qb (\(Forall a) (Forall b) (Forall e) (Forall es) -> p a b es .=> p a b (e SL..: es))
+                    .=> qb -----------------------------------------------------------------------------------------
                                (\(Forall a) (Forall b) (Forall xs) -> p a b xs)
 
 -- | Induction over four argument predicates, with last argument a list.
@@ -301,8 +301,8 @@ instance (SymVal a, SymVal b, SymVal c, SymVal e) => Induction (SBV a -> SBV b -
     where qb a = quantifiedBool a
 
           principle =          qb (\(Forall a) (Forall b) (Forall c) -> p a b c SL.nil)
-                           .&& qb (\(Forall a) (Forall b) (Forall e) (Forall es) -> qb (\(Forall c) -> p a b c es) .=> qb (\(Forall c) -> p a b c (e SL..: es)))
-                    .=> qb -------------------------------------------------------------------------------------------------------------------------------------
+                           .&& qb (\(Forall a) (Forall b) (Forall c) (Forall e) (Forall es) -> p a b c es .=> p a b c (e SL..: es))
+                    .=> qb --------------------------------------------------------------------------------------------------------
                                (\(Forall a) (Forall b) (Forall c) (Forall xs) -> p a b c xs)
 
 {- HLint ignore module "Eta reduce" -}

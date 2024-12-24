@@ -22,8 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
--- import qualified Prelude as P
-import Prelude (IO, ($))
+import Prelude (IO, ($), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -91,7 +90,27 @@ appendAssoc = runKD $
               xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
 
+-- * Reverse and append
+
+-- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
+--
+-- We have:
+--
+-- >>> revApp
+-- Lemma: revApp                           Q.E.D.
+-- [Proven] revApp
+revApp :: IO Proof
+revApp = runKD $ do
+   let p :: SList A -> SList A -> SBool
+       p xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
+
+   lemma "revApp"
+         (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> p xs ys)
+         -- induction is done on the last argument, so we use flip to make sure we induct on xs
+         [induct (flip p)]
 {-
+-- * Reversing twice is identity
+
 -- | @reverse (reverse xs) == xs@
 --
 -- We have:
