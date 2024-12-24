@@ -321,30 +321,6 @@ foldrFusion = runKDWith cvc5 $ do
 
    lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
 
--- * Foldr over append
-
--- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
---
--- We have:
---
--- >>> foldrOverAppend
--- Lemma: foldrOverAppend                  Q.E.D.
--- [Proven] foldrOverAppend
-foldrOverAppend :: IO Proof
-foldrOverAppend = runKD $ do
-   let a :: SA
-       a = uninterpret "a"
-
-       f :: SA -> SA -> SA
-       f = uninterpret "f"
-
-       p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
-
-   lemma "foldrOverAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-          -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
-          [induct (flip p)]
-
 -- * Map, append, and reverse
 
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
@@ -444,6 +420,30 @@ badRevLen = runKD $ do
          [induct p]
 
    pure ()
+
+-- * Foldr over append
+
+-- | @foldr f a (xs ++ ys) == foldr f (foldr f a ys) xs@
+--
+-- We have:
+--
+-- >>> foldrOverAppend
+-- Lemma: foldrOverAppend                  Q.E.D.
+-- [Proven] foldrOverAppend
+foldrOverAppend :: IO Proof
+foldrOverAppend = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       f :: SA -> SA -> SA
+       f = uninterpret "f"
+
+       p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
+
+   lemma "foldrOverAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
+          -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
+          [induct (flip p)]
 
 {- Can't converge
 -- * Foldl over append
