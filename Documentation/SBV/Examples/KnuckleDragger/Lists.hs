@@ -22,7 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), flip, Integer, Num(..), pure)
+import Prelude (IO, ($), flip, Bool(..), Integer, Num(..), pure, id)
 
 import Data.SBV
 import Data.SBV.List
@@ -201,8 +201,11 @@ lenAppend2 = runKD $
                 length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
           []
 
-{-
--- | A list of booleans is not all true, if any of them is false. We have:
+-- * Any, all, and filtering
+
+-- | |not (all id xs) == any not xs|
+--
+-- A list of booleans is not all true, if any of them is false. We have:
 --
 -- >>> allAny
 -- Lemma: allAny                           Q.E.D.
@@ -221,22 +224,25 @@ filterEx :: IO Proof
 filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
   where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
 
--- | The 'filterEx' example above, except we get a counter-example if `2` can be in the list. Note that
--- we don't even need the induction tactic here. (Though having it wouldn't hurt.) We have:
+-- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
+-- we don't need the induction tactic here, but we do need to tell KnuckleDragger to not generate the
+-- high-order function equivalence axioms, which leads to an @unknown@ answer otherwise.
 --
 -- >>> filterEx2 `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: filterEx
--- *** Failed to prove filterEx.
+-- Lemma: filterEx2
+-- *** Failed to prove filterEx2.
 -- Falsifiable. Counter-example:
 --   xs = [2] :: [Integer]
 filterEx2 :: IO ()
-filterEx2 = runKD $ do
+filterEx2 = runKDWith z3{kdOptions = (kdOptions z3) {generateHOEquivs = False}} $ do
         let p :: SList Integer -> SBool
             p xs = filter (.> 2) xs .== filter (.>= 2) xs
 
-        lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
+        lemma "filterEx2" (\(Forall @"xs" xs) -> p xs) []
 
         pure ()
+
+{-
 
 -- * Foldr-map fusion
 
