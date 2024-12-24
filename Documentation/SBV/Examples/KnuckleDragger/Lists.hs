@@ -9,6 +9,7 @@
 -- A variety of KnuckleDragger proofs on list processing functions.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE DeriveAnyClass      #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
@@ -16,17 +17,23 @@
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
-{-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror #-}
+{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), flip)
+import Prelude (IO, ($), flip, Integer, Num(..), pure)
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+
+#ifndef HADDOCK
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception
+#endif
 
 -- | Data declaration for an uninterpreted type, usually indicating source.
 data A
@@ -129,7 +136,108 @@ reverseReverse = runKD $ do
 
    lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [induct p, ra]
 
+-- * Lengths of lists
+
+-- | @length (x : xs) = 1 + length xs@
+--
+-- We have:
+--
+-- >>> lengthTail
+-- Lemma: lengthTail                       Q.E.D.
+-- [Proven] lengthTail
+lengthTail :: IO Proof
+lengthTail = runKD $
+   lemma "lengthTail"
+         (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs)
+         []
+
+-- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
+-- Below, we do a variant of the 'lengthTail, but with a bad implementation over integers,
+-- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
+-- than 5 elements and have 42 in it. We have:
+--
+-- >>> badLengthProof `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badLengthProof
+-- *** Failed to prove badLengthProof.
+-- Falsifiable. Counter-example:
+--   xs   = [15,11,13,16,27,42] :: [Integer]
+--   imp  =                  42 :: Integer
+--   spec =                   6 :: Integer
+badLengthProof :: IO ()
+badLengthProof = runKD $ do
+   let badLength :: SList Integer -> SInteger
+       badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
+
+   lemma "badLengthProof"
+         (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs))
+         []
+
+   pure ()
+
 {-
+
+-- | @length (xs ++ ys) == length xs + length ys@
+--
+-- We have:
+--
+-- >>> lenAppend
+-- Lemma: lenAppend                        Q.E.D.
+-- [Proven] lenAppend
+lenAppend :: IO Proof
+lenAppend = runKD $ lemma "lenAppend"
+                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                                 SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
+                           []
+
+-- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
+--
+-- We have:
+--
+-- >>> lenAppend2
+-- Lemma: lenAppend2                       Q.E.D.
+-- [Proven] lenAppend2
+lenAppend2 :: IO Proof
+lenAppend2 = runKD $ lemma "lenAppend2"
+                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
+                                     SL.length xs .== SL.length ys
+                                 .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
+                           []
+
+-- | A list of booleans is not all true, if any of them is false. We have:
+--
+-- >>> allAny
+-- Lemma: allAny                           Q.E.D.
+-- [Proven] allAny
+allAny :: IO Proof
+allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) [induct p]
+  where p xs = sNot (all id xs) .== any sNot xs
+
+-- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
+-- yields the same result. We have:
+--
+-- >>> filterEx
+-- Lemma: filterEx                         Q.E.D.
+-- [Proven] filterEx
+filterEx :: IO Proof
+filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
+  where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
+
+-- | The 'filterEx' example above, except we get a counter-example if `2` can be in the list. Note that
+-- we don't even need the induction tactic here. (Though having it wouldn't hurt.) We have:
+--
+-- >>> filterEx2 `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: filterEx
+-- *** Failed to prove filterEx.
+-- Falsifiable. Counter-example:
+--   xs = [2] :: [Integer]
+filterEx2 :: IO ()
+filterEx2 = runKD $ do
+        let p :: SList Integer -> SBool
+            p xs = filter (.> 2) xs .== filter (.>= 2) xs
+
+        lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
+
+        pure ()
 
 -- * Foldr-map fusion
 
@@ -440,120 +548,6 @@ foldrFoldl = runKD $ do
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
 -}
-
--- | Prove that the length of a list is one more than the length of its tail.
---
--- We have:
---
--- >>> listLengthProof
--- Lemma: length_correct                   Q.E.D.
--- [Proven] length_correct
-listLengthProof :: IO Proof
-listLengthProof = runKD $ do
-   let length :: SList Elt -> SInteger
-       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
-
-       spec :: SList Elt -> SInteger
-       spec = SL.length
-
-       p :: SList Elt -> SBool
-       p xs = observe "imp" (length xs) .== observe "spec" (spec xs)
-
-   lemma "length_correct" (\(Forall @"xs" xs) -> p xs) [induct p]
-
--- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
--- Below, we do a variant of the 'listLengthProof', but with a bad implementation over integers,
--- and see the counter-example. Our implementation returns an incorrect answer if the given list is longer
--- than 5 elements and have 42 in it. We have:
---
--- >>> badProof `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: bad
--- *** Failed to prove bad.
--- Falsifiable. Counter-example:
---   xs   = [8,25,26,27,28,42] :: [Integer]
---   imp  =                 42 :: Integer
---   spec =                  6 :: Integer
-badProof :: IO ()
-badProof = runKD $ do
-   let length :: SList Integer -> SInteger
-       length = smtFunction "length" $ \xs -> ite (SL.null xs) 0 (1 + length (SL.tail xs))
-
-       badLength :: SList Integer -> SInteger
-       badLength xs = ite (SL.length xs .> 5 .&& 42 `SL.elem` xs) 42 (length xs)
-
-       spec :: SList Integer -> SInteger
-       spec = SL.length
-
-       p :: SList Integer -> SBool
-       p xs = observe "imp" (badLength xs) .== observe "spec" (spec xs)
-
-   lemma "bad" (\(Forall @"xs" xs) -> p xs) [induct p]
-
-   pure ()
-
--- | @length (xs ++ ys) == length xs + length ys@
---
--- We have:
---
--- >>> lenAppend
--- Lemma: lenAppend                        Q.E.D.
--- [Proven] lenAppend
-lenAppend :: IO Proof
-lenAppend = runKD $ lemma "lenAppend"
-                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                                 SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
-                           []
-
--- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
---
--- We have:
---
--- >>> lenAppend2
--- Lemma: lenAppend2                       Q.E.D.
--- [Proven] lenAppend2
-lenAppend2 :: IO Proof
-lenAppend2 = runKD $ lemma "lenAppend2"
-                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                                     SL.length xs .== SL.length ys
-                                 .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
-                           []
-
--- | A list of booleans is not all true, if any of them is false. We have:
---
--- >>> allAny
--- Lemma: allAny                           Q.E.D.
--- [Proven] allAny
-allAny :: IO Proof
-allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) [induct p]
-  where p xs = sNot (all id xs) .== any sNot xs
-
--- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
--- yields the same result. We have:
---
--- >>> filterEx
--- Lemma: filterEx                         Q.E.D.
--- [Proven] filterEx
-filterEx :: IO Proof
-filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
-  where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
-
--- | The 'filterEx' example above, except we get a counter-example if `2` can be in the list. Note that
--- we don't even need the induction tactic here. (Though having it wouldn't hurt.) We have:
---
--- >>> filterEx2 `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: filterEx
--- *** Failed to prove filterEx.
--- Falsifiable. Counter-example:
---   xs = [2] :: [Integer]
-filterEx2 :: IO ()
-filterEx2 = runKD $ do
-        let p :: SList Integer -> SBool
-            p xs = filter (.> 2) xs .== filter (.>= 2) xs
-
-        lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
-
-        pure ()
-
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
 -- >>> runKD revCons
