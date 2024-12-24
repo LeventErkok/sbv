@@ -22,7 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), flip, Bool(..), Integer, Num(..), pure, id)
+import Prelude (IO, ($), flip, Bool(..), Integer, Num(..), pure, id, (.))
 
 import Data.SBV
 import Data.SBV.List
@@ -242,8 +242,6 @@ filterEx2 = runKDWith z3{kdOptions = (kdOptions z3) {generateHOEquivs = False}} 
 
         pure ()
 
-{-
-
 -- * Foldr-map fusion
 
 -- | @foldr f a . map g = foldr (f . g) a@
@@ -286,7 +284,7 @@ foldrMapFusion = runKD $ do
 -- Lemma: foldrFusion                      Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
-foldrFusion = runKD $ do
+foldrFusion = runKDWith cvc5 $ do
    let a :: SA
        a = uninterpret "a"
 
@@ -310,7 +308,7 @@ foldrFusion = runKD $ do
    -- forall x, y: f (g x y) = h x (f y)
    h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
-   lemmaWith cvc5 "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
+   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
 
 -- * Foldr over append
 
@@ -336,6 +334,7 @@ foldrOverAppend = runKD $ do
           -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
           [induct (flip p)]
 
+{-
 {- Can't converge
 -- * Foldl over append
 
