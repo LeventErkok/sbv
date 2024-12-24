@@ -106,8 +106,10 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , solverSetOptions            = startOpts
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
-                                            , kdRibbonLength              = 40
-                                            , firstifyUniqueLen           = 6
+                                            , kdOptions                   = KDOptions { ribbonLength      = 40
+                                                                                      , firstifyUniqueLen = 6
+                                                                                      , generateHOEquivs  = True
+                                                                                      }
                                             }
 
 -- | If supported, this makes all output go to stdout, which works better with SBV
