@@ -445,7 +445,6 @@ foldrOverAppend = runKD $ do
           -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
           [induct (flip p)]
 
-{- Can't converge
 -- * Foldl over append
 
 -- | @foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
@@ -455,23 +454,25 @@ foldrOverAppend = runKD $ do
 -- >>> foldlOverAppend
 -- Lemma: foldrOverAppend                  Q.E.D.
 -- [Proven] foldrOverAppend
+--
+-- Note that the proof crucially relies on a generalized version of the theorem, where we have
+-- to generalize @a@ to be an arbitrary value. Hence the quantified version we use, which reads:
+--
+-- @forall a. foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
+--
+-- If we don't do this generalization, the inductive step cannot use the new value of the seed,
+-- and hence won't converge.
 foldlOverAppend :: IO Proof
 foldlOverAppend = runKD $ do
    let f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p a xs ys = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
+       p xs ys = quantifiedBool (\(Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys)
 
-   chainLemma "foldlOverAppend"
-               (\(Forall @"a" a) (Forall @"xs" xs) (Forall @"ys" ys) -> p a xs ys)
-               (\a x xs ys -> [ foldl f a ((x .: xs) ++ ys)
-                              , foldl f a (x .: (xs ++ ys))
-                              , foldl f (a `f` x) (xs ++ ys)
-                              , foldl f (foldl f (a `f` x) xs) ys
-                              ])
-               -- Induction is done on the last element. Here we want to induct on xs, hence the rearrangement below
-               [induct (flip . p)]
--}
+   lemma "foldlOverAppend"
+         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
+         -- Induction is done on the last element. Here we want to induct on xs, hence the flip below
+         [induct (flip p)]
 
 {- can't converge
 -- * Foldr-foldl correspondence
@@ -502,9 +503,7 @@ foldrFoldlReverse = runKD $ do
                         , x `f` foldl (flip f) e (reverse xs)
                         ])
               [rc, induct p]
--}
 
-{-
  --- Can't converge
 -- * Bookkeeping law
 
@@ -544,9 +543,7 @@ bookKeeping = runKD $ do
                           , foldr f a (map (foldr f a) (xs .: xss))
                           ])
               [assoc, unit, foa, induct p]
--}
 
-{----------------
 -- TODO: Can't converge on this either..
 -- | First duality theorem. Given:
 --
@@ -595,11 +592,10 @@ firstDuality  = runKD $ do
                  [axm1, axm2, induct hp]
 
    lemma "firstDuality" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, axm3, h, induct p]
--}
 
-{- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
-   instantiation of the inductive hypothesis, which I can't get through. Perhaps we need proper
-   support for patterns.
+  -- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
+  -- instantiation of the inductive hypothesis, which I can't get through. Perhaps we need proper
+  -- support for patterns.
 
 -- | Given:
 -- @
