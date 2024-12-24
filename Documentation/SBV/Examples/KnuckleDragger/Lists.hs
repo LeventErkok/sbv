@@ -540,8 +540,9 @@ bookKeeping = runKD $ do
                           ])
               [assoc, unit, foa, induct p]
 
--- TODO: Can't converge on this either..
--- | First duality theorem. Given:
+-- * Foldr-foldl duality.
+
+-- | Given:
 --
 -- @
 --     x @ (y @ z) = (x @ y) @ z     (associativity of @)
@@ -557,9 +558,9 @@ bookKeeping = runKD $ do
 --
 -- We have:
 --
--- >>> firstDuality
-firstDuality :: IO Proof
-firstDuality  = runKD $ do
+-- >>> foldrFoldlDuality
+foldrFoldlDuality :: IO Proof
+foldrFoldlDuality  = runKD $ do
    let (@) :: SA -> SA -> SA
        (@) = uninterpret "|@|"
 
@@ -570,24 +571,19 @@ firstDuality  = runKD $ do
    axm2 <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
    axm3 <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
 
+   -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
+   h <- do let hp xs = quantifiedBool $ \(Forall @"y" y) (Forall @"z" z) -> foldl (@) (y @ z) xs .== y @ foldl (@) z xs
+           lemma "foldl over @" (\(Forall @"xs" xs) -> hp xs) [axm1, axm2, induct hp]
+
    let p xs = foldr (@) e xs .== foldl (@) e xs
 
-   -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
-   h <- do
-      let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
-
-      chainLemma "foldl over @"
-                 (\(Forall @"y" y) (Forall @"z" z) (Forall @"xs" xs) -> hp y z xs)
-                 (\y z x xs -> [ foldl (@) (y @ z) (x .: xs)
-                               , foldl (@) ((y @ z) @ x) xs
-                               , foldl (@) (y @ (z @ x)) xs
-                               -- this transition is hard
-                               , y @ foldl (@) (z @ x) xs
-                               , y @ foldl (@) z (x .: xs)
-                               ])
-                 [axm1, axm2, induct hp]
-
-   lemma "firstDuality" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, axm3, h, induct p]
+   chainLemmaWith z3{verbose=True} "foldrFoldlDuality"
+              (\(Forall @"xs" xs) -> p xs)
+              (\x xs -> [ foldr (@) e (x .: xs)
+                        , x @ foldr (@) e xs
+                        , x @ foldl (@) e xs
+                        ])
+              [h, axm2, axm3, induct p]
 
   -- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
   -- instantiation of the inductive hypothesis, which I can't get through. Perhaps we need proper
