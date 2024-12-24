@@ -99,6 +99,17 @@ appendAssoc = runKD $
 
 -- * Reverse and append
 
+-- | @reverse (x:xs) == reverse xs ++ [x]@
+--
+-- >>> revCons
+-- Lemma: revCons                          Q.E.D.
+-- [Proven] revCons
+revCons :: IO Proof
+revCons = runKD $
+    lemma "revCons"
+          (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x)
+          []
+
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
 --
 -- We have:
@@ -334,7 +345,106 @@ foldrOverAppend = runKD $ do
           -- Induction is done on the last element. Here we want to induct on xs, hence the flip below.
           [induct (flip p)]
 
-{-
+-- * Map, append, and reverse
+
+-- | @map f (xs ++ ys) == map f xs ++ map f ys@
+--
+-- >>> mapAppend
+-- Lemma: mapAppend                        Q.E.D.
+-- [Proven] mapAppend
+mapAppend :: IO Proof
+mapAppend = runKD $ do
+   let p :: (SA -> SB) -> SList A -> SList A -> SBool
+       p g xs ys = map g (xs ++ ys) .== map g xs ++ map g ys
+
+       -- For an arbitrary uninterpreted function 'f':
+       f :: SA -> SB
+       f = uninterpret "f"
+
+   lemma "mapAppend"
+         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
+         -- induction is done on the last argument, so flip to do it on xs
+         [induct (flip (p f))]
+
+-- | @map f . reverse == reverse . map f@
+--
+-- >>> mapReverse
+-- Lemma: revCons                          Q.E.D.
+-- Lemma: mapAppend                        Q.E.D.
+-- Chain: mapReverse
+--   Lemma: mapReverse.1                   Q.E.D.
+--   Lemma: mapReverse.2                   Q.E.D.
+--   Lemma: mapReverse.3                   Q.E.D.
+--   Lemma: mapReverse.4                   Q.E.D.
+--   Lemma: mapReverse.5                   Q.E.D.
+--   Lemma: mapReverse.6                   Q.E.D.
+-- Lemma: mapReverse                       Q.E.D.
+-- [Proven] mapReverse
+mapReverse :: IO Proof
+mapReverse = runKD $ do
+     let p :: (SA -> SB) -> SList A -> SBool
+         p g xs = reverse (map g xs) .== map g (reverse xs)
+
+         -- For an arbitrary uninterpreted function 'f':
+         f :: SA -> SB
+         f = uninterpret "f"
+
+     rCons <- use revCons
+     mApp  <- use mapAppend
+
+     chainLemma "mapReverse"
+                (\(Forall @"xs" xs) -> p f xs)
+                (\x xs -> [ reverse (map f (x .: xs))
+                          , reverse (f x .: map f xs)
+                          , reverse (map f xs) ++ singleton (f x)
+                          , map f (reverse xs) ++ singleton (f x)
+                          , map f (reverse xs) ++ map f (singleton x)
+                          , map f (reverse xs ++ singleton x)
+                          , map f (reverse (x .: xs))
+                          ])
+                [induct (p f), rCons, mApp]
+
+-- * Reverse and length
+
+-- | @length xs == length (reverse xs)@
+--
+-- We have:
+--
+-- >>> revLen
+-- Lemma: revLen                           Q.E.D.
+-- [Proven] revLen
+revLen :: IO Proof
+revLen = runKD $ do
+   let p :: SList A -> SBool
+       p xs = length (reverse xs) .== length xs
+
+   lemma "revLen"
+         (\(Forall @"xs" xs) -> p xs)
+         [induct p]
+
+-- | An example where we attempt to prove a non-theorem. Notice the counter-example
+-- generated for:
+--
+-- @length xs = ite (length xs .== 3) 5 (length xs)@
+--
+-- We have:
+--
+-- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badRevLen
+-- *** Failed to prove badRevLen.
+-- Falsifiable. Counter-example:
+--   xs = [A_1,A_2,A_1] :: [A]
+badRevLen :: IO ()
+badRevLen = runKD $ do
+   let p :: SList A -> SBool
+       p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
+
+   lemma "badRevLen"
+         (\(Forall @"xs" xs) -> p xs)
+         [induct p]
+
+   pure ()
+
 {- Can't converge
 -- * Foldl over append
 
@@ -551,112 +661,4 @@ foldrFoldl = runKD $ do
 
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
--}
--- | @reverse (x:xs) == reverse xs ++ [x]@
---
--- >>> runKD revCons
--- Lemma: revCons                          Q.E.D.
--- [Proven] revCons
-revCons :: KD Proof
-revCons = do
-    let p :: SA -> SList A -> SBool
-        p x xs = reverse (x .: xs) .== reverse xs ++ singleton x
-
-    lemma "revCons" (\(Forall @"x" x) (Forall @"xs" xs) -> p x xs) []
-
--- | @map f (xs ++ ys) == map f xs ++ map f ys@
---
--- >>> runKD mapAppend
--- Lemma: mapAppend                        Q.E.D.
--- [Proven] mapAppend
-mapAppend :: KD Proof
-mapAppend = do
-   let p :: (SA -> SB) -> SList A -> SList A -> SBool
-       p g xs ys = map g (xs ++ ys) .== map g xs ++ map g ys
-
-       -- For an arbitrary uninterpreted function 'f':
-       f :: SA -> SB
-       f = uninterpret "f"
-
-   lemma "mapAppend"
-         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
-         -- induction is done on the last argument, so flip to do it on xs
-         [induct (flip (p f))]
-
--- | @map f . reverse == reverse . map f@
---
--- >>> runKD mapReverse
--- Lemma: revCons                          Q.E.D.
--- Lemma: mapAppend                        Q.E.D.
--- Chain: mapReverse
---   Lemma: mapReverse.1                   Q.E.D.
---   Lemma: mapReverse.2                   Q.E.D.
---   Lemma: mapReverse.3                   Q.E.D.
---   Lemma: mapReverse.4                   Q.E.D.
---   Lemma: mapReverse.5                   Q.E.D.
---   Lemma: mapReverse.6                   Q.E.D.
--- Lemma: mapReverse                       Q.E.D.
--- [Proven] mapReverse
-mapReverse :: KD Proof
-mapReverse = do
-     let p :: (SA -> SB) -> SList A -> SBool
-         p g xs = reverse (map g xs) .== map g (reverse xs)
-
-         -- For an arbitrary uninterpreted function 'f':
-         f :: SA -> SB
-         f = uninterpret "f"
-
-     rCons <- revCons
-     mApp  <- mapAppend
-
-     chainLemma "mapReverse"
-                (\(Forall @"xs" xs) -> p f xs)
-                (\x xs -> [ reverse (map f (x .: xs))
-                          , reverse (f x .: map f xs)
-                          , reverse (map f xs) ++ singleton (f x)
-                          , map f (reverse xs) ++ singleton (f x)
-                          , map f (reverse xs) ++ map f (singleton x)
-                          , map f (reverse xs ++ singleton x)
-                          , map f (reverse (x .: xs))
-                          ])
-                [induct (p f), rCons, mApp]
-
--- | @length xs == length (reverse xs)@
---
--- We have:
---
--- >>> revLen
--- Lemma: revLen                           Q.E.D.
--- [Proven] revLen
-revLen :: IO Proof
-revLen = runKD $ do
-   let p :: SList Elt -> SBool
-       p xs = length (reverse xs) .== length xs
-
-   lemma "revLen"
-         (\(Forall @"xs" xs) -> p xs)
-         [induct p]
-
--- | An example where we attempt to prove a non-theorem. Notice the counter-example
--- generated for:
---
--- @length xs = ite (length xs .== 3) 5 (length xs)@
---
--- We have:
---
--- >>> badRevLen `catch` (\(_ :: SomeException) -> pure ())
--- Lemma: badRevLen
--- *** Failed to prove badRevLen.
--- Falsifiable. Counter-example:
---   xs = [Elt_1,Elt_2,Elt_1] :: [Elt]
-badRevLen :: IO ()
-badRevLen = runKD $ do
-   let p :: SList Elt -> SBool
-       p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
-
-   lemma "badRevLen"
-         (\(Forall @"xs" xs) -> p xs)
-         [induct p]
-
-   pure ()
 -}
