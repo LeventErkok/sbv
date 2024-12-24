@@ -108,7 +108,7 @@ revApp = runKD $ do
          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> p xs ys)
          -- induction is done on the last argument, so we use flip to make sure we induct on xs
          [induct (flip p)]
-{-
+
 -- * Reversing twice is identity
 
 -- | @reverse (reverse xs) == xs@
@@ -122,20 +122,14 @@ revApp = runKD $ do
 reverseReverse :: IO Proof
 reverseReverse = runKD $ do
 
-   -- Helper lemma: @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
-   let ra :: SymVal a => SList a -> SList a -> SBool
-       ra xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
-
-   revApp <- lemma "revApp" (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) -> ra xs ys)
-                   -- induction is always done on the last argument, so flip to make sure we induct on xs
-                   [induct (flip (ra @Elt))]
-
-   let p :: SymVal a => SList a -> SBool
+   let p :: SList A -> SBool
        p xs = reverse (reverse xs) .== xs
 
-   lemma "reverseReverse"
-         (\(Forall @"xs" (xs :: SList Elt)) -> p xs)
-         [induct (p @Elt), revApp]
+   ra <- use revApp
+
+   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [induct p, ra]
+
+{-
 
 -- * Foldr-map fusion
 
