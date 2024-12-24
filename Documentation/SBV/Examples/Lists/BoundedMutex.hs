@@ -6,8 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Demonstrates use of bounded list utilities, proving a simple
--- mutex algorithm correct up to given bounds.
+-- Proves a simple mutex algorithm correct up to a given bound.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DeriveAnyClass      #-}
@@ -27,8 +26,7 @@ import Data.SBV.Control
 
 import Prelude hiding ((!!))
 import Data.SBV.List ((!!))
-import qualified Data.SBV.List              as L
-import qualified Data.SBV.Tools.BoundedList as L
+import qualified Data.SBV.List as L
 
 -- | Each agent can be in one of the three states
 data State = Idle     -- ^ Regular work
@@ -38,10 +36,10 @@ data State = Idle     -- ^ Regular work
 -- | Make 'State' a symbolic enumeration
 mkSymbolicEnumeration ''State
 
--- | A bounded mutex property holds for two sequences of state transitions, if they are not in
--- their critical section at the same time up to that given bound.
-mutex :: Int -> SList State -> SList State -> SBool
-mutex i p1s p2s = L.band i $ L.bzipWith i (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritical) p1s p2s
+-- | The mutex property holds for two sequences of state transitions, if they are not in
+-- their critical section at the same time.
+mutex :: SList State -> SList State -> SBool
+mutex p1s p2s = L.and $ L.zipWith (\p1 p2 -> p1 ./= sCritical .|| p2 ./= sCritical) p1s p2s
 
 -- | A sequence is valid upto a bound if it starts at 'Idle', and follows the mutex rules. That is:
 --
@@ -100,7 +98,7 @@ checkMutex b = runSMT $ do
 
                   -- Try to assert that mutex does not hold. If we get a
                   -- counter example, we would've found a violation!
-                  constrain $ sNot $ mutex b p1 p2
+                  constrain $ sNot $ mutex p1 p2
 
                   query $ do cs <- checkSat
                              case cs of
@@ -121,11 +119,11 @@ checkMutex b = runSMT $ do
 -- trying to show a bounded trace of length 10, such that the second process is ready but
 -- never transitions to critical. We have:
 --
--- > ghci> notFair 10
--- > Fairness is violated at bound: 10
--- > P1: [Idle,Idle,Ready,Critical,Idle,Idle,Ready,Critical,Idle,Idle]
--- > P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
--- > Ts: [1,2,1,1,1,1,1,1,1,1]
+-- >>> notFair 10
+-- Fairness is violated at bound: 10
+-- P1: [Idle,Ready,Critical,Critical,Critical,Critical,Critical,Idle,Idle,Idle]
+-- P2: [Idle,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready,Ready]
+-- Ts: [1,1,1,1,1,1,1,1,1,1]
 --
 -- As expected, P2 gets ready but never goes critical since the arbiter keeps picking
 -- P1 unfairly. (You might get a different trace depending on what z3 happens to produce!)
@@ -148,7 +146,7 @@ notFair b = runSMT $ do p1    :: SList State   <- sList "p1"
 
                         -- Find a trace where p2 never goes critical
                         -- counter example, we would've found a violation!
-                        constrain $ sNot $ L.belem b sCritical p2
+                        constrain $ sNot $ sCritical `L.elem` p2
 
                         query $ do cs <- checkSat
                                    case cs of
