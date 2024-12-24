@@ -174,8 +174,6 @@ badLengthProof = runKD $ do
 
    pure ()
 
-{-
-
 -- | @length (xs ++ ys) == length xs + length ys@
 --
 -- We have:
@@ -184,10 +182,10 @@ badLengthProof = runKD $ do
 -- Lemma: lenAppend                        Q.E.D.
 -- [Proven] lenAppend
 lenAppend :: IO Proof
-lenAppend = runKD $ lemma "lenAppend"
-                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                                 SL.length (xs SL.++ ys) .== SL.length xs + SL.length ys)
-                           []
+lenAppend = runKD $
+    lemma "lenAppend"
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> length (xs ++ ys) .== length xs + length ys)
+          []
 
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
@@ -197,12 +195,13 @@ lenAppend = runKD $ lemma "lenAppend"
 -- Lemma: lenAppend2                       Q.E.D.
 -- [Proven] lenAppend2
 lenAppend2 :: IO Proof
-lenAppend2 = runKD $ lemma "lenAppend2"
-                           (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) ->
-                                     SL.length xs .== SL.length ys
-                                 .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
-                           []
+lenAppend2 = runKD $
+    lemma "lenAppend2"
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) ->
+                length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
+          []
 
+{-
 -- | A list of booleans is not all true, if any of them is false. We have:
 --
 -- >>> allAny
