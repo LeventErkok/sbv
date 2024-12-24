@@ -268,8 +268,9 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ concatMap (declUI curProgInfo) uis
              ++ [ "; --- Firstified function definitions" | not (null specialFuncs) ]
              ++ concat firstifiedDefs
-             ++ [ "; --- Firstified equivalences"         | not (null firstifiedEqualities) ]
-             ++ concat firstifiedEqualities
+             ++ [ "; --- Firstified equivalences"         | not (null exportedFirstifiedEqualities) ]
+             ++ concat exportedFirstifiedEqualities
+             ++ [ "; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting." | not (null firstifiedEqualities || generateHOEquivs)]
              ++ [ "; --- user defined functions ---"]
              ++ userDefs
              ++ [ "; --- assignments ---" ]
@@ -279,37 +280,44 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
+        KDOptions{firstifyUniqueLen, generateHOEquivs} = kdOptions cfg
+
         (firstifiedDefs, firstifiedFuncs)
            = case dup res of
                Nothing         -> ([def | (_, (_, def)) <- res], [(op, nm) | (op, (nm, _)) <- res])
-               Just (o, o', n) -> let curLen = firstifyUniqueLen cfg
-                                  in error $ unlines [ ""
-                                                     , "*** Data.SBV: Insufficient unique length in firstification."
-                                                     , "***"
-                                                     , "***   Operator 1 : " ++ show o
-                                                     , "***   Operator 2 : " ++ show o'
-                                                     , "***   Mapped name: " ++ n
-                                                     , "***   Unique len : " ++ show curLen
-                                                     , "***"
-                                                     , "*** Such collisions should be rare, but looks like you ran into one!"
-                                                     , "*** Try running with an increased unique-length:"
-                                                     , "***"
-                                                     , "***     solver{firstifyUniqueLen = N}"
-                                                     , "***"
-                                                     , "*** where N is larger than " ++ show curLen
-                                                     , "***"
-                                                     , "*** For instance:"
-                                                     , "***"
-                                                     , "***     satWith z3{firstUniqueLen = " ++ show (curLen + 1) ++ "}"
-                                                     , "***"
-                                                     , "*** If that doesn't resolve the problem, or if you believe this is caused by some"
-                                                     , "*** other problem, please report his as a bug."
-                                                     ]
+               Just (o, o', n) -> error $ unlines [ ""
+                                                  , "*** Data.SBV: Insufficient unique length in firstification."
+                                                  , "***"
+                                                  , "***   Operator 1 : " ++ show o
+                                                  , "***   Operator 2 : " ++ show o'
+                                                  , "***   Mapped name: " ++ n
+                                                  , "***   Unique len : " ++ show firstifyUniqueLen
+                                                  , "***"
+                                                  , "*** Such collisions should be rare, but looks like you ran into one!"
+                                                  , "*** Try running with an increased unique-length:"
+                                                  , "***"
+                                                  , "***     solver{firstifyUniqueLen = N}"
+                                                  , "***"
+                                                  , "*** where N is larger than " ++ show firstifyUniqueLen
+                                                  , "***"
+                                                  , "*** For instance:"
+                                                  , "***"
+                                                  , "***     satWith z3{firstUniqueLen = " ++ show (firstifyUniqueLen + 1) ++ "}"
+                                                  , "***"
+                                                  , "*** If that doesn't resolve the problem, or if you believe this is caused by some"
+                                                  , "*** other problem, please report his as a bug."
+                                                  ]
            where res = [(op, declSBVFunc cfg op) | op <- reverse specialFuncs]
                  dup []                = Nothing
                  dup ((o, (n, _)): xs) = case [o' | (o', (n', _)) <- xs, n == n'] of
                                            []       -> dup xs
                                            (o' : _) -> Just (o, o', n)
+
+        exportedFirstifiedEqualities
+           | generateHOEquivs
+           = firstifiedEqualities
+           | True
+           = []
 
         firstifiedEqualities = map equate $ combs firstifiedFuncs
            where combs :: [(Op, String)] -> [(Op, (String, SMTLambda), (String, SMTLambda))]
@@ -403,7 +411,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 -- Declare "known" SBV functions here
 declSBVFunc :: SMTConfig -> Op -> (String, [String])
 declSBVFunc cfg op = (nm, comment ++ body)
-  where nm = firstify (firstifyUniqueLen cfg) op
+  where nm = firstify (firstifyUniqueLen (kdOptions cfg)) op
 
         comment = ["; Firstified function: " ++ htyp]
 
@@ -1048,7 +1056,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                 ps      = " (" ++ unwords (map smtType params) ++ ") "
                 aResult = "(_ is (" ++ fld ++ ps ++ smtType res ++ "))"
 
-        firstifiedName = firstify (firstifyUniqueLen cfg)
+        firstifiedName = firstify (firstifyUniqueLen (kdOptions cfg))
 
         sh (SBVApp Ite [a, b, c]) = "(ite " ++ cvtSV a ++ " " ++ cvtSV b ++ " " ++ cvtSV c ++ ")"
 

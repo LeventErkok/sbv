@@ -26,7 +26,7 @@ import Control.Monad.Trans  (MonadIO(liftIO))
 import Data.List (intercalate)
 import System.IO (hFlush, stdout)
 
-import Data.SBV.Core.Symbolic  (SMTConfig)
+import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
 -- | Monad for running KnuckleDragger proofs in.
@@ -53,5 +53,5 @@ start newLine what nms = liftIO $ do putStr $ line ++ if newLine then "\n" else 
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
 finish :: String -> Int -> KD ()
-finish what skip = do SMTConfig{kdRibbonLength} <- ask
-                      liftIO $ putStrLn $ replicate (kdRibbonLength - skip) ' ' ++ what
+finish what skip = do SMTConfig{kdOptions = KDOptions{ribbonLength}} <- ask
+                      liftIO $ putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
