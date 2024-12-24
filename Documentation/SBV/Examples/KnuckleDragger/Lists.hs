@@ -1,12 +1,12 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.AppendRev
+-- Module    : Documentation.SBV.Examples.KnuckleDragger.Lists
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Example use of the KnuckleDragger, on list append and reverses.
+-- A variety of KnuckleDragger proofs on list processing functions.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
@@ -20,19 +20,28 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Documentation.SBV.Examples.KnuckleDragger.AppendRev where
+module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude hiding (reverse, (++))
+-- import qualified Prelude as P
+import Prelude (IO, ($))
 
 import Data.SBV
+import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
 
-import Data.SBV.List ((.:), (++), reverse)
-import qualified Data.SBV.List as SL
+-- | Data declaration for an uninterpreted type, usually indicating source.
+data A
+mkUninterpretedSort ''A
 
--- | Use an uninterpreted type for the elements
-data Elt
-mkUninterpretedSort ''Elt
+-- | Data declaration for an uninterpreted type, usually indicating target.
+data B
+mkUninterpretedSort ''B
+
+-- | Data declaration for an uninterpreted type, usually indicating an intermediate value.
+data C
+mkUninterpretedSort ''C
+
+-- * Appending null
 
 -- | @xs ++ [] == xs@
 --
@@ -42,9 +51,12 @@ mkUninterpretedSort ''Elt
 -- Lemma: appendNull                       Q.E.D.
 -- [Proven] appendNull
 appendNull :: IO Proof
-appendNull = runKD $ lemma "appendNull"
-                           (\(Forall @"xs" (xs :: SList Elt)) -> xs ++ SL.nil .== xs)
-                           []
+appendNull = runKD $
+   lemma "appendNull"
+         (\(Forall @"xs" (xs :: SList A)) -> xs ++ nil .== xs)
+         []
+
+-- * Moving cons over append
 
 -- | @(x : xs) ++ ys == x : (xs ++ ys)@
 --
@@ -54,9 +66,12 @@ appendNull = runKD $ lemma "appendNull"
 -- Lemma: consApp                          Q.E.D.
 -- [Proven] consApp
 consApp :: IO Proof
-consApp = runKD $ lemma "consApp"
-                        (\(Forall @"x" (x :: SElt)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
-                        []
+consApp = runKD $
+   lemma "consApp"
+         (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
+         []
+
+-- * Associativity of append
 
 -- | @(xs ++ ys) ++ zs == xs ++ (ys ++ zs)@
 --
@@ -65,15 +80,18 @@ consApp = runKD $ lemma "consApp"
 -- >>> appendAssoc
 -- Lemma: appendAssoc                      Q.E.D.
 -- [Proven] appendAssoc
+--
+-- Surprisingly, z3 can prove this without any induction. (Since SBV's append translates directly to
+-- the concatenation of sequences in SMTLib, it must trigger an internal axiom (heuristic?) in z3
+-- that proves it right out-of-the-box!)
 appendAssoc :: IO Proof
-appendAssoc = runKD $ do
-   let p :: SymVal a => SList a -> SList a -> SList a -> SBool
-       p xs ys zs = xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs
-
+appendAssoc = runKD $
    lemma "appendAssoc"
-         (\(Forall @"xs" (xs :: SList Elt)) (Forall @"ys" ys) (Forall @"zs" zs) -> p xs ys zs)
+         (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) (Forall @"zs" zs) ->
+              xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
          []
 
+{-
 -- | @reverse (reverse xs) == xs@
 --
 -- We have:
@@ -99,48 +117,6 @@ reverseReverse = runKD $ do
    lemma "reverseReverse"
          (\(Forall @"xs" (xs :: SList Elt)) -> p xs)
          [induct (p @Elt), revApp]
------------------------------------------------------------------------------
--- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning
--- Copyright : (c) Levent Erkok
--- License   : BSD3
--- Maintainer: erkokl@gmail.com
--- Stability : experimental
---
--- Various equalities that arise in functional-programming. A good source
--- is the classic book "Introduction to Functional Programming using Haskell,"
--- second edition. (Section 4.6 and others.)
------------------------------------------------------------------------------
-
-{-# LANGUAGE CPP                #-}
-{-# LANGUAGE DataKinds          #-}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveDataTypeable #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeAbstractions   #-}
-
-{-# OPTIONS_GHC -Wall -Werror #-}
-
-module Documentation.SBV.Examples.KnuckleDragger.EquationalReasoning where
-
-import Prelude hiding (concat, map, foldl, foldr, reverse, (<>), (++))
-
-import Data.SBV
-import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
-
--- | Data declaration for an uninterpreted type, usually indicating source.
-data A
-mkUninterpretedSort ''A
-
--- | Data declaration for an uninterpreted type, usually indicating target.
-data B
-mkUninterpretedSort ''B
-
--- | Data declaration for an uninterpreted type, usually indicating an intermediate value.
-data C
-mkUninterpretedSort ''C
 
 -- * Foldr-map fusion
 
@@ -451,48 +427,6 @@ foldrFoldl = runKD $ do
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
 -}
------------------------------------------------------------------------------
--- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.ListLen
--- Copyright : (c) Levent Erkok
--- License   : BSD3
--- Maintainer: erkokl@gmail.com
--- Stability : experimental
---
--- Example use of the KnuckleDragger, about lenghts of lists
------------------------------------------------------------------------------
-
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeAbstractions    #-}
-{-# LANGUAGE TypeApplications    #-}
-
-{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
-
-module Documentation.SBV.Examples.KnuckleDragger.ListLen where
-
-import Prelude hiding (length, (++))
-
-import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
-
-import qualified Data.SBV.List as SL
-
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> :set -XScopedTypeVariables
--- >>> import Control.Exception
-#endif
-
--- | Use an uninterpreted type for the elements
-data Elt
-mkUninterpretedSort ''Elt
 
 -- | Prove that the length of a list is one more than the length of its tail.
 --
@@ -570,42 +504,6 @@ lenAppend2 = runKD $ lemma "lenAppend2"
                                      SL.length xs .== SL.length ys
                                  .=> SL.length (xs SL.++ ys) .== 2 * SL.length xs)
                            []
------------------------------------------------------------------------------
--- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.Lists
--- Copyright : (c) Levent Erkok
--- License   : BSD3
--- Maintainer: erkokl@gmail.com
--- Stability : experimental
---
--- Various KnuckleDragger proofs about lists
------------------------------------------------------------------------------
-
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeAbstractions    #-}
-
-{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
-
-module Documentation.SBV.Examples.KnuckleDragger.Lists where
-
-import Data.SBV
-import Data.SBV.List
-import Data.SBV.Tools.KnuckleDragger
-
-import Prelude hiding(reverse, (++), any, all, notElem, filter, map)
-
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> :set -XScopedTypeVariables
--- >>> import Control.Exception
--- >>> import Data.SBV.Tools.KnuckleDragger
-#endif
 
 -- | A list of booleans is not all true, if any of them is false. We have:
 --
@@ -642,14 +540,6 @@ filterEx2 = runKD $ do
         lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
 
         pure ()
-
--- | Data declaration for an uninterpreted source type.
-data A
-mkUninterpretedSort ''A
-
--- | Data declaration for an uninterpreted target type.
-data B
-mkUninterpretedSort ''B
 
 -- | @reverse (x:xs) == reverse xs ++ [x]@
 --
@@ -719,46 +609,6 @@ mapReverse = do
                           , map f (reverse (x .: xs))
                           ])
                 [induct (p f), rCons, mApp]
------------------------------------------------------------------------------
--- |
--- Module    : Documentation.SBV.Examples.KnuckleDragger.RevLen
--- Copyright : (c) Levent Erkok
--- License   : BSD3
--- Maintainer: erkokl@gmail.com
--- Stability : experimental
---
--- Proof that reversing a list does not change its length.
------------------------------------------------------------------------------
-
-{-# LANGUAGE CPP                 #-}
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE DeriveAnyClass      #-}
-{-# LANGUAGE DeriveDataTypeable  #-}
-{-# LANGUAGE StandaloneDeriving  #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeAbstractions    #-}
-
-{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
-
-module Documentation.SBV.Examples.KnuckleDragger.RevLen where
-
-import Prelude hiding (length, reverse)
-
-import Data.SBV
-import Data.SBV.Tools.KnuckleDragger
-
-import Data.SBV.List (reverse, length)
-
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> :set -XScopedTypeVariables
--- >>> import Control.Exception
-#endif
-
--- | Use an uninterpreted type for the elements
-data Elt
-mkUninterpretedSort ''Elt
 
 -- | @length xs == length (reverse xs)@
 --
@@ -798,3 +648,4 @@ badRevLen = runKD $ do
          [induct p]
 
    pure ()
+-}
