@@ -119,12 +119,16 @@ class ChainLemma steps step | steps -> step where
 
         go (1 :: Int) base (zipWith (makeInter steps) proofSteps (drop 1 proofSteps))
 
-     where go _ sofar []
+     where -- if cfg has a transcript, make sure the file is suffixed appropriately
+           mkCfg i = cfg{transcript = unique <$> transcript cfg}
+             where unique f = "chainLemma_" ++ show i ++ "_" ++ f
+
+           go _ sofar []
               | taggedTheorem = theoremWith cfg nm result sofar
               | True          = lemmaWith   cfg nm result sofar
            go i sofar (p:ps)
             | True
-            = do step <- lemmaGen cfg "Lemma" ([nm, show i]) p sofar
+            = do step <- lemmaGen (mkCfg i) "Lemma" ([nm, show i]) p sofar
                  go (i+1) (step : sofar) ps
 
 -- | Chaining lemmas that depend on a single quantified variable.
