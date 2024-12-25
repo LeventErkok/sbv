@@ -64,7 +64,7 @@ docs:
 
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:
-	cabal new-haddock --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
+	cabal new-haddock ${CABAL_OPTS} --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 
