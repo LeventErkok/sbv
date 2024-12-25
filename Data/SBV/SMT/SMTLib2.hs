@@ -50,7 +50,7 @@ import qualified Data.Graph as DG
 -- | For higher-order functions, we firstify them. This requires a uniqu name creation. Here,
 -- we create a firstified name based on the operation. The suffix appended will have at most uniqLen length.
 firstify :: Int -> Op -> String
-firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash (BC.pack (show o)))))
+firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash (BC.pack (compress (show o))))))
   where prefix (SeqOp SBVReverse {}) = "sbv.reverse"
         prefix (SeqOp SBVZip     {}) = "sbv.zip"
         prefix (SeqOp SBVZipWith {}) = "sbv.zipWith"
@@ -67,6 +67,9 @@ firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash 
                                                        , "***"
                                                        , "*** Please report this as a bug."
                                                        ]
+
+        -- compress and make spaces uniform; get words, and then unwords
+        compress = unwords . words
 
 -- | Translate a problem into an SMTLib2 script
 cvt :: SMTLibConverter ([String], [String])
