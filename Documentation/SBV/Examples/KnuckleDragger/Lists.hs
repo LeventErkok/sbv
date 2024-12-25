@@ -47,6 +47,11 @@ mkUninterpretedSort ''B
 data C
 mkUninterpretedSort ''C
 
+-- | For certain proofs, the default settings for z3 have trouble converging. So, we use
+-- the no-auto-config configuration in certain cases.
+z3NoAutoConfig :: SMTConfig
+z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
+
 -- * Appending null
 
 -- | @xs ++ [] == xs@
@@ -288,8 +293,11 @@ mapAppend = runKD $ do
 --   Lemma: mapReverse.6                   Q.E.D.
 -- Lemma: mapReverse                       Q.E.D.
 -- [Proven] mapReverse
+--
+-- Note that for this proof pass the no-auto-config parameter
+-- to z3, as otherwise it doesn't converge.
 mapReverse :: IO Proof
-mapReverse = runKD $ do
+mapReverse = runKDWith z3NoAutoConfig $ do
      let p :: (SA -> SB) -> SList A -> SBool
          p g xs = reverse (map g xs) .== map g (reverse xs)
 
