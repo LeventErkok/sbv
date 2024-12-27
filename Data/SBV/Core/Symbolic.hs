@@ -1398,7 +1398,7 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                                                        , "  Name: " ++ nm
                                                        , "  Type: " ++ show t
                                                        , ""
-                                                       , "You should explicitly register these functions by calling registerFunction before starting the query section."
+                                                       , "You should explicitly register these functions by calling 'registerFunction' on them before starting the query section."
                                                        ]
                                      pure True
                       UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
