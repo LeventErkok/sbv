@@ -147,7 +147,7 @@ else
 endif
 
 test:
-	@$(TIME) cabal new-run SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
+	@$(TIME) cabal new-run ${CABAL_OPTS} SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
 
 checkLinks:
 	@brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
