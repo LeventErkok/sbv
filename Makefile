@@ -57,7 +57,7 @@ quick: tags
 	
 install: tags
 	@$(TIME) cabal new-configure --enable-tests ${CABAL_OPTS} --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal new-install --lib --force-reinstalls
+	@$(TIME) cabal new-install --lib ${CABAL_OPTS} --force-reinstalls
 
 docs:
 	cabal new-haddock ${CABAL_OPTS} --haddock-option=--no-warnings --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
