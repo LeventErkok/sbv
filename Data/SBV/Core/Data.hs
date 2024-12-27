@@ -64,6 +64,7 @@ module Data.SBV.Core.Data
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
  , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(SkolemsTo, skolemize, taggedSkolemize)
  , bvExtract, (#), bvDrop, bvTake
+ , registerSMTType
  ) where
 
 import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol, type (+), type (-), type (<=), natVal)
@@ -556,6 +557,13 @@ class SolverContext m where
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
+
+-- | Register a kind with the solver. Like 'registerUISMTFunction', this is typically not necessary
+-- since SBV will register kinds as it encounters them automatically. But there are cases
+-- where doing this can explicitly can come handy, typically in query contexts.
+registerSMTType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
+registerSMTType _ = do st <- contextState
+                       liftIO $ registerKind st (kindOf (Proxy @a))
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where

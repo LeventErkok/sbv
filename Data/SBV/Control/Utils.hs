@@ -436,14 +436,6 @@ registerUISMTFunction :: (MonadIO m, SolverContext m) => SMTFunction fun a r => 
 registerUISMTFunction f = do st                <- contextState
                              (nmas, isCurried) <- smtFunName f
                              io $ newUninterpreted st nmas (smtFunType f) (UINone isCurried)
-
--- | Register a kind with the solver. Like 'registerUISMTFunction', this is typically not necessary
--- since SBV will register kinds as it encounters them automatically. But there are cases
--- where doing this can explicitly can come handy, typically in query contexts.
-registerSMTType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
-registerSMTType _ = do st <- contextState
-                       liftIO $ registerKind st (kindOf (Proxy @a))
-
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our
 -- way out of it. Note that we only do this if we have a pure boolean type, as otherwise we'd blow
