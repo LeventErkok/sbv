@@ -29,8 +29,7 @@ module Data.SBV.Control.Utils (
        io
      , ask, send, getValue, getFunction, getUninterpretedValue
      , getValueCV, getUICVal, getUIFunCVAssoc, getUnsatAssumptions
-     , SMTFunction(..), registerUISMTFunction, registerSMTType
-     , getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
+     , SMTFunction(..), getQueryState, modifyQueryState, getConfig, getObjectives, getUIs
      , getSBVAssertions, getSBVPgm, getObservables
      , checkSat, checkSatUsing, getAllSatResult
      , inNewContext, freshVar, freshVar_
@@ -78,10 +77,10 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , MonadQuery(..), QueryContext(..), VarContext(..)
                               , registerLabel, svMkSymVar, validationRequested
                               , isSafetyCheckingIStage, isSetupIStage, isRunIStage, IStage(..), QueryT(..)
-                              , extractSymbolicSimulationState, MonadSymbolic(..), newUninterpreted
+                              , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
-                              , Name, CnstMap, UICodeKind(UINone), smtDefGivenName, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar, registerKind
+                              , Name, CnstMap, smtDefGivenName, Inputs(..), ProgInfo(..)
+                              , mustIgnoreVar
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -429,13 +428,6 @@ class (HasKind r, SatModel r) => SMTFunction fun a r | fun -> a r where
                                        , "*** This could be a bug with SBV or the backend solver. Please report!"
                                        ]
 
--- | Registering an uninterpreted SMT function. This is typically not necessary as uses of the UI
--- function itself will register it automatically. But there are cases where doing this explicitly can
--- come in handy, typically in query contexts.
-registerUISMTFunction :: (MonadIO m, SolverContext m) => SMTFunction fun a r => fun -> m ()
-registerUISMTFunction f = do st                <- contextState
-                             (nmas, isCurried) <- smtFunName f
-                             io $ newUninterpreted st nmas (smtFunType f) (UINone isCurried)
 -- | Pointwise function value extraction. If we get unlucky and can't parse z3's output (happens
 -- when we have all booleans and z3 decides to spit out an expression), just brute force our
 -- way out of it. Note that we only do this if we have a pure boolean type, as otherwise we'd blow
