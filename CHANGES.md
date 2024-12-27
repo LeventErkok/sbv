@@ -24,6 +24,9 @@
     functions. If you were using these functions you could easily recreate them. Please get in touch if you
     need this old functionality.
 
+  * [BACKWARDS COMPATIBILITY] Data.SBV no longer exports the class SatModel, which is more directed
+    towards internal SBV purposes. If you need it, you can now import it from Data.SBV.Internals.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying

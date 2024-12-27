@@ -401,7 +401,7 @@ module Data.SBV (
 
   -- ** Programmable model extraction
   -- $programmableExtraction
-  , SatModel(..), Modelable(..), displayModels, extractModels
+  , Modelable(..), displayModels, extractModels
   , getModelDictionaries, getModelValues, getModelUninterpretedValues
 
   -- * SMT Interface

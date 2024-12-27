@@ -25,7 +25,7 @@
 
 module Data.SBV.Internals (
   -- * Running symbolic programs /manually/
-    Result(..), SBVRunMode(..), IStage(..), QueryContext(..), VarContext(..), mkNewState
+    Result(..), SBVRunMode(..), IStage(..), QueryContext(..), VarContext(..), SatModel(..), mkNewState
 
   -- * Solver capabilities
   , SolverCapabilities(..)
@@ -83,7 +83,7 @@ import qualified Data.SBV.Core.Floating as CF (sComparableSWord32AsSFloat, sComp
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
 
-import Data.SBV.SMT.SMT (genParse, showModel)
+import Data.SBV.SMT.SMT (genParse, showModel, SatModel(..))
 
 import Data.SBV.Provers.Prover (ProvableM, SatisfiableM)
 
