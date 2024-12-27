@@ -59,7 +59,7 @@ module Data.SBV.Core.Model (
 
 import Control.Applicative    (ZipList(ZipList))
 import Control.Monad          (when, unless, mplus)
-import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
 import qualified GHC.Generics as G
@@ -2492,8 +2492,12 @@ class SMTDefinable a where
   cgUninterpret       nm code v = sbvDefineValue nm Nothing   $ UICodeC (v, code)
   sym                           = uninterpret
 
-  default registerSMTFunction :: (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
-  registerSMTFunction f = free_ >>= registerSMTFunction . f
+  default registerSMTFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
+  registerSMTFunction f = do let k = kindOf (Proxy @b)
+                             st <- symbolicEnv
+                             v <- liftIO $ internalVariable st k
+                             let b = SBV $ SVal k $ Right $ cache (const (pure v))
+                             registerSMTFunction $ f b
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.

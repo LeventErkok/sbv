@@ -11,13 +11,14 @@
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] ; --- top level inputs ---
+[GOOD] (declare-fun s0 () Bool) ; tracks user variable "__internal_sbv_s0"
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] (declare-fun q1 (Bool) Bool)
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
-[GOOD] (define-fun s0 () Bool (q1 false))
+[GOOD] (define-fun s1 () Bool (q1 s0))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 *** Checking Satisfiability, all solutions..

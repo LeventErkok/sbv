@@ -14,7 +14,6 @@
 
 module TestSuite.Basics.UISat(tests)  where
 
-import Data.SBV.Control
 import Utils.SBVTestFramework
 
 -- Test suite
@@ -45,15 +44,15 @@ q2 = uninterpret "q2"
 
 test1 :: ConstraintSet
 test1 = do setLogic Logic_ALL
-           registerUISMTFunction q1
+           registerSMTFunction q1
 
 test2 :: ConstraintSet
 test2 = do setLogic Logic_ALL
-           registerUISMTFunction q2
+           registerSMTFunction q2
 
 test3 :: ConstraintSet
 test3 = do setLogic Logic_ALL
-           registerUISMTFunction q1
-           registerUISMTFunction q2
+           registerSMTFunction q1
+           registerSMTFunction q2
 
 {- HLint ignore module "Reduce duplication" -}

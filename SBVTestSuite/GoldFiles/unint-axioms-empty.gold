@@ -12,10 +12,11 @@
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
-[GOOD] (define-fun s2 () Thing Thing_witness)
 [GOOD] ; --- top level inputs ---
-[GOOD] (declare-fun s4 () Thing)
+[GOOD] (declare-fun s2 () Thing) ; tracks user variable "__internal_sbv_s2"
+[GOOD] (declare-fun s3 () Thing) ; tracks user variable "__internal_sbv_s3"
 [GOOD] (declare-fun s5 () Thing)
+[GOOD] (declare-fun s6 () Thing)
 [GOOD] ; --- constant tables ---
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
@@ -29,15 +30,15 @@
                                  (let ((l1_s2 (thingMerge l1_s0 l1_s1)))
                                  (let ((l1_s3 (distinct l1_s0 l1_s2)))
                                  l1_s3))))
-[GOOD] (define-fun s3 () Thing (thingMerge s2 s2))
-[GOOD] (define-fun s6 () Bool (= s4 s5))
-[GOOD] (define-fun s7 () Bool (thingCompare s4 s5))
-[GOOD] (define-fun s8 () Bool (=> s6 s7))
+[GOOD] (define-fun s4 () Thing (thingMerge s2 s3))
+[GOOD] (define-fun s7 () Bool (= s5 s6))
+[GOOD] (define-fun s8 () Bool (thingCompare s5 s6))
+[GOOD] (define-fun s9 () Bool (=> s7 s8))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s0)
 [GOOD] (assert s1)
-[GOOD] (assert (not s8))
+[GOOD] (assert (not s9))
 [SEND] (check-sat)
 [RECV] unsat
 *** Solver   : Z3
