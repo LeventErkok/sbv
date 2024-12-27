@@ -22,7 +22,7 @@ module Data.SBV.Control (
 
      -- * Querying the solver
      -- ** Extracting values
-     , registerUISMTFunction, registerSMTType, getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
+     , getFunction, getUninterpretedValue, getModel, getAssignment, getSMTResult, getUnknownReason, getObservables
 
      -- ** Extracting the unsat core
      , getUnsatCore
@@ -74,7 +74,6 @@ module Data.SBV.Control (
 import Data.SBV.Core.Symbolic (Symbolic, QueryContext(..))
 
 import Data.SBV.Trans.Control hiding (query)
-import Data.SBV.Control.Utils (registerUISMTFunction, registerSMTType)
 
 import qualified Data.SBV.Control.Utils as Trans
 
