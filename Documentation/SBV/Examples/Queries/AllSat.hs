@@ -10,7 +10,7 @@
 -- solver repeatedly, telling it to give us a new model each time. SBV already
 -- provides 'Data.SBV.allSat' that precisely does this. However, this example demonstrates
 -- how the query mode can be used to achieve the same, and can also incorporate
--- extra conditions with easy as we walk through solutions.
+-- extra conditions with ease as we walk through solutions.
 -----------------------------------------------------------------------------
 
 {-# OPTIONS_GHC -Wall -Werror #-}
