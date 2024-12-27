@@ -27,10 +27,12 @@
   * [BACKWARDS COMPATIBILITY] Data.SBV no longer exports the class SatModel, which is more directed
     towards internal SBV purposes. If you need it, you can now import it from Data.SBV.Internals.
 
-  * [BACKWARDS COMPATIBILITY] Added 'registerSMTFunction' which comes in handy for telling SBV about functions
+  * [BACKWARDS COMPATIBILITY] Added 'registerFunction' which comes in handy for telling SBV about functions
     that are used in query mode. This is typically not necessary as SBV will register them automatically, but
     there are certain scenarios where explicit control is needed. This function also generalizes the old
     'registerUISMTFunction', which was a special case of this function and is now removed.
+
+  * [BACKWARDS COMPATIBILITY] The function 'registerSMTType' is renamed to 'registerType'.
 
 ### Version 11.0, 2024-11-06
 

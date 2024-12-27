@@ -312,7 +312,7 @@ module Data.SBV (
   , mkUninterpretedSort
 
   -- * Stopping unrolling: Defined functions
-  , SMTDefinable(..), registerSMTType
+  , SMTDefinable(..), registerType
 
   -- * Special relations
   -- $specialRels

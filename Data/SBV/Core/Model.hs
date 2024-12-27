@@ -2423,13 +2423,12 @@ class SMTDefinable a where
   -- 'smtFunction' return a monadic result, please get in touch!
   smtFunction :: Lambda Symbolic a => String -> a -> a
 
-  -- | Register an smt defined function. This function is typically not needed as SBV will register
-  -- the function automatically upon first use. However, there are scenarios (in particular query contexts)
-  -- where the definition isn't used before query-mode starts, and SBV does not (for historical reasons)
+  -- | Register a function. This function is typically not needed as SBV will register functions used
+  -- automatically upon first use. However, there are scenarios (in particular query contexts)
+  -- where the definition isn't used before query-mode starts, and SBV (for historical reasons)
   -- requires functions to be known before query-mode starts executing. In such cases, use this function
-  -- to register them with the system. This is similar to 'Data.SBV.Control.registerUISMTFunction', but for
-  -- defined functions, as opposed to uninterpreted functions.
-  registerSMTFunction :: a -> Symbolic ()
+  -- to register them with the system.
+  registerFunction :: a -> Symbolic ()
 
   -- | Uninterpret a value, i.e., add this value as a completely undefined value/function that
   -- the solver is free to instantiate to satisfy other constraints.
@@ -2492,12 +2491,12 @@ class SMTDefinable a where
   cgUninterpret       nm code v = sbvDefineValue nm Nothing   $ UICodeC (v, code)
   sym                           = uninterpret
 
-  default registerSMTFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
-  registerSMTFunction f = do let k = kindOf (Proxy @b)
-                             st <- symbolicEnv
-                             v <- liftIO $ internalVariable st k
-                             let b = SBV $ SVal k $ Right $ cache (const (pure v))
-                             registerSMTFunction $ f b
+  default registerFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
+  registerFunction f = do let k = kindOf (Proxy @b)
+                          st <- symbolicEnv
+                          v <- liftIO $ internalVariable st k
+                          let b = SBV $ SVal k $ Right $ cache (const (pure v))
+                          registerFunction $ f b
 
 -- | Kind of uninterpretation
 data UIKind a = UIFree  Bool                            -- ^ completely uninterpreted. If Bool is true, then this is curried.
@@ -2531,7 +2530,7 @@ instance (SymVal a, HasKind a) => SMTDefinable (SBV a) where
                                          , show s
                                          ]
 
-  registerSMTFunction x = constrain $ x .== x
+  registerFunction x = constrain $ x .== x
 
   sbvDefineValue nm mbArgs uiKind
      | Just v <- retrieveConstCode uiKind
@@ -2933,7 +2932,7 @@ mkUncurried (UICodeC a) = UICodeC a
 instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction = registerSMTFunction . curry
+  registerFunction = registerFunction . curry
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (curry <$> mkUncurried uiKind) in uncurry f
 
@@ -2941,7 +2940,7 @@ instance (SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV c, SBV 
 instance (SymVal d, SymVal c, SymVal b, SymVal a, HasKind a) => SMTDefinable ((SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c -> fn (a, b, c)
+  registerFunction fn = registerFunction $ \a b c -> fn (a, b, c)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc3 <$> mkUncurried uiKind) in \(arg0, arg1, arg2) -> f arg0 arg1 arg2
     where uc3 fn a b c = fn (a, b, c)
@@ -2951,7 +2950,7 @@ instance (SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d -> fn (a, b, c, d)
+  registerFunction fn = registerFunction $ \a b c d -> fn (a, b, c, d)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc4 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3) -> f arg0 arg1 arg2 arg3
     where uc4 fn a b c d = fn (a, b, c, d)
@@ -2961,7 +2960,7 @@ instance (SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, HasKind a)
             => SMTDefinable ((SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e -> fn (a, b, c, d, e)
+  registerFunction fn = registerFunction $ \a b c d e -> fn (a, b, c, d, e)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc5 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4) -> f arg0 arg1 arg2 arg3 arg4
     where uc5 fn a b c d e = fn (a, b, c, d, e)
@@ -2971,7 +2970,7 @@ instance (SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, SymVal a, 
             => SMTDefinable ((SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f -> fn (a, b, c, d, e, f)
+  registerFunction fn = registerFunction $ \a b c d e f -> fn (a, b, c, d, e, f)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc6 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5) -> f arg0 arg1 arg2 arg3 arg4 arg5
     where uc6 fn a b c d e f = fn (a, b, c, d, e, f)
@@ -2981,7 +2980,7 @@ instance (SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, SymVal b, 
             => SMTDefinable ((SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
+  registerFunction fn = registerFunction $ \a b c d e f g -> fn (a, b, c, d, e, f, g)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc7 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6
     where uc7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
@@ -2991,7 +2990,7 @@ instance (SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, SymVal c, 
             => SMTDefinable ((SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g h -> fn (a, b, c, d, e, f, g, h)
+  registerFunction fn = registerFunction $ \a b c d e f g h -> fn (a, b, c, d, e, f, g, h)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc8 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7
     where uc8 fn a b c d e f g h = fn (a, b, c, d, e, f, g, h)
@@ -3001,7 +3000,7 @@ instance (SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, SymVal d, 
             => SMTDefinable ((SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g h i -> fn (a, b, c, d, e, f, g, h, i)
+  registerFunction fn = registerFunction $ \a b c d e f g h i -> fn (a, b, c, d, e, f, g, h, i)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc9 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8
     where uc9 fn a b c d e f g h i = fn (a, b, c, d, e, f, g, h, i)
@@ -3011,7 +3010,7 @@ instance (SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, SymVal e, 
             => SMTDefinable ((SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g h i j -> fn (a, b, c, d, e, f, g, h, i, j)
+  registerFunction fn = registerFunction $ \a b c d e f g h i j -> fn (a, b, c, d, e, f, g, h, i, j)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc10 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9
     where uc10 fn a b c d e f g h i j = fn (a, b, c, d, e, f, g, h, i, j)
@@ -3021,7 +3020,7 @@ instance (SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, SymVal f, 
             => SMTDefinable ((SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g h i j k -> fn (a, b, c, d, e, f, g, h, i, j, k)
+  registerFunction fn = registerFunction $ \a b c d e f g h i j k -> fn (a, b, c, d, e, f, g, h, i, j, k)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc11 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10
     where uc11 fn a b c d e f g h i j k = fn (a, b, c, d, e, f, g, h, i, j, k)
@@ -3031,7 +3030,7 @@ instance (SymVal m, SymVal l, SymVal k, SymVal j, SymVal i, SymVal h, SymVal g, 
             => SMTDefinable ((SBV m, SBV l, SBV k, SBV j, SBV i, SBV h, SBV g, SBV f, SBV e, SBV d, SBV c, SBV b) -> SBV a) where
   sbv2smt fn = defs2smt $ \p -> fn p .== fn p
 
-  registerSMTFunction fn = registerSMTFunction $ \a b c d e f g h i j k l -> fn (a, b, c, d, e, f, g, h, i, j, k, l)
+  registerFunction fn = registerFunction $ \a b c d e f g h i j k l -> fn (a, b, c, d, e, f, g, h, i, j, k, l)
 
   sbvDefineValue nm mbArgs uiKind = let f = sbvDefineValue nm mbArgs (uc12 <$> mkUncurried uiKind) in \(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) -> f arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11
     where uc12 fn a b c d e f g h i j k l = fn (a, b, c, d, e, f, g, h, i, j, k, l)

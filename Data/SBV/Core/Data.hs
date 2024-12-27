@@ -64,7 +64,7 @@ module Data.SBV.Core.Data
  , QueryState(..), QueryT(..), SMTProblem(..), Constraint(..), Lambda(..), Forall(..), Exists(..), ExistsUnique(..), ForallN(..), ExistsN(..)
  , QuantifiedBool(..), EqSymbolic(..), QNot(..), Skolemize(SkolemsTo, skolemize, taggedSkolemize)
  , bvExtract, (#), bvDrop, bvTake
- , registerSMTType
+ , registerType
  ) where
 
 import GHC.TypeLits (KnownNat, Nat, Symbol, KnownSymbol, symbolVal, AppendSymbol, type (+), type (-), type (<=), natVal)
@@ -558,12 +558,12 @@ class SolverContext m where
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
 
--- | Register a kind with the solver. Like 'registerUISMTFunction', this is typically not necessary
--- since SBV will register kinds as it encounters them automatically. But there are cases
+-- | Register a type with the solver. Like 'registerFunction', This is typically not necessary
+-- since SBV will register types as it encounters them automatically. But there are cases
 -- where doing this can explicitly can come handy, typically in query contexts.
-registerSMTType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
-registerSMTType _ = do st <- contextState
-                       liftIO $ registerKind st (kindOf (Proxy @a))
+registerType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
+registerType _ = do st <- contextState
+                    liftIO $ registerKind st (kindOf (Proxy @a))
 
 -- | A class representing what can be returned from a symbolic computation.
 class Outputtable a where

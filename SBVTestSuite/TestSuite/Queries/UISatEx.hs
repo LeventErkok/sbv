@@ -47,7 +47,7 @@ testQuery2 rf = do r <- runSMTWith defaultSMTCfg{verbose=True, redirectVerbose=J
   where qCore = do core
                    let q6 :: SInteger -> SBool
                        q6 = uninterpret "q6"
-                   registerSMTFunction q6
+                   registerFunction q6
                    query $ do ensureSat
                               qv1 <- getFunction q1
                               qv2 <- getFunction q2
@@ -79,7 +79,7 @@ core = do x <- sInteger_
           constrain $ q1 (-3) .== 9
           constrain $ q1 x    .== x+1
 
-          registerSMTFunction q2 -- Not really necessary, but testing it doesn't break anything
+          registerFunction q2 -- Not really necessary, but testing it doesn't break anything
           constrain $ q2 sTrue 3   .== 5
           constrain $ q2 sFalse 7  .== 6
           constrain $ q2 sFalse 12 .== 3

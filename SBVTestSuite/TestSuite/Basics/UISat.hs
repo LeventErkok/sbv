@@ -44,15 +44,15 @@ q2 = uninterpret "q2"
 
 test1 :: ConstraintSet
 test1 = do setLogic Logic_ALL
-           registerSMTFunction q1
+           registerFunction q1
 
 test2 :: ConstraintSet
 test2 = do setLogic Logic_ALL
-           registerSMTFunction q2
+           registerFunction q2
 
 test3 :: ConstraintSet
 test3 = do setLogic Logic_ALL
-           registerSMTFunction q1
-           registerSMTFunction q2
+           registerFunction q1
+           registerFunction q2
 
 {- HLint ignore module "Reduce duplication" -}
