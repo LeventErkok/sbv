@@ -2282,6 +2282,9 @@ data SMTConfig = SMTConfig {
        , solverSetOptions            :: [SMTOption]         -- ^ Options to set as we start the solver
        , ignoreExitCode              :: Bool                -- ^ If true, we shall ignore the exit code upon exit. Otherwise we require ExitSuccess.
        , redirectVerbose             :: Maybe FilePath      -- ^ Redirect the verbose output to this file if given. If Nothing, stdout is implied.
+       , generateHOEquivs            :: Bool                -- ^ Should SBV generate function-level equivalences for firstified functions?
+                                                            --   The default is False, but in certain cases this can lead the solver to loop-forever,
+                                                            --   especially in KnuckleDragger proofs. In such cases, set this to True to see if it helps.
        , kdOptions                   :: KDOptions           -- ^ KnuckleDragger specific options
        }
 
@@ -2289,10 +2292,6 @@ data SMTConfig = SMTConfig {
 data KDOptions = KDOptions {
          ribbonLength      :: Int  -- ^ Line length for KD proofs
        , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
-       , generateHOEquivs  :: Bool -- ^ Should SBV generate function-level equivalences for firstified functions?
-                                   -- The default is True, but in certain cases this can lead to @unknown@ results
-                                   -- in solvers, especially when finding counter-examples. If you hit such a
-                                   -- case, set this to False to see if it helps.
        }
 
 -- | Ignore internal names and those the user told us to

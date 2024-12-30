@@ -106,9 +106,9 @@ mkConfig s smtVersion startOpts = SMTConfig { verbose                     = Fals
                                             , solverSetOptions            = startOpts
                                             , ignoreExitCode              = False
                                             , redirectVerbose             = Nothing
+                                            , generateHOEquivs            = False
                                             , kdOptions                   = KDOptions { ribbonLength      = 40
                                                                                       , firstifyUniqueLen = 6
-                                                                                      , generateHOEquivs  = True
                                                                                       }
                                             }
 

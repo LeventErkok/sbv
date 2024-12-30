@@ -283,7 +283,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
              ++ [ "; --- formula ---" ]
              ++ finalAssert
 
-        KDOptions{firstifyUniqueLen, generateHOEquivs} = kdOptions cfg
+        SMTConfig{generateHOEquivs, kdOptions = KDOptions{firstifyUniqueLen}} = cfg
 
         (firstifiedDefs, firstifiedFuncs)
            = case dup res of
