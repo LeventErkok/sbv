@@ -312,9 +312,13 @@ tests =
                                        Sat -> getModel
                                        _   -> error $ "Unexpected output: " P.++ show cs
 
+
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
-eval1 cArg (sFun, cFun) rf = do m <- runSMTWith z3{verbose=True, redirectVerbose=Just rf} run
-                                appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
+eval1 cArg sf rf = eval1Gen cArg sf rf z3{verbose=True, redirectVerbose=Just rf}
+
+eval1Gen :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> SMTConfig -> IO ()
+eval1Gen cArg (sFun, cFun) rf cfg = do m <- runSMTWith cfg run
+                                       appendFile rf ("\nRESULT:\n" P.++ showModel z3 m P.++ "\n")
 
  where run = do arg <- free_
                 res <- free_
