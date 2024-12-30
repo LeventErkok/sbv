@@ -26,6 +26,3 @@
 
 *** Data.SBV: Unsupported call to optimize when no objectives are present.
 *** Use "sat" for plain satisfaction
-
-CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Provers/Prover.hs:265:27 in sbv-11.0.5-inplace:Data.SBV.Provers.Prover

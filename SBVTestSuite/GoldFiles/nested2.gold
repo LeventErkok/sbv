@@ -9,6 +9,3 @@ Data.SBV: Mismatched contexts detected.
 *** while another one is in execution, or use results from one such call in another.
 *** Please avoid such nested calls, all interactions should be from the same context.
 *** See https://github.com/LeventErkok/sbv/issues/71 for several examples.
-
-CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Core/Symbolic.hs:1928:48 in sbv-11.0.5-inplace:Data.SBV.Core.Symbolic

@@ -28,6 +28,3 @@
 
 *** Data.SBV: Unsupported call sat/prove when optimization objectives are present.
 *** Use "optimize"/"optimizeWith" to calculate optimal satisfaction!
-
-CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Provers/Prover.hs:612:33 in sbv-11.0.5-inplace:Data.SBV.Provers.Prover
