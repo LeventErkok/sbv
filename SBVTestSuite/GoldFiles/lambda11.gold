@@ -22,18 +22,18 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: map :: (SWord8 -> SWord8) -> [SWord8] -> [SWord8]
-[GOOD] (define-fun-rec sbv.map_ea1537 ((lst (Seq (_ BitVec 8)))) (Seq (_ BitVec 8))
+[GOOD] (define-fun-rec sbv.map_70fb3e ((lst (Seq (_ BitVec 8)))) (Seq (_ BitVec 8))
                      (ite (= lst (as seq.empty (Seq (_ BitVec 8))))
                           (as seq.empty (Seq (_ BitVec 8)))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 (_ BitVec 8)))
                                  (let ((l1_s1 #x01))
                                  (let ((l1_s2 (bvadd l1_s0 l1_s1)))
                                  l1_s2))) (seq.nth lst 0)))
-                                  (sbv.map_ea1537 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_70fb3e (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq (_ BitVec 8)) (sbv.map_ea1537 s0))
+[GOOD] (define-fun s4 () (Seq (_ BitVec 8)) (sbv.map_70fb3e s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

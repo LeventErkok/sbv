@@ -11,6 +11,3 @@ CAUGHT EXCEPTION
 ***
 *** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
 *** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
-
-CallStack (from HasCallStack):
-  error, called at ./Data/SBV/Lambda.hs:135:13 in sbv-11.0.5-inplace:Data.SBV.Lambda

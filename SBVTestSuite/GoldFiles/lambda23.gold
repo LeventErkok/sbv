@@ -33,7 +33,7 @@
                            (as seq.empty (Seq (SBVTuple2 Int Int)))
                            (seq.++ (seq.unit ((as mkSBVTuple2 (SBVTuple2 Int Int)) (seq.nth lst1 0) (seq.nth lst2 0))) (sbv.zip_88576a (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
 [GOOD] ; Firstified function: map :: ((SInteger, SInteger) -> SInteger) -> [(SInteger, SInteger)] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_6ca4af ((lst (Seq (SBVTuple2 Int Int)))) (Seq Int)
+[GOOD] (define-fun-rec sbv.map_03da9a ((lst (Seq (SBVTuple2 Int Int)))) (Seq Int)
                      (ite (= lst (as seq.empty (Seq (SBVTuple2 Int Int))))
                           (as seq.empty (Seq Int))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 (SBVTuple2 Int Int)))
@@ -41,20 +41,20 @@
                                  (let ((l1_s2 (proj_2_SBVTuple2 l1_s0)))
                                  (let ((l1_s3 (+ l1_s1 l1_s2)))
                                  l1_s3)))) (seq.nth lst 0)))
-                                  (sbv.map_6ca4af (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_03da9a (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; Firstified function: foldr :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
-[GOOD] (define-fun-rec sbv.foldr_756167 ((base Int) (lst (Seq Int))) Int
+[GOOD] (define-fun-rec sbv.foldr_7245bc ((base Int) (lst (Seq Int))) Int
                        (ite (= lst (as seq.empty (Seq Int)))
                             base
                             (select (lambda ((l1_s0 Int) (l1_s1 Int))
-         (+ l1_s0 l1_s1)) (seq.nth lst 0) (sbv.foldr_756167 base (seq.extract lst 1 (- (seq.len lst) 1))))))
+         (+ l1_s0 l1_s1)) (seq.nth lst 0) (sbv.foldr_7245bc base (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] (define-fun s8 () (Seq (SBVTuple2 Int Int)) (sbv.zip_88576a s0 s1))
-[GOOD] (define-fun s9 () (Seq Int) (sbv.map_6ca4af s8))
-[GOOD] (define-fun s10 () Int (sbv.foldr_756167 s7 s9))
+[GOOD] (define-fun s9 () (Seq Int) (sbv.map_03da9a s8))
+[GOOD] (define-fun s10 () Int (sbv.foldr_7245bc s7 s9))
 [GOOD] (define-fun s11 () Bool (= s2 s10))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

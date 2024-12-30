@@ -22,10 +22,10 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: filter :: (SInteger -> SBool) -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.filter_46e9e9 ((lst (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec sbv.filter_a7b35a ((lst (Seq Int))) (Seq Int)
                        (ite (= lst (as seq.empty (Seq Int)))
                             (as seq.empty (Seq Int))
-                            (let ((rest (sbv.filter_46e9e9 (seq.extract lst 1 (- (seq.len lst) 1)))))
+                            (let ((rest (sbv.filter_a7b35a (seq.extract lst 1 (- (seq.len lst) 1)))))
                                  (ite (select (lambda ((l1_s0 Int))
                                  (let ((l1_s1 2))
                                  (let ((l1_s3 0))
@@ -52,7 +52,7 @@
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (sbv.filter_46e9e9 s0))
+[GOOD] (define-fun s4 () (Seq Int) (sbv.filter_a7b35a s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

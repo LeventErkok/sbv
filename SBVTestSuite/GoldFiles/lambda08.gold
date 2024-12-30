@@ -22,18 +22,18 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: map :: (SFloat -> SFloat) -> [SFloat] -> [SFloat]
-[GOOD] (define-fun-rec sbv.map_172e96 ((lst (Seq (_ FloatingPoint  8 24)))) (Seq (_ FloatingPoint  8 24))
+[GOOD] (define-fun-rec sbv.map_912813 ((lst (Seq (_ FloatingPoint  8 24)))) (Seq (_ FloatingPoint  8 24))
                      (ite (= lst (as seq.empty (Seq (_ FloatingPoint  8 24))))
                           (as seq.empty (Seq (_ FloatingPoint  8 24)))
                           (seq.++ (seq.unit (select (lambda ((l1_s0 (_ FloatingPoint  8 24)))
                                  (let ((l1_s1 ((_ to_fp 8 24) roundNearestTiesToEven (/ 1.0 1.0))))
                                  (let ((l1_s2 (fp.add roundNearestTiesToEven l1_s0 l1_s1)))
                                  l1_s2))) (seq.nth lst 0)))
-                                  (sbv.map_172e96 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                                  (sbv.map_912813 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (sbv.map_172e96 s0))
+[GOOD] (define-fun s4 () (Seq (_ FloatingPoint  8 24)) (sbv.map_912813 s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
