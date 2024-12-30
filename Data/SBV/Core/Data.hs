@@ -558,7 +558,7 @@ class SolverContext m where
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
 
--- | Register a type with the solver. Like 'registerFunction', This is typically not necessary
+-- | Register a type with the solver. Like 'Data.SBV.Core.Model.registerFunction', This is typically not necessary
 -- since SBV will register types as it encounters them automatically. But there are cases
 -- where doing this can explicitly can come handy, typically in query contexts.
 registerType :: forall a m. (MonadIO m, SolverContext m, HasKind a) => Proxy a -> m ()
