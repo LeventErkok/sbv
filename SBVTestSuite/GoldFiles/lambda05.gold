@@ -39,17 +39,7 @@
                                  (let ((l1_s2 (+ l1_s0 l1_s1)))
                                  l1_s2))) (seq.nth lst 0)))
                                   (sbv.map_4049b6 (seq.extract lst 1 (- (seq.len lst) 1))))))
-[GOOD] ; --- Firstified equivalences
-[GOOD] ; Equality for sbv.map_186748 vs. sbv.map_4049b6
-[GOOD] (assert (forall ((xs (Seq Int)))
-                       (=> (= (lambda ((l1_s0 Int))
-                                 (let ((l1_s1 2))
-                                 (let ((l1_s2 (+ l1_s0 l1_s1)))
-                                 l1_s2))) (lambda ((l1_s0 Int))
-                                 (let ((l1_s1 1))
-                                 (let ((l1_s2 (+ l1_s0 l1_s1)))
-                                 l1_s2))))
-                           (= (sbv.map_186748 xs) (sbv.map_4049b6 xs)))))
+[GOOD] ; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting.
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
