@@ -482,6 +482,7 @@ foldlOverAppend = runKD $ do
          [induct (flip p)]
 
 {- CAN'T CONVERGE
+
 -- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
@@ -494,7 +495,22 @@ foldrFoldlDuality = runKD $ do
    let f :: SA -> SB -> SB
        f = uninterpret "f"
 
-       p xs = quantifiedBool $ \(Forall e) -> foldr f e xs .== foldl (flip f) e (reverse xs)
+       p e xs = foldr f e xs .== foldl (flip f) e (reverse xs)
+
+       join (a, b) = a P.++ P.reverse b
+
+   inductiveLemmaWith cvc5 "foldrFoldlDuality"
+               (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
+               (\e x xs -> join ( [ foldr f e (x .: xs)
+                                  , x `f` foldr f e xs
+                                  , x `f` foldl (flip f) e (reverse xs)
+                                  ]
+                                , [ foldl (flip f) e (reverse (x .: xs))
+                                  , foldl (flip f) e (reverse xs ++ singleton x)
+                                  , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)
+                                  , x `f` foldl (flip f) e (reverse xs)
+                                  ]))
+                    []
 
    -- An instance of foldlOverAppend above, except for our chosen f here which has a different type:
    fa <- let ap xs ys = quantifiedBool $ \(Forall e) -> foldl (flip f) e (xs ++ ys) .== foldl (flip f) (foldl (flip f) e xs) ys
@@ -509,6 +525,9 @@ foldrFoldlDuality = runKD $ do
                           , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)
                           ])
               [fa, induct p]
+-}
+
+{-
 -- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its right-unit: we have:
