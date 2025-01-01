@@ -38,7 +38,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , chainLemma,   chainLemmaWith
        , chainTheorem, chainTheoremWith
        -- * Induction
-       , Induction(..)
+       , Inductive(..)
        -- * Faking proofs
        , sorry
        -- * Running KnuckleDragger proofs

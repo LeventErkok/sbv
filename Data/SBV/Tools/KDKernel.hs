@@ -22,7 +22,7 @@ module Data.SBV.Tools.KDKernel (
        , axiom
        , lemma,        lemmaWith,   lemmaGen
        , theorem,      theoremWith
-       , Induction(..)
+       , Inductive(..)
        , sorry
        ) where
 
@@ -190,7 +190,7 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
-class Induction a where
+class Inductive a where
   induct     :: a -> Proof
   inductAlt1 :: a -> Proof
   inductAlt2 :: a -> Proof
@@ -203,7 +203,7 @@ class Induction a where
 -- is over naturals, will only prove predicates that explicitly restrict the argument to >= 0.
 -- The second and third ones are induction over the entire range of integers, two different
 -- principles that might work better for different problems.
-instance Induction (SInteger -> SBool) where
+instance Inductive (SInteger -> SBool) where
 
    -- | Induction over naturals. Will prove predicates of the form @\n -> n >= 0 .=> predicate n@.
    induct p = internalAxiom "Nat.induct" principle
@@ -235,7 +235,7 @@ instance Induction (SInteger -> SBool) where
                                 (\(Forall i) -> p i)
 
 -- | Induction over two argument predicates, with the last argument SInteger.
-instance SymVal a => Induction (SBV a -> SInteger -> SBool) where
+instance SymVal a => Inductive (SBV a -> SInteger -> SBool) where
   induct p = internalAxiom "Nat.induct2" principle
      where qb a = quantifiedBool a
 
@@ -245,7 +245,7 @@ instance SymVal a => Induction (SBV a -> SInteger -> SBool) where
                                 (\(Forall a) (Forall n) -> n .>= 0 .=> p a n)
 
 -- | Induction over three argument predicates, with last argument SInteger.
-instance (SymVal a, SymVal b) => Induction (SBV a -> SBV b -> SInteger -> SBool) where
+instance (SymVal a, SymVal b) => Inductive (SBV a -> SBV b -> SInteger -> SBool) where
   induct p = internalAxiom "Nat.induct3" principle
      where qb a = quantifiedBool a
 
@@ -255,7 +255,7 @@ instance (SymVal a, SymVal b) => Induction (SBV a -> SBV b -> SInteger -> SBool)
                                 (\(Forall a) (Forall b) (Forall n) -> n .>= 0 .=> p a b n)
 
 -- | Induction over four argument predicates, with last argument SInteger.
-instance (SymVal a, SymVal b, SymVal c) => Induction (SBV a -> SBV b -> SBV c -> SInteger -> SBool) where
+instance (SymVal a, SymVal b, SymVal c) => Inductive (SBV a -> SBV b -> SBV c -> SInteger -> SBool) where
   induct p = internalAxiom "Nat.induct4" principle
      where qb a = quantifiedBool a
 
@@ -266,7 +266,7 @@ instance (SymVal a, SymVal b, SymVal c) => Induction (SBV a -> SBV b -> SBV c ->
 
 
 -- | Induction over lists
-instance SymVal a => Induction (SList a -> SBool) where
+instance SymVal a => Inductive (SList a -> SBool) where
   induct p = internalAxiom "List(a).induct" principle
     where qb a = quantifiedBool a
 
@@ -276,7 +276,7 @@ instance SymVal a => Induction (SList a -> SBool) where
                                (\(Forall xs) -> p xs)
 
 -- | Induction over two argument predicates, with last argument a list.
-instance (SymVal a, SymVal e) => Induction (SBV a -> SList e -> SBool) where
+instance (SymVal a, SymVal e) => Inductive (SBV a -> SList e -> SBool) where
   induct p = internalAxiom "List(a).induct2" principle
     where qb a = quantifiedBool a
 
@@ -286,7 +286,7 @@ instance (SymVal a, SymVal e) => Induction (SBV a -> SList e -> SBool) where
                                (\(Forall a) (Forall es) -> p a es)
 
 -- | Induction over three argument predicates, with last argument a list.
-instance (SymVal a, SymVal b, SymVal e) => Induction (SBV a -> SBV b -> SList e -> SBool) where
+instance (SymVal a, SymVal b, SymVal e) => Inductive (SBV a -> SBV b -> SList e -> SBool) where
   induct p = internalAxiom "List(a).induct3" principle
     where qb a = quantifiedBool a
 
@@ -296,7 +296,7 @@ instance (SymVal a, SymVal b, SymVal e) => Induction (SBV a -> SBV b -> SList e 
                                (\(Forall a) (Forall b) (Forall xs) -> p a b xs)
 
 -- | Induction over four argument predicates, with last argument a list.
-instance (SymVal a, SymVal b, SymVal c, SymVal e) => Induction (SBV a -> SBV b -> SBV c -> SList e -> SBool) where
+instance (SymVal a, SymVal b, SymVal c, SymVal e) => Inductive (SBV a -> SBV b -> SBV c -> SList e -> SBool) where
   induct p = internalAxiom "List(a).induct4" principle
     where qb a = quantifiedBool a
 
