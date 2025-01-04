@@ -35,7 +35,6 @@ import Data.SBV.Core.Data (Constraint)
 
 import Data.SBV.Tools.KDUtils
 
-
 -- | A proposition is something SBV is capable of proving/disproving. We capture this
 -- with a set of constraints. This type might look scary, but for the most part you
 -- can ignore it and treat it as anything you can pass to 'prove' or 'sat' in SBV.
