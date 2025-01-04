@@ -16,8 +16,9 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KDUtils (
-         KD, runKD, runKDWith
+         KD, runKD, runKDWith, Proof(..)
        , start, finish
+       , RootOfTrust(..), calculateRootOfTrust
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, ask, MonadReader)
