@@ -28,6 +28,7 @@ module Data.SBV.Tools.KDKernel (
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.Reader (ask)
 
+import Data.List (intercalate)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
