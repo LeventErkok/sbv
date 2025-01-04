@@ -18,25 +18,22 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KDKernel (
-         Proposition,  Proof
+         Proposition,  Proof(..)
        , axiom
-       , lemma,        lemmaWith,   lemmaGen
-       , theorem,      theoremWith
-       , Inductive(..)
+       , lemma,   lemmaWith,   lemmaGen
+       , theorem, theoremWith
        , sorry
        ) where
 
 import Control.Monad.Trans  (liftIO)
 import Control.Monad.Reader (ask)
 
-import Data.List (intercalate, sort, nub)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint)
 
 import Data.SBV.Tools.KDUtils
 
-import qualified Data.SBV.List as SL
 
 -- | A proposition is something SBV is capable of proving/disproving. We capture this
 -- with a set of constraints. This type might look scary, but for the most part you
@@ -47,32 +44,6 @@ type Proposition a = ( QuantifiedBool a
                      , Satisfiable (Symbolic (SkolemsTo (NegatesTo a)))
                      , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
                      )
-
--- | Keeping track of where the sorry originates from. Used in displaying dependencies.
-data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
-                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
-                 | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
-                               --   name of the proposition itself, not the parent that's trusted.
-
--- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
--- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
--- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
--- mechanism ensures we can't create proven things out of thin air, following the standard LCF
--- methodology.)
-data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
-                   , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
-                   , getProof    :: SBool       -- ^ Get the underlying boolean
-                   , proofName   :: String      -- ^ User given name
-                   }
-
--- | Show instance for 'Proof'
-instance Show Proof where
-  show Proof{rootOfTrust, isUserAxiom, proofName} = '[' : tag ++ "] " ++ proofName
-     where tag | isUserAxiom = "Axiom"
-               | True        = case rootOfTrust of
-                                 None   -> "Proven"
-                                 Self   -> "Sorry"
-                                 Prop s -> "Modulo: " ++ s
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -123,20 +94,7 @@ lemmaGen cfg@SMTConfig{verbose} what nms inputProp by = do
                              , getProof    = label nm (quantifiedBool inputProp)
                              , proofName   = nm
                              }
-
-          where parentRoots = map rootOfTrust by
-                hasSelf     = not $ null [() | Self <- parentRoots]
-                depNames    = nub $ sort [p | Prop p <- parentRoots]
-
-                -- What's the root-of-trust for this node?
-                -- If there are no "sorry" parents, and no parent nodes
-                -- that are marked with a root of trust, then we don't have it either.
-                -- Otherwise, mark it accordingly.
-                (ros, modulo)
-                   | not hasSelf && null depNames = (None,    "")
-                   | True                         = (Prop nm, " [Modulo: " ++ why ++ "]")
-                   where why | hasSelf = "sorry"
-                             | True    = intercalate ", " depNames
+          where (ros, modulo) = calculateRootOfTrust nm by
 
         -- What to do if the proof fails
         cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."

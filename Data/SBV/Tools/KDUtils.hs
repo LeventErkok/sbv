@@ -23,9 +23,10 @@ module Data.SBV.Tools.KDUtils (
 import Control.Monad.Reader (ReaderT, runReaderT, ask, MonadReader)
 import Control.Monad.Trans  (MonadIO(liftIO))
 
-import Data.List (intercalate)
+import Data.List (intercalate, nub, sort)
 import System.IO (hFlush, stdout)
 
+import Data.SBV.Core.Data (SBool)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
@@ -55,3 +56,44 @@ start newLine what nms = liftIO $ do putStr $ line ++ if newLine then "\n" else 
 finish :: String -> Int -> KD ()
 finish what skip = do SMTConfig{kdOptions = KDOptions{ribbonLength}} <- ask
                       liftIO $ putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
+
+-- | Keeping track of where the sorry originates from. Used in displaying dependencies.
+data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
+                 | Self        -- ^ Trusts itself, i.e., established by a call to sorry
+                 | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
+                               --   name of the proposition itself, not the parent that's trusted.
+
+-- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
+-- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
+-- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
+-- mechanism ensures we can't create proven things out of thin air, following the standard LCF
+-- methodology.)
+data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
+                   , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
+                   , getProof    :: SBool       -- ^ Get the underlying boolean
+                   , proofName   :: String      -- ^ User given name
+                   }
+
+-- | Show instance for 'Proof'
+instance Show Proof where
+  show Proof{rootOfTrust, isUserAxiom, proofName} = '[' : tag ++ "] " ++ proofName
+     where tag | isUserAxiom = "Axiom"
+               | True        = case rootOfTrust of
+                                 None   -> "Proven"
+                                 Self   -> "Sorry"
+                                 Prop s -> "Modulo: " ++ s
+
+-- | Calculate the root of trust for a proof. The string is the modulo text, if any.
+calculateRootOfTrust :: String -> [Proof] -> (RootOfTrust, String)
+calculateRootOfTrust nm by | not hasSelf && null depNames = (None,    "")
+                           | True                         = (Prop nm, " [Modulo: " ++ why ++ "]")
+   where why | hasSelf = "sorry"
+             | True    = intercalate ", " depNames
+
+         -- What's the root-of-trust for this node?
+         -- If there are no "sorry" parents, and no parent nodes
+         -- that are marked with a root of trust, then we don't have it either.
+         -- Otherwise, mark it accordingly.
+         parentRoots = map rootOfTrust by
+         hasSelf     = not $ null [() | Self   <- parentRoots]
+         depNames    = nub $ sort [p  | Prop p <- parentRoots]
