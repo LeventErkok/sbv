@@ -226,7 +226,9 @@ freshVar nm = inNewContext $ fmap SBV . svMkSymVar QueryVar k (Just nm)
 -- | Generalization of 'Data.SBV.Control.queryDebug'
 queryDebug :: (MonadIO m, MonadQuery m) => [String] -> m ()
 queryDebug msgs = do QueryState{queryConfig} <- getQueryState
-                     io $ debug queryConfig msgs
+                     io $ do debug queryConfig msgs
+                             -- If we're doing a transcript, record it there too
+                             recordTranscript (transcript queryConfig) (DebugMsg (unlines msgs))
 
 -- | We need to track sent asserts/check-sat calls so we can issue an extra check-sat call if needed
 trackAsserts :: (MonadIO m, MonadQuery m) => String -> m ()

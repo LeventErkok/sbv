@@ -23,22 +23,38 @@ module Data.SBV.SMT.Utils (
         , debug
         , mergeSExpr
         , SBVException(..)
+        , startTranscript
+        , finalizeTranscript
+        , recordTranscript
+        , recordException
+        , recordEndTime
+        , TranscriptMsg(..)
        )
        where
 
 import qualified Control.Exception as C
 
+import Control.Monad (zipWithM_)
 import Control.Monad.Trans (MonadIO, liftIO)
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef, ResultInp(..), ProgInfo(..))
-import Data.SBV.Utils.Lib (joinArgs)
+import Data.SBV.Core.Symbolic (QueryContext, CnstMap, SMTDef, ResultInp(..), ProgInfo(..), startTime)
 
-import Data.List (intercalate)
+import Data.SBV.Utils.Lib   (joinArgs)
+import Data.SBV.Utils.TDiff (Timing(..), showTDiff)
+
+import Data.IORef (writeIORef)
+import Data.Time  (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, getCurrentTime)
+
+import Data.Char  (isSpace)
+import Data.Maybe (fromMaybe)
+import Data.List  (intercalate)
+
 import qualified Data.Set      as Set (Set)
 import qualified Data.Sequence as S   (Seq)
 
-import System.Exit (ExitCode(..))
+import System.Directory (findExecutable)
+import System.Exit      (ExitCode(..))
 
 -- | An instance of SMT-Lib converter; instantiated for SMT-Lib v1 and v2. (And potentially for newer versions in the future.)
 type SMTLibConverter a =  QueryContext                                   -- ^ Internal or external query?
@@ -195,3 +211,85 @@ instance Show SBVException where
                                rest  -> g ++ ["***"] ++ rest
 
           in unlines $ join [grp1, grp2, grp3, grp4]
+
+-- | Compute and report the end time
+recordEndTime :: SMTConfig -> State -> IO ()
+recordEndTime SMTConfig{timing} state = case timing of
+                                           NoTiming        -> return ()
+                                           PrintTiming     -> do e <- elapsed
+                                                                 putStrLn $ "*** SBV: Elapsed time: " ++ showTDiff e
+                                           SaveTiming here -> writeIORef here =<< elapsed
+  where elapsed = getCurrentTime >>= \end -> return $ diffUTCTime end (startTime state)
+
+-- | Start a transcript file, if requested.
+startTranscript :: Maybe FilePath -> SMTConfig -> IO ()
+startTranscript Nothing  _   = return ()
+startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
+                                  mbExecPath <- findExecutable (executable (solver cfg))
+                                  writeFile f $ start ts mbExecPath
+  where SMTSolver{name, options} = solver cfg
+        start ts mbPath = unlines [ ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                                  , ";;; SBV: Starting at " ++ ts
+                                  , ";;;"
+                                  , ";;;           Solver    : " ++ show name
+                                  , ";;;           Executable: " ++ fromMaybe "Unable to locate the executable" mbPath
+                                  , ";;;           Options   : " ++ unwords (options cfg ++ extraArgs cfg)
+                                  , ";;;"
+                                  , ";;; This file is an auto-generated loadable SMT-Lib file."
+                                  , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                                  , ""
+                                  ]
+
+-- | Finish up the transcript file.
+finalizeTranscript :: Maybe FilePath -> ExitCode -> IO ()
+finalizeTranscript Nothing  _  = return ()
+finalizeTranscript (Just f) ec = do ts <- show <$> getZonedTime
+                                    appendFile f $ end ts
+  where end ts = unlines [ ""
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         , ";;;"
+                         , ";;; SBV: Finished at " ++ ts
+                         , ";;;"
+                         , ";;; Exit code: " ++ show ec
+                         , ";;;"
+                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                         ]
+
+-- Kind of things we can record
+data TranscriptMsg = SentMsg  String (Maybe Int) -- ^ Message sent, and time-out if any
+                   | RecvMsg  String             -- ^ Message received
+                   | DebugMsg String             -- ^ A debug message; neither sent nor received
+
+-- If requested, record in the transcript file
+recordTranscript :: Maybe FilePath -> TranscriptMsg -> IO ()
+recordTranscript Nothing  _ = return ()
+recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
+                                 let ts = take 15 $ tsPre ++ repeat '0'
+                                 case m of
+                                   SentMsg sent mbTimeOut  -> appendFile f $ unlines $ (ts ++ "] " ++ to mbTimeOut ++ "Sending:") : lines sent
+                                   RecvMsg recv            -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
+                                                                                        []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
+                                                                                        [x] -> [ts ++ "] Received: " ++ x]
+                                                                                        xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
+                                   DebugMsg msg            -> let tag = ts ++ "] "
+                                                                  emp = ';' : drop 1 (map (const ' ') tag)
+                                                              in zipWithM_ (\t l -> appendFile f (t ++ l ++ "\n")) (tag : repeat emp) (lines msg)
+        where to Nothing  = ""
+              to (Just i) = "[Timeout: " ++ showTimeoutValue i ++ "] "
+{-# INLINE recordTranscript #-}
+
+-- Record the exception
+recordException :: Maybe FilePath -> String -> IO ()
+recordException Nothing  _ = return ()
+recordException (Just f) m = do ts <- show <$> getZonedTime
+                                appendFile f $ exc ts
+  where exc ts = unlines $ [ ""
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           , ";;;"
+                           , ";;; SBV: Caught an exception at " ++ ts
+                           , ";;;"
+                           ]
+                        ++ [ ";;;   " ++ l | l <- dropWhile null (lines m) ]
+                        ++ [ ";;;"
+                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
+                           ]

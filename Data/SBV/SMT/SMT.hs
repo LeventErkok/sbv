@@ -48,7 +48,7 @@ import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
 import Control.Monad      (zipWithM, mplus)
 import Data.Char          (isSpace)
-import Data.Maybe         (fromMaybe, isJust)
+import Data.Maybe         (isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, transpose, isInfixOf)
 import Data.Word          (Word8, Word16, Word32, Word64)
@@ -58,9 +58,7 @@ import Data.Proxy
 
 import Data.IORef (readIORef, writeIORef)
 
-import Data.Time          (getZonedTime, defaultTimeLocale, formatTime, diffUTCTime, getCurrentTime)
-
-import Data.Either(rights)
+import Data.Either (rights)
 
 import System.Directory   (findExecutable)
 import System.Environment (getEnv)
@@ -79,12 +77,13 @@ import Data.SBV.Core.Kind     (showBaseKind, intOfProxy, BVIsNonZero)
 
 import Data.SBV.Core.SizedFloats(FloatingPoint(..))
 
-import Data.SBV.SMT.Utils     (showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..))
+import Data.SBV.SMT.Utils     ( showTimeoutValue, alignPlain, debug, mergeSExpr, SBVException(..)
+                              , startTranscript, recordTranscript, finalizeTranscript, recordEndTime, recordException, TranscriptMsg(..)
+                              )
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
 import Data.SBV.Utils.SExpr     (parenDeficit)
-import Data.SBV.Utils.TDiff     (Timing(..), showTDiff)
 
 import qualified System.Timeout as Timeout (timeout)
 
@@ -726,7 +725,7 @@ runSolver cfg ctx execPath opts pgm continuation
                 let send :: Maybe Int -> String -> IO ()
                     send mbTimeOut command = do hPutStrLn inh (clean command)
                                                 hFlush inh
-                                                recordTranscript (transcript cfg) $ Left (command, mbTimeOut)
+                                                recordTranscript (transcript cfg) $ SentMsg command mbTimeOut
 
                     -- is this a set-command? Then we expect faster response; except for the heartbeat
                     isSetCommand = maybe False chk
@@ -758,7 +757,7 @@ runSolver cfg ctx execPath opts pgm continuation
                     getResponseFromSolver mbCommand mbTimeOut = do
                                 response <- go True 0 []
                                 let collated = intercalate "\n" $ reverse response
-                                recordTranscript (transcript cfg) $ Right collated
+                                recordTranscript (transcript cfg) $ RecvMsg collated
                                 return collated
 
                       where safeGetLine isFirst h =
@@ -1028,80 +1027,6 @@ runSolver cfg ctx execPath opts pgm continuation
                                                                             finalizeTranscript (transcript cfg) ec
                                                                             recordEndTime cfg ctx
                                                                             C.throwIO e)
-
--- | Compute and report the end time
-recordEndTime :: SMTConfig -> State -> IO ()
-recordEndTime SMTConfig{timing} state = case timing of
-                                           NoTiming        -> return ()
-                                           PrintTiming     -> do e <- elapsed
-                                                                 putStrLn $ "*** SBV: Elapsed time: " ++ showTDiff e
-                                           SaveTiming here -> writeIORef here =<< elapsed
-  where elapsed = getCurrentTime >>= \end -> return $ diffUTCTime end (startTime state)
-
--- | Start a transcript file, if requested.
-startTranscript :: Maybe FilePath -> SMTConfig -> IO ()
-startTranscript Nothing  _   = return ()
-startTranscript (Just f) cfg = do ts <- show <$> getZonedTime
-                                  mbExecPath <- findExecutable (executable (solver cfg))
-                                  writeFile f $ start ts mbExecPath
-  where SMTSolver{name, options} = solver cfg
-        start ts mbPath = unlines [ ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                                  , ";;; SBV: Starting at " ++ ts
-                                  , ";;;"
-                                  , ";;;           Solver    : " ++ show name
-                                  , ";;;           Executable: " ++ fromMaybe "Unable to locate the executable" mbPath
-                                  , ";;;           Options   : " ++ unwords (options cfg ++ extraArgs cfg)
-                                  , ";;;"
-                                  , ";;; This file is an auto-generated loadable SMT-Lib file."
-                                  , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                                  , ""
-                                  ]
-
--- | Finish up the transcript file.
-finalizeTranscript :: Maybe FilePath -> ExitCode -> IO ()
-finalizeTranscript Nothing  _  = return ()
-finalizeTranscript (Just f) ec = do ts <- show <$> getZonedTime
-                                    appendFile f $ end ts
-  where end ts = unlines [ ""
-                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                         , ";;;"
-                         , ";;; SBV: Finished at " ++ ts
-                         , ";;;"
-                         , ";;; Exit code: " ++ show ec
-                         , ";;;"
-                         , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                         ]
-
--- If requested, record in the transcript file
-recordTranscript :: Maybe FilePath -> Either (String, Maybe Int) String -> IO ()
-recordTranscript Nothing  _ = return ()
-recordTranscript (Just f) m = do tsPre <- formatTime defaultTimeLocale "; [%T%Q" <$> getZonedTime
-                                 let ts = take 15 $ tsPre ++ repeat '0'
-                                 case m of
-                                   Left  (sent, mbTimeOut) -> appendFile f $ unlines $ (ts ++ "] " ++ to mbTimeOut ++ "Sending:") : lines sent
-                                   Right recv              -> appendFile f $ unlines $ case lines (dropWhile isSpace recv) of
-                                                                                        []  -> [ts ++ "] Received: <NO RESPONSE>"]  -- can't really happen.
-                                                                                        [x] -> [ts ++ "] Received: " ++ x]
-                                                                                        xs  -> (ts ++ "] Received: ") : map (";   " ++) xs
-        where to Nothing  = ""
-              to (Just i) = "[Timeout: " ++ showTimeoutValue i ++ "] "
-{-# INLINE recordTranscript #-}
-
--- Record the exception
-recordException :: Maybe FilePath -> String -> IO ()
-recordException Nothing  _ = return ()
-recordException (Just f) m = do ts <- show <$> getZonedTime
-                                appendFile f $ exc ts
-  where exc ts = unlines $ [ ""
-                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                           , ";;;"
-                           , ";;; SBV: Caught an exception at " ++ ts
-                           , ";;;"
-                           ]
-                        ++ [ ";;;   " ++ l | l <- dropWhile null (lines m) ]
-                        ++ [ ";;;"
-                           , ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;"
-                           ]
 
 -- We should not be catching/processing asynchronous exceptions.
 -- See http://github.com/LeventErkok/sbv/issues/410
