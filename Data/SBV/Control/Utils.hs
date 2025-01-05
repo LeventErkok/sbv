@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns           #-}
+{-# LANGUAGE InstanceSigs           #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -80,7 +81,7 @@ import Data.SBV.Core.Symbolic ( IncState(..), withNewIncState, State(..), svToSV
                               , extractSymbolicSimulationState, MonadSymbolic(..)
                               , UserInputs, getSV, NamedSymVar(..), lookupInput, getUserName'
                               , Name, CnstMap, smtDefGivenName, Inputs(..), ProgInfo(..)
-                              , mustIgnoreVar
+                              , mustIgnoreVar, newInternalVariable
                               )
 
 import Data.SBV.Core.AlgReals    (mergeAlgReals, AlgReal(..), RealPoint(..))
@@ -113,6 +114,11 @@ instance MonadIO m => SolverContext (QueryT m) where
    constrainWithAttribute attr = addQueryConstraint False attr              . quantifiedBool
 
    contextState = queryState
+
+   internalVariable :: forall a. Kind -> QueryT m (SBV a)
+   internalVariable k = inNewContext $ \st -> do
+       sv  <- newInternalVariable st k
+       pure $ SBV $ SVal k (Right (cache (const (pure sv))))
 
    setOption o
      | isStartModeOption o = error $ unlines [ ""

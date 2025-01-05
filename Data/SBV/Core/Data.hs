@@ -53,7 +53,7 @@ module Data.SBV.Core.Data
  , Op(..), PBOp(..), FPOp(..), StrOp(..), RegExOp(..), SeqOp(..), RegExp(..), NamedSymVar(..), OvOp(..), getTableIndex
  , SBVPgm(..), Symbolic, runSymbolic, State, getPathCondition, extendPathCondition
  , inSMTMode, SBVRunMode(..), Kind(..), Outputtable(..), Result(..)
- , SolverContext(..), internalVariable, internalConstraint, isCodeGenMode
+ , SolverContext(..), internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted
  , Quantifier(..), needsExistentials
  , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
@@ -551,7 +551,10 @@ class SolverContext m where
    -- | Get the state associated with this context
    contextState :: m State
 
-   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState #-}
+   -- | Get an internal-variable
+   internalVariable :: Kind -> m (SBV a)
+
+   {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState, internalVariable #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
    setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]

@@ -1526,7 +1526,7 @@ svFloatAsSWord32 fVal@(SVal KFloat _)
                   if cg
                      then do f <- svToSV st fVal
                              newExpr st w32 (SBVApp (IEEEFP (FP_Reinterpret KFloat w32)) [f])
-                     else do n   <- internalVariable st w32
+                     else do n   <- newInternalVariable st w32
                              ysw <- newExpr st KFloat (SBVApp (IEEEFP (FP_Reinterpret w32 KFloat)) [n])
                              internalConstraint st False [] $ fVal `svStrongEqual` SVal KFloat (Right (cache (\_ -> return ysw)))
                              return n
@@ -1552,7 +1552,7 @@ svDoubleAsSWord64 fVal@(SVal KDouble _)
                   if cg
                      then do f <- svToSV st fVal
                              newExpr st w64 (SBVApp (IEEEFP (FP_Reinterpret KDouble w64)) [f])
-                     else do n   <- internalVariable st w64
+                     else do n   <- newInternalVariable st w64
                              ysw <- newExpr st KDouble (SBVApp (IEEEFP (FP_Reinterpret w64 KDouble)) [n])
                              internalConstraint st False [] $ fVal `svStrongEqual` SVal KDouble (Right (cache (\_ -> return ysw)))
                              return n
@@ -1571,7 +1571,7 @@ svFloatingPointAsSWord fVal@(SVal kFrom@(KFP eb sb) _)
                   if cg
                      then do f <- svToSV st fVal
                              newExpr st kTo (SBVApp (IEEEFP (FP_Reinterpret kFrom kTo)) [f])
-                     else do n   <- internalVariable st kTo
+                     else do n   <- newInternalVariable st kTo
                              ysw <- newExpr st kFrom (SBVApp (IEEEFP (FP_Reinterpret kTo kFrom)) [n])
                              internalConstraint st False [] $ fVal `svStrongEqual` SVal kFrom (Right (cache (\_ -> return ysw)))
                              return n

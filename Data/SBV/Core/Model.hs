@@ -2494,7 +2494,7 @@ class SMTDefinable a where
   default registerFunction :: forall b c. (a ~ (SBV b -> c), SymVal b, SMTDefinable c) => a -> Symbolic ()
   registerFunction f = do let k = kindOf (Proxy @b)
                           st <- symbolicEnv
-                          v <- liftIO $ internalVariable st k
+                          v <- liftIO $ newInternalVariable st k
                           let b = SBV $ SVal k $ Right $ cache (const (pure v))
                           registerFunction $ f b
 
@@ -3044,6 +3044,10 @@ instance MonadIO m => SolverContext (SymbolicT m) where
 
    contextState = symbolicEnv
    setOption o  = addNewSMTOption  o
+
+   internalVariable k = contextState >>= \st -> liftIO $ do
+                           sv <- newInternalVariable st k
+                           pure $ SBV $ SVal k (Right (cache (const (pure sv))))
 
 -- | Generalization of 'Data.SBV.assertWithPenalty'
 assertWithPenalty :: MonadSymbolic m => String -> SBool -> Penalty -> m ()

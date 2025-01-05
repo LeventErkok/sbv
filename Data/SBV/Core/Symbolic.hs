@@ -55,7 +55,7 @@ module Data.SBV.Core.Symbolic
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
   , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..)
   , registerKind, registerLabel, registerSpecialFunction, recordObservable
-  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, internalVariable, lambdaVar, quantVar
+  , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
   , SolverCapabilities(..)
   , extractSymbolicSimulationState, CnstMap
@@ -1439,13 +1439,13 @@ addAssertion st cs msg cond = modifyState st rAsserts ((msg, cs, cond):)
 -- | Create an internal variable, which acts as an input but isn't visible to the user.
 -- Such variables are existentially quantified in a SAT context, and universally quantified
 -- in a proof context.
-internalVariable :: State -> Kind -> IO SV
-internalVariable st k = do NamedSymVar sv nm <- newSV st k
-                           let n = "__internal_sbv_" <> nm
-                               v = NamedSymVar sv n
-                           modifyState st rinps (addUserInput sv n) $ modifyIncState st rNewInps (v :)
-                           return sv
-{-# INLINE internalVariable #-}
+newInternalVariable :: State -> Kind -> IO SV
+newInternalVariable st k = do NamedSymVar sv nm <- newSV st k
+                              let n = "__internal_sbv_" <> nm
+                                  v = NamedSymVar sv n
+                              modifyState st rinps (addUserInput sv n) $ modifyIncState st rNewInps (v :)
+                              return sv
+{-# INLINE newInternalVariable #-}
 
 -- | Create a variable to be used in a constraint-expression
 quantVar :: Quantifier -> State -> Kind -> IO SV
