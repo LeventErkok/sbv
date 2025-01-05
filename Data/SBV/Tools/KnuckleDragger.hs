@@ -79,7 +79,7 @@ class ChainLemma steps step | steps -> step where
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
-  -- If @H@ is a singleton, then we error-out. A single step in @H@ indicates a user-error, since there's
+  -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
   -- no sequence of steps to reason about.
   chainLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
@@ -96,14 +96,10 @@ class ChainLemma steps step | steps -> step where
   makeSteps :: steps -> [step]
   makeInter :: steps -> step -> step -> SBool
 
-  chainLemma nm p steps by = do cfg <- ask
-                                chainLemmaWith cfg nm p steps by
-
-  chainTheorem nm p steps by = do cfg <- ask
-                                  chainTheoremWith cfg nm p steps by
-
-  chainLemmaWith   = chainGeneric False
-  chainTheoremWith = chainGeneric True
+  chainLemma nm p steps by   = ask >>= \cfg -> chainLemmaWith   cfg nm p steps by
+  chainTheorem nm p steps by = ask >>= \cfg -> chainTheoremWith cfg nm p steps by
+  chainLemmaWith             = chainGeneric False
+  chainTheoremWith           = chainGeneric True
 
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
   chainGeneric taggedTheorem cfg nm result steps base = do
