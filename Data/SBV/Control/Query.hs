@@ -326,7 +326,7 @@ getModelAtIndex mbi = do
           let name     = fst . snd
               removeSV = snd
               prepare  = S.unstableSort . S.filter (not . mustIgnoreVar cfg . T.unpack . name)
-              assocs   = S.fromList (sortOn fst obsvs) <> fmap removeSV (prepare inputAssocs)
+              assocs   = fmap removeSV (prepare inputAssocs) <> S.fromList (sortOn fst obsvs)
 
           -- collect UIs, and UI functions if requested
           let uiFuns = [ui | ui@(nm, (_, _, SBVType as)) <- uis, length as >  1, allSatTrackUFs cfg, not (mustIgnoreVar cfg nm)] -- functions have at least two things in their type!
