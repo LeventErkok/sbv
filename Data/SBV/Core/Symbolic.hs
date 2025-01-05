@@ -61,7 +61,7 @@ module Data.SBV.Core.Symbolic
   , extractSymbolicSimulationState, CnstMap
   , OptimizeStyle(..), Objective(..), Penalty(..), objectiveName, addSValOptGoal
   , MonadQuery(..), QueryT(..), Query, QueryState(..), QueryContext(..)
-  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), KDOptions(..), SMTEngine
+  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), KDOptions(..), SMTEngine, isEmptyModel
   , validationRequested, outputSVal, ProgInfo(..), mustIgnoreVar, getRootState
   ) where
 
@@ -2321,6 +2321,10 @@ data SMTModel = SMTModel {
                                                                                         -- difficult for SBV to figure out what it means
      }
      deriving Show
+
+-- | Is it the case that the model is really uninteresting? This is the case when there are no assocs nor ui's
+isEmptyModel :: SMTModel -> Bool
+isEmptyModel SMTModel{modelAssocs, modelUIFuns} = null modelAssocs && null modelUIFuns
 
 -- | The result of an SMT solver call. Each constructor is tagged with
 -- the 'SMTConfig' that created it so that further tools can inspect it
