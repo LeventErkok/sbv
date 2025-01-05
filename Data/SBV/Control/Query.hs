@@ -320,7 +320,6 @@ getModelAtIndex mbi = do
           allModelInputs <- getTopLevelInputs
           obsvs          <- getObservables
 
-
           inputAssocs <- let grab (NamedSymVar sv nm) = let wrap !c = (sv, (nm, c)) in wrap <$> getValueCV mbi sv
                          in mapM grab allModelInputs
 
