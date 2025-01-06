@@ -7,14 +7,17 @@
 
   * Generalize support for polyorphic and higher-order functions. These are still experimental, as SMTLib's
     higher-order function support is nascent. (Version 3 of SMTLib will have proper support for such functions, which
-    is not released yet.) Currently, SBV can handle polymorphic and higher-order usage of: 'reverse', 'any', 'all', 'filter',
-    'map', 'foldl', 'foldr', 'zip', and 'zipWith'; all exported from the 'Data.SBV.List' module. These functions are supported
-    polymporphically, and (except reverse and zip) all take a function as an argument. SBV firstifies these
-    functions, and the resulting code is compatible with Z3 and CVC5. (Firstification might change in the
-    future, as SMTLib gains support for more higher-order features itself.) Proof-support in backend solvers
-    for higher-order functions is still quite weak, though KnuckleDragger makes things easier.
+    is not released yet.) Currently, SBV can handle polymorphic and higher-order usage of: 'reverse', 'any', 'all',
+    'filter', 'map', 'foldl', 'foldr', 'zip', and 'zipWith'; all exported from the 'Data.SBV.List' module.
+    These functions are supported polymporphically, and (except reverse and zip) all take a function as
+    an argument. SBV firstifies these functions, and the resulting code is compatible with Z3 and CVC5.
+    (Firstification might change in the future, as SMTLib gains support for more higher-order
+    features itself.) Proof-support in backend solvers for higher-order functions is still quite weak,
+    though KnuckleDragger makes things easier.
 
   * Reworked KnuckleDragger examples, consolidating and improving the theorem statements.
+  
+  * Added a new induction based proof strategy for Knuckledragger.
 
   * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
     can now be defined by the user as we have proper support for fold and map using lambdas.
