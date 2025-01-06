@@ -42,23 +42,12 @@ sumConstProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   inductiveLemma "sumConst_correct"
-                  (\(Forall @"n" n) -> n .>= 0 .=> p n)
-                  (\k -> ( [ sum (k+1)
-                           , c + sum k   -- inductive hypothesis
-                           , c + c * k
-                           ]
-                         , [ spec (k+1)
-                           , c * (k+1)
-                           , c * k + c
-                           , c + c * k
-                           ]
-                         ))
-                  []
+   lemma "sumConst_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
--- We have:
+-- In this case we use the induction tactic, and while it does get the job done, it's rather
+-- slow. See 'sumProof2' for an alternative approach that is faster. We have:
 --
 -- >>> sumProof
 -- Lemma: sum_correct                      Q.E.D.
@@ -69,22 +58,43 @@ sumProof = runKD $ do
        sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
 
        spec :: SInteger -> SInteger
-       spec n = ite (n .== -36) 3 ((n * (n+1)) `sDiv` 2)
+       spec n = (n * (n+1)) `sDiv` 2
 
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
+   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
+
+-- | An alternate proof of proving sum of numbers from @0@ to @n@ is @n*(n-1)/2@, much faster
+-- than 'sumProof'. In this case, instead of just letting z3 find the inductive argument itself,
+-- we explicitly state the inductive steps, which goes a lot faster. We have:
+--
+-- >>> sumProof2
+-- Inductive lemma: sum_correct
+--   Base: sum_correct.Base                Q.E.D.
+--   Help: sum_correct.L1 vs L2            Q.E.D.
+--   Help: sum_correct.L2 vs R1            Q.E.D.
+--   Step: sum_correct.Step                Q.E.D.
+-- [Proven] sum_correct
+sumProof2 :: IO Proof
+sumProof2 = runKD $ do
+   let sum :: SInteger -> SInteger
+       sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
+
+       spec :: SInteger -> SInteger
+       spec n = (n * (n+1)) `sDiv` 2
+
+       p :: SInteger -> SBool
+       p n = sum n .== spec n
+
+   -- An explicit inductive proof, note that we don't have to spell out
+   -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
    inductiveLemma "sum_correct"
                   (\(Forall @"n" n) -> n .>= 0 .=> p n)
                   (\k -> ( [ sum (k+1)
-                           , (k+1) + sum k                      -- inductive hypothesis
-                           , (k+1) + (k * (k+1))     `sDiv` 2
-                           , (2 * (k+1) + k * (k+1)) `sDiv` 2
-                           , ((2+k) * (k+1))         `sDiv` 2
-                           , ((k+1) * (k+2))         `sDiv` 2
+                           , (k+1) + sum k  -- inductive hypothesis
                            ]
                          , [ spec (k+1)
-                           , ((k+1) * (k+2)) `sDiv` 2
                            ]
                          ))
                   []
@@ -94,7 +104,12 @@ sumProof = runKD $ do
 -- We have:
 --
 -- >>> sumSquareProof
--- Lemma: sumSquare_correct                Q.E.D.
+-- Inductive lemma: sumSquare_correct
+--   Base: sumSquare_correct.Base          Q.E.D.
+--   Help: sumSquare_correct.L1 vs L2      Q.E.D.
+--   Help: sumSquare_correct.L2 vs L3      Q.E.D.
+--   Help: sumSquare_correct.L3 vs R1      Q.E.D.
+--   Step: sumSquare_correct.Step          Q.E.D.
 -- [Proven] sumSquare_correct
 sumSquareProof :: IO Proof
 sumSquareProof = runKD $ do
@@ -111,10 +126,9 @@ sumSquareProof = runKD $ do
                   (\(Forall @"n" n) -> n .>= 0 .=> p n)
                   (\k -> ( [ sumSquare (k+1)
                            , (k+1)*(k+1) + sumSquare k
-                           , (k+1)*(k+1) + (k*(k+1)*(2*k+1)) `sDiv` 6   -- inductive hypothesis
+                           , (k+1)*(k+1) + spec k        -- inductive hypothesis
                            ]
                          , [ spec (k+1)
-                           , ((k+1)*(k+2) * (2*(k+1)+1)) `sDiv` 6
                            ]
                          ))
                   []
