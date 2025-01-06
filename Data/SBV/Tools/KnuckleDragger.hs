@@ -38,7 +38,9 @@ module Data.SBV.Tools.KnuckleDragger (
        , chainLemma,   chainLemmaWith
        , chainTheorem, chainTheoremWith
        -- * Induction
-       , Inductive(..), InductionSchema(..)
+       , induct, inductAlt1, inductAlt2
+       , inductiveLemma,   inductiveLemmaWith
+       , inductiveTheorem, inductiveTheoremWith
        -- * Faking proofs
        , sorry
        -- * Running KnuckleDragger proofs
@@ -199,12 +201,20 @@ class Inductive a steps where
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
    inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
+   -- | The inductive schema for the actual proof
+   schema :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> Symbolic Proof
+
+   {-# MINIMAL schema #-}
+
    inductiveLemma   nm p steps by = ask >>= \cfg -> inductiveLemmaWith   cfg nm p steps by
    inductiveTheorem nm p steps by = ask >>= \cfg -> inductiveTheoremWith cfg nm p steps by
    inductiveLemmaWith             = inductGeneric False
    inductiveTheoremWith           = inductGeneric True
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+   inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
+        putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+        runSMTWith cfg $ schema cfg nm qResult steps helpers
 
 -- Capture the general flow after a checkSat. We run the sat case if model is empty.
 checkSatThen :: (MonadIO m, MonadQuery m) => String -> Maybe (m a) -> m a -> m a
@@ -232,10 +242,7 @@ checkSatThen nm mbSat unsat = do
 
 -- | Induction over 'SInteger'.
 instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z], [z])) where
-   inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult steps helpers = liftIO $ do
-        putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
-        runSMTWith cfg schema
-
+   schema cfg@SMTConfig{verbose} nm qResult steps helpers = proof
      where result = qResult . Forall
 
            liftKD     = liftIO . runKDWith cfg
@@ -243,7 +250,7 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
 
            (ros, modulo) = calculateRootOfTrust nm helpers
 
-           schema = do
+           proof = do
               mapM_ (constrain . getProof) helpers
 
               -- Do the dummy call trick here so all the uninterpreted functions

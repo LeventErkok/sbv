@@ -152,8 +152,13 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
 class InductionSchema a where
+  -- | Induction tactic
   induct     :: a -> Proof
+
+  -- | Alternative induction tactic
   inductAlt1 :: a -> Proof
+
+  -- | Another alternative induction tactic
   inductAlt2 :: a -> Proof
 
   -- The second and third principles are the same as first by default, unless we provide them explicitly.
