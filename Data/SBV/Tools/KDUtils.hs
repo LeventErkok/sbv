@@ -17,12 +17,12 @@
 
 module Data.SBV.Tools.KDUtils (
          KD, runKD, runKDWith, Proof(..)
-       , start, finish
+       , startKD, finishKD, getKDConfig
        , RootOfTrust(..), calculateRootOfTrust
        ) where
 
-import Control.Monad.Reader (ReaderT, runReaderT, ask, MonadReader)
-import Control.Monad.Trans  (MonadIO(liftIO))
+import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
+import Control.Monad.Trans  (MonadIO)
 
 import Data.List (intercalate, nub, sort)
 import System.IO (hFlush, stdout)
@@ -43,20 +43,23 @@ runKD = runKDWith defaultSMTCfg
 runKDWith :: SMTConfig -> KD a -> IO a
 runKDWith cfg (KD f) = runReaderT f cfg
 
+-- | get the configuration
+getKDConfig :: KD SMTConfig
+getKDConfig = ask
+
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-start :: Bool -> String -> [String] -> KD Int
-start newLine what nms = liftIO $ do putStr $ line ++ if newLine then "\n" else ""
-                                     hFlush stdout
-                                     return (length line)
+startKD :: Bool -> String -> [String] -> IO Int
+startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
+                              hFlush stdout
+                              return (length line)
   where tab    = 2 * length (drop 1 nms)
         indent = replicate tab ' '
         tag    = what ++ ": " ++ intercalate "." nms
         line   = indent ++ tag
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
-finish :: String -> Int -> KD ()
-finish what skip = do SMTConfig{kdOptions = KDOptions{ribbonLength}} <- ask
-                      liftIO $ putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
+finishKD :: SMTConfig -> String -> Int -> IO ()
+finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
 data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)

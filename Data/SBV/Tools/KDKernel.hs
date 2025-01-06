@@ -53,8 +53,8 @@ type Proposition a = ( QuantifiedBool a
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
-axiom nm p = do start False "Axiom" [nm] >>= finish "Axiom."
-
+axiom nm p = do cfg <- getKDConfig
+                liftIO $ startKD False "Axiom" [nm] >>= finishKD cfg "Axiom."
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
@@ -86,12 +86,12 @@ sorry = Proof { rootOfTrust = Self
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
 lemmaGen cfg@SMTConfig{verbose} what nms inputProp by = do
-    tab <- start verbose what nms
+    tab <- liftIO $ startKD verbose what nms
 
     let nm = intercalate "." nms
 
         -- What to do if all goes well
-        good = do finish ("Q.E.D." ++ modulo) tab
+        good = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
                   pure Proof { rootOfTrust = ros
                              , isUserAxiom = False
                              , getProof    = label nm (quantifiedBool inputProp)

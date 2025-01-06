@@ -245,7 +245,6 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
    schema cfg@SMTConfig{verbose} nm qResult steps helpers = proof
      where result = qResult . Forall
 
-           liftKD     = liftIO . runKDWith cfg
            mkPairs xs = zipWith (\(i, l) (j, r) -> ((i, j), l .== r)) xs (drop 1 xs)
 
            (ros, modulo) = calculateRootOfTrust nm helpers
@@ -264,11 +263,11 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
                 -- Base case first
                 inNewAssertionStack $ do
                    let caseName = [nm, "Base"]
-                   tab <- liftKD $ start verbose "Base" caseName
+                   tab <- liftIO $ startKD verbose "Base" caseName
                    constrain $ sNot (result 0)
                    checkSatThen (intercalate "." caseName)
                                 (Just (io $ putStrLn "Property fails for n = 0."))
-                                (liftKD $ finish ("Q.E.D." ++ modulo) tab)
+                                (liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab)
 
                 -- Induction
                 k <- freshVar "k"
@@ -286,13 +285,13 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
                     loop accum (((i, j), s):ss) = do
                        let caseName = [nm, i ++ " vs " ++ j]
 
-                       tab <- liftKD $ start verbose "Help" caseName
+                       tab <- liftIO $ startKD verbose "Help" caseName
 
                        inNewAssertionStack $ do
                           constrain accum
                           constrain $ sNot s
 
-                          checkSatThen (intercalate "." caseName) Nothing $ liftKD $ finish ("Q.E.D." ++ modulo) tab
+                          checkSatThen (intercalate "." caseName) Nothing $ liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
 
                        loop (accum .&& s) ss
 
@@ -304,7 +303,7 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
                 -- Do the final proof:
                 let caseName = [nm, "Step"]
 
-                tab <- liftKD $ start verbose "Step" caseName
+                tab <- liftIO $ startKD verbose "Step" caseName
 
                 constrain indSchema
 
@@ -313,7 +312,7 @@ instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z
                                  .&& observeIf not "P(k-1)" (result (k-1))
 
                 checkSatThen (intercalate "." caseName) Nothing $ do
-                  liftKD $ finish ("Q.E.D." ++ modulo) tab
+                  liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
                   pure $ Proof { rootOfTrust = ros
                                , isUserAxiom = False
                                , getProof    = label nm $ quantifiedBool qResult
