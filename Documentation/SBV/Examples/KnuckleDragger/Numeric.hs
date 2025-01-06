@@ -6,12 +6,11 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Example use of the KnuckleDragger, for some inductive proofs over integers
+-- Example use of inductive KnuckleDragger proofs, over integers.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
