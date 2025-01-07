@@ -54,7 +54,7 @@ startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
                               return (length line)
   where tab    = 2 * length (drop 1 nms)
         indent = replicate tab ' '
-        tag    = what ++ ": " ++ intercalate "." nms
+        tag    = what ++ ": " ++ intercalate "." (filter (not . null) nms)
         line   = indent ++ tag
 
 -- | Finish a proof. First argument is what we got from the call of 'start' above.
