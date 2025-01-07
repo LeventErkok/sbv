@@ -48,14 +48,14 @@ import Data.SBV.Tools.KnuckleDragger
 -- We have:
 --
 -- >>> sqrt2IsIrrational
--- Chain: oddSquaredIsOdd
---   Lemma: oddSquaredIsOdd.1              Q.E.D.
---   Lemma: oddSquaredIsOdd.2              Q.E.D.
--- Lemma: oddSquaredIsOdd                  Q.E.D.
+-- Chain lemma: oddSquaredIsOdd
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: squareEvenImpliesEven            Q.E.D.
--- Chain: evenSquaredIsMult4
---   Lemma: evenSquaredIsMult4.1           Q.E.D.
--- Lemma: evenSquaredIsMult4               Q.E.D.
+-- Chain lemma: evenSquaredIsMult4
+--   Step  : 1                             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
 sqrt2IsIrrational :: IO Proof

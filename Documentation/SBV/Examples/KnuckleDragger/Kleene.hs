@@ -76,12 +76,12 @@ x <= y = x + y .== y
 -- Lemma: par_lzero                        Q.E.D.
 -- Lemma: par_monotone                     Q.E.D.
 -- Lemma: seq_monotone                     Q.E.D.
--- Chain: star_star_1
---   Lemma: star_star_1.1                  Q.E.D.
---   Lemma: star_star_1.2                  Q.E.D.
---   Lemma: star_star_1.3                  Q.E.D.
---   Lemma: star_star_1.4                  Q.E.D.
--- Lemma: star_star_1                      Q.E.D.
+-- Chain lemma: star_star_1
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: subset_eq                        Q.E.D.
 -- Lemma: star_star_2_2                    Q.E.D.
 -- Lemma: star_star_2_3                    Q.E.D.

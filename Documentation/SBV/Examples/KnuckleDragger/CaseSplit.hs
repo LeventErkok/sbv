@@ -31,18 +31,18 @@ z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
 -- We have:
 --
 -- >>> notDiv3
--- Chain: case_n_mod_3_eq_0
---   Lemma: case_n_mod_3_eq_0.1            Q.E.D.
---   Lemma: case_n_mod_3_eq_0.2            Q.E.D.
--- Lemma: case_n_mod_3_eq_0                Q.E.D.
--- Chain: case_n_mod_3_eq_1
---   Lemma: case_n_mod_3_eq_1.1            Q.E.D.
---   Lemma: case_n_mod_3_eq_1.2            Q.E.D.
--- Lemma: case_n_mod_3_eq_1                Q.E.D.
--- Chain: case_n_mod_3_eq_2
---   Lemma: case_n_mod_3_eq_2.1            Q.E.D.
---   Lemma: case_n_mod_3_eq_2.2            Q.E.D.
--- Lemma: case_n_mod_3_eq_2                Q.E.D.
+-- Chain lemma: case_n_mod_3_eq_0
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Chain lemma: case_n_mod_3_eq_1
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Chain lemma: case_n_mod_3_eq_2
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: notDiv3                          Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
