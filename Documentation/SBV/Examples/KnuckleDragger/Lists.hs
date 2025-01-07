@@ -22,7 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), pure, id, (.))
+import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip, error)
 
 import Data.SBV
 import Data.SBV.List
@@ -130,7 +130,7 @@ revApp = runKD $ do
    lemma "revApp"
          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> p xs ys)
          -- induction is done on the last argument, so we use flip to make sure we induct on xs
-         []
+         [induct (flip p)]
 
 -- * Reversing twice is identity
 
@@ -150,7 +150,7 @@ reverseReverse = runKD $ do
 
    ra <- use revApp
 
-   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [ra]
+   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [induct p, ra]
 
 -- * Lengths of lists
 
@@ -227,7 +227,7 @@ lenAppend2 = runKD $
 -- Lemma: allAny                           Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
-allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) []
+allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) [induct p]
   where p xs = sNot (all id xs) .== any sNot xs
 
 -- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
@@ -237,7 +237,7 @@ allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) []
 -- Lemma: filterEx                         Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
-filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
+filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
   where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
 
 -- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
@@ -276,7 +276,7 @@ mapAppend = runKD $ do
    lemma "mapAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
          -- induction is done on the last argument, so flip to do it on xs
-         []
+         [induct (flip (p f))]
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -307,6 +307,9 @@ mapReverse = runKDWith z3NoAutoConfig $ do
      rCons <- use revCons
      mApp  <- use mapAppend
 
+     error "later" rCons mApp p f
+
+     {-
      chainLemma "mapReverse"
                 (\(Forall @"xs" xs) -> p f xs)
                 (\x xs -> [ reverse (map f (x .: xs))
@@ -318,6 +321,7 @@ mapReverse = runKDWith z3NoAutoConfig $ do
                           , map f (reverse (x .: xs))
                           ])
                 [rCons, mApp]
+                -}
 
 -- * Reverse and length
 
@@ -335,7 +339,7 @@ revLen = runKD $ do
 
    lemma "revLen"
          (\(Forall @"xs" xs) -> p xs)
-         []
+         [induct p]
 
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
@@ -356,7 +360,7 @@ badRevLen = runKD $ do
 
    lemma "badRevLen"
          (\(Forall @"xs" xs) -> p xs)
-         []
+         [induct p]
 
    pure ()
 
@@ -382,7 +386,7 @@ foldrMapFusion = runKD $ do
 
       p xs = foldr f a (map g xs) .== foldr (f . g) a xs
 
-  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) []
+  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
 
 -- * Foldr-foldr fusion
 
@@ -426,7 +430,7 @@ foldrFusion = runKDWith cvc5 $ do
    -- forall x, y: f (g x y) = h x (f y)
    h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
-   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2]
+   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
 
 -- * Foldr over append
 
@@ -449,7 +453,8 @@ foldrOverAppend = runKD $ do
 
    lemma "foldrOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-          []
+          -- induction is done on the last argument, so we use flip to make sure we induct on xs
+          [induct (flip p)]
 
 -- * Foldl over append
 
@@ -477,7 +482,8 @@ foldlOverAppend = runKD $ do
 
    lemma "foldlOverAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-         []
+         -- induction is done on the last argument, so we use flip to make sure we induct on xs
+         [induct (flip p)]
 
 {- Can't converge
 
