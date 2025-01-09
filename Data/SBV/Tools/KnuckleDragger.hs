@@ -117,9 +117,9 @@ class ChainLemma a steps step | steps -> step where
   chainTheoremWith           = chainGeneric True
 
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-  chainGeneric taggedTheorem cfg@SMTConfig{verbose} nm result steps helpers = liftIO $ runSMTWith cfg $ do
+  chainGeneric tagTheorem cfg@SMTConfig{verbose} nm result steps helpers = liftIO $ runSMTWith cfg $ do
 
-        liftIO $ putStrLn $ "Chain " ++ (if taggedTheorem then "theorem" else "lemma") ++ ": " ++ nm
+        liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
 
         let (ros, modulo) = calculateRootOfTrust nm helpers
             finish        = finishKD cfg ("Q.E.D." ++ modulo)
