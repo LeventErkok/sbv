@@ -239,32 +239,6 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure $ (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
-{-
--- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} SymVal a => ChainLemma (SBV a -> [SBool]) SBool where
-   chainSteps steps = mkChainSteps (.=>) . steps <$> free "a"
-
--- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (SymVal a, SymVal b) => ChainLemma (SBV a -> SBV b -> [SBool]) (SBV a -> SBV b -> SBool) where
-   chainSteps steps = do (a, b) <- (,) <$> free "a" <*> free "b"
-                         pure $ mkChainSteps (.=>) $ steps a b
-
--- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c) => ChainLemma (SBV a -> SBV b -> SBV c -> [SBool]) (SBV a -> SBV b -> SBV c -> SBool) where
-   chainSteps steps = do (a, b, c) <- (,,) <$> free "a" <*> free "b" <*> free "c"
-                         pure $ mkChainSteps (.=>) $ steps a b c
-
--- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c, SymVal d) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
-   chainSteps steps = do (a, b, c, d) <- (,,,) <$> free "a" <*> free "b" <*> free "c" <*> free "d"
-                         pure $ mkChainSteps (.=>) $ steps a b c d
-
--- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (SymVal a, SymVal b, SymVal c, SymVal d, SymVal e) => ChainLemma (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
-   chainSteps steps = do (a, b, c, d, e) <- (,,,,) <$> free "a" <*> free "b" <*> free "c" <*> free "d" <*> free "d"
-                         pure $ mkChainSteps (.=>) $ steps a b c d e
-
--}
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
