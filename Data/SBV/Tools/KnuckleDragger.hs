@@ -253,10 +253,9 @@ class Inductive a steps where
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
    inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
-   -- | The inductive schema for the actual proof
-   schema :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> Symbolic Proof
-
-   {-# MINIMAL schema #-}
+   -- | Internal, shouldn't be needed outside the library
+   {-# MINIMAL inductiveSteps #-}
+   inductiveSteps :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> Symbolic Proof
 
    inductiveLemma   nm p steps by = ask >>= \cfg -> inductiveLemmaWith   cfg nm p steps by
    inductiveTheorem nm p steps by = ask >>= \cfg -> inductiveTheoremWith cfg nm p steps by
@@ -266,7 +265,7 @@ class Inductive a steps where
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
    inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
-        runSMTWith cfg $ schema cfg nm qResult steps helpers
+        runSMTWith cfg $ inductiveSteps cfg nm qResult steps helpers
 
 -- Capture the general flow after a checkSat. We run the sat case if model is empty.
 checkSatThen :: (MonadIO m, MonadQuery m) => [String] -> Maybe (m a) -> m a -> m a
@@ -296,7 +295,7 @@ checkSatThen nms mbSat unsat = do
 
 -- | Induction over 'SInteger'.
 instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z], [z])) where
-   schema cfg@SMTConfig{verbose} nm qResult steps helpers = proof
+   inductiveSteps cfg@SMTConfig{verbose} nm qResult steps helpers = proof
      where result = qResult . Forall
 
            mkPairs xs = zipWith (\(i, l) (j, r) -> ((i, j), l .== r)) xs (drop 1 xs)
