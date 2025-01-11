@@ -126,6 +126,11 @@ class ChainLemma a steps step | steps -> step where
 
         (goal, proofSteps) <- chainSteps result steps
 
+        -- This seemingly unneded constraint makes sure SBV sees the
+        -- definitions of any smtFunction calls or uninterpreted functions;
+        -- so it's important to keep it here.
+        constrain $ goal .== goal
+
         -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
         when (null proofSteps) $
            error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
