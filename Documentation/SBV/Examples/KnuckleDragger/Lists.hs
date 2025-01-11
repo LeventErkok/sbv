@@ -300,7 +300,7 @@ mapReverse = runKDWith z3NoAutoConfig $ do
          f :: SA -> SB
          f = uninterpret "f"
 
-     mApp  <- use (mapAppend f)
+     mApp <- use (mapAppend f)
 
      inductiveLemma "mapReverse"
           (\(Forall @"xs" xs) -> p f xs)
