@@ -144,6 +144,7 @@ class ChainLemma a steps step | steps -> step where
 
         let go :: Int -> SBool -> [SBool] -> Query Proof
             go _ accum [] = do
+                queryDebug [nm ++ ": Chain proof end: proving the result:"]
                 checkSatThen verbose "Result" accum goal ["", ""] Nothing $ \tab -> do
                   finish tab
                   pure Proof { rootOfTrust = ros
@@ -153,6 +154,7 @@ class ChainLemma a steps step | steps -> step where
                              }
 
             go i accum (s:ss) = do
+                 queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                  checkSatThen verbose "Step  " accum s ["", show i] Nothing finish
                  go (i+1) (s .&& accum) ss
 
@@ -281,7 +283,7 @@ class Inductive a steps where
 
            query $ do
 
-             -- Base case first
+            queryDebug [nm ++ ": Induction, proving base case:"]
             checkSatThen verbose
                          "Base"
                          sTrue
@@ -293,6 +295,7 @@ class Inductive a steps where
             constrain inductiveHypothesis
 
             let loop accum ((snm, s):ss) = do
+                    queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
                     checkSatThen verbose "Help" accum s [nm, snm] Nothing finish
                     loop (accum .&& s) ss
 
@@ -302,6 +305,7 @@ class Inductive a steps where
             indSchema <- loop sTrue inductionHelperSteps
 
             -- Do the final proof:
+            queryDebug [nm ++ ": Induction, proving inductive step:"]
             checkSatThen verbose "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \tab -> do
               finish tab
               pure $ Proof { rootOfTrust = ros
