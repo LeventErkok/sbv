@@ -65,6 +65,8 @@ import Control.Monad.Reader (ask)
 
 import Data.List (intercalate)
 
+import qualified Data.SBV.List as SL
+
 import Data.Proxy
 import GHC.TypeLits (KnownSymbol, symbolVal)
 
@@ -519,4 +521,36 @@ instance    ( KnownSymbol na, SymVal a
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a b c d (k+1))
                                           .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a b c d (k-1))
+              }
+
+-- Given a user name for the list, get a name for the element, in the most suggestive way possible
+--   xs  -> x
+--   xss -> xs
+--   foo -> fooElt
+singular :: String -> String
+singular n = case reverse n of
+               's':_:_ -> init n
+               _       -> n ++ "Elt"
+
+-- | Induction over 'SList'.
+instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
+        => Inductive (Forall nk [k] -> SBool)
+                     (SList k -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate k = qResult (Forall k)
+           nks         = symbolVal (Proxy @nk)
+           nk          = singular nks
+
+       k  <- free nk
+       ks <- free nks
+
+       saturate =<< predicate <$> internalVariable (kindOf ks)
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate SL.nil
+              , inductiveHypothesis     = predicate ks
+              , inductionHelperSteps    = pairInductiveSteps (steps ks)
+              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks))
               }
