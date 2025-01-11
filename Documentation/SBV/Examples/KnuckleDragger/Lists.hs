@@ -23,6 +23,7 @@
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
 import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
+import qualified Prelude as P
 
 import Data.SBV
 import Data.SBV.List
@@ -46,11 +47,6 @@ mkUninterpretedSort ''B
 -- | Data declaration for an uninterpreted type, usually indicating an intermediate value.
 data C
 mkUninterpretedSort ''C
-
--- | For certain proofs, the default settings for z3 have trouble converging. So, we use
--- the no-auto-config configuration in certain cases.
-z3NoAutoConfig :: SMTConfig
-z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
 
 -- * Appending null
 
@@ -288,11 +284,8 @@ mapAppend f = runKD $ do
 --   Lemma: mapReverse.6                   Q.E.D.
 -- Lemma: mapReverse                       Q.E.D.
 -- [Proven] mapReverse
---
--- Note that for this proof pass the no-auto-config parameter
--- to z3, as otherwise it doesn't converge.
 mapReverse :: IO Proof
-mapReverse = runKDWith z3NoAutoConfig $ do
+mapReverse = runKD $ do
      let p :: (SA -> SB) -> SList A -> SBool
          p g xs = reverse (map g xs) .== map g (reverse xs)
 
@@ -668,3 +661,7 @@ foldrFoldl = runKD $ do
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
 -}
+
+-- make GHC not complain about qualified import of Prelude not being necessary
+_unused :: a
+_unused = P.undefined
