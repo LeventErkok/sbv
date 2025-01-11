@@ -353,14 +353,14 @@ pairInductiveSteps (ls, rs) = pairs
                  ++ mkPairs (take 1 (reverse taggedLs) ++ take 1 (reverse taggedRs))
 
 -- | Induction over 'SInteger'.
-instance (KnownSymbol na, EqSymbolic z) => Inductive (Forall na Integer -> SBool) (SInteger -> ([z], [z])) where
+instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> ([z], [z])) where
    inductionStrategy qResult steps = do
        let predicate = qResult . Forall
 
        dummy <- internalVariable KUnbounded
        constrain $ let rdummy = predicate dummy in rdummy .== rdummy
 
-       let nm = symbolVal (Proxy @na)
+       let nm = symbolVal (Proxy @nk)
 
        k <- free nm
        constrain $ k .>= 0
