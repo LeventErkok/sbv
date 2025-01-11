@@ -108,11 +108,16 @@ sumProof2 = runKD $ do
 --   Base: sumSquare_correct.Base          Q.E.D.
 --   Help: sumSquare_correct.L1 vs L2      Q.E.D.
 --   Help: sumSquare_correct.L2 vs L3      Q.E.D.
---   Help: sumSquare_correct.L3 vs R1      Q.E.D.
+--   Help: sumSquare_correct.L3 vs L4      Q.E.D.
+--   Help: sumSquare_correct.L4 vs L5      Q.E.D.
+--   Help: sumSquare_correct.L5 vs L6      Q.E.D.
+--   Help: sumSquare_correct.L6 vs L7      Q.E.D.
+--   Help: sumSquare_correct.R1 vs R2      Q.E.D.
+--   Help: sumSquare_correct.L7 vs R2      Q.E.D.
 --   Step: sumSquare_correct.Step          Q.E.D.
 -- [Proven] sumSquare_correct
 sumSquareProof :: IO Proof
-sumSquareProof = runKD $ do
+sumSquareProof = runKDWith z3 $ do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .== 0) 0 (n * n + sumSquare (n - 1))
 
@@ -126,9 +131,14 @@ sumSquareProof = runKD $ do
                   (\(Forall @"n" n) -> n .>= 0 .=> p n)
                   (\k -> ( [ sumSquare (k+1)
                            , (k+1)*(k+1) + sumSquare k
-                           , (k+1)*(k+1) + spec k        -- inductive hypothesis
+                           , (k+1)*(k+1) + spec k                                -- inductive hypothesis
+                           , (k+1)*(k+1) + (k*(k+1)*(2*k+1))          `sDiv` 6
+                           , (6*(k+1)*(k+1) + k*(k+1)*(2*k+1))        `sDiv` 6
+                           , (6*k*k + 12*k + 6 + 2*k*k*k + 3*k*k + k) `sDiv` 6
+                           , (2*k*k*k + 9*k*k + 13*k + 6)             `sDiv` 6
                            ]
                          , [ spec (k+1)
+                           , ((k+1)*(k+2)*(2*k+3)) `sDiv` 6
                            ]
                          ))
                   []

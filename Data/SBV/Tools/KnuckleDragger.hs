@@ -137,31 +137,16 @@ class ChainLemma a steps step | steps -> step where
 
         let go :: Int -> SBool -> [SBool] -> Query Proof
             go _ accum [] = do
-                let caseName = ["", ""]
-                tab <- liftIO $ startKD verbose "Result" caseName
-
-                inNewAssertionStack $ do
-                  constrain accum
-                  constrain $ sNot goal
-                  checkSatThen caseName Nothing $ liftIO $ finish tab
-
-                pure Proof { rootOfTrust = ros
-                           , isUserAxiom = False
-                           , getProof    = label nm $ quantifiedBool result
-                           , proofName   = nm
-                           }
+                checkSatThen verbose "Result" accum goal ["", ""] Nothing $ \tab -> do
+                  finish tab
+                  pure Proof { rootOfTrust = ros
+                             , isUserAxiom = False
+                             , getProof    = label nm $ quantifiedBool result
+                             , proofName   = nm
+                             }
 
             go i accum (s:ss) = do
-                 let caseName = ["", show i]
-                 tab <- liftIO $ startKD verbose "Step  " caseName
-
-                 inNewAssertionStack $ do
-                    constrain accum
-                    constrain $ sNot s
-                    checkSatThen caseName Nothing $ liftIO $ finish tab
-
-                 -- It's absolutely essential the next line is done outside of the
-                 -- inNewAssertionStack call, so the accummulated constraint isn't asserted.
+                 checkSatThen verbose "Step  " accum s ["", show i] Nothing finish
                  go (i+1) (s .&& accum) ss
 
         query $ go (1::Int) sTrue proofSteps
@@ -239,6 +224,15 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure $ (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
+
+-- | Captures the schema for an inductive proof
+data InductionSchema = InductionSchema { inductionBaseCase       :: SBool
+                                       , inductiveHypothesis     :: SBool
+                                       , inductionHelperSteps    :: [(String, SBool)]
+                                       , inductionBaseFailureMsg :: String
+                                       , inductiveStep           :: SBool
+                                       }
+
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
@@ -253,29 +247,77 @@ class Inductive a steps where
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
    inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
-   -- | Internal, shouldn't be needed outside the library
-   {-# MINIMAL inductiveSteps #-}
-   inductiveSteps :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> Symbolic Proof
-
    inductiveLemma   nm p steps by = ask >>= \cfg -> inductiveLemmaWith   cfg nm p steps by
    inductiveTheorem nm p steps by = ask >>= \cfg -> inductiveTheoremWith cfg nm p steps by
    inductiveLemmaWith             = inductGeneric False
    inductiveTheoremWith           = inductGeneric True
 
+   -- | Internal, shouldn't be needed outside the library
+   {-# MINIMAL mkSteps #-}
+   mkSteps :: Proposition a => a -> steps -> Symbolic InductionSchema
+
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-   inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
+   inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult steps helpers = liftIO $ do
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
-        runSMTWith cfg $ inductiveSteps cfg nm qResult steps helpers
+        runSMTWith cfg $ do
+           mapM_ (constrain . getProof) helpers
+
+           let (ros, modulo) = calculateRootOfTrust nm helpers
+               finish       = finishKD cfg ("Q.E.D." ++ modulo)
+
+           schema <- mkSteps qResult steps
+
+           query $ do
+
+             -- Base case first
+            checkSatThen verbose
+                         "Base"
+                         sTrue
+                         (inductionBaseCase schema)
+                         [nm, "Base"]
+                         (Just (io $ putStrLn (inductionBaseFailureMsg schema)))
+                         finish
+
+            constrain $ inductiveHypothesis schema
+
+            let loop accum ((snm, s):ss) = do
+                    checkSatThen verbose "Help" accum s [nm, snm] Nothing finish
+                    loop (accum .&& s) ss
+
+                loop accum [] = pure accum
+
+            -- Get the schema
+            indSchema <- loop sTrue $ inductionHelperSteps schema
+
+            -- Do the final proof:
+            checkSatThen verbose "Step" indSchema (inductiveStep schema) [nm, "Step"] Nothing $ \tab -> do
+              finish tab
+              pure $ Proof { rootOfTrust = ros
+                           , isUserAxiom = False
+                           , getProof    = label nm $ quantifiedBool qResult
+                           , proofName   = nm
+                           }
 
 -- Capture the general flow after a checkSat. We run the sat case if model is empty.
-checkSatThen :: (MonadIO m, MonadQuery m) => [String] -> Maybe (m a) -> m a -> m a
-checkSatThen nms mbSat unsat = do
+checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m)
+   => Bool               -- ^ verbose
+   -> String             -- ^ tag
+   -> SBool              -- ^ context
+   -> SBool              -- ^ what we want to prove
+   -> [String]           -- ^ sub-proof
+   -> Maybe (m a)        -- ^ special code to run if model is empty (if any)
+   -> (Int -> IO a)      -- ^ what to do when unsat, with the tab amount
+   -> m a
+checkSatThen verbose tag ctx cond nms mbSat unsat = inNewAssertionStack $ do
+   tab <- liftIO $ startKD verbose tag nms
+   constrain ctx
+   constrain $ sNot cond
    r <- checkSat
    case r of
     Unk    -> unknown
     Sat    -> cex
     DSat{} -> cex
-    Unsat  -> unsat
+    Unsat  -> liftIO $ unsat tab
  where die = error "Failed"
 
        nm = intercalate "." (filter (not . null) nms)
@@ -293,81 +335,35 @@ checkSatThen nms mbSat unsat = do
                                           liftIO $ print $ ThmResult res
                                           die
 
+-- | Create a sequence of proof-obligations from the inductive steps
+pairInductiveSteps :: EqSymbolic a => ([a], [a]) -> [(String, SBool)]
+pairInductiveSteps (ls, rs) = pairs
+  where mkPairs xs = zipWith (\(i, l) (j, r) -> (i ++ " vs " ++  j, l .== r)) xs (drop 1 xs)
+        taggedLs = zip ['L' : show i | i <- [(1 :: Int) ..]] ls
+        taggedRs = zip ['R' : show i | i <- [(1 :: Int) ..]] rs
+        lPairs   = mkPairs taggedLs
+        rPairs   = mkPairs taggedRs
+        pairs    =  lPairs
+                 ++ rPairs
+                 ++ mkPairs (take 1 (reverse taggedLs) ++ take 1 (reverse taggedRs))
+
 -- | Induction over 'SInteger'.
-instance EqSymbolic z => Inductive (Forall nm Integer -> SBool) (SInteger -> ([z], [z])) where
-   inductiveSteps cfg@SMTConfig{verbose} nm qResult steps helpers = proof
-     where result = qResult . Forall
+instance (KnownSymbol na, EqSymbolic z) => Inductive (Forall na Integer -> SBool) (SInteger -> ([z], [z])) where
+   mkSteps qResult steps = do
+       let predicate = qResult . Forall
 
-           mkPairs xs = zipWith (\(i, l) (j, r) -> ((i, j), l .== r)) xs (drop 1 xs)
+       dummy <- internalVariable KUnbounded
+       constrain $ let rdummy = predicate dummy in rdummy .== rdummy
 
-           (ros, modulo) = calculateRootOfTrust nm helpers
+       let nm = symbolVal (Proxy @na)
 
-           proof = do
-              mapM_ (constrain . getProof) helpers
+       k <- free nm
+       constrain $ k .>= 0
 
-              -- Do the dummy call trick here so all the uninterpreted functions
-              -- are properly registered. Hopefully this is enough!
-              dummy <- internalVariable KUnbounded
-              let rdummy = result dummy
-              constrain $ rdummy .== rdummy
-
-              query $ do
-
-                -- Base case first
-                inNewAssertionStack $ do
-                   let caseName = [nm, "Base"]
-                   tab <- liftIO $ startKD verbose "Base" caseName
-                   constrain $ sNot (result 0)
-                   checkSatThen caseName
-                                (Just (io $ putStrLn "Property fails for n = 0."))
-                                (liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab)
-
-                -- Induction
-                k <- freshVar "k"
-                constrain $ k .>= 0
-                constrain $ result k
-
-                let (ls, rs) = steps k
-                    taggedLs = zip ['L' : show i | i <- [(1 :: Int) ..]] ls
-                    taggedRs = zip ['R' : show i | i <- [(1 :: Int) ..]] rs
-                    lPairs   = mkPairs taggedLs
-                    rPairs   = mkPairs taggedRs
-                    pairs    =  lPairs ++ rPairs
-                             ++ mkPairs (take 1 (reverse taggedLs) ++ take 1 (reverse taggedRs))
-
-                    loop accum (((i, j), s):ss) = do
-                       let caseName = [nm, i ++ " vs " ++ j]
-
-                       tab <- liftIO $ startKD verbose "Help" caseName
-
-                       inNewAssertionStack $ do
-                          constrain accum
-                          constrain $ sNot s
-
-                          checkSatThen caseName Nothing $ liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
-
-                       loop (accum .&& s) ss
-
-                    loop accum [] = pure accum
-
-                -- Get the schema
-                indSchema <- loop sTrue pairs
-
-                -- Do the final proof:
-                let caseName = [nm, "Step"]
-
-                tab <- liftIO $ startKD verbose "Step" caseName
-
-                constrain indSchema
-
-                -- Normal induction would be k+1; but we're doing full induction, so also go k-1
-                constrain $ sNot $   observeIf not "P(k+1)" (result (k+1))
-                                 .&& observeIf not "P(k-1)" (result (k-1))
-
-                checkSatThen caseName Nothing $ do
-                  liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
-                  pure $ Proof { rootOfTrust = ros
-                               , isUserAxiom = False
-                               , getProof    = label nm $ quantifiedBool qResult
-                               , proofName   = nm
-                               }
+       pure InductionSchema { inductionBaseCase       = predicate 0
+                            , inductiveHypothesis     = predicate k
+                            , inductionHelperSteps    = pairInductiveSteps (steps k)
+                            , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
+                            , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
+                                                        .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
+                            }
