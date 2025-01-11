@@ -117,7 +117,7 @@ sumProof2 = runKD $ do
 --   Step: sumSquare_correct.Step          Q.E.D.
 -- [Proven] sumSquare_correct
 sumSquareProof :: IO Proof
-sumSquareProof = runKDWith z3 $ do
+sumSquareProof = runKD $ do
    let sumSquare :: SInteger -> SInteger
        sumSquare = smtFunction "sumSquare" $ \n -> ite (n .== 0) 0 (n * n + sumSquare (n - 1))
 
