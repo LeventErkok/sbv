@@ -407,3 +407,35 @@ instance    ( KnownSymbol na, SymVal a
               , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a (k+1))
                                           .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a (k-1))
               }
+
+-- | Induction over 'SInteger' taking an extra argument.
+instance    ( KnownSymbol na, SymVal a
+            , KnownSymbol nb, SymVal b
+            , KnownSymbol nk, EqSymbolic z)
+         => Inductive (Forall na a -> Forall nb b -> Forall nk Integer -> SBool)
+                      (SBV a -> SBV b -> SInteger -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b k = qResult (Forall a) (Forall b) (Forall k)
+           na              = symbolVal (Proxy @na)
+           nb              = symbolVal (Proxy @nb)
+           nk              = symbolVal (Proxy @nk)
+
+       a <- free na
+       b <- free nb
+       k <- free nk
+       constrain $ k .>= 0
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf k)
+
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b 0
+              , inductiveHypothesis     = predicate a b k
+              , inductionHelperSteps    = pairInductiveSteps (steps a b k)
+              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a b (k+1))
+                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a b (k-1))
+              }
