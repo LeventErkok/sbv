@@ -415,7 +415,7 @@ instance    ( KnownSymbol na, SymVal a
                                           .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a (k-1))
               }
 
--- | Induction over 'SInteger' taking an two extra arguments.
+-- | Induction over 'SInteger' taking two extra arguments.
 instance    ( KnownSymbol na, SymVal a
             , KnownSymbol nb, SymVal b
             , KnownSymbol nk, EqSymbolic z)
@@ -553,4 +553,136 @@ instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
               , inductionHelperSteps    = pairInductiveSteps (steps ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks))
+              }
+
+-- | Induction over 'SList' taking an extra argument
+instance   ( KnownSymbol na, SymVal a
+           , KnownSymbol nk, SymVal k, EqSymbolic z)
+        => Inductive (Forall na a -> Forall nk [k] -> SBool)
+                     (SBV a -> SList k -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a k = qResult (Forall a) (Forall k)
+           na            = symbolVal (Proxy @na)
+           nks           = symbolVal (Proxy @nk)
+           nk            = singular nks
+
+       a  <- free na
+       k  <- free nk
+       ks <- free nks
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf ks)
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a SL.nil
+              , inductiveHypothesis     = predicate a ks
+              , inductionHelperSteps    = pairInductiveSteps (steps a ks)
+              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a (k SL..: ks))
+              }
+
+-- | Induction over 'SList' taking two extra arguments
+instance   ( KnownSymbol na, SymVal a
+           , KnownSymbol nb, SymVal b
+           , KnownSymbol nk, SymVal k, EqSymbolic z)
+        => Inductive (Forall na a -> Forall nb b -> Forall nk [k] -> SBool)
+                     (SBV a -> SBV b -> SList k -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b k = qResult (Forall a) (Forall b) (Forall k)
+           na              = symbolVal (Proxy @na)
+           nb              = symbolVal (Proxy @nb)
+           nks             = symbolVal (Proxy @nk)
+           nk              = singular nks
+
+       a  <- free na
+       b  <- free nb
+       k  <- free nk
+       ks <- free nks
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf ks)
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b SL.nil
+              , inductiveHypothesis     = predicate a b ks
+              , inductionHelperSteps    = pairInductiveSteps (steps a b ks)
+              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b (k SL..: ks))
+              }
+
+-- | Induction over 'SList' taking three extra arguments
+instance   ( KnownSymbol na, SymVal a
+           , KnownSymbol nb, SymVal b
+           , KnownSymbol nc, SymVal c
+           , KnownSymbol nk, SymVal k, EqSymbolic z)
+        => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nk [k] -> SBool)
+                     (SBV a -> SBV b -> SBV c -> SList k -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b c k = qResult (Forall a) (Forall b) (Forall c) (Forall k)
+           na                = symbolVal (Proxy @na)
+           nb                = symbolVal (Proxy @nb)
+           nc                = symbolVal (Proxy @nc)
+           nks               = symbolVal (Proxy @nk)
+           nk                = singular nks
+
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+       k  <- free nk
+       ks <- free nks
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf c)
+                              <*> internalVariable (kindOf ks)
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b c SL.nil
+              , inductiveHypothesis     = predicate a b c ks
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c ks)
+              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c (k SL..: ks))
+              }
+
+-- | Induction over 'SList' taking four extra arguments
+instance   ( KnownSymbol na, SymVal a
+           , KnownSymbol nb, SymVal b
+           , KnownSymbol nc, SymVal c
+           , KnownSymbol nd, SymVal d
+           , KnownSymbol nk, SymVal k, EqSymbolic z)
+        => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall nk [k] -> SBool)
+                     (SBV a -> SBV b -> SBV c -> SBV d -> SList k -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b c d k = qResult (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
+           na                  = symbolVal (Proxy @na)
+           nb                  = symbolVal (Proxy @nb)
+           nc                  = symbolVal (Proxy @nc)
+           nd                  = symbolVal (Proxy @nd)
+           nks                 = symbolVal (Proxy @nk)
+           nk                  = singular nks
+
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+       d  <- free nd
+       k  <- free nk
+       ks <- free nks
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf c)
+                              <*> internalVariable (kindOf d)
+                              <*> internalVariable (kindOf ks)
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b c d SL.nil
+              , inductiveHypothesis     = predicate a b c d ks
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c d ks)
+              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c d (k SL..: ks))
               }
