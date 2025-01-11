@@ -365,10 +365,11 @@ instance (KnownSymbol na, EqSymbolic z) => Inductive (Forall na Integer -> SBool
        k <- free nm
        constrain $ k .>= 0
 
-       pure InductionStrategy { inductionBaseCase       = predicate 0
-                              , inductiveHypothesis     = predicate k
-                              , inductionHelperSteps    = pairInductiveSteps (steps k)
-                              , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
-                              , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
-                                                          .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
-                              }
+       pure InductionStrategy {
+                inductionBaseCase       = predicate 0
+              , inductiveHypothesis     = predicate k
+              , inductionHelperSteps    = pairInductiveSteps (steps k)
+              , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
+                                          .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
+              }
