@@ -174,21 +174,21 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                     (SBV a -> SBV b -> SBV c -> [z])
                     (SBV a -> SBV b -> SBV c -> z) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                                pure $ (result (Forall a) (Forall b) (Forall c), mkChainSteps (.==) (steps a b c))
+                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.==) (steps a b c))
 
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
                     (SBV a -> SBV b -> SBV c -> SBV d -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                                pure $ (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.==) (steps a b c d))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.==) (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                                pure $ (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
 
 -- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> [SBool]) SBool where
@@ -209,21 +209,21 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
                     (SBV a -> SBV b -> SBV c -> [SBool])
                     (SBV a -> SBV b -> SBV c -> SBool) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                                pure $ (result (Forall a) (Forall b) (Forall c), mkChainSteps (.=>) (steps a b c))
+                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.=>) (steps a b c))
 
 -- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
                     (SBV a -> SBV b -> SBV c -> SBV d -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                                pure $ (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.=>) (steps a b c d))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.=>) (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                                pure $ (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
 
 -- | Captures the schema for an inductive proof
 data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
@@ -408,7 +408,7 @@ instance    ( KnownSymbol na, SymVal a
                                           .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a (k-1))
               }
 
--- | Induction over 'SInteger' taking an extra argument.
+-- | Induction over 'SInteger' taking an two extra arguments.
 instance    ( KnownSymbol na, SymVal a
             , KnownSymbol nb, SymVal b
             , KnownSymbol nk, EqSymbolic z)
@@ -438,4 +438,80 @@ instance    ( KnownSymbol na, SymVal a
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a b (k+1))
                                           .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a b (k-1))
+              }
+
+-- | Induction over 'SInteger' taking three extra arguments.
+instance    ( KnownSymbol na, SymVal a
+            , KnownSymbol nb, SymVal b
+            , KnownSymbol nc, SymVal c
+            , KnownSymbol nk, EqSymbolic z)
+         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nk Integer -> SBool)
+                      (SBV a -> SBV b -> SBV c -> SInteger -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b c k = qResult (Forall a) (Forall b) (Forall c) (Forall k)
+           na                = symbolVal (Proxy @na)
+           nb                = symbolVal (Proxy @nb)
+           nc                = symbolVal (Proxy @nc)
+           nk                = symbolVal (Proxy @nk)
+
+       a <- free na
+       b <- free nb
+       c <- free nc
+       k <- free nk
+       constrain $ k .>= 0
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf c)
+                              <*> internalVariable (kindOf k)
+
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b c 0
+              , inductiveHypothesis     = predicate a b c k
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c k)
+              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a b c (k+1))
+                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a b c (k-1))
+              }
+
+-- | Induction over 'SInteger' taking four extra arguments.
+instance    ( KnownSymbol na, SymVal a
+            , KnownSymbol nb, SymVal b
+            , KnownSymbol nc, SymVal c
+            , KnownSymbol nd, SymVal d
+            , KnownSymbol nk, EqSymbolic z)
+         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall nk Integer -> SBool)
+                      (SBV a -> SBV b -> SBV c -> SBV d -> SInteger -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a b c d k = qResult (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
+           na                  = symbolVal (Proxy @na)
+           nb                  = symbolVal (Proxy @nb)
+           nc                  = symbolVal (Proxy @nc)
+           nd                  = symbolVal (Proxy @nd)
+           nk                  = symbolVal (Proxy @nk)
+
+       a <- free na
+       b <- free nb
+       c <- free nc
+       d <- free nd
+       k <- free nk
+       constrain $ k .>= 0
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf b)
+                              <*> internalVariable (kindOf c)
+                              <*> internalVariable (kindOf d)
+                              <*> internalVariable (kindOf k)
+
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a b c d 0
+              , inductiveHypothesis     = predicate a b c d k
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c d k)
+              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a b c d (k+1))
+                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a b c d (k-1))
               }
