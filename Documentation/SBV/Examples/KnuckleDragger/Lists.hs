@@ -22,7 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip, error)
+import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -261,22 +261,18 @@ filterEx2 = runKD $ do
 
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
--- >>> mapAppend
+-- >>> mapAppend (uninterpret "f")
 -- Lemma: mapAppend                        Q.E.D.
 -- [Proven] mapAppend
-mapAppend :: IO Proof
-mapAppend = runKD $ do
-   let p :: (SA -> SB) -> SList A -> SList A -> SBool
-       p g xs ys = map g (xs ++ ys) .== map g xs ++ map g ys
-
-       -- For an arbitrary uninterpreted function 'f':
-       f :: SA -> SB
-       f = uninterpret "f"
+mapAppend :: (SA -> SB) -> IO Proof
+mapAppend f = runKD $ do
+   let p :: SList A -> SList A -> SBool
+       p xs ys = map f (xs ++ ys) .== map f xs ++ map f ys
 
    lemma "mapAppend"
-         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p f xs ys)
+         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
          -- induction is done on the last argument, so flip to do it on xs
-         [induct (flip (p f))]
+         [induct (flip p)]
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -304,24 +300,22 @@ mapReverse = runKDWith z3NoAutoConfig $ do
          f :: SA -> SB
          f = uninterpret "f"
 
-     rCons <- use revCons
-     mApp  <- use mapAppend
+     mApp  <- use (mapAppend f)
 
-     error "later" rCons mApp p f
-
-     {-
-     chainLemma "mapReverse"
-                (\(Forall @"xs" xs) -> p f xs)
-                (\x xs -> [ reverse (map f (x .: xs))
-                          , reverse (f x .: map f xs)
-                          , reverse (map f xs) ++ singleton (f x)
-                          , map f (reverse xs) ++ singleton (f x)
-                          , map f (reverse xs) ++ map f (singleton x)
-                          , map f (reverse xs ++ singleton x)
-                          , map f (reverse (x .: xs))
-                          ])
-                [rCons, mApp]
-                -}
+     inductiveLemma "mapReverse"
+          (\(Forall @"xs" xs) -> p f xs)
+          (\x xs -> ( [ reverse (map f (x .: xs))
+                      , reverse (f x .: map f xs)
+                      , reverse (map f xs) ++ singleton (f x)
+                      , map f (reverse xs) ++ singleton (f x)     -- inductive hypothesis
+                      , map f (reverse xs) ++ map f (singleton x)
+                      ]
+                    , [ map f (reverse (x .: xs))
+                      , map f (reverse xs ++ singleton x)
+                      , map f (reverse xs) ++ map f (singleton x)
+                      ]
+                    ))
+          [mApp]
 
 -- * Reverse and length
 
