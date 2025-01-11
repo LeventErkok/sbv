@@ -535,7 +535,7 @@ singular n = case reverse n of
 -- | Induction over 'SList'.
 instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall nk [k] -> SBool)
-                     (SList k -> ([z], [z]))
+                     (SBV k -> SList k -> ([z], [z]))
  where
    inductionStrategy qResult steps = do
        let predicate k = qResult (Forall k)
@@ -550,7 +550,7 @@ instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
        pure InductionStrategy {
                 inductionBaseCase       = predicate SL.nil
               , inductiveHypothesis     = predicate ks
-              , inductionHelperSteps    = pairInductiveSteps (steps ks)
+              , inductionHelperSteps    = pairInductiveSteps (steps k ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks))
               }
@@ -559,7 +559,7 @@ instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
 instance   ( KnownSymbol na, SymVal a
            , KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall na a -> Forall nk [k] -> SBool)
-                     (SBV a -> SList k -> ([z], [z]))
+                     (SBV a -> SBV k -> SList k -> ([z], [z]))
  where
    inductionStrategy qResult steps = do
        let predicate a k = qResult (Forall a) (Forall k)
@@ -577,7 +577,7 @@ instance   ( KnownSymbol na, SymVal a
        pure InductionStrategy {
                 inductionBaseCase       = predicate a SL.nil
               , inductiveHypothesis     = predicate a ks
-              , inductionHelperSteps    = pairInductiveSteps (steps a ks)
+              , inductionHelperSteps    = pairInductiveSteps (steps a k ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a (k SL..: ks))
               }
@@ -587,7 +587,7 @@ instance   ( KnownSymbol na, SymVal a
            , KnownSymbol nb, SymVal b
            , KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall na a -> Forall nb b -> Forall nk [k] -> SBool)
-                     (SBV a -> SBV b -> SList k -> ([z], [z]))
+                     (SBV a -> SBV b -> SBV k -> SList k -> ([z], [z]))
  where
    inductionStrategy qResult steps = do
        let predicate a b k = qResult (Forall a) (Forall b) (Forall k)
@@ -608,7 +608,7 @@ instance   ( KnownSymbol na, SymVal a
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b SL.nil
               , inductiveHypothesis     = predicate a b ks
-              , inductionHelperSteps    = pairInductiveSteps (steps a b ks)
+              , inductionHelperSteps    = pairInductiveSteps (steps a b k ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b (k SL..: ks))
               }
@@ -619,7 +619,7 @@ instance   ( KnownSymbol na, SymVal a
            , KnownSymbol nc, SymVal c
            , KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nk [k] -> SBool)
-                     (SBV a -> SBV b -> SBV c -> SList k -> ([z], [z]))
+                     (SBV a -> SBV b -> SBV c -> SBV k -> SList k -> ([z], [z]))
  where
    inductionStrategy qResult steps = do
        let predicate a b c k = qResult (Forall a) (Forall b) (Forall c) (Forall k)
@@ -643,7 +643,7 @@ instance   ( KnownSymbol na, SymVal a
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c SL.nil
               , inductiveHypothesis     = predicate a b c ks
-              , inductionHelperSteps    = pairInductiveSteps (steps a b c ks)
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c k ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c (k SL..: ks))
               }
@@ -655,7 +655,7 @@ instance   ( KnownSymbol na, SymVal a
            , KnownSymbol nd, SymVal d
            , KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall nk [k] -> SBool)
-                     (SBV a -> SBV b -> SBV c -> SBV d -> SList k -> ([z], [z]))
+                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV k -> SList k -> ([z], [z]))
  where
    inductionStrategy qResult steps = do
        let predicate a b c d k = qResult (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
@@ -682,7 +682,7 @@ instance   ( KnownSymbol na, SymVal a
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c d SL.nil
               , inductiveHypothesis     = predicate a b c d ks
-              , inductionHelperSteps    = pairInductiveSteps (steps a b c d ks)
+              , inductionHelperSteps    = pairInductiveSteps (steps a b c d k ks)
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c d (k SL..: ks))
               }
