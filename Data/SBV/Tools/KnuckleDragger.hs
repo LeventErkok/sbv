@@ -226,12 +226,12 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
                                 pure $ (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
 
 -- | Captures the schema for an inductive proof
-data InductionSchema = InductionSchema { inductionBaseCase       :: SBool
-                                       , inductiveHypothesis     :: SBool
-                                       , inductionHelperSteps    :: [(String, SBool)]
-                                       , inductionBaseFailureMsg :: String
-                                       , inductiveStep           :: SBool
-                                       }
+data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
+                                           , inductiveHypothesis     :: SBool
+                                           , inductionHelperSteps    :: [(String, SBool)]
+                                           , inductionBaseFailureMsg :: String
+                                           , inductiveStep           :: SBool
+                                           }
 
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
@@ -253,8 +253,8 @@ class Inductive a steps where
    inductiveTheoremWith           = inductGeneric True
 
    -- | Internal, shouldn't be needed outside the library
-   {-# MINIMAL mkSteps #-}
-   mkSteps :: Proposition a => a -> steps -> Symbolic InductionSchema
+   {-# MINIMAL inductionStrategy #-}
+   inductionStrategy :: Proposition a => a -> steps -> Symbolic InductionStrategy
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
    inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult steps helpers = liftIO $ do
@@ -265,7 +265,12 @@ class Inductive a steps where
            let (ros, modulo) = calculateRootOfTrust nm helpers
                finish       = finishKD cfg ("Q.E.D." ++ modulo)
 
-           schema <- mkSteps qResult steps
+           InductionStrategy { inductionBaseCase
+                             , inductiveHypothesis
+                             , inductionHelperSteps
+                             , inductionBaseFailureMsg
+                             , inductiveStep
+                             } <- inductionStrategy qResult steps
 
            query $ do
 
@@ -273,12 +278,12 @@ class Inductive a steps where
             checkSatThen verbose
                          "Base"
                          sTrue
-                         (inductionBaseCase schema)
+                         inductionBaseCase
                          [nm, "Base"]
-                         (Just (io $ putStrLn (inductionBaseFailureMsg schema)))
+                         (Just (io $ putStrLn inductionBaseFailureMsg))
                          finish
 
-            constrain $ inductiveHypothesis schema
+            constrain inductiveHypothesis
 
             let loop accum ((snm, s):ss) = do
                     checkSatThen verbose "Help" accum s [nm, snm] Nothing finish
@@ -287,10 +292,10 @@ class Inductive a steps where
                 loop accum [] = pure accum
 
             -- Get the schema
-            indSchema <- loop sTrue $ inductionHelperSteps schema
+            indSchema <- loop sTrue inductionHelperSteps
 
             -- Do the final proof:
-            checkSatThen verbose "Step" indSchema (inductiveStep schema) [nm, "Step"] Nothing $ \tab -> do
+            checkSatThen verbose "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \tab -> do
               finish tab
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False
@@ -349,7 +354,7 @@ pairInductiveSteps (ls, rs) = pairs
 
 -- | Induction over 'SInteger'.
 instance (KnownSymbol na, EqSymbolic z) => Inductive (Forall na Integer -> SBool) (SInteger -> ([z], [z])) where
-   mkSteps qResult steps = do
+   inductionStrategy qResult steps = do
        let predicate = qResult . Forall
 
        dummy <- internalVariable KUnbounded
@@ -360,10 +365,10 @@ instance (KnownSymbol na, EqSymbolic z) => Inductive (Forall na Integer -> SBool
        k <- free nm
        constrain $ k .>= 0
 
-       pure InductionSchema { inductionBaseCase       = predicate 0
-                            , inductiveHypothesis     = predicate k
-                            , inductionHelperSteps    = pairInductiveSteps (steps k)
-                            , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
-                            , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
-                                                        .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
-                            }
+       pure InductionStrategy { inductionBaseCase       = predicate 0
+                              , inductiveHypothesis     = predicate k
+                              , inductionHelperSteps    = pairInductiveSteps (steps k)
+                              , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
+                              , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
+                                                          .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
+                              }
