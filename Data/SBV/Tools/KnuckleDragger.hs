@@ -352,24 +352,58 @@ pairInductiveSteps (ls, rs) = pairs
                  ++ rPairs
                  ++ mkPairs (take 1 (reverse taggedLs) ++ take 1 (reverse taggedRs))
 
+-- | Saturate the given predicate; i.e., we run it on dummy-variables and assert equality of the self,
+-- which ensures the uninterpreted/smtDefine functions to get recorded.
+saturate :: (SolverContext m, EqSymbolic a) => a -> m ()
+saturate d = constrain $ d .== d
+
 -- | Induction over 'SInteger'.
-instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> ([z], [z])) where
+instance   (KnownSymbol nk, EqSymbolic z)
+        => Inductive (Forall nk Integer -> SBool)
+                     (SInteger -> ([z], [z]))
+ where
    inductionStrategy qResult steps = do
-       let predicate = qResult . Forall
+       let predicate k = qResult (Forall k)
+           nk          = symbolVal (Proxy @nk)
 
-       dummy <- internalVariable KUnbounded
-       constrain $ let rdummy = predicate dummy in rdummy .== rdummy
-
-       let nm = symbolVal (Proxy @nk)
-
-       k <- free nm
+       k <- free nk
        constrain $ k .>= 0
+
+       saturate =<< predicate <$> internalVariable (kindOf k)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate 0
               , inductiveHypothesis     = predicate k
               , inductionHelperSteps    = pairInductiveSteps (steps k)
-              , inductionBaseFailureMsg = "Property fails for " ++ nm ++ " = 0."
-              , inductiveStep           =     observeIf not ("P(" ++ nm ++ "+1)") (predicate (k+1))
-                                          .&& observeIf not ("P(" ++ nm ++ "-1)") (predicate (k-1))
+              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
+                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate (k-1))
+              }
+
+-- | Induction over 'SInteger' taking an extra argument.
+instance    ( KnownSymbol na, SymVal a
+            , KnownSymbol nk, EqSymbolic z)
+         => Inductive (Forall na a -> Forall nk Integer -> SBool)
+                      (SBV a -> SInteger -> ([z], [z]))
+ where
+   inductionStrategy qResult steps = do
+       let predicate a k = qResult (Forall a) (Forall k)
+           na            = symbolVal (Proxy @na)
+           nk            = symbolVal (Proxy @nk)
+
+       a <- free na
+       k <- free nk
+       constrain $ k .>= 0
+
+       saturate =<< predicate <$> internalVariable (kindOf a)
+                              <*> internalVariable (kindOf k)
+
+
+       pure InductionStrategy {
+                inductionBaseCase       = predicate a 0
+              , inductiveHypothesis     = predicate a k
+              , inductionHelperSteps    = pairInductiveSteps (steps a k)
+              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
+              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate a (k+1))
+                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate a (k-1))
               }
