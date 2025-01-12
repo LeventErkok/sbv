@@ -481,6 +481,19 @@ foldlOverAppend = runKD $ do
 -- We have:
 --
 -- >>> foldrFoldlDuality
+-- Lemma: foldlOverAppend                  Q.E.D.
+-- Inductive lemma: foldrFoldlDuality
+--   Base: foldrFoldlDuality.Base          Q.E.D.
+--   Help: foldrFoldlDuality.L1 vs L2      Q.E.D.
+--   Help: foldrFoldlDuality.L2 vs L3      Q.E.D.
+--   Help: foldrFoldlDuality.R1 vs R2      Q.E.D.
+--   Help: foldrFoldlDuality.R2 vs R3      Q.E.D.
+--   Help: foldrFoldlDuality.R3 vs R4      Q.E.D.
+--   Help: foldrFoldlDuality.R4 vs R5      Q.E.D.
+--   Help: foldrFoldlDuality.R5 vs R6      Q.E.D.
+--   Help: foldrFoldlDuality.L3 vs R6      Q.E.D.
+--   Step: foldrFoldlDuality.Step          Q.E.D.
+-- [Proven] foldrFoldlDuality
 foldrFoldlDuality :: IO Proof
 foldrFoldlDuality = runKD $ do
    let f :: SA -> SB -> SB
