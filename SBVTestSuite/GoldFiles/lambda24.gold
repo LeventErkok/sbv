@@ -24,16 +24,16 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: zipWith :: (SInteger -> SInteger -> SInteger) -> [SInteger] -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.zipWith_571047 ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec sbv.zipWith_736833 ((lst1 (Seq Int)) (lst2 (Seq Int))) (Seq Int)
                       (ite (or (= lst1 (as seq.empty (Seq Int))) (= lst2 (as seq.empty (Seq Int))))
                            (as seq.empty (Seq Int))
-                           (seq.++ (seq.unit (select (lambda ((l1_s0 Int) (l1_s1 Int))
-         (+ l1_s0 l1_s1)) (seq.nth lst1 0) (seq.nth lst2 0))) (sbv.zipWith_571047 (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
+                           (seq.++ (seq.unit (select (lambda ((args0 Int) (args1 Int))
+         (+ args0 args1)) (seq.nth lst1 0) (seq.nth lst2 0))) (sbv.zipWith_736833 (seq.extract lst1 1 (- (seq.len lst1) 1)) (seq.extract lst2 1 (- (seq.len lst2) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s4 () Bool (= s0 s3))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
-[GOOD] (define-fun s7 () (Seq Int) (sbv.zipWith_571047 s0 s1))
+[GOOD] (define-fun s7 () (Seq Int) (sbv.zipWith_736833 s0 s1))
 [GOOD] (define-fun s8 () Bool (= s2 s7))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

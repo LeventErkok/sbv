@@ -22,34 +22,34 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: all :: (SInteger -> SBool) -> [SInteger] -> SBool
-[GOOD] (define-fun-rec sbv.all_a5a161 ((lst (Seq Int))) Bool
+[GOOD] (define-fun-rec sbv.all_f82c1b ((lst (Seq Int))) Bool
                        (ite (= lst (as seq.empty (Seq Int)))
                             true
-                            (and (select (lambda ((l1_s0 Int))
-                                 (let ((l1_s1 2))
-                                 (let ((l1_s3 0))
-                                 (let ((l1_s7 1))
-                                 (let ((l1_s13 (- 1)))
-                                 (let ((l1_s2 (mod l1_s0 l1_s1)))
-                                 (let ((l1_s4 (>= l1_s0 l1_s3)))
-                                 (let ((l1_s5 (= l1_s2 l1_s3)))
-                                 (let ((l1_s6 (or l1_s4 l1_s5)))
-                                 (let ((l1_s8 (ite l1_s6 l1_s3 l1_s7)))
-                                 (let ((l1_s9 (* l1_s1 l1_s8)))
-                                 (let ((l1_s10 (- l1_s2 l1_s9)))
-                                 (let ((l1_s11 (> l1_s10 l1_s3)))
-                                 (let ((l1_s12 (< l1_s10 l1_s3)))
-                                 (let ((l1_s14 (ite l1_s12 l1_s13 l1_s10)))
-                                 (let ((l1_s15 (ite l1_s11 l1_s7 l1_s14)))
-                                 (let ((l1_s16 (= l1_s13 l1_s15)))
-                                 (let ((l1_s17 (+ l1_s1 l1_s10)))
-                                 (let ((l1_s18 (ite l1_s16 l1_s17 l1_s10)))
-                                 (let ((l1_s19 (= l1_s3 l1_s18)))
-                                 l1_s19)))))))))))))))))))) (seq.nth lst 0)) (sbv.all_a5a161 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                            (and (select (lambda ((args0 Int))
+                 (let ((args1 2))
+                 (let ((args3 0))
+                 (let ((args7 1))
+                 (let ((args13 (- 1)))
+                 (let ((args2 (mod args0 args1)))
+                 (let ((args4 (>= args0 args3)))
+                 (let ((args5 (= args2 args3)))
+                 (let ((args6 (or args4 args5)))
+                 (let ((args8 (ite args6 args3 args7)))
+                 (let ((args9 (* args1 args8)))
+                 (let ((args10 (- args2 args9)))
+                 (let ((args11 (> args10 args3)))
+                 (let ((args12 (< args10 args3)))
+                 (let ((args14 (ite args12 args13 args10)))
+                 (let ((args15 (ite args11 args7 args14)))
+                 (let ((args16 (= args13 args15)))
+                 (let ((args17 (+ args1 args10)))
+                 (let ((args18 (ite args16 args17 args10)))
+                 (let ((args19 (= args3 args18)))
+                 args19)))))))))))))))))))) (seq.nth lst 0)) (sbv.all_f82c1b (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () Bool (sbv.all_a5a161 s0))
+[GOOD] (define-fun s4 () Bool (sbv.all_f82c1b s0))
 [GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

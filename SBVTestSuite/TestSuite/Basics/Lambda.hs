@@ -131,13 +131,13 @@ tests =
       , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st $ \(Forall b)             -> sNot b
       , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
 
-      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr st "lambda40" t_i    (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr st "lambda41" t_i2i  (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr st "lambda42" t_ii2i (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr True st "lambda40" t_i    (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr True st "lambda41" t_i2i  (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr True st "lambda42" t_ii2i (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr st "lambda43" t_w32         (0           :: SWord32)
-      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr st "lambda44" t_w32_w32     (\x   -> x+1 :: SWord32)
-      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr st "lambda45" t_w32_w32_w32 (\x y -> x+y :: SWord32)
+      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr True st "lambda43" t_w32         (0           :: SWord32)
+      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr True st "lambda44" t_w32_w32     (\x   -> x+1 :: SWord32)
+      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr True st "lambda45" t_w32_w32_w32 (\x y -> x+y :: SWord32)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
 
@@ -260,7 +260,7 @@ tests =
         poI = isPartialOrder "poI" leq
 
         record :: (State -> IO String) -> FilePath -> IO ()
-        record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen 0)
+        record gen rf = do st <- mkNewState defaultSMTCfg (LambdaGen (Just 0))
                            appendFile rf . (P.++ "\n") =<< gen st
 
         runP b rf = runGen proveWith b rf

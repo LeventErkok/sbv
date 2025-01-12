@@ -22,29 +22,29 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: map :: (SInteger -> SInteger) -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_186748 ((lst (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec sbv.map_58ac1e ((lst (Seq Int))) (Seq Int)
                      (ite (= lst (as seq.empty (Seq Int)))
                           (as seq.empty (Seq Int))
-                          (seq.++ (seq.unit (select (lambda ((l1_s0 Int))
-                                 (let ((l1_s1 2))
-                                 (let ((l1_s2 (+ l1_s0 l1_s1)))
-                                 l1_s2))) (seq.nth lst 0)))
-                                  (sbv.map_186748 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                          (seq.++ (seq.unit (select (lambda ((args0 Int))
+                 (let ((args1 2))
+                 (let ((args2 (+ args0 args1)))
+                 args2))) (seq.nth lst 0)))
+                                  (sbv.map_58ac1e (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; Firstified function: map :: (SInteger -> SInteger) -> [SInteger] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_4049b6 ((lst (Seq Int))) (Seq Int)
+[GOOD] (define-fun-rec sbv.map_72c5bf ((lst (Seq Int))) (Seq Int)
                      (ite (= lst (as seq.empty (Seq Int)))
                           (as seq.empty (Seq Int))
-                          (seq.++ (seq.unit (select (lambda ((l1_s0 Int))
-                                 (let ((l1_s1 1))
-                                 (let ((l1_s2 (+ l1_s0 l1_s1)))
-                                 l1_s2))) (seq.nth lst 0)))
-                                  (sbv.map_4049b6 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                          (seq.++ (seq.unit (select (lambda ((args0 Int))
+                 (let ((args1 1))
+                 (let ((args2 (+ args0 args1)))
+                 args2))) (seq.nth lst 0)))
+                                  (sbv.map_72c5bf (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting.
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s4 () (Seq Int) (sbv.map_186748 s0))
-[GOOD] (define-fun s5 () (Seq Int) (sbv.map_4049b6 s4))
+[GOOD] (define-fun s4 () (Seq Int) (sbv.map_58ac1e s0))
+[GOOD] (define-fun s5 () (Seq Int) (sbv.map_72c5bf s4))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

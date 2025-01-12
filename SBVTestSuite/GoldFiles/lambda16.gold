@@ -23,15 +23,15 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: foldl :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
-[GOOD] (define-fun-rec sbv.foldl_cb8aa6 ((base Int) (lst (Seq Int))) Int
+[GOOD] (define-fun-rec sbv.foldl_33c9b2 ((base Int) (lst (Seq Int))) Int
                        (ite (= lst (as seq.empty (Seq Int)))
                             base
-                            (sbv.foldl_cb8aa6 (select (lambda ((l1_s0 Int) (l1_s1 Int))
-         (* l1_s0 l1_s1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
+                            (sbv.foldl_33c9b2 (select (lambda ((args0 Int) (args1 Int))
+         (* args0 args1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () Int (sbv.foldl_cb8aa6 s4 s0))
+[GOOD] (define-fun s5 () Int (sbv.foldl_33c9b2 s4 s0))
 [GOOD] (define-fun s6 () Bool (= s1 s5))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
