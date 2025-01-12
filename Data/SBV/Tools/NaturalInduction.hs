@@ -36,10 +36,10 @@ import Data.SBV.Tuple
 -- Q.E.D.
 -- >>> inductNat $ \n -> (sumSquaresToN n, ite (n .== 12) 0 ((n*(n+1)*(2*n+1)) `sEDiv` 6))
 -- Falsifiable. Counter-example:
+--   k      =        11 :: Integer
 --   P(0)   =     (0,0) :: (Integer, Integer)
 --   P(k)   = (506,506) :: (Integer, Integer)
 --   P(k+1) =   (650,0) :: (Integer, Integer)
---   k      =        11 :: Integer
 inductNat :: SymVal a => (SInteger -> (SBV a, SBV a)) -> IO ThmResult
 inductNat = inductNatWith defaultSMTCfg
 

@@ -253,8 +253,8 @@ member se ss
 --
 -- >>> prove $ \x -> x `notMember` observe "set" (singleton (x :: SInteger))
 -- Falsifiable. Counter-example:
---   set = {0} :: {Integer}
 --   s0  =   0 :: Integer
+--   set = {0} :: {Integer}
 --
 -- >>> prove $ \x (s :: SSet Integer) -> x `notMember` (x `delete` s)
 -- Q.E.D.
@@ -292,8 +292,8 @@ isEmpty = null
 --
 -- >>> prove $ \x -> isFull (observe "set" (x `delete` (full :: SSet Integer)))
 -- Falsifiable. Counter-example:
---   set = U - {2} :: {Integer}
 --   s0  =       2 :: Integer
+--   set = U - {2} :: {Integer}
 --
 -- >>> isFull (full :: SSet Integer)
 -- True
