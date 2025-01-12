@@ -1,4 +1,4 @@
 Optimal model:
-  m                = 127 :: Int8
   x                = 127 :: Int8
   toMetricSpace(m) = 255 :: Word8
+  m                = 127 :: Int8

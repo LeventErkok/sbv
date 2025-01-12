@@ -1,4 +1,4 @@
 Optimal model:
-  m                = 2147483647 :: Int32
   x                = 2147483647 :: Int32
   toMetricSpace(m) = 4294967295 :: Word32
+  m                = 2147483647 :: Int32

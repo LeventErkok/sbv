@@ -1,15 +1,4 @@
 Optimal model:
-  max-y                =             Infinity :: Double
-                  6    5          4         3         2         1         0
-                  3 21098765432 1098765432109876543210987654321098765432109876543210
-                  S ----E11---- ------------------------S52-------------------------
-   Binary layout: 0 11111111111 0000000000000000000000000000000000000000000000000000
-      Hex layout: 7FF0 0000 0000 0000
-       Precision: Double
-            Sign: Positive
-        Exponent: 1024 (Stored: 2047, Bias: 1023)
-  Classification: FP_INFINITE
-           Value: Infinity
   x                    =             Infinity :: Double
                   6    5          4         3         2         1         0
                   3 21098765432 1098765432109876543210987654321098765432109876543210
@@ -31,3 +20,14 @@ Optimal model:
            Octal: 0o1777600000000000000000
          Decimal: 18442240474082181120
              Hex: 0xfff0000000000000
+  max-y                =             Infinity :: Double
+                  6    5          4         3         2         1         0
+                  3 21098765432 1098765432109876543210987654321098765432109876543210
+                  S ----E11---- ------------------------S52-------------------------
+   Binary layout: 0 11111111111 0000000000000000000000000000000000000000000000000000
+      Hex layout: 7FF0 0000 0000 0000
+       Precision: Double
+            Sign: Positive
+        Exponent: 1024 (Stored: 2047, Bias: 1023)
+  Classification: FP_INFINITE
+           Value: Infinity

@@ -1,32 +1,4 @@
 Optimal model:
-  metric-min-x+y                =    3.0e-45 :: Float
-                  3  2          1         0
-                  1 09876543 21098765432109876543210
-                  S ---E8--- ----------S23----------
-   Binary layout: 0 00000000 00000000000000000000010
-      Hex layout: 0000 0002
-       Precision: Single
-            Sign: Positive
-        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
-  Classification: FP_SUBNORMAL
-          Binary: 0b1p-148
-           Octal: 0o4p-150
-         Decimal: 3.0e-45
-             Hex: 0x1p-148
-  min-x+y                       =    3.0e-45 :: Float
-                  3  2          1         0
-                  1 09876543 21098765432109876543210
-                  S ---E8--- ----------S23----------
-   Binary layout: 0 00000000 00000000000000000000010
-      Hex layout: 0000 0002
-       Precision: Single
-            Sign: Positive
-        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
-  Classification: FP_SUBNORMAL
-          Binary: 0b1p-148
-           Octal: 0o4p-150
-         Decimal: 3.0e-45
-             Hex: 0x1p-148
   x                             =    1.0e-45 :: Float
                   3  2          1         0
                   1 09876543 21098765432109876543210
@@ -65,3 +37,31 @@ Optimal model:
            Octal: 0o20000000002
          Decimal: 2147483650
              Hex: 0x80000002
+  metric-min-x+y                =    3.0e-45 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000010
+      Hex layout: 0000 0002
+       Precision: Single
+            Sign: Positive
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: FP_SUBNORMAL
+          Binary: 0b1p-148
+           Octal: 0o4p-150
+         Decimal: 3.0e-45
+             Hex: 0x1p-148
+  min-x+y                       =    3.0e-45 :: Float
+                  3  2          1         0
+                  1 09876543 21098765432109876543210
+                  S ---E8--- ----------S23----------
+   Binary layout: 0 00000000 00000000000000000000010
+      Hex layout: 0000 0002
+       Precision: Single
+            Sign: Positive
+        Exponent: -126 (Subnormal, with fixed exponent value. Stored: 0, Bias: 127)
+  Classification: FP_SUBNORMAL
+          Binary: 0b1p-148
+           Octal: 0o4p-150
+         Decimal: 3.0e-45
+             Hex: 0x1p-148
