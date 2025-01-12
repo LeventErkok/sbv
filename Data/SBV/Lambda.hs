@@ -57,17 +57,26 @@ inSubState allowFreeVars inState comp = do
 
         -- If we're not allowing-free variables (i.e., closed lambdas as those that would
         -- be passed to map/fold etc., then we mark that as top-lambda by marking the new-level with Nothing
-        newLevel <- if allowFreeVars
-                       then do ll <- liftIO $ readIORef (rLambdaLevel inState)
-                               case ll of
-                                 Nothing    -> -- nested lambda in a top-level lambda. Should we really
-                                               -- allow this? I don't see any problems with it, but this might prove
-                                               -- to be problematic. We'll cross that bridge when we get there
-                                               pure $ Just 1
+        newLevel <- do mbl <- liftIO $ readIORef (rLambdaLevel inState)
+                       case mbl of
+                         Nothing -> if not allowFreeVars
+                                    then error $ unlines [ ""
+                                                         , "*** Data.SBV.Lambda: Detected nested lambda-definitions."
+                                                         , "***"
+                                                         , "*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow"
+                                                         , "*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually"
+                                                         , "*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas"
+                                                         , "*** if possible. If this workaround isn't applicable, please report this as a use-case for further"
+                                                         , "*** possible enhancements."
+                                                         ]
+                                    else -- nested lambda in a top-level lambda. Should we really
+                                         -- allow this? I don't see any problems with it, but this might prove
+                                         -- to be problematic. We'll cross that bridge when we get there
+                                         pure $ Just 1
 
-                                 Just level -> pure $ Just $ level + 1
-
-                       else pure Nothing
+                         Just l -> pure $ if not allowFreeVars
+                                          then Nothing          -- Put it on top
+                                          else Just $ l + 1
 
         stEmpty <- S.mkNewState (stCfg inState) (LambdaGen newLevel)
 

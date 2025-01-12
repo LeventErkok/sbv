@@ -23,25 +23,32 @@
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
 [GOOD] ; Firstified function: foldl :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
-[GOOD] (define-fun-rec sbv.foldl_a12137 ((base Int) (lst (Seq Int))) Int
+[GOOD] (define-fun-rec sbv.foldl_12e248 ((base Int) (lst (Seq Int))) Int
                        (ite (= lst (as seq.empty (Seq Int)))
                             base
-                            (sbv.foldl_a12137 (select (lambda ((args0 Int) (args1 Int))
-         (+ args0 args1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
+                            (sbv.foldl_12e248 (select (lambda ((l2_s0 Int) (l2_s1 Int))
+         (+ l2_s0 l2_s1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
 [GOOD] ; Firstified function: map :: ([SInteger] -> SInteger) -> [[SInteger]] -> [SInteger]
-[GOOD] (define-fun-rec sbv.map_1a0d57 ((lst (Seq (Seq Int)))) (Seq Int)
+[GOOD] (define-fun-rec sbv.map_88a6dd ((lst (Seq (Seq Int)))) (Seq Int)
                      (ite (= lst (as seq.empty (Seq (Seq Int))))
                           (as seq.empty (Seq Int))
-                          (seq.++ (seq.unit (select (lambda ((args0 (Seq Int)))
-                 (let ((args1 0))
-                 (let ((args2 (sbv.foldl_a12137 args1 args0)))
-                 args2))) (seq.nth lst 0)))
-                                  (sbv.map_1a0d57 (seq.extract lst 1 (- (seq.len lst) 1))))))
+                          (seq.++ (seq.unit (select (lambda ((l1_s0 (Seq Int)))
+                                 (let ((l1_s1 0))
+                                 (let ((l1_s2 (sbv.foldl_12e248 l1_s1 l1_s0)))
+                                 l1_s2))) (seq.nth lst 0)))
+                                  (sbv.map_88a6dd (seq.extract lst 1 (- (seq.len lst) 1))))))
+[GOOD] ; Firstified function: foldl :: (SInteger -> SInteger -> SInteger) -> SInteger -> [SInteger] -> SInteger
+[GOOD] (define-fun-rec sbv.foldl_9f5903 ((base Int) (lst (Seq Int))) Int
+                       (ite (= lst (as seq.empty (Seq Int)))
+                            base
+                            (sbv.foldl_9f5903 (select (lambda ((l1_s0 Int) (l1_s1 Int))
+         (+ l1_s0 l1_s1)) base (seq.nth lst 0)) (seq.extract lst 1 (- (seq.len lst) 1)))))
+[GOOD] ; -- NB. Skipping firstified equivalences, due to generateHOEquivs setting.
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () (Seq Int) (sbv.map_1a0d57 s0))
-[GOOD] (define-fun s6 () Int (sbv.foldl_a12137 s4 s5))
+[GOOD] (define-fun s5 () (Seq Int) (sbv.map_88a6dd s0))
+[GOOD] (define-fun s6 () Int (sbv.foldl_9f5903 s4 s5))
 [GOOD] (define-fun s7 () Bool (= s1 s6))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---

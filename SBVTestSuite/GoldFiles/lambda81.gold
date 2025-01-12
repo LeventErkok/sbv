@@ -1,13 +1,10 @@
 CAUGHT EXCEPTION
 
 
-*** Data.SBV.Lambda: Detected free variables passed to a lambda.
+*** Data.SBV.Lambda: Detected nested lambda-definitions.
 ***
-***  Free vars : l1_s0
-***  Definition: (lambda ((l2_s0 Int))
-***                (+ l1_s0 l2_s0))
-***
-*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in.
-***
-*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible.
-*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements.
+*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow
+*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually
+*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas
+*** if possible. If this workaround isn't applicable, please report this as a use-case for further
+*** possible enhancements.
