@@ -527,6 +527,53 @@ foldrFoldlDuality = runKD $ do
                   [foa]
 
 {-
+-- * Foldr-foldl duality, generalized
+
+-- | Given:
+--
+-- @
+--     x @ (y @ z) = (x @ y) @ z     (associativity of @)
+-- and e @ x = x                     (left unit)
+-- and x @ e = x                     (right unit)
+-- @
+--
+-- Prove:
+--
+-- @
+--     foldr (@) e xs = foldl (@) e xs
+-- @
+--
+-- We have:
+--
+-- >>> foldrFoldlDualityGeneralized
+foldrFoldlDualityGeneralized :: IO Proof
+foldrFoldlDualityGeneralized  = runKD $ do
+   let (@) :: SA -> SA -> SA
+       (@) = uninterpret "|@|"
+
+       e :: SA
+       e = uninterpret "e"
+
+   axm1 <- axiom "@ is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z)
+   axm2 <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
+   axm3 <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
+
+   -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
+   h <- do let hp xs = quantifiedBool $ \(Forall @"y" y) (Forall @"z" z) -> foldl (@) (y @ z) xs .== y @ foldl (@) z xs
+           lemma "foldl over @" (\(Forall @"xs" xs) -> hp xs) [axm1, axm2, induct hp]
+
+   let p xs = foldr (@) e xs .== foldl (@) e xs
+
+   inductiveLemma "foldrFoldlDualityGeneralized"
+                  (\(Forall @"xs" xs) -> p xs)
+                  (pure ())
+                  (\x xs -> ( [ foldr (@) e (x .: xs)
+                              , x @ foldr (@) e xs
+                              ]
+                            , [ foldl (@) e (x .: xs)
+                              ]))
+                  [h, axm2, axm3]
+
 -- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its right-unit: we have:
@@ -549,70 +596,15 @@ bookKeeping = runKD $ do
    assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
    unit  <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
 
-   foa <- use foldrOverAppend
-
-   chainLemma "bookKeeping"
-              (\(Forall @"xss" xss) -> p xss)
-              (\xs xss -> [ foldr f a (concat (xs .: xss))
-                          , foldr f a (xs ++ concat xss)
-                          , foldr f (foldr f a (concat xss)) xs
-                          , foldr f (foldr f a (map (foldr f a) xss)) xs
-                          -- , f (foldr f a xs) (foldr f a (map (foldr f a) xss))
-                          -- , foldr f (foldr f a (map (foldr f a) xss)) (singleton (foldr f a xs))
-                          -- , foldr f a (singleton (foldr f a xs) ++ map (foldr f a) xss)
-                          -- , foldr f a (foldr f a xs .: map (foldr f a) xss)
-                          -- , foldr f a (map (foldr f a) (xs .: xss))
-                          ])
-              [assoc, unit, foa, induct p]
-
--- * Foldr-foldl duality.
-
--- | Given:
---
--- @
---     x @ (y @ z) = (x @ y) @ z     (associativity of @)
--- and e @ x = x                     (left unit)
--- and x @ e = x                     (right unit)
--- @
---
--- Prove:
---
--- @
---     foldr (@) e xs = foldl (@) e xs
--- @
---
--- We have:
---
--- >>> foldrFoldlDuality
-foldrFoldlDuality :: IO Proof
-foldrFoldlDuality  = runKD $ do
-   let (@) :: SA -> SA -> SA
-       (@) = uninterpret "|@|"
-
-       e :: SA
-       e = uninterpret "e"
-
-   axm1 <- axiom "@ is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z)
-   axm2 <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
-   axm3 <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
-
-   -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
-   h <- do let hp xs = quantifiedBool $ \(Forall @"y" y) (Forall @"z" z) -> foldl (@) (y @ z) xs .== y @ foldl (@) z xs
-           lemma "foldl over @" (\(Forall @"xs" xs) -> hp xs) [axm1, axm2, induct hp]
-
-   let p xs = foldr (@) e xs .== foldl (@) e xs
-
-   chainLemmaWith z3{verbose=True} "foldrFoldlDuality"
-              (\(Forall @"xs" xs) -> p xs)
-              (\x xs -> [ foldr (@) e (x .: xs)
-                        , x @ foldr (@) e xs
-                        , x @ foldl (@) e xs
-                        ])
-              [h, axm2, axm3, induct p]
-
-  -- TODO: Can't converge on this one. The strengthened induction axiom requires a very careful
-  -- instantiation of the inductive hypothesis, which I can't get through. Perhaps we need proper
-  -- support for patterns.
+   inductiveLemma "bookKeeping"
+                  (\(Forall @"xss" xss) -> p xss)
+                  (pure ())
+                  (\xs xss -> ( [ foldr f a (concat (xs .: xss))
+                                ]
+                              , [ foldr f a (map (foldr f a) (xs .: xss))
+                                ]
+                              ))
+                  [assoc, unit]
 
 -- | Given:
 -- @
