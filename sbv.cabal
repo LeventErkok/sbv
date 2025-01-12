@@ -7,7 +7,7 @@ Synopsis    : SMT Based Verification: Symbolic Haskell theorem prover using SMT 
 Description : Express properties about Haskell programs and automatically prove them using SMT
                (Satisfiability Modulo Theories) solvers.
 
-Copyright          : Levent Erkok, 2010-2024
+Copyright          : Levent Erkok, 2010-2025
 License            : BSD-3-Clause
 License-file       : LICENSE
 Stability          : Experimental
