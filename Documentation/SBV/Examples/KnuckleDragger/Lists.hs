@@ -23,7 +23,6 @@
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
 import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
-import qualified Prelude as P
 
 import Data.SBV
 import Data.SBV.List
@@ -663,7 +662,3 @@ foldrFoldl = runKD $ do
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
 -}
-
--- make GHC not complain about qualified import of Prelude not being necessary
-_unused :: a
-_unused = P.undefined

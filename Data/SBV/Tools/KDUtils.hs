@@ -57,7 +57,7 @@ startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         tag    = what ++ ": " ++ intercalate "." (filter (not . null) nms)
         line   = indent ++ tag
 
--- | Finish a proof. First argument is what we got from the call of 'start' above.
+-- | Finish a proof. First argument is what we got from the call of 'startKD' above.
 finishKD :: SMTConfig -> String -> Int -> IO ()
 finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
 
@@ -68,7 +68,7 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
                                --   name of the proposition itself, not the parent that's trusted.
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
--- call to 'lemma'/'theorem' etc., ensuring soundness. (Note that the trusted-code base here
+-- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
