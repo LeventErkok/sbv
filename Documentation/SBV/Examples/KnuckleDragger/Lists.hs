@@ -298,6 +298,7 @@ mapReverse = runKD $ do
 
      inductiveLemma "mapReverse"
           (\(Forall @"xs" xs) -> p f xs)
+          (pure ())
           (\x xs -> ( [ reverse (map f (x .: xs))
                       , reverse (f x .: map f xs)
                       , reverse (map f xs) ++ singleton (f x)
@@ -497,6 +498,7 @@ foldrFoldlDuality = runKD $ do
 
    inductiveLemma "foldrFoldlDuality"
                   (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
+                  (pure ())
                   (\e x xs -> ( [ foldr f e (x .: xs)
                                 , x `f` foldr f e xs
                                 , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis

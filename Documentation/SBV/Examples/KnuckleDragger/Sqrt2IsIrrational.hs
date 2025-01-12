@@ -76,6 +76,7 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
+                                  (pure ())
                                   (\a -> let k = a `sDiv` 2
                                          in [ odd a
                                             , sq a .== sq (2 * k + 1)
@@ -93,6 +94,7 @@ sqrt2IsIrrational = runKD $ do
     -- Happily, z3 needs nchainLemma helpers to establish this all on its own.
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
+                                      (pure ())
                                       (\a -> let k = a `sDiv` 2
                                              in [ even a
                                                 , sq a .== sq (k * 2)

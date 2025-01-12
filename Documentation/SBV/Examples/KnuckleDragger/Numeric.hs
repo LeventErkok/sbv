@@ -91,6 +91,7 @@ sumProof2 = runKD $ do
    -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
    inductiveLemma "sum_correct"
                   (\(Forall @"n" n) -> n .>= 0 .=> p n)
+                  (pure ())
                   (\k -> ( [ sum (k+1)
                            , (k+1) + sum k  -- inductive hypothesis
                            ]
@@ -129,6 +130,7 @@ sumSquareProof = runKD $ do
 
    inductiveLemma "sumSquare_correct"
                   (\(Forall @"n" n) -> n .>= 0 .=> p n)
+                  (pure ())
                   (\k -> ( [ sumSquare (k+1)
                            , (k+1)*(k+1) + sumSquare k
                            , (k+1)*(k+1) + spec k                                -- inductive hypothesis
