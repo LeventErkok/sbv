@@ -415,7 +415,7 @@ map f l
         kb  = kindOf (Proxy @b)
         klb = kindOf (Proxy @(SList b))
         r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st False kb f
+                  lam <- lambdaStr st HigherOrderArg kb f
                   let op = SeqOp (SBVMap ka kb lam)
                   registerSpecialFunction st op
                   newExpr st klb (SBVApp op [sva])
@@ -449,7 +449,7 @@ foldl f base l
         kb = kindOf (Proxy @b)
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  lam <- lambdaStr st False kb f
+                  lam <- lambdaStr st HigherOrderArg kb f
                   let op = SeqOp (SBVFoldl ka kb lam)
                   registerSpecialFunction st op
                   newExpr st kb (SBVApp op [svb, svl])
@@ -477,7 +477,7 @@ foldr f base l
         kb = kindOf (Proxy @b)
         r st = do svb <- sbvToSV st base
                   svl <- sbvToSV st l
-                  lam <- lambdaStr st False kb f
+                  lam <- lambdaStr st HigherOrderArg kb f
                   let op = SeqOp (SBVFoldr ka kb lam)
                   registerSpecialFunction st op
                   newExpr st kb (SBVApp op [svb, svl])
@@ -530,7 +530,7 @@ zipWith f xs ys
 
        r st = do svxs <- sbvToSV st xs
                  svys <- sbvToSV st ys
-                 lam <- lambdaStr st False kc f
+                 lam <- lambdaStr st HigherOrderArg kc f
                  let op = SeqOp (SBVZipWith ka kb kc lam)
                  registerSpecialFunction st op
                  newExpr st kr (SBVApp op [svxs, svys])
@@ -556,7 +556,7 @@ all f l
  | True
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
-                 lam <- lambdaStr st False KBool f
+                 lam <- lambdaStr st HigherOrderArg KBool f
                  let op = SeqOp (SBVAll (kindOf (Proxy @a)) lam)
                  registerSpecialFunction st op
                  newExpr st KBool (SBVApp op [sva])
@@ -575,7 +575,7 @@ any f l
  | True
  = SBV $ SVal KBool $ Right $ cache r
  where r st = do sva <- sbvToSV st l
-                 lam <- lambdaStr st False KBool f
+                 lam <- lambdaStr st HigherOrderArg KBool f
                  let op = SeqOp (SBVAny (kindOf (Proxy @a)) lam)
                  registerSpecialFunction st op
                  newExpr st KBool (SBVApp op [sva])
@@ -606,7 +606,7 @@ filter f l
 
         k = kindOf (Proxy @(SList a))
         r st = do sva <- sbvToSV st l
-                  lam <- lambdaStr st False KBool f
+                  lam <- lambdaStr st HigherOrderArg KBool f
                   let op = SeqOp (SBVFilter (kindOf (Proxy @a)) lam)
                   registerSpecialFunction st op
                   newExpr st k (SBVApp op [sva])

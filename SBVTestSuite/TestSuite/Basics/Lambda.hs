@@ -54,9 +54,9 @@ drinker = pure $ quantifiedBool $ \(Exists x) (Forall y) -> d x .=> d y
 tests :: TestTree
 tests =
   testGroup "Basics.Lambda" $ [
-        goldenCapturedIO "lambda01" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInteger)) (2             :: SInteger)
-      , goldenCapturedIO "lambda02" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
-      , goldenCapturedIO "lambda03" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
+        goldenCapturedIO "lambda01" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInteger)) (2             :: SInteger)
+      , goldenCapturedIO "lambda02" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInteger)) (\x   -> x+1   :: SInteger)
+      , goldenCapturedIO "lambda03" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInteger)) (\x y -> x+y*2 :: SInteger)
 
       , goldenCapturedIO "lambda04" $ eval1 [1 .. 3 :: Integer] (map (const sFalse),  P.map (const False))
       , goldenCapturedIO "lambda05" $ eval1 [1 .. 5 :: Integer] (map (+1) . map (+2), P.map (+1) . P.map (+2))
@@ -123,21 +123,21 @@ tests =
       , goldenCapturedIO "lambda31" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 .== 0), P.filter (\x -> x `mod` 2 == 0))
       , goldenCapturedIO "lambda32" $ eval1 [1 .. 10 :: Integer] (filter (\x -> x `sMod` 2 ./= 0), P.filter (\x -> x `mod` 2 /= 0))
 
-      , goldenCapturedIO "lambda33" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInt8)) (0           :: SInt8)
-      , goldenCapturedIO "lambda34" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
-      , goldenCapturedIO "lambda35" $ record $ \st -> show <$> lambdaStr st True (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
+      , goldenCapturedIO "lambda33" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInt8)) (0           :: SInt8)
+      , goldenCapturedIO "lambda34" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInt8)) (\x   -> x+1 :: SInt8)
+      , goldenCapturedIO "lambda35" $ record $ \st -> show <$> lambdaStr st TopLevel (kindOf (Proxy @SInt8)) (\x y -> x+y :: SInt8)
 
       , goldenCapturedIO "lambda36" $ record $ \st -> constraintStr st $ \(Forall (_ :: SBool))  -> sTrue
       , goldenCapturedIO "lambda37" $ record $ \st -> constraintStr st $ \(Forall b)             -> sNot b
       , goldenCapturedIO "lambda38" $ record $ \st -> constraintStr st $ \(Forall x) (Forall y) -> x .== (0 :: SInteger) .|| y
 
-      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr True st "lambda40" t_i    (0           :: SInteger)
-      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr True st "lambda41" t_i2i  (\x   -> x+1 :: SInteger)
-      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr True st "lambda42" t_ii2i (\x y -> x+y :: SInteger)
+      , goldenCapturedIO "lambda40" $ record $ \st -> namedLambdaStr TopLevel st "lambda40" t_i    (0           :: SInteger)
+      , goldenCapturedIO "lambda41" $ record $ \st -> namedLambdaStr TopLevel st "lambda41" t_i2i  (\x   -> x+1 :: SInteger)
+      , goldenCapturedIO "lambda42" $ record $ \st -> namedLambdaStr TopLevel st "lambda42" t_ii2i (\x y -> x+y :: SInteger)
 
-      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr True st "lambda43" t_w32         (0           :: SWord32)
-      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr True st "lambda44" t_w32_w32     (\x   -> x+1 :: SWord32)
-      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr True st "lambda45" t_w32_w32_w32 (\x y -> x+y :: SWord32)
+      , goldenCapturedIO "lambda43" $ record $ \st -> namedLambdaStr TopLevel st "lambda43" t_w32         (0           :: SWord32)
+      , goldenCapturedIO "lambda44" $ record $ \st -> namedLambdaStr TopLevel st "lambda44" t_w32_w32     (\x   -> x+1 :: SWord32)
+      , goldenCapturedIO "lambda45" $ record $ \st -> namedLambdaStr TopLevel st "lambda45" t_w32_w32_w32 (\x y -> x+y :: SWord32)
 
       , goldenCapturedIO "lambda46" $ runSat ((.== 5) . add1)
 

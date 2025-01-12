@@ -24,6 +24,7 @@ module Data.SBV.Lambda (
             lambda,      lambdaStr
           , namedLambda, namedLambdaStr
           , constraint,  constraintStr
+          , LambdaScope(..)
         ) where
 
 import Control.Monad       (join)
@@ -45,6 +46,10 @@ import qualified Data.Foldable as F
 
 import qualified Data.Generics.Uniplate.Data as G
 
+-- | What's the scope of the generated lambda?
+data LambdaScope = HigherOrderArg   -- This lambda will be firstified, hence can't have any free variables
+                 | TopLevel         -- This lambda is used to represent a quantified axiom, can have free vars
+
 data Defn = Defn [String]                        -- The uninterpreted names referred to in the body
                  [String]                        -- Free variables (i.e., not uninterpreted nor bound in the definition itself)
                  (Maybe [(Quantifier, String)])  -- Param declaration groups, if any
@@ -52,31 +57,15 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
                  (Int -> String)                 -- Body, given the tab amount.
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
-inSubState :: MonadIO m => Bool -> State -> (State -> m b) -> m b
-inSubState allowFreeVars inState comp = do
+inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
+inSubState scope inState comp = do
 
-        -- If we're not allowing-free variables (i.e., closed lambdas as those that would
-        -- be passed to map/fold etc., then we mark that as top-lambda by marking the new-level with Nothing
-        newLevel <- do mbl <- liftIO $ readIORef (rLambdaLevel inState)
-                       case mbl of
-                         Nothing -> if not allowFreeVars
-                                    then error $ unlines [ ""
-                                                         , "*** Data.SBV.Lambda: Detected nested lambda-definitions."
-                                                         , "***"
-                                                         , "*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow"
-                                                         , "*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually"
-                                                         , "*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas"
-                                                         , "*** if possible. If this workaround isn't applicable, please report this as a use-case for further"
-                                                         , "*** possible enhancements."
-                                                         ]
-                                    else -- nested lambda in a top-level lambda. Should we really
-                                         -- allow this? I don't see any problems with it, but this might prove
-                                         -- to be problematic. We'll cross that bridge when we get there
-                                         pure $ Just 1
-
-                         Just l -> pure $ if not allowFreeVars
-                                          then Nothing          -- Put it on top
-                                          else Just $ l + 1
+        newLevel <- liftIO $ case scope of
+                               HigherOrderArg -> pure Nothing
+                               TopLevel       -> do ll <- readIORef (rLambdaLevel inState)
+                                                    pure $ case ll of
+                                                             Nothing -> Nothing
+                                                             Just i  -> Just $ i + 1
 
         stEmpty <- S.mkNewState (stCfg inState) (LambdaGen newLevel)
 
@@ -150,23 +139,24 @@ extractAllUniversals other      = error $ unlines [ ""
 
 
 -- | Generic creator for anonymous lamdas.
-lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
-lambdaGen allowFreeVars trans inState fk f = inSubState allowFreeVars inState $ \st -> handle <$> convert st fk (mkLambda st f)
-  where handle d@(Defn _ frees _ _ _)
-          | allowFreeVars || null frees
-          = trans d
-          | True
-          = error $ unlines [ ""
-                            , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
-                            , "***"
-                            , "***  Free vars : " ++ unwords frees
-                            , "***  Definition: " ++ shift (lines (sh d))
-                            , "***"
-                            , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
-                            , "***"
-                            , "*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible."
-                            , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
-                            ]
+lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
+lambdaGen scope trans inState fk f = inSubState scope inState $ \st -> handle <$> convert st fk (mkLambda st f)
+  where handle d@(Defn _ frees _ _ _) =
+            case scope of
+              TopLevel       -> trans d
+              HigherOrderArg -> if null frees
+                                then trans d
+                                else error $ unlines [ ""
+                                                     , "*** Data.SBV.Lambda: Detected free variables passed to a lambda."
+                                                     , "***"
+                                                     , "***  Free vars : " ++ unwords frees
+                                                     , "***  Definition: " ++ shift (lines (sh d))
+                                                     , "***"
+                                                     , "*** In certain contexts, SBV only allows closed-lambdas, i.e., those that do not have any free variables in."
+                                                     , "***"
+                                                     , "*** Please rewrite your program to pass the free variable as an explicit argument to the lambda if possible."
+                                                     , "*** If this workaround isn't applicable, please report this as a use-case for further possible enhancements."
+                                                     ]
 
         sh (Defn _unints _frees Nothing       _ops body) = body 0
         sh (Defn _unints _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
@@ -176,36 +166,36 @@ lambdaGen allowFreeVars trans inState fk f = inSubState allowFreeVars inState $ 
           where tab s = "***              " ++ s
 
 -- | Create an SMTLib lambda, in the given state.
-lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTDef
-lambda inState allowFreeVars fk = lambdaGen allowFreeVars mkLam inState fk
+lambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTDef
+lambda inState scope fk = lambdaGen scope mkLam inState fk
    where mkLam (Defn unints _frees params ops body) = SMTLam fk unints ops (extractAllUniversals <$> params) body
 
 -- | Create an anonymous lambda, rendered as n SMTLib string. The kind passed is the kind of the final result.
-lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> Bool -> Kind -> a -> m SMTLambda
-lambdaStr st allowFreeVars k a = SMTLambda <$> lambdaGen allowFreeVars mkLam st k a
+lambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> LambdaScope -> Kind -> a -> m SMTLambda
+lambdaStr st scope k a = SMTLambda <$> lambdaGen scope mkLam st k a
    where mkLam (Defn _unints _frees Nothing       _ops body) = body 0
          mkLam (Defn _unints _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
-namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
-namedLambdaGen allowFreeVars trans inState fk f = inSubState allowFreeVars inState $ \st -> trans <$> convert st fk (mkLambda st f)
+namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> (Defn -> b) -> State -> Kind -> a -> m b
+namedLambdaGen scope trans inState fk f = inSubState scope inState $ \st -> trans <$> convert st fk (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
-namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> State -> String -> Kind -> a -> m SMTDef
-namedLambda allowFreeVars inState nm fk = namedLambdaGen allowFreeVars mkDef inState fk
+namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> Kind -> a -> m SMTDef
+namedLambda scope inState nm fk = namedLambdaGen scope mkDef inState fk
    where mkDef (Defn unints _frees params ops body) = SMTDef nm fk unints ops (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
-namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> State -> String -> SBVType -> a -> m String
-namedLambdaStr allowFreeVars inState nm t = namedLambdaGen allowFreeVars mkDef inState fk
+namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => LambdaScope -> State -> String -> SBVType -> a -> m String
+namedLambdaStr scope inState nm t = namedLambdaGen scope mkDef inState fk
    where mkDef (Defn unints _frees params ops body) = concat $ declUserFuns [(SMTDef nm fk unints ops (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
 
 -- | Generic constraint generator.
-constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => Bool -> ([String] -> [Op] -> (Int -> String) -> b) -> State -> a -> m b
-constraintGen allowFreeVars trans inState@State{rProgInfo} f = do
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => LambdaScope -> ([String] -> [Op] -> (Int -> String) -> b) -> State -> a -> m b
+constraintGen scope trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
@@ -216,7 +206,7 @@ constraintGen allowFreeVars trans inState@State{rProgInfo} f = do
        mkGroup (ALL, s) = "(forall " ++ s
        mkGroup (EX,  s) = "(exists " ++ s
 
-   inSubState allowFreeVars inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
+   inSubState scope inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
 
 -- | A constraint can be turned into a boolean
 instance Constraint Symbolic a => QuantifiedBool a where
@@ -226,13 +216,13 @@ instance Constraint Symbolic a => QuantifiedBool a where
 -- | Generate a constraint.
 -- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SV
-constraint st = join . constraintGen True mkSV st
+constraint st = join . constraintGen TopLevel mkSV st
    where mkSV _deps ops d = liftIO $ newExpr st KBool (SBVApp (QuantifiedBool ops (d 0)) [])
 
 -- | Generate a constraint, string version
 -- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
-constraintStr = constraintGen True toStr
+constraintStr = constraintGen TopLevel toStr
    where toStr deps _ body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
                                               , "(assert " ++ body 2 ++ ")"
                                               ]
