@@ -77,9 +77,9 @@ almostWeekend = optimize Lexicographic $ do
 --
 -- >>> weekendJustOver
 -- Optimal model:
---   first-day             = Mon :: Day
 --   weekendJustOver       = Mon :: Day
 --   DayAsWord8(first-day) =   0 :: Word8
+--   first-day             = Mon :: Day
 weekendJustOver :: IO OptimizeResult
 weekendJustOver = optimize Lexicographic $ do
                       day <- free "weekendJustOver"
