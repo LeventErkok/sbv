@@ -270,3 +270,5 @@ instance (SymVal a, SymVal b, SymVal c, SymVal e) => InductionTactic (SBV a -> S
                            .&& qb (\(Forall a) (Forall b) (Forall c) (Forall e) (Forall es) -> p a b c es .=> p a b c (e SL..: es))
                     .=> qb --------------------------------------------------------------------------------------------------------
                                (\(Forall a) (Forall b) (Forall c) (Forall xs) -> p a b c xs)
+
+{- HLint ignore module "Eta reduce" -}
