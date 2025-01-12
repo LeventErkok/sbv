@@ -65,10 +65,11 @@ tests =
                                             , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                             )
 
-      , goldenCapturedIO "lambda07" $ eval1 ([[1..5], [1..10], [1..20]] :: [[Integer]])
-                                            ( let sum = foldl (+) 0 in   sum .   map   sum
-                                            ,                          P.sum . P.map P.sum
-                                            )
+      -- no nested lambda's alas
+      , goldenCapturedIO "lambda07" $ eval1Err ([[1..5], [1..10], [1..20]] :: [[Integer]])
+                                               ( let sum = foldl (+) 0 in   sum .   map   sum
+                                               ,                          P.sum . P.map P.sum
+                                               )
 
       , goldenCapturedIO "lambda08" $ eval1 [1 .. 5 :: Float]   (map (+1), P.map (+1))
       , goldenCapturedIO "lambda09" $ eval1 [1 .. 5 :: Int8]    (map (+1), P.map (+1))
@@ -315,6 +316,11 @@ tests =
 
 eval1 :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
 eval1 cArg sf rf = eval1Gen cArg sf rf z3{verbose=True, redirectVerbose=Just rf}
+
+eval1Err :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> IO ()
+eval1Err cArg sf rf = void (eval1Gen cArg sf rf z3{verbose=True, redirectVerbose=Just rf})
+                      `C.catch` \(e::C.SomeException) -> do appendFile rf "CAUGHT EXCEPTION\n\n"
+                                                            appendFile rf (show e)
 
 eval1Gen :: (SymVal a, SymVal b, Show a, Show b, Eq b) => a -> (SBV a -> SBV b, a -> b) -> FilePath -> SMTConfig -> IO ()
 eval1Gen cArg (sFun, cFun) rf cfg = do m <- runSMTWith cfg run
