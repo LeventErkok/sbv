@@ -60,12 +60,22 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
 inSubState :: MonadIO m => LambdaScope -> State -> (State -> m b) -> m b
 inSubState scope inState comp = do
 
-        newLevel <- liftIO $ case scope of
-                               HigherOrderArg -> pure Nothing
-                               TopLevel       -> do ll <- readIORef (rLambdaLevel inState)
-                                                    pure $ case ll of
-                                                             Nothing -> Nothing
-                                                             Just i  -> Just $ i + 1
+        let noNesting = error $ unlines [ ""
+                                        , "*** Data.SBV.Lambda: Detected nested lambda-definitions."
+                                        , "***"
+                                        , "*** SBV uses firstification to deal-with lambdas, and SMTLib's first-order nature does not allow"
+                                        , "*** for easy translation of nested lambdas. As SMTLib gets higher-order features, SBV will eventually"
+                                        , "*** relax this restriction. In the mean-time, please rewrite your program without using nested-lambdas"
+                                        , "*** if possible. If this workaround isn't applicable, please report this as a use-case for further"
+                                        , "*** possible enhancements."
+                                        ]
+
+        newLevel <- do ll <- liftIO $ readIORef (rLambdaLevel inState)
+                       pure $ case ll of
+                                Nothing -> noNesting
+                                Just i  -> case scope of
+                                             HigherOrderArg -> Nothing
+                                             TopLevel       -> Just $ i + 1
 
         stEmpty <- S.mkNewState (stCfg inState) (LambdaGen newLevel)
 
