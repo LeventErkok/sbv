@@ -1600,12 +1600,14 @@ newExpr st k app = do
 -- This isn't a full solution, but handles the common case (hopefully!)
 checkConsistent :: SV -> SBVExpr -> IO ()
 checkConsistent lhs (SBVApp _ args) = mapM_ check args
-   where SV _ (NodeId (lhsContext, lambdaLevel, lhsId)) = lhs
-         check (SV _ (NodeId (rhsContext, ll, ni)))
+   where SV _ (NodeId (lhsContext, mbLambdaLevel, lhsId)) = lhs
+         check (SV _ (NodeId (rhsContext, mbLL, ni)))
            | lhsContext `compatibleContext` rhsContext && lambdaLevel >= ll && (lambdaLevel /= ll || lhsId > ni)
            = pure ()
            | True
            = contextMismatchError lhsContext rhsContext (Just (lambdaLevel, lhsId)) (Just (ll, ni))
+           where lambdaLevel = fromMaybe 0 mbLambdaLevel
+                 ll          = fromMaybe 0 mbLL
 {-# INLINE checkConsistent #-}
 
 -- | Are these compatible contexts? Either the same, or one of them is global
@@ -1924,7 +1926,7 @@ runSymbolic cfg currentRunMode comp = do
    runSymbolicInState st comp
 
 -- | Catch the catastrophic case of context mismatch
-contextMismatchError :: SBVContext -> SBVContext -> Maybe (Maybe Int, Int) -> Maybe (Maybe Int, Int) -> a
+contextMismatchError :: SBVContext -> SBVContext -> Maybe (Int, Int) -> Maybe (Int, Int) -> a
 contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
   where prefix | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
                                 , "***"
@@ -1936,6 +1938,7 @@ contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
                                 , "*** Refers to: " ++ show level1
                                 , "*** And also : " ++ show level2
                                 ]
+
         rest = [ "***"
                , "*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc."
                , "*** while another one is in execution, or use results from one such call in another."
