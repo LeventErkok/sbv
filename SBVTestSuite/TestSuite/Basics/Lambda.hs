@@ -65,7 +65,10 @@ tests =
                                             , P.map (\x -> P.sum [x  ^ i         | i <- [1..10 :: Integer]])
                                             )
 
-      -- no nested lambda's alas
+      -- no nested lambda's alas; the "map sum" term leads to a nested-lambda, and our current
+      -- lambda handler isn't smart enough to take care of such nestedness due to firstification
+      -- We can (hopefully) lift this when SMTLib starts officially supporting higher-order functions
+      -- and solvers get better at it.
       , goldenCapturedIO "lambda07" $ eval1Err ([[1..5], [1..10], [1..20]] :: [[Integer]])
                                                ( let sum = foldl (+) 0 in   sum .   map   sum
                                                ,                          P.sum . P.map P.sum
