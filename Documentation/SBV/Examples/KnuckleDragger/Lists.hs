@@ -33,6 +33,7 @@ import Data.SBV.Tools.KnuckleDragger
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
+-- >>> import Data.SBV
 -- >>> import Control.Exception
 #endif
 
@@ -273,16 +274,17 @@ mapAppend f = runKD $ do
 -- | @map f . reverse == reverse . map f@
 --
 -- >>> mapReverse
--- Lemma: revCons                          Q.E.D.
 -- Lemma: mapAppend                        Q.E.D.
--- Chain: mapReverse
---   Lemma: mapReverse.1                   Q.E.D.
---   Lemma: mapReverse.2                   Q.E.D.
---   Lemma: mapReverse.3                   Q.E.D.
---   Lemma: mapReverse.4                   Q.E.D.
---   Lemma: mapReverse.5                   Q.E.D.
---   Lemma: mapReverse.6                   Q.E.D.
--- Lemma: mapReverse                       Q.E.D.
+-- Inductive lemma: mapReverse
+--   Base: mapReverse.Base                 Q.E.D.
+--   Help: mapReverse.L1 vs L2             Q.E.D.
+--   Help: mapReverse.L2 vs L3             Q.E.D.
+--   Help: mapReverse.L3 vs L4             Q.E.D.
+--   Help: mapReverse.L4 vs L5             Q.E.D.
+--   Help: mapReverse.R1 vs R2             Q.E.D.
+--   Help: mapReverse.R2 vs R3             Q.E.D.
+--   Help: mapReverse.L5 vs R3             Q.E.D.
+--   Step: mapReverse.Step                 Q.E.D.
 -- [Proven] mapReverse
 mapReverse :: IO Proof
 mapReverse = runKD $ do
