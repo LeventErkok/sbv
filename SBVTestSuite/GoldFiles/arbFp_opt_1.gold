@@ -1,4 +1,4 @@
 Optimal model:
-  x                = 65504.0 :: FloatingPoint 5 11
   s0               = 65504.0 :: FloatingPoint 5 11
   toMetricSpace(x) =   64511 :: Word16
+  x                = 65504.0 :: FloatingPoint 5 11
