@@ -473,8 +473,6 @@ foldlOverAppend = runKD $ do
          -- induction is done on the last argument, so we use flip to make sure we induct on xs
          [induct (flip p)]
 
-{- Can't converge
-
 -- * Foldr-foldl correspondence
 
 -- | @foldr f e xs == foldl (flip f) e (reverse xs)@
@@ -489,31 +487,31 @@ foldrFoldlDuality = runKD $ do
 
        p e xs = foldr f e xs .== foldl (flip f) e (reverse xs)
 
-       join (a, b) = a P.++ P.reverse b
-
-       apE e xs ys = foldl (flip f) e (xs ++ ys) .== foldl (flip f) (foldl (flip f) e xs) ys
-       ap    xs ys = quantifiedBool $ \(Forall e) -> apE e xs ys
-
    -- An instance of foldlOverAppend above, except for our chosen f here which has a different type:
-   _fa <- lemma "foldlOverAppend"
-                (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
-                [induct (flip ap)]
+   -- Note the quantification of @e@ below is important since the recursive call changes the value.
+   foa <- do let apE e xs ys = foldl (flip f) e (xs ++ ys) .== foldl (flip f) (foldl (flip f) e xs) ys
+                 ap    xs ys = quantifiedBool $ \(Forall e) -> apE e xs ys
+             lemma "foldlOverAppend"
+                   (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
+                   [induct (flip ap)]
 
-   let strategy e x xs =
-               let ss = join ( [ foldr f e (x .: xs)
-                               , x `f` foldr f e xs
-                               , x `f` foldl (flip f) e (reverse xs)
-                               ]
-                             , [ foldl (flip f) e (reverse (x .: xs))
-                               , foldl (flip f) e (reverse xs ++ singleton x)
-                               , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)
-                               , x `f` foldl (flip f) e (reverse xs)
-                               ])
-               in P.zipWith (\l r -> (apE e (reverse xs) (singleton x)) .=> (l .== r)) ss (P.drop 1 ss)
+   inductiveLemma "foldrFoldlDuality"
+                  (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
+                  (\e x xs -> ( [ foldr f e (x .: xs)
+                                , x `f` foldr f e xs
+                                , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis
+                                ]
+                              , [ foldl (flip f) e (reverse (x .: xs))
+                                , foldl (flip f) e (reverse xs ++ singleton x)
+                                , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)  -- foa
+                                , foldl (flip f) (flip f (foldl (flip f) e (reverse xs)) x) nil
+                                , flip f (foldl (flip f) e (reverse xs)) x
+                                , x `f` foldl (flip f) e (reverse xs)
+                                ]
+                              ))
+                  [foa]
 
-   lemmaWith cvc5 "foldrFoldlDuality" (\(Forall @"e" e) (Forall @"x" x) (Forall @"xs" xs)
-       -> sAnd (strategy e x xs P.++ [p e xs]) .=> (p e nil .&& p e (x .: xs))) []
-
+{-
 -- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its right-unit: we have:
