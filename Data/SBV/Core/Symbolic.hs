@@ -139,7 +139,7 @@ genSBVContext = do ctx <- SBVContext <$> randomIO
                       else pure ctx
 
 -- | A symbolic node id
-newtype NodeId = NodeId { getId :: (SBVContext, Int, Int) } -- Lambda-level, and node-id
+newtype NodeId = NodeId { getId :: (SBVContext, Maybe Int, Int) } -- Lambda-level, and node-id
   deriving (Ord, G.Data)
 
 -- Equality is pair-wise, except we accommodate for negative node-id; which is reserved for true/false
@@ -175,8 +175,9 @@ instance Show SV where
                                      -1 -> "true"
                                      _  -> prefix ++ 's' : show n
         where prefix = case l of
-                         0 -> ""
-                         _ -> 'l' : show l ++ "_"
+                         Nothing -> "arg"   -- top-level lambda
+                         Just 0  -> ""
+                         Just i  -> 'l' : show i ++ "_"
 
 -- | Kind of a symbolic word.
 swKind :: SV -> Kind
@@ -194,11 +195,11 @@ forceSVArg (SV k n) = k `seq` n `seq` return ()
 
 -- | Constant False as an 'SV'. Note that this value always occupies slot -2 and level 0.
 falseSV :: SV
-falseSV = SV KBool $ NodeId (globalSBVContext, 0, -2)
+falseSV = SV KBool $ NodeId (globalSBVContext, Just 0, -2)
 
 -- | Constant True as an 'SV'. Note that this value always occupies slot -1 and level 0.
 trueSV :: SV
-trueSV  = SV KBool $ NodeId (globalSBVContext, 0, -1)
+trueSV  = SV KBool $ NodeId (globalSBVContext, Just 0, -1)
 
 -- | Symbolic operations
 data Op = Plus
@@ -1039,7 +1040,7 @@ isRunIStage s = case s of
 -- | Different means of running a symbolic piece of code
 data SBVRunMode = SMTMode QueryContext IStage Bool SMTConfig   -- ^ In regular mode, with a stage. Bool is True if this is SAT.
                 | CodeGen                                      -- ^ Code generation mode.
-                | LambdaGen Int                                -- ^ Inside a lambda-expression at level
+                | LambdaGen (Maybe Int)                        -- ^ Inside a lambda-expression at level. If Nothing, then closed lambda.
                 | Concrete (Maybe (Bool, [(NamedSymVar, CV)])) -- ^ Concrete simulation mode, with given environment if any. If Nothing: Random.
 
 -- Show instance for SBVRunMode; debugging purposes only
@@ -1162,8 +1163,8 @@ addUserInput sv nm = goAll . goUser
 -- can be found this way.
 lookupInput :: Eq a => (a -> SV) -> SV -> S.Seq a -> Maybe a
 lookupInput f sv ns
-   | l == 0 = res
-   | True   = Nothing  -- l != 0, a lambda var, so we ignore
+   | l == Just 0 = res
+   | True        = Nothing  -- l != Just 0, a lambda var, whether top-level or in a scope, so we ignore
   where
     (_, l, i) = getId (swNodeId sv)
     svs       = fmap f ns
@@ -1222,7 +1223,7 @@ data State  = State { sbvContext          :: SBVContext
                     , rCInfo              :: IORef [(String, CV)]
                     , rObservables        :: IORef (S.Seq (Name, CV -> Bool, SV))
                     , rctr                :: IORef Int
-                    , rLambdaLevel        :: IORef Int
+                    , rLambdaLevel        :: IORef (Maybe Int)     -- If Nothing, then top-level lambda
                     , rUsedKinds          :: IORef KindSet
                     , rUsedLbls           :: IORef (Set.Set String)
                     , rinps               :: IORef Inputs
@@ -1852,10 +1853,10 @@ mkNewState cfg currentRunMode = liftIO $ do
      rm                 <- newIORef currentRunMode
      ctr                <- newIORef (-2) -- start from -2; False and True will always occupy the first two elements
      lambda             <- newIORef $ case currentRunMode of
-                                        SMTMode{}   -> 0
-                                        CodeGen{}   -> 0
-                                        Concrete{}  -> 0
-                                        LambdaGen i -> i
+                                        SMTMode{}     -> Just 0
+                                        CodeGen{}     -> Just 0
+                                        Concrete{}    -> Just 0
+                                        LambdaGen mbi -> mbi
      cInfo              <- newIORef []
      observes           <- newIORef mempty
      pgm                <- newIORef (SBVPgm S.empty)
@@ -1923,7 +1924,7 @@ runSymbolic cfg currentRunMode comp = do
    runSymbolicInState st comp
 
 -- | Catch the catastrophic case of context mismatch
-contextMismatchError :: SBVContext -> SBVContext -> Maybe (Int, Int) -> Maybe (Int, Int) -> a
+contextMismatchError :: SBVContext -> SBVContext -> Maybe (Maybe Int, Int) -> Maybe (Maybe Int, Int) -> a
 contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
   where prefix | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
                                 , "***"

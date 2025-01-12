@@ -39,6 +39,7 @@ import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
 import Data.IORef (readIORef, modifyIORef')
 import Data.List
+import Data.Maybe (fromMaybe)
 
 import qualified Data.Foldable as F
 
@@ -51,10 +52,24 @@ data Defn = Defn [String]                        -- The uninterpreted names refe
                  (Int -> String)                 -- Body, given the tab amount.
 
 -- | Maka a new substate from the incoming state, sharing parts as necessary
-inSubState :: MonadIO m => State -> (State -> m b) -> m b
-inSubState inState comp = do
-        ll <- liftIO $ readIORef (rLambdaLevel inState)
-        stEmpty <- S.mkNewState (stCfg inState) (LambdaGen (ll + 1))
+inSubState :: MonadIO m => Bool -> State -> (State -> m b) -> m b
+inSubState allowFreeVars inState comp = do
+
+        -- If we're not allowing-free variables (i.e., closed lambdas as those that would
+        -- be passed to map/fold etc., then we mark that as top-lambda by marking the new-level with Nothing
+        newLevel <- if allowFreeVars
+                       then do ll <- liftIO $ readIORef (rLambdaLevel inState)
+                               case ll of
+                                 Nothing    -> -- nested lambda in a top-level lambda. Should we really
+                                               -- allow this? I don't see any problems with it, but this might prove
+                                               -- to be problematic. We'll cross that bridge when we get there
+                                               pure $ Just 1
+
+                                 Just level -> pure $ Just $ level + 1
+
+                       else pure Nothing
+
+        stEmpty <- S.mkNewState (stCfg inState) (LambdaGen newLevel)
 
         let share fld = fld inState   -- reuse the field from the parent-context
             fresh fld = fld stEmpty   -- create a new field here
@@ -127,7 +142,7 @@ extractAllUniversals other      = error $ unlines [ ""
 
 -- | Generic creator for anonymous lamdas.
 lambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
-lambdaGen allowFreeVars trans inState fk f = inSubState inState $ \st -> handle <$> convert st fk (mkLambda st f)
+lambdaGen allowFreeVars trans inState fk f = inSubState allowFreeVars inState $ \st -> handle <$> convert st fk (mkLambda st f)
   where handle d@(Defn _ frees _ _ _)
           | allowFreeVars || null frees
           = trans d
@@ -163,25 +178,25 @@ lambdaStr st allowFreeVars k a = SMTLambda <$> lambdaGen allowFreeVars mkLam st 
          mkLam (Defn _unints _frees (Just params) _ops body) = "(lambda " ++ extractAllUniversals params ++ "\n" ++ body 2 ++ ")"
 
 -- | Generaic creator for named functions,
-namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => (Defn -> b) -> State -> Kind -> a -> m b
-namedLambdaGen trans inState fk f = inSubState inState $ \st -> trans <$> convert st fk (mkLambda st f)
+namedLambdaGen :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> (Defn -> b) -> State -> Kind -> a -> m b
+namedLambdaGen allowFreeVars trans inState fk f = inSubState allowFreeVars inState $ \st -> trans <$> convert st fk (mkLambda st f)
 
 -- | Create a named SMTLib function, in the given state.
-namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> Kind -> a -> m SMTDef
-namedLambda inState nm fk = namedLambdaGen mkDef inState fk
+namedLambda :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> State -> String -> Kind -> a -> m SMTDef
+namedLambda allowFreeVars inState nm fk = namedLambdaGen allowFreeVars mkDef inState fk
    where mkDef (Defn unints _frees params ops body) = SMTDef nm fk unints ops (extractAllUniversals <$> params) body
 
 -- | Create a named SMTLib function, in the given state, string version
-namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => State -> String -> SBVType -> a -> m String
-namedLambdaStr inState nm t = namedLambdaGen mkDef inState fk
+namedLambdaStr :: (MonadIO m, Lambda (SymbolicT m) a) => Bool -> State -> String -> SBVType -> a -> m String
+namedLambdaStr allowFreeVars inState nm t = namedLambdaGen allowFreeVars mkDef inState fk
    where mkDef (Defn unints _frees params ops body) = concat $ declUserFuns [(SMTDef nm fk unints ops (extractAllUniversals <$> params) body, t)]
          fk = case t of
                 SBVType [] -> error $ "namedLambdaStr: Invalid type for " ++ show nm ++ ", empty!"
                 SBVType xs -> last xs
 
 -- | Generic constraint generator.
-constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => ([String] -> [Op] -> (Int -> String) -> b) -> State -> a -> m b
-constraintGen trans inState@State{rProgInfo} f = do
+constraintGen :: (MonadIO m, Constraint (SymbolicT m) a) => Bool -> ([String] -> [Op] -> (Int -> String) -> b) -> State -> a -> m b
+constraintGen allowFreeVars trans inState@State{rProgInfo} f = do
    -- indicate we have quantifiers
    liftIO $ modifyIORef' rProgInfo (\u -> u{hasQuants = True})
 
@@ -192,21 +207,23 @@ constraintGen trans inState@State{rProgInfo} f = do
        mkGroup (ALL, s) = "(forall " ++ s
        mkGroup (EX,  s) = "(exists " ++ s
 
-   inSubState inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
+   inSubState allowFreeVars inState $ \st -> mkDef <$> convert st KBool (mkConstraint st f >>= output >> pure ())
 
 -- | A constraint can be turned into a boolean
 instance Constraint Symbolic a => QuantifiedBool a where
   quantifiedBool qb = SBV $ SVal KBool $ Right $ cache f
-    where f st = liftIO $ constraint st qb
+    where f st = liftIO $ constraint st qb 
 
 -- | Generate a constraint.
+-- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
 constraint :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m SV
-constraint st = join . constraintGen mkSV st
+constraint st = join . constraintGen True mkSV st
    where mkSV _deps ops d = liftIO $ newExpr st KBool (SBVApp (QuantifiedBool ops (d 0)) [])
 
 -- | Generate a constraint, string version
+-- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
 constraintStr :: (MonadIO m, Constraint (SymbolicT m) a) => State -> a -> m String
-constraintStr = constraintGen toStr
+constraintStr = constraintGen True toStr
    where toStr deps _ body = intercalate "\n" [ "; user defined axiom: " ++ depInfo deps
                                               , "(assert " ++ body 2 ++ ")"
                                               ]
@@ -223,7 +240,7 @@ convert st expectedKind comp = do
    pure $ toLambda level curProgInfo (stCfg st) expectedKind res
 
 -- | Convert the result of a symbolic run to a more abstract representation
-toLambda :: Int -> ProgInfo -> SMTConfig -> Kind -> Result -> Defn
+toLambda :: Maybe Int -> ProgInfo -> SMTConfig -> Kind -> Result -> Defn
 toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgnsSeq} = sh result
  where tbd xs = error $ unlines $ "*** Data.SBV.lambda: Unsupported construct." : map ("*** " ++) ("" : xs ++ ["", report])
        bad xs = error $ unlines $ "*** Data.SBV.lambda: Impossible happened."   : map ("*** " ++) ("" : xs ++ ["", bugReport])
@@ -323,7 +340,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                        mkLet (s, v) = mkBind (show s) v
 
                        -- Align according to level.
-                       shift = replicate (24 + 16 * (level - 1)) ' '
+                       shift = replicate (24 + 16 * (fromMaybe 0 level - 1)) ' '
 
                        mkTable (((i, ak, rk), elts), _) = mkBind nm (lambdaTable (map (const ' ') nm) ak rk elts)
                           where nm = "table" ++ show i
@@ -343,7 +360,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                                 mkLocalBind (b, Just l)  = mkLet b ++ " ; " ++ l
 
                getLLI :: NodeId -> (Int, Int)
-               getLLI (NodeId (_, l, i)) = (l, i)
+               getLLI (NodeId (_, mbl, i)) = (fromMaybe 0 mbl, i)
 
                -- if we have just one definition returning it, and if the expression itself is simple enough (single-line), simplify
                simpleBody :: [((SV, String), Maybe String)] -> SV -> Maybe String
