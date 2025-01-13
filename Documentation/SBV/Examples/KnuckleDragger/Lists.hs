@@ -545,6 +545,30 @@ foldrFoldlDuality = runKD $ do
 -- We have:
 --
 -- >>> foldrFoldlDualityGeneralized
+-- Axiom: @ is associative                 Axiom.
+-- Axiom: e is left unit                   Axiom.
+-- Axiom: e is right unit                  Axiom.
+-- Inductive lemma: foldl over @
+--   Base: foldl over @.Base               Q.E.D.
+--   Help: foldl over @.L1 vs L2           Q.E.D.
+--   Help: foldl over @.L2 vs L3           Q.E.D.
+--   Help: foldl over @.L3 vs L4           Q.E.D.
+--   Help: foldl over @.R1 vs R2           Q.E.D.
+--   Help: foldl over @.R2 vs R3           Q.E.D.
+--   Help: foldl over @.R3 vs R4           Q.E.D.
+--   Help: foldl over @.L4 vs R4           Q.E.D.
+--   Step: foldl over @.Step               Q.E.D.
+-- Inductive lemma: foldrFoldlDuality
+--   Base: foldrFoldlDuality.Base          Q.E.D.
+--   Help: foldrFoldlDuality.L1 vs L2      Q.E.D.
+--   Help: foldrFoldlDuality.L2 vs L3      Q.E.D.
+--   Help: foldrFoldlDuality.L3 vs L4      Q.E.D.
+--   Help: foldrFoldlDuality.L4 vs L5      Q.E.D.
+--   Help: foldrFoldlDuality.R1 vs R2      Q.E.D.
+--   Help: foldrFoldlDuality.R2 vs R3      Q.E.D.
+--   Help: foldrFoldlDuality.L5 vs R3      Q.E.D.
+--   Step: foldrFoldlDuality.Step          Q.E.D.
+-- [Proven] foldrFoldlDuality
 foldrFoldlDualityGeneralized :: IO Proof
 foldrFoldlDualityGeneralized  = runKD $ do
    let (@) :: SA -> SA -> SA
