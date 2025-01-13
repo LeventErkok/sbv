@@ -622,64 +622,100 @@ foldrFoldlDualityGeneralized  = runKD $ do
 
 -- | Given:
 -- @
---        (x <> y) @ z = x \<> (y \@ z)
---   and  e \@ x = x \<> e
+--        (x <+> y) <*> z = x <+> (y <*> z)
+--   and  x <+> e = e <*> x
 -- @
 --
 -- Proves:
 --
 -- @
---    foldl (\@\) e xs = foldr (\<>) e xs@
+--    foldr (<+>) e xs = foldl (<*>) e xs
 -- @
 --
--- We have:
+-- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem. We have:
 --
 -- >>> foldrFoldl
+-- Axiom: <+> over <*>                     Axiom.
+-- Axiom: unit                             Axiom.
+-- Inductive lemma: foldl over <*>/<+>
+--   Base: foldl over <*>/<+>.Base         Q.E.D.
+--   Help: foldl over <*>/<+>.L1 vs L2     Q.E.D.
+--   Help: foldl over <*>/<+>.L2 vs L3     Q.E.D.
+--   Help: foldl over <*>/<+>.L3 vs L4     Q.E.D.
+--   Help: foldl over <*>/<+>.R1 vs R2     Q.E.D.
+--   Help: foldl over <*>/<+>.L4 vs R2     Q.E.D.
+--   Step: foldl over <*>/<+>.Step         Q.E.D.
+-- Inductive lemma: foldrFoldl
+--   Base: foldrFoldl.Base                 Q.E.D.
+--   Help: foldrFoldl.L1 vs L2             Q.E.D.
+--   Help: foldrFoldl.L2 vs L3             Q.E.D.
+--   Help: foldrFoldl.R1 vs R2             Q.E.D.
+--   Help: foldrFoldl.R2 vs R3             Q.E.D.
+--   Help: foldrFoldl.R3 vs R4             Q.E.D.
+--   Help: foldrFoldl.L3 vs R4             Q.E.D.
+--   Step: foldrFoldl.Step                 Q.E.D.
+-- [Proven] foldrFoldl
 foldrFoldl :: IO Proof
 foldrFoldl = runKD $ do
 
    let -- Declare the operators as uninterpreted functions
-       (@) :: SB -> SA -> SB
-       (@) = uninterpret "|@|"
+       (<+>) :: SA -> SB -> SB
+       (<+>) = uninterpret "<+>"
 
-       (<>) :: SA -> SB -> SB
-       (<>) = uninterpret "|<>|"
+       (<*>) :: SB -> SA -> SB
+       (<*>) = uninterpret "<*>"
 
        -- The unit element
        e :: SB
        e = uninterpret "e"
 
-       -- Equivalence predicate
-       p :: SList A -> SBool
-       p xs = foldl (@) e xs .== foldr (<>) e xs
-
    -- Assumptions about the operators
 
-   -- (x <> y) @ z == x <> (y @ z)
-   axm1 <- axiom "<> over @" $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <> y) @ z .== x <> (y @ z)
+   -- (x <+> y) <*> z == x <+> (y <*> z)
+   axm1 <- axiom "<+> over <*>" $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
 
-   -- e @ x == x <> e
-   axm2 <- axiom "unit" $ \(Forall @"x" x) -> e @ x .== x <> e
+   -- x <+> e == e <*> x
+   axm2 <- axiom "unit" $ \(Forall @"x" x) -> x <+> e .== e <*> x
 
-   -- Helper: foldl (@) (y <> z) xs = y <> foldl (@) z xs
-   h <- do
-      let hp y z xs = foldl (@) (y <> z) xs .== y <> foldl (@) z xs
+   -- Helper: x <+> foldl (<*>) y xs == foldl (<*>) (x <+> y) xs
+   -- NB. We prove this so y is explicitly quantified, as the inductive hypothesis needs to
+   -- instantiate it using a different expression, where @y@ will get @y <*> z@.
+   helper <- do
+      let hp x y xs = x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs
 
-      inductiveLemma "foldl over @"
-                     (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
+      inductiveLemma "foldl over <*>/<+>"
+                     (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
                      (pure ())
-                     (\y x xs -> let z = uninterpret "z"
-                                 in ( [ foldl (@) (y <> z) (x .: xs)
-                                      , foldl (@) ((y <> z) @ x) xs
-                                      , foldl (@) (y <> (z @ x)) xs   -- axiom 1
+                     -- Using z to avoid confusion with the variable x already present, following Bird.
+                     (\x z xs -> let y = uninterpret "y"
+                                 in ( [ x <+> foldl (<*>) y (z .: xs)
+                                      , x <+> foldl (<*>) (y <*> z) xs
+                                      , foldl (<*>) (x <+> (y <*> z)) xs  -- induction hypothesis, y gets y <*> z
+                                      , foldl (<*>) ((x <+> y) <*> z) xs  -- axiom 1
                                       ]
-                                    , [ y <> foldl (@) z (x .: xs)
-                                      , y <> foldl (@) (z @ x) xs     -- inductive hypothesis, where z = z @ x in the inductive case
+                                    , [ foldl (<*>) (x <+> y) (z .: xs)
+                                      , foldl (<*>) ((x <+> y) <*> z) xs
                                       ]))
                      [axm1]
 
+   let -- Equivalence predicate
+       p :: SList A -> SBool
+       p xs = foldr (<+>) e xs .== foldl (<*>) e xs
+
    -- Final proof:
-   lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
+   inductiveLemma "foldrFoldl"
+                  (\(Forall @"xs" xs) -> p xs)
+                  (pure ())
+                  (\x xs -> ( [ foldr (<+>) e (x .: xs)
+                              , x <+> foldr (<+>) e xs     -- induction hypothesis
+                              , x <+> foldl (<*>) e xs
+                              ]
+                            , [ foldl (<*>) e (x .: xs)
+                              , foldl (<*>) (e <*> x) xs
+                              , foldl (<*>) (x <+> e) xs   -- axm2
+                              , x <+> foldl (<*>) e xs     -- helper
+                              ]))
+                  [axm2, helper]
 
 {-
 -- * Bookkeeping law
