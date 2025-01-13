@@ -215,7 +215,7 @@ lenAppend2 = runKD $
 
 -- * Any, all, and filtering
 
--- | |not (all id xs) == any not xs|
+-- | @not (all id xs) == any not xs@
 --
 -- A list of booleans is not all true, if any of them is false. We have:
 --
@@ -621,6 +621,7 @@ foldrFoldlDualityGeneralized  = runKD $ do
 -- * Another foldl-foldr correspondence
 
 -- | Given:
+--
 -- @
 --        (x <+> y) <*> z = x <+> (y <*> z)
 --   and  x <+> e = e <*> x
