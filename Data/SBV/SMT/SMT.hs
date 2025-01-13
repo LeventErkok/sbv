@@ -47,7 +47,7 @@ import qualified Control.Exception as C
 import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
 import Control.Monad      (zipWithM, mplus)
-import Data.Char          (isSpace)
+import Data.Char          (isSpace, isDigit)
 import Data.Maybe         (isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, transpose, isInfixOf)
@@ -607,8 +607,16 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
 
         mkBody (defs, dflt) = map align body
           where ls       = map line defs
-                defLine  = (replicate noOfArgs "_", scv dflt)
                 body     = ls ++ [defLine]
+
+                -- is the default an argument? This is likely to be z3 specific
+                defVal  = scv dflt
+                defLine = case span (/= '!') defVal of
+                                 (arg, '!':n) | all isDigit n -> let argN = arg ++ n in (mkParams argN (read n), argN)
+                                 _                            -> (replicate noOfArgs "_", scv dflt)
+
+                mkParams :: String -> Int -> [String]
+                mkParams arg i = replicate (i-1) "_" ++ arg : replicate (noOfArgs - i) "_"
 
                 colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
 
