@@ -526,7 +526,6 @@ foldrFoldlDuality = runKD $ do
                               ))
                   [foa]
 
-{-
 -- * Foldr-foldl duality, generalized
 
 -- | Given:
@@ -554,26 +553,48 @@ foldrFoldlDualityGeneralized  = runKD $ do
        e :: SA
        e = uninterpret "e"
 
-   axm1 <- axiom "@ is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z)
-   axm2 <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
-   axm3 <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
+   assoc <- axiom "@ is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z)
+   lunit <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
+   runit <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
 
    -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
-   h <- do let hp xs = quantifiedBool $ \(Forall @"y" y) (Forall @"z" z) -> foldl (@) (y @ z) xs .== y @ foldl (@) z xs
-           lemma "foldl over @" (\(Forall @"xs" xs) -> hp xs) [axm1, axm2, induct hp]
+   -- Note that we prove the more generalized lemma over forall-z, as the
+   -- inductive case requires a different substitution.
+   h <- do let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
+           inductiveLemma "foldl over @"
+                          (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
+                          (pure ())
+                          (\y x xs -> let z = uninterpret "z"
+                                      in ( [ foldl (@) (y @ z) (x .: xs)
+                                           , foldl (@) ((y @ z) @ x) xs
+                                           , foldl (@) (y @ (z @ x)) xs
+                                           , foldl (@) y (z @ x .: xs)
+                                           ]
+                                         , [ y @ foldl (@) z (x .: xs)
+                                           , y @ foldl (@) (z @ x) xs    -- inductive hypothesis, where z = z @ x in the inductive case
+                                           , foldl (@) (y @ (z @ x)) xs
+                                           , foldl (@) y (z @ x .: xs)
+                                           ]))
+                          [assoc]
 
    let p xs = foldr (@) e xs .== foldl (@) e xs
 
-   inductiveLemma "foldrFoldlDualityGeneralized"
+   inductiveLemma "foldrFoldlDuality"
                   (\(Forall @"xs" xs) -> p xs)
                   (pure ())
                   (\x xs -> ( [ foldr (@) e (x .: xs)
                               , x @ foldr (@) e xs
+                              , x @ foldl (@) e xs    -- inductive hypothesis
+                              , foldl (@) (x @ e) xs  -- helper
+                              , foldl (@) x xs
                               ]
                             , [ foldl (@) e (x .: xs)
+                              , foldl (@) (e @ x) xs
+                              , foldl (@) x xs
                               ]))
-                  [h, axm2, axm3]
+                  [assoc, lunit, runit, h]
 
+{-
 -- * Bookkeeping law
 
 -- | Provided @f@ is associative and @a@ is its right-unit: we have:
