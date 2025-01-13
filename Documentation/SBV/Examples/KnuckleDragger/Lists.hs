@@ -531,15 +531,15 @@ foldrFoldlDuality = runKD $ do
 -- | Given:
 --
 -- @
---     x @ (y @ z) = (x @ y) @ z     (associativity of @)
--- and e @ x = x                     (left unit)
--- and x @ e = x                     (right unit)
+--     x \@ (y \@ z) = (x \@ y) \@ z     (associativity of @)
+-- and e \@ x = x                     (left unit)
+-- and x \@ e = x                     (right unit)
 -- @
 --
 -- Prove:
 --
 -- @
---     foldr (@) e xs = foldl (@) e xs
+--     foldr (\@) e xs = foldl (\@) e xs
 -- @
 --
 -- We have:
@@ -623,14 +623,14 @@ foldrFoldlDualityGeneralized  = runKD $ do
 -- | Given:
 --
 -- @
---        (x <+> y) <*> z = x <+> (y <*> z)
---   and  x <+> e = e <*> x
+--        (x \<+> y) \<*> z = x \<+> (y \<*> z)
+--   and  x \<+> e = e \<*> x
 -- @
 --
 -- Proves:
 --
 -- @
---    foldr (<+>) e xs = foldl (<*>) e xs
+--    foldr (\<+>) e xs = foldl (\<*>) e xs
 -- @
 --
 -- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem. We have:
@@ -691,7 +691,7 @@ foldrFoldl = runKD $ do
                      (\x z xs -> let y = uninterpret "y"
                                  in ( [ x <+> foldl (<*>) y (z .: xs)
                                       , x <+> foldl (<*>) (y <*> z) xs
-                                      , foldl (<*>) (x <+> (y <*> z)) xs  -- induction hypothesis, y gets y <*> z
+                                      , foldl (<*>) (x <+> (y <*> z)) xs  -- inductive hypothesis, y gets y <*> z
                                       , foldl (<*>) ((x <+> y) <*> z) xs  -- axiom 1
                                       ]
                                     , [ foldl (<*>) (x <+> y) (z .: xs)
@@ -708,7 +708,7 @@ foldrFoldl = runKD $ do
                   (\(Forall @"xs" xs) -> p xs)
                   (pure ())
                   (\x xs -> ( [ foldr (<+>) e (x .: xs)
-                              , x <+> foldr (<+>) e xs     -- induction hypothesis
+                              , x <+> foldr (<+>) e xs     -- inductive hypothesis
                               , x <+> foldl (<*>) e xs
                               ]
                             , [ foldl (<*>) e (x .: xs)
@@ -718,16 +718,44 @@ foldrFoldl = runKD $ do
                               ]))
                   [axm2, helper]
 
-{-
 -- * Bookkeeping law
 
--- | Provided @f@ is associative and @a@ is its right-unit: we have:
+-- | Provided @f@ is associative and @a@ is its both left and right-unit, we have:
 --
--- | @foldr f a . concat == foldr f a . map (foldr f a)@
+-- @foldr f a . concat == foldr f a . map (foldr f a)@
+--
+-- NB. As of early 2025, we cannot express the above theorem in SBV directly, since it involves nested lambdas.
+-- (On the right hand side map has an argument that is represented as a foldr, which itself has a lambda.) As
+-- SMTLib moves to a higher-order logic, we intend to make such expressions readily expressable. In the mean time,
+-- we use an equivalent (albeit roundabout) version, where we define map-foldr combo as a recursive function ourselves.
 --
 -- We have:
 --
 -- >>> bookKeeping
+-- Axiom: f is associative                 Axiom.
+-- Axiom: a is right-unit                  Axiom.
+-- Axiom: a is left-unit                   Axiom.
+-- Lemma: foldrOverAppend                  Q.E.D.
+-- Inductive lemma: foldBase
+--   Base: foldBase.Base                   Q.E.D.
+--   Help: foldBase.L1 vs L2               Q.E.D.
+--   Help: foldBase.L2 vs L3               Q.E.D.
+--   Help: foldBase.R1 vs R2               Q.E.D.
+--   Help: foldBase.R2 vs R3               Q.E.D.
+--   Help: foldBase.L3 vs R3               Q.E.D.
+--   Step: foldBase.Step                   Q.E.D.
+-- Inductive lemma: bookKeeping
+--   Base: bookKeeping.Base                Q.E.D.
+--   Help: bookKeeping.L1 vs L2            Q.E.D.
+--   Help: bookKeeping.L2 vs L3            Q.E.D.
+--   Help: bookKeeping.L3 vs L4            Q.E.D.
+--   Help: bookKeeping.L4 vs L5            Q.E.D.
+--   Help: bookKeeping.R1 vs R2            Q.E.D.
+--   Help: bookKeeping.R2 vs R3            Q.E.D.
+--   Help: bookKeeping.R3 vs R4            Q.E.D.
+--   Help: bookKeeping.L5 vs R4            Q.E.D.
+--   Step: bookKeeping.Step                Q.E.D.
+-- [Proven] bookKeeping
 bookKeeping :: IO Proof
 bookKeeping = runKD $ do
    let a :: SA
@@ -736,18 +764,48 @@ bookKeeping = runKD $ do
        f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
+       -- Fuse map (foldr f a) in the theorem into one call to avoid nested lambdas. See above note.
+       mapFoldr :: SA -> SList [A] -> SList A
+       mapFoldr = smtFunction "mapFoldr" $ \e xss -> ite (null xss)
+                                                         nil
+                                                         (foldr f e (head xss) .: mapFoldr e (tail xss))
+
+       p xss = foldr f a (concat xss) .== foldr f a (mapFoldr a xss)
 
    assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   unit  <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
+   rUnit  <- axiom "a is right-unit" (\(Forall @"x" x) -> x `f` a .== x)
+   lUnit  <- axiom "a is left-unit"  (\(Forall @"x" x) -> a `f` x .== x)
+
+   foa <- use foldrOverAppend
+
+   -- Helper:
+   --   foldr f y xs = foldr f a xs `f` y
+   helper <- inductiveLemma "foldBase"
+                            (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
+                            (pure ())
+                            (\y x xs -> ( [ foldr f y (x .: xs)
+                                          , x `f` foldr f y xs
+                                          , x `f` (foldr f a xs `f` y)   -- inductive hypothesis
+                                          ]
+                                        , [ foldr f a (x .: xs) `f` y
+                                          , (x `f` foldr f a xs) `f` y
+                                          , x `f` (foldr f a xs `f` y)
+                                          ]))
+                            [assoc, lUnit]
 
    inductiveLemma "bookKeeping"
                   (\(Forall @"xss" xss) -> p xss)
                   (pure ())
-                  (\xs xss -> ( [ foldr f a (concat (xs .: xss))
-                                ]
-                              , [ foldr f a (map (foldr f a) (xs .: xss))
-                                ]
-                              ))
-                  [assoc, unit]
--}
+                  (\xs xss -> let y = foldr f a (mapFoldr a xss)
+                              in  ( [ foldr f a (concat (xs .: xss))
+                                    , foldr f a (xs ++ concat xss)
+                                    , foldr f (foldr f a (concat xss)) xs      -- foa: foldr-over-append
+                                    , foldr f (foldr f a (mapFoldr a xss)) xs  -- inductive hypothesis
+                                    , foldr f y xs
+                                    ]
+                                  , [ foldr f a (mapFoldr a (xs .: xss))
+                                    , foldr f a (foldr f a xs .: mapFoldr a xss)
+                                    , foldr f a xs `f` foldr f a (mapFoldr a xss)
+                                    , foldr f a xs `f` y
+                                    ]))
+                  [assoc, rUnit, foa, helper]
