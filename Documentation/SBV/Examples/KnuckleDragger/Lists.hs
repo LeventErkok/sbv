@@ -720,7 +720,7 @@ foldrFoldl = runKD $ do
 
 -- * Bookkeeping law
 
--- | Provided @f@ is associative and @a@ is its both left and right-unit, we have:
+-- | Provided @f@ is associative and @a@ is its both left and right-unit:
 --
 -- @foldr f a . concat == foldr f a . map (foldr f a)@
 --
