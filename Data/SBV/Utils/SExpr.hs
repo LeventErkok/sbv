@@ -13,7 +13,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction, unQuote, unBar) where
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction, unQuote, unBar, simplifyECon) where
 
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
@@ -587,19 +587,20 @@ makeHaskellFunction resp nm isCurried mbArgs
         getArg (EApp [ECon argName, _]) = Just argName
         getArg _                        = Nothing
 
+-- | z3 prints uninterpreted values like this: T!val!4 or T_val_4. Turn that into T_4
+simplifyECon :: String -> String
+simplifyECon "" = ""
+simplifyECon ('!':'v':'a':'l':'!':rest) = '_' : simplifyECon rest
+simplifyECon ('_':'v':'a':'l':'_':rest) = '_' : simplifyECon rest
+simplifyECon (c:cs) = c : simplifyECon cs
+
 -- Print as a Haskell expression, with minimal parens.
 -- This isn't fool-proof; but it does an OK job
 hprint :: [(String, String)] -> SExpr -> String
 hprint env = go (0 :: Int)
-  where sanitize = map clean
-
-        -- z3 uses ! as part of names, replace with _
-        clean '!' = '_'
-        clean c   = c
-
-        go p e = case e of
+  where go p e = case e of
                    ECon n | Just a <- n `lookup` env -> a
-                          | True                     -> sanitize n
+                          | True                     -> simplifyECon n
                    ENum (i, _)       -> cnst i
                    EReal  a          -> cnst a
                    EFloat f          -> cnst f
@@ -608,7 +609,7 @@ hprint env = go (0 :: Int)
 
                    -- Handle lets
                    EApp [ECon "let", EApp binders, rhs] ->
-                       let getBind (EApp [ECon nm, def]) = sanitize nm ++ " = " ++  go 0 def
+                       let getBind (EApp [ECon nm, def]) = simplifyECon nm ++ " = " ++  go 0 def
                            getBind bnd                   = go 0 bnd
 
                            binds = '{' : intercalate "; " (map getBind binders) ++ "}"
