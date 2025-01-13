@@ -13,7 +13,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction) where
+module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction, unQuote, unBar) where
 
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
@@ -563,7 +563,7 @@ makeHaskellFunction resp nm isCurried mbArgs
        Right (EApp [EApp [ECon o, e]]) | o == nm -> do (args, bd) <- lambda e
                                                        let params | isCurried = unwords args
                                                                   | True      = '(' : intercalate ", " args ++ ")"
-                                                       return $ nm ++ " " ++ params ++ " = " ++ bd
+                                                       return $ unBar nm ++ " " ++ params ++ " = " ++ bd
        _                                         -> Nothing
 
   where -- infinite supply of names; starting with the ones we're given
@@ -689,5 +689,18 @@ hprint env = go (0 :: Int)
         isEQ    = (`elem` ["=",  "fp.eq"])
         isAND   = (== "and")
         isOR    = (== "or")
+
+-- Remove one pair of surrounding 'c's, if present
+noSurrounding :: Char -> String -> String
+noSurrounding c (c':cs@(_:_)) | c == c' && c == last cs  = init cs
+noSurrounding _ s                                        = s
+
+-- Remove a pair of surrounding quotes
+unQuote :: String -> String
+unQuote = noSurrounding '"'
+
+-- Remove a pair of surrounding bars
+unBar :: String -> String
+unBar = noSurrounding '|'
 
 {- HLint ignore chainAssigns "Redundant if" -}

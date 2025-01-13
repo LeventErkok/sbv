@@ -66,18 +66,16 @@ import Data.SBV.Utils.PrettyNum (showNegativeNumber)
 -- | An Assignment of a model binding
 data Assignment = Assign SVal CV
 
--- Remove one pair of surrounding 'c's, if present
-noSurrounding :: Char -> String -> String
-noSurrounding c (c':cs@(_:_)) | c == c' && c == last cs  = init cs
-noSurrounding _ s                                        = s
-
--- Remove a pair of surrounding quotes
-unQuote :: String -> String
-unQuote = noSurrounding '"'
-
--- Remove a pair of surrounding bars
-unBar :: String -> String
-unBar = noSurrounding '|'
+-- | Remove the bars from model names; these are (mostly!) automatically inserted
+unBarModel :: SMTModel -> SMTModel
+unBarModel SMTModel {modelObjectives, modelBindings, modelAssocs, modelUIFuns}
+   = SMTModel { modelObjectives = ubf       <$> modelObjectives
+              , modelBindings   = (ubn <$>) <$> modelBindings
+              , modelAssocs     = ubf       <$> modelAssocs
+              , modelUIFuns     = ubf       <$> modelUIFuns
+              }
+   where ubf (n, a) = (unBar n, a)
+         ubn (NamedSymVar sv nm, a) = (NamedSymVar sv (T.pack (unBar (T.unpack nm))), a)
 
 -- Is this a string? If so, return it, otherwise fail in the Maybe monad.
 fromECon :: SExpr -> Maybe String
@@ -353,11 +351,11 @@ getModelAtIndex mbi = do
 
           uiVals    <- mapM (\ui@(nm, (_, _, _)) -> (nm,) <$> getUICVal mbi ui) uiRegs
 
-          return SMTModel { modelObjectives = []
-                          , modelBindings   = toList <$> bindings
-                          , modelAssocs     = uiVals ++ toList (first T.unpack <$> assocs)
-                          , modelUIFuns     = uiFunVals
-                          }
+          return $ unBarModel $ SMTModel { modelObjectives = []
+                                         , modelBindings   = toList <$> bindings
+                                         , modelAssocs     = uiVals ++ toList (first T.unpack <$> assocs)
+                                         , modelUIFuns     = uiFunVals
+                                         }
 
 -- | Just after a check-sat is issued, collect objective values. Used
 -- internally only, not exposed to the user.

@@ -1388,7 +1388,9 @@ newUninterpreted st (nm, mbArgNames) t uiCode
   | not (isInternal || case nm of
                          []   -> False
                          h:tl -> enclosed || (isAlpha h && all validChar tl))
-  = error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
+  = if not enclosed
+    then newUninterpreted st ('|' : nm ++ "|", mbArgNames) t uiCode
+    else error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
   | True
   = do uiMap <- readIORef (rUIMap st)
 
