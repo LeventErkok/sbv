@@ -618,38 +618,7 @@ foldrFoldlDualityGeneralized  = runKD $ do
                               ]))
                   [assoc, lunit, runit, h]
 
-{-
--- * Bookkeeping law
-
--- | Provided @f@ is associative and @a@ is its right-unit: we have:
---
--- | @foldr f a . concat == foldr f a . map (foldr f a)@
---
--- We have:
---
--- >>> bookKeeping
-bookKeeping :: IO Proof
-bookKeeping = runKD $ do
-   let a :: SA
-       a = uninterpret "a"
-
-       f :: SA -> SA -> SA
-       f = uninterpret "f"
-
-       p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
-
-   assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   unit  <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
-
-   inductiveLemma "bookKeeping"
-                  (\(Forall @"xss" xss) -> p xss)
-                  (pure ())
-                  (\xs xss -> ( [ foldr f a (concat (xs .: xss))
-                                ]
-                              , [ foldr f a (map (foldr f a) (xs .: xss))
-                                ]
-                              ))
-                  [assoc, unit]
+-- * Another foldl-foldr correspondence
 
 -- | Given:
 -- @
@@ -684,12 +653,10 @@ foldrFoldl = runKD $ do
        p :: SList A -> SBool
        p xs = foldl (@) e xs .== foldr (<>) e xs
 
-
    -- Assumptions about the operators
 
    -- (x <> y) @ z == x <> (y @ z)
-   axm1 <- axiom "<> over @" $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z)
-                                  -> (x <> y) @ z .== x <> (y @ z)
+   axm1 <- axiom "<> over @" $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <> y) @ z .== x <> (y @ z)
 
    -- e @ x == x <> e
    axm2 <- axiom "unit" $ \(Forall @"x" x) -> e @ x .== x <> e
@@ -698,17 +665,52 @@ foldrFoldl = runKD $ do
    h <- do
       let hp y z xs = foldl (@) (y <> z) xs .== y <> foldl (@) z xs
 
-      chainLemma "foldl over @"
-                 (\(Forall @"y" y) (Forall @"z" z) (Forall @"xs" xs) -> hp y z xs)
-                 (\y z x xs -> [ foldl (@) (y <> z) (x .: xs)
-                               , foldl (@) ((y <> z) @ x) xs
-                               , foldl (@) (y <> (z @ x)) xs
-                               -- this transition is hard
-                               , y <> foldl (@) (z @ x) xs
-                               , y <> foldl (@) z (x .: xs)
-                               ])
-                 [axm1, axm2, induct hp]
+      inductiveLemma "foldl over @"
+                     (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
+                     (pure ())
+                     (\y x xs -> let z = uninterpret "z"
+                                 in ( [ foldl (@) (y <> z) (x .: xs)
+                                      , foldl (@) ((y <> z) @ x) xs
+                                      , foldl (@) (y <> (z @ x)) xs   -- axiom 1
+                                      ]
+                                    , [ y <> foldl (@) z (x .: xs)
+                                      , y <> foldl (@) (z @ x) xs     -- inductive hypothesis, where z = z @ x in the inductive case
+                                      ]))
+                     [axm1]
 
    -- Final proof:
    lemma "foldrFoldl" (\(Forall @"xs" xs) -> p xs) [axm1, axm2, h, induct p]
+
+{-
+-- * Bookkeeping law
+
+-- | Provided @f@ is associative and @a@ is its right-unit: we have:
+--
+-- | @foldr f a . concat == foldr f a . map (foldr f a)@
+--
+-- We have:
+--
+-- >>> bookKeeping
+bookKeeping :: IO Proof
+bookKeeping = runKD $ do
+   let a :: SA
+       a = uninterpret "a"
+
+       f :: SA -> SA -> SA
+       f = uninterpret "f"
+
+       p xss = foldr f a (concat xss) .== foldr f a (map (foldr f a) xss)
+
+   assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
+   unit  <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
+
+   inductiveLemma "bookKeeping"
+                  (\(Forall @"xss" xss) -> p xss)
+                  (pure ())
+                  (\xs xss -> ( [ foldr f a (concat (xs .: xss))
+                                ]
+                              , [ foldr f a (map (foldr f a) (xs .: xss))
+                                ]
+                              ))
+                  [assoc, unit]
 -}
