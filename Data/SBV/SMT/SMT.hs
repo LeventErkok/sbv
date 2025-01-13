@@ -610,13 +610,13 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
                 body     = ls ++ [defLine]
 
                 -- is the default an argument? This is likely to be z3 specific
-                defVal  = scv dflt
-                defLine = case span (/= '!') defVal of
-                                 (arg, '!':n) | all isDigit n -> let argN = arg ++ n in (mkParams argN (read n), argN)
-                                 _                            -> (replicate noOfArgs "_", scv dflt)
-
-                mkParams :: String -> Int -> [String]
-                mkParams arg i = replicate (i-1) "_" ++ arg : replicate (noOfArgs - i) "_"
+                defVal = scv dflt
+                defPos = case span (/= '!') defVal of
+                           (arg, '!':n) | all isDigit n, not (null n) -> Just (read n, arg ++ n) -- default is an argument
+                           _                                          -> Nothing                 -- default is a constant
+                defLine = case defPos of
+                            Just (i, a) | i > 0 -> (replicate (i - 1) "_" ++ a : replicate (noOfArgs - i) "_", a)
+                            _                   -> (replicate noOfArgs "_",                                    defVal)
 
                 colWidths = [maximum (0 : map length col) | col <- transpose (map fst body)]
 
