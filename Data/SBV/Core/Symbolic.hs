@@ -543,7 +543,7 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SeqReplace                          -- ^ See StrReplace
            -- Polymorphic and higher order functions
            | SBVReverse Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
-           | SBVZip     Kind Kind                -- ^ zip k1 k2.         Where we zip [k1] and [k2] to produce [(k1, k2)]
+           | SBVZip     Kind Kind                -- ^ zip a b.           Where we zip [a] and [b] to produce [(a, b)]
            | SBVZipWith Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
            | SBVMap     Kind Kind SMTLambda      -- ^ map    a b fun.    Where fun :: a -> b,      and map    :: (a -> b) -> [a] -> [b]
            | SBVFoldl   Kind Kind SMTLambda      -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl  :: (b -> a -> b) -> b -> [a] -> b
@@ -551,6 +551,7 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SBVFilter  Kind      SMTLambda      -- ^ filter a fun.      Where fun :: a -> Bool,   and filter :: (a -> Bool) -> [a] -> [a]
            | SBVAll     Kind      SMTLambda      -- ^ all    a fun.      Where fun :: a -> Bool,   and all    :: (a -> Bool) -> [a] -> Bool
            | SBVAny     Kind      SMTLambda      -- ^ any    a fun.      Where fun :: a -> Bool,   and any    :: (a -> Bool) -> [a] -> Bool
+           | SBVConcat  Kind                     -- ^ concat a.          Where we concat [[a]] to get [a] (a is the inside-element type)
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -576,6 +577,7 @@ instance Show SeqOp where
   show (SBVFilter  a     f) = funcWithKind "sbv.filter"  a                  (Just f)
   show (SBVAll     a     f) = funcWithKind "sbv.all"     a                  (Just f)
   show (SBVAny     a     f) = funcWithKind "sbv.any"     a                  (Just f)
+  show (SBVConcat  a)       = funcWithKind "sbv.concat"  a                  Nothing
 
 -- helper for above
 funcWithKind :: String -> Kind -> Maybe SMTLambda -> String

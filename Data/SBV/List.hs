@@ -539,8 +539,19 @@ zipWith f xs ys
 --
 -- >>> concat [[1..3::Integer], [4..7], [8..10]]
 -- [1,2,3,4,5,6,7,8,9,10] :: [SInteger]
-concat :: SymVal a => SList [a] -> SList a
-concat = foldr (++) []
+concat :: forall a. SymVal a => SList [a] -> SList a
+concat l
+  | Just l' <- unliteral l
+  = literal (P.concat l')
+  | True
+  = SBV $ SVal kla $ Right $ cache r
+  where ka   = kindOf (Proxy @a)
+        kla  = kindOf (Proxy @[a])
+
+        r st = do sva <- sbvToSV st l
+                  let op = SeqOp (SBVConcat ka)
+                  registerSpecialFunction st op
+                  newExpr st kla (SBVApp op [sva])
 
 -- | Check all elements satisfy the predicate.
 --

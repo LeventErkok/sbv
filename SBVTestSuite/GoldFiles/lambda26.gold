@@ -8,13 +8,12 @@
 [GOOD] (set-option :pp.max_depth      4294967295)
 [GOOD] (set-option :pp.min_alias_size 4294967295)
 [GOOD] (set-option :model.inline_def  true      )
-[GOOD] (set-logic ALL) ; has lambda expressions, using catch-all.
+[GOOD] (set-logic ALL) ; has unbounded values, using catch-all.
 [GOOD] ; --- uninterpreted sorts ---
 [GOOD] ; --- tuples ---
 [GOOD] ; --- sums ---
 [GOOD] ; --- literal constants ---
 [GOOD] (define-fun s2 () (Seq (Seq Int)) (seq.++ (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5))) (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7) (seq.unit 8) (seq.unit 9) (seq.unit 10))) (seq.unit (seq.++ (seq.unit 1) (seq.unit 2) (seq.unit 3) (seq.unit 4) (seq.unit 5) (seq.unit 6) (seq.unit 7) (seq.unit 8) (seq.unit 9) (seq.unit 10) (seq.unit 11) (seq.unit 12) (seq.unit 13) (seq.unit 14) (seq.unit 15) (seq.unit 16) (seq.unit 17) (seq.unit 18) (seq.unit 19) (seq.unit 20)))))
-[GOOD] (define-fun s4 () (Seq Int) (as seq.empty (Seq Int)))
 [GOOD] ; --- top level inputs ---
 [GOOD] (declare-fun s0 () (Seq (Seq Int)))
 [GOOD] (declare-fun s1 () (Seq Int))
@@ -22,21 +21,20 @@
 [GOOD] ; --- non-constant tables ---
 [GOOD] ; --- uninterpreted constants ---
 [GOOD] ; --- Firstified function definitions
-[GOOD] ; Firstified function: foldr :: ([SInteger] -> [SInteger] -> [SInteger]) -> [SInteger] -> [[SInteger]] -> [SInteger]
-[GOOD] (define-fun-rec sbv.foldr_096be6 ((base (Seq Int)) (lst (Seq (Seq Int)))) (Seq Int)
+[GOOD] ; Firstified function: concat :: [[SInteger]] -> [SInteger]
+[GOOD] (define-fun-rec sbv.concat_712066 ((lst (Seq (Seq Int)))) (Seq Int)
                        (ite (= lst (as seq.empty (Seq (Seq Int))))
-                            base
-                            (select (lambda ((args0 (Seq Int)) (args1 (Seq Int)))
-         (seq.++ args0 args1)) (seq.nth lst 0) (sbv.foldr_096be6 base (seq.extract lst 1 (- (seq.len lst) 1))))))
+                            (as seq.empty (Seq Int))
+                            (seq.++ (seq.nth lst 0) (sbv.concat_712066 (seq.extract lst 1 (- (seq.len lst) 1))))))
 [GOOD] ; --- user defined functions ---
 [GOOD] ; --- assignments ---
 [GOOD] (define-fun s3 () Bool (= s0 s2))
-[GOOD] (define-fun s5 () (Seq Int) (sbv.foldr_096be6 s4 s0))
-[GOOD] (define-fun s6 () Bool (= s1 s5))
+[GOOD] (define-fun s4 () (Seq Int) (sbv.concat_712066 s0))
+[GOOD] (define-fun s5 () Bool (= s1 s4))
 [GOOD] ; --- delayedEqualities ---
 [GOOD] ; --- formula ---
 [GOOD] (assert s3)
-[GOOD] (assert s6)
+[GOOD] (assert s5)
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s1))

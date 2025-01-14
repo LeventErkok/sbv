@@ -60,6 +60,7 @@ firstify uniqLen o = prefix o ++ "_" ++ take uniqLen (BC.unpack (B.encode (hash 
         prefix (SeqOp SBVFilter  {}) = "sbv.filter"
         prefix (SeqOp SBVAll     {}) = "sbv.all"
         prefix (SeqOp SBVAny     {}) = "sbv.any"
+        prefix (SeqOp SBVConcat  {}) = "sbv.concat"
         prefix _                     = error $ unlines [ "***"
                                                        , "*** Data.SBV.firstify: Didn't expect firstification to be called."
                                                        , "***"
@@ -429,7 +430,8 @@ declSBVFunc cfg op = (nm, comment ++ body)
                  SeqOp (SBVFilter  ek       (SMTLambda f)) -> mkFilter  ek    f
                  SeqOp (SBVAll     ek       (SMTLambda f)) -> mkAnyAll  True  ek f
                  SeqOp (SBVAny     ek       (SMTLambda f)) -> mkAnyAll  False ek f
-                 _                                         -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: "
+                 SeqOp (SBVConcat  ek)                     -> mkConcat  ek
+                 _                                         -> error $ "Data.SBV.declSBVFunc.body: Unexpected internal function: "
                                                                           ++ show (op, nm)
 
         shf :: String -> [Kind] -> Kind -> String
@@ -450,7 +452,8 @@ declSBVFunc cfg op = (nm, comment ++ body)
                  SeqOp (SBVFilter  a     _)   -> shh "filter"  ([a], KBool) ([KList a], KList a)
                  SeqOp (SBVAll     a     _)   -> shh "all"     ([a], KBool) ([KList a], KBool)
                  SeqOp (SBVAny     a     _)   -> shh "any"     ([a], KBool) ([KList a], KBool)
-                 _                            -> error $ "Data.SBV.declSBVFunc: Unexpected internal function: " ++ show (op, nm)
+                 SeqOp (SBVConcat  a)         -> shf "concat"  [KList (KList a)] (KList a)
+                 _                            -> error $ "Data.SBV.declSBVFunc.htyp: Unexpected internal function: " ++ show (op, nm)
 
         -- in Z3, lambdas are applied with select. In CVC5, it's @. This might change with higher-order features being added to SMTLib in v3
         par x = "(" ++ x ++ ")"
@@ -550,6 +553,15 @@ declSBVFunc cfg op = (nm, comment ++ body)
           where tla = smtType (KList a)
                 (base, conn) | isAll = ("true",  "and")
                              | True  = ("false", "or")
+
+        -- [[a]] -> [a]
+        mkConcat a = [ "(define-fun-rec " ++ nm ++ " ((lst " ++ tlla ++ ")) " ++ tla
+                     , "                (ite " ++ isEmpty "lst" tlla
+                     , "                     " ++ empty tla
+                     , "                     (seq.++ " ++ hd "lst" ++ " (" ++ nm ++ " " ++ tl "lst" ++ "))))"
+                     ]
+         where tla  = smtType (KList a)
+               tlla = smtType (KList (KList a))
 
 -- | Declare new sorts
 declSort :: (String, Maybe [String]) -> [String]
@@ -1217,6 +1229,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp o@(SeqOp SBVFilter{})  args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVAll{} )    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
         sh (SBVApp o@(SeqOp SBVAny{} )    args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
+        sh (SBVApp o@(SeqOp SBVConcat{})  args) = "(" ++ firstifiedName o ++ " " ++ unwords (map cvtSV args) ++ ")"
 
         sh (SBVApp (SeqOp op) args) = "(" ++ show op ++ " " ++ unwords (map cvtSV args) ++ ")"
 
