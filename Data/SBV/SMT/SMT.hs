@@ -47,7 +47,7 @@ import qualified Control.Exception as C
 import Control.Concurrent (newEmptyMVar, takeMVar, putMVar, forkIO)
 import Control.DeepSeq    (NFData(..))
 import Control.Monad      (zipWithM, mplus)
-import Data.Char          (isSpace, isDigit)
+import Data.Char          (isSpace)
 import Data.Maybe         (isJust)
 import Data.Int           (Int8, Int16, Int32, Int64)
 import Data.List          (intercalate, isPrefixOf, transpose, isInfixOf)
@@ -68,6 +68,7 @@ import System.Process     (runInteractiveProcess, waitForProcess, terminateProce
 
 import qualified Data.Map.Strict as M
 import qualified Data.Text       as T
+import Text.Read (readMaybe)
 
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.Data
@@ -83,7 +84,7 @@ import Data.SBV.SMT.Utils     ( showTimeoutValue, alignPlain, debug, mergeSExpr,
 
 import Data.SBV.Utils.PrettyNum
 import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
-import Data.SBV.Utils.SExpr     (parenDeficit)
+import Data.SBV.Utils.SExpr     (parenDeficit, nameSupply)
 
 import qualified System.Timeout as Timeout (timeout)
 
@@ -612,8 +613,8 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
                 -- is the default an argument? This is likely to be z3 specific
                 defVal = scv dflt
                 defPos = case span (/= '!') defVal of
-                           (arg, '!':n) | all isDigit n, not (null n) -> Just (read n, arg ++ n) -- default is an argument
-                           _                                          -> Nothing                 -- default is a constant
+                           (_, '!':n) | Just (i :: Int) <- readMaybe n, i > 0 -> Just (i, nameSupply [] !! (i-1)) -- default is the ith argument
+                           _                                                  -> Nothing                          -- default is a constant (or something else?)
                 defLine = case defPos of
                             Just (i, a) | i > 0 -> (replicate (i - 1) "_" ++ a : replicate (noOfArgs - i) "_", a)
                             _                   -> (replicate noOfArgs "_",                                    defVal)

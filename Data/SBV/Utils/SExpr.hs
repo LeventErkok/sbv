@@ -13,7 +13,11 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Utils.SExpr (SExpr(..), parenDeficit, parseSExpr, parseSExprFunction, makeHaskellFunction, unQuote, unBar, simplifyECon) where
+module Data.SBV.Utils.SExpr ( SExpr(..), parenDeficit, parseSExpr
+                            , parseSExprFunction, makeHaskellFunction
+                            , unQuote, unBar, simplifyECon
+                            , nameSupply
+                            ) where
 
 import Data.Bits   (setBit, testBit)
 import Data.Char   (isDigit, ord, isSpace)
@@ -569,18 +573,9 @@ makeHaskellFunction resp nm isCurried mbArgs
   where -- infinite supply of names; starting with the ones we're given
         preSupply = fromMaybe [] mbArgs
 
-        extras =  ["x", "y", "z"]
-               ++ [[c] | c <- ['a' .. 'z'], c < 'x']
-               ++ ['x' : show i | i <- [(1::Int) ..]]
-
-        mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
-                   | True               = x
-
-        supply = preSupply ++ map mkUnique extras
-
         lambda :: SExpr -> Maybe ([String], String)
         lambda (EApp [ECon "lambda", EApp args, bd]) = do as <- mapM getArg args
-                                                          let env = zip as supply
+                                                          let env = zip as (nameSupply preSupply)
                                                           pure (map snd env, hprint env bd)
         lambda _                                     = Nothing
 
@@ -703,5 +698,18 @@ unQuote = noSurrounding '"'
 -- Remove a pair of surrounding bars
 unBar :: String -> String
 unBar = noSurrounding '|'
+
+-- An infinite supply of names, starting with a given set
+nameSupply :: [String] -> [String]
+nameSupply preSupply = preSupply ++ map mkUnique extras
+  where extras =  ["x", "y", "z"]                           -- x y z
+               ++ [[c] | c <- ['a' .. 'w']]                 -- a b c ... w
+               ++ ['x' : show i | i <- [(1::Int) ..]]       -- x1 x2 x3 ...
+
+        -- make sure extras are different than preSupply. Note that extras
+        -- themselves are unique, so we only have to check the preSupply
+        mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
+                   | True               = x
+
 
 {- HLint ignore chainAssigns "Redundant if" -}
