@@ -773,8 +773,8 @@ bookKeeping = runKD $ do
        p xss = foldr f a (concat xss) .== foldr f a (mapFoldr a xss)
 
    assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   rUnit <- axiom "a is right-unit" (\(Forall @"x" x) -> x `f` a .== x)
-   lUnit <- axiom "a is left-unit"  (\(Forall @"x" x) -> a `f` x .== x)
+   rUnit <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
+   lUnit <- axiom "a is left-unit"   (\(Forall @"x" x) -> a `f` x .== x)
 
    foa <- use foldrOverAppend
 
