@@ -724,11 +724,6 @@ foldrFoldl = runKD $ do
 --
 -- @foldr f a . concat == foldr f a . map (foldr f a)@
 --
--- NB. As of early 2025, we cannot express the above theorem in SBV directly, since it involves nested lambdas.
--- (On the right hand side map has an argument that is represented as a foldr, which itself has a lambda.) As
--- SMTLib moves to a higher-order logic, we intend to make such expressions readily expressable. In the mean time,
--- we use an equivalent (albeit roundabout) version, where we define map-foldr combo as a recursive function ourselves.
---
 -- We have:
 --
 -- >>> bookKeeping
@@ -756,6 +751,31 @@ foldrFoldl = runKD $ do
 --   Help: bookKeeping.L5 vs R4            Q.E.D.
 --   Step: bookKeeping.Step                Q.E.D.
 -- [Proven] bookKeeping
+--
+-- NB. As of early 2025, we cannot express the above theorem in SBV directly, since it involves nested lambdas.
+-- (On the right hand side map has an argument that is represented as a foldr, which itself has a lambda.) As
+-- SMTLib moves to a higher-order logic, we intend to make such expressions readily expressable. In the mean time,
+-- we use an equivalent (albeit roundabout) version, where we define map-foldr combo as a recursive function ourselves.
+--
+-- NB. This theorem does not hold if @f@ does not have a left-unit! Consider the input @[[], [x]]@. Left hand side reduces to
+-- @x@, while the right hand side reduces to: @f a x@. And unless @f@ is commutative or @a@ is not also a left-unit,
+-- then one can find a counter-example. (Aside: if both left and right units exist for a binary operator, then they
+-- are necessarily the same element, since @l = f l r = r@. So, an equivalent statement could simply say @f@ has
+-- both left and right units.) A concrete counter-example is:
+--
+-- @
+--   data T = A | B | C
+--
+--   f :: T -> T -> T
+--   f C A = A
+--   f C B = A
+--   f x _ = x
+-- @
+--
+-- You can verify @f@ is associative. Also note that @C@ is the right-unit for @f@, but it isn't the left-unit.
+-- In fact, @f@ has no-left unit by the above argument. In this case, the bookkeeping law produces @B@ for
+-- the left-hand-side, and @A@ for the right-hand-side for the input @[[], [B]]@.
+--
 bookKeeping :: IO Proof
 bookKeeping = runKD $ do
    let a :: SA
@@ -801,7 +821,8 @@ bookKeeping = runKD $ do
                                     , foldr f a (xs ++ concat xss)
                                     , foldr f (foldr f a (concat xss)) xs      -- foa: foldr-over-append
                                     , foldr f (foldr f a (mapFoldr a xss)) xs  -- inductive hypothesis
-                                    , foldr f y xs
+                                    , foldr f y xs                             -- helper
+                                    , foldr f a xs `f` y
                                     ]
                                   , [ foldr f a (mapFoldr a (xs .: xss))
                                     , foldr f a (foldr f a xs .: mapFoldr a xss)
