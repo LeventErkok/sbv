@@ -745,10 +745,11 @@ foldrFoldl = runKD $ do
 --   Help: bookKeeping.L2 vs L3            Q.E.D.
 --   Help: bookKeeping.L3 vs L4            Q.E.D.
 --   Help: bookKeeping.L4 vs L5            Q.E.D.
+--   Help: bookKeeping.L5 vs L6            Q.E.D.
 --   Help: bookKeeping.R1 vs R2            Q.E.D.
 --   Help: bookKeeping.R2 vs R3            Q.E.D.
 --   Help: bookKeeping.R3 vs R4            Q.E.D.
---   Help: bookKeeping.L5 vs R4            Q.E.D.
+--   Help: bookKeeping.L6 vs R4            Q.E.D.
 --   Step: bookKeeping.Step                Q.E.D.
 -- [Proven] bookKeeping
 --
