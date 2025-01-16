@@ -74,7 +74,7 @@ import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
-import Data.Char                   (isAlpha, isAlphaNum, toLower, isSpace)
+import Data.Char                   (isAlphaNum, toLower, isSpace, isAscii)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
@@ -1379,17 +1379,18 @@ svUninterpretedNamedArgs k nm code args = svUninterpretedGen k nm code (map fst 
 svUninterpretedGen :: Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
 svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       newUninterpreted st (nm, mbArgNames) ty code
+                       nm' <- newUninterpreted st (nm, mbArgNames) ty code
                        sws <- mapM (svToSV st) args
                        mapM_ forceSVArg sws
-                       newExpr st k $ SBVApp (Uninterpreted nm) sws
+                       newExpr st k $ SBVApp (Uninterpreted nm') sws
 
--- | Create a new uninterpreted symbol, possibly with user given code
-newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO ()
+-- | Create a new uninterpreted symbol, possibly with user given code. This function might change
+-- the name given, putting bars around it if needed. That's the name returned.
+newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO String
 newUninterpreted st (nm, mbArgNames) t uiCode
   | not (isInternal || case nm of
                          []   -> False
-                         h:tl -> enclosed || (isAlpha h && all validChar tl))
+                         h:tl -> enclosed || (isAscii h && all validChar tl))
   = if not enclosed
     then newUninterpreted st ('|' : nm ++ "|", mbArgNames) t uiCode
     else error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
@@ -1417,6 +1418,9 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                                                  (\newUIs -> case nm `Map.lookup` newUIs of
                                                                Just (_, _, t') -> checkType t' newUIs
                                                                Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
+
+       pure nm
+
   where checkType :: SBVType -> r -> r
         checkType t' cont
           | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
@@ -1424,7 +1428,8 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
 
-        validChar x = isAlphaNum x || x `elem` ("_" :: String)
+        validChar x = isAscii x && (isAlphaNum x || x `elem` ("_" :: String))
+
         enclosed    =  "|" `isPrefixOf` nm
                     && "|" `isSuffixOf` nm
                     && length nm > 2

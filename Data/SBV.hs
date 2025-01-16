@@ -1709,13 +1709,13 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                        when (op `notElem` curSpecialRels) $ do
 
                           registerKind st ka
-                          newUninterpreted st (nm, Nothing) (SBVType [ka, ka, KBool]) (UINone True)
+                          nm' <- newUninterpreted st (nm, Nothing) (SBVType [ka, ka, KBool]) (UINone True)
 
                           -- Add to the end so if we get incremental ones the order doesn't change for old ones!
                           modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})
 
                           -- Equate it to the relation we are given. We want to do this in the parent state
-                          let SBV eq = quantifiedBool $ \(Forall x) (Forall y) -> rel (x, y) .== uninterpret nm x y
+                          let SBV eq = quantifiedBool $ \(Forall x) (Forall y) -> rel (x, y) .== uninterpret nm' x y
                           internalConstraint (getRootState st) False [] eq
 
                        newExpr st KBool $ SBVApp (SpecialRelOp ka iop) []
