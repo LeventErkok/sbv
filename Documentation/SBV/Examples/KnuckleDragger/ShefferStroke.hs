@@ -128,3 +128,70 @@ all_bot = do
                       , b ︱ n b
                       ])
             [sh1, sh2, commut]
+
+-- * Infimum, supremum, bottom, and top
+
+-- | Infimum: Greatest lower bound
+inf :: SStroke -> SStroke -> SStroke
+a `inf` b = n a ︱n b
+
+-- | Supremum: Least upper bound
+sup :: SStroke -> SStroke -> SStroke
+a `sup` b = n a ︱n b
+
+-- | The unique bottom element
+z :: SStroke
+z = elt ︱n elt
+ where elt = uninterpret "z"
+
+-- | The unique top element
+u :: SStroke
+u = n z
+
+-- | `inf` is commutative: @a `inf` b == b `inf` a@
+--
+-- We have:
+--
+-- >>> runKD infCommutes
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Chain lemma: commutative
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: inf commutes                     Q.E.D.
+-- [Proven] inf commutes
+infCommutes :: KD Proof
+infCommutes = do
+  comm <- commutative
+
+  lemma "inf commutes"
+        (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
+        [comm]
+
+-- | `sup` is commutative: @a `sup` b == b `sup` a@
+--
+-- We have:
+--
+-- >>> runKD supCommutes
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Chain lemma: commutative
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: sup commutes                     Q.E.D.
+-- [Proven] sup commutes
+supCommutes :: KD Proof
+supCommutes = do
+  comm <- commutative
+
+  lemma "sup commutes"
+        (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
+        [comm]
