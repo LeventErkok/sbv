@@ -11,6 +11,7 @@
 -- logic), implies it is a boolean algebra.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveAnyClass     #-}
@@ -25,6 +26,12 @@ module Documentation.SBV.Examples.KnuckleDragger.ShefferStroke where
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
+
+#ifndef HADDOCK
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
+#endif
 
 -- * The sheffer stroke
 
@@ -50,9 +57,9 @@ data ShefferAxioms = ShefferAxioms { sh1 :: Proof
 -- | Collection of sheffer-axioms
 shefferAxioms :: KD ShefferAxioms
 shefferAxioms = do
-   sh1 <- axiom "sh1" $ \(Forall @"a" a) ->                                 ﬧ(ﬧ a) .== a
-   sh2 <- axiom "sh2" $ \(Forall @"a" a) (Forall @"b" b) ->                 a ︱(b ︱ﬧ b) .== ﬧ a
-   sh3 <- axiom "sh3" $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ︱(b ︱c)) .== (ﬧ b ︱a) ︱(ﬧ c ︱a)
+   sh1 <- axiom "Sheffer Stroke 1" $ \(Forall @"a" a) ->                                 ﬧ(ﬧ a) .== a
+   sh2 <- axiom "Sheffer Stroke 2" $ \(Forall @"a" a) (Forall @"b" b) ->                 a ︱(b ︱ﬧ b) .== ﬧ a
+   sh3 <- axiom "Sheffer Stroke 3" $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ︱(b ︱c)) .== (ﬧ b ︱a) ︱(ﬧ c ︱a)
 
    pure $ ShefferAxioms { sh1 = sh1, sh2 = sh2, sh3 = sh3 }
 
@@ -60,19 +67,19 @@ shefferAxioms = do
 
 -- | Prove that the sheffer stroke is commutative. We have:
 --
--- >>> commutative
--- Axiom: sh1                              Axiom.
--- Axiom: sh2                              Axiom.
--- Axiom: sh3                              Axiom.
+-- >>> runKD commutative
+-- Axiom: Sheffer Strok  1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
 -- Chain lemma: commutative
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
+--   Step  : 4                             Q E.D.
 --   Result:                               Q.E.D.
--- [Proven] commutative
-commutative :: IO Proof
-commutative = runKD $ do
+-- [Proven] commutativie
+commutative :: KD Proof
+commutative = do
    ShefferAxioms {sh1, sh3} <- shefferAxioms
    chainLemma "commutative"
               (\(Forall @"a" a) (Forall @"b" b) -> a ︱b .== b ︱a)
@@ -84,3 +91,24 @@ commutative = runKD $ do
                        , b ︱ a
                        ])
               [sh1, sh3]
+
+-- * Bottom elements are the same
+
+-- | Prove that @a ︱ﬧ a == b ︱ﬧ b@ for all elements, that is, bottom element is unique. We have:
+--
+-- >>> runKD all_bot
+all_bot :: KD Proof
+all_bot = do
+  ShefferAxioms {sh1, sh2} <- shefferAxioms
+  commut                   <- commutative
+
+  chainLemma "all_bot"
+             (\(Forall @"a" a) (Forall @"b" b) -> a ︱ﬧ a .== b ︱ﬧ b)
+             (pure ())
+             (\a b -> [ a ︱ﬧ a
+                      , ﬧ ((a ︱ﬧ a) ︱(b ︱ﬧ b))
+                      , ﬧ ((b ︱ﬧ b) ︱(a ︱ﬧ a))
+                      , ﬧ (ﬧ (b ︱ﬧ b))
+                      , b ︱ ﬧ b
+                      ])
+            [sh1, sh2, commut]
