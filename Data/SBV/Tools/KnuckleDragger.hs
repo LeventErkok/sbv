@@ -61,7 +61,6 @@ import Data.SBV.Tools.KDUtils
 
 import Control.Monad        (when)
 import Control.Monad.Trans  (MonadIO, liftIO)
-import Control.Monad.Reader (ask)
 
 import Data.List (intercalate)
 
@@ -118,8 +117,8 @@ class ChainLemma a steps step | steps -> step where
   {-# MINIMAL chainSteps #-}
   chainSteps :: a -> steps -> Symbolic (SBool, [SBool])
 
-  chainLemma   nm p setup steps by = ask >>= \cfg -> chainLemmaWith   cfg nm p setup steps by
-  chainTheorem nm p setup steps by = ask >>= \cfg -> chainTheoremWith cfg nm p setup steps by
+  chainLemma   nm p setup steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p setup steps by
+  chainTheorem nm p setup steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p setup steps by
   chainLemmaWith                   = chainGeneric False
   chainTheoremWith                 = chainGeneric True
 
@@ -263,8 +262,8 @@ class Inductive a steps where
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
    inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
 
-   inductiveLemma   nm p setup steps by = ask >>= \cfg -> inductiveLemmaWith   cfg nm p setup steps by
-   inductiveTheorem nm p setup steps by = ask >>= \cfg -> inductiveTheoremWith cfg nm p setup steps by
+   inductiveLemma   nm p setup steps by = getKDConfig >>= \cfg -> inductiveLemmaWith   cfg nm p setup steps by
+   inductiveTheorem nm p setup steps by = getKDConfig >>= \cfg -> inductiveTheoremWith cfg nm p setup steps by
    inductiveLemmaWith                   = inductGeneric False
    inductiveTheoremWith                 = inductGeneric True
 

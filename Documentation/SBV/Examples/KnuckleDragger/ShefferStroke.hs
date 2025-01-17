@@ -100,9 +100,6 @@ commutative = do
 -- Axiom: Sheffer Stroke 1                 Axiom.
 -- Axiom: Sheffer Stroke 2                 Axiom.
 -- Axiom: Sheffer Stroke 3                 Axiom.
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
 -- Chain lemma: commutative
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.

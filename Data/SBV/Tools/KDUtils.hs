@@ -17,7 +17,7 @@
 
 module Data.SBV.Tools.KDUtils (
          KD, runKD, runKDWith, Proof(..)
-       , startKD, finishKD, getKDConfig
+       , startKD, finishKD, getKDState, getKDConfig, KDState(..)
        , RootOfTrust(..), calculateRootOfTrust
        ) where
 
@@ -31,9 +31,16 @@ import Data.SBV.Core.Data (SBool)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
+import Data.IORef (IORef, newIORef)
+
+-- | Extra state we carry in a KD context
+data KDState = KDState { config      :: SMTConfig
+                       , rAxiomsSeen :: IORef [String]
+                       }
+
 -- | Monad for running KnuckleDragger proofs in.
-newtype KD a = KD (ReaderT SMTConfig IO a)
-            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader SMTConfig, MonadFail)
+newtype KD a = KD (ReaderT KDState IO a)
+            deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
 
 -- | Run a KD proof, using the default configuration.
 runKD :: KD a -> IO a
@@ -41,11 +48,23 @@ runKD = runKDWith defaultSMTCfg
 
 -- | Run a KD proof, using the given configuration.
 runKDWith :: SMTConfig -> KD a -> IO a
-runKDWith cfg (KD f) = runReaderT f cfg
+runKDWith cfg (KD f) = do
+
+        rAxiomsSeen <- newIORef []
+
+        let st = KDState { config      = cfg
+                         , rAxiomsSeen = rAxiomsSeen
+                         }
+
+        runReaderT f st
+
+-- | get the state
+getKDState :: KD KDState
+getKDState = ask
 
 -- | get the configuration
 getKDConfig :: KD SMTConfig
-getKDConfig = ask
+getKDConfig = config <$> getKDState
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
 startKD :: Bool -> String -> [String] -> IO Int

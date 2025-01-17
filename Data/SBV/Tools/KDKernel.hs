@@ -26,8 +26,10 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
+import Control.Monad (when)
+import Data.IORef (readIORef, modifyIORef')
+
 import Control.Monad.Trans  (liftIO)
-import Control.Monad.Reader (ask)
 
 import Data.List (intercalate)
 
@@ -53,8 +55,12 @@ type Proposition a = ( QuantifiedBool a
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
-axiom nm p = do cfg <- getKDConfig
-                liftIO $ startKD False "Axiom" [nm] >>= finishKD cfg "Axiom."
+axiom nm p = do KDState{rAxiomsSeen} <- getKDState
+                axiomsSofar <- liftIO $ readIORef rAxiomsSeen
+                when (nm `notElem` axiomsSofar) $ do
+                   cfg <- getKDConfig
+                   liftIO $ do startKD False "Axiom" [nm] >>= finishKD cfg "Axiom."
+                               modifyIORef' rAxiomsSeen (nm:)
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
@@ -133,7 +139,7 @@ lemmaGen cfg@SMTConfig{verbose} what nms inputProp by = do
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
-lemma nm f by = do cfg <- ask
+lemma nm f by = do cfg <- getKDConfig
                    lemmaWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
@@ -142,7 +148,7 @@ lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proof] -> KD Proof
-theorem nm f by = do cfg <- ask
+theorem nm f by = do cfg <- getKDConfig
                      theoremWith cfg nm f by
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
