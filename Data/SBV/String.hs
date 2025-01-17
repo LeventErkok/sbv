@@ -104,7 +104,7 @@ tail s
  | True
  = subStr s 1 (length s - 1)
 
--- | @`uncons` returns the pair of the first character and tail. Unspecified if the string is empty.
+-- | @`uncons`@ returns the pair of the first character and tail. Unspecified if the string is empty.
 uncons :: SString -> (SChar, SString)
 uncons l = (head l, tail l)
 
