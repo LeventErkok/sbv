@@ -45,8 +45,8 @@ mkUninterpretedSort ''Stroke
 infixl 7 ︱
 
 -- | Negation in terms of ǀ
-ﬧ :: SStroke -> SStroke
-ﬧ x = x ︱x
+n :: SStroke -> SStroke
+n x = x ︱x
 
 -- | Helper datatype to collect sheffer-axioms in.
 data ShefferAxioms = ShefferAxioms { sh1 :: Proof
@@ -57,9 +57,9 @@ data ShefferAxioms = ShefferAxioms { sh1 :: Proof
 -- | Collection of sheffer-axioms
 shefferAxioms :: KD ShefferAxioms
 shefferAxioms = do
-   sh1 <- axiom "Sheffer Stroke 1" $ \(Forall @"a" a) ->                                 ﬧ(ﬧ a) .== a
-   sh2 <- axiom "Sheffer Stroke 2" $ \(Forall @"a" a) (Forall @"b" b) ->                 a ︱(b ︱ﬧ b) .== ﬧ a
-   sh3 <- axiom "Sheffer Stroke 3" $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ︱(b ︱c)) .== (ﬧ b ︱a) ︱(ﬧ c ︱a)
+   sh1 <- axiom "Sheffer Stroke 1" $ \(Forall @"a" a) ->                                 n(n a) .== a
+   sh2 <- axiom "Sheffer Stroke 2" $ \(Forall @"a" a) (Forall @"b" b) ->                 a ︱(b ︱n b) .== n a
+   sh3 <- axiom "Sheffer Stroke 3" $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> n(a ︱(b ︱c)) .== (n b ︱a) ︱(n c ︱a)
 
    pure $ ShefferAxioms { sh1 = sh1, sh2 = sh2, sh3 = sh3 }
 
@@ -68,16 +68,16 @@ shefferAxioms = do
 -- | Prove that the sheffer stroke is commutative. We have:
 --
 -- >>> runKD commutative
--- Axiom: Sheffer Strok  1                 Axiom.
+-- Axiom: Sheffer Stroke 1                 Axiom.
 -- Axiom: Sheffer Stroke 2                 Axiom.
 -- Axiom: Sheffer Stroke 3                 Axiom.
 -- Chain lemma: commutative
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
---   Step  : 4                             Q E.D.
+--   Step  : 4                             Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] commutativie
+-- [Proven] commutative
 commutative :: KD Proof
 commutative = do
    ShefferAxioms {sh1, sh3} <- shefferAxioms
@@ -85,30 +85,49 @@ commutative = do
               (\(Forall @"a" a) (Forall @"b" b) -> a ︱b .== b ︱a)
               (pure ())
               (\a b -> [ a ︱b
-                       , ﬧ(ﬧ(a ︱b))
-                       , ﬧ(ﬧ(a ︱ﬧ(ﬧ b)))
-                       , ﬧ(ﬧ (ﬧ(ﬧ b) ︱ a))
+                       , n(n(a ︱b))
+                       , n(n(a ︱n(n b)))
+                       , n(n (n(n b) ︱ a))
                        , b ︱ a
                        ])
               [sh1, sh3]
 
 -- * Bottom elements are the same
 
--- | Prove that @a ︱ﬧ a == b ︱ﬧ b@ for all elements, that is, bottom element is unique. We have:
+-- | Prove that @a ︱n a == b ︱n b@ for all elements, that is, bottom element is unique. We have:
 --
 -- >>> runKD all_bot
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Chain lemma: commutative
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Chain lemma: all_bot
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] all_bot
 all_bot :: KD Proof
 all_bot = do
   ShefferAxioms {sh1, sh2} <- shefferAxioms
   commut                   <- commutative
 
   chainLemma "all_bot"
-             (\(Forall @"a" a) (Forall @"b" b) -> a ︱ﬧ a .== b ︱ﬧ b)
+             (\(Forall @"a" a) (Forall @"b" b) -> a ︱n a .== b ︱n b)
              (pure ())
-             (\a b -> [ a ︱ﬧ a
-                      , ﬧ ((a ︱ﬧ a) ︱(b ︱ﬧ b))
-                      , ﬧ ((b ︱ﬧ b) ︱(a ︱ﬧ a))
-                      , ﬧ (ﬧ (b ︱ﬧ b))
-                      , b ︱ ﬧ b
+             (\a b -> [ a ︱n a
+                      , n ((a ︱n a) ︱(b ︱n b))
+                      , n ((b ︱n b) ︱(a ︱n a))
+                      , n (n (b ︱n b))
+                      , b ︱ n b
                       ])
             [sh1, sh2, commut]
