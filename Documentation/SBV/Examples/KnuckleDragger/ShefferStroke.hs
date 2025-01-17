@@ -137,7 +137,7 @@ a `inf` b = n a ︱n b
 
 -- | Supremum: Least upper bound
 sup :: SStroke -> SStroke -> SStroke
-a `sup` b = n a ︱n b
+a `sup` b = n (a ︱b)
 
 -- | The unique bottom element
 z :: SStroke
@@ -195,3 +195,31 @@ supCommutes = do
   lemma "sup commutes"
         (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
         [comm]
+
+-- | @a `sup` z == a@
+--
+-- >>> runKD supZ
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Lemma: a `sup` z = a                    Q.E.D.
+-- [Proven] a `sup` z = a
+supZ :: KD Proof
+supZ = do
+  ShefferAxioms {sh1, sh2} <- shefferAxioms
+
+  lemma "a `sup` z = a" (\(Forall @"a" a) -> a `sup` z .== a) [sh1, sh2]
+
+-- | @a `inf` u == a@
+--
+-- >>> runKD infU
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Lemma: a `inf` u = a                    Q.E.D.
+-- [Proven] a `inf` u = a
+infU :: KD Proof
+infU = do
+  ShefferAxioms {sh1, sh2} <- shefferAxioms
+
+  lemma "a `inf` u = a" (\(Forall @"a" a) -> a `inf` u .== a) [sh1, sh2]
