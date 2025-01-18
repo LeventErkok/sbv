@@ -34,49 +34,47 @@ data Stroke
 mkUninterpretedSort ''Stroke
 
 -- | The sheffer stroke operator
-(︱) :: SStroke -> SStroke -> SStroke
-(︱) = uninterpret "︱"
-infixl 7 ︱
+(⏐) :: SStroke -> SStroke -> SStroke
+(⏐) = uninterpret "⏐"
+infixl 7 ⏐
 
--- | Negation in terms of ǀ
--- TODO: I'd like to use ﬧ instead of n here, but doctest has a bug that causes
--- the properties to be ignore. So, just using n for now. See: https://github.com/phadej/cabal-extras/issues/131
-n :: SStroke -> SStroke
-n x = x ︱x
+-- | Negation in terms of ⏐
+ﬧ :: SStroke -> SStroke
+ﬧ x = x ⏐ x
 
 -- | First Sheffer axiom @ﬧﬧa == a@
 sheffer1 :: KD Proof
-sheffer1 = axiom "ﬧﬧa == a" $ \(Forall @"a" a) -> n (n a) .== a
+sheffer1 = axiom "ﬧﬧa == a" $ \(Forall @"a" a) -> ﬧ (ﬧ a) .== a
 
--- | Second Sheffer axiom @a ︱(b ︱ﬧb) == ﬧa@
+-- | Second Sheffer axiom @a ⏐ (b ⏐ ﬧb) == ﬧa@
 sheffer2 :: KD Proof
-sheffer2 = axiom "a ︱(b ︱ﬧb) == ﬧa" $ \(Forall @"a" a) (Forall @"b" b) -> a ︱(b ︱n b) .== n a
+sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \(Forall @"a" a) (Forall @"b" b) -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
 
--- | Third Sheffer axiom @ﬧ(a ︱(b ︱c)) == (ﬧb ︱a) ︱(ﬧc ︱a)@
+-- | Third Sheffer axiom @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
 sheffer3 :: KD Proof
-sheffer3 = axiom "ﬧ(a ︱(b ︱c)) == (ﬧb ︱a) ︱(ﬧc ︱a)"
-               $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> n (a ︱(b ︱c)) .== (n b ︱a) ︱(n c ︱a)
+sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)"
+               $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
 
 -- * Infimum, supremum, bottom, and top
 
 -- | Infimum: Greatest lower bound.
 -- TODO: I'd like to use ⊓ here, but I can't figure out how to make that an operator.
 inf :: SStroke -> SStroke -> SStroke
-a `inf` b = n a ︱n b
+a `inf` b = ﬧ a ⏐ ﬧ b
 
 -- | Supremum: Least upper bound.
 -- TODO: I'd like to use ⊔ here, but I can't figure out how to make that an operator.
 sup :: SStroke -> SStroke -> SStroke
-a `sup` b = n (a ︱b)
+a `sup` b = ﬧ (a ⏐ b)
 
 -- | The unique bottom element
 z :: SStroke
-z = elt ︱n elt
- where elt = uninterpret "z"
+z = elt ⏐ ﬧ elt
+ where elt = uninterpret "z_witness"
 
 -- | The unique top element
 u :: SStroke
-u = n z
+u = ﬧ z
 
 -- * Sheffer's stroke defines a boolean algebra
 
@@ -91,28 +89,26 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sh2 <- sheffer2
   sh3 <- sheffer3
 
-  -- @a ︱b == b ︱a@
-  commut <- chainLemma "a ︱b == b ︱a"
-                       (\(Forall @"a" a) (Forall @"b" b) -> a ︱b .== b ︱a)
-                       (pure ())
-                       (\a b -> [ a ︱b
-                                , n (n (a ︱b))
-                                , n (n (a ︱n (n b)))
-                                , n (n (n (n b) ︱ a))
-                                , b ︱ a
+  -- @a ⏐b == b ⏐a@
+  commut <- chainLemma "a ⏐ b == b ⏐ a"
+                       (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ b .== b ⏐ a)
+                       (\a b -> [ a ⏐ b
+                                , ﬧ (ﬧ (a ⏐ b))
+                                , ﬧ (ﬧ (a ⏐ ﬧ (ﬧ b)))
+                                , ﬧ (ﬧ (ﬧ (ﬧ b) ⏐ a))
+                                , b ⏐ a
                                 ])
                        [sh1, sh3]
 
-  -- @a ︱ﬧa == b ︱ﬧb@
-  -- Make sure this is used
-  _all_bot <- chainLemma "a ︱ﬧa == b ︱ﬧb"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a ︱n a .== b ︱n b)
-                         (pure ())
-                         (\a b -> [ a ︱n a
-                                  , n ((a ︱n a) ︱(b ︱n b))
-                                  , n ((b ︱n b) ︱(a ︱n a))
-                                  , n (n (b ︱n b))
-                                  , b ︱ n b
+  -- @a ⏐ﬧa == b ⏐ﬧb@
+  -- TODO: Make sure this is used
+  _all_bot <- chainLemma "a ⏐ ﬧa == b ⏐ ﬧb"
+                         (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
+                         (\a b -> [ a ⏐ ﬧ a
+                                  , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
+                                  , ﬧ ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a))
+                                  , ﬧ (ﬧ (b ⏐ ﬧ b))
+                                  , b ⏐ ﬧ b
                                   ])
                          [sh1, sh2, commut]
 
@@ -146,26 +142,25 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
                     [sh1, sh3, commut]
 
-  -- @a ⊔ n a == u@
+  -- @a ⊔ ﬧ a == u@
   compl1 <- lemma "a ⊔ ﬧa == u"
-                  (\(Forall @"a" a) -> a `sup` n a .== u)
+                  (\(Forall @"a" a) -> a `sup` ﬧ a .== u)
                   [sh1, sh2, sh3]
 
   -- @a ⊓ ﬧa == z@
   compl2 <- lemma "a ⊓ ﬧa == z"
-                  (\(Forall @"a" a) -> a `inf` n a .== z)
+                  (\(Forall @"a" a) -> a `inf` ﬧ a .== z)
                   [sh1, sh2, sh3]
 
   -- @a ⊔ u == u@
   bound1 <- chainLemma "a ⊔ u"
                        (\(Forall @"a" a) -> a `sup` u .== u)
-                       (pure ())
                        (\a -> [ a `sup` u
                               , (a `sup` u) `inf` u
                               , u `inf` (a `sup` u)
-                              , (a `sup` n a) `inf` (a `sup` u)
-                              , a `sup` (n a `inf` u)
-                              , a `sup` n a
+                              , (a `sup` ﬧ a) `inf` (a `sup` u)
+                              , a `sup` (ﬧ a `inf` u)
+                              , a `sup` ﬧ a
                               , u
                               ])
                        [ident2, commut2, compl1, distrib1]
@@ -173,13 +168,12 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   -- @a ⊓ z = z@
   bound2 <- chainLemma "a ⊓ z = z"
                        (\(Forall @"a" a) -> a `inf` z .== z)
-                       (pure ())
                        (\a -> [ a `inf` z
                               , (a `inf` z) `sup` z
                               , z `sup` (a `inf` z)
-                              , (a `inf` n a) `sup` (a `inf` z)
-                              , a `inf` (n a `sup` z)
-                              , a `inf` n a
+                              , (a `inf` ﬧ a) `sup` (a `inf` z)
+                              , a `inf` (ﬧ a `sup` z)
+                              , a `inf` ﬧ a
                               , z
                               ])
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
@@ -188,7 +182,6 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   -- TODO: Make sure this is used
   _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a `sup` (a `inf` b) .== a)
-                        (pure ())
                         (\a b -> [ a `sup` (a `inf` b)
                                  , (a `inf` u) `sup` (a `inf` b)
                                  , a `inf` (u `sup` b)
@@ -202,7 +195,6 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   -- TODO: Make sure this is used
   _absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
                          (\(Forall @"a" a) (Forall @"b" b) -> a `inf` (a `sup` b) .== a)
-                         (pure ())
                          (\a b -> [ a `inf` (a `sup` b)
                                   , (a `sup` z) `inf` (a `sup` b)
                                   , a `sup` (z `inf` b)
