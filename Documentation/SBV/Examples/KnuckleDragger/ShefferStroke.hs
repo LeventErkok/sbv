@@ -154,46 +154,51 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                   [sh1, sh2, sh3]
 
   -- @a ⊔ u == u@
-  _bound1 <- chainLemma "a ⊔ u"
-                        (\(Forall @"a" a) -> a `sup` u .== u)
-                        (pure ())
-                        (\a -> [ a `sup` u
-                               , (a `sup` u) `inf` u
-                               , u `inf` (a `sup` u)
-                               , (a `sup` n a) `inf` (a `sup` u)
-                               , a `sup` (n a `inf` u)
-                               , a `sup` n a
-                               , u
-                               ])
-                        [ident2, commut2, compl1, distrib1]
+  bound1 <- chainLemma "a ⊔ u"
+                       (\(Forall @"a" a) -> a `sup` u .== u)
+                       (pure ())
+                       (\a -> [ a `sup` u
+                              , (a `sup` u) `inf` u
+                              , u `inf` (a `sup` u)
+                              , (a `sup` n a) `inf` (a `sup` u)
+                              , a `sup` (n a `inf` u)
+                              , a `sup` n a
+                              , u
+                              ])
+                       [ident2, commut2, compl1, distrib1]
 
   -- @a ⊓ z = z@
   _bound2 <- chainLemma "a ⊓ z = z"
-                        (\(Forall @"a" a) -> a `inf` z .== z)
+                       (\(Forall @"a" a) -> a `inf` z .== z)
+                       (pure ())
+                       (\a -> [ a `inf` z
+                              , (a `inf` z) `sup` z
+                              , z `sup` (a `inf` z)
+                              , (a `inf` n a) `sup` (a `inf` z)
+                              , a `inf` (n a `sup` z)
+                              , a `inf` n a
+                              , z
+                              ])
+                       [ident1, commut1, compl2, distrib2, ident1, compl2]
+
+  -- @a ⊔ (a ⊓ b) = a@
+  _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
+                        (\(Forall @"a" a) (Forall @"b" b) -> a `sup` (a `inf` b) .== a)
                         (pure ())
-                        (\a -> [ a `inf` z
-                               , (a `inf` z) `sup` z
-                               , z `sup` (a `inf` z)
-                               , (a `inf` n a) `sup` (a `inf` z)
-                               , a `inf` (n a `sup` z)
-                               , a `inf` n a
-                               , z
-                               ])
-                        [ident1, commut1, compl2, distrib2, ident1, compl2]
+                        (\a b -> [ a `sup` (a `inf` b)
+                                 , (a `inf` u) `sup` (a `inf` b)
+                                 , a `inf` (u `sup` b)
+                                 , a `inf` (b `sup` u)
+                                 , a `inf` u
+                                 , a
+                                 ])
+                        [ident2, distrib2, commut1, bound1]
 
   pure sorry
 
 {-
 
 @[simp] -- This simp is a little overeager.
-lemma absorb₁ (a b : α) : a ⊔ (a ⊓ b) = a := by
-  calc
-    a ⊔ (a ⊓ b) = (a ⊓ u) ⊔ (a ⊓ b) := by rw [ident₂]
-    _           = a ⊓ (u ⊔ b)       := by rw [distrib₂]
-    _           = a ⊓ (b ⊔ u)       := by conv => lhs; rw [commut₁]
-    _           = a ⊓ u             := by rw [bound₁]
-    _           = a                 := ident₂ a
-
 -- it would be nice to have a "dualization" tactic. This might be some work though.
 @[simp] -- This simp is a little overeager.
 lemma absorb₂ (a b : α) : a ⊓ (a ⊔ b) = a := by
