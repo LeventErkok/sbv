@@ -61,6 +61,7 @@ import Data.SBV.Utils.SExpr
 import Data.SBV.Control.Types
 import Data.SBV.Control.Utils
 
+import Data.SBV.Utils.Lib       (unBar)
 import Data.SBV.Utils.PrettyNum (showNegativeNumber)
 
 -- | An Assignment of a model binding

@@ -19,11 +19,13 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , stringToQFS, qfsToString
                           , isKString
                           , checkObservableName
+                          , needsBars, isEnclosedInBars
+                          , noSurrounding, unQuote, unBar, nameSupply
                           )
                           where
 
-import Data.Char    (isSpace, chr, ord, toLower, isDigit)
-import Data.List    (isPrefixOf)
+import Data.Char    (isSpace, chr, ord, toLower, isDigit, isAscii, isAlphaNum)
+import Data.List    (isPrefixOf, isSuffixOf)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 
@@ -148,3 +150,41 @@ checkObservableName lbl
   | True
   = Nothing
 
+-- Remove one pair of surrounding 'c's, if present
+noSurrounding :: Char -> String -> String
+noSurrounding c (c':cs@(_:_)) | c == c' && c == last cs  = init cs
+noSurrounding _ s                                        = s
+
+-- Remove a pair of surrounding quotes
+unQuote :: String -> String
+unQuote = noSurrounding '"'
+
+-- Remove a pair of surrounding bars
+unBar :: String -> String
+unBar = noSurrounding '|'
+
+-- Is this string surrounded by bars? NB. There shouldn't be any other bars or backslash anywhere
+isEnclosedInBars :: String -> Bool
+isEnclosedInBars nm =  "|" `isPrefixOf` nm
+                    && "|" `isSuffixOf` nm
+                    && length nm > 2
+                    && not (any (`elem` ("|\\" :: String)) (drop 1 (init nm)))
+
+-- Does this name need bar in SMTLib2?
+needsBars :: String -> Bool
+needsBars ""        = error "Impossible happened: needsBars received an empty name!"
+needsBars nm@(h:tl) = not (isEnclosedInBars nm || (isAscii h && all validChar tl))
+ where  validChar x = isAscii x && (isAlphaNum x || x `elem` ("_" :: String))
+
+
+-- An infinite supply of names, starting with a given set
+nameSupply :: [String] -> [String]
+nameSupply preSupply = preSupply ++ map mkUnique extras
+  where extras =  ["x", "y", "z"]                           -- x y z
+               ++ [[c] | c <- ['a' .. 'w']]                 -- a b c ... w
+               ++ ['x' : show i | i <- [(1::Int) ..]]       -- x1 x2 x3 ...
+
+        -- make sure extras are different than preSupply. Note that extras
+        -- themselves are unique, so we only have to check the preSupply
+        mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
+                   | True               = x

@@ -83,7 +83,7 @@ import Data.SBV.SMT.Utils     ( showTimeoutValue, alignPlain, debug, mergeSExpr,
                               )
 
 import Data.SBV.Utils.PrettyNum
-import Data.SBV.Utils.Lib       (joinArgs, splitArgs)
+import Data.SBV.Utils.Lib       (joinArgs, splitArgs, needsBars)
 import Data.SBV.Utils.SExpr     (parenDeficit, nameSupply)
 
 import qualified System.Timeout as Timeout (timeout)
@@ -603,8 +603,12 @@ showModelUI cfg (nm, (isCurried, SBVType ts, interp))
                      []  -> error $ "showModelUI: Unexpected type: " ++ show (SBVType ts)
                      tss -> (init tss, last tss)
 
-        sig | isCurried = nm ++ " :: "  ++ intercalate " -> " ats ++  " -> " ++ rt
-            | True      = nm ++ " :: (" ++ intercalate ", "   ats ++ ") -> " ++ rt
+        -- signatures require parens if this is a non-ascii name, i.e., needs bars
+        sigName | needsBars nm = '(' : nm ++ ")"
+                | True         = nm
+
+        sig | isCurried = sigName ++ " :: "  ++ intercalate " -> " ats ++  " -> " ++ rt
+            | True      = sigName ++ " :: (" ++ intercalate ", "   ats ++ ") -> " ++ rt
 
         mkBody (defs, dflt) = map align body
           where ls       = map line defs

@@ -15,7 +15,7 @@
 
 module Data.SBV.Utils.SExpr ( SExpr(..), parenDeficit, parseSExpr
                             , parseSExprFunction, makeHaskellFunction
-                            , unQuote, unBar, simplifyECon
+                            , unQuote, simplifyECon
                             , nameSupply
                             ) where
 
@@ -33,6 +33,8 @@ import Numeric    (readInt, readSigned, readDec, readHex, fromRat)
 import Data.SBV.Core.AlgReals
 import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Data (nan, infinity, RoundingMode(..))
+
+import Data.SBV.Utils.Lib (unBar, unQuote, nameSupply)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH, wordToFloat, wordToDouble)
 
@@ -685,31 +687,5 @@ hprint env = go (0 :: Int)
         isEQ    = (`elem` ["=",  "fp.eq"])
         isAND   = (== "and")
         isOR    = (== "or")
-
--- Remove one pair of surrounding 'c's, if present
-noSurrounding :: Char -> String -> String
-noSurrounding c (c':cs@(_:_)) | c == c' && c == last cs  = init cs
-noSurrounding _ s                                        = s
-
--- Remove a pair of surrounding quotes
-unQuote :: String -> String
-unQuote = noSurrounding '"'
-
--- Remove a pair of surrounding bars
-unBar :: String -> String
-unBar = noSurrounding '|'
-
--- An infinite supply of names, starting with a given set
-nameSupply :: [String] -> [String]
-nameSupply preSupply = preSupply ++ map mkUnique extras
-  where extras =  ["x", "y", "z"]                           -- x y z
-               ++ [[c] | c <- ['a' .. 'w']]                 -- a b c ... w
-               ++ ['x' : show i | i <- [(1::Int) ..]]       -- x1 x2 x3 ...
-
-        -- make sure extras are different than preSupply. Note that extras
-        -- themselves are unique, so we only have to check the preSupply
-        mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
-                   | True               = x
-
 
 {- HLint ignore chainAssigns "Redundant if" -}

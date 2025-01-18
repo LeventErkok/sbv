@@ -74,7 +74,7 @@ import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
-import Data.Char                   (isAlphaNum, toLower, isSpace, isAscii)
+import Data.Char                   (toLower, isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
 import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
@@ -110,7 +110,7 @@ import Data.SBV.Core.Kind
 import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff (Timing)
-import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName)
+import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName, needsBars)
 
 import Data.SBV.Control.Types
 
@@ -1388,9 +1388,7 @@ svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
 -- the name given, putting bars around it if needed. That's the name returned.
 newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO String
 newUninterpreted st (nm, mbArgNames) t uiCode
-  | not (isInternal || case nm of
-                         []   -> False
-                         h:tl -> enclosed || (isAscii h && all validChar tl))
+  | not isInternal && needsBars nm
   = if not enclosed
     then newUninterpreted st ('|' : nm ++ "|", mbArgNames) t uiCode
     else error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
@@ -1427,8 +1425,6 @@ newUninterpreted st (nm, mbArgNames) t uiCode
                             ++ "      Current type      : " ++ show t ++ "\n"
                             ++ "      Previously used at: " ++ show t'
           | True    = cont
-
-        validChar x = isAscii x && (isAlphaNum x || x `elem` ("_" :: String))
 
         enclosed    =  "|" `isPrefixOf` nm
                     && "|" `isSuffixOf` nm
