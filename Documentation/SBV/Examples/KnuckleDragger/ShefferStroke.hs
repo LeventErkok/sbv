@@ -104,6 +104,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [sh1, sh3]
 
   -- @a ︱ﬧa == b ︱ﬧb@
+  -- Make sure this is used
   _all_bot <- chainLemma "a ︱ﬧa == b ︱ﬧb"
                          (\(Forall @"a" a) (Forall @"b" b) -> a ︱n a .== b ︱n b)
                          (pure ())
@@ -131,7 +132,9 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                   [sh1, sh2]
 
   -- @a ⊓ u == a@
-  ident2 <- lemma "a ⊓ u = a" (\(Forall @"a" a) -> a `inf` u .== a) [sh1, sh2]
+  ident2 <- lemma "a ⊓ u = a"
+                  (\(Forall @"a" a) -> a `inf` u .== a)
+                  [sh1, sh2]
 
   -- @a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)@
   distrib1 <- lemma "a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)"
@@ -168,7 +171,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [ident2, commut2, compl1, distrib1]
 
   -- @a ⊓ z = z@
-  _bound2 <- chainLemma "a ⊓ z = z"
+  bound2 <- chainLemma "a ⊓ z = z"
                        (\(Forall @"a" a) -> a `inf` z .== z)
                        (pure ())
                        (\a -> [ a `inf` z
@@ -182,6 +185,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
   -- @a ⊔ (a ⊓ b) = a@
+  -- TODO: Make sure this is used
   _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a `sup` (a `inf` b) .== a)
                         (pure ())
@@ -193,6 +197,20 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                  , a
                                  ])
                         [ident2, distrib2, commut1, bound1]
+
+  -- @a ⊓ (a ⊔ b) = a@
+  -- TODO: Make sure this is used
+  _absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
+                         (\(Forall @"a" a) (Forall @"b" b) -> a `inf` (a `sup` b) .== a)
+                         (pure ())
+                         (\a b -> [ a `inf` (a `sup` b)
+                                  , (a `sup` z) `inf` (a `sup` b)
+                                  , a `sup` (z `inf` b)
+                                  , a `sup` (b `inf` z)
+                                  , a `sup` z
+                                  , a
+                                  ])
+                        [ident1, distrib1, commut2, bound2]
 
   pure sorry
 
