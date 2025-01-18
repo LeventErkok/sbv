@@ -116,11 +116,11 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                    (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ b .== b ⨅ a)
                    [commut]
 
-  ident1 <- lemma "a ⊔ z = a"
+  ident1 <- lemma "a ⊔ z == a"
                   (\(Forall @"a" a) -> a ⨆ z .== a)
                   [sh1, sh2]
 
-  ident2 <- lemma "a ⊓ u = a"
+  ident2 <- lemma "a ⊓ u == a"
                   (\(Forall @"a" a) -> a ⨅ u .== a)
                   [sh1, sh2]
 
@@ -140,7 +140,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                   (\(Forall @"a" a) -> a ⨅ ﬧ a .== z)
                   [sh1, sh2, sh3]
 
-  bound1 <- chainLemma "a ⊔ u"
+  bound1 <- chainLemma "a ⊔ u == u"
                        (\(Forall @"a" a) -> a ⨆ u .== u)
                        (\a -> [ a ⨆ u
                               , (a ⨆ u) ⨅ u
@@ -152,7 +152,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                               ])
                        [ident2, commut2, compl1, distrib1]
 
-  bound2 <- chainLemma "a ⊓ z = z"
+  bound2 <- chainLemma "a ⊓ z == z"
                        (\(Forall @"a" a) -> a ⨅ z .== z)
                        (\a -> [ a ⨅ z
                               , (a ⨅ z) ⨆ z
@@ -165,7 +165,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
   -- TODO: Make sure this is used
-  _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
+  _absorb1 <- chainLemma "a ⊔ (a ⊓ b) == a"
                          (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
                          (\a b -> [ a ⨆ (a ⨅ b)
                                   , (a ⨅ u) ⨆ (a ⨅ b)
@@ -176,27 +176,29 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                   ])
                          [ident2, distrib2, commut1, bound1]
 
-  -- TODO: Make sure this is used
-  _absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
-                         (\a b -> [ a ⨅ (a ⨆ b)
-                                  , (a ⨆ z) ⨅ (a ⨆ b)
-                                  , a ⨆ (z ⨅ b)
-                                  , a ⨆ (b ⨅ z)
-                                  , a ⨆ z
-                                  , a
-                                  ])
-                         [ident1, distrib1, commut2, bound2]
+  absorb2 <- chainLemma "a ⊓ (a ⊔ b) == a"
+                        (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
+                        (\a b -> [ a ⨅ (a ⨆ b)
+                                 , (a ⨆ z) ⨅ (a ⨆ b)
+                                 , a ⨆ (z ⨅ b)
+                                 , a ⨆ (b ⨅ z)
+                                 , a ⨆ z
+                                 , a
+                                 ])
+                        [ident1, distrib1, commut2, bound2]
+
+  -- TODO: use this
+  _DEMP2 <- chainLemma "a ⊓ a == a"
+                       (\(Forall @"a" a) -> a ⨅ a .== a)
+                       (\a -> [ a ⨅ a
+                              , a ⨅ (a ⨆ z)
+                              , a
+                              ])
+                       [ident1, absorb2]
 
   pure sorry
 
 {-
-@[simp]
-lemma idemp₂ (a : α) : a ⊓ a = a := by
-  symm
-  calc
-    a = a ⊓ (a ⊔ z) := Eq.symm (absorb₂ a z)
-    _ = a ⊓ a       := by rw [ident₁]
 
 lemma inv (a a' : α) : a ⊔ a' = u → a ⊓ a' = z → a' = aᶜ := by
   intro h₁ h₂
