@@ -166,15 +166,15 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   -- TODO: Make sure this is used
   _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
-                        (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
-                        (\a b -> [ a ⨆ (a ⨅ b)
-                                 , (a ⨅ u) ⨆ (a ⨅ b)
-                                 , a ⨅ (u ⨆ b)
-                                 , a ⨅ (b ⨆ u)
-                                 , a ⨅ u
-                                 , a
-                                 ])
-                        [ident2, distrib2, commut1, bound1]
+                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
+                         (\a b -> [ a ⨆ (a ⨅ b)
+                                  , (a ⨅ u) ⨆ (a ⨅ b)
+                                  , a ⨅ (u ⨆ b)
+                                  , a ⨅ (b ⨆ u)
+                                  , a ⨅ u
+                                  , a
+                                  ])
+                         [ident2, distrib2, commut1, bound1]
 
   -- TODO: Make sure this is used
   _absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
@@ -186,7 +186,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                   , a ⨆ z
                                   , a
                                   ])
-                        [ident1, distrib1, commut2, bound2]
+                         [ident1, distrib1, commut2, bound2]
 
   pure sorry
 
