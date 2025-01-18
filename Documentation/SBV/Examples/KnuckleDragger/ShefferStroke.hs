@@ -215,18 +215,6 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   pure sorry
 
 {-
-
-@[simp] -- This simp is a little overeager.
--- it would be nice to have a "dualization" tactic. This might be some work though.
-@[simp] -- This simp is a little overeager.
-lemma absorb₂ (a b : α) : a ⊓ (a ⊔ b) = a := by
-  calc
-    a ⊓ (a ⊔ b) = (a ⊔ z) ⊓ (a ⊔ b) := by rw [ident₁]
-    _           = a ⊔ (z ⊓ b)       := by rw [distrib₁]
-    _           = a ⊔ (b ⊓ z)       := by conv => lhs; rw [commut₂]
-    _           = a ⊔ z             := by rw [bound₂]
-    _           = a                 := ident₁ a
-
 @[simp]
 lemma idemp₂ (a : α) : a ⊓ a = a := by
   symm
