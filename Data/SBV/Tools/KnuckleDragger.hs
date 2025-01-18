@@ -88,6 +88,8 @@ class ChainLemma a steps step | steps -> step where
   --    * Prove: @H && A == B && B == C && C == D -> P@
   --    * If all of the above steps succeed, conclude @P@.
   --
+  -- Additionally, you can have the equalities under an assumption, as captured in the steps.
+  --
   -- Note that if the type of steps (i.e., @A@ .. @D@ above) is 'SBool', then we use implication
   -- as opposed to equality; which better captures line of reasoning.
   --
@@ -110,7 +112,7 @@ class ChainLemma a steps step | steps -> step where
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL chainSteps #-}
-  chainSteps :: a -> steps -> Symbolic (SBool, [SBool])
+  chainSteps :: a -> steps -> Symbolic (SBool, (SBool, [SBool]))
 
   chainLemma   nm p steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps by
   chainTheorem nm p steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps by
@@ -125,7 +127,7 @@ class ChainLemma a steps step | steps -> step where
         let (ros, modulo) = calculateRootOfTrust nm helpers
             finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
-        (goal, proofSteps) <- chainSteps result steps
+        (goal, (intros, proofSteps)) <- chainSteps result steps
 
         -- This seemingly unneded constraint makes sure SBV sees the
         -- definitions of any smtFunction calls or uninterpreted functions;
@@ -144,7 +146,7 @@ class ChainLemma a steps step | steps -> step where
         let go :: Int -> SBool -> [SBool] -> Query Proof
             go _ accum [] = do
                 queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                checkSatThen verbose "Result" accum goal ["", ""] Nothing $ \tab -> do
+                checkSatThen verbose "Result" (intros .=> accum) goal ["", ""] Nothing $ \tab -> do
                   finish tab
                   pure Proof { rootOfTrust = ros
                              , isUserAxiom = False
@@ -157,21 +159,21 @@ class ChainLemma a steps step | steps -> step where
                  checkSatThen verbose "Step  " accum s ["", show i] Nothing finish
                  go (i+1) (s .&& accum) ss
 
-        query $ go (1::Int) sTrue proofSteps
+        query $ go (1::Int) intros proofSteps
 
 -- | Turn a sequence of steps into a chain of pairs, merged with a function.
-mkChainSteps :: (a -> a -> b) -> [a] -> [b]
-mkChainSteps f xs = zipWith f xs (drop 1 xs)
+mkChainSteps :: (a -> a -> b) -> (SBool, [a]) -> (SBool, [b])
+mkChainSteps f (intros, xs) = (intros, zipWith f xs (drop 1 xs))
 
 -- | Chaining lemmas that depend on a single quantified variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> [z]) z where
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [z])) z where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (.==) (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> [z])
+                    (SBV a -> SBV b -> (SBool, [z]))
                     (SBV a -> SBV b -> z) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (.==) (steps a b))
@@ -179,7 +181,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> [z])
+                    (SBV a -> SBV b -> SBV c -> (SBool, [z]))
                     (SBV a -> SBV b -> SBV c -> z) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.==) (steps a b c))
@@ -187,26 +189,28 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [z]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.==) (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [z]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [z]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
 
 -- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> [SBool]) SBool where
+instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [SBool])) SBool where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (.=>) (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> [SBool])
+                    (SBV a -> SBV b -> (SBool, [SBool]))
                     (SBV a -> SBV b -> SBool) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (.=>) (steps a b))
@@ -214,7 +218,7 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
 -- | Chaining lemmas that depend on three quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> [SBool])
+                    (SBV a -> SBV b -> SBV c -> (SBool, [SBool]))
                     (SBV a -> SBV b -> SBV c -> SBool) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.=>) (steps a b c))
@@ -222,14 +226,16 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
 -- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.=>) (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> [SBool]) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
 

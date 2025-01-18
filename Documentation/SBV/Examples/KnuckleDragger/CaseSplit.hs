@@ -57,31 +57,31 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    -- Case 0: n = 0 (mod 3)
    case0 <- chainLemma "case_n_mod_3_eq_0"
                        (\(Forall @"n" n) -> (n `sEMod` 3 .== 0) .=> p n)
-                       (\n -> let k = n `sEDiv` 3
-                              in [ n `sEMod` 3 .== 0
-                                 , n .== 3 * k
-                                 , s n .== s (3 * k)
-                                 ])
+                       (\n -> (sTrue, let k = n `sEDiv` 3
+                                      in [ n `sEMod` 3 .== 0
+                                         , n .== 3 * k
+                                         , s n .== s (3 * k)
+                                         ]))
                        []
 
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
                        (\(Forall @"n" n) -> (n `sEMod` 3 .== 1) .=> p n)
-                       (\n -> let k = n `sEDiv` 3
-                              in [ n `sEMod` 3 .== 1
-                                 , n .== 3 * k + 1
-                                 , s n .== s (3 * k + 1)
-                                 ])
+                       (\n -> (sTrue, let k = n `sEDiv` 3
+                                      in [ n `sEMod` 3 .== 1
+                                         , n .== 3 * k + 1
+                                         , s n .== s (3 * k + 1)
+                                         ]))
                        []
 
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
                        (\(Forall @"n" n) -> (n `sEMod` 3 .== 2) .=> p n)
-                       (\n -> let k = n `sEDiv` 3
-                              in [ n `sEMod` 3 .== 2
-                                 , n .== 3 * k + 2
-                                 , s n .== s (3 * k + 2)
-                                 ])
+                       (\n -> (sTrue, let k = n `sEDiv` 3
+                                      in [ n `sEMod` 3 .== 2
+                                         , n .== 3 * k + 2
+                                         , s n .== s (3 * k + 2)
+                                         ]))
                        []
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so
