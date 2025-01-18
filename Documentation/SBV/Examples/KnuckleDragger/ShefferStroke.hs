@@ -270,17 +270,33 @@ dist2 = do
         (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
         [sh1, sh3, commut]
 
+-- | @a `sup` n a == u@
+--
+-- >>> runKD compl1
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Lemma: compl1                           Q.E.D.
+-- [Proven] compl1
+compl1 :: KD Proof
+compl1 = do
+  ShefferAxioms {sh1, sh2, sh3} <- shefferAxioms
+  lemma "compl1" (\(Forall @"a" a) -> a `sup` n a .== u) [sh1, sh2, sh3]
+
+-- | @a `inf` n a == z@
+--
+-- >>> runKD compl2
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Lemma: compl2                           Q.E.D.
+-- [Proven] compl2
+compl2 :: KD Proof
+compl2 = do
+  ShefferAxioms {sh1, sh2, sh3} <- shefferAxioms
+  lemma "compl2" (\(Forall @"a" a) -> a `inf` n a .== z) [sh1, sh2, sh3]
+
 {-
-@[simp]
-lemma compl₁ (a : α) : a ⊔ aᶜ = u := by
-  simp only [sup, u, z, comple]
-  exact congr rfl (all_bot a elt)
-
-@[simp]
-lemma compl₂ (a  : α) : a ⊓ aᶜ = z := by
-  simp only [inf, z, u, comple, sh₁, commut]
-  exact all_bot a elt
-
 @[simp]
 lemma bound₁ (a : α) : a ⊔ u = u := by
   calc
