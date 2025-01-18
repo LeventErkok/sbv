@@ -79,19 +79,14 @@ class ChainLemma a steps step | steps -> step where
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
-  -- Consider a call of the form @chainLemma name P setup [A, B, C, D] H@. Note that @H@ is
+  -- Consider a call of the form @chainLemma name P [A, B, C, D] H@. Note that @H@ is
   -- a list of already proven facts, ensured by the type signature. We proceed as follows:
   --
-  --    * Run setup
   --    * Prove: @H -> A == B@
   --    * Prove: @H && A == B -> B == C@
   --    * Prove: @H && A == B && B == C -> C == D@
   --    * Prove: @H && A == B && B == C && C == D -> P@
   --    * If all of the above steps succeed, conclude @P@.
-  --
-  -- Setup is typically used for setting options, or calls to 'registerFunction'. Use @pure ()@ if not
-  -- needed. Note that you can run arbitrary Symbolic code here, which is flexible but also can change
-  -- the proof-status if you (for instance) use 'constrain' to add extra restrictions.
   --
   -- Note that if the type of steps (i.e., @A@ .. @D@ above) is 'SBool', then we use implication
   -- as opposed to equality; which better captures line of reasoning.
@@ -102,32 +97,30 @@ class ChainLemma a steps step | steps -> step where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
   -- no sequence of steps to reason about.
-  chainLemma :: Proposition a => String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+  chainLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Same as chainLemma, except tagged as Theorem
-  chainTheorem :: Proposition a => String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+  chainTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL chainSteps #-}
   chainSteps :: a -> steps -> Symbolic (SBool, [SBool])
 
-  chainLemma   nm p setup steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p setup steps by
-  chainTheorem nm p setup steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p setup steps by
-  chainLemmaWith                   = chainGeneric False
-  chainTheoremWith                 = chainGeneric True
+  chainLemma   nm p steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps by
+  chainTheorem nm p steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps by
+  chainLemmaWith             = chainGeneric False
+  chainTheoremWith           = chainGeneric True
 
-  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
-  chainGeneric tagTheorem cfg@SMTConfig{verbose} nm result setup steps helpers = liftIO $ runSMTWith cfg $ do
+  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainGeneric tagTheorem cfg@SMTConfig{verbose} nm result steps helpers = liftIO $ runSMTWith cfg $ do
 
         liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
-
-        setup
 
         let (ros, modulo) = calculateRootOfTrust nm helpers
             finish        = finishKD cfg ("Q.E.D." ++ modulo)
@@ -251,31 +244,30 @@ data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
-   inductiveLemma :: Proposition a => String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+   inductiveLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Inductively prove a theorem. Same as 'inductiveLemma', but tagged as a theorem, using the default config.
-   inductiveTheorem :: Proposition a => String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+   inductiveTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Same as 'inductiveLemma', but with the given solver configuration.
-   inductiveLemmaWith :: Proposition a => SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+   inductiveLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
-   inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
+   inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
-   inductiveLemma   nm p setup steps by = getKDConfig >>= \cfg -> inductiveLemmaWith   cfg nm p setup steps by
-   inductiveTheorem nm p setup steps by = getKDConfig >>= \cfg -> inductiveTheoremWith cfg nm p setup steps by
-   inductiveLemmaWith                   = inductGeneric False
-   inductiveTheoremWith                 = inductGeneric True
+   inductiveLemma   nm p steps by = getKDConfig >>= \cfg -> inductiveLemmaWith   cfg nm p steps by
+   inductiveTheorem nm p steps by = getKDConfig >>= \cfg -> inductiveTheoremWith cfg nm p steps by
+   inductiveLemmaWith             = inductGeneric False
+   inductiveTheoremWith           = inductGeneric True
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
    inductionStrategy :: Proposition a => a -> steps -> Symbolic InductionStrategy
 
-   inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> Symbolic () -> steps -> [Proof] -> KD Proof
-   inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult setup steps helpers = liftIO $ do
+   inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+   inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult steps helpers = liftIO $ do
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
         runSMTWith cfg $ do
-           setup
 
            mapM_ (constrain . getProof) helpers
 

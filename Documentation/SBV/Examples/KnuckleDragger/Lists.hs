@@ -298,7 +298,6 @@ mapReverse = runKD $ do
 
      inductiveLemma "mapReverse"
           (\(Forall @"xs" xs) -> p f xs)
-          (pure ())
           (\x xs -> ( [ reverse (map f (x .: xs))
                       , reverse (f x .: map f xs)
                       , reverse (map f xs) ++ singleton (f x)
@@ -511,7 +510,6 @@ foldrFoldlDuality = runKD $ do
 
    inductiveLemma "foldrFoldlDuality"
                   (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
-                  (pure ())
                   (\e x xs -> ( [ foldr f e (x .: xs)
                                 , x `f` foldr f e xs
                                 , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis
@@ -587,7 +585,6 @@ foldrFoldlDualityGeneralized  = runKD $ do
    h <- do let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
            inductiveLemma "foldl over @"
                           (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
-                          (pure ())
                           (\y x xs -> let z = uninterpret "z"
                                       in ( [ foldl (@) (y @ z) (x .: xs)
                                            , foldl (@) ((y @ z) @ x) xs
@@ -605,7 +602,6 @@ foldrFoldlDualityGeneralized  = runKD $ do
 
    inductiveLemma "foldrFoldlDuality"
                   (\(Forall @"xs" xs) -> p xs)
-                  (pure ())
                   (\x xs -> ( [ foldr (@) e (x .: xs)
                               , x @ foldr (@) e xs
                               , x @ foldl (@) e xs    -- inductive hypothesis
@@ -686,7 +682,6 @@ foldrFoldl = runKD $ do
 
       inductiveLemma "foldl over <*>/<+>"
                      (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
-                     (pure ())
                      -- Using z to avoid confusion with the variable x already present, following Bird.
                      (\x z xs -> let y = uninterpret "y"
                                  in ( [ x <+> foldl (<*>) y (z .: xs)
@@ -706,7 +701,6 @@ foldrFoldl = runKD $ do
    -- Final proof:
    inductiveLemma "foldrFoldl"
                   (\(Forall @"xs" xs) -> p xs)
-                  (pure ())
                   (\x xs -> ( [ foldr (<+>) e (x .: xs)
                               , x <+> foldr (<+>) e xs     -- inductive hypothesis
                               , x <+> foldl (<*>) e xs
@@ -803,7 +797,6 @@ bookKeeping = runKD $ do
    --   foldr f y xs = foldr f a xs `f` y
    helper <- inductiveLemma "foldBase"
                             (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
-                            (pure ())
                             (\y x xs -> ( [ foldr f y (x .: xs)
                                           , x `f` foldr f y xs
                                           , x `f` (foldr f a xs `f` y)   -- inductive hypothesis
@@ -816,7 +809,6 @@ bookKeeping = runKD $ do
 
    inductiveLemma "bookKeeping"
                   (\(Forall @"xss" xss) -> p xss)
-                  (pure ())
                   (\xs xss -> let y = foldr f a (mapFoldr a xss)
                               in  ( [ foldr f a (concat (xs .: xss))
                                     , foldr f a (xs ++ concat xss)

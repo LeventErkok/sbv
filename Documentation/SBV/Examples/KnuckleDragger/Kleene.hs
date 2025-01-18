@@ -122,7 +122,6 @@ kleeneProofs = runKD $ do
 
   -- This one requires a chain of reasoning: x* x* == x*
   star_star_1  <- chainLemma "star_star_1" (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x)
-                                           (pure ())
                                            (\x -> [ star x * star x
                                                   , (1 + x * star x) * (1 + x * star x)
                                                   , (1 + 1) + (x * star x + x * star x)
