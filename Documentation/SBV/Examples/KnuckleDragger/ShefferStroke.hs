@@ -8,7 +8,7 @@
 --
 -- Inspired by https://www.philipzucker.com/cody_sheffer/, proving
 -- that the axioms of sheffer stroke (i.e., nand in traditional boolean
--- logic), implies it is a boolean algebra.
+-- logic), imply it is a boolean algebra.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                #-}
@@ -27,12 +27,6 @@ module Documentation.SBV.Examples.KnuckleDragger.ShefferStroke where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
--- $setup
--- >>> -- For doctest purposes only:
--- >>> import Data.SBV.Tools.KnuckleDragger(runKD)
-#endif
-
 -- * The sheffer stroke
 
 -- | The abstract type for the domain.
@@ -45,97 +39,33 @@ mkUninterpretedSort ''Stroke
 infixl 7 ︱
 
 -- | Negation in terms of ǀ
+-- TODO: I'd like to use ﬧ instead of n here, but doctest has a bug that causes
+-- the properties to be ignore. So, just using n for now. See: https://github.com/phadej/cabal-extras/issues/131
 n :: SStroke -> SStroke
 n x = x ︱x
 
--- | Helper datatype to collect sheffer-axioms in.
-data ShefferAxioms = ShefferAxioms { sh1 :: Proof
-                                   , sh2 :: Proof
-                                   , sh3 :: Proof
-                                   }
+-- | First Sheffer axiom @ﬧﬧa == a@
+sheffer1 :: KD Proof
+sheffer1 = axiom "ﬧﬧa == a" $ \(Forall @"a" a) -> n (n a) .== a
 
--- | Collection of sheffer-axioms
-shefferAxioms :: KD ShefferAxioms
-shefferAxioms = do
-   sh1 <- axiom "Sheffer Stroke 1" $ \(Forall @"a" a) ->                                 n(n a) .== a
-   sh2 <- axiom "Sheffer Stroke 2" $ \(Forall @"a" a) (Forall @"b" b) ->                 a ︱(b ︱n b) .== n a
-   sh3 <- axiom "Sheffer Stroke 3" $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> n(a ︱(b ︱c)) .== (n b ︱a) ︱(n c ︱a)
+-- | Second Sheffer axiom @a ︱(b ︱ﬧb) == ﬧa@
+sheffer2 :: KD Proof
+sheffer2 = axiom "a ︱(b ︱ﬧb) == ﬧa" $ \(Forall @"a" a) (Forall @"b" b) -> a ︱(b ︱n b) .== n a
 
-   pure $ ShefferAxioms { sh1 = sh1, sh2 = sh2, sh3 = sh3 }
-
--- * Commmutativity
-
--- | Prove that the sheffer stroke is commutative. We have:
---
--- >>> runKD commutative
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] commutative
-commutative :: KD Proof
-commutative = do
-   ShefferAxioms {sh1, sh3} <- shefferAxioms
-   chainLemma "commutative"
-              (\(Forall @"a" a) (Forall @"b" b) -> a ︱b .== b ︱a)
-              (pure ())
-              (\a b -> [ a ︱b
-                       , n(n(a ︱b))
-                       , n(n(a ︱n(n b)))
-                       , n(n (n(n b) ︱ a))
-                       , b ︱ a
-                       ])
-              [sh1, sh3]
-
--- * Bottom elements are the same
-
--- | Prove that @a ︱n a == b ︱n b@ for all elements, that is, bottom element is unique. We have:
---
--- >>> runKD all_bot
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Chain lemma: all_bot
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] all_bot
-all_bot :: KD Proof
-all_bot = do
-  ShefferAxioms {sh1, sh2} <- shefferAxioms
-  commut                   <- commutative
-
-  chainLemma "all_bot"
-             (\(Forall @"a" a) (Forall @"b" b) -> a ︱n a .== b ︱n b)
-             (pure ())
-             (\a b -> [ a ︱n a
-                      , n ((a ︱n a) ︱(b ︱n b))
-                      , n ((b ︱n b) ︱(a ︱n a))
-                      , n (n (b ︱n b))
-                      , b ︱ n b
-                      ])
-            [sh1, sh2, commut]
+-- | Third Sheffer axiom @ﬧ(a ︱(b ︱c)) == (ﬧb ︱a) ︱(ﬧc ︱a)@
+sheffer3 :: KD Proof
+sheffer3 = axiom "ﬧ(a ︱(b ︱c)) == (ﬧb ︱a) ︱(ﬧc ︱a)"
+               $ \(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> n (a ︱(b ︱c)) .== (n b ︱a) ︱(n c ︱a)
 
 -- * Infimum, supremum, bottom, and top
 
--- | Infimum: Greatest lower bound
+-- | Infimum: Greatest lower bound.
+-- TODO: I'd like to use ⊓ here, but I can't figure out how to make that an operator.
 inf :: SStroke -> SStroke -> SStroke
 a `inf` b = n a ︱n b
 
--- | Supremum: Least upper bound
+-- | Supremum: Least upper bound.
+-- TODO: I'd like to use ⊔ here, but I can't figure out how to make that an operator.
 sup :: SStroke -> SStroke -> SStroke
 a `sup` b = n (a ︱b)
 
@@ -148,215 +78,112 @@ z = elt ︱n elt
 u :: SStroke
 u = n z
 
--- | `sup` is commutative: @a `sup` b == b `sup` a@
+-- * Sheffer's stroke defines a boolean algebra
+
+-- | Prove that Sheffer stroke axioms imply it is a boolean algebra. We have:
 --
--- We have:
---
--- >>> runKD commut1
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: sup commutes                     Q.E.D.
--- [Proven] sup commutes
-commut1 :: KD Proof
-commut1 = do
-  comm <- commutative
+-- TODO: Due to doctest issues, the output here does not get tested.
+-- >>> shefferBooleanAlgebra
+shefferBooleanAlgebra :: IO Proof
+shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
-  lemma "sup commutes"
-        (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
-        [comm]
+  sh1 <- sheffer1
+  sh2 <- sheffer2
+  sh3 <- sheffer3
 
--- | `inf` is commutative: @a `inf` b == b `inf` a@
---
--- We have:
---
--- >>> runKD commut2
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: inf commutes                     Q.E.D.
--- [Proven] inf commutes
-commut2 :: KD Proof
-commut2 = do
-  comm <- commutative
+  -- @a ︱b == b ︱a@
+  commut <- chainLemma "a ︱b == b ︱a"
+                       (\(Forall @"a" a) (Forall @"b" b) -> a ︱b .== b ︱a)
+                       (pure ())
+                       (\a b -> [ a ︱b
+                                , n (n (a ︱b))
+                                , n (n (a ︱n (n b)))
+                                , n (n (n (n b) ︱ a))
+                                , b ︱ a
+                                ])
+                       [sh1, sh3]
 
-  lemma "inf commutes"
-        (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
-        [comm]
+  -- @a ︱ﬧa == b ︱ﬧb@
+  _all_bot <- chainLemma "a ︱ﬧa == b ︱ﬧb"
+                         (\(Forall @"a" a) (Forall @"b" b) -> a ︱n a .== b ︱n b)
+                         (pure ())
+                         (\a b -> [ a ︱n a
+                                  , n ((a ︱n a) ︱(b ︱n b))
+                                  , n ((b ︱n b) ︱(a ︱n a))
+                                  , n (n (b ︱n b))
+                                  , b ︱ n b
+                                  ])
+                         [sh1, sh2, commut]
 
--- | @a `sup` z == a@
---
--- >>> runKD ident1
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Lemma: a `sup` z = a                    Q.E.D.
--- [Proven] a `sup` z = a
-ident1 :: KD Proof
-ident1 = do
-  ShefferAxioms {sh1, sh2} <- shefferAxioms
+  -- @a ⊔ b == b ⊔ a@
+  commut1 <- lemma "a ⊔ b == b ⊔ a"
+                   (\(Forall @"a" a) (Forall @"b" b) -> a `sup` b .== b `sup` a)
+                   [commut]
 
-  lemma "a `sup` z = a" (\(Forall @"a" a) -> a `sup` z .== a) [sh1, sh2]
+  -- @a ⊓ b == b ⊓ a@
+  commut2 <- lemma "a ⊓ b == b ⊓ a"
+                   (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
+                   [commut]
 
--- | @a `inf` u == a@
---
--- >>> runKD ident2
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Lemma: a `inf` u = a                    Q.E.D.
--- [Proven] a `inf` u = a
-ident2 :: KD Proof
-ident2 = do
-  ShefferAxioms {sh1, sh2} <- shefferAxioms
+  -- @a ⊔ z == a@
+  ident1 <- lemma "a ⊔ z = a"
+                  (\(Forall @"a" a) -> a `sup` z .== a)
+                  [sh1, sh2]
 
-  lemma "a `inf` u = a" (\(Forall @"a" a) -> a `inf` u .== a) [sh1, sh2]
+  -- @a ⊓ u == a@
+  ident2 <- lemma "a ⊓ u = a" (\(Forall @"a" a) -> a `inf` u .== a) [sh1, sh2]
 
--- | @a `sup` (b `inf` c) == (a `sup` b) `inf` (a `sup` c)@
---
--- >>> runKD distrib1
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: distrib1                         Q.E.D.
--- [Proven] distrib1
-distrib1 :: KD Proof
-distrib1 = do
-  ShefferAxioms {sh1, sh3} <- shefferAxioms
-  commut                   <- commutative
+  -- @a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)@
+  distrib1 <- lemma "a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)"
+                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `sup` (b `inf` c) .== (a `sup` b) `inf` (a `sup` c))
+                    [sh1, sh3, commut]
 
-  lemma "distrib1"
-        (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `sup` (b `inf` c) .== (a `sup` b) `inf` (a `sup` c))
-        [sh1, sh3, commut]
+  -- @a ⊓ (b ⊔ c) == (a ⊓ b) ⊔ (a ⊓ c)@
+  distrib2 <- lemma "a ⊓ (b ⊔ c) == (a ⊓ b) ⊔ (a ⊓ c)"
+                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
+                    [sh1, sh3, commut]
 
--- | @a `inf` (b `sup` c) == (a `inf` b) `sup` (a `inf` c)@
---
--- >>> runKD distrib2
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: distrib2                         Q.E.D.
--- [Proven] distrib2
-distrib2 :: KD Proof
-distrib2 = do
-  ShefferAxioms {sh1, sh3} <- shefferAxioms
-  commut                   <- commutative
+  -- @a ⊔ n a == u@
+  compl1 <- lemma "a ⊔ ﬧa == u"
+                  (\(Forall @"a" a) -> a `sup` n a .== u)
+                  [sh1, sh2, sh3]
 
-  lemma "distrib2"
-        (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
-        [sh1, sh3, commut]
+  -- @a ⊓ ﬧa == z@
+  compl2 <- lemma "a ⊓ ﬧa == z"
+                  (\(Forall @"a" a) -> a `inf` n a .== z)
+                  [sh1, sh2, sh3]
 
--- | @a `sup` n a == u@
---
--- >>> runKD compl1
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Lemma: compl1                           Q.E.D.
--- [Proven] compl1
-compl1 :: KD Proof
-compl1 = do
-  ShefferAxioms {sh1, sh2, sh3} <- shefferAxioms
-  lemma "compl1" (\(Forall @"a" a) -> a `sup` n a .== u) [sh1, sh2, sh3]
+  -- @a ⊔ u == u@
+  _bound1 <- chainLemma "a ⊔ u"
+                        (\(Forall @"a" a) -> a `sup` u .== u)
+                        (pure ())
+                        (\a -> [ a `sup` u
+                               , (a `sup` u) `inf` u
+                               , u `inf` (a `sup` u)
+                               , (a `sup` n a) `inf` (a `sup` u)
+                               , a `sup` (n a `inf` u)
+                               , a `sup` n a
+                               , u
+                               ])
+                        [ident2, commut2, compl1, distrib1]
 
--- | @a `inf` n a == z@
---
--- >>> runKD compl2
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Lemma: compl2                           Q.E.D.
--- [Proven] compl2
-compl2 :: KD Proof
-compl2 = do
-  ShefferAxioms {sh1, sh2, sh3} <- shefferAxioms
-  lemma "compl2" (\(Forall @"a" a) -> a `inf` n a .== z) [sh1, sh2, sh3]
+  -- @a ⊓ z = z@
+  _bound2 <- chainLemma "a ⊓ z = z"
+                        (\(Forall @"a" a) -> a `inf` z .== z)
+                        (pure ())
+                        (\a -> [ a `inf` z
+                               , (a `inf` z) `sup` z
+                               , z `sup` (a `inf` z)
+                               , (a `inf` n a) `sup` (a `inf` z)
+                               , a `inf` (n a `sup` z)
+                               , a `inf` n a
+                               , z
+                               ])
+                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
--- | @a `sup` u == u@
---
--- >>> runKD bound1
--- Axiom: Sheffer Stroke 1                 Axiom.
--- Axiom: Sheffer Stroke 2                 Axiom.
--- Axiom: Sheffer Stroke 3                 Axiom.
--- Lemma: a `inf` u = a                    Q.E.D.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: inf commutes                     Q.E.D.
--- Lemma: compl1                           Q.E.D.
--- Chain lemma: commutative
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: distrib1                         Q.E.D.
--- Chain lemma: bound1
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Step  : 5                             Q.E.D.
---   Step  : 6                             Q.E.D.
---   Result:                               Q.E.D.
--- [Proven] bound1
-bound1 :: KD Proof
-bound1 = do
+  pure sorry
 
-  p_ident2   <- ident2
-  p_commut2  <- commut2
-  p_compl1   <- compl1
-  p_distrib1 <- distrib1
-
-  chainLemma "bound1"
-             (\(Forall @"a" a) -> a `sup` u .== u)
-             (pure ())
-             (\a -> [ a `sup` u
-                    , (a `sup` u) `inf` u
-                    , u `inf` (a `sup` u)
-                    , (a `sup` n a) `inf` (a `sup` u)
-                    , a `sup` (n a `inf` u)
-                    , a `sup` n a
-                    , u
-                    ])
-             [p_ident2, p_commut2, p_compl1, p_distrib1]
 {-
-@[simp]
-lemma bound₂ (a : α) : a ⊓ z = z := by
-  calc
-    a ⊓ z = (a ⊓ z) ⊔ z        := by rw [ident₁]
-    _     = z ⊔ (a ⊓ z)        := by rw [commut₁]
-    _     = (a ⊓ aᶜ) ⊔ (a ⊓ z) := by rw [compl₂]
-    _     = a ⊓ (aᶜ ⊔ z)       := by rw [distrib₂]
-    _     = a ⊓ aᶜ             := by rw [ident₁]
-    _     = z                  := compl₂ a
 
 @[simp] -- This simp is a little overeager.
 lemma absorb₁ (a b : α) : a ⊔ (a ⊓ b) = a := by
