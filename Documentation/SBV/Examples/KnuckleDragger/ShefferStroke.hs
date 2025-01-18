@@ -164,17 +164,17 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                               ])
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
-  -- TODO: Make sure this is used
-  _absorb1 <- chainLemma "a ⊔ (a ⊓ b) == a"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
-                         (\a b -> [ a ⨆ (a ⨅ b)
-                                  , (a ⨅ u) ⨆ (a ⨅ b)
-                                  , a ⨅ (u ⨆ b)
-                                  , a ⨅ (b ⨆ u)
-                                  , a ⨅ u
-                                  , a
-                                  ])
-                         [ident2, distrib2, commut1, bound1]
+  -- TODO: absorb1
+  _bsorb1 <- chainLemma "a ⊔ (a ⊓ b) == a"
+                        (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
+                        (\a b -> [ a ⨆ (a ⨅ b)
+                                 , (a ⨅ u) ⨆ (a ⨅ b)
+                                 , a ⨅ (u ⨆ b)
+                                 , a ⨅ (b ⨆ u)
+                                 , a ⨅ u
+                                 , a
+                                 ])
+                        [ident2, distrib2, commut1, bound1]
 
   absorb2 <- chainLemma "a ⊓ (a ⊔ b) == a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
@@ -187,8 +187,8 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                  ])
                         [ident1, distrib1, commut2, bound2]
 
-  -- TODO: use this
-  _DEMP2 <- chainLemma "a ⊓ a == a"
+  -- TODO: idemp2
+  _demp2 <- chainLemma "a ⊓ a == a"
                        (\(Forall @"a" a) -> a ⨅ a .== a)
                        (\a -> [ a ⨅ a
                               , a ⨅ (a ⨆ z)
@@ -196,25 +196,27 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                               ])
                        [ident1, absorb2]
 
+  -- TODO: inv
+  _nv <- chainLemma "a ⨆ a' == u → a ⨅ a' == z → a' = ﬧ a"
+                    (\(Forall @"a" a) (Forall @"a'" a') -> a ⨆ a' .== u .=> a ⨅ a' .== z .=> a' .== ﬧ a)
+                    (\a a' -> [ a'
+                              , a' ⨅ u
+                              , a' ⨅ (a ⨆ ﬧ a)
+                              , (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)
+                              , (a' ⨅ a) ⨆ (ﬧ a ⨅ a')
+                              , (a ⨅ a') ⨆ (ﬧ a ⨅ a')
+                              -- , z ⨆ (ﬧ a ⨅ a')
+                              -- , (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a')
+                              -- , (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a')
+                              -- , ﬧ a ⨅ (a ⨆ a')
+                              -- , ﬧ a ⨅ u
+                              -- , ﬧ a
+                              ])
+                    [ident2, compl1, distrib2, commut2]
+
   pure sorry
 
 {-
-
-lemma inv (a a' : α) : a ⊔ a' = u → a ⊓ a' = z → a' = aᶜ := by
-  intro h₁ h₂
-  calc
-    a' = a' ⊓ u               := Eq.symm (ident₂ a')
-    _  = a' ⊓ (a ⊔ aᶜ)        := by rw [compl₁]
-    _  = (a' ⊓ a) ⊔ (a' ⊓ aᶜ) := by rw [distrib₂]
-    _  = (a' ⊓ a) ⊔ (aᶜ ⊓ a') := by conv => left; right; exact commut₂ a' aᶜ
-    _  = (a ⊓ a') ⊔ (aᶜ ⊓ a') := by conv => left; left; exact commut₂ a' a
-    _  = z ⊔ (aᶜ ⊓ a')        := by rw [h₂]
-    _  = (a ⊓ aᶜ) ⊔ (aᶜ ⊓ a') := by rw [compl₂]
-    _  = (aᶜ ⊓ a) ⊔ (aᶜ ⊓ a') := by conv => left; left; exact commut₂ a aᶜ
-    _  = aᶜ ⊓ (a ⊔ a')        := by rw [distrib₂]
-    _  = aᶜ ⊓ u               := by rw [h₁]
-    _  = aᶜ                   := ident₂ aᶜ
-
 lemma dne (a : α) : aᶜᶜ = a := by
   symm
   apply inv
