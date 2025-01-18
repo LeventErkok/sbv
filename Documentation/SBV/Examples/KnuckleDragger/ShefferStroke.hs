@@ -196,8 +196,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                        [ident1, absorb2]
 
-  -- TODO: inv
-  _nv <- chainLemma "a ⨆ a' == u → a ⨅ a' == z → a' = ﬧ a"
+  inv <- chainLemma "a ⨆ a' == u → a ⨅ a' == z → a' = ﬧ a"
                     (\(Forall @"a" a) (Forall @"a'" a') -> a ⨆ a' .== u .=> a ⨅ a' .== z .=> a' .== ﬧ a)
                     (\a a' -> (a ⨆ a' .== u .&& a ⨅ a' .== z, [ a'
                                                               , a' ⨅ u
@@ -214,21 +213,18 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                               ]))
                     [ident2, compl1, distrib2, commut2]
 
+  dne <- lemma "ﬧ (ﬧ a) == a"
+               (\(Forall @"a" a) -> ﬧ (ﬧ a) .== a)
+               [inv, compl1, compl2, commut1, commut2]
+
+  -- TODO: inv_elim
+  _nv_elim <- lemma "ﬧ a == ﬧ b → a == b"
+                    (\(Forall @"a" a) (Forall @"b" b) -> ﬧ a .== ﬧ b .=> a .== b)
+                    [dne]
+
   pure sorry
 
 {-
-lemma dne (a : α) : aᶜᶜ = a := by
-  symm
-  apply inv
-  . rw [commut₁]; exact compl₁ a
-  . rw [commut₂]; exact compl₂ a
-
-lemma inv_elim (a b : α) : aᶜ = bᶜ → a = b := by
-  intro h
-  have h' : aᶜᶜ = bᶜᶜ := congrArg compl h
-  simp only [dne] at h'
-  trivial
-
 lemma cancel (a b : α) : a ⊔ bᶜ = u → a ⊓ bᶜ = z → a = b := by
   intro h₁ h₂
   have h : bᶜ = aᶜ := by apply inv <;> trivial
