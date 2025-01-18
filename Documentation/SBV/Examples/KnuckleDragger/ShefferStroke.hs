@@ -226,7 +226,7 @@ ident2 = do
 
 -- | @a `sup` (b `inf` c) == (a `sup` b) `inf` (a `sup` c)@
 --
--- >>> runKD dist1
+-- >>> runKD distrib1
 -- Axiom: Sheffer Stroke 1                 Axiom.
 -- Axiom: Sheffer Stroke 2                 Axiom.
 -- Axiom: Sheffer Stroke 3                 Axiom.
@@ -236,20 +236,20 @@ ident2 = do
 --   Step  : 3                             Q.E.D.
 --   Step  : 4                             Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: dist1                            Q.E.D.
--- [Proven] dist1
-dist1 :: KD Proof
-dist1 = do
+-- Lemma: distrib1                         Q.E.D.
+-- [Proven] distrib1
+distrib1 :: KD Proof
+distrib1 = do
   ShefferAxioms {sh1, sh3} <- shefferAxioms
   commut                   <- commutative
 
-  lemma "dist1"
+  lemma "distrib1"
         (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `sup` (b `inf` c) .== (a `sup` b) `inf` (a `sup` c))
         [sh1, sh3, commut]
 
 -- | @a `inf` (b `sup` c) == (a `inf` b) `sup` (a `inf` c)@
 --
--- >>> runKD dist2
+-- >>> runKD distrib2
 -- Axiom: Sheffer Stroke 1                 Axiom.
 -- Axiom: Sheffer Stroke 2                 Axiom.
 -- Axiom: Sheffer Stroke 3                 Axiom.
@@ -259,14 +259,14 @@ dist1 = do
 --   Step  : 3                             Q.E.D.
 --   Step  : 4                             Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: dist2                            Q.E.D.
--- [Proven] dist2
-dist2 :: KD Proof
-dist2 = do
+-- Lemma: distrib2                         Q.E.D.
+-- [Proven] distrib2
+distrib2 :: KD Proof
+distrib2 = do
   ShefferAxioms {sh1, sh3} <- shefferAxioms
   commut                   <- commutative
 
-  lemma "dist2"
+  lemma "distrib2"
         (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
         [sh1, sh3, commut]
 
@@ -296,17 +296,58 @@ compl2 = do
   ShefferAxioms {sh1, sh2, sh3} <- shefferAxioms
   lemma "compl2" (\(Forall @"a" a) -> a `inf` n a .== z) [sh1, sh2, sh3]
 
-{-
-@[simp]
-lemma bound₁ (a : α) : a ⊔ u = u := by
-  calc
-    a ⊔ u = (a ⊔ u) ⊓ u        := by rw [ident₂]
-    _     = u ⊓ (a ⊔ u)        := by rw [commut₂]
-    _     = (a ⊔ aᶜ) ⊓ (a ⊔ u) := by rw [compl₁]
-    _     = a ⊔ (aᶜ ⊓ u)       := by rw [distrib₁]
-    _     = a ⊔ aᶜ             := by rw [ident₂]
-    _     = u                  := compl₁ a
+-- | @a `sup` u == u@
+--
+-- >>> runKD bound1
+-- Axiom: Sheffer Stroke 1                 Axiom.
+-- Axiom: Sheffer Stroke 2                 Axiom.
+-- Axiom: Sheffer Stroke 3                 Axiom.
+-- Lemma: a `inf` u = a                    Q.E.D.
+-- Chain lemma: commutative
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: inf commutes                     Q.E.D.
+-- Lemma: compl1                           Q.E.D.
+-- Chain lemma: commutative
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: distrib1                         Q.E.D.
+-- Chain lemma: bound1
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Step  : 5                             Q.E.D.
+--   Step  : 6                             Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] bound1
+bound1 :: KD Proof
+bound1 = do
 
+  p_ident2   <- ident2
+  p_commut2  <- commut2
+  p_compl1   <- compl1
+  p_distrib1 <- distrib1
+
+  chainLemma "bound1"
+             (\(Forall @"a" a) -> a `sup` u .== u)
+             (pure ())
+             (\a -> [ a `sup` u
+                    , (a `sup` u) `inf` u
+                    , u `inf` (a `sup` u)
+                    , (a `sup` n a) `inf` (a `sup` u)
+                    , a `sup` (n a `inf` u)
+                    , a `sup` n a
+                    , u
+                    ])
+             [p_ident2, p_commut2, p_compl1, p_distrib1]
+{-
 @[simp]
 lemma bound₂ (a : α) : a ⊓ z = z := by
   calc
