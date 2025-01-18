@@ -58,14 +58,12 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)"
 -- * Infimum, supremum, bottom, and top
 
 -- | Infimum: Greatest lower bound.
--- TODO: I'd like to use ⊓ here, but I can't figure out how to make that an operator.
-inf :: SStroke -> SStroke -> SStroke
-a `inf` b = ﬧ a ⏐ ﬧ b
+(⨅) :: SStroke -> SStroke -> SStroke
+a ⨅ b = ﬧ a ⏐ ﬧ b
 
 -- | Supremum: Least upper bound.
--- TODO: I'd like to use ⊔ here, but I can't figure out how to make that an operator.
-sup :: SStroke -> SStroke -> SStroke
-a `sup` b = ﬧ (a ⏐ b)
+(⨆) :: SStroke -> SStroke -> SStroke
+a ⨆ b = ﬧ (a ⏐ b)
 
 -- | The unique bottom element
 z :: SStroke
@@ -81,6 +79,7 @@ u = ﬧ z
 -- | Prove that Sheffer stroke axioms imply it is a boolean algebra. We have:
 --
 -- TODO: Due to doctest issues, the output here does not get tested.
+-- See: https://github.com/yav/haskell-lexer/issues/14, which seems to be the root cause.
 -- >>> shefferBooleanAlgebra
 shefferBooleanAlgebra :: IO Proof
 shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
@@ -89,7 +88,6 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sh2 <- sheffer2
   sh3 <- sheffer3
 
-  -- @a ⏐b == b ⏐a@
   commut <- chainLemma "a ⏐ b == b ⏐ a"
                        (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ b .== b ⏐ a)
                        (\a b -> [ a ⏐ b
@@ -100,106 +98,92 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                 ])
                        [sh1, sh3]
 
-  -- @a ⏐ﬧa == b ⏐ﬧb@
-  -- TODO: Make sure this is used
-  _all_bot <- chainLemma "a ⏐ ﬧa == b ⏐ ﬧb"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
-                         (\a b -> [ a ⏐ ﬧ a
-                                  , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
-                                  , ﬧ ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a))
-                                  , ﬧ (ﬧ (b ⏐ ﬧ b))
-                                  , b ⏐ ﬧ b
-                                  ])
-                         [sh1, sh2, commut]
+  all_bot <- chainLemma "a ⏐ ﬧa == b ⏐ ﬧb"
+                        (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
+                        (\a b -> [ a ⏐ ﬧ a
+                                 , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
+                                 , ﬧ ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a))
+                                 , ﬧ (ﬧ (b ⏐ ﬧ b))
+                                 , b ⏐ ﬧ b
+                                 ])
+                        [sh1, sh2, commut]
 
-  -- @a ⊔ b == b ⊔ a@
   commut1 <- lemma "a ⊔ b == b ⊔ a"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `sup` b .== b `sup` a)
+                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ b .== b ⨆ a)
                    [commut]
 
-  -- @a ⊓ b == b ⊓ a@
   commut2 <- lemma "a ⊓ b == b ⊓ a"
-                   (\(Forall @"a" a) (Forall @"b" b) -> a `inf` b .== b `inf` a)
+                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ b .== b ⨅ a)
                    [commut]
 
-  -- @a ⊔ z == a@
   ident1 <- lemma "a ⊔ z = a"
-                  (\(Forall @"a" a) -> a `sup` z .== a)
+                  (\(Forall @"a" a) -> a ⨆ z .== a)
                   [sh1, sh2]
 
-  -- @a ⊓ u == a@
   ident2 <- lemma "a ⊓ u = a"
-                  (\(Forall @"a" a) -> a `inf` u .== a)
+                  (\(Forall @"a" a) -> a ⨅ u .== a)
                   [sh1, sh2]
 
-  -- @a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)@
   distrib1 <- lemma "a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)"
-                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `sup` (b `inf` c) .== (a `sup` b) `inf` (a `sup` c))
+                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨅ c) .== (a ⨆ b) ⨅ (a ⨆ c))
                     [sh1, sh3, commut]
 
-  -- @a ⊓ (b ⊔ c) == (a ⊓ b) ⊔ (a ⊓ c)@
   distrib2 <- lemma "a ⊓ (b ⊔ c) == (a ⊓ b) ⊔ (a ⊓ c)"
-                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a `inf` (b `sup` c) .== (a `inf` b) `sup` (a `inf` c))
+                    (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨅ (b ⨆ c) .== (a ⨅ b) ⨆ (a ⨅ c))
                     [sh1, sh3, commut]
 
-  -- @a ⊔ ﬧ a == u@
   compl1 <- lemma "a ⊔ ﬧa == u"
-                  (\(Forall @"a" a) -> a `sup` ﬧ a .== u)
-                  [sh1, sh2, sh3]
+                  (\(Forall @"a" a) -> a ⨆ ﬧ a .== u)
+                  [sh1, sh2, sh3, all_bot]
 
-  -- @a ⊓ ﬧa == z@
   compl2 <- lemma "a ⊓ ﬧa == z"
-                  (\(Forall @"a" a) -> a `inf` ﬧ a .== z)
+                  (\(Forall @"a" a) -> a ⨅ ﬧ a .== z)
                   [sh1, sh2, sh3]
 
-  -- @a ⊔ u == u@
   bound1 <- chainLemma "a ⊔ u"
-                       (\(Forall @"a" a) -> a `sup` u .== u)
-                       (\a -> [ a `sup` u
-                              , (a `sup` u) `inf` u
-                              , u `inf` (a `sup` u)
-                              , (a `sup` ﬧ a) `inf` (a `sup` u)
-                              , a `sup` (ﬧ a `inf` u)
-                              , a `sup` ﬧ a
+                       (\(Forall @"a" a) -> a ⨆ u .== u)
+                       (\a -> [ a ⨆ u
+                              , (a ⨆ u) ⨅ u
+                              , u ⨅ (a ⨆ u)
+                              , (a ⨆ ﬧ a) ⨅ (a ⨆ u)
+                              , a ⨆ (ﬧ a ⨅ u)
+                              , a ⨆ ﬧ a
                               , u
                               ])
                        [ident2, commut2, compl1, distrib1]
 
-  -- @a ⊓ z = z@
   bound2 <- chainLemma "a ⊓ z = z"
-                       (\(Forall @"a" a) -> a `inf` z .== z)
-                       (\a -> [ a `inf` z
-                              , (a `inf` z) `sup` z
-                              , z `sup` (a `inf` z)
-                              , (a `inf` ﬧ a) `sup` (a `inf` z)
-                              , a `inf` (ﬧ a `sup` z)
-                              , a `inf` ﬧ a
+                       (\(Forall @"a" a) -> a ⨅ z .== z)
+                       (\a -> [ a ⨅ z
+                              , (a ⨅ z) ⨆ z
+                              , z ⨆ (a ⨅ z)
+                              , (a ⨅ ﬧ a) ⨆ (a ⨅ z)
+                              , a ⨅ (ﬧ a ⨆ z)
+                              , a ⨅ ﬧ a
                               , z
                               ])
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
-  -- @a ⊔ (a ⊓ b) = a@
   -- TODO: Make sure this is used
   _absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
-                        (\(Forall @"a" a) (Forall @"b" b) -> a `sup` (a `inf` b) .== a)
-                        (\a b -> [ a `sup` (a `inf` b)
-                                 , (a `inf` u) `sup` (a `inf` b)
-                                 , a `inf` (u `sup` b)
-                                 , a `inf` (b `sup` u)
-                                 , a `inf` u
+                        (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
+                        (\a b -> [ a ⨆ (a ⨅ b)
+                                 , (a ⨅ u) ⨆ (a ⨅ b)
+                                 , a ⨅ (u ⨆ b)
+                                 , a ⨅ (b ⨆ u)
+                                 , a ⨅ u
                                  , a
                                  ])
                         [ident2, distrib2, commut1, bound1]
 
-  -- @a ⊓ (a ⊔ b) = a@
   -- TODO: Make sure this is used
   _absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
-                         (\(Forall @"a" a) (Forall @"b" b) -> a `inf` (a `sup` b) .== a)
-                         (\a b -> [ a `inf` (a `sup` b)
-                                  , (a `sup` z) `inf` (a `sup` b)
-                                  , a `sup` (z `inf` b)
-                                  , a `sup` (b `inf` z)
-                                  , a `sup` z
+                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
+                         (\a b -> [ a ⨅ (a ⨆ b)
+                                  , (a ⨆ z) ⨅ (a ⨆ b)
+                                  , a ⨆ (z ⨅ b)
+                                  , a ⨆ (b ⨅ z)
+                                  , a ⨆ z
                                   , a
                                   ])
                         [ident1, distrib1, commut2, bound2]
