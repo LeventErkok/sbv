@@ -90,22 +90,22 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   commut <- chainLemma "a ⏐ b == b ⏐ a"
                        (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ b .== b ⏐ a)
-                       (\a b -> [ a ⏐ b
-                                , ﬧ (ﬧ (a ⏐ b))
-                                , ﬧ (ﬧ (a ⏐ ﬧ (ﬧ b)))
-                                , ﬧ (ﬧ (ﬧ (ﬧ b) ⏐ a))
-                                , b ⏐ a
-                                ])
+                       (\a b -> (sTrue, [ a ⏐ b
+                                        , ﬧ (ﬧ (a ⏐ b))
+                                        , ﬧ (ﬧ (a ⏐ ﬧ (ﬧ b)))
+                                        , ﬧ (ﬧ (ﬧ (ﬧ b) ⏐ a))
+                                        , b ⏐ a
+                                        ]))
                        [sh1, sh3]
 
   all_bot <- chainLemma "a ⏐ ﬧa == b ⏐ ﬧb"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
-                        (\a b -> [ a ⏐ ﬧ a
-                                 , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
-                                 , ﬧ ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a))
-                                 , ﬧ (ﬧ (b ⏐ ﬧ b))
-                                 , b ⏐ ﬧ b
-                                 ])
+                        (\a b -> (sTrue, [ a ⏐ ﬧ a
+                                         , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
+                                         , ﬧ ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a))
+                                         , ﬧ (ﬧ (b ⏐ ﬧ b))
+                                         , b ⏐ ﬧ b
+                                         ]))
                         [sh1, sh2, commut]
 
   commut1 <- lemma "a ⊔ b == b ⊔ a"
@@ -142,76 +142,76 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   bound1 <- chainLemma "a ⊔ u == u"
                        (\(Forall @"a" a) -> a ⨆ u .== u)
-                       (\a -> [ a ⨆ u
-                              , (a ⨆ u) ⨅ u
-                              , u ⨅ (a ⨆ u)
-                              , (a ⨆ ﬧ a) ⨅ (a ⨆ u)
-                              , a ⨆ (ﬧ a ⨅ u)
-                              , a ⨆ ﬧ a
-                              , u
-                              ])
+                       (\a -> (sTrue, [ a ⨆ u
+                                      , (a ⨆ u) ⨅ u
+                                      , u ⨅ (a ⨆ u)
+                                      , (a ⨆ ﬧ a) ⨅ (a ⨆ u)
+                                      , a ⨆ (ﬧ a ⨅ u)
+                                      , a ⨆ ﬧ a
+                                      , u
+                                      ]))
                        [ident2, commut2, compl1, distrib1]
 
   bound2 <- chainLemma "a ⊓ z == z"
                        (\(Forall @"a" a) -> a ⨅ z .== z)
-                       (\a -> [ a ⨅ z
-                              , (a ⨅ z) ⨆ z
-                              , z ⨆ (a ⨅ z)
-                              , (a ⨅ ﬧ a) ⨆ (a ⨅ z)
-                              , a ⨅ (ﬧ a ⨆ z)
-                              , a ⨅ ﬧ a
-                              , z
-                              ])
+                       (\a -> (sTrue, [ a ⨅ z
+                                      , (a ⨅ z) ⨆ z
+                                      , z ⨆ (a ⨅ z)
+                                      , (a ⨅ ﬧ a) ⨆ (a ⨅ z)
+                                      , a ⨅ (ﬧ a ⨆ z)
+                                      , a ⨅ ﬧ a
+                                      , z
+                                      ]))
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
   -- TODO: absorb1
   _bsorb1 <- chainLemma "a ⊔ (a ⊓ b) == a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
-                        (\a b -> [ a ⨆ (a ⨅ b)
-                                 , (a ⨅ u) ⨆ (a ⨅ b)
-                                 , a ⨅ (u ⨆ b)
-                                 , a ⨅ (b ⨆ u)
-                                 , a ⨅ u
-                                 , a
-                                 ])
+                        (\a b -> (sTrue, [ a ⨆ (a ⨅ b)
+                                         , (a ⨅ u) ⨆ (a ⨅ b)
+                                         , a ⨅ (u ⨆ b)
+                                         , a ⨅ (b ⨆ u)
+                                         , a ⨅ u
+                                         , a
+                                         ]))
                         [ident2, distrib2, commut1, bound1]
 
   absorb2 <- chainLemma "a ⊓ (a ⊔ b) == a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
-                        (\a b -> [ a ⨅ (a ⨆ b)
-                                 , (a ⨆ z) ⨅ (a ⨆ b)
-                                 , a ⨆ (z ⨅ b)
-                                 , a ⨆ (b ⨅ z)
-                                 , a ⨆ z
-                                 , a
-                                 ])
+                        (\a b -> (sTrue, [ a ⨅ (a ⨆ b)
+                                         , (a ⨆ z) ⨅ (a ⨆ b)
+                                         , a ⨆ (z ⨅ b)
+                                         , a ⨆ (b ⨅ z)
+                                         , a ⨆ z
+                                         , a
+                                         ]))
                         [ident1, distrib1, commut2, bound2]
 
   -- TODO: idemp2
   _demp2 <- chainLemma "a ⊓ a == a"
                        (\(Forall @"a" a) -> a ⨅ a .== a)
-                       (\a -> [ a ⨅ a
-                              , a ⨅ (a ⨆ z)
-                              , a
-                              ])
+                       (\a -> (sTrue, [ a ⨅ a
+                                      , a ⨅ (a ⨆ z)
+                                      , a
+                                      ]))
                        [ident1, absorb2]
 
   -- TODO: inv
   _nv <- chainLemma "a ⨆ a' == u → a ⨅ a' == z → a' = ﬧ a"
                     (\(Forall @"a" a) (Forall @"a'" a') -> a ⨆ a' .== u .=> a ⨅ a' .== z .=> a' .== ﬧ a)
-                    (\a a' -> [ a'
-                              , a' ⨅ u
-                              , a' ⨅ (a ⨆ ﬧ a)
-                              , (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)
-                              , (a' ⨅ a) ⨆ (ﬧ a ⨅ a')
-                              , (a ⨅ a') ⨆ (ﬧ a ⨅ a')
-                              -- , z ⨆ (ﬧ a ⨅ a')
-                              -- , (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a')
-                              -- , (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a')
-                              -- , ﬧ a ⨅ (a ⨆ a')
-                              -- , ﬧ a ⨅ u
-                              -- , ﬧ a
-                              ])
+                    (\a a' -> (a ⨆ a' .== u .&& a ⨅ a' .== z, [ a'
+                                                              , a' ⨅ u
+                                                              , a' ⨅ (a ⨆ ﬧ a)
+                                                              , (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)
+                                                              , (a' ⨅ a) ⨆ (ﬧ a ⨅ a')
+                                                              , (a ⨅ a') ⨆ (ﬧ a ⨅ a')
+                                                              , z ⨆ (ﬧ a ⨅ a')
+                                                              , (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a')
+                                                              , (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a')
+                                                              , ﬧ a ⨅ (a ⨆ a')
+                                                              , ﬧ a ⨅ u
+                                                              , ﬧ a
+                                                              ]))
                     [ident2, compl1, distrib2, commut2]
 
   pure sorry
