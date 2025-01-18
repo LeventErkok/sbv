@@ -390,8 +390,8 @@ foldrMapFusion = runKD $ do
 -- instantaneously. We have:
 --
 -- >>> foldrFusion
--- Axiom: f a == b                         Axiom.
--- Axiom: f (g x) = h x (f y)              Axiom.
+-- Axiom: f a == b
+-- Axiom: f (g x) = h x (f y)
 -- Lemma: foldrFusion                      Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
@@ -545,9 +545,9 @@ foldrFoldlDuality = runKD $ do
 -- We have:
 --
 -- >>> foldrFoldlDualityGeneralized
--- Axiom: @ is associative                 Axiom.
--- Axiom: e is left unit                   Axiom.
--- Axiom: e is right unit                  Axiom.
+-- Axiom: @ is associative
+-- Axiom: e is left unit
+-- Axiom: e is right unit
 -- Inductive lemma: foldl over @
 --   Base: foldl over @.Base               Q.E.D.
 --   Help: foldl over @.L1 vs L2           Q.E.D.
@@ -636,8 +636,8 @@ foldrFoldlDualityGeneralized  = runKD $ do
 -- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem. We have:
 --
 -- >>> foldrFoldl
--- Axiom: <+> over <*>                     Axiom.
--- Axiom: unit                             Axiom.
+-- Axiom: <+> over <*>
+-- Axiom: unit
 -- Inductive lemma: foldl over <*>/<+>
 --   Base: foldl over <*>/<+>.Base         Q.E.D.
 --   Help: foldl over <*>/<+>.L1 vs L2     Q.E.D.
@@ -727,9 +727,9 @@ foldrFoldl = runKD $ do
 -- We have:
 --
 -- >>> bookKeeping
--- Axiom: f is associative                 Axiom.
--- Axiom: a is right-unit                  Axiom.
--- Axiom: a is left-unit                   Axiom.
+-- Axiom: f is associative
+-- Axiom: a is right-unit
+-- Axiom: a is left-unit
 -- Lemma: foldrOverAppend                  Q.E.D.
 -- Inductive lemma: foldBase
 --   Base: foldBase.Base                   Q.E.D.
