@@ -26,9 +26,6 @@ module Data.SBV.Tools.KDKernel (
        , sorry
        ) where
 
-import Control.Monad (when)
-import Data.IORef (readIORef, modifyIORef')
-
 import Control.Monad.Trans  (liftIO)
 
 import Data.List (intercalate)
@@ -55,12 +52,7 @@ type Proposition a = ( QuantifiedBool a
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
-axiom nm p = do KDState{rAxiomsSeen} <- getKDState
-                axiomsSofar <- liftIO $ readIORef rAxiomsSeen
-                when (nm `notElem` axiomsSofar) $ do
-                   cfg <- getKDConfig
-                   liftIO $ do startKD False "Axiom" [nm] >>= finishKD cfg "Axiom."
-                               modifyIORef' rAxiomsSeen (nm:)
+axiom nm p = do _ <- liftIO $ startKD True "Axiom" [nm]
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.

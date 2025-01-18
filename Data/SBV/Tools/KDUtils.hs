@@ -31,11 +31,8 @@ import Data.SBV.Core.Data (SBool)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
-import Data.IORef (IORef, newIORef)
-
 -- | Extra state we carry in a KD context
-data KDState = KDState { config      :: SMTConfig
-                       , rAxiomsSeen :: IORef [String]
+data KDState = KDState { config :: SMTConfig
                        }
 
 -- | Monad for running KnuckleDragger proofs in.
@@ -48,15 +45,7 @@ runKD = runKDWith defaultSMTCfg
 
 -- | Run a KD proof, using the given configuration.
 runKDWith :: SMTConfig -> KD a -> IO a
-runKDWith cfg (KD f) = do
-
-        rAxiomsSeen <- newIORef []
-
-        let st = KDState { config      = cfg
-                         , rAxiomsSeen = rAxiomsSeen
-                         }
-
-        runReaderT f st
+runKDWith cfg (KD f) = runReaderT f KDState {config = cfg}
 
 -- | get the state
 getKDState :: KD KDState
