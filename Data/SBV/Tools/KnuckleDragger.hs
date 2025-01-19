@@ -79,16 +79,17 @@ class ChainLemma a steps step | steps -> step where
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
-  -- Consider a call of the form @chainLemma name P [A, B, C, D] H@. Note that @H@ is
+  -- Consider a call of the form @chainLemma name P (cond, [A, B, C, D]) H@. Note that @H@ is
   -- a list of already proven facts, ensured by the type signature. We proceed as follows:
   --
-  --    * Prove: @H -> A == B@
-  --    * Prove: @H && A == B -> B == C@
-  --    * Prove: @H && A == B && B == C -> C == D@
-  --    * Prove: @H && A == B && B == C && C == D -> P@
+  --    * Prove: @(H && cond)                                   -> (A == B)@
+  --    * Prove: @(H && cond && A == B)                         -> (B == C)@
+  --    * Prove: @(H && cond && A == B && B == C)               -> (C == D)@
+  --    * Prove: @(H && (cond -> (A == B && B == C && C == D))) -> P@
   --    * If all of the above steps succeed, conclude @P@.
   --
-  -- Additionally, you can have the equalities under an assumption, as captured in the steps.
+  -- cond acts as the context. Typically, if you are trying to prove @Y -> Z@, then you want cond to be Y.
+  -- (This is similar to @intros@ commands in theorem provers.)
   --
   -- Note that if the type of steps (i.e., @A@ .. @D@ above) is 'SBool', then we use implication
   -- as opposed to equality; which better captures line of reasoning.
@@ -156,10 +157,10 @@ class ChainLemma a steps step | steps -> step where
 
             go i accum (s:ss) = do
                  queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                 checkSatThen verbose "Step  " accum s ["", show i] Nothing finish
+                 checkSatThen verbose "Step  " (intros .&& accum) s ["", show i] Nothing finish
                  go (i+1) (s .&& accum) ss
 
-        query $ go (1::Int) intros proofSteps
+        query $ go (1::Int) sTrue proofSteps
 
 -- | Turn a sequence of steps into a chain of pairs, merged with a function.
 mkChainSteps :: (a -> a -> b) -> (SBool, [a]) -> (SBool, [b])
