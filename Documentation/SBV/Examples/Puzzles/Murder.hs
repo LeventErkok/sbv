@@ -34,7 +34,7 @@ module Documentation.SBV.Examples.Puzzles.Murder where
 import Data.Char
 import Data.List
 
-import Data.SBV
+import Data.SBV hiding (some)
 import Data.SBV.Control
 
 -- | Locations
@@ -138,8 +138,8 @@ puzzle = runSMT $ do
   let ifVictim p = role p .== sVictim
       ifKiller p = role p .== sKiller
 
-      every f = sAnd (map f chars)
-      some  f = sOr  (map f chars)
+      every f = sAll f chars
+      some  f = sAny f chars
 
   -- A man and a woman were together in a bar at the time of the murder.
   constrain $ some $ \c -> sex c .== sFemale .&& location c .== sBar
