@@ -226,18 +226,23 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ ﬧ b .== u .=> a ⨅ ﬧ b .== z .=> a .== b)
                   [inv, inv_elim]
 
+  -- TODO: a1
+  _1 <- chainLemma "a ⊔ (aᶜ ⊔ b) = u"
+                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (ﬧ a ⨆ b) .== u)
+                   (\a b -> (sTrue, [ a ⨆ (ﬧ a ⨆ b)
+                                    , (a ⨆ (ﬧ a ⨆ b)) ⨅ u
+                                    , u ⨅ (a ⨆ (ﬧ a ⨆ b))
+                                    , (a ⨆ ﬧ a) ⨅ (a ⨆ (ﬧ a ⨆ b))
+                                    , a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))
+                                    , a ⨆ ﬧ a
+                                    , u
+                                    ]))
+                   [ident2, commut2, compl1, distrib1, absorb2]
+
   pure sorry
 
 {-
 @[simp]
-lemma A₁ (a b : α) : a ⊔ (aᶜ ⊔ b) = u := by
-  calc
-    a ⊔ (aᶜ ⊔ b) = (a ⊔ (aᶜ ⊔ b)) ⊓ u := by rw [ident₂]
-    _            = u ⊓ (a ⊔ (aᶜ ⊔ b)) := by rw [commut₂]
-    _            = (a ⊔ aᶜ) ⊓ (a ⊔ (aᶜ ⊔ b)) := by rw [compl₁]
-    _            = a ⊔ (aᶜ ⊓ (aᶜ ⊔ b)) := by rw [distrib₁]
-    _            = a ⊔ aᶜ := by rw [absorb₂, compl₁]
-    _            = u := by rw [compl₁]
 
 @[simp]
 lemma A₂ (a b : α) : a ⊓ (aᶜ ⊓ b) = z := by
