@@ -164,8 +164,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
-  -- TODO: absorb1
-  _bsorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
+  absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
                         (\a b -> (sTrue, [ a ⨆ (a ⨅ b)
                                          , (a ⨅ u) ⨆ (a ⨅ b)
@@ -239,22 +238,22 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                     ]))
                    [ident2, commut2, compl1, distrib1, absorb2]
 
+  -- TODO: a2
+  _2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = z"
+                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (ﬧ a ⨅ b) .== z)
+                   (\a b -> (sTrue, [ a ⨅ (ﬧ a ⨅ b)
+                                    , (a ⨅ (ﬧ a ⨅ b)) ⨆ z
+                                    , z ⨆ (a ⨅ (ﬧ a ⨅ b))
+                                    , (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ b))
+                                    , a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))
+                                    , a ⨅ ﬧ a
+                                    , z
+                                    ]))
+                   [ident1, commut1, compl2, distrib2, absorb1]
+
   pure sorry
 
 {-
-@[simp]
-
-@[simp]
-lemma A₂ (a b : α) : a ⊓ (aᶜ ⊓ b) = z := by
-  calc
-    a ⊓ (aᶜ ⊓ b) = (a ⊓ (aᶜ ⊓ b)) ⊔ z := by rw [ident₁]
-    _            = z ⊔ (a ⊓ (aᶜ ⊓ b)) := by rw [commut₁]
-    _            = (a ⊓ aᶜ) ⊔ (a ⊓ (aᶜ ⊓ b)) := by rw [compl₂]
-    _            = a ⊓ (aᶜ ⊔ (aᶜ ⊓ b)) := by rw [distrib₂]
-    _            = a ⊓ aᶜ := by rw [absorb₁, compl₂]
-    _            = z := by rw [compl₂]
-
-
 @[simp]
 lemma dm₁ (a b : α) : (a ⊔ b)ᶜ = aᶜ ⊓ bᶜ := by
   symm
