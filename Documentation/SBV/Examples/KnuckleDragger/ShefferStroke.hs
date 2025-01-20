@@ -225,8 +225,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ ﬧ b .== u .=> a ⨅ ﬧ b .== z .=> a .== b)
                   [inv, inv_elim]
 
-  -- TODO: a1
-  _1 <- chainLemma "a ⊔ (aᶜ ⊔ b) = u"
+  a1 <- chainLemma "a ⊔ (aᶜ ⊔ b) = u"
                    (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (ﬧ a ⨆ b) .== u)
                    (\a b -> (sTrue, [ a ⨆ (ﬧ a ⨆ b)
                                     , (a ⨆ (ﬧ a ⨆ b)) ⨅ u
@@ -238,8 +237,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                     ]))
                    [ident2, commut2, compl1, distrib1, absorb2]
 
-  -- TODO: a2
-  _2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = z"
+  a2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = z"
                    (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (ﬧ a ⨅ b) .== z)
                    (\a b -> (sTrue, [ a ⨅ (ﬧ a ⨅ b)
                                     , (a ⨅ (ﬧ a ⨅ b)) ⨆ z
@@ -251,39 +249,19 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                     ]))
                    [ident1, commut1, compl2, distrib2, absorb1]
 
+  -- TODO: dm1
+  _m1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ"
+               (\(Forall @"a" a) (Forall @"b" b) -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
+               [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
+
+  -- TODO: dm2
+  _m2 <- lemma "(a ⨅ b)ᶜ = aᶜ ⨆ bᶜ"
+               (\(Forall @"a" a) (Forall @"b" b) -> ﬧ(a ⨅ b) .== ﬧ a ⨆ ﬧ b)
+               [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
+
   pure sorry
 
 {-
-@[simp]
-lemma dm₁ (a b : α) : (a ⊔ b)ᶜ = aᶜ ⊓ bᶜ := by
-  symm
-  apply cancel <;> simp [dne]
-  . rw [commut₁, distrib₁]
-    conv => left; left; rw [commut₁]; right; left; exact Eq.symm (dne a)
-    rw [A₁, commut₂, ident₂, commut₁]
-    conv => left; right; rw [commut₁]; left; exact Eq.symm (dne b)
-    simp
-  . rw [distrib₂]
-    conv => left; left; rw [commut₂]
-    rw [A₂, commut₁, ident₁]
-    rw [commut₂]; conv => left; right; rw [commut₂]
-    simp
-
-@[simp]
-lemma dm₂ (a b : α) : (a ⊓ b)ᶜ = aᶜ ⊔ bᶜ := by
-  symm
-  apply cancel <;> simp [dne]
-  . rw [commut₂, distrib₁]
-    conv => left; left; rw [commut₁]; right; rw [commut₁]
-    rw [A₁, commut₂, ident₂]
-    rw [commut₁]
-    rw [A₁]
-  . rw [commut₂, distrib₂]
-    conv => left; left; rw [commut₂]; right; left; exact Eq.symm (dne a)
-    rw [A₂, commut₁, ident₁]
-    rw [commut₂]; conv => left; right; rw [commut₂]; left; exact Eq.symm (dne b)
-    rw [A₂]
-
 lemma D₁ (a b c : α) : (a ⊔ (b ⊔ c)) ⊔ aᶜ = u := by
   rw [commut₁]
   conv => left; right; left; exact Eq.symm (dne a)
