@@ -88,7 +88,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sh2 <- sheffer2
   sh3 <- sheffer3
 
-  commut <- chainLemma "a ⏐ b == b ⏐ a"
+  commut <- chainLemma "a | b = b | a"
                        (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ b .== b ⏐ a)
                        (\a b -> (sTrue, [ a ⏐ b
                                         , ﬧ (ﬧ (a ⏐ b))
@@ -98,7 +98,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                         ]))
                        [sh1, sh3]
 
-  all_bot <- chainLemma "a ⏐ ﬧa == b ⏐ ﬧb"
+  all_bot <- chainLemma "a | a′ = b | b′"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
                         (\a b -> (sTrue, [ a ⏐ ﬧ a
                                          , ﬧ ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b))
@@ -108,39 +108,39 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                          ]))
                         [sh1, sh2, commut]
 
-  commut1 <- lemma "a ⊔ b == b ⊔ a"
+  commut1 <- lemma "a ⊔ b = b ⊔ a"
                    (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ b .== b ⨆ a)
                    [commut]
 
-  commut2 <- lemma "a ⊓ b == b ⊓ a"
+  commut2 <- lemma "a ⊓ b = b ⊓ a"
                    (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ b .== b ⨅ a)
                    [commut]
 
-  ident1 <- lemma "a ⊔ z == a"
+  ident1 <- lemma "a ⊔ z = a"
                   (\(Forall @"a" a) -> a ⨆ z .== a)
                   [sh1, sh2]
 
-  ident2 <- lemma "a ⊓ u == a"
+  ident2 <- lemma "a ⊓ u = a"
                   (\(Forall @"a" a) -> a ⨅ u .== a)
                   [sh1, sh2]
 
-  distrib1 <- lemma "a ⊔ (b ⊓ c) == (a ⊔ b) ⊓ (a ⊔ c)"
+  distrib1 <- lemma "a ⊔ (b ⊓ c) = (a ⊔ b) ⊓ (a ⊔ c)"
                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨅ c) .== (a ⨆ b) ⨅ (a ⨆ c))
                     [sh1, sh3, commut]
 
-  distrib2 <- lemma "a ⊓ (b ⊔ c) == (a ⊓ b) ⊔ (a ⊓ c)"
+  distrib2 <- lemma "a ⊓ (b ⊔ c) = (a ⊓ b) ⊔ (a ⊓ c)"
                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨅ (b ⨆ c) .== (a ⨅ b) ⨆ (a ⨅ c))
                     [sh1, sh3, commut]
 
-  compl1 <- lemma "a ⊔ ﬧa == u"
+  compl1 <- lemma "a ⊔ aᶜ = u"
                   (\(Forall @"a" a) -> a ⨆ ﬧ a .== u)
                   [sh1, sh2, sh3, all_bot]
 
-  compl2 <- lemma "a ⊓ ﬧa == z"
+  compl2 <- lemma "a ⊓ aᶜ = z"
                   (\(Forall @"a" a) -> a ⨅ ﬧ a .== z)
-                  [sh1, sh2, sh3]
+                  [sh1, commut, all_bot]
 
-  bound1 <- chainLemma "a ⊔ u == u"
+  bound1 <- chainLemma "a ⊔ u = u"
                        (\(Forall @"a" a) -> a ⨆ u .== u)
                        (\a -> (sTrue, [ a ⨆ u
                                       , (a ⨆ u) ⨅ u
@@ -152,7 +152,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                        [ident2, commut2, compl1, distrib1]
 
-  bound2 <- chainLemma "a ⊓ z == z"
+  bound2 <- chainLemma "a ⊓ z = z"
                        (\(Forall @"a" a) -> a ⨅ z .== z)
                        (\a -> (sTrue, [ a ⨅ z
                                       , (a ⨅ z) ⨆ z
@@ -165,7 +165,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [ident1, commut1, compl2, distrib2, ident1, compl2]
 
   -- TODO: absorb1
-  _bsorb1 <- chainLemma "a ⊔ (a ⊓ b) == a"
+  _bsorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ (a ⨅ b) .== a)
                         (\a b -> (sTrue, [ a ⨆ (a ⨅ b)
                                          , (a ⨅ u) ⨆ (a ⨅ b)
@@ -176,7 +176,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                          ]))
                         [ident2, distrib2, commut1, bound1]
 
-  absorb2 <- chainLemma "a ⊓ (a ⊔ b) == a"
+  absorb2 <- chainLemma "a ⊓ (a ⊔ b)"
                         (\(Forall @"a" a) (Forall @"b" b) -> a ⨅ (a ⨆ b) .== a)
                         (\a b -> (sTrue, [ a ⨅ (a ⨆ b)
                                          , (a ⨆ z) ⨅ (a ⨆ b)
@@ -188,7 +188,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                         [ident1, distrib1, commut2, bound2]
 
   -- TODO: idemp2
-  _demp2 <- chainLemma "a ⊓ a == a"
+  _demp2 <- chainLemma "a ⊓ a = a"
                        (\(Forall @"a" a) -> a ⨅ a .== a)
                        (\a -> (sTrue, [ a ⨅ a
                                       , a ⨅ (a ⨆ z)
@@ -196,7 +196,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                        [ident1, absorb2]
 
-  inv <- chainLemma "a ⨆ a' == u → a ⨅ a' == z → a' = ﬧ a"
+  inv <- chainLemma "a ⊔ a' = u → a ⊓ a' = z → a' = aᶜ"
                     (\(Forall @"a" a) (Forall @"a'" a') -> a ⨆ a' .== u .=> a ⨅ a' .== z .=> a' .== ﬧ a)
                     (\a a' -> (a ⨆ a' .== u .&& a ⨅ a' .== z, [ a'
                                                               , a' ⨅ u
@@ -213,23 +213,22 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                               ]))
                     [ident2, compl1, distrib2, commut2]
 
-  dne <- lemma "ﬧ (ﬧ a) == a"
+  dne <- lemma "aᶜᶜ = a"
                (\(Forall @"a" a) -> ﬧ (ﬧ a) .== a)
                [inv, compl1, compl2, commut1, commut2]
 
-  -- TODO: inv_elim
-  _nv_elim <- lemma "ﬧ a == ﬧ b → a == b"
+  inv_elim <- lemma "aᶜ = bᶜ → a = b"
                     (\(Forall @"a" a) (Forall @"b" b) -> ﬧ a .== ﬧ b .=> a .== b)
                     [dne]
+
+  -- TODO: cancel
+  _ancel <- lemma "a ⊔ bᶜ = u → a ⊓ bᶜ = z → a = b"
+                  (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ ﬧ b .== u .=> a ⨅ ﬧ b .== z .=> a .== b)
+                  [inv, inv_elim]
 
   pure sorry
 
 {-
-lemma cancel (a b : α) : a ⊔ bᶜ = u → a ⊓ bᶜ = z → a = b := by
-  intro h₁ h₂
-  have h : bᶜ = aᶜ := by apply inv <;> trivial
-  apply inv_elim; symm; trivial
-
 @[simp]
 lemma A₁ (a b : α) : a ⊔ (aᶜ ⊔ b) = u := by
   calc
