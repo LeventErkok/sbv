@@ -186,8 +186,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                          ]))
                         [ident1, distrib1, commut2, bound2]
 
-  -- TODO: idemp2
-  _demp2 <- chainLemma "a ⊓ a = a"
+  idemp2 <- chainLemma "a ⊓ a = a"
                        (\(Forall @"a" a) -> a ⨅ a .== a)
                        (\a -> (sTrue, [ a ⨅ a
                                       , a ⨅ (a ⨆ z)
@@ -249,28 +248,33 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                     ]))
                    [ident1, commut1, compl2, distrib2, absorb1]
 
-  -- TODO: dm1
-  _m1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ"
+  dm1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ"
                (\(Forall @"a" a) (Forall @"b" b) -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
                [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
 
-  -- TODO: dm2
-  _m2 <- lemma "(a ⨅ b)ᶜ = aᶜ ⨆ bᶜ"
+  dm2 <- lemma "(a ⨅ b)ᶜ = aᶜ ⨆ bᶜ"
                (\(Forall @"a" a) (Forall @"b" b) -> ﬧ(a ⨅ b) .== ﬧ a ⨆ ﬧ b)
                [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
+
+
+  -- TODO: d1
+  _1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ aᶜ = u"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ a .== u)
+              [a1, a2, commut1, ident1, ident2, distrib1, compl1, compl2, dm1, dm2, idemp2]
+
+  -- TODO: e1
+  _1 <- lemma "b ⊓ (a ⊔ (b ⊔ c)) = b"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> b ⨅ (a ⨆ (b ⨆ c)) .== b)
+              [distrib2, absorb1, absorb2, commut1]
+
+  -- TODO: e2
+  _2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> b ⨆ (a ⨅ (b ⨅ c)) .== b)
+              [distrib1, absorb1, absorb2, commut2]
 
   pure sorry
 
 {-
-lemma D₁ (a b c : α) : (a ⊔ (b ⊔ c)) ⊔ aᶜ = u := by
-  rw [commut₁]
-  conv => left; right; left; exact Eq.symm (dne a)
-  simp
-
-lemma E₁ (a b c : α) : b ⊓ (a ⊔ (b ⊔ c)) = b := by rw [distrib₂, absorb₂, commut₁, absorb₁]
-
-lemma E₂ (a b c : α) : b ⊔ (a ⊓ (b ⊓ c)) = b := by rw [distrib₁, absorb₁, commut₂, absorb₂]
-
 lemma F₁ (a b c : α) : (a ⊔ (b ⊔ c)) ⊔ bᶜ = u := by
   calc
     (a ⊔ (b ⊔ c)) ⊔ bᶜ = bᶜ ⊔ (a ⊔ (b ⊔ c)) := by rw [commut₁]
