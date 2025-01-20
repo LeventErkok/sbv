@@ -300,7 +300,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       , a ⨅ ﬧ a
                                       , z
                                       ]))
-              [ident1, commut1, commut2, compl2, distrib2, e2]
+                   [ident1, commut1, commut2, compl2, distrib2, e2]
 
   -- TODO: i1
   _1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = z"
