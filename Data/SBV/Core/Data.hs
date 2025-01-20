@@ -56,7 +56,7 @@ module Data.SBV.Core.Data
  , SolverContext(..), internalConstraint, isCodeGenMode
  , SBVType(..), newUninterpreted
  , Quantifier(..), needsExistentials
- , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension, smtLibReservedNames
+ , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
  , SolverCapabilities(..)
  , extractSymbolicSimulationState
  , SMTScript(..), Solver(..), SMTSolver(..), SMTResult(..), SMTModel(..), SMTConfig(..), KDOptions(..)
@@ -98,8 +98,6 @@ import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Operations
 
 import Data.SBV.Control.Types
-
-import Data.SBV.SMT.SMTLibNames
 
 import Data.SBV.Utils.Lib
 
@@ -933,7 +931,7 @@ instance (KnownSymbol nm, Skolemize r) => Skolemize (ForallN n nm a -> r) where
 instance (HasKind a, KnownSymbol nm, Skolemize r) => Skolemize (Exists nm a -> r) where
   type SkolemsTo (Exists nm a -> r) = SkolemsTo r
   skolem scope args f = skolem scope args (f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) (UINone True) args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (UIPrefix (scope ++ symbolVal (Proxy @nm))) (UINone True) args
 
 -- | Skolemize over a number of existential quantifiers
 instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (ExistsN n nm a -> r) where
@@ -942,7 +940,7 @@ instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (Exis
     where need   = intOfProxy (Proxy @n)
           prefix = symbolVal (Proxy @nm)
           fs     = [prefix ++ "_" ++ show i | i <- [1 .. need]]
-          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ n) (UINone True) args | n <- fs]
+          skolemized = [SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (UIPrefix (scope ++ n)) (UINone True) args | n <- fs]
 
 -- | Skolemize over a unique existential quantifier
 instance (  HasKind a
@@ -955,7 +953,7 @@ instance (  HasKind a
                                           -> Forall (AppendSymbol nm "_eu2") a
                                           -> SBool
   skolem scope args f = skolem scope args (rewriteExistsUnique f (Exists skolemized))
-    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (scope ++ symbolVal (Proxy @nm)) (UINone True) args
+    where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (UIPrefix (scope ++ symbolVal (Proxy @nm))) (UINone True) args
 
 -- | Class of things that we can logically negate
 class QNot a where

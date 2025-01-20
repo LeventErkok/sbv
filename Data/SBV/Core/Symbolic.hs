@@ -53,7 +53,7 @@ module Data.SBV.Core.Symbolic
   , lookupInput , getSValPathCondition, extendSValPathCondition
   , getTableIndex, sObserve
   , SBVPgm(..), MonadSymbolic(..), SymbolicT, Symbolic, runSymbolic, mkNewState, runSymbolicInState, State(..), SMTDef(..), smtDefGivenName, withNewIncState, IncState(..), incrementInternalCounter
-  , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..)
+  , inSMTMode, SBVRunMode(..), IStage(..), Result(..), ResultInp(..), UICodeKind(..), UIName(..)
   , registerKind, registerLabel, registerSpecialFunction, recordObservable
   , addAssertion, addNewSMTOption, imposeConstraint, internalConstraint, newInternalVariable, lambdaVar, quantVar
   , SMTLibPgm(..), SMTLibVersion(..), smtLibVersionExtension
@@ -74,9 +74,9 @@ import Control.Monad.State.Lazy    (MonadState)
 import Control.Monad.Trans         (MonadIO(liftIO), MonadTrans(lift))
 import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
-import Data.Char                   (toLower, isSpace)
+import Data.Char                   (isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy, isPrefixOf, isSuffixOf, nub)
+import Data.List                   (intercalate, sortBy, isPrefixOf, nub)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
 
@@ -97,7 +97,7 @@ import qualified Data.IORef                  as R    (modifyIORef')
 import qualified Data.Generics               as G    (Data(..))
 import qualified Data.Generics.Uniplate.Data as G
 import qualified Data.IntMap.Strict          as IMap (IntMap, empty, lookup, insertWith)
-import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size)
+import qualified Data.Map.Strict             as Map  (Map, empty, toList, lookup, insert, size, notMember)
 import qualified Data.Set                    as Set  (Set, empty, toList, insert, member)
 import qualified Data.Foldable               as F    (toList)
 import qualified Data.Sequence               as S    (Seq, empty, (|>), (<|), lookup, elemIndexL)
@@ -1363,6 +1363,10 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
                 | UISMT  SMTDef   -- SMTLib, first argument are the free-variables in it
                 | UICgC  [String] -- Code-gen, currently only C
 
+-- | Is the name given by the user for the uninterpreted constant a prefix or a full name?
+data UIName = UIGiven  String  -- ^ Full name
+            | UIPrefix String  -- ^ Prefix
+
 -- | Uninterpreted constants and functions. An uninterpreted constant is
 -- a value that is indexed by its name. The only property the prover assumes
 -- about these values are that they are equivalent to themselves; i.e., (for
@@ -1370,69 +1374,77 @@ data UICodeKind = UINone Bool     -- no code. If bool is true, then curried.
 -- We support uninterpreted-functions as a general means of black-box'ing
 -- operations that are /irrelevant/ for the purposes of the proof; i.e., when
 -- the proofs can be performed without any knowledge about the function itself.
-svUninterpreted :: Kind -> String -> UICodeKind -> [SVal] -> SVal
+svUninterpreted :: Kind -> UIName -> UICodeKind -> [SVal] -> SVal
 svUninterpreted k nm code args = svUninterpretedGen k nm code args Nothing
 
-svUninterpretedNamedArgs :: Kind -> String -> UICodeKind -> [(SVal, String)] -> SVal
+svUninterpretedNamedArgs :: Kind -> UIName -> UICodeKind -> [(SVal, String)] -> SVal
 svUninterpretedNamedArgs k nm code args = svUninterpretedGen k nm code (map fst args) (Just (map snd args))
 
-svUninterpretedGen :: Kind -> String -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
+svUninterpretedGen :: Kind -> UIName -> UICodeKind -> [SVal] -> Maybe [String] -> SVal
 svUninterpretedGen k nm code args mbArgNames = SVal k $ Right $ cache result
   where result st = do let ty = SBVType (map kindOf args ++ [k])
-                       nm' <- newUninterpreted st (nm, mbArgNames) ty code
+                       nm' <- newUninterpreted st nm mbArgNames ty code
                        sws <- mapM (svToSV st) args
                        mapM_ forceSVArg sws
                        newExpr st k $ SBVApp (Uninterpreted nm') sws
 
 -- | Create a new uninterpreted symbol, possibly with user given code. This function might change
 -- the name given, putting bars around it if needed. That's the name returned.
-newUninterpreted :: State -> (String, Maybe [String]) -> SBVType -> UICodeKind -> IO String
-newUninterpreted st (nm, mbArgNames) t uiCode
-  | not isInternal && needsBars nm
-  = if not enclosed
-    then newUninterpreted st ('|' : nm ++ "|", mbArgNames) t uiCode
-    else error $ "Bad uninterpreted constant name: " ++ show nm ++ ". Must be a valid SMTLib identifier."
-  | True
-  = do uiMap <- readIORef (rUIMap st)
+newUninterpreted :: State -> UIName -> Maybe [String] -> SBVType -> UICodeKind -> IO String
+newUninterpreted st uiName mbArgNames t uiCode = do
 
-       isCurried <- case uiCode of
-                      UINone c -> pure c
-                      UISMT d  -> do modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
-                                       $ noInteractive [ "Defined functions (smtFunction):"
-                                                       , "  Name: " ++ nm
-                                                       , "  Type: " ++ show t
-                                                       , ""
-                                                       , "You should explicitly register these functions by calling 'registerFunction' on them before starting the query section."
-                                                       ]
-                                     pure True
-                      UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
-                                  do modifyState st rCgMap (Map.insert nm c) (return ())
-                                     pure True
+  uiMap <- readIORef (rUIMap st)
 
-       case nm `Map.lookup` uiMap of
-         Just (_, _, t') -> checkType t' (return ())
-         Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
-                              $ modifyIncState st rNewUIs
-                                                 (\newUIs -> case nm `Map.lookup` newUIs of
-                                                               Just (_, _, t') -> checkType t' newUIs
-                                                               Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
+  let candName = case uiName of
+                   UIGiven  n   -> n
+                   UIPrefix pre -> let suffix 0 = pre
+                                       suffix i = pre ++ show i
+                                   in case [cand | i <- [0::Int ..], let cand = suffix i, cand `Map.notMember` uiMap] of
+                                        (n:_) -> n
+                                        []    -> error $ "newUninterpreted: Can't generate a unique name for prefix: " ++ pre   -- can't happen
 
-       pure nm
+      -- determine the final name
+      nm = case () of
+             () | "__internal_sbv_" `isPrefixOf` candName -> candName                -- internal names go thru
+             () | needsBars candName                      -> '|' : candName ++ "|"   -- surround with bars if not legitimate in SMTLib
+             ()                                           -> candName
 
-  where checkType :: SBVType -> r -> r
-        checkType t' cont
-          | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ " used at incompatible types\n"
-                            ++ "      Current type      : " ++ show t ++ "\n"
-                            ++ "      Previously used at: " ++ show t'
-          | True    = cont
+      extraComment = case uiName of
+                      UIGiven  n | nm /= n                 -> " (Given: " ++ n ++ ")"
+                      UIPrefix n | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
+                      _                                    -> ""
 
-        enclosed    =  "|" `isPrefixOf` nm
-                    && "|" `isSuffixOf` nm
-                    && length nm > 2
-                    && not (any (`elem` ("|\\" :: String)) (drop 1 (init nm)))
+  isCurried <- case uiCode of
+                 UINone c -> pure c
+                 UISMT d  -> do modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
+                                  $ noInteractive [ "Defined functions (smtFunction):"
+                                                  , "  Name: " ++ nm ++ extraComment
+                                                  , "  Type: " ++ show t
+                                                  , ""
+                                                  , "You should explicitly register these functions by calling"
+                                                  , "the function 'registerFunction' on them before starting the query section."
+                                                  ]
+                                pure True
+                 UICgC c  -> -- No need to record the code in interactive mode: CodeGen doesn't use interactive
+                             do modifyState st rCgMap (Map.insert nm c) (return ())
+                                pure True
 
-        -- let internal names go through
-        isInternal = "__internal_sbv_" `isPrefixOf` nm
+  let checkType :: SBVType -> r -> r
+      checkType t' cont
+        | t /= t' = error $  "Uninterpreted constant " ++ show nm ++ extraComment ++ " used at incompatible types\n"
+                          ++ "      Current type      : " ++ show t ++ "\n"
+                          ++ "      Previously used at: " ++ show t'
+        | True    = cont
+
+  case nm `Map.lookup` uiMap of
+    Just (_, _, t') -> checkType t' (return ())
+    Nothing         -> modifyState st rUIMap (Map.insert nm (isCurried, mbArgNames, t))
+                         $ modifyIncState st rNewUIs
+                                            (\newUIs -> case nm `Map.lookup` newUIs of
+                                                          Just (_, _, t') -> checkType t' newUIs
+                                                          Nothing         -> Map.insert nm (isCurried, mbArgNames, t) newUIs)
+
+  pure nm
 
 -- | Add a new sAssert based constraint
 addAssertion :: State -> Maybe CallStack -> String -> SV -> IO ()
@@ -1485,7 +1497,7 @@ newSV st k = do ctr <- incrementInternalCounter st
 -- allow for this.
 registerKind :: State -> Kind -> IO ()
 registerKind st k
-  | KUserSort sortName _ <- k, map toLower sortName `elem` smtLibReservedNames
+  | KUserSort sortName _ <- k, isReserved sortName
   = error $ "SBV: " ++ show sortName ++ " is a reserved sort; please use a different name."
   | True
   = do -- Adding a kind to the incState is tricky; we only need to add it
@@ -1533,7 +1545,7 @@ registerKind st k
 -- | Register a new label with the system, making sure they are unique and have no '|'s in them
 registerLabel :: String -> State -> String -> IO ()
 registerLabel whence st nm
-  | map toLower nm `elem` smtLibReservedNames
+  | isReserved nm
   = err "is a reserved string; please use a different name."
   | '|' `elem` nm
   = err "contains the character `|', which is not allowed!"

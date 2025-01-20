@@ -422,6 +422,7 @@ module Data.SBV (
   , SymVal, free, free_, mkFreeVars, symbolic, symbolics, literal, unliteral, fromCV
   , isConcrete, isSymbolic, isConcretely, mkSymVal
   , MonadSymbolic(..), Symbolic, SymbolicT, label, output, runSMT, runSMTWith
+  , some
 
   -- * Queriable values
   , Queriable(..), freshVar, freshVar_, getValue
@@ -470,7 +471,7 @@ import Data.SBV.Core.SizedFloats
 import Data.SBV.Core.Floating
 import Data.SBV.Core.Symbolic   ( MonadSymbolic(..), SymbolicT, registerKind
                                 , ProgInfo(..), rProgInfo, SpecialRelOp(..), UICodeKind(UINone)
-                                , getRootState
+                                , getRootState, UIName(UIGiven)
                                 )
 
 import Data.SBV.Provers.Prover hiding (prove, proveWith, sat, satWith, allSat,
@@ -1709,7 +1710,7 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                        when (op `notElem` curSpecialRels) $ do
 
                           registerKind st ka
-                          nm' <- newUninterpreted st (nm, Nothing) (SBVType [ka, ka, KBool]) (UINone True)
+                          nm' <- newUninterpreted st (UIGiven nm) Nothing (SBVType [ka, ka, KBool]) (UINone True)
 
                           -- Add to the end so if we get incremental ones the order doesn't change for old ones!
                           modifyIORef' (rProgInfo st) (\u -> u{progSpecialRels = curSpecialRels ++ [iop]})

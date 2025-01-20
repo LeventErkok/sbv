@@ -21,17 +21,19 @@ module Data.SBV.Utils.Lib ( mlift2, mlift3, mlift4, mlift5, mlift6, mlift7, mlif
                           , checkObservableName
                           , needsBars, isEnclosedInBars
                           , noSurrounding, unQuote, unBar, nameSupply
+                          ,   curry2,   curry3,   curry4,   curry5,   curry6,   curry7,   curry8,   curry9,   curry10,   curry11,   curry12
+                          , uncurry2, uncurry3, uncurry4, uncurry5, uncurry6, uncurry7, uncurry8, uncurry9, uncurry10, uncurry11, uncurry12
                           )
                           where
 
-import Data.Char    (isSpace, chr, ord, toLower, isDigit, isAscii, isAlphaNum)
+import Data.Char    (isSpace, chr, ord, isDigit, isAscii, isAlphaNum)
 import Data.List    (isPrefixOf, isSuffixOf)
 import Data.Dynamic (fromDynamic, toDyn, Typeable)
 import Data.Maybe   (fromJust, isJust, isNothing)
 
 import Numeric (readHex, showHex)
 
-import Data.SBV.SMT.SMTLibNames (smtLibReservedNames)
+import Data.SBV.SMT.SMTLibNames (isReserved)
 
 -- | We have a nasty issue with the usual String/List confusion in Haskell. However, we can
 -- do a simple dynamic trick to determine where we are. The ice is thin here, but it seems to work.
@@ -143,7 +145,7 @@ checkObservableName :: String -> Maybe String
 checkObservableName lbl
   | null lbl
   = Just "SBV.observe: Bad empty name!"
-  | map toLower lbl `elem` smtLibReservedNames
+  | isReserved lbl
   = Just $ "SBV.observe: The name chosen is reserved, please change it!: " ++ show lbl
   | "s" `isPrefixOf` lbl && all isDigit (drop 1 lbl)
   = Just $ "SBV.observe: Names of the form sXXX are internal to SBV, please use a different name: " ++ show lbl
@@ -176,7 +178,6 @@ needsBars ""        = error "Impossible happened: needsBars received an empty na
 needsBars nm@(h:tl) = not (isEnclosedInBars nm || (isAscii h && all validChar tl))
  where  validChar x = isAscii x && (isAlphaNum x || x `elem` ("_" :: String))
 
-
 -- An infinite supply of names, starting with a given set
 nameSupply :: [String] -> [String]
 nameSupply preSupply = preSupply ++ map mkUnique extras
@@ -188,3 +189,70 @@ nameSupply preSupply = preSupply ++ map mkUnique extras
         -- themselves are unique, so we only have to check the preSupply
         mkUnique x | x `elem` preSupply = mkUnique $ x ++ "'"
                    | True               = x
+
+-- Different arities of curry/uncurry
+curry2 :: ((a, b) -> z) -> a -> b -> z
+curry2 fn a b = fn (a, b)
+
+curry3 :: ((a, b, c) -> z) -> a -> b -> c -> z
+curry3 fn a b c = fn (a, b, c)
+
+curry4 :: ((a, b, c, d) -> z) -> a -> b -> c -> d -> z
+curry4 fn a b c d = fn (a, b, c, d)
+
+curry5 :: ((a, b, c, d, e) -> z) -> a -> b -> c -> d -> e -> z
+curry5 fn a b c d e = fn (a, b, c, d, e)
+
+curry6 :: ((a, b, c, d, e, f) -> z) -> a -> b -> c -> d -> e -> f -> z
+curry6 fn a b c d e f = fn (a, b, c, d, e, f)
+
+curry7 :: ((a, b, c, d, e, f, g) -> z) -> a -> b -> c -> d -> e -> f -> g -> z
+curry7 fn a b c d e f g = fn (a, b, c, d, e, f, g)
+
+curry8 :: ((a, b, c, d, e, f, g, h) -> z) -> a -> b -> c -> d -> e -> f -> g -> h -> z
+curry8 fn a b c d e f g h = fn (a, b, c, d, e, f, g, h)
+
+curry9 :: ((a, b, c, d, e, f, g, h, i) -> z) -> a -> b -> c -> d -> e -> f -> g -> h -> i -> z
+curry9 fn a b c d e f g h i = fn (a, b, c, d, e, f, g, h, i)
+
+curry10 :: ((a, b, c, d, e, f, g, h, i, j) -> z) -> a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> z
+curry10 fn a b c d e f g h i j = fn (a, b, c, d, e, f, g, h, i, j)
+
+curry11 :: ((a, b, c, d, e, f, g, h, i, j, k) -> z) -> a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> z
+curry11 fn a b c d e f g h i j k = fn (a, b, c, d, e, f, g, h, i, j, k)
+
+curry12 :: ((a, b, c, d, e, f, g, h, i, j, k, l) -> z) -> a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l -> z
+curry12 fn a b c d e f g h i j k l = fn (a, b, c, d, e, f, g, h, i, j, k, l)
+
+uncurry2 :: (a -> b -> z) -> (a, b) -> z
+uncurry2 fn (a, b) = fn a b
+
+uncurry3 :: (a -> b -> c -> z) -> (a, b, c) -> z
+uncurry3 fn (a, b, c) = fn a b c
+
+uncurry4 :: (a -> b -> c -> d -> z) -> (a, b, c, d) -> z
+uncurry4 fn (a, b, c, d) = fn a b c d
+
+uncurry5 :: (a -> b -> c -> d -> e -> z) -> (a, b, c, d, e) -> z
+uncurry5 fn (a, b, c, d, e) = fn a b c d e
+
+uncurry6 :: (a -> b -> c -> d -> e -> f -> z) -> (a, b, c, d, e, f) -> z
+uncurry6 fn (a, b, c, d, e, f) = fn a b c d e f
+
+uncurry7 :: (a -> b -> c -> d -> e -> f -> g -> z) -> (a, b, c, d, e, f, g) -> z
+uncurry7 fn (a, b, c, d, e, f, g) = fn a b c d e f g
+
+uncurry8 :: (a -> b -> c -> d -> e -> f -> g -> h -> z) -> (a, b, c, d, e, f, g, h) -> z
+uncurry8 fn (a, b, c, d, e, f, g, h) = fn a b c d e f g h
+
+uncurry9 :: (a -> b -> c -> d -> e -> f -> g -> h -> i -> z) -> (a, b, c, d, e, f, g, h, i) -> z
+uncurry9 fn (a, b, c, d, e, f, g, h, i) = fn a b c d e f g h i
+
+uncurry10 :: (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> z) -> (a, b, c, d, e, f, g, h, i, j) -> z
+uncurry10 fn (a, b, c, d, e, f, g, h, i, j) = fn a b c d e f g h i j
+
+uncurry11 :: (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> z) -> (a, b, c, d, e, f, g, h, i, j, k) -> z
+uncurry11 fn (a, b, c, d, e, f, g, h, i, j, k) = fn a b c d e f g h i j k
+
+uncurry12 :: (a -> b -> c -> d -> e -> f -> g -> h -> i -> j -> k -> l -> z) -> (a, b, c, d, e, f, g, h, i, j, k, l) -> z
+uncurry12 fn (a, b, c, d, e, f, g, h, i, j, k, l) = fn a b c d e f g h i j k l

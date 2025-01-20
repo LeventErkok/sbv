@@ -11,11 +11,11 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.SMT.SMTLibNames where
+module Data.SBV.SMT.SMTLibNames (isReserved) where
 
 import Data.Char (toLower)
 
--- | Names reserved by SMTLib. This list is current as of Dec 6 2015; but of course
+-- | Names reserved by SMTLib, all lower-case. This list is current as of Dec 6 2015; but of course
 -- there's no guarantee it'll stay that way.
 smtLibReservedNames :: [String]
 smtLibReservedNames = map (map toLower)
@@ -28,3 +28,7 @@ smtLibReservedNames = map (map toLower)
                         -- The following are most likely Z3 specific
                         , "interval", "assert-soft"
                         ]
+
+-- | Is this name reserved? Note that we'll ignore case in checking here. This is probably over-cautious.
+isReserved :: String -> Bool
+isReserved = (`elem` smtLibReservedNames)
