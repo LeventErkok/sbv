@@ -50,7 +50,6 @@ import Data.SBV.Tools.KnuckleDragger
 -- >>> sqrt2IsIrrational
 -- Chain lemma: oddSquaredIsOdd
 --   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: squareEvenImpliesEven            Q.E.D.
 -- Chain lemma: evenSquaredIsMult4
@@ -76,10 +75,9 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
-                                  (\a -> (sTrue, let k = a `sDiv` 2
-                                                 in [ odd a
-                                                    , sq a .== sq (2 * k + 1)
-                                                    , a .== 2 * k + 1
+                                  (\a -> (odd a, let k = some "w" (\kv -> a .== 2*kv+1)
+                                                 in [ sq a
+                                                    , sq (2 * k + 1)
                                                     ]))
                                   []
 
@@ -93,10 +91,10 @@ sqrt2IsIrrational = runKD $ do
     -- Happily, z3 needs nchainLemma helpers to establish this all on its own.
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
-                                      (\a -> (sTrue, let k = a `sDiv` 2
-                                                     in [ even a
-                                                        , sq a .== sq (k * 2)
-                                                        ]))
+                                      (\a -> (even a, let k = some "w" (\kv -> a .== 2*kv)
+                                                      in [ sq a
+                                                         , sq (k * 2)
+                                                         ]))
                                       []
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here

@@ -34,14 +34,24 @@ z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
 -- Chain lemma: case_n_mod_3_eq_0
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
 --   Result:                               Q.E.D.
 -- Chain lemma: case_n_mod_3_eq_1
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Step  : 5                             Q.E.D.
+--   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
 -- Chain lemma: case_n_mod_3_eq_2
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
+--   Step  : 5                             Q.E.D.
+--   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: notDiv3                          Q.E.D.
 -- [Proven] notDiv3
@@ -56,32 +66,42 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
 
    -- Case 0: n = 0 (mod 3)
    case0 <- chainLemma "case_n_mod_3_eq_0"
-                       (\(Forall @"n" n) -> (n `sEMod` 3 .== 0) .=> p n)
-                       (\n -> (sTrue, let k = n `sEDiv` 3
-                                      in [ n `sEMod` 3 .== 0
-                                         , n .== 3 * k
-                                         , s n .== s (3 * k)
-                                         ]))
+                       (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n)
+                       (\n -> (n `sEMod` 3 .== 0, let w = some "witness" $ \k -> n .== 3*k
+                                                  in [ s n
+                                                     , s (3*w)
+                                                     , 2*(3*w)*(3*w) + 3*w + 1
+                                                     , 18*w*w + 3*w + 1
+                                                     , 3*(6*w*w + w) + 1
+                                                     ]))
                        []
 
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
-                       (\(Forall @"n" n) -> (n `sEMod` 3 .== 1) .=> p n)
-                       (\n -> (sTrue, let k = n `sEDiv` 3
-                                      in [ n `sEMod` 3 .== 1
-                                         , n .== 3 * k + 1
-                                         , s n .== s (3 * k + 1)
-                                         ]))
+                       (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n)
+                       (\n -> (n `sEMod` 3 .== 1, let w = some "witness" $ \k -> n .== 3*k + 1
+                                                  in [ s n
+                                                     , s (3*w+1)
+                                                     , 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
+                                                     , 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1
+                                                     , 18*w*w + 12*w + 2 + 3*w + 2
+                                                     , 18*w*w + 15*w + 4
+                                                     , 3*(6*w*w + 5*w + 1) + 1
+                                                     ]))
                        []
 
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
-                       (\(Forall @"n" n) -> (n `sEMod` 3 .== 2) .=> p n)
-                       (\n -> (sTrue, let k = n `sEDiv` 3
-                                      in [ n `sEMod` 3 .== 2
-                                         , n .== 3 * k + 2
-                                         , s n .== s (3 * k + 2)
-                                         ]))
+                       (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n)
+                       (\n -> (n `sEMod` 3 .== 2, let w = some "witness" $ \k -> n .== 3*k + 2
+                                                  in [ s n
+                                                     , s (3*w+2)
+                                                     , 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
+                                                     , 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1
+                                                     , 18*w*w + 24*w + 8 + 3*w + 3
+                                                     , 18*w*w + 27*w + 11
+                                                     , 3*(6*w*w + 9*w + 3) + 2
+                                                     ]))
                        []
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so
