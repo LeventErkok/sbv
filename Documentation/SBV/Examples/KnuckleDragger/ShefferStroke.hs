@@ -68,7 +68,7 @@ a ⨆ b = ﬧ (a ⏐ b)
 -- | The unique bottom element
 z :: SStroke
 z = elt ⏐ ﬧ elt
- where elt = uninterpret "z_witness"
+ where elt = some "z" (const sTrue)
 
 -- | The unique top element
 u :: SStroke
