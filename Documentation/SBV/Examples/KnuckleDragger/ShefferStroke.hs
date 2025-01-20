@@ -80,6 +80,7 @@ u = ﬧ z
 --
 -- TODO: Due to doctest issues, the output here does not get tested.
 -- See: https://github.com/yav/haskell-lexer/issues/14, which seems to be the root cause.
+-- Make a proper test for this using the regular test infrastructure
 -- >>> shefferBooleanAlgebra
 shefferBooleanAlgebra :: IO Proof
 shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
@@ -262,54 +263,58 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ a .== u)
               [a1, a2, commut1, ident1, ident2, distrib1, compl1, compl2, dm1, dm2, idemp2]
 
-  -- TODO: e1
-  _1 <- lemma "b ⊓ (a ⊔ (b ⊔ c)) = b"
+  e1 <- lemma "b ⊓ (a ⊔ (b ⊔ c)) = b"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> b ⨅ (a ⨆ (b ⨆ c)) .== b)
               [distrib2, absorb1, absorb2, commut1]
 
-  -- TODO: e2
-  _2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b"
+  e2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> b ⨆ (a ⨅ (b ⨅ c)) .== b)
               [distrib1, absorb1, absorb2, commut2]
+
+  f1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ bᶜ = u"
+                   (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== u)
+                   (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨆ ﬧ b
+                                      , ﬧ b ⨆ (a ⨆ (b ⨆ c))
+                                      , u ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))
+                                      , (b ⨆ ﬧ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))
+                                      , (ﬧ b ⨆ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))
+                                      , ﬧ b ⨆ (b ⨅ (a ⨆ (b ⨆ c)))
+                                      , ﬧ b ⨆ b
+                                      , u
+                                      ]))
+                   [commut1, commut2, distrib1, e1, compl1, compl2]
+
+  -- TODO: g1
+  _1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = u"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== u)
+              [commut1, f1]
+
+  h1 <- chainLemma "(a ⊔ b ⊔ c)ᶜ ⊓ a = z"
+                   (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ a .== z)
+                   (\a b c -> (sTrue, [ a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)
+                                      , (a ⨅  (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⨆ z
+                                      , z ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))
+                                      , (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))
+                                      , a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))
+                                      , a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))
+                                      , a ⨅ ﬧ a
+                                      , z
+                                      ]))
+              [ident1, commut1, commut2, compl2, distrib2, e2]
+
+  -- TODO: i1
+  _1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = z"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ b .== z)
+              [commut1, h1]
+
+  -- TODO: j1
+  _1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = z"
+              (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ c .== z)
+              [a2, dne, commut2]
 
   pure sorry
 
 {-
-lemma F₁ (a b c : α) : (a ⊔ (b ⊔ c)) ⊔ bᶜ = u := by
-  calc
-    (a ⊔ (b ⊔ c)) ⊔ bᶜ = bᶜ ⊔ (a ⊔ (b ⊔ c)) := by rw [commut₁]
-    _                  = u ⊓ (bᶜ ⊔ (a ⊔ (b ⊔ c))) := by rw [commut₂]; simp
-    _                  = (b ⊔ bᶜ) ⊓ (bᶜ ⊔ (a ⊔ (b ⊔ c))) := by simp
-    _                  = (bᶜ ⊔ b) ⊓ (bᶜ ⊔ (a ⊔ (b ⊔ c))) := by rw [commut₁]
-    _                  = bᶜ ⊔ (b ⊓ (a ⊔ (b ⊔ c))) := by rw [distrib₁]
-    _                  = bᶜ ⊔ b := by rw [E₁]
-    _                  = u := by rw [commut₁]; simp
-
-lemma G₁ (a b c : α) : (a ⊔ (b ⊔ c)) ⊔ cᶜ = u := by
-  conv => left; left; right; rw [commut₁]
-  apply F₁
-
-lemma H₁ (a b c : α) : (a ⊔ b ⊔ c)ᶜ ⊓ a = z := by
-  simp; rw [commut₂]
-  calc
-    a ⊓ (aᶜ ⊓ bᶜ ⊓ cᶜ) = (a ⊓ (aᶜ ⊓ bᶜ ⊓ cᶜ)) ⊔ z := by rw [ident₁]
-    _                  = z ⊔ (a ⊓ (aᶜ ⊓ bᶜ ⊓ cᶜ)) := by rw [commut₁]
-    _                  = (a ⊓ aᶜ) ⊔ (a ⊓ (aᶜ ⊓ bᶜ ⊓ cᶜ)) := by rw [compl₂]
-    _                  = a ⊓ (aᶜ ⊔ (aᶜ ⊓ bᶜ ⊓ cᶜ)) := by rw [distrib₂]
-    _                  = a ⊓ (aᶜ ⊔ (cᶜ ⊓ (aᶜ ⊓ bᶜ))) := by conv => left; right; right; rw [commut₂]
-    _                  = a ⊓ aᶜ := by rw [E₂]
-    _                  = z := by rw [compl₂]
-
-lemma I₁ (a b c : α) : (a ⊔ b ⊔ c)ᶜ ⊓ b = z := by
-  conv => left; left; arg 1; left; rw [commut₁]
-  exact H₁ ..
-
-lemma J₁ (a b c : α) : (a ⊔ b ⊔ c)ᶜ ⊓ c = z := by
-  simp
-  rw [commut₂]
-  conv => left; right; rw [commut₂]
-  simp
-
 -- Incredibly, these are derivable
 @[simp]
 lemma assoc₁ (a b c : α) : a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c := by
