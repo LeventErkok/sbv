@@ -24,14 +24,18 @@ module Data.SBV.Tools.KDKernel (
        , theorem, theoremWith
        , InductionTactic(..)
        , sorry
+       , checkSatThen
        ) where
 
-import Control.Monad.Trans  (liftIO)
+import Control.Monad.Trans  (liftIO, MonadIO)
 
 import Data.List (intercalate)
 
 import Data.SBV
-import Data.SBV.Core.Data (Constraint)
+import Data.SBV.Core.Data (Constraint, SolverContext)
+import Data.SBV.Core.Symbolic (isEmptyModel)
+import Data.SBV.Control hiding (getProof)
+import Data.SBV.Control.Utils (getConfig)
 
 import qualified Data.SBV.List as SL
 
@@ -146,6 +150,43 @@ theorem nm f by = do cfg <- getKDConfig
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
+
+-- | Capture the general flow after a checkSat. We run the sat case if model is empty.
+checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m)
+   => Bool               -- ^ verbose
+   -> String             -- ^ tag
+   -> SBool              -- ^ context
+   -> SBool              -- ^ what we want to prove
+   -> [String]           -- ^ sub-proof
+   -> Maybe (m a)        -- ^ special code to run if model is empty (if any)
+   -> (Int -> IO a)      -- ^ what to do when unsat, with the tab amount
+   -> m a
+checkSatThen verbose tag ctx cond nms mbSat unsat = inNewAssertionStack $ do
+   tab <- liftIO $ startKD verbose tag nms
+   constrain ctx
+   constrain $ sNot cond
+   r <- checkSat
+   case r of
+    Unk    -> unknown
+    Sat    -> cex
+    DSat{} -> cex
+    Unsat  -> liftIO $ unsat tab
+ where die = error "Failed"
+
+       nm = intercalate "." (filter (not . null) nms)
+
+       unknown = do r <- getUnknownReason
+                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                                putStrLn $ "\n*** Solver reported: " ++ show r
+                                die
+
+       cex = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+                model <- getModel
+                case (isEmptyModel model, mbSat) of
+                  (True,  Just act) -> act >> die
+                  _                 -> do res <- Satisfiable <$> getConfig <*> pure model
+                                          liftIO $ print $ ThmResult res
+                                          die
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.

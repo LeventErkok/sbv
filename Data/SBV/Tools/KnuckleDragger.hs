@@ -51,18 +51,14 @@ module Data.SBV.Tools.KnuckleDragger (
 
 import Data.SBV
 import Data.SBV.Core.Data (SolverContext(internalVariable))
-import Data.SBV.Core.Symbolic (isEmptyModel)
 
-import Data.SBV.Control.Utils (getConfig)
 import Data.SBV.Control hiding (getProof)
 
 import Data.SBV.Tools.KDKernel
 import Data.SBV.Tools.KDUtils
 
-import Control.Monad        (when)
-import Control.Monad.Trans  (MonadIO, liftIO)
-
-import Data.List (intercalate)
+import Control.Monad       (when)
+import Control.Monad.Trans (liftIO)
 
 import qualified Data.SBV.List as SL
 
@@ -320,43 +316,6 @@ class Inductive a steps where
                            , getProof    = label nm $ quantifiedBool qResult
                            , proofName   = nm
                            }
-
--- Capture the general flow after a checkSat. We run the sat case if model is empty.
-checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m)
-   => Bool               -- ^ verbose
-   -> String             -- ^ tag
-   -> SBool              -- ^ context
-   -> SBool              -- ^ what we want to prove
-   -> [String]           -- ^ sub-proof
-   -> Maybe (m a)        -- ^ special code to run if model is empty (if any)
-   -> (Int -> IO a)      -- ^ what to do when unsat, with the tab amount
-   -> m a
-checkSatThen verbose tag ctx cond nms mbSat unsat = inNewAssertionStack $ do
-   tab <- liftIO $ startKD verbose tag nms
-   constrain ctx
-   constrain $ sNot cond
-   r <- checkSat
-   case r of
-    Unk    -> unknown
-    Sat    -> cex
-    DSat{} -> cex
-    Unsat  -> liftIO $ unsat tab
- where die = error "Failed"
-
-       nm = intercalate "." (filter (not . null) nms)
-
-       unknown = do r <- getUnknownReason
-                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                                putStrLn $ "\n*** Solver reported: " ++ show r
-                                die
-
-       cex = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                model <- getModel
-                case (isEmptyModel model, mbSat) of
-                  (True,  Just act) -> act >> die
-                  _                 -> do res <- Satisfiable <$> getConfig <*> pure model
-                                          liftIO $ print $ ThmResult res
-                                          die
 
 -- | Create a sequence of proof-obligations from the inductive steps
 pairInductiveSteps :: EqSymbolic a => ([a], [a]) -> [(String, SBool)]
