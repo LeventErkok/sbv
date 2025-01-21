@@ -1,6 +1,6 @@
 -----------------------------------------------------------------------------
 -- |
--- Module    : Data.SBV.Tools.KDKernel
+-- Module    : Data.SBV.Tools.KD.Kernel
 -- Copyright : (c) Levent Erkok
 -- License   : BSD3
 -- Maintainer: erkokl@gmail.com
@@ -17,7 +17,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.Tools.KDKernel (
+module Data.SBV.Tools.KD.Kernel (
          Proposition,  Proof(..)
        , axiom
        , lemma,   lemmaWith,   lemmaGen
@@ -39,7 +39,7 @@ import Data.SBV.Control.Utils (getConfig)
 
 import qualified Data.SBV.List as SL
 
-import Data.SBV.Tools.KDUtils
+import Data.SBV.Tools.KD.Utils
 
 -- | A proposition is something SBV is capable of proving/disproving. We capture this
 -- with a set of constraints. This type might look scary, but for the most part you

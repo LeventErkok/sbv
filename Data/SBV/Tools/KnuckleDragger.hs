@@ -54,8 +54,8 @@ import Data.SBV.Core.Data (SolverContext(internalVariable))
 
 import Data.SBV.Control hiding (getProof)
 
-import Data.SBV.Tools.KDKernel
-import Data.SBV.Tools.KDUtils
+import Data.SBV.Tools.KD.Kernel
+import Data.SBV.Tools.KD.Utils
 
 import Control.Monad       (when)
 import Control.Monad.Trans (liftIO)
