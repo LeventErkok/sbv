@@ -337,38 +337,52 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
           (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
           [c1, c2, cancel]
 
+  assoc2 <- do
+     ie <- chainLemma "(a ⊓ (b ⊓ c))ᶜ = ((a ⊓ b) ⊓ c)ᶜ"
+                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨅ (b ⨅ c)) .== ﬧ((a ⨅ b) ⨅ c))
+                      (\a b c -> (sTrue, [ ﬧ(a ⨅ (b ⨅ c))
+                                         , ﬧ a ⨆ ﬧ (b ⨅ c)
+                                         , ﬧ a ⨆ (ﬧ b ⨆ ﬧ c)
+                                         , (ﬧ a ⨆ ﬧ b) ⨆ ﬧ c
+                                         , ﬧ (a ⨅ b) ⨆ ﬧ c
+                                         , ﬧ((a ⨅ b) ⨅ c)
+                                         ]))
+                      [dm2, assoc1]
 
-  lemma "TODO" sFalse [assoc1, i1]
+     chainLemma "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c"
+                (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c)
+                (\a b c -> (sTrue, [ a ⨅ (b ⨅ c)
+                                   , ﬧ (ﬧ (a ⨅ (b ⨅ c)))
+                                   , ﬧ (ﬧ ((a ⨅ b) ⨅ c))
+                                   , ((a ⨅ b) ⨅ c)
+                                   ]))
+                [inv_elim, dne, ie]
+
+  let a ≤ b = a .== b ⨅ a
+
+  le_trans <- chainLemma "a ≤ b → b ≤ c → a ≤ c"
+                         (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ≤ b .=> b ≤ c .=> a ≤ c)
+                         (\a b c -> (a ≤ b .&& b ≤ c, [ a
+                                                      , b ⨅ a
+                                                      , (c ⨅ b) ⨅ a
+                                                      , c ⨅ (b ⨅ a)
+                                                      , c ⨅ a
+                                                      ]))
+                         [assoc2]
+
+  le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b"
+                            (\(Forall @"a" a) (Forall @"b" b) -> a ≤ b .=> b ≤ a .=> a .== b)
+                            (\a b -> (a ≤ b .&& b ≤ a, [ a
+                                                       , b ⨅ a
+                                                       , a ⨅ b
+                                                       , b
+                                                       ]))
+                            [commut2]
+
+
+  lemma "TODO" sFalse [i1, le_trans, le_antisymm]
 
 {-
--- We don't try to dualize the proof here, that's too painful, we apply de Morgan liberally
-@[simp]
-lemma assoc₂ (a b c : α) : a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c := by
-  apply inv_elim
-  simp
-
-instance ShefferLE : LE α := ⟨ λ a b ↦ a = b ⊓ a ⟩
-
-lemma Sheffer.le_refl (a : α) : a ≤ a := by simp [ShefferLE]
-
-lemma Sheffer.le_trans (a b c : α) : a ≤ b → b ≤ c → a ≤ c := by
-  rw [ShefferLE]
-  intro h₁ h₂
-  calc
-    a = b ⊓ a       := h₁
-    _ = (c ⊓ b) ⊓ a := by conv => lhs; rw [h₂]
-    _ = c ⊓ (b ⊓ a) := Eq.symm (assoc₂ c b a)
-    _ = c ⊓ a       := by rw [← h₁]
-
-lemma Sheffer.le_antisymm (a b : α) : a ≤ b → b ≤ a → a = b := by
-  simp [ShefferLE]
-  intro h₁ h₂
-  calc
-    a = b ⊓ a := h₁
-    _ = a ⊓ b := commut₂ ..
-    _ = b     := id (Eq.symm h₂)
-
-
 instance ShefferToBooleanAlg : BooleanAlgebra α where
   sup := (. ⊔ .)
   le_refl := fun a ↦ Sheffer.le_refl a
