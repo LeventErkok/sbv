@@ -312,15 +312,22 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== u)
                      (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)
                                         , (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)
-                                        , ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅  ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
-                                        , (u ⨅ u) ⨅ u
+                                        , ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
                                         , u
                                         ]))
                      [dm1, distrib1, d1, f1, g1]
 
-    c2 <- lemma      "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = z"
+    c2 <- chainLemma "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = z"
                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== z)
-                     [sorry]
+                     (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)
+                                        , (a ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))
+                                        , (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))
+                                        , z ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))
+                                        , ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ z
+                                        , (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)
+                                        , ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)
+                                        ]))
+                     [commut1, commut2, distrib2, h1, d1, ident1]
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
           (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
