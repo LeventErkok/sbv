@@ -136,6 +136,7 @@ mergeSExpr (x:xs)
                go i (')':cs) = let i'= i-1 in i' `seq` go i' cs
                go i ('"':cs) = go i (skipString cs)
                go i ('|':cs) = go i (skipBar cs)
+               go i (';':cs) = go i (drop 1 (dropWhile (/= '\n') cs))
                go i (_  :cs) = go i cs
 
        grab i ls

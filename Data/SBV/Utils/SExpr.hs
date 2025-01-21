@@ -69,6 +69,8 @@ tokenize inp = go inp []
                                (pre, '|':rest) -> go rest (wrap pre : sofar)
                                (pre, rest)     -> go rest (wrap pre : sofar)
 
+       go (';':r) sofar = go (drop 1 (dropWhile (/= '\n') r)) sofar
+
        go ('"':r) sofar = go rest (finalStr : sofar)
            where grabString []             acc = (reverse acc, [])         -- Strictly speaking, this is the unterminated string case; but let's ignore
                  grabString ('"' :'"':cs)  acc = grabString cs ('"' :acc)
@@ -84,7 +86,7 @@ tokenize inp = go inp []
        -- characters that can stop the current token
        -- it is *crucial* that this list contains every character
        -- we can match in one of the previous cases!
-       stopper = " \t\n():|\""
+       stopper = " \t\n():|\";"
 
 -- | The balance of parens in this string. If 0, this means it's a legit line!
 parenDeficit :: String -> Int
