@@ -326,32 +326,21 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                         , ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ z
                                         , (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)
                                         , ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)
+                                        , (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ c)
+                                        , (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ z
+                                        , z ⨆ z
+                                        , z
                                         ]))
-                     [commut1, commut2, distrib2, h1, d1, ident1]
+                     [commut1, commut2, distrib2, h1, d1, j1, ident1]
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
           (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
           [c1, c2, cancel]
 
 
-  lemma "TODO" sFalse [assoc1, i1, j1]
+  lemma "TODO" sFalse [assoc1, i1]
 
 {-
--- Incredibly, these are derivable
-@[simp]
-lemma assoc₁ (a b c : α) : a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c := by
-  apply cancel; simp
-  . calc
-      (a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ ⊓ cᶜ) = ((a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ)) ⊓ ((a ⊔ (b ⊔ c)) ⊔ cᶜ) := by rw [distrib₁]
-      _                              = ((a ⊔ (b ⊔ c) ⊔ aᶜ) ⊓ ((a ⊔ (b ⊔ c) ⊔ bᶜ))) ⊓ ((a ⊔ (b ⊔ c)) ⊔ cᶜ) := by rw [distrib₁]
-      _                              = (u ⊓ u) ⊓ u := by rw [D₁, F₁, G₁]
-      _                              = u := by simp
-  . rw [commut₂]
-    rw [distrib₂]; rw [distrib₂]
-    calc
-      (a ⊔ b ⊔ c)ᶜ ⊓ a ⊔ ((a ⊔ b ⊔ c)ᶜ ⊓ b ⊔ (a ⊔ b ⊔ c)ᶜ ⊓ c) = z ⊔ (z ⊔ z) := by rw [H₁, I₁, J₁]
-      _ = z := by repeat rw [ident₁]
-
 -- We don't try to dualize the proof here, that's too painful, we apply de Morgan liberally
 @[simp]
 lemma assoc₂ (a b c : α) : a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c := by
