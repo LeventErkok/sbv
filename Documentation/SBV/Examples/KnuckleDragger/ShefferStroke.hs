@@ -307,28 +307,27 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ c .== z)
               [a2, dne, commut2]
 
-  -- TODO: assoc1
-  _ssoc1 <- do
-    ah1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ ⊓ cᶜ) = u"
-                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c) .== u)
-                      (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)
-                                         , ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
-                                         , ((a ⨆ (b ⨆ c) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c) ⨆ ﬧ b))) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
-                                         , (u ⨅ u) ⨅ u
-                                         , u
-                                         ]))
-                      [distrib1, d1, f1, g1]
+  assoc1 <- do
+    c1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = u"
+                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== u)
+                     (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)
+                                        , (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)
+                                        , ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅  ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
+                                        , (u ⨅ u) ⨅ u
+                                        , u
+                                        ]))
+                     [dm1, distrib1, d1, f1, g1]
 
-    ah2 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ a ⊔ ((a ⊔ b ⊔ c)ᶜ ⊓ b ⊔ (a ⊔ b ⊔ c)ᶜ ⊓ c) = z"
-                 (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨆ b ⨆ c) ⨅ a ⨆ (ﬧ(a ⨆ b ⨆ c) ⨅ b ⨆ ﬧ (a ⨆ b ⨆ c) ⨅ c) .== z)
-                 [h1, i1, j1, ident1, commut1]
+    c2 <- lemma      "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = z"
+                     (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== z)
+                     [sorry]
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
           (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
-          [distrib1, distrib2, d1, f1, g1, h1, i1, j1, ident1, commut1, commut2, ah1, ah2, cancel]
+          [c1, c2, cancel]
 
 
-  pure sorry
+  lemma "TODO" sFalse [assoc1, i1, j1]
 
 {-
 -- Incredibly, these are derivable
