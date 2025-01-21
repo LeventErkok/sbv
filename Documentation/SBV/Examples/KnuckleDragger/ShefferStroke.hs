@@ -220,8 +220,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                     (\(Forall @"a" a) (Forall @"b" b) -> ﬧ a .== ﬧ b .=> a .== b)
                     [dne]
 
-  -- TODO: cancel
-  _ancel <- lemma "a ⊔ bᶜ = u → a ⊓ bᶜ = z → a = b"
+  cancel <- lemma "a ⊔ bᶜ = u → a ⊓ bᶜ = z → a = b"
                   (\(Forall @"a" a) (Forall @"b" b) -> a ⨆ ﬧ b .== u .=> a ⨅ ﬧ b .== z .=> a .== b)
                   [inv, inv_elim]
 
@@ -258,8 +257,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
 
 
-  -- TODO: d1
-  _1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ aᶜ = u"
+  d1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ aᶜ = u"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ a .== u)
               [a1, a2, commut1, ident1, ident2, distrib1, compl1, compl2, dm1, dm2, idemp2]
 
@@ -284,8 +282,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                    [commut1, commut2, distrib1, e1, compl1, compl2]
 
-  -- TODO: g1
-  _1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = u"
+  g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = u"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== u)
               [commut1, f1]
 
@@ -302,15 +299,34 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                    [ident1, commut1, commut2, compl2, distrib2, e2]
 
-  -- TODO: i1
-  _1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = z"
+  i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = z"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ b .== z)
               [commut1, h1]
 
-  -- TODO: j1
-  _1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = z"
+  j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = z"
               (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ (a ⨆ b ⨆ c) ⨅ c .== z)
               [a2, dne, commut2]
+
+  -- TODO: assoc1
+  _ssoc1 <- do
+    ah1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ ⊓ cᶜ) = u"
+                      (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c) .== u)
+                      (\a b c -> (sTrue, [ (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)
+                                         , ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
+                                         , ((a ⨆ (b ⨆ c) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c) ⨆ ﬧ b))) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c)
+                                         , (u ⨅ u) ⨅ u
+                                         , u
+                                         ]))
+                      [distrib1, d1, f1, g1]
+
+    ah2 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ a ⊔ ((a ⊔ b ⊔ c)ᶜ ⊓ b ⊔ (a ⊔ b ⊔ c)ᶜ ⊓ c) = z"
+                 (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> ﬧ(a ⨆ b ⨆ c) ⨅ a ⨆ (ﬧ(a ⨆ b ⨆ c) ⨅ b ⨆ ﬧ (a ⨆ b ⨆ c) ⨅ c) .== z)
+                 [h1, i1, j1, ident1, commut1]
+
+    lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
+          (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
+          [distrib1, distrib2, d1, f1, g1, h1, i1, j1, ident1, commut1, commut2, ah1, ah2, cancel]
+
 
   pure sorry
 
@@ -321,9 +337,9 @@ lemma assoc₁ (a b c : α) : a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c := by
   apply cancel; simp
   . calc
       (a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ ⊓ cᶜ) = ((a ⊔ (b ⊔ c)) ⊔ (aᶜ ⊓ bᶜ)) ⊓ ((a ⊔ (b ⊔ c)) ⊔ cᶜ) := by rw [distrib₁]
-      _ = ((a ⊔ (b ⊔ c) ⊔ aᶜ) ⊓ ((a ⊔ (b ⊔ c) ⊔ bᶜ))) ⊓ ((a ⊔ (b ⊔ c)) ⊔ cᶜ) := by rw [distrib₁]
-      _ = (u ⊓ u) ⊓ u := by rw [D₁, F₁, G₁]
-      _ = u := by simp
+      _                              = ((a ⊔ (b ⊔ c) ⊔ aᶜ) ⊓ ((a ⊔ (b ⊔ c) ⊔ bᶜ))) ⊓ ((a ⊔ (b ⊔ c)) ⊔ cᶜ) := by rw [distrib₁]
+      _                              = (u ⊓ u) ⊓ u := by rw [D₁, F₁, G₁]
+      _                              = u := by simp
   . rw [commut₂]
     rw [distrib₂]; rw [distrib₂]
     calc
