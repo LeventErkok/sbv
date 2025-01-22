@@ -9,15 +9,18 @@
 -- Runs an IO computation printing the time it took to run it
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE TupleSections #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Utils.TDiff
   ( Timing(..)
+  , timeIf
   , showTDiff
   )
   where
 
-import Data.Time  (NominalDiffTime)
+import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime)
 import Data.IORef (IORef)
 
 import Data.List (intercalate)
@@ -26,6 +29,9 @@ import Data.Ratio
 import GHC.Real   (Ratio((:%)))
 
 import Numeric (showFFloat)
+
+import Control.Monad.Trans (liftIO, MonadIO)
+import Control.DeepSeq (rnf, NFData)
 
 -- | Specify how to save timing information, if at all.
 data Timing = NoTiming | PrintTiming | SaveTiming (IORef NominalDiffTime)
@@ -59,3 +65,11 @@ showTDiff diff
 
          aboveSeconds = map (\(t, v) -> show v ++ [t]) $ dropWhile (\p -> snd p == 0) [('d', days), ('h', hours), ('m', minutes)]
          fields       = aboveSeconds ++ [secondsPicos]
+
+timeIf :: (NFData a, MonadIO m) => Bool -> m a -> m (Maybe NominalDiffTime, a)
+timeIf measureTime act
+  | not measureTime = (Nothing,) <$> act
+  | True            = do start <- liftIO $ getCurrentTime
+                         r     <- act
+                         rnf r `seq` do end <- liftIO $ getCurrentTime
+                                        pure (Just (diffUTCTime end start), r)
