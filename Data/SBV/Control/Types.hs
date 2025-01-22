@@ -9,6 +9,9 @@
 -- Types related to interactive queries
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Control.Types (
@@ -22,13 +25,14 @@ module Data.SBV.Control.Types (
      ) where
 
 import Control.DeepSeq (NFData(..))
+import GHC.Generics (Generic)
 
 -- | Result of a 'Data.SBV.Control.checkSat' or 'Data.SBV.Control.checkSatAssuming' call.
 data CheckSatResult = Sat                   -- ^ Satisfiable: A model is available, which can be queried with 'Data.SBV.Control.getValue'.
                     | DSat (Maybe String)   -- ^ Delta-satisfiable: A delta-sat model is available. String is the precision info, if available.
                     | Unsat                 -- ^ Unsatisfiable: No model is available. Unsat cores might be obtained via 'Data.SBV.Control.getUnsatCore'.
                     | Unk                   -- ^ Unknown: Use 'Data.SBV.Control.getUnknownReason' to obtain an explanation why this might be the case.
-                    deriving (Eq, Show)
+                    deriving (Eq, Show, NFData, Generic)
 
 -- | Collectable information from the solver.
 data SMTInfoFlag = AllStatistics
