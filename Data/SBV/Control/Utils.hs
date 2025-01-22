@@ -116,7 +116,7 @@ instance MonadIO m => SolverContext (QueryT m) where
    contextState = queryState
 
    internalVariable :: forall a. Kind -> QueryT m (SBV a)
-   internalVariable k = inNewContext $ \st -> do
+   internalVariable k = contextState >>= \st -> liftIO $ do
        sv  <- newInternalVariable st k
        pure $ SBV $ SVal k (Right (cache (const (pure sv))))
 
