@@ -186,6 +186,7 @@ syncUpSolver progInfo rGlobalConsts is = do
                        let cnsts = sortBy cmp . map swap . Map.toList $ newConsts
 
                        return $ toIncSMTLib cfg progInfo inps ks (allConsts, cnsts) tbls uis as constraints cfg
+
         mapM_ (send True) $ mergeSExpr ls
 
 -- | Retrieve the query context
