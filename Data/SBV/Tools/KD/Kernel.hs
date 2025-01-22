@@ -120,6 +120,8 @@ theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Capture the general flow after a checkSat. We run the sat case if model is empty.
+-- NB. This is the only place in Knuckledragger where we actually call check-sat;
+-- so all interaction goes through here.
 checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => Bool               -- ^ verbose
    -> String             -- ^ tag
