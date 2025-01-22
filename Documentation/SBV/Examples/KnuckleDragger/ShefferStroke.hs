@@ -83,7 +83,7 @@ u = ﬧ z
 -- Make a proper test for this using the regular test infrastructure
 -- >>> shefferBooleanAlgebra
 shefferBooleanAlgebra :: IO Proof
-shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60, measureTime = True}} $ do
 
   sh1 <- sheffer1
   sh2 <- sheffer2
