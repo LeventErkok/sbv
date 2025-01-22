@@ -32,7 +32,7 @@ import Control.Monad.Trans  (liftIO, MonadIO)
 import Data.List (intercalate)
 
 import Data.SBV
-import Data.SBV.Core.Data (SolverContext)
+import Data.SBV.Core.Data (Constraint, SolverContext)
 import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
 import Data.SBV.Control.Utils (getConfig)
@@ -45,7 +45,12 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff (timeIf)
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
-type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a))
+type Proposition a = ( QNot a
+                     , QuantifiedBool a
+                     , Skolemize (NegatesTo a)
+                     , QuantifiedBool (SkolemsTo (NegatesTo a))
+                     , Constraint Symbolic (SkolemsTo (NegatesTo a))
+                     )
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -132,9 +137,8 @@ checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop
            tab <- liftIO $ startKD verbose tag nms
            constrain ctx
 
-           -- It's tempting to skolemize here. We avoid from doing so, since
-           -- it introduces new constants and that doesn't really work well with knuckledragger..
-           constrain $ qNot prop
+           -- First negate, then skolemize!
+           constrain $ skolemize (qNot prop)
 
            (mbT, r) <- timeIf measureTime checkSat
 
