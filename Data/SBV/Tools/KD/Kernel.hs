@@ -14,7 +14,6 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
-{-# LANGUAGE TupleSections        #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -42,8 +41,8 @@ import qualified Data.SBV.List as SL
 
 import Data.SBV.Tools.KD.Utils
 
-import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime)
-import Control.DeepSeq (rnf)
+import Data.Time (NominalDiffTime)
+import Data.SBV.Utils.TDiff (timeIf)
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
 type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a))
@@ -137,7 +136,7 @@ checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop
            -- it introduces new constants and that doesn't really work well with knuckledragger..
            constrain $ qNot prop
 
-           (mbT, r) <- timing checkSat
+           (mbT, r) <- timeIf measureTime checkSat
 
            case r of
              Unk    -> unknown
@@ -160,13 +159,6 @@ checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop
                   _                 -> do res <- Satisfiable <$> getConfig <*> pure model
                                           liftIO $ print $ ThmResult res
                                           die
-
-       timing act
-         | not measureTime = (Nothing,) <$> act
-         | True            = do start <- liftIO $ getCurrentTime
-                                r     <- act
-                                rnf r `seq` do end <- liftIO $ getCurrentTime
-                                               pure (Just (diffUTCTime end start), r)
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.

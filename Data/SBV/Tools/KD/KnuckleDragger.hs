@@ -136,8 +136,8 @@ class ChainLemma a steps step | steps -> step where
         let go :: Int -> SBool -> [SBool] -> Query Proof
             go _ accum [] = do
                 queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \tab -> do
-                  finish tab
+                checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \d -> do
+                  finish d
                   pure Proof { rootOfTrust = ros
                              , isUserAxiom = False
                              , getProof    = label nm $ quantifiedBool result
@@ -262,7 +262,9 @@ class Inductive a steps where
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
    inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
+
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+
         runSMTWith cfg $ do
 
            mapM_ (constrain . getProof) helpers
@@ -302,8 +304,8 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \tab -> do
-              finish tab
+            checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \d -> do
+              finish d
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False
                            , getProof    = label nm $ quantifiedBool qResult
