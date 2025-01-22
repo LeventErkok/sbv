@@ -177,13 +177,17 @@ checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
 class InductionTactic a where
-  -- | Induction tactic
-  induct     :: a -> Proof
+  -- | Induction tactic.
+  induct :: a -> Proof
 
-  -- | Alternative induction tactic
+  -- | Alternative induction tactic. Only applies for integers where the induction hypothesis
+  -- proves @p k .== p (k+1)@ and hence is valid for all integers, not just positive ones. For other
+  -- types, equivalent to 'induct'.
   inductAlt1 :: a -> Proof
 
-  -- | Another alternative induction tactic
+  -- | Another alternative induction tactic. Only applies for integers where the induction hypothesis
+  -- states @p k .=> p (k+1) .&& p (k-1)@ and hence is valid for all integers, not just positive ones.
+  -- For other types, equivalent to 'induct'.
   inductAlt2 :: a -> Proof
 
   -- The second and third principles are the same as first by default, unless we provide them explicitly.
