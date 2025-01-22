@@ -44,10 +44,10 @@ import Data.SBV.Tools.KD.Utils
 -- | A proposition is something SBV is capable of proving/disproving. We capture this
 -- with a set of constraints. This type might look scary, but for the most part you
 -- can ignore it and treat it as anything you can pass to 'prove' or 'sat' in SBV.
-type Proposition a = ( QuantifiedBool a
-                     , QNot a
+type Proposition a = ( QNot a
+                     , QuantifiedBool a
                      , Skolemize (NegatesTo a)
-                     , Satisfiable (Symbolic (SkolemsTo (NegatesTo a)))
+                     , QuantifiedBool (SkolemsTo (NegatesTo a))
                      , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
                      )
 
@@ -87,51 +87,19 @@ sorry = Proof { rootOfTrust = Self
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
-lemmaGen cfg@SMTConfig{verbose} what nms inputProp by = do
-    tab <- liftIO $ startKD verbose what nms
-
-    let nm = intercalate "." nms
+lemmaGen cfg@SMTConfig{verbose} tag nms inputProp by = liftIO $ runSMTWith cfg $ go
+  where go  = do mapM_ (constrain . getProof) by
+                 query $ checkSatThen verbose tag sTrue inputProp nms Nothing good
 
         -- What to do if all goes well
-        good = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
-                  pure Proof { rootOfTrust = ros
-                             , isUserAxiom = False
-                             , getProof    = label nm (quantifiedBool inputProp)
-                             , proofName   = nm
-                             }
+        good tab = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
+                      pure Proof { rootOfTrust = ros
+                                 , isUserAxiom = False
+                                 , getProof    = label nm (quantifiedBool inputProp)
+                                 , proofName   = nm
+                                 }
           where (ros, modulo) = calculateRootOfTrust nm by
-
-        -- What to do if the proof fails
-        cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-
-                           -- When trying to get a counter-example, only include in the
-                           -- implication those facts that are user-given axioms. This
-                           -- way our counter-example will be more likely to be relevant
-                           -- to the proposition we're currently proving. (Hopefully.)
-                           -- Remember that we first have to negate, and then skolemize!
-                           SatResult res <- satWith cfg $ do
-                                               mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
-                                               pure $ skolemize (qNot inputProp)
-
-                           print $ ThmResult res
-                           error "Failed"
-
-        -- bailing out
-        failed r = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                               print r
-                               error "Failed"
-
-    pRes <- liftIO $ proveWith cfg $ do
-                mapM_ (constrain . getProof) by :: Symbolic ()
-                pure $ skolemize (quantifiedBool inputProp)
-
-    case pRes of
-      ThmResult Unsatisfiable{} -> good
-      ThmResult Satisfiable{}   -> cex
-      ThmResult DeltaSat{}      -> cex
-      ThmResult SatExtField{}   -> cex
-      ThmResult Unknown{}       -> failed pRes
-      ThmResult ProofError{}    -> failed pRes
+                nm = intercalate "." nms
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
@@ -152,25 +120,28 @@ theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 
 -- | Capture the general flow after a checkSat. We run the sat case if model is empty.
-checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m)
+checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => Bool               -- ^ verbose
    -> String             -- ^ tag
    -> SBool              -- ^ context
-   -> SBool              -- ^ what we want to prove
+   -> a                  -- ^ what we want to prove
    -> [String]           -- ^ sub-proof
-   -> Maybe (m a)        -- ^ special code to run if model is empty (if any)
-   -> (Int -> IO a)      -- ^ what to do when unsat, with the tab amount
-   -> m a
-checkSatThen verbose tag ctx cond nms mbSat unsat = inNewAssertionStack $ do
-   tab <- liftIO $ startKD verbose tag nms
-   constrain ctx
-   constrain $ sNot cond
-   r <- checkSat
-   case r of
-    Unk    -> unknown
-    Sat    -> cex
-    DSat{} -> cex
-    Unsat  -> liftIO $ unsat tab
+   -> Maybe (m r)        -- ^ special code to run if model is empty (if any)
+   -> (Int -> IO r)      -- ^ what to do when unsat, with the tab amount
+   -> m r
+checkSatThen verbose tag ctx prop nms mbSat unsat = do
+        inNewAssertionStack $ do
+           tab <- liftIO $ startKD verbose tag nms
+           constrain ctx
+
+           -- Remember: We first have to negate, then skolemize
+           constrain $ quantifiedBool $ skolemize (qNot prop)
+           r <- checkSat
+           case r of
+             Unk    -> unknown
+             Sat    -> cex
+             DSat{} -> cex
+             Unsat  -> liftIO $ unsat tab
  where die = error "Failed"
 
        nm = intercalate "." (filter (not . null) nms)
