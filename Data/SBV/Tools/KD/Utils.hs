@@ -9,6 +9,8 @@
 -- Various KnuckleDrugger machinery.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass             #-}
+{-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns             #-}
@@ -33,7 +35,10 @@ import Data.SBV.Core.Data (SBool)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
-import Data.SBV.Utils.TDiff (showTDiff)
+import Data.SBV.Utils.TDiff (showTDiff, timeIf)
+import Control.DeepSeq (NFData)
+
+import GHC.Generics
 
 -- | Extra state we carry in a KD context
 data KDState = KDState { config :: SMTConfig
@@ -44,12 +49,17 @@ newtype KD a = KD (ReaderT KDState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
 
 -- | Run a KD proof, using the default configuration.
-runKD :: KD a -> IO a
+runKD :: NFData a => KD a -> IO a
 runKD = runKDWith defaultSMTCfg
 
 -- | Run a KD proof, using the given configuration.
-runKDWith :: SMTConfig -> KD a -> IO a
-runKDWith cfg (KD f) = runReaderT f KDState {config = cfg}
+runKDWith :: NFData a => SMTConfig -> KD a -> IO a
+runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
+   (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg}
+   case mbT of
+     Nothing -> pure ()
+     Just t  -> putStrLn $ "[Total time: " ++ showTDiff t ++ "]"
+   pure r
 
 -- | get the state
 getKDState :: KD KDState
@@ -70,17 +80,20 @@ startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         line   = indent ++ tag
 
 -- | Finish a proof. First argument is what we got from the call of 'startKD' above.
-finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> IO ()
-finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what ++ timing
- where timing = case mbT of
-                  Nothing -> ""
-                  Just e  -> " [" ++ showTDiff e ++ "]"
+finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()
+finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) extraTiming =
+   putStrLn $ replicate (ribbonLength - skip) ' ' ++ what ++ timing ++ extras
+ where timing = maybe "" ((' ' :) . mkTiming) mbT
+       extras = concatMap mkTiming extraTiming
+
+       mkTiming t = '[' : showTDiff t ++ "]"
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
 data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)
                  | Self        -- ^ Trusts itself, i.e., established by a call to sorry
                  | Prop String -- ^ Trusts a parent that itself trusts something else. Note the name here is the
                                --   name of the proposition itself, not the parent that's trusted.
+                deriving (NFData, Generic)
 
 -- | Proof for a property. This type is left abstract, i.e., the only way to create on is via a
 -- call to lemma/theorem etc., ensuring soundness. (Note that the trusted-code base here
@@ -91,7 +104,7 @@ data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described ab
                    , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
                    , getProof    :: SBool       -- ^ Get the underlying boolean
                    , proofName   :: String      -- ^ User given name
-                   }
+                   } deriving (NFData, Generic)
 
 -- | Show instance for 'Proof'
 instance Show Proof where

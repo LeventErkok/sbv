@@ -58,6 +58,9 @@ import qualified Data.SBV.List as SL
 import Data.Proxy
 import GHC.TypeLits (KnownSymbol, symbolVal)
 
+import Data.SBV.Utils.TDiff
+import Data.Maybe (catMaybes)
+
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
 use = liftIO
@@ -110,46 +113,50 @@ class ChainLemma a steps step | steps -> step where
   chainTheoremWith           = chainGeneric True
 
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-  chainGeneric tagTheorem cfg nm result steps helpers = liftIO $ runSMTWith cfg $ do
+  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps helpers =
+          liftIO $ runSMTWith cfg $ do
+             liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
 
-        liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+             mbStartTime <- getTimeStampIf measureTime
 
-        let (ros, modulo) = calculateRootOfTrust nm helpers
-            finish        = finishKD cfg ("Q.E.D." ++ modulo)
+             let (ros, modulo) = calculateRootOfTrust nm helpers
+                 finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
-        (goal, (intros, proofSteps)) <- chainSteps result steps
+             (goal, (intros, proofSteps)) <- chainSteps result steps
 
-        -- This seemingly unneded constraint makes sure SBV sees the
-        -- definitions of any smtFunction calls or uninterpreted functions;
-        -- so it's important to keep it here.
-        constrain $ goal .== goal
+             -- This seemingly unneded constraint makes sure SBV sees the
+             -- definitions of any smtFunction calls or uninterpreted functions;
+             -- so it's important to keep it here.
+             constrain $ goal .== goal
 
-        -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
-        when (null proofSteps) $
-           error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
-                             , "**   There must be at least two steps."
-                             , "**   Was given less than two."
-                             ]
+             -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
+             when (null proofSteps) $
+                error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
+                                  , "**   There must be at least two steps."
+                                  , "**   Was given less than two."
+                                  ]
 
-        mapM_ (constrain . getProof) helpers
+             mapM_ (constrain . getProof) helpers
 
-        let go :: Int -> SBool -> [SBool] -> Query Proof
-            go _ accum [] = do
-                queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \d -> do
-                  finish d
-                  pure Proof { rootOfTrust = ros
-                             , isUserAxiom = False
-                             , getProof    = label nm $ quantifiedBool result
-                             , proofName   = nm
-                             }
+             let go :: Int -> SBool -> [SBool] -> Query Proof
+                 go _ accum [] = do
+                     queryDebug [nm ++ ": Chain proof end: proving the result:"]
+                     checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \d -> do
 
-            go i accum (s:ss) = do
-                 queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                 checkSatThen cfg "Step  " (intros .&& accum) s ["", show i] Nothing finish
-                 go (i+1) (s .&& accum) ss
+                       mbElapsed <- getElapsedTime mbStartTime
+                       finish d $ catMaybes [mbElapsed]
+                       pure Proof { rootOfTrust = ros
+                                  , isUserAxiom = False
+                                  , getProof    = label nm (quantifiedBool result)
+                                  , proofName   = nm
+                                  }
 
-        query $ go (1::Int) sTrue proofSteps
+                 go i accum (s:ss) = do
+                      queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
+                      checkSatThen cfg "Step  " (intros .&& accum) s ["", show i] Nothing (flip finish [])
+                      go (i+1) (s .&& accum) ss
+
+             query $ go (1::Int) sTrue proofSteps
 
 -- | Turn a sequence of steps into a chain of pairs, merged with a function.
 mkChainSteps :: (a -> a -> b) -> (SBool, [a]) -> (SBool, [b])
@@ -261,16 +268,18 @@ class Inductive a steps where
    inductionStrategy :: Proposition a => a -> steps -> Symbolic InductionStrategy
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-   inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
+   inductGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm qResult steps helpers = liftIO $ do
 
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+
+        mbStartTime <- getTimeStampIf measureTime
 
         runSMTWith cfg $ do
 
            mapM_ (constrain . getProof) helpers
 
            let (ros, modulo) = calculateRootOfTrust nm helpers
-               finish       = finishKD cfg ("Q.E.D." ++ modulo)
+               finish et d  = finishKD cfg ("Q.E.D." ++ modulo) d et
 
            InductionStrategy { inductionBaseCase
                              , inductiveHypothesis
@@ -288,13 +297,13 @@ class Inductive a steps where
                          inductionBaseCase
                          [nm, "Base"]
                          (Just (io $ putStrLn inductionBaseFailureMsg))
-                         finish
+                         (finish [])
 
             constrain inductiveHypothesis
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen cfg "Help" accum s [nm, snm] Nothing finish
+                    checkSatThen cfg "Help" accum s [nm, snm] Nothing (finish [])
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -305,7 +314,8 @@ class Inductive a steps where
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
             checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \d -> do
-              finish d
+              mbElapsed <- getElapsedTime mbStartTime
+              finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False
                            , getProof    = label nm $ quantifiedBool qResult

@@ -29,7 +29,8 @@ module Data.SBV.Tools.KD.Kernel (
 
 import Control.Monad.Trans  (liftIO, MonadIO)
 
-import Data.List (intercalate)
+import Data.List  (intercalate)
+import Data.Maybe (catMaybes)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint, SolverContext)
@@ -42,7 +43,7 @@ import qualified Data.SBV.List as SL
 import Data.SBV.Tools.KD.Utils
 
 import Data.Time (NominalDiffTime)
-import Data.SBV.Utils.TDiff (timeIf)
+import Data.SBV.Utils.TDiff
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
 type Proposition a = ( QNot a
@@ -88,17 +89,19 @@ sorry = Proof { rootOfTrust = Self
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
-lemmaGen cfg tag nms inputProp by = liftIO $ runSMTWith cfg $ go
-  where go  = do mapM_ (constrain . getProof) by
-                 query $ checkSatThen cfg tag sTrue inputProp nms Nothing good
+lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = liftIO $
+        getTimeStampIf measureTime >>= runSMTWith cfg . go
+  where go mbStartTime = do mapM_ (constrain . getProof) by
+                            query $ checkSatThen cfg tag sTrue inputProp nms Nothing (good mbStartTime)
 
         -- What to do if all goes well
-        good d = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d
-                    pure Proof { rootOfTrust = ros
-                               , isUserAxiom = False
-                               , getProof    = label nm (quantifiedBool inputProp)
-                               , proofName   = nm
-                               }
+        good mbStart d = do mbElapsed <- getElapsedTime mbStart
+                            liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
+                            pure Proof { rootOfTrust = ros
+                                       , isUserAxiom = False
+                                       , getProof    = label nm (quantifiedBool inputProp)
+                                       , proofName   = nm
+                                       }
           where (ros, modulo) = calculateRootOfTrust nm by
                 nm = intercalate "." nms
 

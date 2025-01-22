@@ -17,10 +17,12 @@ module Data.SBV.Utils.TDiff
   ( Timing(..)
   , timeIf
   , showTDiff
+  , getTimeStampIf
+  , getElapsedTime
   )
   where
 
-import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime)
+import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime, UTCTime)
 import Data.IORef (IORef)
 
 import Data.List (intercalate)
@@ -67,9 +69,17 @@ showTDiff diff
          fields       = aboveSeconds ++ [secondsPicos]
 
 timeIf :: (NFData a, MonadIO m) => Bool -> m a -> m (Maybe NominalDiffTime, a)
-timeIf measureTime act
-  | not measureTime = (Nothing,) <$> act
-  | True            = do start <- liftIO $ getCurrentTime
-                         r     <- act
-                         rnf r `seq` do end <- liftIO $ getCurrentTime
-                                        pure (Just (diffUTCTime end start), r)
+timeIf measureTime act = do mbStart <- getTimeStampIf measureTime
+                            r     <- act
+                            rnf r `seq` do mbElapsed <- getElapsedTime mbStart
+                                           pure (mbElapsed, r)
+
+getTimeStampIf  :: MonadIO m => Bool -> m (Maybe UTCTime)
+getTimeStampIf measureTime
+  | not measureTime = pure Nothing
+  | True            = liftIO $ Just <$> getCurrentTime
+
+getElapsedTime :: MonadIO m => Maybe UTCTime -> m (Maybe NominalDiffTime)
+getElapsedTime Nothing      = pure Nothing
+getElapsedTime (Just start) = liftIO $ do e <- getCurrentTime
+                                          pure $ Just (diffUTCTime e start)
