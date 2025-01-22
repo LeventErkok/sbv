@@ -400,7 +400,6 @@ instance    ( KnownSymbol na, SymVal a
                               <*> internalVariable (kindOf b)
                               <*> internalVariable (kindOf k)
 
-
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b 0
               , inductiveHypothesis     = predicate a b k
@@ -435,7 +434,6 @@ instance    ( KnownSymbol na, SymVal a
                               <*> internalVariable (kindOf b)
                               <*> internalVariable (kindOf c)
                               <*> internalVariable (kindOf k)
-
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c 0
@@ -475,7 +473,6 @@ instance    ( KnownSymbol na, SymVal a
                               <*> internalVariable (kindOf c)
                               <*> internalVariable (kindOf d)
                               <*> internalVariable (kindOf k)
-
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c d 0
