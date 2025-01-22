@@ -2313,6 +2313,7 @@ data SMTConfig = SMTConfig {
 data KDOptions = KDOptions {
          ribbonLength      :: Int  -- ^ Line length for KD proofs
        , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
+       , measureTime       :: Bool -- ^ Print time taken by the solver for each goal
        }
 
 -- | Ignore internal names and those the user told us to

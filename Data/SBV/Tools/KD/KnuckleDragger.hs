@@ -110,7 +110,7 @@ class ChainLemma a steps step | steps -> step where
   chainTheoremWith           = chainGeneric True
 
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-  chainGeneric tagTheorem cfg@SMTConfig{verbose} nm result steps helpers = liftIO $ runSMTWith cfg $ do
+  chainGeneric tagTheorem cfg nm result steps helpers = liftIO $ runSMTWith cfg $ do
 
         liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
 
@@ -136,7 +136,7 @@ class ChainLemma a steps step | steps -> step where
         let go :: Int -> SBool -> [SBool] -> Query Proof
             go _ accum [] = do
                 queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                checkSatThen verbose "Result" (intros .=> accum) goal ["", ""] Nothing $ \tab -> do
+                checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \tab -> do
                   finish tab
                   pure Proof { rootOfTrust = ros
                              , isUserAxiom = False
@@ -146,7 +146,7 @@ class ChainLemma a steps step | steps -> step where
 
             go i accum (s:ss) = do
                  queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                 checkSatThen verbose "Step  " (intros .&& accum) s ["", show i] Nothing finish
+                 checkSatThen cfg "Step  " (intros .&& accum) s ["", show i] Nothing finish
                  go (i+1) (s .&& accum) ss
 
         query $ go (1::Int) sTrue proofSteps
@@ -261,7 +261,7 @@ class Inductive a steps where
    inductionStrategy :: Proposition a => a -> steps -> Symbolic InductionStrategy
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-   inductGeneric tagTheorem cfg@SMTConfig{verbose} nm qResult steps helpers = liftIO $ do
+   inductGeneric tagTheorem cfg nm qResult steps helpers = liftIO $ do
         putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
         runSMTWith cfg $ do
 
@@ -280,7 +280,7 @@ class Inductive a steps where
            query $ do
 
             queryDebug [nm ++ ": Induction, proving base case:"]
-            checkSatThen verbose
+            checkSatThen cfg
                          "Base"
                          sTrue
                          inductionBaseCase
@@ -292,7 +292,7 @@ class Inductive a steps where
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen verbose "Help" accum s [nm, snm] Nothing finish
+                    checkSatThen cfg "Help" accum s [nm, snm] Nothing finish
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -302,7 +302,7 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen verbose "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \tab -> do
+            checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \tab -> do
               finish tab
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False

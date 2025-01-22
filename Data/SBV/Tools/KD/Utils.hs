@@ -24,12 +24,16 @@ module Data.SBV.Tools.KD.Utils (
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
 import Control.Monad.Trans  (MonadIO)
 
+import Data.Time (NominalDiffTime)
+
 import Data.List (intercalate, nub, sort)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data (SBool)
 import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
+
+import Data.SBV.Utils.TDiff (showTDiff)
 
 -- | Extra state we carry in a KD context
 data KDState = KDState { config :: SMTConfig
@@ -66,8 +70,11 @@ startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
         line   = indent ++ tag
 
 -- | Finish a proof. First argument is what we got from the call of 'startKD' above.
-finishKD :: SMTConfig -> String -> Int -> IO ()
-finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what skip = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what
+finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> IO ()
+finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) = putStrLn $ replicate (ribbonLength - skip) ' ' ++ what ++ timing
+ where timing = case mbT of
+                  Nothing -> ""
+                  Just e  -> " [" ++ showTDiff e ++ "]"
 
 -- | Keeping track of where the sorry originates from. Used in displaying dependencies.
 data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying solver etc.)

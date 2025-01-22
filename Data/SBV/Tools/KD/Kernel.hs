@@ -14,6 +14,7 @@
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TupleSections        #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -40,6 +41,9 @@ import Data.SBV.Control.Utils (getConfig)
 import qualified Data.SBV.List as SL
 
 import Data.SBV.Tools.KD.Utils
+
+import Data.Time (getCurrentTime, diffUTCTime, NominalDiffTime)
+import Control.DeepSeq (rnf)
 
 -- | A proposition is something SBV is capable of proving/disproving. We capture this
 -- with a set of constraints. This type might look scary, but for the most part you
@@ -87,17 +91,17 @@ sorry = Proof { rootOfTrust = Self
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
-lemmaGen cfg@SMTConfig{verbose} tag nms inputProp by = liftIO $ runSMTWith cfg $ go
+lemmaGen cfg tag nms inputProp by = liftIO $ runSMTWith cfg $ go
   where go  = do mapM_ (constrain . getProof) by
-                 query $ checkSatThen verbose tag sTrue inputProp nms Nothing good
+                 query $ checkSatThen cfg tag sTrue inputProp nms Nothing good
 
         -- What to do if all goes well
-        good tab = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) tab
-                      pure Proof { rootOfTrust = ros
-                                 , isUserAxiom = False
-                                 , getProof    = label nm (quantifiedBool inputProp)
-                                 , proofName   = nm
-                                 }
+        good d = do liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d
+                    pure Proof { rootOfTrust = ros
+                               , isUserAxiom = False
+                               , getProof    = label nm (quantifiedBool inputProp)
+                               , proofName   = nm
+                               }
           where (ros, modulo) = calculateRootOfTrust nm by
                 nm = intercalate "." nms
 
@@ -123,27 +127,29 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 -- NB. This is the only place in Knuckledragger where we actually call check-sat;
 -- so all interaction goes through here.
 checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
-   => Bool               -- ^ verbose
-   -> String             -- ^ tag
-   -> SBool              -- ^ context
-   -> a                  -- ^ what we want to prove
-   -> [String]           -- ^ sub-proof
-   -> Maybe (m r)        -- ^ special code to run if model is empty (if any)
-   -> (Int -> IO r)      -- ^ what to do when unsat, with the tab amount
+   => SMTConfig                              -- ^ config
+   -> String                                 -- ^ tag
+   -> SBool                                  -- ^ context
+   -> a                                      -- ^ what we want to prove
+   -> [String]                               -- ^ sub-proof
+   -> Maybe (m r)                            -- ^ special code to run if model is empty (if any)
+   -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen verbose tag ctx prop nms mbSat unsat = do
+checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop nms mbSat unsat = do
         inNewAssertionStack $ do
            tab <- liftIO $ startKD verbose tag nms
            constrain ctx
 
            -- Remember: We first have to negate, then skolemize
            constrain $ quantifiedBool $ skolemize (qNot prop)
-           r <- checkSat
+
+           (mbT, r) <- timing checkSat
+
            case r of
              Unk    -> unknown
              Sat    -> cex
              DSat{} -> cex
-             Unsat  -> liftIO $ unsat tab
+             Unsat  -> liftIO $ unsat (tab, mbT)
  where die = error "Failed"
 
        nm = intercalate "." (filter (not . null) nms)
@@ -160,6 +166,13 @@ checkSatThen verbose tag ctx prop nms mbSat unsat = do
                   _                 -> do res <- Satisfiable <$> getConfig <*> pure model
                                           liftIO $ print $ ThmResult res
                                           die
+
+       timing act
+         | not measureTime = (Nothing,) <$> act
+         | True            = do start <- liftIO $ getCurrentTime
+                                r     <- act
+                                rnf r `seq` do end <- liftIO $ getCurrentTime
+                                               pure (Just (diffUTCTime end start), r)
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
