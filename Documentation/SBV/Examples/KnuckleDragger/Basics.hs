@@ -177,3 +177,10 @@ existsConjunctionNot = runKD $ do
                             []
 
     pure ()
+
+-- | Quantifier alternation
+--
+-- >>> forallExists
+-- WHAT
+forallExists :: IO Proof
+forallExists = runKD $ lemma "forallExists1" (\(Forall @"x" x) (Exists @"y" y) -> x .>= (y :: SWord8)) []
