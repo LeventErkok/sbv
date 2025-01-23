@@ -360,6 +360,53 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   let a ≤ b = a .== b ⨅ a
 
+  le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b"
+                            (\(Forall @"a" a) (Forall @"b" b) -> a ≤ b .=> b ≤ a .=> a .== b)
+                            (\a b -> (a ≤ b .&& b ≤ a, [ a
+                                                       , b ⨅ a
+                                                       , a ⨅ b
+                                                       , b
+                                                       ]))
+                            [commut2]
+
+  -- We are now ready to show that we have a boolean-algebra. To do this, we will
+  -- prove the properties to be a (generalized) boolean-algebra, captured in Lean
+  -- as follows: (https://leanprover-community.github.io/mathlib_docs/order/boolean_algebra.html)
+  --
+  -- @
+  -- structure boolean_algebra  (α : Type u) : Type u
+  --   sup             : α → α → α
+  --   le              : α → α → Prop
+  --   lt              : α → α → Prop
+  --   le_refl         : ∀ (a : α), a ≤ a
+  --   le_trans        : ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c
+  --   lt_iff_le_not_le: (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a) . "order_laws_tac"
+  --   le_antisymm     : ∀ (a b : α), a ≤ b → b ≤ a → a = b
+  --   le_sup_left     : ∀ (a b : α), a ≤ a ⊔ b
+  --   le_sup_right    : ∀ (a b : α), b ≤ a ⊔ b
+  --   sup_le          : ∀ (a b c : α), a ≤ c → b ≤ c → a ⊔ b ≤ c
+  --   inf             : α → α → α
+  --   inf_le_left     : ∀ (a b : α), a ⊓ b ≤ a
+  --   inf_le_right    : ∀ (a b : α), a ⊓ b ≤ b
+  --   le_inf          : ∀ (a b c : α), a ≤ b → a ≤ c → a ≤ b ⊓ c
+  --   le_sup_inf      : ∀ (x y z : α), (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z
+  --   compl           : α → α
+  --   sdiff           : α → α → α
+  --   himp            : α → α → α
+  --   top             : α
+  --   bot             : α
+  --   inf_compl_le_bot: ∀ (x : α), x ⊓ xᶜ ≤ ⊥
+  --   top_le_sup_compl: ∀ (x : α), ⊤ ≤ x ⊔ xᶜ
+  --   le_top          : ∀ (a : α), a ≤ ⊤
+  --   bot_le          : ∀ (a : α), ⊥ ≤ a
+  --   sdiff_eq        : (∀ (x y : α), x \ y = x ⊓ yᶜ) . "obviously"
+  --   himp_eq         : (∀ (x y : α), x ⇨ y = y ⊔ xᶜ) . "obviously"
+  -- @
+  --
+  -- We will prove each required property in turn:
+
+  le_refl <- lemma "a ≤ a" (\(Forall @"a" a) -> a ≤ a) [idemp2]
+
   le_trans <- chainLemma "a ≤ b → b ≤ c → a ≤ c"
                          (\(Forall @"a" a) (Forall @"b" b) (Forall @"c" c) -> a ≤ b .=> b ≤ c .=> a ≤ c)
                          (\a b c -> (a ≤ b .&& b ≤ c, [ a
@@ -370,17 +417,8 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                       ]))
                          [assoc2]
 
-  le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b"
-                            (\(Forall @"a" a) (Forall @"b" b) -> a ≤ b .=> b ≤ a .=> a .== b)
-                            (\a b -> (a ≤ b .&& b ≤ a, [ a
-                                                       , b ⨅ a
-                                                       , a ⨅ b
-                                                       , b
-                                                       ]))
-                            [commut2]
 
-
-  lemma "TODO" sFalse [i1, le_trans, le_antisymm]
+  lemma "ShefferAlgebraIsBoolean" sFalse [i1, le_trans, le_antisymm, le_refl]
 
 {-
 instance ShefferToBooleanAlg : BooleanAlgebra α where
