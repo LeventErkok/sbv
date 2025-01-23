@@ -33,7 +33,6 @@ import GHC.Real   (Ratio((:%)))
 import Numeric (showFFloat)
 
 import Control.Monad.Trans (liftIO, MonadIO)
-import Control.DeepSeq (rnf, NFData)
 
 -- | Specify how to save timing information, if at all.
 data Timing = NoTiming | PrintTiming | SaveTiming (IORef NominalDiffTime)
@@ -68,11 +67,11 @@ showTDiff diff
          aboveSeconds = map (\(t, v) -> show v ++ [t]) $ dropWhile (\p -> snd p == 0) [('d', days), ('h', hours), ('m', minutes)]
          fields       = aboveSeconds ++ [secondsPicos]
 
-timeIf :: (NFData a, MonadIO m) => Bool -> m a -> m (Maybe NominalDiffTime, a)
+timeIf :: MonadIO m => Bool -> m a -> m (Maybe NominalDiffTime, a)
 timeIf measureTime act = do mbStart <- getTimeStampIf measureTime
                             r     <- act
-                            rnf r `seq` do mbElapsed <- getElapsedTime mbStart
-                                           pure (mbElapsed, r)
+                            r `seq` do mbElapsed <- getElapsedTime mbStart
+                                       pure (mbElapsed, r)
 
 getTimeStampIf  :: MonadIO m => Bool -> m (Maybe UTCTime)
 getTimeStampIf measureTime

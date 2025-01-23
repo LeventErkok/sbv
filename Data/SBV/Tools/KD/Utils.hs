@@ -49,11 +49,11 @@ newtype KD a = KD (ReaderT KDState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
 
 -- | Run a KD proof, using the default configuration.
-runKD :: NFData a => KD a -> IO a
+runKD :: KD a -> IO a
 runKD = runKDWith defaultSMTCfg
 
 -- | Run a KD proof, using the given configuration.
-runKDWith :: NFData a => SMTConfig -> KD a -> IO a
+runKDWith :: SMTConfig -> KD a -> IO a
 runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
    (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg}
    case mbT of
