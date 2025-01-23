@@ -67,7 +67,30 @@ data BooleanAlgebraProof = BooleanAlgebraProof {
   , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} :: Proof
   , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} :: Proof
   , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} :: Proof
-  } deriving Show
+  }
+
+-- | A somewhat prettier printer for a BooleanAlgebra proof
+instance Show BooleanAlgebraProof where
+  show p = unlines [ "BooleanAlgebraProof {"
+                   , "  le_refl         : " ++ show (le_refl          p)
+                   , "  le_trans        : " ++ show (le_trans         p)
+                   , "  lt_iff_le_not_le: " ++ show (lt_iff_le_not_le p)
+                   , "  le_antisymm     : " ++ show (le_antisymm      p)
+                   , "  le_sup_left     : " ++ show (le_sup_left      p)
+                   , "  le_sup_right    : " ++ show (le_sup_right     p)
+                   , "  sup_le          : " ++ show (sup_le           p)
+                   , "  inf_le_left     : " ++ show (inf_le_left      p)
+                   , "  inf_le_right    : " ++ show (inf_le_right     p)
+                   , "  le_inf          : " ++ show (le_inf           p)
+                   , "  le_sup_inf      : " ++ show (le_sup_inf       p)
+                   , "  inf_compl_le_bot: " ++ show (inf_compl_le_bot p)
+                   , "  top_le_sup_compl: " ++ show (top_le_sup_compl p)
+                   , "  le_top          : " ++ show (le_top           p)
+                   , "  bot_le          : " ++ show (bot_le           p)
+                   , "  sdiff_eq        : " ++ show (sdiff_eq         p)
+                   , "  himp_eq         : " ++ show (himp_eq          p)
+                   , "}"
+                   ]
 
 -- * The sheffer stroke
 
@@ -389,7 +412,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                          [assoc2]
 
   pure BooleanAlgebraProof {
-            le_refl          {- ∀ (a : α), a ≤ a                             -} = error "TODO" i1 le_antisymm le_refl le_trans
+            le_refl          {- ∀ (a : α), a ≤ a                             -} = le_refl
           , le_trans         {- ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c         -} = error "TODO"
           , lt_iff_le_not_le {- (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a)        -} = error "TODO"
           , le_antisymm      {- ∀ (a b : α), a ≤ b → b ≤ a → a = b           -} = error "TODO"
@@ -405,7 +428,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
           , le_top           {- ∀ (a : α), a ≤ ⊤                             -} = error "TODO"
           , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} = error "TODO"
           , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} = error "TODO"
-          , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = error "TODO"
+          , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = error "TODO" i1 le_antisymm le_refl le_trans
        }
 
 {-
