@@ -32,8 +32,10 @@ import Control.Monad.Trans  (liftIO, MonadIO)
 import Data.List  (intercalate)
 import Data.Maybe (catMaybes, fromMaybe)
 
-import Data.SBV
-import Data.SBV.Core.Data (Constraint, SolverContext)
+-- skolemize is explicitly disallowed here! see the comment below (search for skolemize)
+import Data.SBV hiding (skolemize)
+
+import Data.SBV.Core.Data (SolverContext)
 import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
 import Data.SBV.Control.Utils (getConfig)
@@ -46,12 +48,7 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
-type Proposition a = ( QNot a
-                     , QuantifiedBool a
-                     , Skolemize (NegatesTo a)
-                     , QuantifiedBool (SkolemsTo (NegatesTo a))
-                     , Constraint Symbolic (SkolemsTo (NegatesTo a))
-                     )
+type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a))
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -144,8 +141,9 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
            tab <- liftIO $ startKD cfg verbose tag nms
            constrain ctx
 
-           -- First negate, then skolemize!
-           constrain $ skolemize (qNot prop)
+           -- It's tempting to skolemize here.. But skolemization creates fresh constants
+           -- based on the name given, and they mess with all else. So, don't skolemize!
+           constrain $ qNot prop
 
            (mbT, r) <- timeIf measureTime checkSat
 
