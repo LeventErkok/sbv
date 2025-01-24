@@ -50,7 +50,9 @@ class BooleanAlgebra α where
   ⲳ    :: α
   т    :: α
 
-  infix 4 ≤
+  infix  4 ≤
+  infixl 6 ⨆
+  infixl 7 ⨅
 
 -- | Proofs needed for a boolean-algebra. Again, we follow Lean's definition here. Since we cannot
 -- put these in the class definition above, we will keep them in a simple data-structure.
@@ -345,7 +347,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                    [ident1, commut1, commut2, compl2, distrib2, e2]
 
   i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ b .== ⲳ) [commut1, h1]
-  j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ) [a2, dne, commut2]
+  j1  <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ) [a2, dne, commut2]
 
   assoc1 <- do
     c1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т"
@@ -371,7 +373,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                         , ⲳ ⨆ ⲳ
                                         , ⲳ :: SStroke
                                         ]))
-                     [commut1, commut2, distrib2, h1, d1, j1, ident1]
+                     [commut1, commut2, distrib2, d1, h1, i1, j1, ident1]
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c"
           (\ABC -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c)
@@ -444,9 +446,12 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                     ]))
                        [assoc2]
 
-  -- le_sup_inf := by intro a b c; simp; rw [distrib₁]; exact Sheffer.le_refl ..
-  -- TODO: fix this
-  le_sup_inf <- pure sorry
+  le_sup_inf <- chainLemma "(x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z"
+                           (\XYZ -> (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z)
+                           (\x y (z :: SStroke)-> (sTrue, [ (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z
+                                                          , (x ⨆ y) ⨅ (x ⨆ z) ≤ (x ⨆ y) ⨅ (x ⨆ z)
+                                                          ]))
+                           [distrib1, le_refl]
 
   inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
   top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\X -> т ≤ x ⨆ ﬧ x) [compl1, le_refl]
@@ -470,9 +475,6 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\XY -> x \\ y .== x ⨅ ﬧ y) []   -- by definition
   himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\XY -> x ⇨ y .== y ⨆ ﬧ x)  []   -- by definition
-
-  -- TODO: fix this
-  _ <- pure i1
 
   pure BooleanAlgebraProof {
             le_refl          {- ∀ (a : α), a ≤ a                             -} = le_refl
