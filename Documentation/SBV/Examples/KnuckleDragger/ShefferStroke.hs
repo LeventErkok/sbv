@@ -448,7 +448,15 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
   top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\X -> т ≤ x ⨆ ﬧ x) [compl1, le_refl]
 
-  le_top           <- pure sorry
+  le_top <- chainLemma "a ≤ ⊤"
+                       (\A -> a ≤ т)
+                       (\a -> (sTrue, [ a ≤ т
+                                      , a .== т ⨅ a
+                                      , a .== a ⨅ т
+                                      , a .== (a :: SStroke)
+                                      ]))
+                       [bound2, commut2, ident2]
+
   bot_le           <- pure sorry
   sdiff_eq         <- pure sorry
   himp_eq          <- pure sorry
