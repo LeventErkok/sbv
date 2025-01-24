@@ -135,15 +135,15 @@ instance BooleanAlgebra SStroke where
 #define XY  X  (Forall @"y"  (y  :: SStroke))
 #define XYZ XY (Forall @"z"  (z  :: SStroke))
 
--- | First Sheffer axiom @ﬧﬧa == a@
+-- | First Sheffer axiom: @ﬧﬧa == a@
 sheffer1 :: KD Proof
 sheffer1 = axiom "ﬧﬧa == a" $ \A -> ﬧﬧ a .== a
 
--- | Second Sheffer axiom @a ⏐ (b ⏐ ﬧb) == ﬧa@
+-- | Second Sheffer axiom: @a ⏐ (b ⏐ ﬧb) == ﬧa@
 sheffer2 :: KD Proof
 sheffer2 = axiom "a ⏐ (b ⏐ ﬧb) == ﬧa" $ \AB -> a ⏐ (b ⏐ ﬧ b) .== ﬧ a
 
--- | Third Sheffer axiom @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
+-- | Third Sheffer axiom: @ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)@
 sheffer3 :: KD Proof
 sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC -> ﬧ(a ⏐ (b ⏐ c)) .== (ﬧ b ⏐ a) ⏐ (ﬧ c ⏐ a)
 
