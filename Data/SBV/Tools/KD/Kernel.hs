@@ -92,10 +92,11 @@ sorry = Proof { rootOfTrust = Self
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
-lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = liftIO $
-        getTimeStampIf measureTime >>= runSMTWith cfg . go
-  where go mbStartTime = do mapM_ (constrain . getProof) by
-                            query $ checkSatThen cfg tag sTrue inputProp nms Nothing Nothing (good mbStartTime)
+lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = do
+        kdSt <- getKDState
+        liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
+  where go kdSt mbStartTime = do mapM_ (constrain . getProof) by
+                                 query $ checkSatThen cfg kdSt tag sTrue inputProp nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -131,6 +132,7 @@ theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
 -- so all interaction goes through here.
 checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
+   -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
    -> SBool                                  -- ^ context
    -> a                                      -- ^ what we want to prove
@@ -139,13 +141,15 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> Maybe (m r)                            -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop nms fullNms mbSat unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx prop nms fullNms mbSat unsat = do
         inNewAssertionStack $ do
            tab <- liftIO $ startKD cfg verbose tag nms
            constrain ctx
 
            -- First negate, then skolemize!
            constrain $ skolemize (qNot prop)
+
+           updStats kdState (\s -> s{noOfCheckSats = noOfCheckSats s + 1})
 
            (mbT, r) <- timeIf measureTime checkSat
 

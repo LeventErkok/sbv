@@ -19,8 +19,8 @@
 
 module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
-       , startKD, finishKD, getKDState, getKDConfig, KDState(..)
-       , RootOfTrust(..), calculateRootOfTrust, message
+       , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
+       , RootOfTrust(..), calculateRootOfTrust, message, updStats
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -38,10 +38,16 @@ import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 import Data.SBV.Utils.TDiff (showTDiff, timeIf)
 import Control.DeepSeq (NFData)
 
+import Data.IORef
+
 import GHC.Generics
 
+-- | Various statistics we collect
+data KDStats = KDStats { noOfCheckSats :: Int }
+
 -- | Extra state we carry in a KD context
-data KDState = KDState { config :: SMTConfig
+data KDState = KDState { stats  :: IORef KDStats
+                       , config :: SMTConfig
                        }
 
 -- | Monad for running KnuckleDragger proofs in.
@@ -55,10 +61,14 @@ runKD = runKDWith defaultSMTCfg
 -- | Run a KD proof, using the given configuration.
 runKDWith :: SMTConfig -> KD a -> IO a
 runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
-   (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg}
+   rStats <- newIORef $ KDStats { noOfCheckSats = 0 }
+   (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
-     Just t  -> message cfg $ "[Total time: " ++ showTDiff t ++ "]\n"
+     Just t  -> do stats <- do st <- readIORef rStats
+                               case st of
+                                 KDStats noOfCheckSats -> pure $ "Decisions: " ++ show noOfCheckSats
+                   message cfg $ "[Total time: " ++ showTDiff t ++ ", " ++ stats ++ "]\n"
    pure r
 
 -- | get the state
@@ -68,6 +78,10 @@ getKDState = ask
 -- | get the configuration
 getKDConfig :: KD SMTConfig
 getKDConfig = config <$> getKDState
+
+-- | Update stats
+updStats :: MonadIO m => KDState -> (KDStats -> KDStats) -> m ()
+updStats KDState{stats} u = liftIO $ readIORef stats >>= \s -> writeIORef stats (u s)
 
 -- | Display the message if not quiet. Note that we don't print a newline; so the message must have it if needed.
 message :: MonadIO m => SMTConfig -> String -> m ()
