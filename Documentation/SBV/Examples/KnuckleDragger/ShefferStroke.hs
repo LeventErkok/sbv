@@ -27,6 +27,8 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.ShefferStroke where
 
+import Prelude hiding ((<))
+
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
@@ -46,6 +48,8 @@ class BooleanAlgebra α where
   (⇨)  :: α -> α -> α
   ⲳ    :: α
   т    :: α
+
+  infix 4 ≤
 
 -- | Proofs needed for a boolean-algebra. Again, we follow Lean's definition here. Since we cannot
 -- put these in the class definition above, we will keep them in a simple data-structure.
@@ -411,60 +415,56 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                       ]))
                          [assoc2]
 
+  lt_iff_le_not_le <- lemma "a < b ↔ a ≤ b ∧ ¬b ≤ a" (\AB -> (a < b) .<=> a ≤ b .&& sNot (b ≤ a)) [sh3]
+
+  le_sup_left  <- lemma "a ≤ a ⊔ b" (\AB -> a ≤ a ⨆ b) [commut1, commut2, absorb2]
+  le_sup_right <- lemma "b ≤ a ⊔ b" (\AB -> a ≤ a ⨆ b) [commut1, commut2, absorb2]
+
+  sup_le <- chainLemma "a ≤ c → b ≤ c → a ⊔ b ≤ c"
+                       (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c)
+                       (\a b c -> (a ≤ c .&& b ≤ c, [ a ⨆ b
+                                                    , (c ⨅ a) ⨆ (c ⨅ b)
+                                                    , c ⨅ (a ⨆ b) :: SStroke
+                                                    ]))
+                       [distrib2]
+
+  inf_le_left  <- lemma "a ⊓ b ≤ a" (\AB -> a ⨅ b ≤ a) [assoc2, idemp2]
+  inf_le_right <- lemma "a ⊓ b ≤ b" (\AB -> a ⨅ b ≤ b) [commut2, inf_le_left]
+
+  le_inf           <- pure sorry
+  le_sup_inf       <- pure sorry
+  inf_compl_le_bot <- pure sorry
+  top_le_sup_compl <- pure sorry
+  le_top           <- pure sorry
+  bot_le           <- pure sorry
+  sdiff_eq         <- pure sorry
+  himp_eq          <- pure sorry
+
+  -- TODO: fix this
+  _ <- pure i1
+
   pure BooleanAlgebraProof {
             le_refl          {- ∀ (a : α), a ≤ a                             -} = le_refl
-          , le_trans         {- ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c         -} = error "TODO"
-          , lt_iff_le_not_le {- (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a)        -} = error "TODO"
-          , le_antisymm      {- ∀ (a b : α), a ≤ b → b ≤ a → a = b           -} = error "TODO"
-          , le_sup_left      {- ∀ (a b : α), a ≤ a ⊔ b                       -} = error "TODO"
-          , le_sup_right     {- ∀ (a b : α), b ≤ a ⊔ b                       -} = error "TODO"
-          , sup_le           {- ∀ (a b c : α), a ≤ c → b ≤ c → a ⊔ b ≤ c     -} = error "TODO"
-          , inf_le_left      {- ∀ (a b : α), a ⊓ b ≤ a                       -} = error "TODO"
-          , inf_le_right     {- ∀ (a b : α), a ⊓ b ≤ b                       -} = error "TODO"
-          , le_inf           {- ∀ (a b c : α), a ≤ b → a ≤ c → a ≤ b ⊓ c     -} = error "TODO"
-          , le_sup_inf       {- ∀ (x y z : α), (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z -} = error "TODO"
-          , inf_compl_le_bot {- ∀ (x : α), x ⊓ xᶜ ≤ ⊥                        -} = error "TODO"
-          , top_le_sup_compl {- ∀ (x : α), ⊤ ≤ x ⊔ xᶜ                        -} = error "TODO"
-          , le_top           {- ∀ (a : α), a ≤ ⊤                             -} = error "TODO"
-          , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} = error "TODO"
-          , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} = error "TODO"
-          , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = error "TODO" i1 le_antisymm le_refl le_trans
+          , le_trans         {- ∀ (a b c : α), a ≤ b → b ≤ c → a ≤ c         -} = le_trans
+          , lt_iff_le_not_le {- (∀ (a b : α), a < b ↔ a ≤ b ∧ ¬b ≤ a)        -} = lt_iff_le_not_le
+          , le_antisymm      {- ∀ (a b : α), a ≤ b → b ≤ a → a = b           -} = le_antisymm
+          , le_sup_left      {- ∀ (a b : α), a ≤ a ⊔ b                       -} = le_sup_left
+          , le_sup_right     {- ∀ (a b : α), b ≤ a ⊔ b                       -} = le_sup_right
+          , sup_le           {- ∀ (a b c : α), a ≤ c → b ≤ c → a ⊔ b ≤ c     -} = sup_le
+          , inf_le_left      {- ∀ (a b : α), a ⊓ b ≤ a                       -} = inf_le_left
+          , inf_le_right     {- ∀ (a b : α), a ⊓ b ≤ b                       -} = inf_le_right
+          , le_inf           {- ∀ (a b c : α), a ≤ b → a ≤ c → a ≤ b ⊓ c     -} = le_inf
+          , le_sup_inf       {- ∀ (x y z : α), (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z -} = le_sup_inf
+          , inf_compl_le_bot {- ∀ (x : α), x ⊓ xᶜ ≤ ⊥                        -} = inf_compl_le_bot
+          , top_le_sup_compl {- ∀ (x : α), ⊤ ≤ x ⊔ xᶜ                        -} = top_le_sup_compl
+          , le_top           {- ∀ (a : α), a ≤ ⊤                             -} = le_top
+          , bot_le           {- ∀ (a : α), ⊥ ≤ a                             -} = bot_le
+          , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} = sdiff_eq
+          , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = himp_eq
        }
 
 {-
 instance ShefferToBooleanAlg : BooleanAlgebra α where
-  sup := (. ⊔ .)
-  le_refl := fun a ↦ Sheffer.le_refl a
-  le_trans := fun a b c a_1 a_2 ↦ Sheffer.le_trans a b c a_1 a_2
-  le_antisymm := Sheffer.le_antisymm
-  le_sup_left := by
-    intro a b
-    simp only [ShefferLE, Sup.sup]
-    rw [commut₂]
-    exact Eq.symm (absorb₂ a b)
-  le_sup_right := by
-    intro a b
-    simp only [ShefferLE]
-    rw [commut₂, commut₁]
-    exact Eq.symm (absorb₂ b a)
-  sup_le := by
-    intro a b c
-    simp only [ShefferLE]
-    intro h₁ h₂
-    calc
-      a ⊔ b = (c ⊓ a) ⊔ b       := by conv => left; left; rw [h₁]
-      _     = (c ⊓ a) ⊔ (c ⊓ b) := by conv => left; right; rw [h₂]
-      _     = c ⊓ (a ⊔ b)       := Eq.symm (distrib₂ ..)
-  inf := (. ⊓ .)
-  inf_le_left := by
-    intro a b; simp [ShefferLE]
-  inf_le_right := by
-    intro a b; simp only [ShefferLE]
-    calc
-      a ⊓ b = a ⊓ (b ⊓ b) := by rw [idemp₂]
-      _     = a ⊓ b ⊓ b   := assoc₂ a b b
-      _     = b ⊓ a ⊓ b   := by conv => left; left; rw [commut₂]
-      _     = b ⊓ (a ⊓ b) := Eq.symm (assoc₂ ..)
   le_inf := by
     intro a b c h₁ h₂
     simp only [ShefferLE]
