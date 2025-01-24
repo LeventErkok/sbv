@@ -16,6 +16,7 @@
 module Data.SBV.Utils.TDiff
   ( Timing(..)
   , timeIf
+  , timeIfRNF
   , showTDiff
   , getTimeStampIf
   , getElapsedTime
@@ -33,6 +34,8 @@ import GHC.Real   (Ratio((:%)))
 import Numeric (showFFloat)
 
 import Control.Monad.Trans (liftIO, MonadIO)
+import Control.DeepSeq (NFData(rnf))
+
 
 -- | Specify how to save timing information, if at all.
 data Timing = NoTiming | PrintTiming | SaveTiming (IORef NominalDiffTime)
@@ -67,17 +70,26 @@ showTDiff diff
          aboveSeconds = map (\(t, v) -> show v ++ [t]) $ dropWhile (\p -> snd p == 0) [('d', days), ('h', hours), ('m', minutes)]
          fields       = aboveSeconds ++ [secondsPicos]
 
+-- | Run an action and measure how long it took. We reduce the result to weak-head-normal-form,
+-- so beware of the cases if the result is lazily computed; in which case we'll stop soon as the
+-- result is in WHNF, and not necessarily fully calculated.
 timeIf :: MonadIO m => Bool -> m a -> m (Maybe NominalDiffTime, a)
 timeIf measureTime act = do mbStart <- getTimeStampIf measureTime
                             r     <- act
                             r `seq` do mbElapsed <- getElapsedTime mbStart
                                        pure (mbElapsed, r)
 
+-- | Same as 'timeIf', except we fully evaluate the result, via its the NFData instance.
+timeIfRNF :: (NFData a, MonadIO m) => Bool -> m a -> m (Maybe NominalDiffTime, a)
+timeIfRNF measureTime act = timeIf measureTime (act >>= \r -> rnf r `seq` pure r)
+
+-- | Get a time-stamp if we're asked to do so
 getTimeStampIf  :: MonadIO m => Bool -> m (Maybe UTCTime)
 getTimeStampIf measureTime
   | not measureTime = pure Nothing
   | True            = liftIO $ Just <$> getCurrentTime
 
+-- | Get elapsed time from the given beginning time, if any.
 getElapsedTime :: MonadIO m => Maybe UTCTime -> m (Maybe NominalDiffTime)
 getElapsedTime Nothing      = pure Nothing
 getElapsedTime (Just start) = liftIO $ do e <- getCurrentTime
