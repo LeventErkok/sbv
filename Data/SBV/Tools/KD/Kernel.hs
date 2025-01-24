@@ -149,9 +149,13 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
            -- First negate, then skolemize!
            constrain $ skolemize (qNot prop)
 
+           (mbT, r) <- timeIf measureTime checkSat
+
            updStats kdState (\s -> s{noOfCheckSats = noOfCheckSats s + 1})
 
-           (mbT, r) <- timeIf measureTime checkSat
+           case mbT of
+             Nothing -> pure ()
+             Just t  -> updStats kdState (\s -> s{solverElapsed = solverElapsed s + t})
 
            case r of
              Unk    -> unknown

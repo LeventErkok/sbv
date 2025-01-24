@@ -43,7 +43,9 @@ import Data.IORef
 import GHC.Generics
 
 -- | Various statistics we collect
-data KDStats = KDStats { noOfCheckSats :: Int }
+data KDStats = KDStats { noOfCheckSats :: Int
+                       , solverElapsed :: NominalDiffTime
+                       }
 
 -- | Extra state we carry in a KD context
 data KDState = KDState { stats  :: IORef KDStats
@@ -61,14 +63,19 @@ runKD = runKDWith defaultSMTCfg
 -- | Run a KD proof, using the given configuration.
 runKDWith :: SMTConfig -> KD a -> IO a
 runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
-   rStats <- newIORef $ KDStats { noOfCheckSats = 0 }
+   rStats <- newIORef $ KDStats { noOfCheckSats = 0, solverElapsed = 0 }
    (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg, stats = rStats}
    case mbT of
      Nothing -> pure ()
-     Just t  -> do stats <- do st <- readIORef rStats
-                               case st of
-                                 KDStats noOfCheckSats -> pure $ "Decisions: " ++ show noOfCheckSats
-                   message cfg $ "[Total time: " ++ showTDiff t ++ ", " ++ stats ++ "]\n"
+     Just t  -> do KDStats noOfCheckSats solverTime <- readIORef rStats
+
+                   let stats = [ ("SBV",       showTDiff (t - solverTime))
+                               , ("Solver",    showTDiff solverTime)
+                               , ("Total",     showTDiff t)
+                               , ("Decisions", show noOfCheckSats)
+                               ]
+
+                   message cfg $ '[' : intercalate ", " [k ++ ": " ++ v | (k, v) <- stats] ++ "]\n"
    pure r
 
 -- | get the state
@@ -81,7 +88,7 @@ getKDConfig = config <$> getKDState
 
 -- | Update stats
 updStats :: MonadIO m => KDState -> (KDStats -> KDStats) -> m ()
-updStats KDState{stats} u = liftIO $ readIORef stats >>= \s -> writeIORef stats (u s)
+updStats KDState{stats} u = liftIO $ modifyIORef' stats u
 
 -- | Display the message if not quiet. Note that we don't print a newline; so the message must have it if needed.
 message :: MonadIO m => SMTConfig -> String -> m ()
