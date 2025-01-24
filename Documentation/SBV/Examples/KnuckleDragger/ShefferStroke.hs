@@ -128,6 +128,9 @@ instance BooleanAlgebra SStroke where
 #define AAp A  (Forall @"a'" (a' :: SStroke))
 #define AB  A  (Forall @"b"  (b  :: SStroke))
 #define ABC AB (Forall @"c"  (c  :: SStroke))
+#define X      (Forall @"x"  (x  :: SStroke))
+#define XY  X  (Forall @"y"  (y  :: SStroke))
+#define XYZ XY (Forall @"z"  (z  :: SStroke))
 
 -- | First Sheffer axiom @ﬧﬧa == a@
 sheffer1 :: KD Proof
@@ -431,10 +434,20 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   inf_le_left  <- lemma "a ⊓ b ≤ a" (\AB -> a ⨅ b ≤ a) [assoc2, idemp2]
   inf_le_right <- lemma "a ⊓ b ≤ b" (\AB -> a ⨅ b ≤ b) [commut2, inf_le_left]
 
-  le_inf           <- pure sorry
-  le_sup_inf       <- pure sorry
-  inf_compl_le_bot <- pure sorry
-  top_le_sup_compl <- pure sorry
+  le_inf <- chainLemma "a ≤ b → a ≤ c → a ≤ b ⊓ c"
+                       (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c)
+                       (\a b c -> (a ≤ b .&& a ≤ c, [ a
+                                                    , b ⨅ a
+                                                    , b ⨅ (c ⨅ a)
+                                                    , b ⨅ c ⨅ a :: SStroke
+                                                    ]))
+                       [assoc2]
+
+  le_sup_inf <- pure sorry
+
+  inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
+  top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\X -> т ≤ x ⨆ ﬧ x) [compl1, le_refl]
+
   le_top           <- pure sorry
   bot_le           <- pure sorry
   sdiff_eq         <- pure sorry
@@ -462,41 +475,10 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
           , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} = sdiff_eq
           , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = himp_eq
        }
-
 {-
 instance ShefferToBooleanAlg : BooleanAlgebra α where
-  le_inf := by
-    intro a b c h₁ h₂
-    simp only [ShefferLE]
-    calc
-      a = b ⊓ a       := h₁
-      _ = b ⊓ (c ⊓ a) := by conv => left; right; rw [h₂]
-      _ = b ⊓ c ⊓ a  := by exact assoc₂ b c a
   le_sup_inf := by intro a b c; simp; rw [distrib₁]; exact Sheffer.le_refl ..
-  top := u
-  bot := z
-  inf_compl_le_bot := by intro a; simp only [compl₂]; exact Sheffer.le_refl ..
-  top_le_sup_compl := by intro a; simp only [compl₁]; exact Sheffer.le_refl ..
   le_top := by intro a; simp only [ShefferLE]; rw [commut₂]; exact Eq.symm (ident₂ a)
   bot_le := by intro a; simp [ShefferLE]
-
-end ShefferLaws
-
-section BooleanToSheffer
-
-variable {α : Type*}
-variable [BooleanAlgebra α]
-
--- This is intentionally not an instance to avoid creating an instance cycle
--- Boolean Algebra -> Sheffer Algebra -> Boolean Algebra.
-def BooleanAlgToSheffer : ShefferAlgebra α where
-  stroke x y := (x ⊓ y)ᶜ
-  elt := ⊥
-  sh₁ := by intro a; simp [prime]
-  sh₂ := by intro a b; simp [prime]
-  sh₃ := by intro a b c; simp [prime]; rw [inf_sup_left]
-            conv => left; left; rw [inf_comm]
-            conv => left; right; rw [inf_comm]
-
-end BooleanToSheffer
 -}
+
