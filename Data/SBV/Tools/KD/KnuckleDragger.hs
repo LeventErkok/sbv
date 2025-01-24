@@ -61,8 +61,6 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Data.SBV.Utils.TDiff
 import Data.Maybe (catMaybes)
 
-import System.IO (hPutStrLn, stderr)
-
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
 use = liftIO
@@ -306,7 +304,7 @@ class Inductive a steps where
                          inductionBaseCase
                          [nm, "Base"]
                          Nothing
-                         (Just (io $ hPutStrLn stderr inductionBaseFailureMsg))
+                         (Just (liftIO (putStrLn inductionBaseFailureMsg)))
                          (finish [])
 
             constrain inductiveHypothesis

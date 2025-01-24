@@ -38,8 +38,6 @@ import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
 import Data.SBV.Control.Utils (getConfig)
 
-import System.IO (hPutStrLn, stderr)
-
 import qualified Data.SBV.List as SL
 
 import Data.SBV.Tools.KD.Utils
@@ -167,11 +165,11 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
        fullNm = intercalate "." (filter (not . null) (fromMaybe nms fullNms))
 
        unknown = do r <- getUnknownReason
-                    liftIO $ do hPutStrLn stderr $ "\n*** Failed to prove " ++ fullNm ++ "."
-                                hPutStrLn stderr $ "\n*** Solver reported: " ++ show r
+                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+                                putStrLn $ "\n*** Solver reported: " ++ show r
                                 die
 
-       cex = do liftIO $ hPutStrLn stderr $ "\n*** Failed to prove " ++ fullNm ++ "."
+       cex = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
                 model <- getModel
                 case (isEmptyModel model, mbSat) of
                   (True,  Just act) -> act >> die
