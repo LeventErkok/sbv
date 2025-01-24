@@ -443,6 +443,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                     ]))
                        [assoc2]
 
+  -- le_sup_inf := by intro a b c; simp; rw [distrib₁]; exact Sheffer.le_refl ..
   le_sup_inf <- pure sorry
 
   inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
@@ -457,9 +458,16 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                       ]))
                        [bound2, commut2, ident2]
 
-  bot_le           <- pure sorry
-  sdiff_eq         <- pure sorry
-  himp_eq          <- pure sorry
+  bot_le <- chainLemma "⊥ ≤ a"
+                       (\A -> ⲳ ≤ a)
+                       (\a -> (sTrue, [ ⲳ ≤ a
+                                      , ⲳ .== a ⨅ (ⲳ :: SStroke)
+                                      , ⲳ .== (ⲳ :: SStroke)
+                                      ]))
+                       [bound2]
+
+  sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\XY -> x \\ y .== x ⨅ ﬧ y) []   -- by definition
+  himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\XY -> x ⇨ y .== y ⨆ ﬧ x)  []   -- by definition
 
   -- TODO: fix this
   _ <- pure i1
@@ -483,10 +491,3 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
           , sdiff_eq         {- (∀ (x y : α), x \ y = x ⊓ yᶜ)                -} = sdiff_eq
           , himp_eq          {- (∀ (x y : α), x ⇨ y = y ⊔ xᶜ)                -} = himp_eq
        }
-{-
-instance ShefferToBooleanAlg : BooleanAlgebra α where
-  le_sup_inf := by intro a b c; simp; rw [distrib₁]; exact Sheffer.le_refl ..
-  le_top := by intro a; simp only [ShefferLE]; rw [commut₂]; exact Eq.symm (ident₂ a)
-  bot_le := by intro a; simp [ShefferLE]
--}
-
