@@ -28,6 +28,7 @@
 module Documentation.SBV.Examples.KnuckleDragger.ShefferStroke where
 
 import Prelude hiding ((<))
+import Data.List (intercalate)
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
@@ -75,26 +76,26 @@ data BooleanAlgebraProof = BooleanAlgebraProof {
 
 -- | A somewhat prettier printer for a BooleanAlgebra proof
 instance Show BooleanAlgebraProof where
-  show p = unlines [ "BooleanAlgebraProof {"
-                   , "  le_refl         : " ++ show (le_refl          p)
-                   , "  le_trans        : " ++ show (le_trans         p)
-                   , "  lt_iff_le_not_le: " ++ show (lt_iff_le_not_le p)
-                   , "  le_antisymm     : " ++ show (le_antisymm      p)
-                   , "  le_sup_left     : " ++ show (le_sup_left      p)
-                   , "  le_sup_right    : " ++ show (le_sup_right     p)
-                   , "  sup_le          : " ++ show (sup_le           p)
-                   , "  inf_le_left     : " ++ show (inf_le_left      p)
-                   , "  inf_le_right    : " ++ show (inf_le_right     p)
-                   , "  le_inf          : " ++ show (le_inf           p)
-                   , "  le_sup_inf      : " ++ show (le_sup_inf       p)
-                   , "  inf_compl_le_bot: " ++ show (inf_compl_le_bot p)
-                   , "  top_le_sup_compl: " ++ show (top_le_sup_compl p)
-                   , "  le_top          : " ++ show (le_top           p)
-                   , "  bot_le          : " ++ show (bot_le           p)
-                   , "  sdiff_eq        : " ++ show (sdiff_eq         p)
-                   , "  himp_eq         : " ++ show (himp_eq          p)
-                   , "}"
-                   ]
+  show p = intercalate "\n" [ "BooleanAlgebraProof {"
+                            , "  le_refl         : " ++ show (le_refl          p)
+                            , "  le_trans        : " ++ show (le_trans         p)
+                            , "  lt_iff_le_not_le: " ++ show (lt_iff_le_not_le p)
+                            , "  le_antisymm     : " ++ show (le_antisymm      p)
+                            , "  le_sup_left     : " ++ show (le_sup_left      p)
+                            , "  le_sup_right    : " ++ show (le_sup_right     p)
+                            , "  sup_le          : " ++ show (sup_le           p)
+                            , "  inf_le_left     : " ++ show (inf_le_left      p)
+                            , "  inf_le_right    : " ++ show (inf_le_right     p)
+                            , "  le_inf          : " ++ show (le_inf           p)
+                            , "  le_sup_inf      : " ++ show (le_sup_inf       p)
+                            , "  inf_compl_le_bot: " ++ show (inf_compl_le_bot p)
+                            , "  top_le_sup_compl: " ++ show (top_le_sup_compl p)
+                            , "  le_top          : " ++ show (le_top           p)
+                            , "  bot_le          : " ++ show (bot_le           p)
+                            , "  sdiff_eq        : " ++ show (sdiff_eq         p)
+                            , "  himp_eq         : " ++ show (himp_eq          p)
+                            , "}"
+                            ]
 
 -- * The sheffer stroke
 
@@ -444,6 +445,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        [assoc2]
 
   -- le_sup_inf := by intro a b c; simp; rw [distrib₁]; exact Sheffer.le_refl ..
+  -- TODO: fix this
   le_sup_inf <- pure sorry
 
   inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
