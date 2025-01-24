@@ -20,10 +20,10 @@
 module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
        , startKD, finishKD, getKDState, getKDConfig, KDState(..)
-       , RootOfTrust(..), calculateRootOfTrust
+       , RootOfTrust(..), calculateRootOfTrust, message
        ) where
 
-import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask)
+import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
 import Data.Time (NominalDiffTime)
@@ -58,7 +58,7 @@ runKDWith cfg@SMTConfig{kdOptions = KDOptions{measureTime}} (KD f) = do
    (mbT, r) <- timeIf measureTime $ runReaderT f KDState {config = cfg}
    case mbT of
      Nothing -> pure ()
-     Just t  -> putStrLn $ "[Total time: " ++ showTDiff t ++ "]"
+     Just t  -> message cfg $ "[Total time: " ++ showTDiff t ++ "]\n"
    pure r
 
 -- | get the state
@@ -69,11 +69,17 @@ getKDState = ask
 getKDConfig :: KD SMTConfig
 getKDConfig = config <$> getKDState
 
+-- | Display the message if not quiet. Note that we don't print a newline; so the message must have it if needed.
+message :: MonadIO m => SMTConfig -> String -> m ()
+message SMTConfig{kdOptions = KDOptions{quiet}} s
+  | quiet = pure ()
+  | True  = liftIO $ putStr s
+
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-startKD :: Bool -> String -> [String] -> IO Int
-startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
-                              hFlush stdout
-                              return (length line)
+startKD :: SMTConfig -> Bool -> String -> [String] -> IO Int
+startKD cfg newLine what nms = do message cfg $ line ++ if newLine then "\n" else ""
+                                  hFlush stdout
+                                  return (length line)
   where tab    = 2 * length (drop 1 nms)
         indent = replicate tab ' '
         tag    = what ++ ": " ++ intercalate "." (filter (not . null) nms)
@@ -81,8 +87,8 @@ startKD newLine what nms = do putStr $ line ++ if newLine then "\n" else ""
 
 -- | Finish a proof. First argument is what we got from the call of 'startKD' above.
 finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()
-finishKD SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) extraTiming =
-   putStrLn $ replicate (ribbonLength - skip) ' ' ++ what ++ timing ++ extras
+finishKD cfg@SMTConfig{kdOptions = KDOptions{ribbonLength}} what (skip, mbT) extraTiming =
+   message cfg $ replicate (ribbonLength - skip) ' ' ++ what ++ timing ++ extras ++ "\n"
  where timing = maybe "" ((' ' :) . mkTiming) mbT
        extras = concatMap mkTiming extraTiming
 

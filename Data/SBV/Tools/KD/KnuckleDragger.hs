@@ -61,6 +61,8 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Data.SBV.Utils.TDiff
 import Data.Maybe (catMaybes)
 
+import System.IO (hPutStrLn, stderr)
+
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
 use = liftIO
@@ -115,7 +117,7 @@ class ChainLemma a steps step | steps -> step where
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
   chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps helpers =
           liftIO $ runSMTWith cfg $ do
-             liftIO $ putStrLn $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+             message cfg $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm ++ "\n"
 
              mbStartTime <- getTimeStampIf measureTime
 
@@ -141,7 +143,7 @@ class ChainLemma a steps step | steps -> step where
              let go :: Int -> SBool -> [SBool] -> Query Proof
                  go _ accum [] = do
                      queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                     checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] Nothing $ \d -> do
+                     checkSatThen cfg "Result" (intros .=> accum) goal ["", ""] (Just [nm, "Result"]) Nothing $ \d -> do
 
                        mbElapsed <- getElapsedTime mbStartTime
                        finish d $ catMaybes [mbElapsed]
@@ -153,7 +155,7 @@ class ChainLemma a steps step | steps -> step where
 
                  go i accum (s:ss) = do
                       queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                      checkSatThen cfg "Step  " (intros .&& accum) s ["", show i] Nothing (flip finish [])
+                      checkSatThen cfg "Step  " (intros .&& accum) s ["", show i] (Just [nm, show i]) Nothing (flip finish [])
                       go (i+1) (s .&& accum) ss
 
              query $ go (1::Int) sTrue proofSteps
@@ -270,7 +272,7 @@ class Inductive a steps where
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
    inductGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm qResult steps helpers = liftIO $ do
 
-        putStrLn $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm
+        message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm ++ "\n"
 
         mbStartTime <- getTimeStampIf measureTime
 
@@ -296,14 +298,15 @@ class Inductive a steps where
                          sTrue
                          inductionBaseCase
                          [nm, "Base"]
-                         (Just (io $ putStrLn inductionBaseFailureMsg))
+                         Nothing
+                         (Just (io $ hPutStrLn stderr inductionBaseFailureMsg))
                          (finish [])
 
             constrain inductiveHypothesis
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen cfg "Help" accum s [nm, snm] Nothing (finish [])
+                    checkSatThen cfg "Help" accum s [nm, snm] Nothing Nothing (finish [])
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -313,7 +316,7 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing $ \d -> do
+            checkSatThen cfg "Step" indSchema inductiveStep [nm, "Step"] Nothing Nothing $ \d -> do
               mbElapsed <- getElapsedTime mbStartTime
               finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros

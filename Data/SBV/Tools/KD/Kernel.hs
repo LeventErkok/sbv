@@ -30,13 +30,15 @@ module Data.SBV.Tools.KD.Kernel (
 import Control.Monad.Trans  (liftIO, MonadIO)
 
 import Data.List  (intercalate)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromMaybe)
 
 import Data.SBV
 import Data.SBV.Core.Data (Constraint, SolverContext)
 import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
 import Data.SBV.Control.Utils (getConfig)
+
+import System.IO (hPutStrLn, stderr)
 
 import qualified Data.SBV.List as SL
 
@@ -58,7 +60,8 @@ type Proposition a = ( QNot a
 -- if you assert nonsense, then you get nonsense back. So, calls to 'axiom' should be limited to
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
-axiom nm p = do _ <- liftIO $ startKD True "Axiom" [nm]
+axiom nm p = do cfg <- getKDConfig
+                _   <- liftIO $ startKD cfg True "Axiom" [nm]
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
@@ -92,7 +95,7 @@ lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> 
 lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = liftIO $
         getTimeStampIf measureTime >>= runSMTWith cfg . go
   where go mbStartTime = do mapM_ (constrain . getProof) by
-                            query $ checkSatThen cfg tag sTrue inputProp nms Nothing (good mbStartTime)
+                            query $ checkSatThen cfg tag sTrue inputProp nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -132,12 +135,13 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> SBool                                  -- ^ context
    -> a                                      -- ^ what we want to prove
    -> [String]                               -- ^ sub-proof
+   -> (Maybe [String])                       -- ^ full-path to the proof, if different than sub-proof
    -> Maybe (m r)                            -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop nms mbSat unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop nms fullNms mbSat unsat = do
         inNewAssertionStack $ do
-           tab <- liftIO $ startKD verbose tag nms
+           tab <- liftIO $ startKD cfg verbose tag nms
            constrain ctx
 
            -- First negate, then skolemize!
@@ -152,14 +156,14 @@ checkSatThen SMTConfig{verbose, kdOptions = KDOptions{measureTime}} tag ctx prop
              Unsat  -> liftIO $ unsat (tab, mbT)
  where die = error "Failed"
 
-       nm = intercalate "." (filter (not . null) nms)
+       fullNm = intercalate "." (filter (not . null) (fromMaybe nms fullNms))
 
        unknown = do r <- getUnknownReason
-                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
-                                putStrLn $ "\n*** Solver reported: " ++ show r
+                    liftIO $ do hPutStrLn stderr $ "\n*** Failed to prove " ++ fullNm ++ "."
+                                hPutStrLn stderr $ "\n*** Solver reported: " ++ show r
                                 die
 
-       cex = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ nm ++ "."
+       cex = do liftIO $ hPutStrLn stderr $ "\n*** Failed to prove " ++ fullNm ++ "."
                 model <- getModel
                 case (isEmptyModel model, mbSat) of
                   (True,  Just act) -> act >> die
