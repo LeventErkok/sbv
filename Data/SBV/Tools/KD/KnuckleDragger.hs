@@ -43,7 +43,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        ) where
 
 import Data.SBV
-import Data.SBV.Core.Data (SolverContext(internalVariable))
+import Data.SBV.Core.Model (qSaturate)
 
 import Data.SBV.Control hiding (getProof)
 
@@ -117,6 +117,9 @@ class ChainLemma a steps step | steps -> step where
           kdSt <- getKDState
 
           liftIO $ runSMTWith cfg $ do
+
+             qSaturate result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+
              message cfg $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm ++ "\n"
 
              mbStartTime <- getTimeStampIf measureTime
@@ -125,11 +128,6 @@ class ChainLemma a steps step | steps -> step where
                  finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
              (goal, (intros, proofSteps)) <- chainSteps result steps
-
-             -- This seemingly unneded constraint makes sure SBV sees the
-             -- definitions of any smtFunction calls or uninterpreted functions;
-             -- so it's important to keep it here.
-             constrain $ goal .== goal
 
              -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
              when (null proofSteps) $
@@ -270,7 +268,7 @@ class Inductive a steps where
    inductionStrategy :: Proposition a => a -> steps -> Symbolic InductionStrategy
 
    inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-   inductGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm qResult steps helpers = do
+   inductGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps helpers = do
 
      kdSt <- getKDState
 
@@ -282,6 +280,8 @@ class Inductive a steps where
 
         runSMTWith cfg $ do
 
+           qSaturate result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+
            mapM_ (constrain . getProof) helpers
 
            let (ros, modulo) = calculateRootOfTrust nm helpers
@@ -292,7 +292,7 @@ class Inductive a steps where
                              , inductionHelperSteps
                              , inductionBaseFailureMsg
                              , inductiveStep
-                             } <- inductionStrategy qResult steps
+                             } <- inductionStrategy result steps
 
            query $ do
 
@@ -326,7 +326,7 @@ class Inductive a steps where
               finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False
-                           , getProof    = label nm $ quantifiedBool qResult
+                           , getProof    = label nm $ quantifiedBool result
                            , proofName   = nm
                            }
 
@@ -342,24 +342,17 @@ pairInductiveSteps (ls, rs) = pairs
                  ++ rPairs
                  ++ mkPairs (take 1 (reverse taggedLs) ++ take 1 (reverse taggedRs))
 
--- | Saturate the given predicate; i.e., we run it on dummy-variables and assert equality of the self,
--- which ensures the uninterpreted/smtDefine functions to get recorded.
-saturate :: (SolverContext m, EqSymbolic a) => a -> m ()
-saturate d = constrain $ d .== d
-
 -- | Induction over 'SInteger'.
 instance   (KnownSymbol nk, EqSymbolic z)
         => Inductive (Forall nk Integer -> SBool)
                      (SInteger -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate k = qResult (Forall k)
+   inductionStrategy result steps = do
+       let predicate k = result (Forall k)
            nk          = symbolVal (Proxy @nk)
 
        k <- free nk
        constrain $ k .>= 0
-
-       saturate =<< predicate <$> internalVariable (kindOf k)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate 0
@@ -376,18 +369,14 @@ instance    ( KnownSymbol na, SymVal a
          => Inductive (Forall na a -> Forall nk Integer -> SBool)
                       (SBV a -> SInteger -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a k = qResult (Forall a) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a k = result (Forall a) (Forall k)
            na            = symbolVal (Proxy @na)
            nk            = symbolVal (Proxy @nk)
 
        a <- free na
        k <- free nk
        constrain $ k .>= 0
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf k)
-
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a 0
@@ -405,8 +394,8 @@ instance    ( KnownSymbol na, SymVal a
          => Inductive (Forall na a -> Forall nb b -> Forall nk Integer -> SBool)
                       (SBV a -> SBV b -> SInteger -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b k = qResult (Forall a) (Forall b) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b k = result (Forall a) (Forall b) (Forall k)
            na              = symbolVal (Proxy @na)
            nb              = symbolVal (Proxy @nb)
            nk              = symbolVal (Proxy @nk)
@@ -415,10 +404,6 @@ instance    ( KnownSymbol na, SymVal a
        b <- free nb
        k <- free nk
        constrain $ k .>= 0
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf k)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b 0
@@ -437,8 +422,8 @@ instance    ( KnownSymbol na, SymVal a
          => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nk Integer -> SBool)
                       (SBV a -> SBV b -> SBV c -> SInteger -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b c k = qResult (Forall a) (Forall b) (Forall c) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b c k = result (Forall a) (Forall b) (Forall c) (Forall k)
            na                = symbolVal (Proxy @na)
            nb                = symbolVal (Proxy @nb)
            nc                = symbolVal (Proxy @nc)
@@ -449,11 +434,6 @@ instance    ( KnownSymbol na, SymVal a
        c <- free nc
        k <- free nk
        constrain $ k .>= 0
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf c)
-                              <*> internalVariable (kindOf k)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c 0
@@ -473,8 +453,8 @@ instance    ( KnownSymbol na, SymVal a
          => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall nk Integer -> SBool)
                       (SBV a -> SBV b -> SBV c -> SBV d -> SInteger -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b c d k = qResult (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b c d k = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
            na                  = symbolVal (Proxy @na)
            nb                  = symbolVal (Proxy @nb)
            nc                  = symbolVal (Proxy @nc)
@@ -487,12 +467,6 @@ instance    ( KnownSymbol na, SymVal a
        d <- free nd
        k <- free nk
        constrain $ k .>= 0
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf c)
-                              <*> internalVariable (kindOf d)
-                              <*> internalVariable (kindOf k)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c d 0
@@ -517,15 +491,13 @@ instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
         => Inductive (Forall nk [k] -> SBool)
                      (SBV k -> SList k -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate k = qResult (Forall k)
+   inductionStrategy result steps = do
+       let predicate k = result (Forall k)
            nks         = symbolVal (Proxy @nk)
            nk          = singular nks
 
        k  <- free nk
        ks <- free nks
-
-       saturate =<< predicate <$> internalVariable (kindOf ks)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate SL.nil
@@ -541,8 +513,8 @@ instance   ( KnownSymbol na, SymVal a
         => Inductive (Forall na a -> Forall nk [k] -> SBool)
                      (SBV a -> SBV k -> SList k -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a k = qResult (Forall a) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a k = result (Forall a) (Forall k)
            na            = symbolVal (Proxy @na)
            nks           = symbolVal (Proxy @nk)
            nk            = singular nks
@@ -550,9 +522,6 @@ instance   ( KnownSymbol na, SymVal a
        a  <- free na
        k  <- free nk
        ks <- free nks
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf ks)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a SL.nil
@@ -569,8 +538,8 @@ instance   ( KnownSymbol na, SymVal a
         => Inductive (Forall na a -> Forall nb b -> Forall nk [k] -> SBool)
                      (SBV a -> SBV b -> SBV k -> SList k -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b k = qResult (Forall a) (Forall b) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b k = result (Forall a) (Forall b) (Forall k)
            na              = symbolVal (Proxy @na)
            nb              = symbolVal (Proxy @nb)
            nks             = symbolVal (Proxy @nk)
@@ -580,10 +549,6 @@ instance   ( KnownSymbol na, SymVal a
        b  <- free nb
        k  <- free nk
        ks <- free nks
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf ks)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b SL.nil
@@ -601,8 +566,8 @@ instance   ( KnownSymbol na, SymVal a
         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nk [k] -> SBool)
                      (SBV a -> SBV b -> SBV c -> SBV k -> SList k -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b c k = qResult (Forall a) (Forall b) (Forall c) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b c k = result (Forall a) (Forall b) (Forall c) (Forall k)
            na                = symbolVal (Proxy @na)
            nb                = symbolVal (Proxy @nb)
            nc                = symbolVal (Proxy @nc)
@@ -614,11 +579,6 @@ instance   ( KnownSymbol na, SymVal a
        c  <- free nc
        k  <- free nk
        ks <- free nks
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf c)
-                              <*> internalVariable (kindOf ks)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c SL.nil
@@ -637,8 +597,8 @@ instance   ( KnownSymbol na, SymVal a
         => Inductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall nk [k] -> SBool)
                      (SBV a -> SBV b -> SBV c -> SBV d -> SBV k -> SList k -> ([z], [z]))
  where
-   inductionStrategy qResult steps = do
-       let predicate a b c d k = qResult (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
+   inductionStrategy result steps = do
+       let predicate a b c d k = result (Forall a) (Forall b) (Forall c) (Forall d) (Forall k)
            na                  = symbolVal (Proxy @na)
            nb                  = symbolVal (Proxy @nb)
            nc                  = symbolVal (Proxy @nc)
@@ -652,12 +612,6 @@ instance   ( KnownSymbol na, SymVal a
        d  <- free nd
        k  <- free nk
        ks <- free nks
-
-       saturate =<< predicate <$> internalVariable (kindOf a)
-                              <*> internalVariable (kindOf b)
-                              <*> internalVariable (kindOf c)
-                              <*> internalVariable (kindOf d)
-                              <*> internalVariable (kindOf ks)
 
        pure InductionStrategy {
                 inductionBaseCase       = predicate a b c d SL.nil

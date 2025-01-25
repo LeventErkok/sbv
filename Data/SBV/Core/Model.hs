@@ -18,6 +18,7 @@
 {-# LANGUAGE FlexibleContexts        #-}
 {-# LANGUAGE FlexibleInstances       #-}
 {-# LANGUAGE InstanceSigs            #-}
+{-# LANGUAGE MultiParamTypeClasses   #-}
 {-# LANGUAGE Rank2Types              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE TypeApplications        #-}
@@ -28,7 +29,8 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), QSaturate(..)
+  , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
   , oneIf, genVar, genVar_
@@ -59,7 +61,7 @@ module Data.SBV.Core.Model (
   where
 
 import Control.Applicative    (ZipList(ZipList))
-import Control.Monad          (when, unless, mplus)
+import Control.Monad          (when, unless, mplus, replicateM)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 
 import GHC.Generics (M1(..), U1(..), (:*:)(..), K1(..))
@@ -3213,6 +3215,34 @@ slet x f = SBV $ SVal k $ Right $ cache r
                     let xsbv = SBV $ SVal (kindOf x) (Right (cache (const (return xsv))))
                         res  = f xsbv
                     sbvToSV st res
+
+-- | Class of things that we can logically reduce to a boolean, by saturating and then asserting equivalance to itself
+class QSaturate m a where
+  qSaturate :: a -> m ()
+
+-- | Base case; simple variable in the symbolic monad
+instance SolverContext m => QSaturate m SBool where
+  qSaturate b = constrain $ b .== b
+
+-- | Saturate over a universal quantifier
+instance (HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (Forall nm a -> r) where
+  qSaturate f = qSaturate . f . Forall =<< internalVariable (kindOf (Proxy @a))
+
+-- | Saturate over an a number of universal quantifiers
+instance (KnownNat n, HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (ForallN n nm a -> r) where
+  qSaturate f = qSaturate . f . ForallN =<< replicateM (intOfProxy (Proxy @n)) (internalVariable (kindOf (Proxy @a)))
+
+-- | Saturate over an existential quantifier
+instance (HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (Exists nm a -> r) where
+  qSaturate f = qSaturate . f . Exists =<< internalVariable (kindOf (Proxy @a))
+
+-- | Saturate over an a number of existential quantifiers
+instance (KnownNat n, HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (ExistsN n nm a -> r) where
+  qSaturate f = qSaturate . f . ExistsN =<< replicateM (intOfProxy (Proxy @n)) (internalVariable (kindOf (Proxy @a)))
+
+-- | Saturate over a unique-exists variable
+instance (HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (ExistsUnique nm a -> r) where
+  qSaturate f = qSaturate . f . ExistsUnique =<< internalVariable (kindOf (Proxy @a))
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in

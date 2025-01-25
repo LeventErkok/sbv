@@ -36,6 +36,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.SBV hiding (skolemize)
 
 import Data.SBV.Core.Data (SolverContext)
+import Data.SBV.Core.Model (QSaturate(..))
 import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
 import Data.SBV.Control.Utils (getConfig)
@@ -48,7 +49,7 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
-type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a))
+type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a), QSaturate Symbolic a)
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -90,7 +91,8 @@ lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> 
 lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = do
         kdSt <- getKDState
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
-  where go kdSt mbStartTime = do mapM_ (constrain . getProof) by
+  where go kdSt mbStartTime = do qSaturate inputProp
+                                 mapM_ (constrain . getProof) by
                                  query $ checkSatThen cfg kdSt tag sTrue inputProp nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
