@@ -116,8 +116,8 @@ existsDisjunction = runKD $ do
 -- *** Failed to prove forallConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: T -> Bool
---   p T_2 = True
 --   p T_0 = True
+--   p T_2 = True
 --   p _   = False
 -- <BLANKLINE>
 --   q :: T -> Bool
@@ -177,10 +177,3 @@ existsConjunctionNot = runKD $ do
                             []
 
     pure ()
-
--- | Quantifier alternation
---
--- >>> forallExists
--- WHAT
-forallExists :: IO Proof
-forallExists = runKD $ lemma "forallExists1" (\(Forall @"x" x) (Exists @"y" y) -> x .>= (y :: SWord8)) []
