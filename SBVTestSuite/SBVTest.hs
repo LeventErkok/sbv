@@ -75,6 +75,7 @@ import qualified TestSuite.Crypto.AES
 import qualified TestSuite.Crypto.RC4
 import qualified TestSuite.Crypto.SHA
 import qualified TestSuite.GenTest.GenTests
+import qualified TestSuite.KnuckleDragger.Basics
 import qualified TestSuite.Optimization.AssertWithPenalty
 import qualified TestSuite.Optimization.Basics
 import qualified TestSuite.Optimization.Combined
@@ -188,6 +189,7 @@ main = defaultMain $ testGroup "SBV" [
                       , TestSuite.Crypto.RC4.tests
                       , TestSuite.Crypto.SHA.tests
                       , TestSuite.GenTest.GenTests.tests
+                      , TestSuite.KnuckleDragger.Basics.tests
                       , TestSuite.Optimization.AssertWithPenalty.tests
                       , TestSuite.Optimization.Basics.tests
                       , TestSuite.Optimization.Combined.tests

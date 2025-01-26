@@ -299,6 +299,7 @@ Test-Suite SBVTest
                   , mtl
                   , random
                   , sbv
+                  , silently
                   , tasty
                   , tasty-golden
                   , tasty-hunit
@@ -363,6 +364,7 @@ Test-Suite SBVTest
                   , TestSuite.Crypto.RC4
                   , TestSuite.Crypto.SHA
                   , TestSuite.GenTest.GenTests
+                  , TestSuite.KnuckleDragger.Basics
                   , TestSuite.Optimization.AssertWithPenalty
                   , TestSuite.Optimization.Basics
                   , TestSuite.Optimization.Combined

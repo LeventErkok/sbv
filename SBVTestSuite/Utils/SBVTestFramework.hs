@@ -24,6 +24,7 @@ module Utils.SBVTestFramework (
         , goldenString
         , goldenVsStringShow
         , goldenCapturedIO
+        , silentlyCaptureIO
         , qc1, qc2
         , shouldNotTypeCheck
         -- module exports to simplify life
@@ -34,13 +35,14 @@ module Utils.SBVTestFramework (
 
 import qualified Control.Exception as C
 
-import Control.DeepSeq     (force, NFData)
+import Control.DeepSeq     (force, NFData, rnf)
 import Control.Exception   (evaluate, try, throwIO, TypeError(..))
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.ByteString.Lazy.Char8 as LBC
-
 import System.Directory   (removeFile)
+
+import Control.Concurrent (threadDelay)
 
 import Test.Tasty            (testGroup, TestTree, TestName)
 import Test.Tasty.HUnit      ((@?), Assertion, testCase, AssertionPredicable, assertFailure)
@@ -58,6 +60,7 @@ import Data.SBV.Control
 import System.FilePath ((</>), (<.>))
 import Data.List       (isInfixOf, isSuffixOf)
 
+import System.IO.Silently
 
 import Data.SBV.Internals (runSymbolic, Result, SBVRunMode(..), IStage(..), SBV(..), SVal(..), showModel, SMTModel(..), QueryContext(..), Outputtable)
 
@@ -85,6 +88,16 @@ goldenCapturedIO n res = goldenVsFileDiff n diff gf gfTmp (rm gfTmp >> res gfTmp
         rm f  = removeFile f `C.catch` (\(_ :: C.SomeException) -> return ())
 
         diff ref new = ["diff", "-u", ref, new]
+
+-- Allows testing of IO a that puts things to std-out, producing some result.
+silentlyCaptureIO :: Show a => TestName -> (Int, String -> String) -> IO a -> TestTree
+silentlyCaptureIO n (delay, clean) act = goldenCapturedIO n $ \fp -> do
+        (s, p) <- capture delayedAct
+        let out = clean (s ++ show p)
+        rnf out `seq` writeFile fp out
+  where -- We need to delay the running of the act, as otherwise the stdout we get from tasty clobbers that of the
+        -- function we're running. See: https://github.com/UnkindPartition/tasty/issues/434
+        delayedAct = threadDelay delay >> act
 
 -- | Count the number of models. It's not kosher to
 -- call this function if you provided a max-model count
