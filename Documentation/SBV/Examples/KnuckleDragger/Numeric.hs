@@ -53,7 +53,7 @@ sumConstProof = runKD $ do
 -- Lemma: sum_correct                      Q.E.D.
 -- [Proven] sum_correct
 sumProof :: IO Proof
-sumProof = runKDWith z3{verbose=True} $ do
+sumProof = runKD $ do
    let sum :: SInteger -> SInteger
        sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
 
