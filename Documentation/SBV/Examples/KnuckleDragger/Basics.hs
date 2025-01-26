@@ -116,8 +116,8 @@ existsDisjunction = runKD $ do
 -- *** Failed to prove forallConjunctionNot.
 -- Falsifiable. Counter-example:
 --   p :: T -> Bool
---   p T_0 = True
 --   p T_2 = True
+--   p T_0 = True
 --   p _   = False
 -- <BLANKLINE>
 --   q :: T -> Bool

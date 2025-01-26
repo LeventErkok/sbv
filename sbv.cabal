@@ -436,6 +436,7 @@ Test-Suite SBVDocTest
                     , mtl
                     , process
                     , sbv
+                    , silently
                     , tasty
                     , tasty-golden
                     , tasty-hunit
