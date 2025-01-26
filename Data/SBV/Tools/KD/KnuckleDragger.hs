@@ -143,6 +143,7 @@ class ChainLemma a steps step | steps -> step where
                      queryDebug [nm ++ ": Chain proof end: proving the result:"]
                      checkSatThen cfg kdSt "Result" (Just (intros .=> accum))
                                                     goal
+                                                    helpers
                                                     ["", ""]
                                                     (Just [nm, "Result"])
                                                     Nothing $ \d -> do
@@ -160,6 +161,7 @@ class ChainLemma a steps step | steps -> step where
                       checkSatThen cfg kdSt "Step  "
                                             (Just (intros .&& accum))
                                             s
+                                            helpers
                                             ["", show i]
                                             (Just [nm, show i])
                                             Nothing (flip finish [])
@@ -312,6 +314,7 @@ class Inductive a steps where
                          "Base"
                          Nothing
                          inductionBaseCase
+                         helpers
                          [nm, "Base"]
                          Nothing
                          (Just (liftIO (putStrLn inductionBaseFailureMsg)))
@@ -321,7 +324,7 @@ class Inductive a steps where
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen cfg kdSt "Help" (Just accum) s [nm, snm] Nothing Nothing (finish [])
+                    checkSatThen cfg kdSt "Help" (Just accum) s helpers [nm, snm] Nothing Nothing (finish [])
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -331,7 +334,7 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen cfg kdSt "Step" (Just indSchema) inductiveStep [nm, "Step"] Nothing Nothing $ \d -> do
+            checkSatThen cfg kdSt "Step" (Just indSchema) inductiveStep helpers [nm, "Step"] Nothing Nothing $ \d -> do
               mbElapsed <- getElapsedTime mbStartTime
               finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros

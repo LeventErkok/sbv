@@ -32,14 +32,13 @@ import Control.Monad.Trans  (liftIO, MonadIO)
 import Data.List  (intercalate)
 import Data.Maybe (catMaybes, fromMaybe)
 
--- skolemize is explicitly disallowed here! see the comment below (search for skolemize)
-import Data.SBV hiding (skolemize)
-
-import Data.SBV.Core.Data (SolverContext)
-import Data.SBV.Core.Model (QSaturate(..))
+import Data.SBV.Core.Data hiding (None)
 import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Control hiding (getProof)
-import Data.SBV.Control.Utils (getConfig)
+
+import Data.SBV.SMT.SMT
+import Data.SBV.Core.Model
+import Data.SBV.Provers.Prover
 
 import qualified Data.SBV.List as SL
 
@@ -49,7 +48,13 @@ import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
-type Proposition a = (QNot a, QuantifiedBool a, QuantifiedBool (NegatesTo a), QSaturate Symbolic a)
+type Proposition a = ( QNot a
+                     , QuantifiedBool a
+                     , QSaturate Symbolic a
+                     , Skolemize (NegatesTo a)
+                     , Satisfiable (Symbolic (SkolemsTo (NegatesTo a)))
+                     , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
+                     )
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
 -- giving meaning to uninterpreted symbols. Note that we perform no checks on these propositions,
@@ -93,7 +98,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturate inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag Nothing inputProp nms Nothing Nothing (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag Nothing inputProp by nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -133,12 +138,13 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> String                                 -- ^ tag
    -> Maybe SBool                            -- ^ context if any. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
+   -> [Proof]                                -- ^ helpers in the context. NB. Only used for printing cex's. We assume they're already asserted.
    -> [String]                               -- ^ sub-proof
    -> (Maybe [String])                       -- ^ full-path to the proof, if different than sub-proof
-   -> Maybe (m r)                            -- ^ special code to run if model is empty (if any)
+   -> Maybe (IO ())                          -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag mbCtx prop nms fullNms mbSat unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag mbCtx prop by nms fullNms mbSat unsat = do
 
         case mbCtx of
            Just{}  -> inNewAssertionStack check
@@ -176,13 +182,31 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                                 putStrLn $ "\n*** Solver reported: " ++ show r
                                 die
 
-       cex = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
-                model <- getModel
-                case (isEmptyModel model, mbSat) of
-                  (True,  Just act) -> act >> die
-                  _                 -> do res <- Satisfiable <$> getConfig <*> pure model
-                                          liftIO $ print $ ThmResult res
-                                          die
+       -- What to do if the proof fails
+       cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+
+                          -- When trying to get a counter-example, only include in the
+                          -- implication those facts that are user-given axioms. This
+                          -- way our counter-example will be more likely to be relevant
+                          -- to the proposition we're currently proving. (Hopefully.)
+                          -- Remember that we first have to negate, and then skolemize!
+                          SatResult res <- satWith cfg $ do
+                                              mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                              pure $ skolemize (qNot prop)
+
+                          let isEmpty = case res of
+                                          Unsatisfiable{} -> False           -- Shouldn't really happen!
+                                          Satisfiable _ m -> isEmptyModel m  -- Shouldn't really happen!
+                                          DeltaSat _ _  m -> isEmptyModel m  -- Unlikely but why not
+                                          SatExtField _ m -> isEmptyModel m  -- Can't really happen
+                                          Unknown{}       -> False           -- Possible, I suppose. Just print it
+                                          ProofError{}    -> False           -- Ditto
+
+                          case (isEmpty, mbSat) of
+                            (True,  Just act) -> act
+                            _                 -> (print $ ThmResult res)
+
+                          die
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
