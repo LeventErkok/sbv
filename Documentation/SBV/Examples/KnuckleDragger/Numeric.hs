@@ -34,7 +34,7 @@ sumConstProof = runKD $ do
        c = uninterpret "c"
 
        sum :: SInteger -> SInteger
-       sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (c + sum (n-1))
+       sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (c + sum (n - 1))
 
        spec :: SInteger -> SInteger
        spec n = c * n
