@@ -141,7 +141,11 @@ class ChainLemma a steps step | steps -> step where
              let go :: Int -> SBool -> [SBool] -> Query Proof
                  go _ accum [] = do
                      queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                     checkSatThen cfg kdSt "Result" (intros .=> accum) goal ["", ""] (Just [nm, "Result"]) Nothing $ \d -> do
+                     checkSatThen cfg kdSt "Result" (Just (intros .=> accum))
+                                                    goal
+                                                    ["", ""]
+                                                    (Just [nm, "Result"])
+                                                    Nothing $ \d -> do
 
                        mbElapsed <- getElapsedTime mbStartTime
                        finish d $ catMaybes [mbElapsed]
@@ -153,7 +157,13 @@ class ChainLemma a steps step | steps -> step where
 
                  go i accum (s:ss) = do
                       queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                      checkSatThen cfg kdSt "Step  " (intros .&& accum) s ["", show i] (Just [nm, show i]) Nothing (flip finish [])
+                      checkSatThen cfg kdSt "Step  "
+                                            (Just (intros .&& accum))
+                                            s
+                                            ["", show i]
+                                            (Just [nm, show i])
+                                            Nothing (flip finish [])
+
                       go (i+1) (s .&& accum) ss
 
              query $ go (1::Int) sTrue proofSteps
@@ -300,7 +310,7 @@ class Inductive a steps where
             checkSatThen cfg
                          kdSt
                          "Base"
-                         sTrue
+                         Nothing
                          inductionBaseCase
                          [nm, "Base"]
                          Nothing
@@ -311,7 +321,7 @@ class Inductive a steps where
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen cfg kdSt "Help" accum s [nm, snm] Nothing Nothing (finish [])
+                    checkSatThen cfg kdSt "Help" (Just accum) s [nm, snm] Nothing Nothing (finish [])
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -321,7 +331,7 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen cfg kdSt "Step" indSchema inductiveStep [nm, "Step"] Nothing Nothing $ \d -> do
+            checkSatThen cfg kdSt "Step" (Just indSchema) inductiveStep [nm, "Step"] Nothing Nothing $ \d -> do
               mbElapsed <- getElapsedTime mbStartTime
               finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros

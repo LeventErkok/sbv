@@ -93,7 +93,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturate inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag sTrue inputProp nms Nothing Nothing (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag Nothing inputProp nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -131,21 +131,27 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
-   -> SBool                                  -- ^ context
+   -> Maybe SBool                            -- ^ context if any. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
    -> [String]                               -- ^ sub-proof
    -> (Maybe [String])                       -- ^ full-path to the proof, if different than sub-proof
    -> Maybe (m r)                            -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx prop nms fullNms mbSat unsat = do
-        inNewAssertionStack $ do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag mbCtx prop nms fullNms mbSat unsat = do
+
+        case mbCtx of
+           Just{}  -> inNewAssertionStack check
+           Nothing -> check
+
+ where check = do
            tab <- liftIO $ startKD cfg verbose tag nms
-           constrain ctx
+
+           maybe (pure ()) constrain mbCtx
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
-           constrain $ qNot prop
+           constrain $ sNot (quantifiedBool prop)
 
            (mbT, r) <- timeIf measureTime checkSat
 
@@ -160,7 +166,8 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
              Sat    -> cex
              DSat{} -> cex
              Unsat  -> liftIO $ unsat (tab, mbT)
- where die = error "Failed"
+
+       die = error "Failed"
 
        fullNm = intercalate "." (filter (not . null) (fromMaybe nms fullNms))
 
