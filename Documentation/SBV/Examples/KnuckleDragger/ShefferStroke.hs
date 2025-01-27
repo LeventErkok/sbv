@@ -366,6 +366,25 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sh2 <- sheffer2
   sh3 <- sheffer3
 
+  let infixl 1 =:
+      (=:) step (steps, _by) = step ++ steps
+      a ? b = ([a], b)
+      infixl 2 ?
+      _ |- x = [x]
+      infixl 3 |-
+
+      at :: Proof -> a -> SBool
+      at _ _ = sTrue
+
+  _ommut <- chainLemma "a | b = b | a"
+                       (\AB -> a ⏐ b .== b ⏐ a)
+                       (\a b -> (sTrue, sTrue |- a ⏐ b =: ﬧﬧ(a ⏐ b)      ? sh1 `at` (a, b)
+                                                       =: ﬧﬧ(a ⏐ ﬧﬧ b)   ? sh3
+                                                       =: ﬧﬧ((ﬧﬧ b) ⏐ a) ? sh3
+                                                       =: b ⏐ a          ? sh3
+                                        ))
+                       [sh1, sh3]
+
   commut <- chainLemma "a | b = b | a"
                        (\AB -> a ⏐ b .== b ⏐ a)
                        (\a b -> (sTrue, [ a ⏐ b
