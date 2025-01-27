@@ -887,6 +887,7 @@ defaultKindedValue k = CV k $ cvt k
 
         -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
         uninterp s Nothing      = CUserSort (Nothing, s ++ "_witness")
+        uninterp s Nothing      = CUserSort (Nothing, witnessName s)
 
 -- | Go from an SExpr directly to a value
 sexprToVal :: forall a. SymVal a => SExpr -> Maybe a
