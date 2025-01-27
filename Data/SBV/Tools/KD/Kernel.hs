@@ -191,6 +191,7 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                           -- to the proposition we're currently proving. (Hopefully.)
                           -- Remember that we first have to negate, and then skolemize!
                           SatResult res <- satWith cfg $ do
+                                              qSaturate prop
                                               mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
                                               pure $ skolemize (qNot prop)
 
