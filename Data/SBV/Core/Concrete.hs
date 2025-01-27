@@ -463,7 +463,7 @@ mkConstCV k@KMaybe{}      a = error $ "Unexpected call to mkConstCV (" ++ show k
 mkConstCV k@KEither{}     a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 mkConstCV k@KArray{}      a = error $ "Unexpected call to mkConstCV (" ++ show k ++ ") with value: " ++ show (toInteger a)
 
--- | Generate a random constant value ('CVal') of the correct kind.
+-- | Generate a random constant value ('CVal') of the correct kind. We error out for a completely uninterpreted type.
 randomCVal :: Kind -> IO CVal
 randomCVal k =
   case k of
@@ -486,7 +486,10 @@ randomCVal k =
     KString            -> do l <- randomRIO (0, 100)
                              CString <$> replicateM l (chr <$> randomRIO (0, 255))
     KChar              -> CChar . chr <$> randomRIO (0, 255)
-    KUserSort s _      -> error $ "Unexpected call to randomCVal with user kind: " ++ s
+    KUserSort s es     -> case es of
+                            Just vs@(_:_) -> do i <- randomRIO (0, length vs - 1)
+                                                pure $ CUserSort (Just i, vs !! i)
+                            _             -> error $ "randomCVal: Not supported for completely uninterpreted type: " ++ s
     KList ek           -> do l <- randomRIO (0, 100)
                              CList <$> replicateM l (randomCVal ek)
     KSet  ek           -> do i <- randomIO                           -- regular or complement
