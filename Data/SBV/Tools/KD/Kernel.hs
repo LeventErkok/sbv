@@ -96,7 +96,7 @@ lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> 
 lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = do
         kdSt <- getKDState
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
-  where go kdSt mbStartTime = do qSaturate inputProp
+  where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
                                  query $ checkSatThen cfg kdSt tag Nothing inputProp by nms Nothing Nothing (good mbStartTime)
 
@@ -191,7 +191,7 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                           -- to the proposition we're currently proving. (Hopefully.)
                           -- Remember that we first have to negate, and then skolemize!
                           SatResult res <- satWith cfg $ do
-                                              qSaturate prop
+                                              qSaturateSavingObservables prop
                                               mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
                                               pure $ skolemize (qNot prop)
 

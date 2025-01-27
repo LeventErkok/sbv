@@ -43,7 +43,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        ) where
 
 import Data.SBV
-import Data.SBV.Core.Model (qSaturate)
+import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
@@ -118,7 +118,7 @@ class ChainLemma a steps step | steps -> step where
 
           liftIO $ runSMTWith cfg $ do
 
-             qSaturate result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+             qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
              message cfg $ "Chain " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm ++ "\n"
 
@@ -292,7 +292,7 @@ class Inductive a steps where
 
         runSMTWith cfg $ do
 
-           qSaturate result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
+           qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
            mapM_ (constrain . getProof) helpers
 

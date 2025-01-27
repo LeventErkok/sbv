@@ -19,6 +19,7 @@
 {-# LANGUAGE FlexibleInstances       #-}
 {-# LANGUAGE InstanceSigs            #-}
 {-# LANGUAGE MultiParamTypeClasses   #-}
+{-# LANGUAGE NamedFieldPuns          #-}
 {-# LANGUAGE Rank2Types              #-}
 {-# LANGUAGE ScopedTypeVariables     #-}
 {-# LANGUAGE TypeApplications        #-}
@@ -29,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans -Wno-incomplete-uni-patterns #-}
 
 module Data.SBV.Core.Model (
-    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), QSaturate(..)
+    Mergeable(..), Equality(..), EqSymbolic(..), OrdSymbolic(..), SDivisible(..), SMTDefinable(..), QSaturate, qSaturateSavingObservables
   , Metric(..), minimize, maximize, assertWithPenalty, SIntegral, SFiniteBits(..)
   , ite, iteLazy, sFromIntegral, sShiftLeft, sShiftRight, sRotateLeft, sBarrelRotateLeft, sRotateRight, sBarrelRotateRight, sSignedShiftArithRight, (.^)
   , some
@@ -114,7 +115,7 @@ import Data.SBV.SMT.SMT        (ThmResult, showModel)
 
 import Data.SBV.Utils.Numeric (fpIsEqualObjectH)
 
-import Data.IORef (readIORef)
+import Data.IORef (readIORef, writeIORef)
 import Data.SBV.Utils.Lib
 
 -- Symbolic-Word class instances
@@ -3243,6 +3244,13 @@ instance (KnownNat n, HasKind a, Monad m, SolverContext m, QSaturate m r) => QSa
 -- | Saturate over a unique-exists variable
 instance (HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (ExistsUnique nm a -> r) where
   qSaturate f = qSaturate . f . ExistsUnique =<< internalVariable (kindOf (Proxy @a))
+
+-- | Saturate a predicate, but save/restore observables so they're not messed up.
+qSaturateSavingObservables :: (Monad m, MonadIO m, SolverContext m, QSaturate m a) => a -> m ()
+qSaturateSavingObservables p = do State{rObservables} <- contextState
+                                  curObservables <- liftIO $ readIORef rObservables
+                                  qSaturate p
+                                  liftIO $ writeIORef rObservables curObservables
 
 -- | Equality as a proof method. Allows for
 -- very concise construction of equivalence proofs, which is very typical in
