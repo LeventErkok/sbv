@@ -16,6 +16,7 @@
 module Data.SBV.SMT.Utils (
           SMTLibConverter
         , SMTLibIncConverter
+        , witnessName
         , addAnnotations
         , showTimeoutValue
         , alignDiagnostic
@@ -84,6 +85,11 @@ type SMTLibIncConverter a =  ProgInfo                                    -- ^ Va
                           -> S.Seq (Bool, [(String, String)], SV)        -- ^ extra constraints
                           -> SMTConfig                                   -- ^ configuration
                           -> a
+
+-- | The name of a witness for a type. We should make sure this doesn't conflict any reserved names, but I think the chances of that is
+-- pretty low anyhow.
+witnessName :: String -> String
+witnessName = (++ "_witness")
 
 -- | Create an annotated term
 addAnnotations :: [(String, String)] -> String -> String

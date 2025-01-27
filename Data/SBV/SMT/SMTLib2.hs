@@ -569,7 +569,7 @@ declSort (s, _)
   | s == "RoundingMode" -- built-in-sort; so don't declare.
   = []
 declSort (s, Nothing) = [ "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort." 
-                        , "(declare-fun " ++ s ++ "_witness () " ++ s ++ ")"
+                        , "(declare-fun " ++ witnessName s ++ " () " ++ s ++ ")"
                         ]
 declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
                         , "(define-fun " ++ s ++ "_constrIndex ((x " ++ s ++ ")) Int"
