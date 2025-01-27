@@ -91,6 +91,10 @@ import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
+import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debug
+                            , mergeSExpr, SBVException(..), recordTranscript, TranscriptMsg(..)
+                            , witnessName
+                            )
 
 import Data.SBV.Utils.ExtractIO
 import Data.SBV.Utils.Lib       (qfsToString)
