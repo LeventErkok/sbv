@@ -726,11 +726,11 @@ handleIEEE w consts as var = cvt w
         -- In C, the second argument is returned. (I think, might depend on the architecture, optimizations etc.).
         -- We'll translate it so that we deterministically return +0.
         -- There's really no good choice here.
-        wrapMinMax k a b s = parens cond <+> text "?" <+> zero <+> text ":" <+> s
-          where zero = text $ if k == KFloat then showCFloat 0 else showCDouble 0
-                cond =                   parens (text "FP_ZERO == fpclassify" P.<> parens a)                                      -- a is zero
-                       <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" P.<> parens b)                                      -- b is zero
-                       <+> text "&&" <+> parens (text "signbit" P.<> parens a <+> text "!=" <+> text "signbit" P.<> parens b)       -- a and b differ in sign
+        wrapMinMax k a b s = parens cond <+> text "?" <+> fzero <+> text ":" <+> s
+          where fzero = text $ if k == KFloat then showCFloat 0 else showCDouble 0
+                cond  =                   parens (text "FP_ZERO == fpclassify" P.<> parens a)                                  -- a is zero
+                        <+> text "&&" <+> parens (text "FP_ZERO == fpclassify" P.<> parens b)                                  -- b is zero
+                        <+> text "&&" <+> parens (text "signbit" P.<> parens a <+> text "!=" <+> text "signbit" P.<> parens b) -- a and b differ in sign
 
 ppExpr :: CgConfig -> [(SV, CV)] -> SBVExpr -> Doc -> (Doc, Doc) -> Doc
 ppExpr cfg consts (SBVApp op opArgs) lhs (typ, var)
