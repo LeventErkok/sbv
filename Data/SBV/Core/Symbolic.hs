@@ -2189,9 +2189,6 @@ instance Show SMTLibPgm where
   show (SMTLibPgm _ pgm _) = intercalate "\n" pgm
 
 -- Other Technicalities..
-instance NFData CV where
-  rnf (CV x y) = x `seq` y `seq` ()
-
 instance NFData GeneralizedCV where
   rnf (ExtendedCV e) = e `seq` ()
   rnf (RegularCV  c) = c `seq` ()
@@ -2212,7 +2209,6 @@ instance NFData Result where
                         `seq` rnf inps     `seq` rnf consts  `seq` rnf tbls
                         `seq` rnf uis      `seq` rnf axs     `seq` rnf pgm
                         `seq` rnf cstr     `seq` rnf asserts `seq` rnf outs
-instance NFData Kind         where rnf a          = seq a ()
 instance NFData SV           where rnf a          = seq a ()
 instance NFData SBVExpr      where rnf a          = seq a ()
 instance NFData Quantifier   where rnf a          = seq a ()

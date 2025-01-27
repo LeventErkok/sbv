@@ -9,6 +9,7 @@
 -- Type-level sized floats.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -49,6 +50,8 @@ import LibBF (BigFloat, BFOpts, RoundMode, Status)
 import qualified LibBF as BF
 
 import qualified Data.Generics as G
+
+import Control.DeepSeq(NFData(..))
 
 -- | A floating point value, indexed by its exponent and significand sizes.
 --
@@ -100,6 +103,10 @@ data FP = FP { fpExponentSize    :: Int
              , fpValue           :: BigFloat
              }
              deriving (Eq, G.Data)
+
+-- Not full, but good enough
+instance NFData FP where
+  rnf (FP e s _) = e `seq` s `seq` ()
 
 -- Manually implemented instance as GHC generated a non-IEEE 754 compliant instance.
 -- Note that we cannot pack the values in a tuple and then compare them as that will

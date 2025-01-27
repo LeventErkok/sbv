@@ -12,7 +12,9 @@
 {-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE LambdaCase           #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
@@ -43,6 +45,7 @@ import Data.Proxy
 import Data.Kind
 
 import Data.List (isPrefixOf, intercalate, nub, sort)
+import Control.DeepSeq (NFData)
 
 import Data.Typeable (Typeable)
 import Data.Type.Bool
@@ -52,6 +55,7 @@ import GHC.TypeLits
 
 import Data.SBV.Utils.Lib (isKString)
 
+import GHC.Generics
 import qualified Data.Generics.Uniplate.Data as G
 
 -- | Kind of symbolic value
@@ -72,7 +76,7 @@ data Kind = KBool
           | KRational
           | KEither Kind Kind
           | KArray  Kind Kind
-          deriving (Eq, Ord, G.Data)
+          deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- Expand such that the resulting list has all the kinds we touch
 expandKinds :: Kind -> [Kind]

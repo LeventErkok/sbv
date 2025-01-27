@@ -9,7 +9,9 @@
 -- Algebraic reals in Haskell.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleInstances  #-}
 
 {-# OPTIONS_GHC -Wall -Werror -fno-warn-orphans #-}
@@ -30,6 +32,7 @@ module Data.SBV.Core.AlgReals (
            )
    where
 
+import Control.DeepSeq (NFData)
 import Data.Char       (isDigit)
 
 import Data.List       (sortBy, isPrefixOf, partition)
@@ -43,11 +46,12 @@ import Numeric (readSigned, readFloat)
 import Text.Read(readMaybe)
 
 import qualified Data.Generics as G
+import GHC.Generics
 
 -- | Is the endpoint included in the interval?
 data RealPoint a = OpenPoint   a -- ^ open: i.e., doesn't include the point
                  | ClosedPoint a -- ^ closed: i.e., includes the point
-                 deriving (Show, Eq, Ord, G.Data)
+                 deriving (Show, Eq, Ord, G.Data, NFData, Generic)
 
 -- | Extract the point associated with the open-closed point
 realPoint :: RealPoint a -> a
@@ -60,7 +64,7 @@ realPoint (ClosedPoint a) = a
 data AlgReal = AlgRational Bool Rational                             -- ^ bool says it's exact (i.e., SMT-solver did not return it with ? at the end.)
              | AlgPolyRoot (Integer,  AlgRealPoly) (Maybe String)    -- ^ which root of this polynomial and an approximate decimal representation with given precision, if available
              | AlgInterval (RealPoint Rational) (RealPoint Rational) -- ^ interval, with low and high bounds
-             deriving G.Data
+             deriving (G.Data, Generic, NFData)
 
 -- | Check whether a given argument is an exact rational
 isExactRational :: AlgReal -> Bool
@@ -71,7 +75,7 @@ isExactRational _                    = False
 -- coefficient list. For instance, "5x^3 + 2x - 5" is
 -- represented as [(5, 3), (2, 1), (-5, 0)]
 newtype AlgRealPoly = AlgRealPoly [(Integer, Integer)]
-                   deriving (Eq, Ord, G.Data)
+                   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Construct a poly-root real with a given approximate value (either as a decimal, or polynomial-root)
 mkPolyReal :: Either (Bool, String) (Integer, [(Integer, Integer)]) -> AlgReal
