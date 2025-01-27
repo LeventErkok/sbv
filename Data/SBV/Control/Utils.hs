@@ -882,7 +882,7 @@ defaultKindedValue k = CV k $ cvt k
         cvt (KArray  _  k2)  = CArray $ ArrayModel [] (cvt k2)
 
         -- Tricky case of uninterpreted
-        uninterp _ (Just (c:_)) = CUserSort (Just 1, c)
+        uninterp _ (Just (c:_)) = CUserSort (Just 0, c)
         uninterp _ (Just [])    = error "defaultKindedValue: enumerated kind with no constructors!"
 
         -- A completely uninterpreted sort, i.e., no elements. Return the witness element for it.
