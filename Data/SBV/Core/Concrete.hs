@@ -9,6 +9,8 @@
 -- Operations on concrete values
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
 {-# LANGUAGE DeriveDataTypeable  #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -19,6 +21,8 @@
 module Data.SBV.Core.Concrete where
 
 import Control.Monad (replicateM)
+
+import Control.DeepSeq (NFData)
 
 import Data.Bits
 import System.Random (randomIO, randomRIO)
@@ -39,10 +43,12 @@ import qualified Data.Set as Set
 
 import qualified Data.Generics as G
 
+import GHC.Generics
+
 -- | A 'RCSet' is either a regular set or a set given by its complement from the corresponding universal set.
 data RCSet a = RegularSet    (Set a)
              | ComplementSet (Set a)
-             deriving G.Data
+             deriving (NFData, G.Data, Generic)
 
 -- | Show instance. Regular sets are shown as usual.
 -- Complements are shown "U -" notation.
@@ -78,7 +84,7 @@ instance HasKind a => HasKind (RCSet a) where
 -- That is, we store the history of the writes. The earlier a pair is in the list, the "later" it
 -- is done, i.e., it takes precedence over the latter entries.
 data ArrayModel a b = ArrayModel [(a, b)] b
-                     deriving G.Data
+                     deriving (G.Data, Generic, NFData)
 
 -- | The kind of an ArrayModel
 instance (HasKind a, HasKind b) => HasKind (ArrayModel a b) where
@@ -102,7 +108,7 @@ data CVal = CAlgReal  !AlgReal                -- ^ Algebraic real
           | CMaybe    !(Maybe CVal)           -- ^ Maybe
           | CEither   !(Either CVal CVal)     -- ^ Disjoint union
           | CArray    !(ArrayModel CVal CVal) -- ^ Arrays are backed by look-up tables concretely
-          deriving G.Data
+          deriving (G.Data, Generic, NFData)
 
 -- | Assign a rank to constant values, this is structural and helps with ordering
 cvRank :: CVal -> Int
@@ -191,7 +197,7 @@ instance Ord CVal where
 data CV = CV { _cvKind  :: !Kind
              , cvVal    :: !CVal
              }
-             deriving (Eq, Ord, G.Data)
+             deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | A generalized CV allows for expressions involving infinite and epsilon values/intervals Used in optimization problems.
 data GeneralizedCV = ExtendedCV ExtCV
