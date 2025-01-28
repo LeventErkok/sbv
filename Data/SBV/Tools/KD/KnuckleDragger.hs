@@ -642,6 +642,7 @@ instance   ( KnownSymbol na, SymVal a
 -- | Instantiating a proof at different types of arguments. This is necessarily done using
 -- dynamics, hand has a cost of not being applicable.
 class Instantiatable nm a where
+  -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
   apply :: nm -> Proof -> a -> Proof
 
 -- | Single parameter
