@@ -20,6 +20,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -29,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof, Instantiatable(..)
+         Proposition, Proof, Instantiatable(..), Inst(..)
        , axiom
        , lemma,        lemmaWith
        , theorem,      theoremWith
@@ -55,12 +56,14 @@ import Control.Monad.Trans (liftIO)
 
 import qualified Data.SBV.List as SL
 
-import Data.List (intercalate)
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.Maybe (catMaybes)
+
 import Data.Proxy
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 
 import Data.SBV.Utils.TDiff
-import Data.Maybe (catMaybes)
 
 import Data.Dynamic
 
@@ -639,115 +642,75 @@ instance   ( KnownSymbol na, SymVal a
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c d (k SL..: ks))
               }
 
+-- | Instantiation for a universally quantified variable
+newtype Inst (nm :: Symbol) a = Inst (SBV a)
+
+instance KnownSymbol nm => Show (Inst nm a) where
+   show (Inst a) = symbolVal (Proxy @nm) ++ " |-> " ++ show a
+
 -- | Instantiating a proof at different types of arguments. This is necessarily done using
 -- dynamics, hand has a cost of not being applicable.
-class Instantiatable nm a where
+class Instantiatable a where
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
-  apply :: nm -> Proof -> a -> Proof
+  apply :: Proof -> a -> Proof
 
 -- | Single parameter
-instance (KnownSymbol nm1, HasKind a, Typeable a) => Instantiatable (Forall nm1 a) (SBV a) where
-  apply _quant p@Proof{getProp, proofName} a =
-       let die = cantInstantiate p (kindOf (Proxy @a))
-       in case fromDynamic getProp :: Maybe (Forall nm1 a -> SBool) of
-            Nothing -> die
-            Just f  -> let result = f (Forall a)
-                           nm     = proofName ++ " @[" ++ intercalate ", " [show (symbolVal (Proxy @nm1), a)] ++ "]"
-                       in p { getProof  = label nm result
-                            , getProp   = toDyn result
-                            , proofName = nm
-                            }
+instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
+  apply = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
 
 -- | Two parameters
-instance ( KnownSymbol nm1, KnownSymbol nm2
-         , HasKind a, Typeable a
-         , HasKind b, Typeable b)
-         => Instantiatable (Forall nm1 a, Forall nm2 b) (SBV a, SBV b) where
-  apply _quant p@Proof{getProp, proofName} (a, b) =
-       let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b)]
-       in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> SBool) of
-            Nothing -> die
-            Just f  -> let result = f (Forall a) (Forall b)
-                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                           , show (symbolVal (Proxy @nm2), b)] ++ "]"
-                       in p { getProof  = label nm result
-                            , getProp   = toDyn result
-                            , proofName = nm
-                            }
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         ) => Instantiatable (Inst na a, Inst nb b) where
+  apply = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
 
 -- | Three parameters
-instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3
-         , HasKind a, Typeable a
-         , HasKind b, Typeable b
-         , HasKind c, Typeable c)
-         => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c) (SBV a, SBV b, SBV c) where
-  apply _quant p@Proof{getProp, proofName} (a, b, c) =
-       let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c)]
-       in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> SBool) of
-            Nothing -> die
-            Just f  -> let result = f (Forall a) (Forall b) (Forall c)
-                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                           , show (symbolVal (Proxy @nm2), b)
-                                                                           , show (symbolVal (Proxy @nm3), c)] ++ "]"
-                       in p { getProof  = label nm result
-                            , getProp   = toDyn result
-                            , proofName = nm
-                            }
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
 
 -- | Four parameters
-instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3, KnownSymbol nm4
-         , HasKind a, Typeable a
-         , HasKind b, Typeable b
-         , HasKind c, Typeable c
-         , HasKind d, Typeable d)
-         => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c, Forall nm4 d) (SBV a, SBV b, SBV c, SBV d) where
-  apply _quant p@Proof{getProp, proofName} (a, b, c, d) =
-       let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d)]
-       in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> Forall nm4 d -> SBool) of
-            Nothing -> die
-            Just f  -> let result = f (Forall a) (Forall b) (Forall c) (Forall d)
-                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                           , show (symbolVal (Proxy @nm2), b)
-                                                                           , show (symbolVal (Proxy @nm3), c)
-                                                                           , show (symbolVal (Proxy @nm4), d)
-                                                                           ] ++ "]"
-                       in p { getProof  = label nm result
-                            , getProp   = toDyn result
-                            , proofName = nm
-                            }
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
 
 -- | Five parameters
-instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3, KnownSymbol nm4, KnownSymbol nm5
-         , HasKind a, Typeable a
-         , HasKind b, Typeable b
-         , HasKind c, Typeable c
-         , HasKind d, Typeable d
-         , HasKind e, Typeable e)
-         => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c, Forall nm4 d, Forall nm5 e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
-  apply _quant p@Proof{getProp, proofName} (a, b, c, d, e) =
-       let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e)]
-       in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> Forall nm4 d -> Forall nm5 e -> SBool) of
-            Nothing -> die
-            Just f  -> let result = f (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                           , show (symbolVal (Proxy @nm2), b)
-                                                                           , show (symbolVal (Proxy @nm3), c)
-                                                                           , show (symbolVal (Proxy @nm4), d)
-                                                                           , show (symbolVal (Proxy @nm5), e)
-                                                                           ] ++ "]"
-                       in p { getProof  = label nm result
-                            , getProp   = toDyn result
-                            , proofName = nm
-                            }
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         , KnownSymbol ne, HasKind e, Typeable e
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
-cantInstantiate :: Proof -> Kind -> a
-cantInstantiate Proof{getProp, proofName} k = error $ unlines [ "apply: Cannot instantiate proof:"
-                                                              , "  Name: " ++ proofName
-                                                              , "  Type: " ++ trim (show getProp)
-                                                              , "  At  : " ++ show k
-                                                              ]
-   where -- dynamic puts funky <</>> at the beginning and end; trim it:
-         trim  ('<':'<':s) = reverse (trimE (reverse s))
-         trim  s           = s
-         trimE ('>':'>':s) = reverse s
-         trimE s           = s
+instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
+instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
+                                                 Nothing -> cantInstantiate
+                                                 Just f  -> let result = f `ap` a
+                                                                nm     = proofName ++ " @ " ++ paren sha
+                                                            in p { getProof  = label nm result
+                                                                 , getProp   = toDyn result
+                                                                 , proofName = nm
+                                                                 }
+ where sha = show a
+       cantInstantiate = error $ unlines [ "apply: Cannot instantiate proof:"
+                                         , "   Name: " ++ proofName
+                                         , "   Type: " ++ trim (show getProp)
+                                         , "   At  : " ++ sha
+                                         ]
+
+       -- dynamic puts funky <</>> at the beginning and end; trim it:
+       trim  ('<':'<':s) = reverse (trimE (reverse s))
+       trim  s           = s
+       trimE ('>':'>':s) = s
+       trimE s           = s
+
+       -- Add parens if necessary
+       paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
+               | all (not . isSpace) s                    = s
+               | True                                     = '(' : s ++ ")"

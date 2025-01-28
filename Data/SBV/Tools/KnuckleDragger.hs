@@ -36,7 +36,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , inductiveTheorem, inductiveTheoremWith
 
        -- * Creating instances of proofs
-       , apply
+       , apply, Inst(..)
 
        -- * Faking proofs
        , sorry
