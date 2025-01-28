@@ -642,18 +642,19 @@ instance   ( KnownSymbol na, SymVal a
 -- | Instantiating a proof at different types of arguments. This is necessarily done using
 -- dynamics, hand has a cost of not being applicable.
 class Instantiatable nm a where
-  instantiate :: nm -> Proof -> a -> Proof
+  apply :: nm -> Proof -> a -> Proof
 
 -- | Single parameter
 instance (KnownSymbol nm1, HasKind a, Typeable a) => Instantiatable (Forall nm1 a) (SBV a) where
-  instantiate _quant p@Proof{getProp, proofName} a =
+  apply _quant p@Proof{getProp, proofName} a =
        let die = cantInstantiate p (kindOf (Proxy @a))
        in case fromDynamic getProp :: Maybe (Forall nm1 a -> SBool) of
             Nothing -> die
             Just f  -> let result = f (Forall a)
-                       in p { getProof  = result
+                           nm     = proofName ++ " @[" ++ intercalate ", " [show (symbolVal (Proxy @nm1), a)] ++ "]"
+                       in p { getProof  = label nm result
                             , getProp   = toDyn result
-                            , proofName = proofName ++ " @[" ++ intercalate ", " [show (symbolVal (Proxy @nm1), a)] ++ "]"
+                            , proofName = nm
                             }
 
 -- | Two parameters
@@ -661,15 +662,16 @@ instance ( KnownSymbol nm1, KnownSymbol nm2
          , HasKind a, Typeable a
          , HasKind b, Typeable b)
          => Instantiatable (Forall nm1 a, Forall nm2 b) (SBV a, SBV b) where
-  instantiate _quant p@Proof{getProp, proofName} (a, b) =
+  apply _quant p@Proof{getProp, proofName} (a, b) =
        let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b)]
        in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> SBool) of
             Nothing -> die
             Just f  -> let result = f (Forall a) (Forall b)
-                       in p { getProof  = result
+                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
+                                                                           , show (symbolVal (Proxy @nm2), b)] ++ "]"
+                       in p { getProof  = label nm result
                             , getProp   = toDyn result
-                            , proofName = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                                 , show (symbolVal (Proxy @nm2), b)] ++ "]"
+                            , proofName = nm
                             }
 
 -- | Three parameters
@@ -678,16 +680,17 @@ instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3
          , HasKind b, Typeable b
          , HasKind c, Typeable c)
          => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c) (SBV a, SBV b, SBV c) where
-  instantiate _quant p@Proof{getProp, proofName} (a, b, c) =
+  apply _quant p@Proof{getProp, proofName} (a, b, c) =
        let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c)]
        in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> SBool) of
             Nothing -> die
             Just f  -> let result = f (Forall a) (Forall b) (Forall c)
-                       in p { getProof  = result
+                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
+                                                                           , show (symbolVal (Proxy @nm2), b)
+                                                                           , show (symbolVal (Proxy @nm3), c)] ++ "]"
+                       in p { getProof  = label nm result
                             , getProp   = toDyn result
-                            , proofName = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                                 , show (symbolVal (Proxy @nm2), b)
-                                                                                 , show (symbolVal (Proxy @nm3), c)] ++ "]"
+                            , proofName = nm
                             }
 
 -- | Four parameters
@@ -697,18 +700,19 @@ instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3, KnownSymbol nm4
          , HasKind c, Typeable c
          , HasKind d, Typeable d)
          => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c, Forall nm4 d) (SBV a, SBV b, SBV c, SBV d) where
-  instantiate _quant p@Proof{getProp, proofName} (a, b, c, d) =
+  apply _quant p@Proof{getProp, proofName} (a, b, c, d) =
        let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d)]
        in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> Forall nm4 d -> SBool) of
             Nothing -> die
             Just f  -> let result = f (Forall a) (Forall b) (Forall c) (Forall d)
-                       in p { getProof  = result
+                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
+                                                                           , show (symbolVal (Proxy @nm2), b)
+                                                                           , show (symbolVal (Proxy @nm3), c)
+                                                                           , show (symbolVal (Proxy @nm4), d)
+                                                                           ] ++ "]"
+                       in p { getProof  = label nm result
                             , getProp   = toDyn result
-                            , proofName = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                                 , show (symbolVal (Proxy @nm2), b)
-                                                                                 , show (symbolVal (Proxy @nm3), c)
-                                                                                 , show (symbolVal (Proxy @nm4), d)
-                                                                                 ] ++ "]"
+                            , proofName = nm
                             }
 
 -- | Five parameters
@@ -719,23 +723,24 @@ instance ( KnownSymbol nm1, KnownSymbol nm2, KnownSymbol nm3, KnownSymbol nm4, K
          , HasKind d, Typeable d
          , HasKind e, Typeable e)
          => Instantiatable (Forall nm1 a, Forall nm2 b, Forall nm3 c, Forall nm4 d, Forall nm5 e) (SBV a, SBV b, SBV c, SBV d, SBV e) where
-  instantiate _quant p@Proof{getProp, proofName} (a, b, c, d, e) =
+  apply _quant p@Proof{getProp, proofName} (a, b, c, d, e) =
        let die = cantInstantiate p $ KTuple [kindOf (Proxy @a), kindOf (Proxy @b), kindOf (Proxy @c), kindOf (Proxy @d), kindOf (Proxy @e)]
        in case fromDynamic getProp :: Maybe (Forall nm1 a -> Forall nm2 b -> Forall nm3 c -> Forall nm4 d -> Forall nm5 e -> SBool) of
             Nothing -> die
             Just f  -> let result = f (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
-                       in p { getProof  = result
+                           nm     = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
+                                                                           , show (symbolVal (Proxy @nm2), b)
+                                                                           , show (symbolVal (Proxy @nm3), c)
+                                                                           , show (symbolVal (Proxy @nm4), d)
+                                                                           , show (symbolVal (Proxy @nm5), e)
+                                                                           ] ++ "]"
+                       in p { getProof  = label nm result
                             , getProp   = toDyn result
-                            , proofName = proofName ++ " @[" ++ intercalate ", " [ show (symbolVal (Proxy @nm1), a)
-                                                                                 , show (symbolVal (Proxy @nm2), b)
-                                                                                 , show (symbolVal (Proxy @nm3), c)
-                                                                                 , show (symbolVal (Proxy @nm4), d)
-                                                                                 , show (symbolVal (Proxy @nm5), e)
-                                                                                 ] ++ "]"
+                            , proofName = nm
                             }
 
 cantInstantiate :: Proof -> Kind -> a
-cantInstantiate Proof{getProp, proofName} k = error $ unlines [ "Cannot instantiate proof:"
+cantInstantiate Proof{getProp, proofName} k = error $ unlines [ "apply: Cannot instantiate proof:"
                                                               , "  Name: " ++ proofName
                                                               , "  Type: " ++ trim (show getProp)
                                                               , "  At  : " ++ show k
