@@ -10,10 +10,12 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE ConstraintKinds      #-}
+{-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
 {-# LANGUAGE NamedFieldPuns       #-}
 {-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeAbstractions     #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -47,6 +49,8 @@ import Data.SBV.Tools.KD.Utils
 import Data.Time (NominalDiffTime)
 import Data.SBV.Utils.TDiff
 
+import Data.Dynamic
+
 -- | A proposition is something SBV is capable of proving/disproving in KnuckleDragger.
 type Proposition a = ( QNot a
                      , QuantifiedBool a
@@ -54,6 +58,7 @@ type Proposition a = ( QNot a
                      , Skolemize (NegatesTo a)
                      , Satisfiable (Symbolic (SkolemsTo (NegatesTo a)))
                      , Constraint  Symbolic  (SkolemsTo (NegatesTo a))
+                     , Typeable a
                      )
 
 -- | Accept the given definition as a fact. Usually used to introduce definitial axioms,
@@ -71,6 +76,7 @@ internalAxiom :: Proposition a => String -> a -> Proof
 internalAxiom nm p = Proof { rootOfTrust = None
                            , isUserAxiom = False
                            , getProof    = label nm (quantifiedBool p)
+                           , getProp     = toDyn p
                            , proofName   = nm
                            }
 
@@ -81,6 +87,7 @@ sorry :: Proof
 sorry = Proof { rootOfTrust = Self
               , isUserAxiom = False
               , getProof    = label "sorry" (quantifiedBool p)
+              , getProp     = toDyn p
               , proofName   = "sorry"
               }
   where -- ideally, I'd rather just use 
@@ -89,7 +96,7 @@ sorry = Proof { rootOfTrust = Self
         -- doesn't contain the actual contents, as SBV determines unsatisfiability
         -- itself. By using the following proposition (which is easy for the backend
         -- solver to determine as false, we avoid the constant folding.
-        p (Forall (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
+        p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
@@ -106,6 +113,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
                             pure Proof { rootOfTrust = ros
                                        , isUserAxiom = False
                                        , getProof    = label nm (quantifiedBool inputProp)
+                                       , getProp     = toDyn inputProp
                                        , proofName   = nm
                                        }
           where (ros, modulo) = calculateRootOfTrust nm by

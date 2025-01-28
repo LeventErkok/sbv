@@ -20,6 +20,7 @@
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -29,7 +30,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof
+         Proposition, Proof, Instantiatable(..), Inst(..)
        , axiom
        , lemma,        lemmaWith
        , theorem,      theoremWith
@@ -55,11 +56,16 @@ import Control.Monad.Trans (liftIO)
 
 import qualified Data.SBV.List as SL
 
+import Data.Char (isSpace)
+import Data.List (isPrefixOf, isSuffixOf)
+import Data.Maybe (catMaybes)
+
 import Data.Proxy
-import GHC.TypeLits (KnownSymbol, symbolVal)
+import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 
 import Data.SBV.Utils.TDiff
-import Data.Maybe (catMaybes)
+
+import Data.Dynamic
 
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
@@ -153,6 +159,7 @@ class ChainLemma a steps step | steps -> step where
                        pure Proof { rootOfTrust = ros
                                   , isUserAxiom = False
                                   , getProof    = label nm (quantifiedBool result)
+                                  , getProp     = toDyn result
                                   , proofName   = nm
                                   }
 
@@ -340,6 +347,7 @@ class Inductive a steps where
               pure $ Proof { rootOfTrust = ros
                            , isUserAxiom = False
                            , getProof    = label nm $ quantifiedBool result
+                           , getProp     = toDyn result
                            , proofName   = nm
                            }
 
@@ -633,3 +641,76 @@ instance   ( KnownSymbol na, SymVal a
               , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate a b c d (k SL..: ks))
               }
+
+-- | Instantiation for a universally quantified variable
+newtype Inst (nm :: Symbol) a = Inst (SBV a)
+
+instance KnownSymbol nm => Show (Inst nm a) where
+   show (Inst a) = symbolVal (Proxy @nm) ++ " |-> " ++ show a
+
+-- | Instantiating a proof at different types of arguments. This is necessarily done using
+-- dynamics, hand has a cost of not being applicable.
+class Instantiatable a where
+  -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
+  apply :: Proof -> a -> Proof
+
+-- | Single parameter
+instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
+  apply = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
+
+-- | Two parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         ) => Instantiatable (Inst na a, Inst nb b) where
+  apply = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
+
+-- | Three parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
+
+-- | Four parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
+
+-- | Five parameters
+instance ( KnownSymbol na, HasKind a, Typeable a
+         , KnownSymbol nb, HasKind b, Typeable b
+         , KnownSymbol nc, HasKind c, Typeable c
+         , KnownSymbol nd, HasKind d, Typeable d
+         , KnownSymbol ne, HasKind e, Typeable e
+         ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
+  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
+
+instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
+instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
+                                                 Nothing -> cantInstantiate
+                                                 Just f  -> let result = f `ap` a
+                                                                nm     = proofName ++ " @ " ++ paren sha
+                                                            in p { getProof  = label nm result
+                                                                 , getProp   = toDyn result
+                                                                 , proofName = nm
+                                                                 }
+ where sha = show a
+       cantInstantiate = error $ unlines [ "apply: Cannot instantiate proof:"
+                                         , "   Name: " ++ proofName
+                                         , "   Type: " ++ trim (show getProp)
+                                         , "   At  : " ++ sha
+                                         ]
+
+       -- dynamic puts funky <</>> at the beginning and end; trim it:
+       trim  ('<':'<':s) = reverse (trimE (reverse s))
+       trim  s           = s
+       trimE ('>':'>':s) = s
+       trimE s           = s
+
+       -- Add parens if necessary
+       paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
+               | all (not . isSpace) s                    = s
+               | True                                     = '(' : s ++ ")"
