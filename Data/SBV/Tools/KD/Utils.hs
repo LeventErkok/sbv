@@ -36,11 +36,12 @@ import Data.SBV.Core.Symbolic  (SMTConfig, KDOptions(..))
 import Data.SBV.Provers.Prover (defaultSMTCfg, SMTConfig(..))
 
 import Data.SBV.Utils.TDiff (showTDiff, timeIf)
-import Control.DeepSeq (NFData)
+import Control.DeepSeq (NFData(rnf))
 
 import Data.IORef
 
 import GHC.Generics
+import Data.Dynamic
 
 -- | Various statistics we collect
 data KDStats = KDStats { noOfCheckSats :: Int
@@ -127,11 +128,20 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof = Proof { rootOfTrust :: RootOfTrust -- ^ Root of trust, described above.
-                   , isUserAxiom :: Bool        -- ^ Was this an axiom given by the user?
-                   , getProof    :: SBool       -- ^ Get the underlying boolean
-                   , proofName   :: String      -- ^ User given name
-                   } deriving (NFData, Generic)
+data Proof = Proof { rootOfTrust :: RootOfTrust  -- ^ Root of trust, described above.
+                   , isUserAxiom :: Bool         -- ^ Was this an axiom given by the user?
+                   , getProof    :: SBool        -- ^ Get the underlying boolean
+                   , getProp     :: Dynamic      -- ^ The actual proposition
+                   , proofName   :: String       -- ^ User given name
+                   }
+
+-- | NFData ignores the getProp field
+instance NFData Proof where
+  rnf (Proof rootOfTrust isUserAxiom getProof _getProp proofName) =     rnf rootOfTrust
+                                                                  `seq` rnf isUserAxiom
+                                                                  `seq` rnf getProof
+                                                                  `seq` rnf proofName
+                                                                  `seq` ()
 
 -- | Show instance for 'Proof'
 instance Show Proof where
