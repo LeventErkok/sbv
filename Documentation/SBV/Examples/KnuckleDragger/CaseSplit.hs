@@ -68,35 +68,35 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    case0 <- chainLemma "case_n_mod_3_eq_0"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n)
                        (\n -> n `sEMod` 3 .== 0 |- let w = some "witness" $ \k -> n .== 3*k
-                                                   in s n <: s (3*w)                 ? [trivial]
-                                                          =: s (3*w)                 ? [trivial]
-                                                          =: 2*(3*w)*(3*w) + 3*w + 1 ? [trivial]
-                                                          =: 18*w*w + 3*w + 1        ? [trivial]
-                                                          =: 3*(6*w*w + w) + 1       ? [trivial]
+                                                   in s n <: s (3*w)                 ? smt
+                                                          =: s (3*w)                 ? smt
+                                                          =: 2*(3*w)*(3*w) + 3*w + 1 ? smt
+                                                          =: 18*w*w + 3*w + 1        ? smt
+                                                          =: 3*(6*w*w + w) + 1       ? smt
                                                           =: qed)
 
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n)
                        (\n -> n `sEMod` 3 .== 1 |- let w = some "witness" $ \k -> n .== 3*k + 1
-                                                   in s n <: s (3*w+1)                                 ? [trivial]
-                                                          =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1           ? [trivial]
-                                                          =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1 ? [trivial]
-                                                          =: 18*w*w + 12*w + 2 + 3*w + 2               ? [trivial]
-                                                          =: 18*w*w + 15*w + 4                         ? [trivial]
-                                                          =: 3*(6*w*w + 5*w + 1) + 1                   ? [trivial]
+                                                   in s n <: s (3*w+1)                                 ? smt
+                                                          =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1           ? smt
+                                                          =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1 ? smt
+                                                          =: 18*w*w + 12*w + 2 + 3*w + 2               ? smt
+                                                          =: 18*w*w + 15*w + 4                         ? smt
+                                                          =: 3*(6*w*w + 5*w + 1) + 1                   ? smt
                                                           =: qed)
 
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n)
                        (\n -> n `sEMod` 3 .== 2 |- let w = some "witness" $ \k -> n .== 3*k + 2
-                                                   in s n <: s (3*w+2)                                 ? [trivial]
-                                                          =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1           ? [trivial]
-                                                          =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1 ? [trivial]
-                                                          =: 18*w*w + 24*w + 8 + 3*w + 3               ? [trivial]
-                                                          =: 18*w*w + 27*w + 11                        ? [trivial]
-                                                          =: 3*(6*w*w + 9*w + 3) + 2                   ? [trivial]
+                                                   in s n <: s (3*w+2)                                 ? smt
+                                                          =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1           ? smt
+                                                          =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1 ? smt
+                                                          =: 18*w*w + 24*w + 8 + 3*w + 3               ? smt
+                                                          =: 18*w*w + 27*w + 11                        ? smt
+                                                          =: 3*(6*w*w + 9*w + 3) + 2                   ? smt
                                                           =: qed)
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so

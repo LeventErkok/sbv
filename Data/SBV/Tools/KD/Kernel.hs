@@ -25,7 +25,7 @@ module Data.SBV.Tools.KD.Kernel (
        , lemma,   lemmaWith,   lemmaGen
        , theorem, theoremWith
        , InductionTactic(..)
-       , sorry, trivial
+       , sorry, smt
        , checkSatThen
        ) where
 
@@ -99,14 +99,15 @@ sorry = Proof { rootOfTrust = Self
         p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | A manifestly true theorem. Not useful by itself, but it acts as a place holder in chain-proofs where
--- we're essentially telling SBV to prove the step without anything extra.
-trivial :: Proof
-trivial = Proof { rootOfTrust = None
-                , isUserAxiom = False
-                , getProof    = label "trivial" p
-                , getProp     = toDyn p
-                , proofName   = "trivial"
-                }
+-- we're essentially telling SBV to prove the step without anything extra. The name is picked as smt to indicate the solver handles it.
+smt :: [Proof]
+smt = [Proof { rootOfTrust = None
+             , isUserAxiom = False
+             , getProof    = label "trivial" p
+             , getProp     = toDyn p
+             , proofName   = "smt"
+             }
+      ]
   where p = sTrue
 
 -- | Helper to generate lemma/theorem statements.

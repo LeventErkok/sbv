@@ -35,11 +35,14 @@ module Data.SBV.Tools.KnuckleDragger (
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
 
+       -- * Proof by smt
+       , smt
+
        -- * Creating instances of proofs
        , at, Inst(..)
 
        -- * Faking proofs
-       , sorry, trivial
+       , sorry
 
        -- * Running KnuckleDragger proofs
        , KD, runKD, runKDWith, use

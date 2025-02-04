@@ -39,7 +39,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductAlt1, inductAlt2
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
-       , sorry, trivial
+       , sorry, smt
        , KD, runKD, runKDWith, use
        , (|-), (<:), (=:), (?), qed
        ) where
