@@ -712,9 +712,18 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | all (not . isSpace) s                    = s
                | True                                     = '(' : s ++ ")"
 
-(?) :: a -> [Proof] -> ([a], [Proof])
-a ? b = ([a], b)
-infixl 2 ?
+-- | Class capturing giving a proof-step helper
+class ProofHint a b where
+  (?) :: a -> b -> ([a], [Proof])
+  infixl 2 ?
+
+-- | Giving just one proof as a helper
+instance ProofHint a Proof where
+  a ? b = ([a], [b])
+
+-- | Giving a bunch of proofs as a helper
+instance ProofHint a [Proof] where
+  a ? b = ([a], b)
 
 -- | Start reasoning for the calculational proof.
 (<:) :: a -> [([a], [Proof])] -> [([a], [Proof])]
