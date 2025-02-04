@@ -25,7 +25,7 @@ module Data.SBV.Tools.KD.Kernel (
        , lemma,   lemmaWith,   lemmaGen
        , theorem, theoremWith
        , InductionTactic(..)
-       , sorry
+       , sorry, trivial
        , checkSatThen
        ) where
 
@@ -97,6 +97,17 @@ sorry = Proof { rootOfTrust = Self
         -- itself. By using the following proposition (which is easy for the backend
         -- solver to determine as false, we avoid the constant folding.
         p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
+
+-- | A manifestly true theorem. Not useful by itself, but it acts as a place holder in chain-proofs where
+-- we're essentially telling SBV to prove the step without anything extra.
+trivial :: Proof
+trivial = Proof { rootOfTrust = None
+                , isUserAxiom = False
+                , getProof    = label "trivial" p
+                , getProp     = toDyn p
+                , proofName   = "trivial"
+                }
+  where p = sTrue
 
 -- | Helper to generate lemma/theorem statements.
 lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof

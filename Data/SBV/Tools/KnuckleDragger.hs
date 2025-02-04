@@ -36,13 +36,16 @@ module Data.SBV.Tools.KnuckleDragger (
        , inductiveTheorem, inductiveTheoremWith
 
        -- * Creating instances of proofs
-       , apply, Inst(..)
+       , at, Inst(..)
 
        -- * Faking proofs
-       , sorry
+       , sorry, trivial
 
        -- * Running KnuckleDragger proofs
        , KD, runKD, runKDWith, use
+
+       -- * Calculational proof combinators
+       , (|-), (<:), (=:), (?), qed
        ) where
 
 import Data.SBV.Tools.KD.KnuckleDragger

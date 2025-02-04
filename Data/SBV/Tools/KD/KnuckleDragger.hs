@@ -39,8 +39,9 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductAlt1, inductAlt2
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
-       , sorry
+       , sorry, trivial
        , KD, runKD, runKDWith, use
+       , (|-), (<:), (=:), (?), qed
        ) where
 
 import Data.SBV
@@ -111,7 +112,7 @@ class ChainLemma a steps step | steps -> step where
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL chainSteps #-}
-  chainSteps :: a -> steps -> Symbolic (SBool, (SBool, [SBool]))
+  chainSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
 
   chainLemma   nm p steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps by
   chainTheorem nm p steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps by
@@ -119,7 +120,7 @@ class ChainLemma a steps step | steps -> step where
   chainTheoremWith           = chainGeneric True
 
   chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps helpers = do
+  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps _helpers = do
           kdSt <- getKDState
 
           liftIO $ runSMTWith cfg $ do
@@ -130,10 +131,13 @@ class ChainLemma a steps step | steps -> step where
 
              mbStartTime <- getTimeStampIf measureTime
 
-             let (ros, modulo) = calculateRootOfTrust nm helpers
+             (goal, (intros, proofSteps)) <- chainSteps result steps
+
+             let stepHelpers   = concatMap fst proofSteps
+                 (ros, modulo) = calculateRootOfTrust nm stepHelpers
                  finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
-             (goal, (intros, proofSteps)) <- chainSteps result steps
+             mapM_ (qSaturateSavingObservables . getProof) stepHelpers
 
              -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
              when (null proofSteps) $
@@ -142,54 +146,57 @@ class ChainLemma a steps step | steps -> step where
                                   , "**   Was given less than two."
                                   ]
 
-             mapM_ (constrain . getProof) helpers
+             -- mapM_ (constrain . getProof) helpers
 
-             let go :: Int -> SBool -> [SBool] -> Query Proof
+             let go :: Int -> SBool -> [([Proof], SBool)] -> Query Proof
                  go _ accum [] = do
                      queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                     checkSatThen cfg kdSt "Result" (Just (intros .=> accum))
-                                                    goal
-                                                    helpers
-                                                    ["", ""]
-                                                    (Just [nm, "Result"])
-                                                    Nothing $ \d -> do
+                     -- mapM_ (constrain . getProof) helpers
+                     checkSatThen cfg kdSt "Result" True
+                                  (Just (intros .=> accum))
+                                  goal
+                                  [] --helpers
+                                  ["", ""]
+                                  (Just [nm, "Result"])
+                                  Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
+                                                     finish d $ catMaybes [mbElapsed]
+                                                     pure Proof { rootOfTrust = ros
+                                                                , isUserAxiom = False
+                                                                , getProof    = label nm (quantifiedBool result)
+                                                                , getProp     = toDyn result
+                                                                , proofName   = nm
+                                                                }
 
-                       mbElapsed <- getElapsedTime mbStartTime
-                       finish d $ catMaybes [mbElapsed]
-                       pure Proof { rootOfTrust = ros
-                                  , isUserAxiom = False
-                                  , getProof    = label nm (quantifiedBool result)
-                                  , getProp     = toDyn result
-                                  , proofName   = nm
-                                  }
-
-                 go i accum (s:ss) = do
+                 go i accum ((by, s):ss) = do
                       queryDebug [nm ++ ": Chain proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                       checkSatThen cfg kdSt "Step  "
-                                            (Just (intros .&& accum))
+                                            True
+                                            (Just (intros .&& accum .&& sAnd (map getProof by)))
                                             s
-                                            helpers
+                                            [] -- helpers
                                             ["", show i]
                                             (Just [nm, show i])
-                                            Nothing (flip finish [])
+                                            Nothing
+                                            (flip finish [])
 
                       go (i+1) (s .&& accum) ss
 
              query $ go (1::Int) sTrue proofSteps
 
 -- | Turn a sequence of steps into a chain of pairs, merged with a function.
-mkChainSteps :: (a -> a -> b) -> (SBool, [a]) -> (SBool, [b])
-mkChainSteps f (intros, xs) = (intros, zipWith f xs (drop 1 xs))
+mkChainSteps :: (a -> a -> SBool) -> (SBool, [(a, [Proof])]) -> (SBool, [([Proof], SBool)])
+mkChainSteps f (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
+  where merge (a1, _) (a2, by) = (by, a1 `f` a2)
 
 -- | Chaining lemmas that depend on a single quantified variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [z])) z where
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [(z, [Proof])])) z where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (.==) (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [z]))
+                    (SBV a -> SBV b -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> z) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (.==) (steps a b))
@@ -197,7 +204,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [z]))
+                    (SBV a -> SBV b -> SBV c -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> z) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.==) (steps a b c))
@@ -205,7 +212,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [z]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.==) (steps a b c d))
@@ -213,20 +220,20 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [z]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
 
 -- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [SBool])) SBool where
+instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [(SBool, [Proof])])) SBool where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (.=>) (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> (SBool, [(SBool, [Proof])]))
                     (SBV a -> SBV b -> SBool) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (.=>) (steps a b))
@@ -234,7 +241,7 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
 -- | Chaining lemmas that depend on three quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> SBV c -> (SBool, [(SBool, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBool) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.=>) (steps a b c))
@@ -242,7 +249,7 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
 -- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [(SBool, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.=>) (steps a b c d))
@@ -250,7 +257,7 @@ instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b
 -- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
 instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [SBool]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [(SBool, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
@@ -316,14 +323,7 @@ class Inductive a steps where
            query $ do
 
             queryDebug [nm ++ ": Induction, proving base case:"]
-            checkSatThen cfg
-                         kdSt
-                         "Base"
-                         Nothing
-                         inductionBaseCase
-                         helpers
-                         [nm, "Base"]
-                         Nothing
+            checkSatThen cfg kdSt "Base" True Nothing inductionBaseCase helpers [nm, "Base"] Nothing
                          (Just (liftIO (putStrLn inductionBaseFailureMsg)))
                          (finish [])
 
@@ -331,7 +331,7 @@ class Inductive a steps where
 
             let loop accum ((snm, s):ss) = do
                     queryDebug [nm ++ ": Induction, proving helper: " ++ snm]
-                    checkSatThen cfg kdSt "Help" (Just accum) s helpers [nm, snm] Nothing Nothing (finish [])
+                    checkSatThen cfg kdSt "Help" True (Just accum) s helpers [nm, snm] Nothing Nothing (finish [])
                     loop (accum .&& s) ss
 
                 loop accum [] = pure accum
@@ -341,7 +341,7 @@ class Inductive a steps where
 
             -- Do the final proof:
             queryDebug [nm ++ ": Induction, proving inductive step:"]
-            checkSatThen cfg kdSt "Step" (Just indSchema) inductiveStep helpers [nm, "Step"] Nothing Nothing $ \d -> do
+            checkSatThen cfg kdSt "Step" True (Just indSchema) inductiveStep helpers [nm, "Step"] Nothing Nothing $ \d -> do
               mbElapsed <- getElapsedTime mbStartTime
               finish (catMaybes [mbElapsed]) d
               pure $ Proof { rootOfTrust = ros
@@ -652,24 +652,24 @@ instance KnownSymbol nm => Show (Inst nm a) where
 -- dynamics, hand has a cost of not being applicable.
 class Instantiatable a where
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
-  apply :: Proof -> a -> Proof
+  at :: Proof -> a -> Proof
 
 -- | Single parameter
 instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
-  apply = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
+  at = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
 
 -- | Two parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nb, HasKind b, Typeable b
          ) => Instantiatable (Inst na a, Inst nb b) where
-  apply = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
+  at = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
 
 -- | Three parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nb, HasKind b, Typeable b
          , KnownSymbol nc, HasKind c, Typeable c
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
-  apply = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
+  at = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
 
 -- | Four parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -677,7 +677,7 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nc, HasKind c, Typeable c
          , KnownSymbol nd, HasKind d, Typeable d
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
-  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
+  at = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
 
 -- | Five parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -686,7 +686,7 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nd, HasKind d, Typeable d
          , KnownSymbol ne, HasKind e, Typeable e
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
-  apply = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
+  at = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
 instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
 instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
@@ -698,7 +698,7 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                                                                  , proofName = nm
                                                                  }
  where sha = show a
-       cantInstantiate = error $ unlines [ "apply: Cannot instantiate proof:"
+       cantInstantiate = error $ unlines [ "at: Cannot instantiate proof:"
                                          , "   Name: " ++ proofName
                                          , "   Type: " ++ trim (show getProp)
                                          , "   At  : " ++ sha
@@ -714,3 +714,26 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
        paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
                | all (not . isSpace) s                    = s
                | True                                     = '(' : s ++ ")"
+
+(?) :: a -> [Proof] -> ([a], [Proof])
+a ? b = ([a], b)
+infixl 2 ?
+
+-- | Start reasoning for the calculational proof.
+(<:) :: a -> [([a], [Proof])] -> [([a], [Proof])]
+a <: b = ([a], []) =: b
+infixr 1 <:
+
+-- | Chain steps in a calculational proof.
+(=:) :: ([a], [Proof]) -> [([a], [Proof])] -> [([a], [Proof])]
+a =: b = a : b
+infixr 1 =:
+
+-- | Mark the end of a calculational proof.
+qed :: [(a, [Proof])]
+qed = []
+
+-- | Add hypotheses to a calculational proof.
+(|-) :: SBool -> [([a], [Proof])] -> (SBool, [([a], [Proof])])
+a |- b = (a, b)
+infixl 0 |-

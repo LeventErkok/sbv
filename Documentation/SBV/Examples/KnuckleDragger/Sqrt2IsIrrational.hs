@@ -66,6 +66,8 @@ sqrt2IsIrrational = runKD $ do
         sq :: SInteger -> SInteger
         sq x = x * x
 
+        none x = (x, [] :: [Proof])
+
     -- Prove that an odd number squared gives you an odd number.
     -- We need to help the solver by guiding it through how it can
     -- be decomposed as @2k+1@.
@@ -76,8 +78,8 @@ sqrt2IsIrrational = runKD $ do
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
                                   (\a -> (odd a, let k = some "w" (\kv -> a .== 2*kv+1)
-                                                 in [ sq a
-                                                    , sq (2 * k + 1)
+                                                 in [ none $ sq a
+                                                    , none $ sq (2 * k + 1)
                                                     ]))
                                   []
 
@@ -92,8 +94,8 @@ sqrt2IsIrrational = runKD $ do
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
                                       (\a -> (even a, let k = some "w" (\kv -> a .== 2*kv)
-                                                      in [ sq a
-                                                         , sq (k * 2)
+                                                      in [ none $ sq a
+                                                         , none $ sq (k * 2)
                                                          ]))
                                       []
 
