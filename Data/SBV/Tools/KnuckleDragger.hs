@@ -35,9 +35,6 @@ module Data.SBV.Tools.KnuckleDragger (
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
 
-       -- * Proof by smt
-       , smt
-
        -- * Creating instances of proofs
        , at, Inst(..)
 

@@ -39,7 +39,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductAlt1, inductAlt2
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
-       , sorry, smt
+       , sorry
        , KD, runKD, runKDWith, use
        , (|-), (<:), (=:), (?), qed
        ) where
@@ -680,23 +680,31 @@ class ProofHint a b where
   (?) :: a -> b -> ProofStep a
   infixl 2 ?
 
--- | Giving just one proof as a helper
+-- | Giving just one proof as a helper.
 instance ProofHint a Proof where
   a ? p = ProofStep a [p]
 
--- | Giving a bunch of proofs as a helper
+-- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
   a ? ps = ProofStep a ps
+
+-- | Chain steps in a calculational proof.
+class ChainStep arg a where
+  (=:) :: arg -> [ProofStep a] -> [ProofStep a]
+  infixr 1 =:
+
+-- | Chaining a step to another
+instance ChainStep (ProofStep a) a where
+  a =: b = a : b
+
+-- | Chaining a step to another
+instance ChainStep a a where
+  a =: b = ProofStep a [] : b
 
 -- | Start reasoning for the calculational proof.
 (<:) :: a -> [ProofStep a] -> [ProofStep a]
 a <: b = ProofStep a [] =: b
 infixr 1 <:
-
--- | Chain steps in a calculational proof.
-(=:) :: ProofStep a -> [ProofStep a] -> [ProofStep a]
-a =: b = a : b
-infixr 1 =:
 
 -- | Mark the end of a calculational proof.
 qed :: [ProofStep a]
