@@ -81,7 +81,6 @@ sqrt2IsIrrational = runKD $ do
                                                  in [ none $ sq a
                                                     , none $ sq (2 * k + 1)
                                                     ]))
-                                  []
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
     -- is enough to establish this.
@@ -97,7 +96,6 @@ sqrt2IsIrrational = runKD $ do
                                                       in [ none $ sq a
                                                          , none $ sq (k * 2)
                                                          ]))
-                                      []
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.

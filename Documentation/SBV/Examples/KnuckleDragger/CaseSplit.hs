@@ -76,7 +76,6 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                      , none $ 18*w*w + 3*w + 1
                                                      , none $ 3*(6*w*w + w) + 1
                                                      ]))
-                       []
 
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
@@ -90,7 +89,6 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                      , none $ 18*w*w + 15*w + 4
                                                      , none $ 3*(6*w*w + 5*w + 1) + 1
                                                      ]))
-                       []
 
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
@@ -104,7 +102,6 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                      , none $ 18*w*w + 27*w + 11
                                                      , none $ 3*(6*w*w + 9*w + 3) + 2
                                                      ]))
-                       []
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so
    -- no extra completeness helper is needed.

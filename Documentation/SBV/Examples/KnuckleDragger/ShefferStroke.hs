@@ -367,28 +367,23 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sh2 <- sheffer2
   sh3 <- sheffer3
 
-  commut <- chainLemma "a | b = b | a"
-              (\AB -> a ⏐ b .== b ⏐ a)
-              (\a b -> sTrue |- a ⏐ b <: ﬧﬧ(a ⏐ b)                   ? [sh1]
-                                      =: ﬧﬧ(a ⏐ ﬧﬧ b)                ? [sh1]
-                                      =: ﬧﬧ(a ⏐ (ﬧ b ⏐ ﬧ b))         ? [trivial]
-                                      =: ﬧ ((ﬧﬧ b ⏐ a) ⏐ (ﬧﬧ b ⏐ a)) ? [sh3]
-                                      =: ﬧﬧ(ﬧﬧ b ⏐ a)                ? [trivial]
-                                      =: ﬧﬧ b ⏐ a                    ? [sh1]
-                                      =: b ⏐ a                       ? [sh1]
-                                      =: qed)
-              []
+  commut <- chainLemma "a | b = b | a" (\AB -> a ⏐ b .== b ⏐ a) $
+                       \a b -> sTrue |- a ⏐ b <: ﬧﬧ(a ⏐ b)                   ? [sh1]
+                                              =: ﬧﬧ(a ⏐ ﬧﬧ b)                ? [sh1]
+                                              =: ﬧﬧ(a ⏐ (ﬧ b ⏐ ﬧ b))         ? [trivial]
+                                              =: ﬧ ((ﬧﬧ b ⏐ a) ⏐ (ﬧﬧ b ⏐ a)) ? [sh3]
+                                              =: ﬧﬧ(ﬧﬧ b ⏐ a)                ? [trivial]
+                                              =: ﬧﬧ b ⏐ a                    ? [sh1]
+                                              =: b ⏐ a                       ? [sh1]
+                                              =: qed
 
-  all_bot <- chainLemma "a | a′ = b | b′"
-               (\AB -> a ⏐ ﬧ a .== b ⏐ ﬧ b)
-               (\a b -> sTrue |- a ⏐ ﬧ a <: ﬧﬧ(a ⏐ ﬧ a)              ? [sh1]
-                                         =: ﬧ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b)) ? [sh2]
-                                         =: ﬧ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a)) ? [commut]
-                                         =: ﬧﬧ (b ⏐ ﬧ b)             ? [sh2]
-                                         =: b ⏐ ﬧ b                  ? [sh1]
-                                         =: qed)
-               []
-
+  all_bot <- chainLemma "a | a′ = b | b′" (\AB -> a ⏐ ﬧ a .== b ⏐ ﬧ b) $
+                        \a b -> sTrue |- a ⏐ ﬧ a <: ﬧﬧ(a ⏐ ﬧ a)              ? [sh1]
+                                                 =: ﬧ((a ⏐ ﬧ a) ⏐ (b ⏐ ﬧ b)) ? [sh2]
+                                                 =: ﬧ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a)) ? [commut]
+                                                 =: ﬧﬧ (b ⏐ ﬧ b)             ? [sh2]
+                                                 =: b ⏐ ﬧ b                  ? [sh1]
+                                                 =: qed
 
   commut1  <- lemma "a ⊔ b = b ⊔ a" (\AB -> a ⨆ b .== b ⨆ a) [commut]
   commut2  <- lemma "a ⊓ b = b ⊓ a" (\AB -> a ⨅ b .== b ⨅ a) [commut]
@@ -402,99 +397,84 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   compl1 <- lemma "a ⊔ aᶜ = т" (\A -> a ⨆ ﬧ a .== т) [sh1, sh2, sh3, all_bot]
   compl2 <- lemma "a ⊓ aᶜ = ⲳ" (\A -> a ⨅ ﬧ a .== ⲳ) [sh1, commut, all_bot]
 
-  bound1 <- chainLemma "a ⊔ т = т"
-              (\A -> a ⨆ т .== т)
-              (\a -> sTrue |- a ⨆ т <: (a ⨆ т) ⨅ т         ? [ident2]
-                                    =: т ⨅ (a ⨆ т)         ? [commut2]
-                                    =: (a ⨆ ﬧ a) ⨅ (a ⨆ т) ? [compl1]
-                                    =: a ⨆ (ﬧ a ⨅ т)       ? [distrib1]
-                                    =: a ⨆ ﬧ a             ? [ident2]
-                                    =: (т :: SStroke)      ? [compl1]
-                                    =: qed)
-              []
+  bound1 <- chainLemma "a ⊔ т = т" (\A -> a ⨆ т .== т) $
+                       \a -> sTrue |- a ⨆ т <: (a ⨆ т) ⨅ т         ? [ident2]
+                                            =: т ⨅ (a ⨆ т)         ? [commut2]
+                                            =: (a ⨆ ﬧ a) ⨅ (a ⨆ т) ? [compl1]
+                                            =: a ⨆ (ﬧ a ⨅ т)       ? [distrib1]
+                                            =: a ⨆ ﬧ a             ? [ident2]
+                                            =: (т :: SStroke)      ? [compl1]
+                                            =: qed
 
-  bound2 <- chainLemma "a ⊓ ⲳ = ⲳ"
-              (\A -> a ⨅ ⲳ .== ⲳ)
-              (\a -> sTrue |- a ⨅ ⲳ <: (a ⨅ ⲳ) ⨆ ⲳ         ? [ident1]
-                                    =: ⲳ ⨆ (a ⨅ ⲳ)         ? [commut1]
-                                    =: (a ⨅ ﬧ a) ⨆ (a ⨅ ⲳ) ? [compl2]
-                                    =: a ⨅ (ﬧ a ⨆ ⲳ)       ? [distrib2]
-                                    =: a ⨅ ﬧ a             ? [ident1]
-                                    =: (ⲳ :: SStroke)      ? [compl2]
-                                    =: qed)
-              []
+  bound2 <- chainLemma "a ⊓ ⲳ = ⲳ" (\A -> a ⨅ ⲳ .== ⲳ) $
+                       \a -> sTrue |- a ⨅ ⲳ <: (a ⨅ ⲳ) ⨆ ⲳ         ? [ident1]
+                                            =: ⲳ ⨆ (a ⨅ ⲳ)         ? [commut1]
+                                            =: (a ⨅ ﬧ a) ⨆ (a ⨅ ⲳ) ? [compl2]
+                                            =: a ⨅ (ﬧ a ⨆ ⲳ)       ? [distrib2]
+                                            =: a ⨅ ﬧ a             ? [ident1]
+                                            =: (ⲳ :: SStroke)      ? [compl2]
+                                            =: qed
 
-  absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a"
-               (\AB -> a ⨆ (a ⨅ b) .== a)
-               (\a b -> sTrue |- a ⨆ (a ⨅ b) <: (a ⨅ т) ⨆ (a ⨅ b) ? [ident2]
-                                             =: a ⨅ (т ⨆ b)       ? [distrib2]
-                                             =: a ⨅ (b ⨆ т)       ? [commut1]
-                                             =: a ⨅ т             ? [bound1]
-                                             =: (a :: SStroke)    ? [ident2]
-                                             =: qed)
-               []
+  absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a" (\AB -> a ⨆ (a ⨅ b) .== a) $
+                        \a b -> sTrue |- a ⨆ (a ⨅ b) <: (a ⨅ т) ⨆ (a ⨅ b) ? [ident2]
+                                                     =: a ⨅ (т ⨆ b)       ? [distrib2]
+                                                     =: a ⨅ (b ⨆ т)       ? [commut1]
+                                                     =: a ⨅ т             ? [bound1]
+                                                     =: (a :: SStroke)    ? [ident2]
+                                                     =: qed
 
-  absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a"
-               (\AB -> a ⨅ (a ⨆ b) .== a)
-               (\a b -> sTrue |- a ⨅ (a ⨆ b) <: (a ⨆ ⲳ) ⨅ (a ⨆ b) ? [ident1]
-                                             =: a ⨆ (ⲳ ⨅ b)       ? [distrib1]
-                                             =: a ⨆ (b ⨅ ⲳ)       ? [commut2]
-                                             =: a ⨆ ⲳ             ? [bound2]
-                                             =: (a :: SStroke)    ? [ident1]
-                                             =: qed)
-               []
+  absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a" (\AB -> a ⨅ (a ⨆ b) .== a) $
+                        \a b -> sTrue |- a ⨅ (a ⨆ b) <: (a ⨆ ⲳ) ⨅ (a ⨆ b) ? [ident1]
+                                                     =: a ⨆ (ⲳ ⨅ b)       ? [distrib1]
+                                                     =: a ⨆ (b ⨅ ⲳ)       ? [commut2]
+                                                     =: a ⨆ ⲳ             ? [bound2]
+                                                     =: (a :: SStroke)    ? [ident1]
+                                                     =: qed
 
-  idemp2 <- chainLemma "a ⊓ a = a"
-              (\A -> a ⨅ a .== a)
-              (\a -> sTrue |- a ⨅ a <: a ⨅ (a ⨆ (ⲳ :: SStroke)) ? [ident1]
-                                    =: a                        ? [absorb2]
-                                    =: qed)
-              []
+  idemp2 <- chainLemma "a ⊓ a = a" (\A -> a ⨅ a .== a) $
+                       \a -> sTrue |- a ⨅ a <: a ⨅ (a ⨆ (ⲳ :: SStroke)) ? [ident1]
+                                            =: a                        ? [absorb2]
+                                            =: qed
 
 
   inv <- chainLemma "a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ"
-           (\AAp  -> a ⨆ a' .== т .=> a ⨅ a' .== ⲳ .=> a' .== ﬧ a)
-           (\a a' -> a ⨆ a' .== т .&& a ⨅ a' .== ⲳ
-                      |- a' <:  a' ⨅ т                 ? [ident2]
-                            =:  a' ⨅ (a ⨆ ﬧ a)         ? [compl1]
-                            =:  (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)  ? [distrib2]
-                            =:  (a' ⨅ a) ⨆ (ﬧ a ⨅ a')  ? [commut2]
-                            =:  (a ⨅ a') ⨆ (ﬧ a ⨅ a')  ? [commut2]
-                            =:  ⲳ ⨆ (ﬧ a ⨅ a')         ? [compl2]
-                            =:  (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a') ? [compl2]
-                            =:  (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a') ? [commut2]
-                            =:  ﬧ a ⨅ (a ⨆ a')         ? [distrib2]
-                            =:  ﬧ a ⨅ т                ? [trivial]
-                            =:  (ﬧ a :: SStroke)       ? [ident2]
-                            =: qed)
-           []
+                    (\AAp  -> a ⨆ a' .== т .=> a ⨅ a' .== ⲳ .=> a' .== ﬧ a) $
+                    \a a' -> a ⨆ a' .== т .&& a ⨅ a' .== ⲳ
+                          |- a' <:  a' ⨅ т                 ? [ident2]
+                                =:  a' ⨅ (a ⨆ ﬧ a)         ? [compl1]
+                                =:  (a' ⨅ a) ⨆ (a' ⨅ ﬧ a)  ? [distrib2]
+                                =:  (a' ⨅ a) ⨆ (ﬧ a ⨅ a')  ? [commut2]
+                                =:  (a ⨅ a') ⨆ (ﬧ a ⨅ a')  ? [commut2]
+                                =:  ⲳ ⨆ (ﬧ a ⨅ a')         ? [compl2]
+                                =:  (a ⨅ ﬧ a) ⨆ (ﬧ a ⨅ a') ? [compl2]
+                                =:  (ﬧ a ⨅ a) ⨆ (ﬧ a ⨅ a') ? [commut2]
+                                =:  ﬧ a ⨅ (a ⨆ a')         ? [distrib2]
+                                =:  ﬧ a ⨅ т                ? [trivial]
+                                =:  (ﬧ a :: SStroke)       ? [ident2]
+                                =: qed
 
   dne      <- lemma "aᶜᶜ = a"         (\A -> ﬧﬧ a .== a)               [inv, compl1, compl2, commut1, commut2]
   inv_elim <- lemma "aᶜ = bᶜ → a = b" (\AB -> ﬧ a .== ﬧ b .=> a .== b) [dne]
 
   cancel <- lemma "a ⊔ bᶜ = т → a ⊓ bᶜ = ⲳ → a = b" (\AB -> a ⨆ ﬧ b .== т .=> a ⨅ ﬧ b .== ⲳ .=> a .== b) [inv, inv_elim]
 
-  a1 <- chainLemma "a ⊔ (aᶜ ⊔ b) = т"
-          (\AB  -> a ⨆ (ﬧ a ⨆ b) .== т)
-          (\a b -> sTrue |- a ⨆ (ﬧ a ⨆ b) <: (a ⨆ (ﬧ a ⨆ b)) ⨅ т         ? [ident2]
-                                          =: т ⨅ (a ⨆ (ﬧ a ⨆ b))         ? [commut2]
-                                          =: (a ⨆ ﬧ a) ⨅ (a ⨆ (ﬧ a ⨆ b)) ? [compl1]
-                                          =: a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))       ? [distrib1]
-                                          =: a ⨆ ﬧ a                     ? [absorb2]
-                                          =: (т :: SStroke)              ? [compl1]
-                                          =: qed)
-          []
+  a1 <- chainLemma "a ⊔ (aᶜ ⊔ b) = т" (\AB  -> a ⨆ (ﬧ a ⨆ b) .== т) $
+                   \a b -> sTrue |- a ⨆ (ﬧ a ⨆ b) <: (a ⨆ (ﬧ a ⨆ b)) ⨅ т         ? [ident2]
+                                                  =: т ⨅ (a ⨆ (ﬧ a ⨆ b))         ? [commut2]
+                                                  =: (a ⨆ ﬧ a) ⨅ (a ⨆ (ﬧ a ⨆ b)) ? [compl1]
+                                                  =: a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))       ? [distrib1]
+                                                  =: a ⨆ ﬧ a                     ? [absorb2]
+                                                  =: (т :: SStroke)              ? [compl1]
+                                                  =: qed
 
-  a2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = ⲳ"
-          (\AB  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ)
-          (\a b -> sTrue |- a ⨅ (ﬧ a ⨅ b) <: (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ? [ident1]
-                                          =: ⲳ ⨆ (a ⨅ (ﬧ a ⨅ b))         ? [commut1]
-                                          =: (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ b)) ? [compl2]
-                                          =: a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))       ? [distrib2]
-                                          =: a ⨅ ﬧ a                     ? [absorb1]
-                                          =: (ⲳ :: SStroke)              ? [compl2]
-                                          =: qed)
-          []
+  a2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = ⲳ" (\AB  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ) $
+          \a b -> sTrue |- a ⨅ (ﬧ a ⨅ b) <: (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ? [ident1]
+                                         =: ⲳ ⨆ (a ⨅ (ﬧ a ⨅ b))         ? [commut1]
+                                         =: (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ b)) ? [compl2]
+                                         =: a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))       ? [distrib2]
+                                         =: a ⨅ ﬧ a                     ? [absorb1]
+                                         =: (ⲳ :: SStroke)              ? [compl2]
+                                         =: qed
 
   dm1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ" (\AB -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
                [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
@@ -512,100 +492,88 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   e2 <- lemma "b ⊔ (a ⊓ (b ⊓ c)) = b" (\ABC -> b ⨆ (a ⨅ (b ⨅ c)) .== b)
               [distrib1, absorb1, absorb2, commut2]
 
-  f1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ bᶜ = т"
-          (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== т)
-          (\a b c -> sTrue |-  (a ⨆ (b ⨆ c)) ⨆ ﬧ b <: ﬧ b ⨆ (a ⨆ (b ⨆ c))               ? [commut1]
-                                                   =: (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⨅ т         ? [ident2]
-                                                   =: т ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))         ? [commut2]
-                                                   =: (b ⨆ ﬧ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ? [compl1]
-                                                   =: (ﬧ b ⨆ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ? [commut1]
-                                                   =: ﬧ b ⨆ (b ⨅ (a ⨆ (b ⨆ c)))         ? [distrib1]
-                                                   =: ﬧ b ⨆ b                           ? [e1]
-                                                   =: b ⨆ ﬧ b                           ? [commut1]
-                                                   =: (т :: SStroke)                    ? [compl1]
-                                                   =: qed)
-          []
+  f1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ bᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ b .== т) $
+                   \a b c -> sTrue |-  (a ⨆ (b ⨆ c)) ⨆ ﬧ b <: ﬧ b ⨆ (a ⨆ (b ⨆ c))               ? [commut1]
+                                                           =: (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ⨅ т         ? [ident2]
+                                                           =: т ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c)))         ? [commut2]
+                                                           =: (b ⨆ ﬧ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ? [compl1]
+                                                           =: (ﬧ b ⨆ b) ⨅ (ﬧ b ⨆ (a ⨆ (b ⨆ c))) ? [commut1]
+                                                           =: ﬧ b ⨆ (b ⨅ (a ⨆ (b ⨆ c)))         ? [distrib1]
+                                                           =: ﬧ b ⨆ b                           ? [e1]
+                                                           =: b ⨆ ﬧ b                           ? [commut1]
+                                                           =: (т :: SStroke)                    ? [compl1]
+                                                           =: qed
 
   g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== т) [commut1, f1]
 
-  h1 <- chainLemma "(a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ"
-          (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ a .== ⲳ)
-          (\a b c -> sTrue |- ﬧ(a ⨆ b ⨆ c) ⨅ a <: a ⨅ ﬧ (a ⨆ b ⨆ c)                   ? [commut2]
-                                               =: a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)               ? [dm1]
-                                               =: (a ⨅  (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⨆ ⲳ        ? [ident1]
-                                               =: ⲳ ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))         ? [commut1]
-                                               =: (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ? [compl2]
-                                               =: a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))       ? [distrib2]
-                                               =: a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))     ? [commut2]
-                                               =: a ⨅ ﬧ a                             ? [e2]
-                                               =: (ⲳ :: SStroke)                      ? [compl2]
-                                               =: qed)
-          []
+  h1 <- chainLemma "(a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ a .== ⲳ) $
+                   \a b c -> sTrue |- ﬧ(a ⨆ b ⨆ c) ⨅ a <: a ⨅ ﬧ (a ⨆ b ⨆ c)                   ? [commut2] 
+                                                       =: a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)               ? [dm1]
+                                                       =: (a ⨅  (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ⨆ ⲳ        ? [ident1]
+                                                       =: ⲳ ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))         ? [commut1]
+                                                       =: (a ⨅ ﬧ a) ⨆ (a ⨅ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)) ? [compl2]
+                                                       =: a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c))       ? [distrib2]
+                                                       =: a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))     ? [commut2]
+                                                       =: a ⨅ ﬧ a                             ? [e2]
+                                                       =: (ⲳ :: SStroke)                      ? [compl2]
+                                                       =: qed
 
   i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ b .== ⲳ) [commut1, h1]
   j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ) [a2, dne, commut2]
 
   assoc1 <- do
     c1 <- chainLemma "(a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т"
-            (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== т)
-            (\a b c -> sTrue |- (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)
-                             <: (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)                     ? [dm1]
-                             =: ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c) ? [distrib1]
-                             =: ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ т                     ? [g1]
-                             =: (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)                           ? [ident2]
-                             =: ((a ⨆ (b ⨆ c)) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)         ? [distrib1]
-                             =: т ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)                             ? [d1]
-                             =: т ⨅ т                                                 ? [f1]
-                             =: (т :: SStroke)                                        ? [idemp2]
-                             =: qed)
-            []
+                     (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c) .== т) $
+                     \a b c -> sTrue |- (a ⨆ (b ⨆ c)) ⨆ ﬧ((a ⨆ b) ⨆ c)
+                                     <: (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b ⨅ ﬧ c)                     ? [dm1]
+                                     =: ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ c) ? [distrib1]
+                                     =: ((a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)) ⨅ т                     ? [g1]
+                                     =: (a ⨆ (b ⨆ c)) ⨆ (ﬧ a ⨅ ﬧ b)                           ? [ident2]
+                                     =: ((a ⨆ (b ⨆ c)) ⨆ ﬧ a) ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)         ? [distrib1]
+                                     =: т ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)                             ? [d1]
+                                     =: т ⨅ т                                                 ? [f1]
+                                     =: (т :: SStroke)                                        ? [idemp2]
+                                     =: qed
 
     c2 <- chainLemma "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ"
-            (\ABC -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ)
-            (\a b c -> sTrue |- (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)
-                             <: ﬧ((a ⨆ b) ⨆ c) ⨅ (a ⨆ (b ⨆ c))                    ? [commut2]
-                             =: (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)) ? [distrib2]
-                             =: (a ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ? [commut2]
-                             =: (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ? [commut2]
-                             =: ⲳ ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))                    ? [h1]
-                             =: ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ⲳ                    ? [commut1]
-                             =: (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)                          ? [ident1]
-                             =: ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)                          ? [commut2]
-                             =: (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ c)       ? [distrib2]
-                             =: (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ ⲳ                          ? [j1]
-                             =: ⲳ ⨆ ⲳ                                             ? [i1]
-                             =: (ⲳ :: SStroke)                                    ? [ident1]
-                             =: qed)
-            []
+                     (\ABC -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ) $
+                     \a b c -> sTrue |- (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c)
+                                     <: ﬧ((a ⨆ b) ⨆ c) ⨅ (a ⨆ (b ⨆ c))                    ? [commut2]
+                                     =: (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)) ? [distrib2]
+                                     =: (a ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ? [commut2]
+                                     =: (ﬧ((a ⨆ b) ⨆ c) ⨅ a) ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ? [commut2]
+                                     =: ⲳ ⨆ ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c))                    ? [h1]
+                                     =: ((b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)) ⨆ ⲳ                    ? [commut1]
+                                     =: (b ⨆ c) ⨅ ﬧ((a ⨆ b) ⨆ c)                          ? [ident1]
+                                     =: ﬧ((a ⨆ b) ⨆ c) ⨅ (b ⨆ c)                          ? [commut2]
+                                     =: (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ (ﬧ((a ⨆ b) ⨆ c) ⨅ c)       ? [distrib2]
+                                     =: (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ ⲳ                          ? [j1]
+                                     =: ⲳ ⨆ ⲳ                                             ? [i1]
+                                     =: (ⲳ :: SStroke)                                    ? [ident1]
+                                     =: qed
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c" (\ABC -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c) [c1, c2, cancel]
 
-  assoc2 <- chainLemma "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c"
-              (\ABC -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c)
-              (\a b c -> sTrue |- a ⨅ (b ⨅ c) <: ﬧﬧ(a ⨅ (b ⨅ c))               ? [dne]
-                                              =: ﬧﬧ((a ⨅ b) ⨅ c)               ? [assoc1]
-                                              =:   ((a ⨅ b) ⨅ (c :: SStroke))  ? [dne]
-                                              =: qed)
-              []
+  assoc2 <- chainLemma "a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c" (\ABC -> a ⨅ (b ⨅ c) .== (a ⨅ b) ⨅ c) $
+                       \a b c -> sTrue |- a ⨅ (b ⨅ c) <: ﬧﬧ(a ⨅ (b ⨅ c))               ? [dne]
+                                                      =: ﬧﬧ((a ⨅ b) ⨅ c)               ? [assoc1]
+                                                      =:   ((a ⨅ b) ⨅ (c :: SStroke))  ? [dne]
+                                                      =: qed
 
-  le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b"
-                   (\AB -> a ≤ b .=> b ≤ a .=> a .== b)
-                   (\a b -> a ≤ b .&& b ≤ a |- a <: b ⨅ a          ? [trivial]
-                                                 =: a ⨅ b          ? [commut2]
-                                                 =: (b :: SStroke) ? [trivial]
-                                                 =: qed)
-                   []
+  le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b" (\AB -> a ≤ b .=> b ≤ a .=> a .== b) $
+                            \a b -> a ≤ b .&& b ≤ a |- a <: b ⨅ a          ? [trivial]
+                                                         =: a ⨅ b          ? [commut2]
+                                                         =: (b :: SStroke) ? [trivial]
+                                                         =: qed
 
   le_refl <- lemma "a ≤ a" (\A -> a ≤ a) [idemp2]
 
-  le_trans <- chainLemma "a ≤ b → b ≤ c → a ≤ c"
-                (\ABC -> a ≤ b .=> b ≤ c .=> a ≤ c)
-                (\a b c -> a ≤ b .&& b ≤ c |- a <: b ⨅ a              ? [trivial]
-                                                =: (c ⨅ b) ⨅ a        ? [trivial]
-                                                =: c ⨅ (b ⨅ a)        ? [assoc2]
-                                                =: (c ⨅ a :: SStroke) ? [trivial]
-                                                =: qed)
-                []
+  le_trans <- chainLemma "a ≤ b → b ≤ c → a ≤ c" (\ABC -> a ≤ b .=> b ≤ c .=> a ≤ c) $
+                         \a b c -> a ≤ b .&& b ≤ c |- a <: b ⨅ a              ? [trivial]
+                                                        =: (c ⨅ b) ⨅ a        ? [trivial]
+                                                        =: c ⨅ (b ⨅ a)        ? [assoc2]
+                                                        =: (c ⨅ a :: SStroke) ? [trivial]
+                                                        =: qed
 
   lt_iff_le_not_le <- lemma "a < b ↔ a ≤ b ∧ ¬b ≤ a" (\AB -> (a < b) .<=> a ≤ b .&& sNot (b ≤ a)) [sh3]
 
@@ -613,22 +581,20 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   le_sup_right <- lemma "b ≤ a ⊔ b" (\AB -> a ≤ a ⨆ b) [commut1, commut2, absorb2]
 
   sup_le <- chainLemma "a ≤ c → b ≤ c → a ⊔ b ≤ c"
-              (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c)
-              (\a b c -> a ≤ c .&& b ≤ c |- a ⨆ b <: (c ⨅ a) ⨆ (c ⨅ b)        ? [trivial]
-                                                  =: (c ⨅ (a ⨆ b) :: SStroke) ? [distrib2]
-                                                  =: qed)
-              []
+                       (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c) $
+                       \a b c -> a ≤ c .&& b ≤ c |- a ⨆ b <: (c ⨅ a) ⨆ (c ⨅ b)        ? [trivial]
+                                                          =: (c ⨅ (a ⨆ b) :: SStroke) ? [distrib2]
+                                                          =: qed
 
   inf_le_left  <- lemma "a ⊓ b ≤ a" (\AB -> a ⨅ b ≤ a) [assoc2, idemp2]
   inf_le_right <- lemma "a ⊓ b ≤ b" (\AB -> a ⨅ b ≤ b) [commut2, inf_le_left]
 
   le_inf <- chainLemma "a ≤ b → a ≤ c → a ≤ b ⊓ c"
-              (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c)
-              (\a b c -> a ≤ b .&& a ≤ c |- a <: b ⨅ a                    ? [trivial]
-                                              =: b ⨅ (c ⨅ a)              ? [trivial]
-                                              =: (b ⨅ c ⨅ a :: SStroke)   ? [assoc2]
-                                              =: qed)
-              []
+                       (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
+                       \a b c -> a ≤ b .&& a ≤ c |- a <: b ⨅ a                    ? [trivial]
+                                                      =: b ⨅ (c ⨅ a)              ? [trivial]
+                                                      =: (b ⨅ c ⨅ a :: SStroke)   ? [assoc2]
+                                                      =: qed
 
   le_sup_inf <- lemma "(x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z"
                       (\XYZ -> (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z)
@@ -637,20 +603,16 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   inf_compl_le_bot <- lemma "x ⊓ xᶜ ≤ ⊥" (\X -> x ⨅ ﬧ x ≤ ⲳ) [compl2, le_refl]
   top_le_sup_compl <- lemma "⊤ ≤ x ⊔ xᶜ" (\X -> т ≤ x ⨆ ﬧ x) [compl1, le_refl]
 
-  le_top <- chainLemma "a ≤ ⊤"
-               (\A -> a ≤ т)
-               (\a -> sTrue |- a ≤ т <: a .== т ⨅ a          ? [trivial]
-                                     =: a .== a ⨅ т          ? [commut2]
-                                     =: a .== (a :: SStroke) ? [ident2]
-                                     =: qed)
-               []
+  le_top <- chainLemma "a ≤ ⊤" (\A -> a ≤ т) $
+                       \a -> sTrue |- a ≤ т <: a .== т ⨅ a          ? [trivial]
+                                            =: a .== a ⨅ т          ? [commut2]
+                                            =: a .== (a :: SStroke) ? [ident2]
+                                            =: qed
 
-  bot_le <- chainLemma "⊥ ≤ a"
-               (\A -> ⲳ ≤ a)
-               (\a -> sTrue |- ⲳ ≤ a <: ⲳ .== a ⨅ (ⲳ :: SStroke) ? [trivial]
-                                     =: (ⲳ .== (ⲳ :: SStroke))   ? [bound2]
-                                     =: qed)
-               []
+  bot_le <- chainLemma "⊥ ≤ a" (\A -> ⲳ ≤ a) $
+                       \a -> sTrue |- ⲳ ≤ a <: ⲳ .== a ⨅ (ⲳ :: SStroke) ? [trivial]
+                                            =: (ⲳ .== (ⲳ :: SStroke))   ? [bound2]
+                                            =: qed
 
   sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\XY -> x \\ y .== x ⨅ ﬧ y) [trivial]
   himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\XY -> x ⇨ y .== y ⨆ ﬧ x)  [trivial]

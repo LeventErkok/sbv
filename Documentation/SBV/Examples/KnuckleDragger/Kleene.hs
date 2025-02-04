@@ -130,7 +130,7 @@ kleeneProofs = runKD $ do
                                                           , none $ 1 + x * star x
                                                           , none $ star x
                                                           ]))
-                                           kleene
+                                           -- kleene
 
   subset_eq   <- lemma "subset_eq" (\(Forall @"x" x) (Forall @"y" y) -> (x .== y) .== (x <= y .&& y <= x)) kleene
 

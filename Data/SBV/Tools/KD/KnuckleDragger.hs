@@ -99,28 +99,28 @@ class ChainLemma a steps step | steps -> step where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
   -- no sequence of steps to reason about.
-  chainLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
+  chainLemma :: Proposition a => String -> a -> steps -> KD Proof
 
   -- | Same as chainLemma, except tagged as Theorem
-  chainTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
+  chainTheorem :: Proposition a => String -> a -> steps -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
   -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL chainSteps #-}
   chainSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
 
-  chainLemma   nm p steps by = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps by
-  chainTheorem nm p steps by = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps by
-  chainLemmaWith             = chainGeneric False
-  chainTheoremWith           = chainGeneric True
+  chainLemma   nm p steps = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps
+  chainTheorem nm p steps = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps
+  chainLemmaWith          = chainGeneric False
+  chainTheoremWith        = chainGeneric True
 
-  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
-  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps _helpers = do
+  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
+  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
           kdSt <- getKDState
 
           liftIO $ runSMTWith cfg $ do
@@ -146,16 +146,13 @@ class ChainLemma a steps step | steps -> step where
                                   , "**   Was given less than two."
                                   ]
 
-             -- mapM_ (constrain . getProof) helpers
-
              let go :: Int -> SBool -> [([Proof], SBool)] -> Query Proof
                  go _ accum [] = do
                      queryDebug [nm ++ ": Chain proof end: proving the result:"]
-                     -- mapM_ (constrain . getProof) helpers
                      checkSatThen cfg kdSt "Result" True
                                   (Just (intros .=> accum))
                                   goal
-                                  [] --helpers
+                                  []
                                   ["", ""]
                                   (Just [nm, "Result"])
                                   Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
@@ -173,7 +170,7 @@ class ChainLemma a steps step | steps -> step where
                                             True
                                             (Just (intros .&& accum .&& sAnd (map getProof by)))
                                             s
-                                            [] -- helpers
+                                            []
                                             ["", show i]
                                             (Just [nm, show i])
                                             Nothing
