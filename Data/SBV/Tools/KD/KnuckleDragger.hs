@@ -677,6 +677,7 @@ data ProofStep a = ProofStep a [Proof]
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
+  -- | Specify a helper for the given proof step
   (?) :: a -> b -> ProofStep a
   infixl 2 ?
 
@@ -690,6 +691,7 @@ instance ProofHint a [Proof] where
 
 -- | Chain steps in a calculational proof.
 class ChainStep arg a where
+  -- | Chain two steps together to form a proof sequence.
   (=:) :: arg -> [ProofStep a] -> [ProofStep a]
   infixr 1 =:
 
@@ -711,6 +713,7 @@ qed :: [ProofStep a]
 qed = []
 
 -- | Add hypotheses to a calculational proof.
+-- | Start a calculational proof, with the given hypothesis. You can use 'sTrue' if the calculation holds without any preconditions.
 (|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
 a |- b = (a, b)
 infixl 0 |-
