@@ -116,21 +116,19 @@ kleeneProofs = runKD $ do
                ]
 
   -- Various proofs:
-  par_lzero    <- lemma "par_lzero" (\(Forall @"x" (x :: SKleene)) -> 0 + x .== x) kleene
+  par_lzero    <- lemma "par_lzero"    (\(Forall @"x" (x :: SKleene)) -> 0 + x .== x) kleene
   par_monotone <- lemma "par_monotone" (\(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x <= y .=> ((x + z) <= (y + z))) kleene
   seq_monotone <- lemma "seq_monotone" (\(Forall @"x" (x :: SKleene)) (Forall @"y" y) (Forall @"z" z) -> x <= y .=> ((x * z) <= (y * z))) kleene
 
-  let none x = (x, [] :: [Proof])
-
   -- This one requires a chain of reasoning: x* x* == x*
-  star_star_1  <- chainLemma "star_star_1" (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x)
-                                           (\x -> (sTrue, [ none $ star x * star x
-                                                          , none $ (1 + x * star x) * (1 + x * star x)
-                                                          , none $ (1 + 1) + (x * star x + x * star x)
-                                                          , none $ 1 + x * star x
-                                                          , none $ star x
-                                                          ]))
-                                           -- kleene
+  star_star_1  <- chainLemma "star_star_1"
+                             (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x)
+                             (\x -> sTrue |- star x * star x
+                                          <: (1 + x * star x) * (1 + x * star x) ? [unfold]
+                                          =: (1 + 1) + (x * star x + x * star x) ? kleene
+                                          =: 1 + x * star x                      ? [par_idem]
+                                          =: star x                              ? [unfold]
+                                          =: qed)
 
   subset_eq   <- lemma "subset_eq" (\(Forall @"x" x) (Forall @"y" y) -> (x .== y) .== (x <= y .&& y <= x)) kleene
 

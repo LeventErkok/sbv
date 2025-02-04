@@ -66,8 +66,6 @@ sqrt2IsIrrational = runKD $ do
         sq :: SInteger -> SInteger
         sq x = x * x
 
-        none x = (x, [] :: [Proof])
-
     -- Prove that an odd number squared gives you an odd number.
     -- We need to help the solver by guiding it through how it can
     -- be decomposed as @2k+1@.
@@ -77,10 +75,9 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
-                                  (\a -> (odd a, let k = some "w" (\kv -> a .== 2*kv+1)
-                                                 in [ none $ sq a
-                                                    , none $ sq (2 * k + 1)
-                                                    ]))
+                                  (\a -> odd a |- let k = some "w" (\kv -> a .== 2*kv+1)
+                                                  in sq a <: sq (2 * k + 1) ? [trivial]
+                                                          =: qed)
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
     -- is enough to establish this.
@@ -92,10 +89,9 @@ sqrt2IsIrrational = runKD $ do
     -- Happily, z3 needs nchainLemma helpers to establish this all on its own.
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
-                                      (\a -> (even a, let k = some "w" (\kv -> a .== 2*kv)
-                                                      in [ none $ sq a
-                                                         , none $ sq (k * 2)
-                                                         ]))
+                                      (\a -> even a |- let k = some "w" (\kv -> a .== 2*kv)
+                                                       in sq a <: sq (k * 2) ? [trivial]
+                                                               =: qed)
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.
