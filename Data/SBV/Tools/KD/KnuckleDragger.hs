@@ -90,9 +90,6 @@ class ChainLemma a steps step | steps -> step where
   -- cond acts as the context. Typically, if you are trying to prove @Y -> Z@, then you want cond to be Y.
   -- (This is similar to @intros@ commands in theorem provers.)
   --
-  -- Note that if the type of steps (i.e., @A@ .. @D@ above) is 'SBool', then we use implication
-  -- as opposed to equality; which better captures line of reasoning.
-  --
   -- So, chain-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning in the case of
   -- non-boolean steps.
   --
@@ -221,43 +218,6 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
-
--- | Chaining lemmas that depend on a single quantified variable. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [(SBool, [Proof])])) SBool where
-   chainSteps result steps = do a <- free (symbolVal (Proxy @na))
-                                pure (result (Forall a), mkChainSteps (.=>) (steps a))
-
--- | Chaining lemmas that depend on two quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b)
-      => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [(SBool, [Proof])]))
-                    (SBV a -> SBV b -> SBool) where
-   chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                                pure (result (Forall a) (Forall b), mkChainSteps (.=>) (steps a b))
-
--- | Chaining lemmas that depend on three quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [(SBool, [Proof])]))
-                    (SBV a -> SBV b -> SBV c -> SBool) where
-   chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.=>) (steps a b c))
-
--- | Chaining lemmas that depend on four quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [(SBool, [Proof])]))
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBool) where
-   chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.=>) (steps a b c d))
-
--- | Chaining lemmas that depend on five quantified variables. Overlapping version for 'SBool' that uses implication.
-instance {-# OVERLAPPING #-} (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [(SBool, [Proof])]))
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SBool) where
-   chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.=>) (steps a b c d e))
 
 -- | Captures the schema for an inductive proof
 data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
@@ -714,24 +674,24 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
-  (?) :: a -> b -> ([a], [Proof])
+  (?) :: a -> b -> (a, [Proof])
   infixl 2 ?
 
 -- | Giving just one proof as a helper
 instance ProofHint a Proof where
-  a ? b = ([a], [b])
+  a ? b = (a, [b])
 
 -- | Giving a bunch of proofs as a helper
 instance ProofHint a [Proof] where
-  a ? b = ([a], b)
+  a ? b = (a, b)
 
 -- | Start reasoning for the calculational proof.
-(<:) :: a -> [([a], [Proof])] -> [([a], [Proof])]
-a <: b = ([a], []) =: b
+(<:) :: a -> [(a, [Proof])] -> [(a, [Proof])]
+a <: b = (a, []) =: b
 infixr 1 <:
 
 -- | Chain steps in a calculational proof.
-(=:) :: ([a], [Proof]) -> [([a], [Proof])] -> [([a], [Proof])]
+(=:) :: (a, [Proof]) -> [(a, [Proof])] -> [(a, [Proof])]
 a =: b = a : b
 infixr 1 =:
 
@@ -740,6 +700,6 @@ qed :: [(a, [Proof])]
 qed = []
 
 -- | Add hypotheses to a calculational proof.
-(|-) :: SBool -> [([a], [Proof])] -> (SBool, [([a], [Proof])])
+(|-) :: SBool -> [(a, [Proof])] -> (SBool, [(a, [Proof])])
 a |- b = (a, b)
 infixl 0 |-
