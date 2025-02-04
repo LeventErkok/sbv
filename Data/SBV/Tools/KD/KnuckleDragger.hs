@@ -705,7 +705,7 @@ instance ChainStep a a where
 
 -- | Start reasoning for the calculational proof.
 (<:) :: a -> [ProofStep a] -> [ProofStep a]
-a <: b = ProofStep a [] =: b
+a <: b = ProofStep a [] : b
 infixr 1 <:
 
 -- | Mark the end of a calculational proof.
