@@ -591,9 +591,9 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
 
   le_inf <- chainLemma "a ≤ b → a ≤ c → a ≤ b ⊓ c"
                        (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
-                       \a b c -> a ≤ b .&& a ≤ c |- a <: b ⨅ a                    ? smt
-                                                      =: b ⨅ (c ⨅ a)              ? smt
-                                                      =: (b ⨅ c ⨅ a :: SStroke)   ? assoc2
+                       \a b c -> a ≤ b .&& a ≤ c |- a <: b ⨅ a                  ? smt
+                                                      =: b ⨅ (c ⨅ a)            ? smt
+                                                      =: (b ⨅ c ⨅ a :: SStroke) ? assoc2
                                                       =: qed
 
   le_sup_inf <- lemma "(x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z"
