@@ -177,15 +177,15 @@ class ChainLemma a steps step | steps -> step where
 
              query $ go (1::Int) sTrue proofSteps
 
--- | Turn a sequence of steps into a chain of pairs, merged with a function.
-mkChainSteps :: (a -> a -> SBool) -> (SBool, [(a, [Proof])]) -> (SBool, [([Proof], SBool)])
-mkChainSteps f (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
-  where merge (a1, _) (a2, by) = (by, a1 `f` a2)
+-- | Turn a sequence of steps into a chain of equality implications, merged with a function.
+mkChainSteps :: EqSymbolic a => (SBool, [(a, [Proof])]) -> (SBool, [([Proof], SBool)])
+mkChainSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
+  where merge (a1, _) (a2, by) = (by, a1 .== a2)
 
 -- | Chaining lemmas that depend on a single quantified variable.
 instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [(z, [Proof])])) z where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
-                                pure (result (Forall a), mkChainSteps (.==) (steps a))
+                                pure (result (Forall a), mkChainSteps (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
@@ -193,7 +193,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
                     (SBV a -> SBV b -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> z) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                                pure (result (Forall a) (Forall b), mkChainSteps (.==) (steps a b))
+                                pure (result (Forall a) (Forall b), mkChainSteps (steps a b))
 
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
@@ -201,7 +201,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                     (SBV a -> SBV b -> SBV c -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> z) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (.==) (steps a b c))
+                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (steps a b c))
 
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
@@ -209,7 +209,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                     (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (.==) (steps a b c d))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
@@ -217,7 +217,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [(z, [Proof])]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (.==) (steps a b c d e))
+                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (steps a b c d e))
 
 -- | Captures the schema for an inductive proof
 data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
