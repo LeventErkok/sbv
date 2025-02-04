@@ -116,7 +116,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag Nothing inputProp by nms Nothing Nothing (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag False Nothing inputProp by nms Nothing Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -155,6 +155,7 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
+   -> Bool                                   -- in query mode already (True), or lemmaGen (False)?
    -> Maybe SBool                            -- ^ context if any. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
    -> [Proof]                                -- ^ helpers in the context. NB. Only used for printing cex's. We assume they're already asserted.
@@ -163,7 +164,7 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> Maybe (IO ())                          -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag mbCtx prop by nms fullNms mbSat unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag inQuery mbCtx prop by nms fullNms mbSat unsat = do
 
         case mbCtx of
            Just{}  -> inNewAssertionStack check
@@ -172,7 +173,10 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
  where check = do
            tab <- liftIO $ startKD cfg verbose tag nms
 
-           maybe (pure ()) constrain mbCtx
+           case mbCtx of
+             Nothing  -> queryDebug ["; checkSatThen: No context value to push."]
+             Just ctx -> do queryDebug ["; checkSatThen: Pushing in the context: " ++ show ctx]
+                            constrain ctx
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
@@ -202,31 +206,38 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                                 die
 
        -- What to do if the proof fails
-       cex  = liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+       cex  = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
-                          -- When trying to get a counter-example, only include in the
-                          -- implication those facts that are user-given axioms. This
-                          -- way our counter-example will be more likely to be relevant
-                          -- to the proposition we're currently proving. (Hopefully.)
-                          -- Remember that we first have to negate, and then skolemize!
-                          SatResult res <- satWith cfg $ do
-                                              qSaturateSavingObservables prop
-                                              mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
-                                              pure $ skolemize (qNot prop)
+                 res <- if inQuery
+                        then Satisfiable <$> pure cfg <*> getModel
+                        else -- When trying to get a counter-example not in query mode, we
+                             -- do a skolemized sat call, which gets better counter-examples.
+                             -- We only include the those facts that are user-given axioms. This
+                             -- way our counter-example will be more likely to be relevant
+                             -- to the proposition we're currently proving. (Hopefully.)
+                             -- Remember that we first have to negate, and then skolemize!
+                             do SatResult res <- liftIO $ satWith cfg $ do
+                                                   qSaturateSavingObservables prop
+                                                   mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                                   pure $ skolemize (qNot prop)
+                                pure res
 
-                          let isEmpty = case res of
-                                          Unsatisfiable{} -> False           -- Shouldn't really happen!
-                                          Satisfiable _ m -> isEmptyModel m  -- Shouldn't really happen!
-                                          DeltaSat _ _  m -> isEmptyModel m  -- Unlikely but why not
-                                          SatExtField _ m -> isEmptyModel m  -- Can't really happen
-                                          Unknown{}       -> False           -- Possible, I suppose. Just print it
-                                          ProofError{}    -> False           -- Ditto
+                 let isEmpty = case res of
+                                 Unsatisfiable{} -> -- Shouldn't really happen! bail out
+                                                    error $ unlines [" SBV.KnuckleDragger: Unexpected unsat-result while extracting a model."
+                                                                    , "Please report this as a bug!"
+                                                                    ]
+                                 Satisfiable _ m -> isEmptyModel m  -- Expected case
+                                 DeltaSat _ _  m -> isEmptyModel m  -- Unlikely but why not
+                                 SatExtField _ m -> isEmptyModel m  -- Can't really happen
+                                 Unknown{}       -> False           -- Possible, I suppose. Just print it
+                                 ProofError{}    -> False           -- Ditto
 
-                          case (isEmpty, mbSat) of
-                            (True,  Just act) -> act
-                            _                 -> (print $ ThmResult res)
+                 liftIO $ case (isEmpty, mbSat) of
+                           (True,  Just act) -> act
+                           _                 -> (print $ ThmResult res)
 
-                          die
+                 die
 
 -- | Given a predicate, return an induction principle for it. Typically, we only have one viable
 -- induction principle for a given type, but we allow for alternative ones.
