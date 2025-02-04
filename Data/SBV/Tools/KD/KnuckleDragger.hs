@@ -178,19 +178,19 @@ class ChainLemma a steps step | steps -> step where
              query $ go (1::Int) sTrue proofSteps
 
 -- | Turn a sequence of steps into a chain of equality implications, merged with a function.
-mkChainSteps :: EqSymbolic a => (SBool, [(a, [Proof])]) -> (SBool, [([Proof], SBool)])
+mkChainSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Proof], SBool)])
 mkChainSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
-  where merge (a1, _) (a2, by) = (by, a1 .== a2)
+  where merge (ProofStep a _) (ProofStep b by) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [(z, [Proof])])) z where
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) z where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [(z, [Proof])]))
+                    (SBV a -> SBV b -> (SBool, [ProofStep z]))
                     (SBV a -> SBV b -> z) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (steps a b))
@@ -198,7 +198,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [(z, [Proof])]))
+                    (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
                     (SBV a -> SBV b -> SBV c -> z) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (steps a b c))
@@ -206,7 +206,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [(z, [Proof])]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> z) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (steps a b c d))
@@ -214,7 +214,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [(z, [Proof])]))
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z]))
                     (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (steps a b c d e))
@@ -672,34 +672,37 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | all (not . isSpace) s                    = s
                | True                                     = '(' : s ++ ")"
 
+-- | A proof-step with associated helpers
+data ProofStep a = ProofStep a [Proof]
+
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
-  (?) :: a -> b -> (a, [Proof])
+  (?) :: a -> b -> ProofStep a
   infixl 2 ?
 
 -- | Giving just one proof as a helper
 instance ProofHint a Proof where
-  a ? b = (a, [b])
+  a ? p = ProofStep a [p]
 
 -- | Giving a bunch of proofs as a helper
 instance ProofHint a [Proof] where
-  a ? b = (a, b)
+  a ? ps = ProofStep a ps
 
 -- | Start reasoning for the calculational proof.
-(<:) :: a -> [(a, [Proof])] -> [(a, [Proof])]
-a <: b = (a, []) =: b
+(<:) :: a -> [ProofStep a] -> [ProofStep a]
+a <: b = ProofStep a [] =: b
 infixr 1 <:
 
 -- | Chain steps in a calculational proof.
-(=:) :: (a, [Proof]) -> [(a, [Proof])] -> [(a, [Proof])]
+(=:) :: ProofStep a -> [ProofStep a] -> [ProofStep a]
 a =: b = a : b
 infixr 1 =:
 
 -- | Mark the end of a calculational proof.
-qed :: [(a, [Proof])]
+qed :: [ProofStep a]
 qed = []
 
 -- | Add hypotheses to a calculational proof.
-(|-) :: SBool -> [(a, [Proof])] -> (SBool, [(a, [Proof])])
+(|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
 a |- b = (a, b)
 infixl 0 |-
