@@ -712,7 +712,6 @@ infixr 1 <:
 qed :: [ProofStep a]
 qed = []
 
--- | Add hypotheses to a calculational proof.
 -- | Start a calculational proof, with the given hypothesis. You can use 'sTrue' if the calculation holds without any preconditions.
 (|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
 a |- b = (a, b)
