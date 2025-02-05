@@ -19,7 +19,6 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeAbstractions     #-}
-{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-matches #-}
@@ -128,7 +127,7 @@ kleeneProofs = runKD $ do
                                                     =: (1 + 1) + (x * star x + x * star x) ? kleene
                                                     =: 1 + x * star x                      ? par_idem
                                                     =: star x                              ? unfold
-                                                    =: qed @Kleene)
+                                                    =: qed)
 
   subset_eq   <- lemma "subset_eq" (\(Forall @"x" x) (Forall @"y" y) -> (x .== y) .== (x <= y .&& y <= x)) kleene
 

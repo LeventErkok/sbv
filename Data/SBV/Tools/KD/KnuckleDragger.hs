@@ -26,6 +26,8 @@
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeAbstractions           #-}
 {-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeOperators              #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -704,21 +706,26 @@ instance ChainStep a a where
   a =: b = ProofStep a [] : b
 
 -- | Mark the end of a calculational proof.
-qed :: [ProofStep (SBV a)]
+qed :: [ProofStep a]
 qed = []
 
+-- | Type family to capture what sort of starts we allow in a chain proof.
+type family ChainsTo a where
+  ChainsTo (SBool, a) = a
+  ChainsTo a          = a
+
 -- | Starting a chain proof.
-class ChainStart arg a where
+class ChainStart a where
   -- | Start a chain proof.
-  (|-) :: arg -> [ProofStep a] -> (SBool, [ProofStep a])
+  (|-) :: a -> [ProofStep (ChainsTo a)] -> (SBool, [ProofStep (ChainsTo a)])
   infixl 0 |-
 
 -- | Start a calculational proof, with no hypothesis.
-instance ChainStart a a where
+instance a ~ ChainsTo a => ChainStart a where
    -- Start a chain proof, with no hypothesis.
    a |- b = (sTrue, ProofStep a [] : b)
 
 -- | Start a calculational proof, with the given hypothesis.
-instance ChainStart (SBool, a) a where
+instance {-# OVERLAPPING #-} ChainStart (SBool, a) where
    -- Start a chain proof, with a hypothesis.
    (hyp, a) |- b = (hyp, ProofStep a [] : b)

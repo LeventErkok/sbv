@@ -21,7 +21,6 @@
 {-# LANGUAGE StandaloneDeriving   #-}
 {-# LANGUAGE TemplateHaskell      #-}
 {-# LANGUAGE TypeAbstractions     #-}
-{-# LANGUAGE TypeApplications     #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -375,7 +374,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                      =: ﬧﬧ(ﬧﬧ b ⏐ a)
                                      =: ﬧﬧ b ⏐ a                    ? sh1
                                      =: b ⏐ a                       ? sh1
-                                     =: qed @Stroke
+                                     =: qed
 
   all_bot <- chainLemma "a | a′ = b | b′" (\AB -> a ⏐ ﬧ a .== b ⏐ ﬧ b) $
                         \a b -> a ⏐ ﬧ a |- ﬧﬧ(a ⏐ ﬧ a)              ? sh1
@@ -383,7 +382,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                         =: ﬧ((b ⏐ ﬧ b) ⏐ (a ⏐ ﬧ a)) ? commut
                                         =: ﬧﬧ (b ⏐ ﬧ b)             ? sh2
                                         =: b ⏐ ﬧ b                  ? sh1
-                                        =: qed @Stroke
+                                        =: qed
 
   commut1  <- lemma "a ⊔ b = b ⊔ a" (\AB -> a ⨆ b .== b ⨆ a) [commut]
   commut2  <- lemma "a ⊓ b = b ⊓ a" (\AB -> a ⨅ b .== b ⨅ a) [commut]
@@ -404,7 +403,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                 =: a ⨆ (ﬧ a ⨅ т)       ? distrib1
                                                 =: a ⨆ ﬧ a             ? ident2
                                                 =: (т :: SStroke)      ? compl1
-                                                =: qed @Stroke
+                                                =: qed
 
   bound2 <- chainLemma "a ⊓ ⲳ = ⲳ" (\A -> a ⨅ ⲳ .== ⲳ) $
                        \(a :: SStroke) -> a ⨅ ⲳ |- (a ⨅ ⲳ) ⨆ ⲳ         ? ident1
@@ -413,7 +412,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                 =: a ⨅ (ﬧ a ⨆ ⲳ)       ? distrib2
                                                 =: a ⨅ ﬧ a             ? ident1
                                                 =: (ⲳ :: SStroke)      ? compl2
-                                                =: qed @Stroke
+                                                =: qed
 
   absorb1 <- chainLemma "a ⊔ (a ⊓ b) = a" (\AB -> a ⨆ (a ⨅ b) .== a) $
                         \(a :: SStroke) b -> a ⨆ (a ⨅ b) |- (a ⨅ т) ⨆ (a ⨅ b) ? ident2
@@ -421,7 +420,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                          =: a ⨅ (b ⨆ т)       ? commut1
                                                          =: a ⨅ т             ? bound1
                                                          =: a                 ? ident2
-                                                         =: qed @Stroke
+                                                         =: qed
 
   absorb2 <- chainLemma "a ⊓ (a ⊔ b) = a" (\AB -> a ⨅ (a ⨆ b) .== a) $
                         \(a :: SStroke) b -> a ⨅ (a ⨆ b) |- (a ⨆ ⲳ) ⨅ (a ⨆ b) ? ident1
@@ -429,12 +428,12 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                          =: a ⨆ (b ⨅ ⲳ)       ? commut2
                                                          =: a ⨆ ⲳ             ? bound2
                                                          =: a                 ? ident1
-                                                         =: qed @Stroke
+                                                         =: qed
 
   idemp2 <- chainLemma "a ⊓ a = a" (\A -> a ⨅ a .== a) $
                        \(a :: SStroke) -> a ⨅ a |- a ⨅ (a ⨆ ⲳ) ? ident1
                                                 =: a           ? absorb2
-                                                =: qed @Stroke
+                                                =: qed
 
 
   inv <- chainLemma "a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ"
@@ -450,7 +449,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                                               =:  ﬧ a ⨅ (a ⨆ a')         ? distrib2
                                                                               =:  ﬧ a ⨅ т
                                                                               =:  ﬧ a                    ? ident2
-                                                                              =: qed @Stroke
+                                                                              =: qed
 
   dne      <- lemma "aᶜᶜ = a"         (\A -> ﬧﬧ a .== a)               [inv, compl1, compl2, commut1, commut2]
   inv_elim <- lemma "aᶜ = bᶜ → a = b" (\AB -> ﬧ a .== ﬧ b .=> a .== b) [dne]
@@ -464,7 +463,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                       =: a ⨆ (ﬧ a ⨅ (ﬧ a ⨆ b))       ? distrib1
                                                       =: a ⨆ ﬧ a                     ? absorb2
                                                       =: (т :: SStroke)              ? compl1
-                                                      =: qed @Stroke
+                                                      =: qed
 
   a2 <- chainLemma "a ⊓ (aᶜ ⊓ b) = ⲳ" (\AB  -> a ⨅ (ﬧ a ⨅ b) .== ⲳ) $
                    \(a :: SStroke) b -> a ⨅ (ﬧ a ⨅ b) |- (a ⨅ (ﬧ a ⨅ b)) ⨆ ⲳ         ? ident1
@@ -473,7 +472,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                       =: a ⨅ (ﬧ a ⨆ (ﬧ a ⨅ b))       ? distrib2
                                                       =: a ⨅ ﬧ a                     ? absorb1
                                                       =: (ⲳ :: SStroke)              ? compl2
-                                                      =: qed @Stroke
+                                                      =: qed
 
   dm1 <- lemma "(a ⊔ b)ᶜ = aᶜ ⊓ bᶜ" (\AB -> ﬧ(a ⨆ b) .== ﬧ a ⨅ ﬧ b)
                [a1, a2, dne, commut1, commut2, ident1, ident2, distrib1, distrib2]
@@ -501,7 +500,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                               =: ﬧ b ⨆ b                           ? e1
                                                               =: b ⨆ ﬧ b                           ? commut1
                                                               =: (т :: SStroke)                    ? compl1
-                                                              =: qed @Stroke
+                                                              =: qed
 
   g1 <- lemma "(a ⊔ (b ⊔ c)) ⊔ cᶜ = т" (\ABC -> (a ⨆ (b ⨆ c)) ⨆ ﬧ c .== т) [commut1, f1]
 
@@ -515,7 +514,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                            =: a ⨅ (ﬧ a ⨆ (ﬧ c ⨅ (ﬧ a ⨅ ﬧ b)))     ? commut2
                                                            =: a ⨅ ﬧ a                             ? e2
                                                            =: (ⲳ :: SStroke)                      ? compl2
-                                                           =: qed @Stroke
+                                                           =: qed
 
   i1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ b .== ⲳ) [commut1, h1]
   j1 <- lemma "(a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ" (\ABC -> ﬧ(a ⨆ b ⨆ c) ⨅ c .== ⲳ) [a2, dne, commut2]
@@ -532,7 +531,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                          =: т ⨅ ((a ⨆ (b ⨆ c)) ⨆ ﬧ b)                             ? d1
                                          =: т ⨅ (т :: SStroke)                                    ? f1
                                          =: (т :: SStroke)                                        ? idemp2
-                                         =: qed @Stroke
+                                         =: qed
 
     c2 <- chainLemma "(a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ"
                      (\ABC -> (a ⨆ (b ⨆ c)) ⨅ ﬧ((a ⨆ b) ⨆ c) .== ⲳ) $
@@ -549,7 +548,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                          =: (ﬧ((a ⨆ b) ⨆ c) ⨅ b) ⨆ ⲳ                          ? j1
                                          =: ⲳ ⨆ (ⲳ :: SStroke)                                ? i1
                                          =: (ⲳ :: SStroke)                                    ? ident1
-                                         =: qed @Stroke
+                                         =: qed
 
     lemma "a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c" (\ABC -> a ⨆ (b ⨆ c) .== (a ⨆ b) ⨆ c) [c1, c2, cancel]
 
@@ -557,13 +556,13 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        \(a :: SStroke) b c -> a ⨅ (b ⨅ c) |- ﬧﬧ(a ⨅ (b ⨅ c)) ? dne
                                                           =: ﬧﬧ((a ⨅ b) ⨅ c) ? assoc1
                                                           =:   ((a ⨅ b) ⨅ c) ? dne
-                                                          =: qed @Stroke
+                                                          =: qed
 
   le_antisymm <- chainLemma "a ≤ b → b ≤ a → a = b" (\AB -> a ≤ b .=> b ≤ a .=> a .== b) $
                             \(a :: SStroke) b -> (a ≤ b .&& b ≤ a, a) |- b ⨅ a
                                                                       =: a ⨅ b ? commut2
                                                                       =: b
-                                                                      =: qed @Stroke
+                                                                      =: qed
 
   le_refl <- lemma "a ≤ a" (\A -> a ≤ a) [idemp2]
 
@@ -572,7 +571,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                                                                      =: (c ⨅ b) ⨅ a
                                                                      =: c ⨅ (b ⨅ a) ? assoc2
                                                                      =: (c ⨅ a)
-                                                                     =: qed @Stroke
+                                                                     =: qed
 
   lt_iff_le_not_le <- lemma "a < b ↔ a ≤ b ∧ ¬b ≤ a" (\AB -> (a < b) .<=> a ≤ b .&& sNot (b ≤ a)) [sh3]
 
@@ -582,7 +581,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
   sup_le <- chainLemma "a ≤ c → b ≤ c → a ⊔ b ≤ c"
                        (\ABC -> a ≤ c .=> b ≤ c .=> a ⨆ b ≤ c) $
                        \(a :: SStroke) b c -> (a ≤ c .&& b ≤ c,  a ⨆ b) |- (c ⨅ a) ⨆ (c ⨅ b) =: c ⨅ (a ⨆ b) ? distrib2
-                                                                                             =: qed @Stroke
+                                                                                             =: qed
 
   inf_le_left  <- lemma "a ⊓ b ≤ a" (\AB -> a ⨅ b ≤ a) [assoc2, idemp2]
   inf_le_right <- lemma "a ⊓ b ≤ b" (\AB -> a ⨅ b ≤ b) [commut2, inf_le_left]
@@ -591,7 +590,7 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        (\ABC -> a ≤ b .=> a ≤ c .=> a ≤ b ⨅ c) $
                        \(a :: SStroke) b c -> (a ≤ b .&& a ≤ c, a) |- b ⨅ a =: b ⨅ (c ⨅ a)
                                                                             =: (b ⨅ c ⨅ a) ? assoc2
-                                                                            =: qed @Stroke
+                                                                            =: qed
 
   le_sup_inf <- lemma "(x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z"
                       (\XYZ -> (x ⨆ y) ⨅ (x ⨆ z) ≤ x ⨆ y ⨅ z)
@@ -604,12 +603,12 @@ shefferBooleanAlgebra = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 
                        \(a :: SStroke)-> a ≤ т |- a .== т ⨅ a
                                                =: a .== a ⨅ т ? commut2
                                                =: a .== a     ? ident2
-                                               =: qed @Bool
+                                               =: qed
 
   bot_le <- chainLemma "⊥ ≤ a" (\A -> ⲳ ≤ a) $
                        \(a :: SStroke) -> ⲳ ≤ a |- ⲳ .== a ⨅ ⲳ
                                                 =: (ⲳ .== (ⲳ :: SStroke)) ? bound2
-                                                =: qed @Bool
+                                                =: qed
 
   sdiff_eq <- lemma "x \\ y = x ⊓ yᶜ" (\XY -> x \\ y .== x ⨅ ﬧ y) []
   himp_eq  <- lemma "x ⇨ y = y ⊔ xᶜ"  (\XY -> x ⇨ y .== y ⨆ ﬧ x)  []
