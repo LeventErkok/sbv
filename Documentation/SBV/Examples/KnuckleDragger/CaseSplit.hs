@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -73,7 +74,7 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                           =: 2*(3*w)*(3*w) + 3*w + 1
                                                           =: 18*w*w + 3*w + 1
                                                           =: 3*(6*w*w + w) + 1
-                                                          =: qed)
+                                                          =: qed @Integer)
 
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
@@ -85,7 +86,7 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                           =: 18*w*w + 12*w + 2 + 3*w + 2
                                                           =: 18*w*w + 15*w + 4
                                                           =: 3*(6*w*w + 5*w + 1) + 1
-                                                          =: qed)
+                                                          =: qed @Integer)
 
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
@@ -97,7 +98,7 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
                                                           =: 18*w*w + 24*w + 8 + 3*w + 3
                                                           =: 18*w*w + 27*w + 11
                                                           =: 3*(6*w*w + 9*w + 3) + 2
-                                                          =: qed)
+                                                          =: qed @Integer)
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so
    -- no extra completeness helper is needed.

@@ -707,7 +707,18 @@ instance ChainStep a a where
 qed :: [ProofStep (SBV a)]
 qed = []
 
--- | Start a calculational proof, with the given hypothesis. You can use 'sTrue' if the calculation holds without any preconditions.
-(|-) :: (SBool, a) -> [ProofStep a] -> (SBool, [ProofStep a])
-(hyp, a) |- b = (hyp, ProofStep a [] : b)
-infixl 0 |-
+-- | Starting a chain proof.
+class ChainStart arg a where
+  -- | Start a chain proof.
+  (|-) :: arg -> [ProofStep a] -> (SBool, [ProofStep a])
+  infixl 0 |-
+
+-- | Start a calculational proof, with no hypothesis.
+instance ChainStart a a where
+   -- Start a chain proof, with no hypothesis.
+   a |- b = (sTrue, ProofStep a [] : b)
+
+-- | Start a calculational proof, with the given hypothesis.
+instance ChainStart (SBool, a) a where
+   -- Start a chain proof, with a hypothesis.
+   (hyp, a) |- b = (hyp, ProofStep a [] : b)
