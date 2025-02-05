@@ -182,7 +182,7 @@ class ChainLemma a steps step | steps -> step where
 -- | Turn a sequence of steps into a chain of equality implications, merged with a function.
 mkChainSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Proof], SBool)])
 mkChainSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
-  where merge (ProofStep a _) (ProofStep b by) = (by, a .== b)
+  where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
 instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) z where
@@ -697,11 +697,11 @@ class ChainStep arg a where
   (=:) :: arg -> [ProofStep a] -> [ProofStep a]
   infixr 1 =:
 
--- | Chaining a step to another
+-- | Chaining a step to another, with a given helper proof.
 instance ChainStep (ProofStep a) a where
   a =: b = a : b
 
--- | Chaining a step to another
+-- | Chaining a step to another, without any helpers.
 instance ChainStep a a where
   a =: b = ProofStep a [] : b
 
@@ -709,23 +709,10 @@ instance ChainStep a a where
 qed :: [ProofStep a]
 qed = []
 
--- | Type family to capture what sort of starts we allow in a chain proof.
-type family ChainsTo a where
-  ChainsTo (SBool, a) = a
-  ChainsTo a          = a
-
--- | Starting a chain proof.
-class ChainStart a where
-  -- | Start a chain proof.
-  (|-) :: a -> [ProofStep (ChainsTo a)] -> (SBool, [ProofStep (ChainsTo a)])
-  infixl 0 |-
-
--- | Start a calculational proof, with no hypothesis.
-instance a ~ ChainsTo a => ChainStart a where
-   -- Start a chain proof, with no hypothesis.
-   a |- b = (sTrue, ProofStep a [] : b)
-
--- | Start a calculational proof, with the given hypothesis.
-instance {-# OVERLAPPING #-} ChainStart (SBool, a) where
-   -- Start a chain proof, with a hypothesis.
-   (hyp, a) |- b = (hyp, ProofStep a [] : b)
+-- | Start a chain proof, with the given hypothesis. Use 'sTrue' as the
+-- first argument if the chain holds unconditionally. The first argument is
+-- typically used to introduce hypotheses in proofs of implications such as @A .=> B@, where
+-- we would put @A@ as the starting assumption.
+(|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
+hyp |- ps = (hyp, ps)
+infixl 0 |-

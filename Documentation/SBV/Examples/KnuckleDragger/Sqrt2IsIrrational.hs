@@ -12,6 +12,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -76,8 +77,8 @@ sqrt2IsIrrational = runKD $ do
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
                                   (\a -> let k = some "w" (\kv -> a .== 2*kv+1)
-                                         in (odd a, sq a) |- sq (2 * k + 1)
-                                                          =: qed)
+                                         in odd a |- sq a =: sq (2 * k + 1)
+                                                          =: qed @SInteger)
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
     -- is enough to establish this.
@@ -90,8 +91,8 @@ sqrt2IsIrrational = runKD $ do
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
                                       (\a -> let k = some "w" (\kv -> a .== 2*kv)
-                                             in (even a, sq a) |- sq (k * 2)
-                                                               =: qed)
+                                             in even a |- sq a =: sq (k * 2)
+                                                               =: qed @SInteger)
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.
