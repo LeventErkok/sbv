@@ -704,7 +704,7 @@ instance ChainStep a a where
   a =: b = ProofStep a [] : b
 
 -- | Mark the end of a calculational proof.
-qed :: [ProofStep a]
+qed :: [ProofStep (SBV a)]
 qed = []
 
 -- | Start a calculational proof, with the given hypothesis. You can use 'sTrue' if the calculation holds without any preconditions.
