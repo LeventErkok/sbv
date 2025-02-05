@@ -41,7 +41,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , inductiveTheorem, inductiveTheoremWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (<:), (=:), (?), qed
+       , (|-), (=:), (?), qed
        ) where
 
 import Data.SBV
@@ -703,16 +703,11 @@ instance ChainStep (ProofStep a) a where
 instance ChainStep a a where
   a =: b = ProofStep a [] : b
 
--- | Start reasoning for the calculational proof.
-(<:) :: a -> [ProofStep a] -> [ProofStep a]
-(<:) = (=:)
-infixr 1 <:
-
 -- | Mark the end of a calculational proof.
 qed :: [ProofStep a]
 qed = []
 
 -- | Start a calculational proof, with the given hypothesis. You can use 'sTrue' if the calculation holds without any preconditions.
-(|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
-a |- b = (a, b)
+(|-) :: (SBool, a) -> [ProofStep a] -> (SBool, [ProofStep a])
+(hyp, a) |- b = (hyp, ProofStep a [] : b)
 infixl 0 |-

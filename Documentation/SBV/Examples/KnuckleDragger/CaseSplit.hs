@@ -67,8 +67,8 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    -- Case 0: n = 0 (mod 3)
    case0 <- chainLemma "case_n_mod_3_eq_0"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n)
-                       (\n -> n `sEMod` 3 .== 0 |- let w = some "witness" $ \k -> n .== 3*k
-                                                   in s n <: s (3*w)
+                       (\n -> let w = some "witness" $ \k -> n .== 3*k
+                              in (n `sEMod` 3 .== 0, s n) |- s (3*w)
                                                           =: s (3*w)
                                                           =: 2*(3*w)*(3*w) + 3*w + 1
                                                           =: 18*w*w + 3*w + 1
@@ -78,8 +78,8 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    -- Case 1: n = 1 (mod 3)
    case1 <- chainLemma "case_n_mod_3_eq_1"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n)
-                       (\n -> n `sEMod` 3 .== 1 |- let w = some "witness" $ \k -> n .== 3*k + 1
-                                                   in s n <: s (3*w+1)
+                       (\n -> let w = some "witness" $ \k -> n .== 3*k + 1
+                              in (n `sEMod` 3 .== 1, s n) |- s (3*w+1)
                                                           =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
                                                           =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1
                                                           =: 18*w*w + 12*w + 2 + 3*w + 2
@@ -90,8 +90,8 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    -- Case 2: n = 2 (mod 3)
    case2 <- chainLemma "case_n_mod_3_eq_2"
                        (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n)
-                       (\n -> n `sEMod` 3 .== 2 |- let w = some "witness" $ \k -> n .== 3*k + 2
-                                                   in s n <: s (3*w+2)
+                       (\n -> let w = some "witness" $ \k -> n .== 3*k + 2
+                              in (n `sEMod` 3 .== 2, s n) |- s (3*w+2)
                                                           =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
                                                           =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1
                                                           =: 18*w*w + 24*w + 8 + 3*w + 3

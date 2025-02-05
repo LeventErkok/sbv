@@ -75,8 +75,8 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- chainLemma "oddSquaredIsOdd"
                                   (\(Forall @"a" a) -> odd a .=> odd (sq a))
-                                  (\a -> odd a |- let k = some "w" (\kv -> a .== 2*kv+1)
-                                                  in sq a <: sq (2 * k + 1)
+                                  (\a -> let k = some "w" (\kv -> a .== 2*kv+1)
+                                         in (odd a, sq a) |- sq (2 * k + 1)
                                                           =: qed)
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
@@ -89,8 +89,8 @@ sqrt2IsIrrational = runKD $ do
     -- Happily, z3 needs nchainLemma helpers to establish this all on its own.
     evenSquaredIsMult4 <- chainLemma "evenSquaredIsMult4"
                                       (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a)
-                                      (\a -> even a |- let k = some "w" (\kv -> a .== 2*kv)
-                                                       in sq a <: sq (k * 2)
+                                      (\a -> let k = some "w" (\kv -> a .== 2*kv)
+                                             in (even a, sq a) |- sq (k * 2)
                                                                =: qed)
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
