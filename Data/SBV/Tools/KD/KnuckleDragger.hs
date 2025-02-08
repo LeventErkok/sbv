@@ -76,7 +76,7 @@ use = liftIO
 
 -- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
-class ChainLemma a steps step | steps -> step where
+class ChainLemma a steps where
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
@@ -185,39 +185,35 @@ mkChainSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
   where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) z where
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
    chainSteps result steps = do a <- free (symbolVal (Proxy @na))
                                 pure (result (Forall a), mkChainSteps (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [ProofStep z]))
-                    (SBV a -> SBV b -> z) where
+                    (SBV a -> SBV b -> (SBool, [ProofStep z])) where
    chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                 pure (result (Forall a) (Forall b), mkChainSteps (steps a b))
 
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
-                    (SBV a -> SBV b -> SBV c -> z) where
+                    (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
    chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                 pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (steps a b c))
 
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
-                    (SBV a -> SBV b -> SBV c -> SBV d -> z) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
    chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z]))
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> z) where
+                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
    chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                 pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (steps a b c d e))
 
