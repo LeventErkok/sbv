@@ -36,8 +36,8 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , axiom
        , lemma,        lemmaWith
        , theorem,      theoremWith
-       , chainLemma,   chainLemmaWith
-       , chainTheorem, chainTheoremWith
+       , calcLemma,   calcLemmaWith
+       , calcTheorem, calcTheoremWith
        , induct, inductAlt1, inductAlt2
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
@@ -54,7 +54,6 @@ import Data.SBV.Control hiding (getProof)
 import Data.SBV.Tools.KD.Kernel
 import Data.SBV.Tools.KD.Utils
 
-import Control.Monad       (when)
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.SBV.List as SL
@@ -74,13 +73,13 @@ import Data.Dynamic
 use :: IO Proof -> KD Proof
 use = liftIO
 
--- | A class for doing equational reasoning style chained proofs. Use 'chainLemma' to prove a given theorem
+-- | A class for doing equational reasoning style calculational proofs. Use 'calcLemma to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
-class ChainLemma a steps where
+class CalcLemma a steps where
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
-  -- Consider a call of the form @chainLemma name P (cond, [A, B, C, D]) H@. Note that @H@ is
+  -- Consider a call of the form @calcLemma name P (cond, [A, B, C, D]) H@. Note that @H@ is
   -- a list of already proven facts, ensured by the type signature. We proceed as follows:
   --
   --    * Prove: @(H && cond)                                   -> (A == B)@
@@ -92,34 +91,34 @@ class ChainLemma a steps where
   -- cond acts as the context. Typically, if you are trying to prove @Y -> Z@, then you want cond to be Y.
   -- (This is similar to @intros@ commands in theorem provers.)
   --
-  -- So, chain-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning in the case of
+  -- So, calc-lemma is essentially modus-ponens, applied in a sequence of stepwise equality reasoning in the case of
   -- non-boolean steps.
   --
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
   -- no sequence of steps to reason about.
-  chainLemma :: Proposition a => String -> a -> steps -> KD Proof
+  calcLemma :: Proposition a => String -> a -> steps -> KD Proof
 
-  -- | Same as chainLemma, except tagged as Theorem
-  chainTheorem :: Proposition a => String -> a -> steps -> KD Proof
+  -- | Same as calcLemma, except tagged as Theorem
+  calcTheorem :: Proposition a => String -> a -> steps -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  chainLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
+  calcLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
-  -- | Same as chainLemmaWith, except tagged as Theorem
-  chainTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
+  -- | Same as calcLemmaWith, except tagged as Theorem
+  calcTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
-  {-# MINIMAL chainSteps #-}
-  chainSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
+  {-# MINIMAL calcSteps #-}
+  calcSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
 
-  chainLemma   nm p steps = getKDConfig >>= \cfg -> chainLemmaWith   cfg nm p steps
-  chainTheorem nm p steps = getKDConfig >>= \cfg -> chainTheoremWith cfg nm p steps
-  chainLemmaWith          = chainGeneric False
-  chainTheoremWith        = chainGeneric True
+  calcLemma   nm p steps = getKDConfig >>= \cfg -> calcLemmaWith   cfg nm p steps
+  calcTheorem nm p steps = getKDConfig >>= \cfg -> calcTheoremWith cfg nm p steps
+  calcLemmaWith          = calcGeneric False
+  calcTheoremWith        = calcGeneric True
 
-  chainGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
-  chainGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
+  calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
+  calcGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
           kdSt <- getKDState
 
           liftIO $ runSMTWith cfg $ do
@@ -130,20 +129,13 @@ class ChainLemma a steps where
 
              mbStartTime <- getTimeStampIf measureTime
 
-             (goal, (intros, proofSteps)) <- chainSteps result steps
+             (goal, (intros, proofSteps)) <- calcSteps result steps
 
              let stepHelpers   = concatMap fst proofSteps
                  (ros, modulo) = calculateRootOfTrust nm stepHelpers
                  finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
              mapM_ (qSaturateSavingObservables . getProof) stepHelpers
-
-             -- proofSteps is the zipped version; so if it's null then user must've given 0 or 1 steps.
-             when (null proofSteps) $
-                error $ unlines $ [ "Incorrect use of chainLemma on " ++ show nm ++ ":"
-                                  , "**   There must be at least two steps."
-                                  , "**   Was given less than two."
-                                  ]
 
              let go :: Int -> SBool -> [([Proof], SBool)] -> Query Proof
                  go _ accum [] = do
@@ -179,43 +171,43 @@ class ChainLemma a steps where
 
              query $ go (1::Int) sTrue proofSteps
 
--- | Turn a sequence of steps into a chain of equality implications, merged with a function.
-mkChainSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Proof], SBool)])
-mkChainSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
+-- | Turn a sequence of steps into a chain of equalities
+mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Proof], SBool)])
+mkCalcSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
   where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => ChainLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
-   chainSteps result steps = do a <- free (symbolVal (Proxy @na))
-                                pure (result (Forall a), mkChainSteps (steps a))
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
+   calcSteps result steps = do a <- free (symbolVal (Proxy @na))
+                               pure (result (Forall a), mkCalcSteps (steps a))
 
 -- | Chaining lemmas that depend on two quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
-      => ChainLemma (Forall na a -> Forall nb b -> SBool)
-                    (SBV a -> SBV b -> (SBool, [ProofStep z])) where
-   chainSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
-                                pure (result (Forall a) (Forall b), mkChainSteps (steps a b))
+      => CalcLemma (Forall na a -> Forall nb b -> SBool)
+                   (SBV a -> SBV b -> (SBool, [ProofStep z])) where
+   calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
+                               pure (result (Forall a) (Forall b), mkCalcSteps (steps a b))
 
 -- | Chaining lemmas that depend on three quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                    (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
-   chainSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
-                                pure (result (Forall a) (Forall b) (Forall c), mkChainSteps (steps a b c))
+      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
+                   (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+   calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
+                               pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c))
 
 -- | Chaining lemmas that depend on four quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
-   chainSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkChainSteps (steps a b c d))
+      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
+                   (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+   calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d))
 
 -- | Chaining lemmas that depend on five quantified variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
-      => ChainLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                    (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
-   chainSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
-                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkChainSteps (steps a b c d e))
+      => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
+                   (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+   calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
+                               pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
 
 -- | Captures the schema for an inductive proof
 data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
@@ -713,8 +705,8 @@ instance ChainStep (ProofStep a) where
 qed :: [ProofStep a]
 qed = []
 
--- | Start a chain proof, with the given hypothesis. Use 'sTrue' as the
--- first argument if the chain holds unconditionally. The first argument is
+-- | Start a calculational proof, with the given hypothesis. Use 'sTrue' as the
+-- first argument if the calculation holds unconditionally. The first argument is
 -- typically used to introduce hypotheses in proofs of implications such as @A .=> B@, where
 -- we would put @A@ as the starting assumption.
 (|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])

@@ -17,7 +17,7 @@
 
   * Reworked KnuckleDragger examples, consolidating and improving the theorem statements.
   
-  * Added a new induction based proof strategy for Knuckledragger.
+  * Added new calculational and induction based proof strategies for Knuckledragger.
 
   * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
     can now be defined by the user as we have proper support for fold and map using lambdas.
