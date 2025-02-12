@@ -73,7 +73,7 @@ import Data.Dynamic
 use :: IO Proof -> KD Proof
 use = liftIO
 
--- | A class for doing equational reasoning style calculational proofs. Use 'calcLemma to prove a given theorem
+-- | A class for doing equational reasoning style calculational proofs. Use 'calcLemma' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class CalcLemma a steps where
 
