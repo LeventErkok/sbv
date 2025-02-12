@@ -673,10 +673,6 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
 -- | A proof-step with associated helpers
 data ProofStep a = ProofStep a [Proof]
 
-type family MkProofStep a where
-  MkProofStep (ProofStep a) = ProofStep a
-  MkProofStep a             = ProofStep a
-
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
   -- | Specify a helper for the given proof step
@@ -691,15 +687,25 @@ instance ProofHint a Proof where
 instance ProofHint a [Proof] where
   a ? ps = ProofStep a ps
 
+-- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
+-- we don't allow users to change this and write other chainable things. Probably it is not really necessary
+-- to have that extensibility. (Nor a big-deal if something like that is desired, as thing should be turned to
+-- a symbolic value at that level anyhow.)
+type family ChainsTo a where
+  ChainsTo (ProofStep a) = [ProofStep a]
+  ChainsTo a             = [ProofStep a]
+
 -- | Chain steps in a calculational proof.
 class ChainStep a where
   -- | Chain two steps together to form a proof sequence.
-  (=:) :: a -> [MkProofStep a] -> [MkProofStep a]
+  (=:) :: a -> ChainsTo a -> ChainsTo a
   infixr 1 =:
 
+-- | Chaining from a symbolic value without any annotation
 instance ChainStep (SBV a) where
    a =: as = ProofStep a [] : as
 
+-- | Chaining from another proof step
 instance ChainStep (ProofStep a) where
    a =: as = a : as
 
