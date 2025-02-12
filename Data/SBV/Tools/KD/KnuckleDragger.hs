@@ -673,6 +673,10 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
 -- | A proof-step with associated helpers
 data ProofStep a = ProofStep a [Proof]
 
+type family MkProofStep a where
+  MkProofStep (ProofStep a) = ProofStep a
+  MkProofStep a             = ProofStep a
+
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
   -- | Specify a helper for the given proof step
@@ -688,15 +692,15 @@ instance ProofHint a [Proof] where
   a ? ps = ProofStep a ps
 
 -- | Chain steps in a calculational proof.
-class ChainStep a b where
+class ChainStep a where
   -- | Chain two steps together to form a proof sequence.
-  (=:) :: a -> [ProofStep b] -> [ProofStep b]
+  (=:) :: a -> [MkProofStep a] -> [MkProofStep a]
   infixr 1 =:
 
-instance ChainStep a a where
+instance ChainStep (SBV a) where
    a =: as = ProofStep a [] : as
 
-instance ChainStep (ProofStep a) a where
+instance ChainStep (ProofStep a) where
    a =: as = a : as
 
 -- | Mark the end of a calculational proof.
