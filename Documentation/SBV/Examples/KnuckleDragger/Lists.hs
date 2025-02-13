@@ -766,7 +766,6 @@ foldrFoldl = runKD $ do
 -- You can verify @f@ is associative. Also note that @C@ is the right-unit for @f@, but it isn't the left-unit.
 -- In fact, @f@ has no-left unit by the above argument. In this case, the bookkeeping law produces @B@ for
 -- the left-hand-side, and @A@ for the right-hand-side for the input @[[], [B]]@.
---
 bookKeeping :: IO Proof
 bookKeeping = runKD $ do
    let a :: SA
