@@ -680,9 +680,8 @@ instance ProofHint a [Proof] where
   a ? ps = ProofStep a ps
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
--- we don't allow users to change this and write other chainable things. Probably it is not really necessary
--- to have that extensibility. (Nor a big-deal if something like that is desired, as thing should be turned to
--- a symbolic value at that level anyhow.)
+-- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
+-- but we'll cross that bridge if someone actually asks for it.
 type family ChainsTo a where
   ChainsTo (ProofStep a) = [ProofStep a]
   ChainsTo a             = [ProofStep a]
