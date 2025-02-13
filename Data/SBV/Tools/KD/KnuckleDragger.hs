@@ -688,7 +688,7 @@ type family ChainsTo a where
   ChainsTo a             = [ProofStep a]
 
 -- | Chain steps in a calculational proof.
-(=:) :: (ChainStep a (ChainsTo a)) =>  a -> ChainsTo a -> ChainsTo a
+(=:) :: ChainStep a (ChainsTo a) =>  a -> ChainsTo a -> ChainsTo a
 (=:) = chain
 infixr 1 =:
 
