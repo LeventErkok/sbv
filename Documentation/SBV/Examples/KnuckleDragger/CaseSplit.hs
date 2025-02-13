@@ -65,42 +65,42 @@ notDiv3 = runKDWith z3NoAutoConfig $ do
    -- Note that we use the euclidian definition of division/modulus.
 
    -- Case 0: n = 0 (mod 3)
-   case0 <- calcLemma "case_n_mod_3_eq_0"
-                      (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n)
-                      (\n -> let w = some "witness" $ \k -> n .== 3*k
-                             in n `sEMod` 3 .== 0 |- s n
-                                                  =: s (3*w)
-                                                  =: s (3*w)
-                                                  =: 2*(3*w)*(3*w) + 3*w + 1
-                                                  =: 18*w*w + 3*w + 1
-                                                  =: 3*(6*w*w + w) + 1
-                                                  =: qed)
+   case0 <- calc "case_n_mod_3_eq_0"
+                 (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n) $
+                 \n -> let w = some "witness" $ \k -> n .== 3*k
+                       in n `sEMod` 3 .== 0 |- s n
+                                            =: s (3*w)
+                                            =: s (3*w)
+                                            =: 2*(3*w)*(3*w) + 3*w + 1
+                                            =: 18*w*w + 3*w + 1
+                                            =: 3*(6*w*w + w) + 1
+                                            =: qed
 
    -- Case 1: n = 1 (mod 3)
-   case1 <- calcLemma "case_n_mod_3_eq_1"
-                      (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n)
-                      (\n -> let w = some "witness" $ \k -> n .== 3*k + 1
-                             in n `sEMod` 3 .== 1 |- s n
-                                                  =: s (3*w+1)
-                                                  =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
-                                                  =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1
-                                                  =: 18*w*w + 12*w + 2 + 3*w + 2
-                                                  =: 18*w*w + 15*w + 4
-                                                  =: 3*(6*w*w + 5*w + 1) + 1
-                                                  =: qed)
+   case1 <- calc "case_n_mod_3_eq_1"
+                 (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n) $
+                 \n -> let w = some "witness" $ \k -> n .== 3*k + 1
+                       in n `sEMod` 3 .== 1 |- s n
+                                            =: s (3*w+1)
+                                            =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
+                                            =: 2*(9*w*w + 3*w + 3*w + 1) + (3*w + 1) + 1
+                                            =: 18*w*w + 12*w + 2 + 3*w + 2
+                                            =: 18*w*w + 15*w + 4
+                                            =: 3*(6*w*w + 5*w + 1) + 1
+                                            =: qed
 
    -- Case 2: n = 2 (mod 3)
-   case2 <- calcLemma "case_n_mod_3_eq_2"
-                      (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n)
-                      (\n -> let w = some "witness" $ \k -> n .== 3*k + 2
-                             in n `sEMod` 3 .== 2 |- s n
-                                                  =: s (3*w+2)
-                                                  =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
-                                                  =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1
-                                                  =: 18*w*w + 24*w + 8 + 3*w + 3
-                                                  =: 18*w*w + 27*w + 11
-                                                  =: 3*(6*w*w + 9*w + 3) + 2
-                                                  =: qed)
+   case2 <- calc "case_n_mod_3_eq_2"
+                 (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n) $
+                 \n -> let w = some "witness" $ \k -> n .== 3*k + 2
+                       in n `sEMod` 3 .== 2 |- s n
+                                            =: s (3*w+2)
+                                            =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
+                                            =: 2*(9*w*w + 6*w + 6*w + 4) + (3*w + 2) + 1
+                                            =: 18*w*w + 24*w + 8 + 3*w + 3
+                                            =: 18*w*w + 27*w + 11
+                                            =: 3*(6*w*w + 9*w + 3) + 2
+                                            =: qed
 
    -- Note that z3 is smart enough to figure out the above cases are complete, so
    -- no extra completeness helper is needed.

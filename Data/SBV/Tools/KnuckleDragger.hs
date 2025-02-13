@@ -27,8 +27,8 @@ module Data.SBV.Tools.KnuckleDragger (
        , theorem, theoremWith
 
        -- * Reasoning via calculation
-       , calcLemma,   calcLemmaWith
-       , calcTheorem, calcTheoremWith
+       , calc,    calcWith
+       , calcThm, calcThmWith
 
        -- * Induction
        , induct, inductAlt1, inductAlt2

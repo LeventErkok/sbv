@@ -34,10 +34,10 @@
 module Data.SBV.Tools.KD.KnuckleDragger (
          Proposition, Proof, Instantiatable(..), Inst(..)
        , axiom
-       , lemma,        lemmaWith
-       , theorem,      theoremWith
-       , calcLemma,   calcLemmaWith
-       , calcTheorem, calcTheoremWith
+       , lemma,   lemmaWith
+       , theorem, theoremWith
+       , calc,    calcWith
+       , calcThm, calcThmWith
        , induct, inductAlt1, inductAlt2
        , inductiveLemma,   inductiveLemmaWith
        , inductiveTheorem, inductiveTheoremWith
@@ -73,13 +73,13 @@ import Data.Dynamic
 use :: IO Proof -> KD Proof
 use = liftIO
 
--- | A class for doing equational reasoning style calculational proofs. Use 'calcLemma' to prove a given theorem
+-- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class CalcLemma a steps where
 
   -- | Prove a property via a series of equality steps, using the default solver.
   -- Let @H@ be a list of already established lemmas. Let @P@ be a property we wanted to prove, named @name@.
-  -- Consider a call of the form @calcLemma name P (cond, [A, B, C, D]) H@. Note that @H@ is
+  -- Consider a call of the form @calc name P (cond, [A, B, C, D]) H@. Note that @H@ is
   -- a list of already proven facts, ensured by the type signature. We proceed as follows:
   --
   --    * Prove: @(H && cond)                                   -> (A == B)@
@@ -97,25 +97,25 @@ class CalcLemma a steps where
   -- If there are no helpers given (i.e., if @H@ is empty), then this call is equivalent to 'lemmaWith'.
   -- If @H@ is a singleton, then we bail out. A single step in @H@ indicates a usage mistake, since there's
   -- no sequence of steps to reason about.
-  calcLemma :: Proposition a => String -> a -> steps -> KD Proof
+  calc :: Proposition a => String -> a -> steps -> KD Proof
 
-  -- | Same as calcLemma, except tagged as Theorem
-  calcTheorem :: Proposition a => String -> a -> steps -> KD Proof
+  -- | Same as calc, except tagged as Theorem
+  calcThm :: Proposition a => String -> a -> steps -> KD Proof
 
   -- | Prove a property via a series of equality steps, using the given solver.
-  calcLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
+  calcWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
-  -- | Same as calcLemmaWith, except tagged as Theorem
-  calcTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
+  -- | Same as calcWith, except tagged as Theorem
+  calcThmWith :: Proposition a => SMTConfig -> String -> a -> steps -> KD Proof
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
   calcSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
 
-  calcLemma   nm p steps = getKDConfig >>= \cfg -> calcLemmaWith   cfg nm p steps
-  calcTheorem nm p steps = getKDConfig >>= \cfg -> calcTheoremWith cfg nm p steps
-  calcLemmaWith          = calcGeneric False
-  calcTheoremWith        = calcGeneric True
+  calc    nm p steps = getKDConfig >>= \cfg -> calcWith    cfg nm p steps
+  calcThm nm p steps = getKDConfig >>= \cfg -> calcThmWith cfg nm p steps
+  calcWith           = calcGeneric False
+  calcThmWith        = calcGeneric True
 
   calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
   calcGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
