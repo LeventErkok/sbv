@@ -42,7 +42,7 @@ sumConstProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   lemma "sumConst_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
+   lemma "sumConst_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) []
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
@@ -63,7 +63,7 @@ sumProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) [induct p]
+   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) []
 
 -- | An alternate proof of proving sum of numbers from @0@ to @n@ is @n*(n-1)/2@, much faster
 -- than 'sumProof'. In this case, instead of just letting z3 find the inductive argument itself,
@@ -89,15 +89,15 @@ sumProof2 = runKD $ do
 
    -- An explicit inductive proof, note that we don't have to spell out
    -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
-   inductiveLemma "sum_correct"
-                  (\(Forall @"n" n) -> n .>= 0 .=> p n)
-                  (\k -> ( [ sum (k+1)
-                           , (k+1) + sum k  -- inductive hypothesis
-                           ]
-                         , [ spec (k+1)
-                           ]
-                         ))
-                  []
+   induct "sum_correct"
+          (\(Forall @"n" n) -> n .>= 0 .=> p n)
+          (\k -> ( [ sum (k+1)
+                   , (k+1) + sum k  -- inductive hypothesis
+                   ]
+                 , [ spec (k+1)
+                   ]
+                 ))
+          []
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
@@ -127,21 +127,21 @@ sumSquareProof = runKD $ do
        p :: SInteger -> SBool
        p n = sumSquare n .== spec n
 
-   inductiveLemma "sumSquare_correct"
-                  (\(Forall @"n" n) -> n .>= 0 .=> p n)
-                  (\k -> ( [ sumSquare (k+1)
-                           , (k+1)*(k+1) + sumSquare k
-                           , (k+1)*(k+1) + spec k                                -- inductive hypothesis
-                           , (k+1)*(k+1) + (k*(k+1)*(2*k+1))          `sDiv` 6
-                           , (6*(k+1)*(k+1) + k*(k+1)*(2*k+1))        `sDiv` 6
-                           , (6*k*k + 12*k + 6 + 2*k*k*k + 3*k*k + k) `sDiv` 6
-                           , (2*k*k*k + 9*k*k + 13*k + 6)             `sDiv` 6
-                           ]
-                         , [ spec (k+1)
-                           , ((k+1)*(k+2)*(2*k+3)) `sDiv` 6
-                           ]
-                         ))
-                  []
+   induct "sumSquare_correct"
+          (\(Forall @"n" n) -> n .>= 0 .=> p n)
+          (\k -> ( [ sumSquare (k+1)
+                   , (k+1)*(k+1) + sumSquare k
+                   , (k+1)*(k+1) + spec k                                -- inductive hypothesis
+                   , (k+1)*(k+1) + (k*(k+1)*(2*k+1))          `sDiv` 6
+                   , (6*(k+1)*(k+1) + k*(k+1)*(2*k+1))        `sDiv` 6
+                   , (6*k*k + 12*k + 6 + 2*k*k*k + 3*k*k + k) `sDiv` 6
+                   , (2*k*k*k + 9*k*k + 13*k + 6)             `sDiv` 6
+                   ]
+                 , [ spec (k+1)
+                   , ((k+1)*(k+2)*(2*k+3)) `sDiv` 6
+                   ]
+                 ))
+          []
 
 -- | Prove that @11^n - 4^n@ is always divisible by 7.
 --
@@ -163,4 +163,4 @@ elevenMinusFour = runKD $ do
    pow0 <- lemma "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)             []
    powN <- lemma "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
 
-   lemmaWith cvc5 "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN, induct emf]
+   lemmaWith cvc5 "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN]

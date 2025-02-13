@@ -36,11 +36,8 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
-       , calc,    calcWith
-       , calcThm, calcThmWith
-       , induct, inductAlt1, inductAlt2
-       , inductiveLemma,   inductiveLemmaWith
-       , inductiveTheorem, inductiveTheoremWith
+       , calc,   calcWith,   calcThm,   calcThmWith
+       , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
        , (|-), (=:), (?), qed
@@ -220,21 +217,21 @@ data InductionStrategy = InductionStrategy { inductionBaseCase       :: SBool
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
-   inductiveLemma :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
+   induct :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Inductively prove a theorem. Same as 'inductiveLemma', but tagged as a theorem, using the default config.
-   inductiveTheorem :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
+   inductThm :: Proposition a => String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Same as 'inductiveLemma', but with the given solver configuration.
-   inductiveLemmaWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+   inductWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
-   inductiveTheoremWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
+   inductThmWith :: Proposition a => SMTConfig -> String -> a -> steps -> [Proof] -> KD Proof
 
-   inductiveLemma   nm p steps by = getKDConfig >>= \cfg -> inductiveLemmaWith   cfg nm p steps by
-   inductiveTheorem nm p steps by = getKDConfig >>= \cfg -> inductiveTheoremWith cfg nm p steps by
-   inductiveLemmaWith             = inductGeneric False
-   inductiveTheoremWith           = inductGeneric True
+   induct    nm p steps by = getKDConfig >>= \cfg -> inductWith    cfg nm p steps by
+   inductThm nm p steps by = getKDConfig >>= \cfg -> inductThmWith cfg nm p steps by
+   inductWith              = inductGeneric False
+   inductThmWith           = inductGeneric True
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}

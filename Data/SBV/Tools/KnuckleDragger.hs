@@ -30,10 +30,9 @@ module Data.SBV.Tools.KnuckleDragger (
        , calc,    calcWith
        , calcThm, calcThmWith
 
-       -- * Induction
-       , induct, inductAlt1, inductAlt2
-       , inductiveLemma,   inductiveLemmaWith
-       , inductiveTheorem, inductiveTheoremWith
+       -- * Reasoning via induction
+       , induct,    inductWith
+       , inductThm, inductThmWith
 
        -- * Creating instances of proofs
        , at, Inst(..)

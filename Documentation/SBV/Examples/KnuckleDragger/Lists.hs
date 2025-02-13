@@ -125,8 +125,7 @@ revApp = runKD $ do
 
    lemma "revApp"
          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> p xs ys)
-         -- induction is done on the last argument, so we use flip to make sure we induct on xs
-         [induct (flip p)]
+         []
 
 -- * Reversing twice is identity
 
@@ -146,7 +145,7 @@ reverseReverse = runKD $ do
 
    ra <- use revApp
 
-   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [induct p, ra]
+   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [ra]
 
 -- * Lengths of lists
 
@@ -223,7 +222,7 @@ lenAppend2 = runKD $
 -- Lemma: allAny                           Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
-allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) [induct p]
+allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) []
   where p xs = sNot (all id xs) .== any sNot xs
 
 -- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
@@ -233,7 +232,7 @@ allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) [induct p]
 -- Lemma: filterEx                         Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
-filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) [induct p]
+filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
   where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
 
 -- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
@@ -267,8 +266,7 @@ mapAppend f = runKD $ do
 
    lemma "mapAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-         -- induction is done on the last argument, so flip to do it on xs
-         [induct (flip p)]
+         []
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -296,19 +294,19 @@ mapReverse = runKD $ do
 
      mApp <- use (mapAppend f)
 
-     inductiveLemma "mapReverse"
-          (\(Forall @"xs" xs) -> p f xs)
-          (\x xs -> ( [ reverse (map f (x .: xs))
-                      , reverse (f x .: map f xs)
-                      , reverse (map f xs) ++ singleton (f x)
-                      , map f (reverse xs) ++ singleton (f x)     -- inductive hypothesis
-                      , map f (reverse xs) ++ map f (singleton x)
-                      ]
-                    , [ map f (reverse (x .: xs))
-                      , map f (reverse xs ++ singleton x)
-                      , map f (reverse xs) ++ map f (singleton x)
-                      ]
-                    ))
+     induct "mapReverse"
+            (\(Forall @"xs" xs) -> p f xs)
+            (\x xs -> ( [ reverse (map f (x .: xs))
+                        , reverse (f x .: map f xs)
+                        , reverse (map f xs) ++ singleton (f x)
+                        , map f (reverse xs) ++ singleton (f x)     -- inductive hypothesis
+                        , map f (reverse xs) ++ map f (singleton x)
+                        ]
+                      , [ map f (reverse (x .: xs))
+                        , map f (reverse xs ++ singleton x)
+                        , map f (reverse xs) ++ map f (singleton x)
+                        ]
+                      ))
           [mApp]
 
 -- * Reverse and length
@@ -327,7 +325,7 @@ revLen = runKD $ do
 
    lemma "revLen"
          (\(Forall @"xs" xs) -> p xs)
-         [induct p]
+         []
 
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
@@ -348,7 +346,7 @@ badRevLen = runKD $ do
 
    lemma "badRevLen"
          (\(Forall @"xs" xs) -> p xs)
-         [induct p]
+         []
 
    pure ()
 
@@ -374,7 +372,7 @@ foldrMapFusion = runKD $ do
 
       p xs = foldr f a (map g xs) .== foldr (f . g) a xs
 
-  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) [induct p]
+  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) []
 
 -- * Foldr-foldr fusion
 
@@ -418,7 +416,7 @@ foldrFusion = runKDWith cvc5 $ do
    -- forall x, y: f (g x y) = h x (f y)
    h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
-   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2, induct p]
+   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2]
 
 -- * Foldr over append
 
@@ -441,8 +439,7 @@ foldrOverAppend = runKD $ do
 
    lemma "foldrOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-          -- induction is done on the last argument, so we use flip to make sure we induct on xs
-          [induct (flip p)]
+          []
 
 -- * Foldl over append
 
@@ -470,8 +467,7 @@ foldlOverAppend = runKD $ do
 
    lemma "foldlOverAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-         -- induction is done on the last argument, so we use flip to make sure we induct on xs
-         [induct (flip p)]
+         []
 
 -- * Foldr-foldl correspondence
 
@@ -506,23 +502,23 @@ foldrFoldlDuality = runKD $ do
                  ap    xs ys = quantifiedBool $ \(Forall e) -> apE e xs ys
              lemma "foldlOverAppend"
                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
-                   [induct (flip ap)]
+                   []
 
-   inductiveLemma "foldrFoldlDuality"
-                  (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
-                  (\e x xs -> ( [ foldr f e (x .: xs)
-                                , x `f` foldr f e xs
-                                , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis
-                                ]
-                              , [ foldl (flip f) e (reverse (x .: xs))
-                                , foldl (flip f) e (reverse xs ++ singleton x)
-                                , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)  -- foa
-                                , foldl (flip f) (flip f (foldl (flip f) e (reverse xs)) x) nil
-                                , flip f (foldl (flip f) e (reverse xs)) x
-                                , x `f` foldl (flip f) e (reverse xs)
-                                ]
-                              ))
-                  [foa]
+   induct "foldrFoldlDuality"
+          (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
+          (\e x xs -> ( [ foldr f e (x .: xs)
+                        , x `f` foldr f e xs
+                        , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis
+                        ]
+                      , [ foldl (flip f) e (reverse (x .: xs))
+                        , foldl (flip f) e (reverse xs ++ singleton x)
+                        , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)  -- foa
+                        , foldl (flip f) (flip f (foldl (flip f) e (reverse xs)) x) nil
+                        , flip f (foldl (flip f) e (reverse xs)) x
+                        , x `f` foldl (flip f) e (reverse xs)
+                        ]
+                      ))
+          [foa]
 
 -- * Foldr-foldl duality, generalized
 
@@ -583,36 +579,36 @@ foldrFoldlDualityGeneralized  = runKD $ do
    -- Note that we prove the more generalized lemma over forall-z, as the
    -- inductive case requires a different substitution.
    h <- do let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
-           inductiveLemma "foldl over @"
-                          (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
-                          (\y x xs -> let z = uninterpret "z"
-                                      in ( [ foldl (@) (y @ z) (x .: xs)
-                                           , foldl (@) ((y @ z) @ x) xs
-                                           , foldl (@) (y @ (z @ x)) xs
-                                           , foldl (@) y (z @ x .: xs)
-                                           ]
-                                         , [ y @ foldl (@) z (x .: xs)
-                                           , y @ foldl (@) (z @ x) xs    -- inductive hypothesis, where z = z @ x in the inductive case
-                                           , foldl (@) (y @ (z @ x)) xs
-                                           , foldl (@) y (z @ x .: xs)
-                                           ]))
-                          [assoc]
+           induct "foldl over @"
+                  (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
+                  (\y x xs -> let z = uninterpret "z"
+                              in ( [ foldl (@) (y @ z) (x .: xs)
+                                   , foldl (@) ((y @ z) @ x) xs
+                                   , foldl (@) (y @ (z @ x)) xs
+                                   , foldl (@) y (z @ x .: xs)
+                                   ]
+                                 , [ y @ foldl (@) z (x .: xs)
+                                   , y @ foldl (@) (z @ x) xs    -- inductive hypothesis, where z = z @ x in the inductive case
+                                   , foldl (@) (y @ (z @ x)) xs
+                                   , foldl (@) y (z @ x .: xs)
+                                   ]))
+                  [assoc]
 
    let p xs = foldr (@) e xs .== foldl (@) e xs
 
-   inductiveLemma "foldrFoldlDuality"
-                  (\(Forall @"xs" xs) -> p xs)
-                  (\x xs -> ( [ foldr (@) e (x .: xs)
-                              , x @ foldr (@) e xs
-                              , x @ foldl (@) e xs    -- inductive hypothesis
-                              , foldl (@) (x @ e) xs  -- helper
-                              , foldl (@) x xs
-                              ]
-                            , [ foldl (@) e (x .: xs)
-                              , foldl (@) (e @ x) xs
-                              , foldl (@) x xs
-                              ]))
-                  [assoc, lunit, runit, h]
+   induct "foldrFoldlDuality"
+          (\(Forall @"xs" xs) -> p xs)
+          (\x xs -> ( [ foldr (@) e (x .: xs)
+                      , x @ foldr (@) e xs
+                      , x @ foldl (@) e xs    -- inductive hypothesis
+                      , foldl (@) (x @ e) xs  -- helper
+                      , foldl (@) x xs
+                      ]
+                    , [ foldl (@) e (x .: xs)
+                      , foldl (@) (e @ x) xs
+                      , foldl (@) x xs
+                      ]))
+          [assoc, lunit, runit, h]
 
 -- * Another foldl-foldr correspondence
 
@@ -680,37 +676,37 @@ foldrFoldl = runKD $ do
    helper <- do
       let hp x y xs = x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs
 
-      inductiveLemma "foldl over <*>/<+>"
-                     (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
-                     -- Using z to avoid confusion with the variable x already present, following Bird.
-                     (\x z xs -> let y = uninterpret "y"
-                                 in ( [ x <+> foldl (<*>) y (z .: xs)
-                                      , x <+> foldl (<*>) (y <*> z) xs
-                                      , foldl (<*>) (x <+> (y <*> z)) xs  -- inductive hypothesis, y gets y <*> z
-                                      , foldl (<*>) ((x <+> y) <*> z) xs  -- axiom 1
-                                      ]
-                                    , [ foldl (<*>) (x <+> y) (z .: xs)
-                                      , foldl (<*>) ((x <+> y) <*> z) xs
-                                      ]))
-                     [axm1]
+      induct "foldl over <*>/<+>"
+             (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
+             -- Using z to avoid confusion with the variable x already present, following Bird.
+             (\x z xs -> let y = uninterpret "y"
+                         in ( [ x <+> foldl (<*>) y (z .: xs)
+                              , x <+> foldl (<*>) (y <*> z) xs
+                              , foldl (<*>) (x <+> (y <*> z)) xs  -- inductive hypothesis, y gets y <*> z
+                              , foldl (<*>) ((x <+> y) <*> z) xs  -- axiom 1
+                              ]
+                            , [ foldl (<*>) (x <+> y) (z .: xs)
+                              , foldl (<*>) ((x <+> y) <*> z) xs
+                              ]))
+             [axm1]
 
    let -- Equivalence predicate
        p :: SList A -> SBool
        p xs = foldr (<+>) e xs .== foldl (<*>) e xs
 
    -- Final proof:
-   inductiveLemma "foldrFoldl"
-                  (\(Forall @"xs" xs) -> p xs)
-                  (\x xs -> ( [ foldr (<+>) e (x .: xs)
-                              , x <+> foldr (<+>) e xs     -- inductive hypothesis
-                              , x <+> foldl (<*>) e xs
-                              ]
-                            , [ foldl (<*>) e (x .: xs)
-                              , foldl (<*>) (e <*> x) xs
-                              , foldl (<*>) (x <+> e) xs   -- axm2
-                              , x <+> foldl (<*>) e xs     -- helper
-                              ]))
-                  [axm2, helper]
+   induct "foldrFoldl"
+          (\(Forall @"xs" xs) -> p xs)
+          (\x xs -> ( [ foldr (<+>) e (x .: xs)
+                      , x <+> foldr (<+>) e xs     -- inductive hypothesis
+                      , x <+> foldl (<*>) e xs
+                      ]
+                    , [ foldl (<*>) e (x .: xs)
+                      , foldl (<*>) (e <*> x) xs
+                      , foldl (<*>) (x <+> e) xs   -- axm2
+                      , x <+> foldl (<*>) e xs     -- helper
+                      ]))
+          [axm2, helper]
 
 -- * Bookkeeping law
 
@@ -795,31 +791,31 @@ bookKeeping = runKD $ do
 
    -- Helper:
    --   foldr f y xs = foldr f a xs `f` y
-   helper <- inductiveLemma "foldBase"
-                            (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
-                            (\y x xs -> ( [ foldr f y (x .: xs)
-                                          , x `f` foldr f y xs
-                                          , x `f` (foldr f a xs `f` y)   -- inductive hypothesis
-                                          ]
-                                        , [ foldr f a (x .: xs) `f` y
-                                          , (x `f` foldr f a xs) `f` y
-                                          , x `f` (foldr f a xs `f` y)
-                                          ]))
-                            [assoc, lUnit]
+   helper <- induct "foldBase"
+                    (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
+                    (\y x xs -> ( [ foldr f y (x .: xs)
+                                  , x `f` foldr f y xs
+                                  , x `f` (foldr f a xs `f` y)   -- inductive hypothesis
+                                  ]
+                                , [ foldr f a (x .: xs) `f` y
+                                  , (x `f` foldr f a xs) `f` y
+                                  , x `f` (foldr f a xs `f` y)
+                                  ]))
+                    [assoc, lUnit]
 
-   inductiveLemma "bookKeeping"
-                  (\(Forall @"xss" xss) -> p xss)
-                  (\xs xss -> let y = foldr f a (mapFoldr a xss)
-                              in  ( [ foldr f a (concat (xs .: xss))
-                                    , foldr f a (xs ++ concat xss)
-                                    , foldr f (foldr f a (concat xss)) xs      -- foa: foldr-over-append
-                                    , foldr f (foldr f a (mapFoldr a xss)) xs  -- inductive hypothesis
-                                    , foldr f y xs                             -- helper
-                                    , foldr f a xs `f` y
-                                    ]
-                                  , [ foldr f a (mapFoldr a (xs .: xss))
-                                    , foldr f a (foldr f a xs .: mapFoldr a xss)
-                                    , foldr f a xs `f` foldr f a (mapFoldr a xss)
-                                    , foldr f a xs `f` y
-                                    ]))
-                  [assoc, rUnit, foa, helper]
+   induct "bookKeeping"
+          (\(Forall @"xss" xss) -> p xss)
+          (\xs xss -> let y = foldr f a (mapFoldr a xss)
+                      in  ( [ foldr f a (concat (xs .: xss))
+                            , foldr f a (xs ++ concat xss)
+                            , foldr f (foldr f a (concat xss)) xs      -- foa: foldr-over-append
+                            , foldr f (foldr f a (mapFoldr a xss)) xs  -- inductive hypothesis
+                            , foldr f y xs                             -- helper
+                            , foldr f a xs `f` y
+                            ]
+                          , [ foldr f a (mapFoldr a (xs .: xss))
+                            , foldr f a (foldr f a xs .: mapFoldr a xss)
+                            , foldr f a xs `f` foldr f a (mapFoldr a xss)
+                            , foldr f a xs `f` y
+                            ]))
+          [assoc, rUnit, foa, helper]
