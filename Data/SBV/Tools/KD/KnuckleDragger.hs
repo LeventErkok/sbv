@@ -688,18 +688,21 @@ type family ChainsTo a where
   ChainsTo a             = [ProofStep a]
 
 -- | Chain steps in a calculational proof.
-class ChainStep a where
-  -- | Chain two steps together to form a proof sequence.
-  (=:) :: a -> ChainsTo a -> ChainsTo a
-  infixr 1 =:
+(=:) :: (ChainStep a (ChainsTo a)) =>  a -> ChainsTo a -> ChainsTo a
+(=:) = chain
+infixr 1 =:
 
--- | Chaining from a symbolic value without any annotation
-instance ChainStep (SBV a) where
-   a =: as = ProofStep a [] : as
+-- | Chaining two steps together
+class ChainStep a b where
+  chain :: a -> b -> b
+
+-- | Chaining from a value without any annotation
+instance ChainStep a [ProofStep a] where
+  chain x y = ProofStep x [] : y
 
 -- | Chaining from another proof step
-instance ChainStep (ProofStep a) where
-   a =: as = a : as
+instance ChainStep (ProofStep a) [ProofStep a] where
+  chain x y = x : y
 
 -- | Mark the end of a calculational proof.
 qed :: [ProofStep a]
