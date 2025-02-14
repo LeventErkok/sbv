@@ -25,6 +25,7 @@ module Data.SBV.Tools.KD.Kernel (
        , lemma,   lemmaWith,   lemmaGen
        , theorem, theoremWith
        , sorry
+       , internalAxiom
        , checkSatThen
        ) where
 
@@ -68,7 +69,6 @@ axiom nm p = do cfg <- getKDConfig
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
--- Not exported.
 internalAxiom :: Proposition a => String -> a -> Proof
 internalAxiom nm p = Proof { rootOfTrust = None
                            , isUserAxiom = False

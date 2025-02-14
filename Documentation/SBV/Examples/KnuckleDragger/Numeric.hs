@@ -90,14 +90,11 @@ sumProof2 = runKD $ do
    -- An explicit inductive proof, note that we don't have to spell out
    -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
    induct "sum_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> p n)
-          (\k -> ( [ sum (k+1)
-                   , (k+1) + sum k  -- inductive hypothesis
-                   ]
-                 , [ spec (k+1)
-                   ]
-                 ))
-          []
+          (\(Forall @"n" n) -> n .>= 0 .=> p n) $
+          \k ih -> k .>= 0 |- sum (k+1)
+                           =: (k+1) + sum k ? ih
+                           =: spec (k+1)
+                           =: qed
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
@@ -128,20 +125,12 @@ sumSquareProof = runKD $ do
        p n = sumSquare n .== spec n
 
    induct "sumSquare_correct"
-          (\(Forall @"n" n) -> n .>= 0 .=> p n)
-          (\k -> ( [ sumSquare (k+1)
-                   , (k+1)*(k+1) + sumSquare k
-                   , (k+1)*(k+1) + spec k                                -- inductive hypothesis
-                   , (k+1)*(k+1) + (k*(k+1)*(2*k+1))          `sDiv` 6
-                   , (6*(k+1)*(k+1) + k*(k+1)*(2*k+1))        `sDiv` 6
-                   , (6*k*k + 12*k + 6 + 2*k*k*k + 3*k*k + k) `sDiv` 6
-                   , (2*k*k*k + 9*k*k + 13*k + 6)             `sDiv` 6
-                   ]
-                 , [ spec (k+1)
-                   , ((k+1)*(k+2)*(2*k+3)) `sDiv` 6
-                   ]
-                 ))
-          []
+          (\(Forall @"n" n) -> n .>= 0 .=> p n) $
+          \k ih -> k .>= 0 |- sumSquare (k+1)
+                           =: (k+1)*(k+1) + sumSquare k
+                           =: (k+1)*(k+1) + spec k       ? ih
+                           =: spec (k+1)
+                           =: qed
 
 -- | Prove that @11^n - 4^n@ is always divisible by 7.
 --
