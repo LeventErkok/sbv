@@ -123,7 +123,7 @@ kleeneProofs = runKD $ do
   star_star_1  <- calc "star_star_1"
                        (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x) $
                        \x -> sTrue |- star x * star x                     ? unfold
-                                   =: (1 + x * star x) * (1 + x * star x) ? kleene
+                                   =: (1 + x * star x) * (1 + x * star x) ? (let hd [h] = h; hd _ = error "rr" in hd kleene)
                                    =: (1 + 1) + (x * star x + x * star x) ? par_idem
                                    =: 1 + x * star x                      ? unfold
                                    =: star x

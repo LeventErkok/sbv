@@ -40,7 +40,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (=:), (?), qed
+       , (|-), (=:), (?), (??), qed
        ) where
 
 import Data.SBV
@@ -685,19 +685,13 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
 -- | A proof-step with associated helpers
 data ProofStep a = ProofStep a [Proof]
 
--- | Class capturing giving a proof-step helper
-class ProofHint a b where
-  -- | Specify a helper for the given proof step
-  (?) :: a -> b -> ProofStep a
-  infixl 2 ?
+(?) :: a -> Proof -> ProofStep a
+a ? p = ProofStep a [p]
+infixl 2 ?
 
--- | Giving just one proof as a helper.
-instance ProofHint a Proof where
-  a ? p = ProofStep a [p]
-
--- | Giving a bunch of proofs as a helper.
-instance ProofHint a [Proof] where
-  a ? ps = ProofStep a ps
+(??) :: a -> [Proof] -> ProofStep a
+a ?? ps = ProofStep a ps
+infixl 2 ??
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,

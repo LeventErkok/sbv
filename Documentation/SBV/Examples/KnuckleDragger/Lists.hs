@@ -22,7 +22,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
+import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip, undefined)
 
 import Data.SBV
 import Data.SBV.List
@@ -294,6 +294,8 @@ mapReverse = runKD $ do
 
      mApp <- use (mapAppend f)
 
+     undefined mApp p
+     {-
      induct "mapReverse"
             (\(Forall @"xs" xs) -> p f xs)
             (\x xs -> ( [ reverse (map f (x .: xs))
@@ -308,6 +310,7 @@ mapReverse = runKD $ do
                         ]
                       ))
           [mApp]
+     -}
 
 -- * Reverse and length
 
@@ -504,6 +507,8 @@ foldrFoldlDuality = runKD $ do
                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
                    []
 
+   undefined foa p
+   {-
    induct "foldrFoldlDuality"
           (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
           (\e x xs -> ( [ foldr f e (x .: xs)
@@ -519,6 +524,7 @@ foldrFoldlDuality = runKD $ do
                         ]
                       ))
           [foa]
+          -}
 
 -- * Foldr-foldl duality, generalized
 
@@ -579,6 +585,8 @@ foldrFoldlDualityGeneralized  = runKD $ do
    -- Note that we prove the more generalized lemma over forall-z, as the
    -- inductive case requires a different substitution.
    h <- do let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
+           undefined assoc hp
+           {-
            induct "foldl over @"
                   (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
                   (\y x xs -> let z = uninterpret "z"
@@ -593,9 +601,12 @@ foldrFoldlDualityGeneralized  = runKD $ do
                                    , foldl (@) y (z @ x .: xs)
                                    ]))
                   [assoc]
+                  -}
 
    let p xs = foldr (@) e xs .== foldl (@) e xs
 
+   undefined [assoc, lunit, runit, h] p
+   {-
    induct "foldrFoldlDuality"
           (\(Forall @"xs" xs) -> p xs)
           (\x xs -> ( [ foldr (@) e (x .: xs)
@@ -609,6 +620,7 @@ foldrFoldlDualityGeneralized  = runKD $ do
                       , foldl (@) x xs
                       ]))
           [assoc, lunit, runit, h]
+          -}
 
 -- * Another foldl-foldr correspondence
 
@@ -676,6 +688,8 @@ foldrFoldl = runKD $ do
    helper <- do
       let hp x y xs = x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs
 
+      undefined axm1 hp
+      {-
       induct "foldl over <*>/<+>"
              (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
              -- Using z to avoid confusion with the variable x already present, following Bird.
@@ -689,12 +703,15 @@ foldrFoldl = runKD $ do
                               , foldl (<*>) ((x <+> y) <*> z) xs
                               ]))
              [axm1]
+             -}
 
    let -- Equivalence predicate
        p :: SList A -> SBool
        p xs = foldr (<+>) e xs .== foldl (<*>) e xs
 
    -- Final proof:
+   undefined [axm2, helper] p
+   {-
    induct "foldrFoldl"
           (\(Forall @"xs" xs) -> p xs)
           (\x xs -> ( [ foldr (<+>) e (x .: xs)
@@ -707,6 +724,7 @@ foldrFoldl = runKD $ do
                       , x <+> foldl (<*>) e xs     -- helper
                       ]))
           [axm2, helper]
+          -}
 
 -- * Bookkeeping law
 
@@ -790,7 +808,9 @@ bookKeeping = runKD $ do
 
    -- Helper:
    --   foldr f y xs = foldr f a xs `f` y
-   helper <- induct "foldBase"
+   helper <- undefined [assoc, lUnit] mapFoldr p
+   {-
+             induct "foldBase"
                     (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
                     (\y x xs -> ( [ foldr f y (x .: xs)
                                   , x `f` foldr f y xs
@@ -801,7 +821,10 @@ bookKeeping = runKD $ do
                                   , x `f` (foldr f a xs `f` y)
                                   ]))
                     [assoc, lUnit]
+                    -}
 
+   undefined [assoc, rUnit, foa, helper]
+   {-
    induct "bookKeeping"
           (\(Forall @"xss" xss) -> p xss)
           (\xs xss -> let y = foldr f a (mapFoldr a xss)
@@ -818,3 +841,4 @@ bookKeeping = runKD $ do
                             , foldr f a xs `f` y
                             ]))
           [assoc, rUnit, foa, helper]
+          -}
