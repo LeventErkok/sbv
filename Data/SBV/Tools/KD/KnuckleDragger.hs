@@ -316,18 +316,16 @@ instance   (KnownSymbol nk, EqSymbolic z)
            nk          = symbolVal (Proxy @nk)
 
        k <- free nk
-       constrain $ k .>= 0
 
        let ih = internalAxiom "IH" $ predicate k
            (intros, pSteps) = mkCalcSteps $ steps ih k
 
        pure InductionStrategy {
-                inductionIntros         = intros
+                inductionIntros         = k .>= 0 .&& intros
               , inductionBaseCase       = predicate 0
               , inductionProofSteps     = pSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
-              , inductiveStep           =     observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
-                                          .&& observeIf not ("P(" ++ nk ++ "-1)") (predicate (k-1))
+              , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
               }
 
 -- | Induction over 'SInteger' taking an extra argument.
@@ -344,13 +342,11 @@ instance    ( KnownSymbol na, SymVal a
        a <- free na
        k <- free nk
 
-       constrain $ k .>= 0
-
        let ih = internalAxiom "IH" $ \(Forall @"A" a') -> predicate a' k
            (intros, pSteps) = mkCalcSteps $ steps ih a k
 
        pure InductionStrategy {
-                inductionIntros         = intros
+                inductionIntros         = k .>= 0 .&& intros
               , inductionBaseCase       = predicate a 0
               , inductionProofSteps     = pSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
@@ -374,13 +370,12 @@ instance    ( KnownSymbol na, SymVal a
        a <- free na
        b <- free nb
        k <- free nk
-       constrain $ k .>= 0
 
        let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') -> predicate a' b' k
            (intros, pSteps) = mkCalcSteps $ steps ih a b k
 
        pure InductionStrategy {
-                inductionIntros         = intros
+                inductionIntros         = k .>= 0 .&& intros
               , inductionBaseCase       = predicate a b 0
               , inductionProofSteps     = pSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
@@ -407,13 +402,12 @@ instance    ( KnownSymbol na, SymVal a
        b <- free nb
        c <- free nc
        k <- free nk
-       constrain $ k .>= 0
 
        let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') -> predicate a' b' c' k
            (intros, pSteps) = mkCalcSteps $ steps ih a b c k
 
        pure InductionStrategy {
-                inductionIntros         = intros
+                inductionIntros         = k .>= 0 .&& intros
               , inductionBaseCase       = predicate a b c 0
               , inductionProofSteps     = pSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
@@ -443,13 +437,12 @@ instance    ( KnownSymbol na, SymVal a
        c <- free nc
        d <- free nd
        k <- free nk
-       constrain $ k .>= 0
 
        let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') (Forall @"D" d') -> predicate a' b' c' d' k
            (intros, pSteps) = mkCalcSteps $ steps ih a b c d k
 
        pure InductionStrategy {
-                inductionIntros         = intros
+                inductionIntros         = k .>= 0 .&& intros
               , inductionBaseCase       = predicate a b c d 0
               , inductionProofSteps     = pSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
