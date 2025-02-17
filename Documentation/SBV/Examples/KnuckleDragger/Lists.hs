@@ -235,8 +235,17 @@ lenAppend2 = runKD $
 -- Lemma: allAny                           Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
-allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) []
-  where p xs = sNot (all id xs) .== any sNot xs
+allAny = runKD $ do
+   let p xs = sNot (all id xs) .== any sNot xs
+
+   induct "allAny"
+          (\(Forall @"xs" xs) -> p xs) $
+          \ih k ks -> sTrue |- sNot (all id (k .: ks))
+                            =: sNot (k .&& all id ks)
+                            =: (sNot k .|| sNot (all id ks))   ? ih
+                            =: sNot k .|| any sNot ks
+                            =: any sNot (k .: ks)
+                            =: qed
 
 -- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
 -- yields the same result. We have:
@@ -245,8 +254,16 @@ allAny = runKD $ lemma "allAny" (\(Forall @"xs" xs) -> p xs) []
 -- Lemma: filterEx                         Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
-filterEx = runKD $ lemma "filterEx" (\(Forall @"xs" xs) -> p xs) []
-  where p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
+filterEx = runKD $ do
+  let p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
+
+  induct "filterEx"
+         (\(Forall @"xs" xs) -> p xs) $
+         \ih k ks -> (2 :: SInteger) `notElem` (k .:  ks)
+                  |- filter (.> 2) (k .: ks)
+                  =: ite (k .> 2) (k .: filter (.>  2) ks) (filter (.>  2) ks) ? ih
+                  =: ite (k .> 2) (k .: filter (.>= 2) ks) (filter (.>= 2) ks)
+                  =: qed
 
 -- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
 -- we don't need the induction tactic here.
