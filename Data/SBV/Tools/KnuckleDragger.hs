@@ -44,7 +44,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , KD, runKD, runKDWith, use
 
        -- * Calculational proof combinators
-       , (|-), (=:), (?), qed
+       , (|-), (⊢), (=:), (≡), (?), qed
        ) where
 
 import Data.SBV.Tools.KD.KnuckleDragger

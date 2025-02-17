@@ -40,7 +40,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (=:), (?), qed
+       , (|-), (⊢), (=:), (≡), (?), qed
        ) where
 
 import Data.SBV
@@ -711,6 +711,11 @@ type family ChainsTo a where
 (=:) = chain
 infixr 1 =:
 
+-- | Unicode alternative for `=:`:
+(≡) :: ChainStep a (ChainsTo a) =>  a -> ChainsTo a -> ChainsTo a
+(≡) = (=:)
+infixr 1 ≡
+
 -- | Chaining two steps together
 class ChainStep a b where
   chain :: a -> b -> b
@@ -734,3 +739,8 @@ qed = []
 (|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
 hyp |- ps = (hyp, ps)
 infixl 0 |-
+
+-- | Alternative unicode for `|-`:
+(⊢) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
+(⊢) = (|-)
+infixl 0 ⊢
