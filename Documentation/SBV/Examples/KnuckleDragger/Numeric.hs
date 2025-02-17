@@ -42,7 +42,15 @@ sumConstProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   lemma "sumConst_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) []
+   induct "sumConst_correct"
+          (\(Forall @"n" n) -> n .>= 0 .=> p n) $
+          \ih k -> sTrue |- sum (k+1)
+                         =: c + sum k  ? ih
+                         =: c + spec k
+                         =: c + c*k
+                         =: c*(k+1)
+                         =: spec (k+1)
+                         =: qed
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
