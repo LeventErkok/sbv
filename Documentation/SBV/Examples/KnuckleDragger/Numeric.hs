@@ -146,7 +146,7 @@ elevenMinusFour = runKD $ do
           \ih k -> let x = some "x" (\v -> 7 * v .== 11 `pow` k - 4 `pow` k)
                    in sTrue |- emf (k+1)
                             =: 7 `sDivides` (11 `pow` (k+1) - 4 `pow` (k+1))                  ? powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" k)
-                            =: 7 `sDivides` (11 * 11 `pow` k - 4 `pow` (k + 1))               ? powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" k)
+                            =: 7 `sDivides` (11 * 11 `pow` k - 4 `pow` (k+1))                 ? powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" k)
                             =: 7 `sDivides` (11 * 11 `pow` k - 4 * 4 `pow` k)
                             =: 7 `sDivides` (7 * 11 `pow` k + 4 * 11 `pow` k - 4 * 4 `pow` k)
                             =: 7 `sDivides` (7 * 11 `pow` k + 4 * (11 `pow` k - 4 `pow` k))   ? ih
