@@ -54,11 +54,14 @@ sumConstProof = runKD $ do
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
--- In this case we use the induction tactic, and while it does get the job done, it's rather
--- slow. See 'sumProof2' for an alternative approach that is faster. We have:
+-- We have:
 --
 -- >>> sumProof
--- Lemma: sum_correct                      Q.E.D.
+-- Inductive lemma: sum_correct
+--   Base: sum_correct.Base                Q.E.D.
+--   Help: sum_correct.L1 vs L2            Q.E.D.
+--   Help: sum_correct.L2 vs R1            Q.E.D.
+--   Step: sum_correct.Step                Q.E.D.
 -- [Proven] sum_correct
 sumProof :: IO Proof
 sumProof = runKD $ do
@@ -71,38 +74,14 @@ sumProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   lemma "sum_correct" (\(Forall @"n" n) -> n .>= 0 .=> p n) []
-
--- | An alternate proof of proving sum of numbers from @0@ to @n@ is @n*(n-1)/2@, much faster
--- than 'sumProof'. In this case, instead of just letting z3 find the inductive argument itself,
--- we explicitly state the inductive steps, which goes a lot faster. We have:
---
--- >>> sumProof2
--- Inductive lemma: sum_correct
---   Base: sum_correct.Base                Q.E.D.
---   Help: sum_correct.L1 vs L2            Q.E.D.
---   Help: sum_correct.L2 vs R1            Q.E.D.
---   Step: sum_correct.Step                Q.E.D.
--- [Proven] sum_correct
-sumProof2 :: IO Proof
-sumProof2 = runKD $ do
-   let sum :: SInteger -> SInteger
-       sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
-
-       spec :: SInteger -> SInteger
-       spec n = (n * (n+1)) `sDiv` 2
-
-       p :: SInteger -> SBool
-       p n = sum n .== spec n
-
-   -- An explicit inductive proof, note that we don't have to spell out
-   -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
    induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih k -> k .>= 0 |- sum (k+1)
-                           =: (k+1) + sum k ? ih
-                           =: spec (k+1)
-                           =: qed
+          \ih k -> sTrue |- sum (k+1)
+                         =: k+1 + sum k                ? ih
+                         =: k+1 + spec k
+                         =: k+1 + (k*(k+1)) `sDiv` 2
+                         =: spec (k+1)
+                         =: qed
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
