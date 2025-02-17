@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -77,9 +78,8 @@ sumProof = runKD $ do
    induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih k -> sTrue |- sum (k+1)
-                         =: k+1 + sum k                ? ih
+                         =: k+1 + sum k  ? ih
                          =: k+1 + spec k
-                         =: k+1 + (k*(k+1)) `sDiv` 2
                          =: spec (k+1)
                          =: qed
 
@@ -113,13 +113,15 @@ sumSquareProof = runKD $ do
 
    induct "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih k -> k .>= 0 |- sumSquare (k+1)
-                           =: (k+1)*(k+1) + sumSquare k
-                           =: (k+1)*(k+1) + spec k       ? ih
-                           =: spec (k+1)
-                           =: qed
+          \ih k -> sTrue |- sumSquare (k+1)
+                         =: (k+1)*(k+1) + sumSquare k ? ih
+                         =: (k+1)*(k+1) + spec k
+                         =: spec (k+1)
+                         =: qed
 
 -- | Prove that @11^n - 4^n@ is always divisible by 7.
+--
+-- NB. As of Feb 2025, z3 struggles with the inductive step in this proof, but cvc5 performs just fine.
 --
 -- We have:
 --
@@ -136,7 +138,19 @@ elevenMinusFour = runKD $ do
        emf :: SInteger -> SBool
        emf n = 7 `sDivides` (11 `pow` n - 4 `pow` n)
 
-   pow0 <- lemma "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)             []
+   _ow0 <- lemma "pow0" (\(Forall @"x" x)                 ->             x `pow` 0     .== 1)             []
    powN <- lemma "powN" (\(Forall @"x" x) (Forall @"n" n) -> n .>= 0 .=> x `pow` (n+1) .== x * x `pow` n) []
 
-   lemmaWith cvc5 "elevenMinusFour" (\(Forall @"n" n) -> n .>= 0 .=> emf n) [pow0, powN]
+   inductWith cvc5 "elevenMinusFour"
+          (\(Forall @"n" n) -> n .>= 0 .=> emf n) $
+          \ih k -> let x = some "x" (\v -> 7 * v .== 11 `pow` k - 4 `pow` k)
+                   in sTrue |- emf (k+1)
+                            =: 7 `sDivides` (11 `pow` (k+1) - 4 `pow` (k+1))                  ? powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" k)
+                            =: 7 `sDivides` (11 * 11 `pow` k - 4 `pow` (k + 1))               ? powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" k)
+                            =: 7 `sDivides` (11 * 11 `pow` k - 4 * 4 `pow` k)
+                            =: 7 `sDivides` (7 * 11 `pow` k + 4 * 11 `pow` k - 4 * 4 `pow` k)
+                            =: 7 `sDivides` (7 * 11 `pow` k + 4 * (11 `pow` k - 4 `pow` k))   ? ih
+                            =: 7 `sDivides` (7 * 11 `pow` k + 4 * 7 * x)
+                            =: 7 `sDivides` (7 * (11 `pow` k + 4 * x))
+                            =: sTrue
+                            =: qed
