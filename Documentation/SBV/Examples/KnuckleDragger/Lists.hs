@@ -125,12 +125,12 @@ revApp = runKD $ do
 
    induct "revApp"
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
-          \ih (k :: SA) ks ys -> sTrue |- reverse ((k .: ks) ++ ys)
-                                       =: reverse (k .: (ks ++ ys))
-                                       =: reverse (ks ++ ys) ++ singleton k           ? ih
-                                       =: (reverse ys ++ reverse ks) ++ singleton k
-                                       =: reverse ys ++ (reverse ks ++ singleton k)
-                                       =: reverse ys ++ reverse (k .: ks)
+          \ih (x :: SA) xs ys -> sTrue |- reverse ((x .: xs) ++ ys)
+                                       =: reverse (x .: (xs ++ ys))
+                                       =: reverse (xs ++ ys) ++ singleton x           ? ih
+                                       =: (reverse ys ++ reverse xs) ++ singleton x
+                                       =: reverse ys ++ (reverse xs ++ singleton x)
+                                       =: reverse ys ++ reverse (x .: xs)
                                        =: qed
 
 -- * Reversing twice is identity
@@ -153,11 +153,11 @@ reverseReverse = runKD $ do
 
    induct "reverseReverse"
           (\(Forall @"xs" xs) -> p xs) $
-          \ih (k :: SA) ks -> sTrue |- reverse (reverse (k .: ks))
-                                    =: reverse (reverse ks ++ singleton k)           ? ra
-                                    =: reverse (singleton k) ++ reverse (reverse ks) ? ih
-                                    =: singleton k ++ ks
-                                    =: k .: ks
+          \ih (x :: SA) xs -> sTrue |- reverse (reverse (x .: xs))
+                                    =: reverse (reverse xs ++ singleton x)           ? ra
+                                    =: reverse (singleton x) ++ reverse (reverse xs) ? ih
+                                    =: singleton x ++ xs
+                                    =: x .: xs
                                     =: qed
 
 -- * Lengths of lists
@@ -240,11 +240,11 @@ allAny = runKD $ do
 
    induct "allAny"
           (\(Forall @"xs" xs) -> p xs) $
-          \ih k ks -> sTrue |- sNot (all id (k .: ks))
-                            =: sNot (k .&& all id ks)
-                            =: (sNot k .|| sNot (all id ks))   ? ih
-                            =: sNot k .|| any sNot ks
-                            =: any sNot (k .: ks)
+          \ih x xs -> sTrue |- sNot (all id (x .: xs))
+                            =: sNot (x .&& all id xs)
+                            =: (sNot x .|| sNot (all id xs))   ? ih
+                            =: sNot x .|| any sNot xs
+                            =: any sNot (x .: xs)
                             =: qed
 
 -- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
@@ -259,10 +259,10 @@ filterEx = runKD $ do
 
   induct "filterEx"
          (\(Forall @"xs" xs) -> p xs) $
-         \ih k ks -> (2 :: SInteger) `notElem` (k .:  ks)
-                  |- filter (.> 2) (k .: ks)
-                  =: ite (k .> 2) (k .: filter (.>  2) ks) (filter (.>  2) ks) ? ih
-                  =: ite (k .> 2) (k .: filter (.>= 2) ks) (filter (.>= 2) ks)
+         \ih x xs -> (2 :: SInteger) `notElem` (x .:  xs)
+                  |- filter (.> 2) (x .: xs)
+                  =: ite (x .> 2) (x .: filter (.>  2) xs) (filter (.>  2) xs) ? ih
+                  =: ite (x .> 2) (x .: filter (.>= 2) xs) (filter (.>= 2) xs)
                   =: qed
 
 -- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
@@ -294,9 +294,15 @@ mapAppend f = runKD $ do
    let p :: SList A -> SList A -> SBool
        p xs ys = map f (xs ++ ys) .== map f xs ++ map f ys
 
-   lemma "mapAppend"
-         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-         []
+   induct "mapAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          \ih x xs ys -> sTrue |- map f ((x .: xs) ++ ys)
+                               =: map f (x .: (xs ++ ys))
+                               =: f x .: map f (xs ++ ys)        ? ih
+                               =: f x .: (map f xs  ++ map f ys)
+                               =: (f x .: map f xs) ++ map f ys
+                               =: map f (x .: xs) ++ map f ys
+                               =: qed
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -324,23 +330,16 @@ mapReverse = runKD $ do
 
      mApp <- use (mapAppend f)
 
-     undefined mApp p
-     {-
      induct "mapReverse"
-            (\(Forall @"xs" xs) -> p f xs)
-            (\x xs -> ( [ reverse (map f (x .: xs))
-                        , reverse (f x .: map f xs)
-                        , reverse (map f xs) ++ singleton (f x)
-                        , map f (reverse xs) ++ singleton (f x)     -- inductive hypothesis
-                        , map f (reverse xs) ++ map f (singleton x)
-                        ]
-                      , [ map f (reverse (x .: xs))
-                        , map f (reverse xs ++ singleton x)
-                        , map f (reverse xs) ++ map f (singleton x)
-                        ]
-                      ))
-          [mApp]
-     -}
+            (\(Forall @"xs" xs) -> p f xs) $
+            \ih x xs -> sTrue |- reverse (map f (x .: xs))
+                              =: reverse (f x .: map f xs)
+                              =: reverse (map f xs) ++ singleton (f x)       ? ih
+                              =: map f (reverse xs) ++ singleton (f x)
+                              =: map f (reverse xs) ++ map f (singleton x)   ? mApp
+                              =: map f (reverse xs ++ singleton x)
+                              =: map f (reverse (x .: xs))
+                              =: qed
 
 -- * Reverse and length
 
@@ -356,9 +355,14 @@ revLen = runKD $ do
    let p :: SList A -> SBool
        p xs = length (reverse xs) .== length xs
 
-   lemma "revLen"
-         (\(Forall @"xs" xs) -> p xs)
-         []
+   induct "revLen"
+          (\(Forall @"xs" xs) -> p xs) $
+          \ih (x :: SA) xs -> sTrue |- length (reverse (x .: xs))
+                                    =: length (reverse xs ++ singleton x)
+                                    =: length (reverse xs) + length (singleton x)  ? ih
+                                    =: length xs + 1
+                                    =: length (x .: xs)
+                                    =: qed
 
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
