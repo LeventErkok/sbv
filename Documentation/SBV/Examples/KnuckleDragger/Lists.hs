@@ -510,10 +510,9 @@ foldrOverAppend = runKD $ do
 -- and hence won't converge.
 foldlOverAppend :: IO Proof
 foldlOverAppend = runKD $ do
-   let f :: SA -> SA -> SA
-       f = uninterpret "f"
+   let
 
-       p xs ys = quantifiedBool $ \(Forall a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
+       p xs ys = (xs :: SList A) .== ys
 
    lemma "foldlOverAppend"
          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
@@ -546,15 +545,7 @@ foldrFoldlDuality = runKD $ do
 
        p e xs = foldr f e xs .== foldl (flip f) e (reverse xs)
 
-   -- An instance of foldlOverAppend above, except for our chosen f here which has a different type:
-   -- Note the quantification of @e@ below is important since the recursive call changes the value.
-   foa <- do let apE e xs ys = foldl (flip f) e (xs ++ ys) .== foldl (flip f) (foldl (flip f) e xs) ys
-                 ap    xs ys = quantifiedBool $ \(Forall e) -> apE e xs ys
-             lemma "foldlOverAppend"
-                   (\(Forall @"xs" xs) (Forall @"ys" ys) -> ap xs ys)
-                   []
-
-   undefined foa p
+   undefined p
    {-
    induct "foldrFoldlDuality"
           (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
