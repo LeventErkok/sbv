@@ -91,7 +91,7 @@ sumProof2 = runKD $ do
    -- all the steps, as z3 is able to fill out the arithmetic part fairly quickly.
    induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \k ih -> k .>= 0 |- sum (k+1)
+          \ih k -> k .>= 0 |- sum (k+1)
                            =: (k+1) + sum k ? ih
                            =: spec (k+1)
                            =: qed
@@ -126,7 +126,7 @@ sumSquareProof = runKD $ do
 
    induct "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \k ih -> k .>= 0 |- sumSquare (k+1)
+          \ih k -> k .>= 0 |- sumSquare (k+1)
                            =: (k+1)*(k+1) + sumSquare k
                            =: (k+1)*(k+1) + spec k       ? ih
                            =: spec (k+1)
