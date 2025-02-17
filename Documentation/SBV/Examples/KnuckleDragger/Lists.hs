@@ -123,9 +123,15 @@ revApp = runKD $ do
    let p :: SList A -> SList A -> SBool
        p xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
 
-   lemma "revApp"
-         (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> p xs ys)
-         []
+   induct "revApp"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          \ih (k :: SA) ks ys -> sTrue |- reverse ((k .: ks) ++ ys)
+                                       =: reverse (k .: (ks ++ ys))
+                                       =: reverse (ks ++ ys) ++ singleton k           ? ih
+                                       =: (reverse ys ++ reverse ks) ++ singleton k
+                                       =: reverse ys ++ (reverse ks ++ singleton k)
+                                       =: reverse ys ++ reverse (k .: ks)
+                                       =: qed
 
 -- * Reversing twice is identity
 
