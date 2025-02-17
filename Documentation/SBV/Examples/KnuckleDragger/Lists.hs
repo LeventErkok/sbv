@@ -151,7 +151,14 @@ reverseReverse = runKD $ do
 
    ra <- use revApp
 
-   lemma "reverseReverse" (\(Forall @"xs" xs) -> p xs) [ra]
+   induct "reverseReverse"
+          (\(Forall @"xs" xs) -> p xs) $
+          \ih (k :: SA) ks -> sTrue |- reverse (reverse (k .: ks))
+                                    =: reverse (reverse ks ++ singleton k)           ? ra
+                                    =: reverse (singleton k) ++ reverse (reverse ks) ? ih
+                                    =: singleton k ++ ks
+                                    =: k .: ks
+                                    =: qed
 
 -- * Lengths of lists
 
