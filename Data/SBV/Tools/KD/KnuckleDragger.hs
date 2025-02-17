@@ -126,7 +126,7 @@ class CalcLemma a steps where
 
         mbStartTime <- getTimeStampIf measureTime
 
-        (goal, (intros, proofSteps)) <- calcSteps result steps
+        (goal, (calcIntros, proofSteps)) <- calcSteps result steps
 
         let stepHelpers   = concatMap fst proofSteps
             (ros, modulo) = calculateRootOfTrust nm stepHelpers
@@ -138,7 +138,7 @@ class CalcLemma a steps where
             go _ accum [] = do
                 queryDebug [nm ++ ": Proof end: proving the result:"]
                 checkSatThen cfg kdSt "Result" True
-                             (Just (intros .=> accum))
+                             (Just (calcIntros .=> accum))
                              goal
                              []
                              ["", ""]
@@ -156,7 +156,7 @@ class CalcLemma a steps where
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                  checkSatThen cfg kdSt "Step  "
                                        True
-                                       (Just (intros .&& accum .&& sAnd (map getProof by)))
+                                       (Just (calcIntros .&& sAnd (map getProof by)))
                                        s
                                        []
                                        ["", show i]
@@ -271,9 +271,9 @@ class Inductive a steps where
 
           let loop i accum ((by, s):ss) = do
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
-                  checkSatThen cfg kdSt "Step "
+                  checkSatThen cfg kdSt "Step"
                                         True
-                                        (Just (inductionIntros .&& accum .&& sAnd (map getProof by)))
+                                        (Just (inductionIntros .&& sAnd (map getProof by)))
                                         s
                                         []
                                         [nm, show i]
@@ -289,7 +289,14 @@ class Inductive a steps where
 
           -- Do the final proof:
           queryDebug [nm ++ ": Induction, proving inductive step:"]
-          checkSatThen cfg kdSt "Step" True (Just (inductionIntros .=> indSchema)) inductiveStep [] [nm, "Step"] Nothing Nothing $ \d -> do
+          checkSatThen cfg kdSt "Step"
+                                True
+                                (Just (inductionIntros .=> indSchema))
+                                inductiveStep
+                                []
+                                [nm, "Step"]
+                                Nothing
+                                Nothing $ \d -> do
             mbElapsed <- getElapsedTime mbStartTime
             finish (catMaybes [mbElapsed]) d
             pure $ Proof { rootOfTrust = ros
