@@ -482,9 +482,14 @@ foldrOverAppend = runKD $ do
 
        p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
 
-   lemma "foldrOverAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-          []
+   induct "foldrOverAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          \ih x xs ys -> sTrue |- foldr f a ((x .: xs) ++ ys)
+                               =: foldr f a (x .: (xs ++ ys))
+                               =: x `f` foldr f a (xs ++ ys)       ? ih
+                               =: x `f` foldr f (foldr f a ys) xs
+                               =: foldr f (foldr f a ys) (x .: xs)
+                               =: qed
 
 -- * Foldl over append
 
