@@ -409,7 +409,14 @@ foldrMapFusion = runKD $ do
 
       p xs = foldr f a (map g xs) .== foldr (f . g) a xs
 
-  lemma "foldrMapFusion" (\(Forall @"xs" xs) -> p xs) []
+  induct "foldrMapFusion"
+         (\(Forall @"xs" xs) -> p xs) $
+         \ih x xs -> sTrue |- foldr f a (map g (x .: xs))
+                           =: foldr f a (g x .: map g xs)
+                           =: g x `f` foldr f a (map g xs) ? ih
+                           =: g x `f` foldr (f . g) a xs
+                           =: foldr (f . g) a (x .: xs)
+                           =: qed
 
 -- * Foldr-foldr fusion
 
@@ -420,16 +427,13 @@ foldrMapFusion = runKD $ do
 --   We have: f . foldr g a = foldr h b
 -- @
 --
--- Note that, as of Dec 2024, z3 can't converge on this proof, but cvc5 gets it almost
--- instantaneously. We have:
---
 -- >>> foldrFusion
 -- Axiom: f a == b
 -- Axiom: f (g x) = h x (f y)
 -- Lemma: foldrFusion                      Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
-foldrFusion = runKDWith cvc5 $ do
+foldrFusion = runKD $ do
    let a :: SA
        a = uninterpret "a"
 
@@ -445,15 +449,19 @@ foldrFusion = runKDWith cvc5 $ do
        h :: SC -> SB -> SB
        h = uninterpret "h"
 
-       p xs = f (foldr g a xs) .== foldr h b xs
-
-   -- f a == b
-   h1 <- axiom "f a == b" $ f a .== b
+       p xs = f a .== b .=> f (foldr g a xs) .== foldr h b xs
 
    -- forall x, y: f (g x y) = h x (f y)
-   h2 <- axiom "f (g x) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
+   ax <- axiom "f (g x y) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
-   lemma "foldrFusion" (\(Forall @"xs" xs) -> p xs) [h1, h2]
+   induct "foldrFusion"
+          (\(Forall @"xs" xs) -> p xs) $
+          \ih x xs -> f a .== b |- f (foldr g a (x .: xs))
+                                =: f (g x (foldr g a xs))  ? ax
+                                =: h x (f (foldr g a xs))  ? ih
+                                =: h x (foldr h b xs)
+                                =: foldr h b (x .: xs)
+                                =: qed
 
 -- * Foldr over append
 
