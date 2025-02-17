@@ -21,11 +21,6 @@ import Prelude hiding (sum, length)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
--- | The default settings for z3 have trouble running this proof out-of-the-box.
--- We have to pass auto_config=false to z3!
-z3NoAutoConfig :: SMTConfig
-z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
-
 -- | Prove that @2n^2 + n + 1@ is not divisible by @3@.
 --
 -- We have:
@@ -56,7 +51,7 @@ z3NoAutoConfig = z3{extraArgs = ["auto_config=false"]}
 -- Lemma: notDiv3                          Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
-notDiv3 = runKDWith z3NoAutoConfig $ do
+notDiv3 = runKD $ do
 
    let s n = 2 * n * n + n + 1
        p n = s n `sEMod` 3 ./= 0
