@@ -304,8 +304,8 @@ class Inductive a steps where
                                         (Just (sAnd (map getHelperBool by)))
                                         s
                                         []
-                                        [nm, show i]
-                                        Nothing
+                                        ["", show i]
+                                        (Just [nm, show i])
                                         Nothing
                                         (finish [])
                   loop (i+1) (accum .&& s) ss
