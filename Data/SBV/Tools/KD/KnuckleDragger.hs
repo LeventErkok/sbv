@@ -157,7 +157,7 @@ class CalcLemma a steps where
                  -- Prove that the assumptions follow, if any
                  case [a | HAssum a <- by] of
                    [] -> pure ()
-                   as -> checkSatThen cfg kdSt "Asmps "
+                   as -> checkSatThen cfg kdSt "Asms  "
                                                True
                                                (Just calcIntros)
                                                (sAnd as)
@@ -288,7 +288,7 @@ class Inductive a steps where
                   -- Prove that the assumptions follow, if any
                   case [a | HAssum a <- by] of
                     [] -> pure ()
-                    as -> checkSatThen cfg kdSt "Asmps "
+                    as -> checkSatThen cfg kdSt "Asms"
                                                 True
                                                 (Just inductionIntros)
                                                 (sAnd as)
