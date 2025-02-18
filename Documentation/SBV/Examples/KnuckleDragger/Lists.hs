@@ -111,13 +111,13 @@ revApp :: IO Proof
 revApp = runKD $
    induct "revApp"
           (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
-          \ih (x :: SA) xs ys -> sTrue |- reverse ((x .: xs) ++ ys)
-                                       =: reverse (x .: (xs ++ ys))
-                                       =: reverse (xs ++ ys) ++ singleton x           ? ih
-                                       =: (reverse ys ++ reverse xs) ++ singleton x
-                                       =: reverse ys ++ (reverse xs ++ singleton x)
-                                       =: reverse ys ++ reverse (x .: xs)
-                                       =: qed
+          \ih (x :: SA) xs ys -> [] |- reverse ((x .: xs) ++ ys)
+                                    =: reverse (x .: (xs ++ ys))
+                                    =: reverse (xs ++ ys) ++ singleton x           ? ih
+                                    =: (reverse ys ++ reverse xs) ++ singleton x
+                                    =: reverse ys ++ (reverse xs ++ singleton x)
+                                    =: reverse ys ++ reverse (x .: xs)
+                                    =: qed
 
 -- * Reversing twice is identity
 
@@ -136,12 +136,12 @@ reverseReverse = runKD $ do
 
    induct "reverseReverse"
           (\(Forall @"xs" (xs :: SList A)) -> reverse (reverse xs) .== xs) $
-          \ih (x :: SA) xs -> sTrue |- reverse (reverse (x .: xs))
-                                    =: reverse (reverse xs ++ singleton x)           ? ra
-                                    =: reverse (singleton x) ++ reverse (reverse xs) ? ih
-                                    =: singleton x ++ xs
-                                    =: x .: xs
-                                    =: qed
+          \ih (x :: SA) xs -> [] |- reverse (reverse (x .: xs))
+                                 =: reverse (reverse xs ++ singleton x)           ? ra
+                                 =: reverse (singleton x) ++ reverse (reverse xs) ? ih
+                                 =: singleton x ++ xs
+                                 =: x .: xs
+                                 =: qed
 
 -- * Lengths of lists
 
@@ -210,12 +210,12 @@ allAny :: IO Proof
 allAny = runKD $
    induct "allAny"
           (\(Forall @"xs" xs) -> sNot (all id xs) .== any sNot xs) $
-          \ih x xs -> sTrue |- sNot (all id (x .: xs))
-                            =: sNot (x .&& all id xs)
-                            =: (sNot x .|| sNot (all id xs))   ? ih
-                            =: sNot x .|| any sNot xs
-                            =: any sNot (x .: xs)
-                            =: qed
+          \ih x xs -> [] |- sNot (all id (x .: xs))
+                         =: sNot (x .&& all id xs)
+                         =: (sNot x .|| sNot (all id xs))   ? ih
+                         =: sNot x .|| any sNot xs
+                         =: any sNot (x .: xs)
+                         =: qed
 
 -- | If an integer list doesn't have 2 as an element, then filtering for @> 2@ or @.>= 2@
 -- yields the same result. We have:
@@ -227,11 +227,11 @@ filterEx :: IO Proof
 filterEx = runKD $
   induct "filterEx"
          (\(Forall @"xs" xs) -> (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)) $
-         \ih x xs -> (2 :: SInteger) `notElem` (x .:  xs)
-                  |- filter (.> 2) (x .: xs)
-                  =: ite (x .> 2) (x .: filter (.>  2) xs) (filter (.>  2) xs) ? ih
-                  =: ite (x .> 2) (x .: filter (.>= 2) xs) (filter (.>= 2) xs)
-                  =: qed
+         \ih x xs -> let h = (2 :: SInteger) `notElem` (x .:  xs)
+                  in [h] |- filter (.> 2) (x .: xs)
+                         =: ite (x .> 2) (x .: filter (.>  2) xs) (filter (.>  2) xs) ? [hyp h, hprf ih]
+                         =: ite (x .> 2) (x .: filter (.>= 2) xs) (filter (.>= 2) xs)
+                         =: qed
 
 -- | The 'filterEx' example above, except we get a counter-example if @2@ can be in the list. Note that
 -- we don't need the induction tactic here.
@@ -258,13 +258,13 @@ mapAppend :: (SA -> SB) -> IO Proof
 mapAppend f = runKD $ do
    induct "mapAppend"
           (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
-          \ih x xs ys -> sTrue |- map f ((x .: xs) ++ ys)
-                               =: map f (x .: (xs ++ ys))
-                               =: f x .: map f (xs ++ ys)        ? ih
-                               =: f x .: (map f xs  ++ map f ys)
-                               =: (f x .: map f xs) ++ map f ys
-                               =: map f (x .: xs) ++ map f ys
-                               =: qed
+          \ih x xs ys -> [] |- map f ((x .: xs) ++ ys)
+                            =: map f (x .: (xs ++ ys))
+                            =: f x .: map f (xs ++ ys)        ? ih
+                            =: f x .: (map f xs  ++ map f ys)
+                            =: (f x .: map f xs) ++ map f ys
+                            =: map f (x .: xs) ++ map f ys
+                            =: qed
 
 -- | @map f . reverse == reverse . map f@
 --
@@ -291,14 +291,14 @@ mapReverse = runKD $ do
 
      induct "mapReverse"
             (\(Forall @"xs" xs) -> reverse (map f xs) .== map f (reverse xs)) $
-            \ih x xs -> sTrue |- reverse (map f (x .: xs))
-                              =: reverse (f x .: map f xs)
-                              =: reverse (map f xs) ++ singleton (f x)       ? ih
-                              =: map f (reverse xs) ++ singleton (f x)
-                              =: map f (reverse xs) ++ map f (singleton x)   ? mApp
-                              =: map f (reverse xs ++ singleton x)
-                              =: map f (reverse (x .: xs))
-                              =: qed
+            \ih x xs -> [] |- reverse (map f (x .: xs))
+                           =: reverse (f x .: map f xs)
+                           =: reverse (map f xs) ++ singleton (f x)       ? ih
+                           =: map f (reverse xs) ++ singleton (f x)
+                           =: map f (reverse xs) ++ map f (singleton x)   ? mApp
+                           =: map f (reverse xs ++ singleton x)
+                           =: map f (reverse (x .: xs))
+                           =: qed
 
 -- * Reverse and length
 
@@ -313,12 +313,12 @@ revLen :: IO Proof
 revLen = runKD $
    induct "revLen"
           (\(Forall @"xs" (xs :: SList A)) -> length (reverse xs) .== length xs) $
-          \ih (x :: SA) xs -> sTrue |- length (reverse (x .: xs))
-                                    =: length (reverse xs ++ singleton x)
-                                    =: length (reverse xs) + length (singleton x)  ? ih
-                                    =: length xs + 1
-                                    =: length (x .: xs)
-                                    =: qed
+          \ih (x :: SA) xs -> [] |- length (reverse (x .: xs))
+                                 =: length (reverse xs ++ singleton x)
+                                 =: length (reverse xs) + length (singleton x)  ? ih
+                                 =: length xs + 1
+                                 =: length (x .: xs)
+                                 =: qed
 
 -- | An example where we attempt to prove a non-theorem. Notice the counter-example
 -- generated for:
@@ -360,12 +360,12 @@ foldrMapFusion = runKD $ do
 
   induct "foldrMapFusion"
          (\(Forall @"xs" xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
-         \ih x xs -> sTrue |- foldr f a (map g (x .: xs))
-                           =: foldr f a (g x .: map g xs)
-                           =: g x `f` foldr f a (map g xs) ? ih
-                           =: g x `f` foldr (f . g) a xs
-                           =: foldr (f . g) a (x .: xs)
-                           =: qed
+         \ih x xs -> [] |- foldr f a (map g (x .: xs))
+                        =: foldr f a (g x .: map g xs)
+                        =: g x `f` foldr f a (map g xs) ? ih
+                        =: g x `f` foldr (f . g) a xs
+                        =: foldr (f . g) a (x .: xs)
+                        =: qed
 
 -- * Foldr-foldr fusion
 
@@ -402,12 +402,12 @@ foldrFusion = runKD $ do
 
    induct "foldrFusion"
           (\(Forall @"xs" xs) -> h1 .&& h2 .=> f (foldr g a xs) .== foldr h b xs) $
-          \ih x xs -> h1 .&& h2 |- f (foldr g a (x .: xs))
-                                =: f (g x (foldr g a xs))
-                                =: h x (f (foldr g a xs))   ? ih
-                                =: h x (foldr h b xs)
-                                =: foldr h b (x .: xs)
-                                =: qed
+          \ih x xs -> [h1, h2] |- f (foldr g a (x .: xs))
+                               =: f (g x (foldr g a xs))   ? h2
+                               =: h x (f (foldr g a xs))   ? [hyp h1, hyp h2, hprf ih]
+                               =: h x (foldr h b xs)
+                               =: foldr h b (x .: xs)
+                               =: qed
 
 -- * Foldr over append
 
@@ -428,12 +428,12 @@ foldrOverAppend = runKD $ do
 
    induct "foldrOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
-          \ih x xs ys -> sTrue |- foldr f a ((x .: xs) ++ ys)
-                               =: foldr f a (x .: (xs ++ ys))
-                               =: x `f` foldr f a (xs ++ ys)       ? ih
-                               =: x `f` foldr f (foldr f a ys) xs
-                               =: foldr f (foldr f a ys) (x .: xs)
-                               =: qed
+          \ih x xs ys -> [] |- foldr f a ((x .: xs) ++ ys)
+                            =: foldr f a (x .: (xs ++ ys))
+                            =: x `f` foldr f a (xs ++ ys)       ? ih
+                            =: x `f` foldr f (foldr f a ys) xs
+                            =: foldr f (foldr f a ys) (x .: xs)
+                            =: qed
 
 -- * Foldl over append
 
@@ -450,11 +450,11 @@ foldlOverAppend f = runKD $
    -- explicit here to emphasize that the IH is used at a different value of a.
    induct "foldlOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
-          \ih x xs ys a -> sTrue |- foldl f a ((x .: xs) ++ ys)
-                                 =: foldl f a (x .: (xs ++ ys))
-                                 =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
-                                 =: foldl f (foldl f (a `f` x) xs) ys
-                                 =: qed
+          \ih x xs ys a -> [] |- foldl f a ((x .: xs) ++ ys)
+                              =: foldl f a (x .: (xs ++ ys))
+                              =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
+                              =: foldl f (foldl f (a `f` x) xs) ys
+                              =: qed
 
 -- * Foldr-foldl correspondence
 
@@ -488,13 +488,13 @@ foldrFoldlDuality = runKD $ do
           \ih x xs e ->
               let ff  = flip f
                   rxs = reverse xs
-              in sTrue |- foldr f e (x .: xs) =: x `f` foldr f e xs                      ? ih
-                                              =: x `f` foldl ff e rxs
-                                              =: foldl ff e rxs `ff` x
-                                              =: foldl ff (foldl ff e rxs) (singleton x) ? foa
-                                              =: foldl ff e (rxs ++ singleton x)
-                                              =: foldl ff e (reverse (x .: xs))
-                                              =: qed
+              in [] |- foldr f e (x .: xs) =: x `f` foldr f e xs                      ? ih
+                                           =: x `f` foldl ff e rxs
+                                           =: foldl ff e rxs `ff` x
+                                           =: foldl ff (foldl ff e rxs) (singleton x) ? foa
+                                           =: foldl ff e (rxs ++ singleton x)
+                                           =: foldl ff e (reverse (x .: xs))
+                                           =: qed
 
 -- * Foldr-foldl duality, generalized
 
@@ -557,24 +557,23 @@ foldrFoldlDualityGeneralized  = runKD $ do
    -- we don't have to actually specify this since z3 can figure it out by itself, but we're being explicit.
    helper <- induct "helper"
                      (\(Forall @"xs" xs) (Forall @"y" y) (Forall @"z" z) -> assoc .=> foldl (@) (y @ z) xs .== y @ foldl (@) z xs) $
-                     \ih x xs y z -> assoc |- foldl (@) (y @ z) (x .: xs)
-                                           =: foldl (@) ((y @ z) @ x) xs  -- assoc
-                                           =: foldl (@) (y @ (z @ x)) xs  ? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
-                                           =: y @ foldl (@) (z @ x) xs
-                                           =: y @ foldl (@) z (x .: xs)
-                                           =: qed
+                     \ih x xs y z -> [assoc] |- foldl (@) (y @ z) (x .: xs)
+                                             =: foldl (@) ((y @ z) @ x) xs  ? assoc
+                                             =: foldl (@) (y @ (z @ x)) xs  ? [hyp assoc, hprf (ih `at` (Inst @"y" y, Inst @"z" (z @ x)))]
+                                             =: y @ foldl (@) (z @ x) xs
+                                             =: y @ foldl (@) z (x .: xs)
+                                             =: qed
 
    induct "foldrFoldlDuality"
           (\(Forall @"xs" xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
-          \ih x xs -> assoc .&& lunit .&& runit
-                   |- foldr (@) e (x .: xs)
-                   =: x @ foldr (@) e xs    ? ih
-                   =: x @ foldl (@) e xs    ? helper
-                   =: foldl (@) (x @ e) xs  -- runit
-                   =: foldl (@) x xs        -- lunit
-                   =: foldl (@) (e @ x) xs
-                   =: foldl (@) e (x .: xs)
-                   =: qed
+          \ih x xs -> [assoc, lunit, runit] |- foldr (@) e (x .: xs)
+                                            =: x @ foldr (@) e xs    ? [hyp assoc, hyp lunit, hyp runit, hprf ih]
+                                            =: x @ foldl (@) e xs    ? [hyp assoc, hprf helper]
+                                            =: foldl (@) (x @ e) xs  ? runit
+                                            =: foldl (@) x xs        ? lunit
+                                            =: foldl (@) (e @ x) xs
+                                            =: foldl (@) e (x .: xs)
+                                            =: qed
 
 -- * Another foldl-foldr correspondence
 
@@ -641,23 +640,23 @@ foldrFoldl = runKD $ do
              (\(Forall @"xs" xs) (Forall @"x" x) (Forall @"y" y) -> assoc .=> x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs) $
              -- Using z to avoid confusion with the variable x already present, following Bird.
              -- z3 can figure out the proper instantiation of ih so the at call is unnecessary, but being explicit is helpful.
-             \ih z xs x y -> assoc |- x <+> foldl (<*>) y (z .: xs)
-                                   =: x <+> foldl (<*>) (y <*> z) xs    ? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
-                                   =: foldl (<*>) (x <+> (y <*> z)) xs
-                                   =: foldl (<*>) ((x <+> y) <*> z) xs
-                                   =: foldl (<*>) (x <+> y) (z .: xs)
-                                   =: qed
+             \ih z xs x y -> [assoc] |- x <+> foldl (<*>) y (z .: xs)
+                                     =: x <+> foldl (<*>) (y <*> z) xs    ? [hyp assoc, hprf (ih `at` (Inst @"x" x, Inst @"y" (y <*> z)))]
+                                     =: foldl (<*>) (x <+> (y <*> z)) xs  ? assoc
+                                     =: foldl (<*>) ((x <+> y) <*> z) xs
+                                     =: foldl (<*>) (x <+> y) (z .: xs)
+                                     =: qed
 
    -- Final proof:
    induct "foldrFoldl"
           (\(Forall @"xs" xs) -> assoc .&& unit .=> foldr (<+>) e xs .== foldl (<*>) e xs) $
-          \ih x xs -> assoc .&& unit |- foldr (<+>) e (x .: xs)
-                                     =: x <+> foldr (<+>) e xs    ? ih
-                                     =: x <+> foldl (<*>) e xs    ? helper
-                                     =: foldl (<*>) (x <+> e) xs  -- unit
-                                     =: foldl (<*>) (e <*> x) xs
-                                     =: foldl (<*>) e (x .: xs)
-                                     =: qed
+          \ih x xs -> [assoc, unit] |- foldr (<+>) e (x .: xs)
+                                    =: x <+> foldr (<+>) e xs    ? [hyp assoc, hyp unit, hprf ih]
+                                    =: x <+> foldl (<*>) e xs    ? [hyp assoc, hprf helper]
+                                    =: foldl (<*>) (x <+> e) xs  ? unit
+                                    =: foldl (<*>) (e <*> x) xs
+                                    =: foldl (<*>) e (x .: xs)
+                                    =: qed
 
 -- * Bookkeeping law
 
@@ -740,26 +739,25 @@ bookKeeping = runKD $ do
    --   foldr f y xs = foldr f a xs `f` y
    helper <- induct "foldBase"
                     (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
-                    \ih x xs y -> lUnit .&& assoc  |- foldr f y (x .: xs)
-                                                   =: x `f` foldr f y xs          ? ih
-                                                   =: x `f` (foldr f a xs `f` y)  -- assoc
-                                                   =: (x `f` foldr f a xs) `f` y
-                                                   =: foldr f a (x .: xs) `f` y
-                                                   =: qed
+                    \ih x xs y -> [lUnit, assoc] |- foldr f y (x .: xs)
+                                                 =: x `f` foldr f y xs          ? [hyp lUnit, hyp assoc, hprf ih]
+                                                 =: x `f` (foldr f a xs `f` y)  ? assoc
+                                                 =: (x `f` foldr f a xs) `f` y
+                                                 =: foldr f a (x .: xs) `f` y
+                                                 =: qed
 
    foa <- use foldrOverAppend
 
    induct "bookKeeping"
           (\(Forall @"xss" xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (mapFoldr a xss)) $
-          \ih xs xss -> assoc .&& rUnit .&& lUnit
-                     |- foldr f a (concat (xs .: xss))
-                     =: foldr f a (xs ++ concat xss)                 ? foa
-                     =: foldr f (foldr f a (concat xss)) xs          ? ih
-                     =: foldr f (foldr f a (mapFoldr a xss)) xs      ? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (mapFoldr a xss)))
-                     =: foldr f a xs `f` foldr f a (mapFoldr a xss)
-                     =: foldr f a (foldr f a xs .: mapFoldr a xss)
-                     =: foldr f a (mapFoldr a (xs .: xss))
-                     =: qed
+          \ih xs xss -> [assoc, rUnit, lUnit] |- foldr f a (concat (xs .: xss))
+                                              =: foldr f a (xs ++ concat xss)                 ? foa
+                                              =: foldr f (foldr f a (concat xss)) xs          ? [hyp assoc, hyp rUnit, hyp lUnit, hprf ih]
+                                              =: foldr f (foldr f a (mapFoldr a xss)) xs      ? [hyp lUnit, hyp assoc, hprf (helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (mapFoldr a xss))))]
+                                              =: foldr f a xs `f` foldr f a (mapFoldr a xss)
+                                              =: foldr f a (foldr f a xs .: mapFoldr a xss)
+                                              =: foldr f a (mapFoldr a (xs .: xss))
+                                              =: qed
 
 -- * Map and filter don't commute
 
