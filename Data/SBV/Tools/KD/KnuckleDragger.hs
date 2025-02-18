@@ -162,8 +162,8 @@ class CalcLemma a steps where
                                                (Just calcIntros)
                                                (sAnd as)
                                                []
-                                               [nm, show i]
-                                               Nothing
+                                               ["", show i]
+                                               (Just [nm, show i])
                                                Nothing
                                                (flip finish [])
 
@@ -293,8 +293,8 @@ class Inductive a steps where
                                                 (Just inductionIntros)
                                                 (sAnd as)
                                                 []
-                                                [nm, show i]
-                                                Nothing
+                                                ["", show i]
+                                                (Just [nm, show i])
                                                 Nothing
                                                 (finish [])
 
