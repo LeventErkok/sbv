@@ -1682,8 +1682,8 @@ setSMTOption cfg = set
         -- timeout is not standard. We distinguish between CVC/Z3. All else follows z3
         -- The value is in milliseconds, which is how z3/CVC interpret it
         timeOut i = case name (solver cfg) of
-                     CVC4 -> [":tlimit",  show i]
-                     CVC5 -> [":tlimit",  show i]
+                     CVC4 -> [":tlimit-per",  show i]
+                     CVC5 -> [":tlimit-per",  show i]
                      _    -> [":timeout", show i]
 
         -- SMTLib's True/False is spelled differently than Haskell's.
