@@ -90,7 +90,7 @@ consApp = runKD $
 -- [Proven] appendAssoc
 --
 -- Surprisingly, z3 can prove this without any induction. (Since SBV's append translates directly to
--- the concatenation of sequences in SMTLib, it must trigger an internal axiom (heuristic?) in z3
+-- the concatenation of sequences in SMTLib, it must trigger an internal heuristic in z3
 -- that proves it right out-of-the-box!)
 appendAssoc :: IO Proof
 appendAssoc = runKD $
@@ -429,8 +429,6 @@ foldrMapFusion = runKD $ do
 -- @
 --
 -- >>> foldrFusion
--- Axiom: f a == b
--- Axiom: f (g x) = h x (f y)
 -- Lemma: foldrFusion                      Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
@@ -450,16 +448,15 @@ foldrFusion = runKD $ do
        h :: SC -> SB -> SB
        h = uninterpret "h"
 
-       p xs = f a .== b .=> f (foldr g a xs) .== foldr h b xs
-
-   -- forall x, y: f (g x y) = h x (f y)
-   ax <- axiom "f (g x y) = h x (f y)" $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
+       -- Assumptions under which the equality holds
+       h1 = f a .== b
+       h2 = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) -> f (g x y) .== h x (f y)
 
    induct "foldrFusion"
-          (\(Forall @"xs" xs) -> p xs) $
-          \ih x xs -> f a .== b |- f (foldr g a (x .: xs))
-                                =: f (g x (foldr g a xs))  ? ax
-                                =: h x (f (foldr g a xs))  ? ih
+          (\(Forall @"xs" xs) -> h1 .&& h2 .=> f (foldr g a xs) .== foldr h b xs) $
+          \ih x xs -> h1 .&& h2 |- f (foldr g a (x .: xs))
+                                =: f (g x (foldr g a xs))
+                                =: h x (f (foldr g a xs))   ? ih
                                 =: h x (foldr h b xs)
                                 =: foldr h b (x .: xs)
                                 =: qed
@@ -543,26 +540,19 @@ foldrFoldlDuality = runKD $ do
    let f :: SA -> SB -> SB
        f = uninterpret "f"
 
-       p e xs = foldr f e xs .== foldl (flip f) e (reverse xs)
+       p xs e = foldr f e xs .== foldl (flip f) e (reverse xs)
 
-   undefined p
-   {-
+   foa <- use foldlOverAppend
+
    induct "foldrFoldlDuality"
-          (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs)
-          (\e x xs -> ( [ foldr f e (x .: xs)
-                        , x `f` foldr f e xs
-                        , x `f` foldl (flip f) e (reverse xs)   -- inductive hypothesis
-                        ]
-                      , [ foldl (flip f) e (reverse (x .: xs))
-                        , foldl (flip f) e (reverse xs ++ singleton x)
-                        , foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x)  -- foa
-                        , foldl (flip f) (flip f (foldl (flip f) e (reverse xs)) x) nil
-                        , flip f (foldl (flip f) e (reverse xs)) x
-                        , x `f` foldl (flip f) e (reverse xs)
-                        ]
-                      ))
-          [foa]
-          -}
+          (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs) $
+          \ih x xs e -> sTrue |- foldr f e (x .: xs)
+                              =: x `f` foldr f e xs                                           ? ih
+                              =: x `f` foldl (flip f) e (reverse xs)
+                              =: foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x) ? foa
+                              =: foldl (flip f) e (reverse xs ++ singleton x)
+                              =: foldl (flip f) e (reverse (x .: xs))
+                              =: qed
 
 -- * Foldr-foldl duality, generalized
 
