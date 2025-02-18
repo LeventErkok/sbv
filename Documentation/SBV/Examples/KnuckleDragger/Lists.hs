@@ -23,7 +23,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip, undefined)
+import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -663,7 +663,6 @@ foldrFoldl = runKD $ do
        e = uninterpret "e"
 
    -- Assumptions about the operators
-
    let -- (x <+> y) <*> z == x <+> (y <*> z)
        assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
 
@@ -766,47 +765,32 @@ bookKeeping = runKD $ do
                                                          nil
                                                          (foldr f e (head xss) .: mapFoldr e (tail xss))
 
-       p xss = foldr f a (concat xss) .== foldr f a (mapFoldr a xss)
-
-   assoc <- axiom "f is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z)
-   rUnit <- axiom "a is right-unit"  (\(Forall @"x" x) -> x `f` a .== x)
-   lUnit <- axiom "a is left-unit"   (\(Forall @"x" x) -> a `f` x .== x)
-
-   foa <- use foldrOverAppend
+   -- Assumptions about f
+   let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x `f` (y `f` z) .== (x `f` y) `f` z
+       rUnit = quantifiedBool $ \(Forall @"x" x) -> x `f` a .== x
+       lUnit = quantifiedBool $ \(Forall @"x" x) -> a `f` x .== x
 
    -- Helper:
    --   foldr f y xs = foldr f a xs `f` y
-   helper <- undefined [assoc, lUnit] mapFoldr p
-   {-
-             induct "foldBase"
-                    (\(Forall @"b" y) (Forall @"xs" xs) -> foldr f y xs .== foldr f a xs `f` y)
-                    (\y x xs -> ( [ foldr f y (x .: xs)
-                                  , x `f` foldr f y xs
-                                  , x `f` (foldr f a xs `f` y)   -- inductive hypothesis
-                                  ]
-                                , [ foldr f a (x .: xs) `f` y
-                                  , (x `f` foldr f a xs) `f` y
-                                  , x `f` (foldr f a xs `f` y)
-                                  ]))
-                    [assoc, lUnit]
-                    -}
+   helper <- induct "foldBase"
+                    (\(Forall @"xs" xs) (Forall @"y" y) -> lUnit .&& assoc .=> foldr f y xs .== foldr f a xs `f` y) $
+                    \ih x xs y -> lUnit .&& assoc  |- foldr f y (x .: xs)
+                                                   =: x `f` foldr f y xs          ? ih
+                                                   =: x `f` (foldr f a xs `f` y)  -- assoc
+                                                   =: (x `f` foldr f a xs) `f` y
+                                                   =: foldr f a (x .: xs) `f` y
+                                                   =: qed
 
-   undefined [assoc, rUnit, foa, helper]
-   {-
+   foa <- use foldrOverAppend
+
    induct "bookKeeping"
-          (\(Forall @"xss" xss) -> p xss)
-          (\xs xss -> let y = foldr f a (mapFoldr a xss)
-                      in  ( [ foldr f a (concat (xs .: xss))
-                            , foldr f a (xs ++ concat xss)
-                            , foldr f (foldr f a (concat xss)) xs      -- foa: foldr-over-append
-                            , foldr f (foldr f a (mapFoldr a xss)) xs  -- inductive hypothesis
-                            , foldr f y xs                             -- helper
-                            , foldr f a xs `f` y
-                            ]
-                          , [ foldr f a (mapFoldr a (xs .: xss))
-                            , foldr f a (foldr f a xs .: mapFoldr a xss)
-                            , foldr f a xs `f` foldr f a (mapFoldr a xss)
-                            , foldr f a xs `f` y
-                            ]))
-          [assoc, rUnit, foa, helper]
-          -}
+          (\(Forall @"xss" xss) -> assoc .&& rUnit .&& lUnit .=> foldr f a (concat xss) .== foldr f a (mapFoldr a xss)) $
+          \ih xs xss -> assoc .&& rUnit .&& lUnit
+                     |- foldr f a (concat (xs .: xss))
+                     =: foldr f a (xs ++ concat xss)                 ? foa
+                     =: foldr f (foldr f a (concat xss)) xs          ? ih
+                     =: foldr f (foldr f a (mapFoldr a xss)) xs      ? helper `at` (Inst @"xs" xs, Inst @"y" (foldr f a (mapFoldr a xss)))
+                     =: foldr f a xs `f` foldr f a (mapFoldr a xss)
+                     =: foldr f a (foldr f a xs .: mapFoldr a xss)
+                     =: foldr f a (mapFoldr a (xs .: xss))
+                     =: qed
