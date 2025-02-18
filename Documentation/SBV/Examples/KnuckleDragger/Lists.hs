@@ -501,14 +501,6 @@ foldrOverAppend = runKD $ do
 -- >>> foldlOverAppend
 -- Lemma: foldlOverAppend                  Q.E.D.
 -- [Proven] foldlOverAppend
---
--- Note that the proof crucially relies on a generalized version of the theorem, where we have
--- to generalize @a@ to be an arbitrary value. Hence the quantified version we use, which reads:
---
--- @forall a. foldl f a (xs ++ ys) == foldl f (foldl f a xs) ys@
---
--- If we don't do this generalization, the inductive step cannot use the new value of the seed,
--- and hence won't converge.
 foldlOverAppend :: IO Proof
 foldlOverAppend = runKD $ do
    let f :: SA -> SA -> SA
@@ -516,11 +508,13 @@ foldlOverAppend = runKD $ do
 
        p xs ys a = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
 
+   -- z3 is smart enough to instantiate the IH correctly below, and the at clause isn't necessary. But we're being
+   -- explicit here to emphasize that the IH is used at a different value of a.
    induct "foldlOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> p xs ys a) $
           \ih x xs ys a -> sTrue |- foldl f a ((x .: xs) ++ ys)
                                  =: foldl f a (x .: (xs ++ ys))
-                                 =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"A" ys, Inst @"B" (a `f` x))
+                                 =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
                                  =: foldl f (foldl f (a `f` x) xs) ys
                                  =: qed
 
