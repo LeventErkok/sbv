@@ -172,7 +172,8 @@ getOption f = case f undefined of
                  ReproducibleResourceLimit{} -> askFor "ReproducibleResourceLimit" ":reproducible-resource-limit" $ integer    ReproducibleResourceLimit
                  SMTVerbosity{}              -> askFor "SMTVerbosity"              ":verbosity"                   $ integer    SMTVerbosity
                  OptionKeyword nm _          -> askFor ("OptionKeyword" ++ nm)     nm                             $ stringList (OptionKeyword nm)
-                 SetLogic{}                  -> error "Data.SBV.Query: SMTLib does not allow querying value of the logic!"
+                 SetLogic{}                  -> error "Data.SBV.Query: SMTLib does not allow querying the value of logic!"
+                 SetTimeOut{}                -> error "Data.SBV.Query: SMTLib does not allow querying the timeout value!"
                  -- Not to be confused by getInfo, which is totally irrelevant!
                  SetInfo{}                   -> error "Data.SBV.Query: SMTLib does not allow querying value of meta-info!"
 

@@ -91,6 +91,7 @@ import Data.SBV.Core.Operations  (svNot, svNotEqual, svOr, svEqual)
 
 import Data.SBV.SMT.SMT     (showModel, parseCVs, SatModel, AllSatResult(..))
 import Data.SBV.SMT.SMTLib  (toIncSMTLib, toSMTLib)
+import Data.SBV.SMT.SMTLib2 (setSMTOption)
 import Data.SBV.SMT.Utils   ( showTimeoutValue, addAnnotations, alignPlain, debug
                             , mergeSExpr, SBVException(..), recordTranscript, TranscriptMsg(..)
                             , witnessName
@@ -128,7 +129,8 @@ instance MonadIO m => SolverContext (QueryT m) where
                                              , "*** Data.SBV: '" ++ show o ++ "' can only be set at start-up time."
                                              , "*** Hint: Move the call to 'setOption' before the query."
                                              ]
-     | True                = send True $ setSMTOption o
+     | True                = do State{stCfg} <- contextState
+                                send True $ setSMTOption stCfg o
 
 -- | Adding a constraint, possibly with attributes and possibly soft. Only used internally.
 -- Use 'constrain' and 'namedConstraint' from user programs.

@@ -37,6 +37,8 @@
 
   * [BACKWARDS COMPATIBILITY] The function 'registerSMTType' is renamed to 'registerType'.
 
+  * Fix the time-out limit setting for CVC4/5. Thanks to Daniel Matichuk for reporting.
+
 ### Version 11.0, 2024-11-06
 
   * [BACKWARDS COMPATIBILITY] SBV now handles arrays in a much more uniform way, unifying

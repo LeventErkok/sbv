@@ -555,7 +555,7 @@ class SolverContext m where
    {-# MINIMAL constrain, softConstrain, namedConstraint, constrainWithAttribute, setOption, contextState, internalVariable #-}
 
    -- time-out, logic, and info are  simply options in our implementation, so default implementation suffices
-   setTimeOut t = setOption $ OptionKeyword ":timeout" [show t]
+   setTimeOut   = setOption . SetTimeOut
    setLogic     = setOption . SetLogic
    setInfo    k = setOption . SetInfo k
 

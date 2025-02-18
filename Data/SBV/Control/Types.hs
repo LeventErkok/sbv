@@ -17,7 +17,7 @@
 module Data.SBV.Control.Types (
        CheckSatResult(..)
      , Logic(..)
-     , SMTOption(..), isStartModeOption, isOnlyOnceOption, setSMTOption
+     , SMTOption(..), isStartModeOption, isOnlyOnceOption
      , SMTInfoFlag(..)
      , SMTErrorBehavior(..)
      , SMTReasonUnknown(..)
@@ -116,6 +116,7 @@ data SMTOption = DiagnosticOutputChannel   FilePath
                | OptionKeyword             String  [String]
                | SetLogic                  Logic
                | SetInfo                   String  [String]
+               | SetTimeOut                Integer
                deriving Show
 
 -- | Can this command only be run at the very beginning? If 'True' then
@@ -136,6 +137,7 @@ isStartModeOption SMTVerbosity{}              = False
 isStartModeOption OptionKeyword{}             = True  -- Conservative.
 isStartModeOption SetLogic{}                  = True
 isStartModeOption SetInfo{}                   = False
+isStartModeOption SetTimeOut{}                = True
 
 -- | Can this option be set multiple times? I'm only making a guess here.
 -- If this returns True, then we'll only send the last instance we see.
@@ -155,35 +157,7 @@ isOnlyOnceOption SMTVerbosity{}              = False
 isOnlyOnceOption OptionKeyword{}             = False -- This is really hard to determine. Just being permissive
 isOnlyOnceOption SetLogic{}                  = True
 isOnlyOnceOption SetInfo{}                   = False
-
--- SMTLib's True/False is spelled differently than Haskell's.
-smtBool :: Bool -> String
-smtBool True  = "true"
-smtBool False = "false"
-
--- | Translate an option setting to SMTLib. Note the SetLogic/SetInfo discrepancy.
-setSMTOption :: SMTOption -> String
-setSMTOption = cvt
-  where cvt (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   show f]
-        cvt (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
-        cvt (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
-        cvt (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
-        cvt (ProduceInterpolants       b) = opt   [":produce-interpolants",        smtBool b]
-        cvt (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
-        cvt (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
-        cvt (ProduceAbducts            b) = opt   [":produce-abducts",             smtBool b]
-        cvt (RandomSeed                i) = opt   [":random-seed",                 show i]
-        cvt (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", show i]
-        cvt (SMTVerbosity              i) = opt   [":verbosity",                   show i]
-        cvt (OptionKeyword          k as) = opt   (k : as)
-        cvt (SetLogic                  l) = logic l
-        cvt (SetInfo                k as) = info  (k : as)
-
-        opt   xs = "(set-option " ++ unwords xs ++ ")"
-        info  xs = "(set-info "   ++ unwords xs ++ ")"
-
-        logic Logic_NONE = "; NB. not setting the logic per user request of Logic_NONE"
-        logic l          = "(set-logic " ++ show l ++ ")"
+isOnlyOnceOption SetTimeOut{}                = False
 
 -- | SMT-Lib logics. If left unspecified SBV will pick the logic based on what it determines is needed. However, the
 -- user can override this choice using a call to 'Data.SBV.setLogic' This is especially handy if one is experimenting with custom

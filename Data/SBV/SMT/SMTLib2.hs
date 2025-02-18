@@ -16,7 +16,7 @@
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
-module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtCV, cvtInc, declUserFuns, constructTables) where
+module Data.SBV.SMT.SMTLib2(cvt, cvtExp, cvtCV, cvtInc, declUserFuns, constructTables, setSMTOption) where
 
 import Crypto.Hash.SHA512 (hash)
 import qualified Data.ByteString.Base16 as B
@@ -221,7 +221,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                     : concat [flattenConfig | any needsFlattening kindInfo, Just flattenConfig <- [supportsFlattenedModels solverCaps]]
 
         -- process all other settings we're given. If an option cannot be repeated, we only take the last one.
-        userSettings = map setSMTOption $ filter (not . isLogic) $ foldr comb [] $ solverSetOptions cfg
+        userSettings = map (setSMTOption cfg) $ filter (not . isLogic) $ foldr comb [] $ solverSetOptions cfg
            where -- Logic is already processed, so drop it:
                  isLogic SetLogic{} = True
                  isLogic _          = False
@@ -1653,3 +1653,40 @@ reducePB op args = case op of
 
   where addIf :: [Int] -> String
         addIf cs = "(+ " ++ unwords ["(ite " ++ a ++ " " ++ show c ++ " 0)" | (a, c) <- zip args cs] ++ ")"
+
+-- | Translate an option setting to SMTLib. Note the SetLogic/SetInfo discrepancy.
+setSMTOption :: SMTConfig -> SMTOption -> String
+setSMTOption cfg = set
+  where set (DiagnosticOutputChannel   f) = opt   [":diagnostic-output-channel",   show f]
+        set (ProduceAssertions         b) = opt   [":produce-assertions",          smtBool b]
+        set (ProduceAssignments        b) = opt   [":produce-assignments",         smtBool b]
+        set (ProduceProofs             b) = opt   [":produce-proofs",              smtBool b]
+        set (ProduceInterpolants       b) = opt   [":produce-interpolants",        smtBool b]
+        set (ProduceUnsatAssumptions   b) = opt   [":produce-unsat-assumptions",   smtBool b]
+        set (ProduceUnsatCores         b) = opt   [":produce-unsat-cores",         smtBool b]
+        set (ProduceAbducts            b) = opt   [":produce-abducts",             smtBool b]
+        set (RandomSeed                i) = opt   [":random-seed",                 show i]
+        set (ReproducibleResourceLimit i) = opt   [":reproducible-resource-limit", show i]
+        set (SMTVerbosity              i) = opt   [":verbosity",                   show i]
+        set (OptionKeyword          k as) = opt   (k : as)
+        set (SetLogic                  l) = logic l
+        set (SetInfo                k as) = info  (k : as)
+        set (SetTimeOut                i) = opt   $ timeOut i
+
+        opt   xs = "(set-option " ++ unwords xs ++ ")"
+        info  xs = "(set-info "   ++ unwords xs ++ ")"
+
+        logic Logic_NONE = "; NB. not setting the logic per user request of Logic_NONE"
+        logic l          = "(set-logic " ++ show l ++ ")"
+
+        -- timeout is not standard. We distinguish between CVC/Z3. All else follows z3
+        -- The value is in milliseconds, which is how z3/CVC interpret it
+        timeOut i = case name (solver cfg) of
+                     CVC4 -> [":tlimit",  show i]
+                     CVC5 -> [":tlimit",  show i]
+                     _    -> [":timeout", show i]
+
+        -- SMTLib's True/False is spelled differently than Haskell's.
+        smtBool :: Bool -> String
+        smtBool True  = "true"
+        smtBool False = "false"
