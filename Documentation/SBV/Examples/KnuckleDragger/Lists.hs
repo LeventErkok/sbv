@@ -475,20 +475,15 @@ foldrOverAppend = runKD $ do
 --
 -- We have:
 --
--- >>> foldlOverAppend
+-- >>> foldlOverAppend (uninterpret "f")
 -- Lemma: foldlOverAppend                  Q.E.D.
 -- [Proven] foldlOverAppend
-foldlOverAppend :: IO Proof
-foldlOverAppend = runKD $ do
-   let f :: SA -> SA -> SA
-       f = uninterpret "f"
-
-       p xs ys a = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
-
+foldlOverAppend :: (SB -> SA -> SB) -> IO Proof
+foldlOverAppend f = runKD $
    -- z3 is smart enough to instantiate the IH correctly below, and the at clause isn't necessary. But we're being
    -- explicit here to emphasize that the IH is used at a different value of a.
    induct "foldlOverAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> p xs ys a) $
+          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
           \ih x xs ys a -> sTrue |- foldl f a ((x .: xs) ++ ys)
                                  =: foldl f a (x .: (xs ++ ys))
                                  =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
@@ -520,19 +515,20 @@ foldrFoldlDuality = runKD $ do
    let f :: SA -> SB -> SB
        f = uninterpret "f"
 
-       p xs e = foldr f e xs .== foldl (flip f) e (reverse xs)
-
-   foa <- use foldlOverAppend
+   foa <- use (foldlOverAppend (flip f))
 
    induct "foldrFoldlDuality"
-          (\(Forall @"e" e) (Forall @"xs" xs) -> p e xs) $
-          \ih x xs e -> sTrue |- foldr f e (x .: xs)
-                              =: x `f` foldr f e xs                                           ? ih
-                              =: x `f` foldl (flip f) e (reverse xs)
-                              =: foldl (flip f) (foldl (flip f) e (reverse xs)) (singleton x) ? foa
-                              =: foldl (flip f) e (reverse xs ++ singleton x)
-                              =: foldl (flip f) e (reverse (x .: xs))
-                              =: qed
+          (\(Forall @"xs" xs) (Forall @"e" e) -> foldr f e xs .== foldl (flip f) e (reverse xs)) $
+          \ih x xs e ->
+              let ff  = flip f
+                  rxs = reverse xs
+              in sTrue |- foldr f e (x .: xs) =: x `f` foldr f e xs                      ? ih
+                                              =: x `f` foldl ff e rxs
+                                              =: foldl ff e rxs `ff` x
+                                              =: foldl ff (foldl ff e rxs) (singleton x) ? foa
+                                              =: foldl ff e (rxs ++ singleton x)
+                                              =: foldl ff e (reverse (x .: xs))
+                                              =: qed
 
 -- * Foldr-foldl duality, generalized
 
