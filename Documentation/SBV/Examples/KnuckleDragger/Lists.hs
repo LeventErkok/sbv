@@ -59,10 +59,7 @@ mkUninterpretedSort ''C
 -- Lemma: appendNull                       Q.E.D.
 -- [Proven] appendNull
 appendNull :: IO Proof
-appendNull = runKD $
-   lemma "appendNull"
-         (\(Forall @"xs" (xs :: SList A)) -> xs ++ nil .== xs)
-         []
+appendNull = runKD $ lemma "appendNull" (\(Forall @"xs" (xs :: SList A)) -> xs ++ nil .== xs) []
 
 -- * Moving cons over append
 
@@ -74,10 +71,7 @@ appendNull = runKD $
 -- Lemma: consApp                          Q.E.D.
 -- [Proven] consApp
 consApp :: IO Proof
-consApp = runKD $
-   lemma "consApp"
-         (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys))
-         []
+consApp = runKD $ lemma "consApp" (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) ++ ys .== x .: (xs ++ ys)) []
 
 -- * Associativity of append
 
@@ -94,10 +88,7 @@ consApp = runKD $
 -- that proves it right out-of-the-box!)
 appendAssoc :: IO Proof
 appendAssoc = runKD $
-   lemma "appendAssoc"
-         (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) (Forall @"zs" zs) ->
-              xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs)
-         []
+   lemma "appendAssoc" (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) (Forall @"zs" zs) -> xs ++ (ys ++ zs) .== (xs ++ ys) ++ zs) []
 
 -- * Reverse and append
 
@@ -107,10 +98,7 @@ appendAssoc = runKD $
 -- Lemma: revCons                          Q.E.D.
 -- [Proven] revCons
 revCons :: IO Proof
-revCons = runKD $
-    lemma "revCons"
-          (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x)
-          []
+revCons = runKD $ lemma "revCons" (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> reverse (x .: xs) .== reverse xs ++ singleton x) []
 
 -- | @reverse (xs ++ ys) .== reverse ys ++ reverse xs@
 --
@@ -165,10 +153,7 @@ reverseReverse = runKD $ do
 -- Lemma: lengthTail                       Q.E.D.
 -- [Proven] lengthTail
 lengthTail :: IO Proof
-lengthTail = runKD $
-   lemma "lengthTail"
-         (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs)
-         []
+lengthTail = runKD $ lemma "lengthTail" (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) -> length (x .: xs) .== 1 + length xs) []
 
 -- | It is instructive to see what kind of counter-example we get if a lemma fails to prove.
 -- Below, we do a variant of the 'lengthTail, but with a bad implementation over integers,
@@ -187,9 +172,7 @@ badLengthProof = runKD $ do
    let badLength :: SList Integer -> SInteger
        badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
 
-   lemma "badLengthProof"
-         (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs))
-         []
+   lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []
 
    pure ()
 
@@ -201,10 +184,7 @@ badLengthProof = runKD $ do
 -- Lemma: lenAppend                        Q.E.D.
 -- [Proven] lenAppend
 lenAppend :: IO Proof
-lenAppend = runKD $
-    lemma "lenAppend"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> length (xs ++ ys) .== length xs + length ys)
-          []
+lenAppend = runKD $ lemma "lenAppend" (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> length (xs ++ ys) .== length xs + length ys) []
 
 -- | @length xs == length ys -> length (xs ++ ys) == 2 * length xs@
 --
@@ -215,10 +195,7 @@ lenAppend = runKD $
 -- [Proven] lenAppend2
 lenAppend2 :: IO Proof
 lenAppend2 = runKD $
-    lemma "lenAppend2"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) ->
-                length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs)
-          []
+    lemma "lenAppend2" (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> length xs .== length ys .=> length (xs ++ ys) .== 2 * length xs) []
 
 -- * Any, all, and filtering
 
@@ -266,10 +243,7 @@ filterEx = runKD $
 --   xs = [2] :: [Integer]
 filterEx2 :: IO ()
 filterEx2 = runKD $ do
-        let p :: SList Integer -> SBool
-            p xs = filter (.> 2) xs .== filter (.>= 2) xs
-
-        lemma "filterEx2" (\(Forall @"xs" xs) -> p xs) []
+        lemma "filterEx2" (\(Forall @"xs" xs) -> filter (.> (2 :: SInteger)) xs .== filter (.>= 2) xs) []
 
         pure ()
 
@@ -309,17 +283,14 @@ mapAppend f = runKD $ do
 -- [Proven] mapReverse
 mapReverse :: IO Proof
 mapReverse = runKD $ do
-     let p :: (SA -> SB) -> SList A -> SBool
-         p g xs = reverse (map g xs) .== map g (reverse xs)
-
-         -- For an arbitrary uninterpreted function 'f':
+     let -- For an arbitrary uninterpreted function 'f':
          f :: SA -> SB
          f = uninterpret "f"
 
      mApp <- use (mapAppend f)
 
      induct "mapReverse"
-            (\(Forall @"xs" xs) -> p f xs) $
+            (\(Forall @"xs" xs) -> reverse (map f xs) .== map f (reverse xs)) $
             \ih x xs -> sTrue |- reverse (map f (x .: xs))
                               =: reverse (f x .: map f xs)
                               =: reverse (map f xs) ++ singleton (f x)       ? ih
@@ -363,12 +334,7 @@ revLen = runKD $
 --   xs = [A_1,A_2,A_1] :: [A]
 badRevLen :: IO ()
 badRevLen = runKD $ do
-   let p :: SList A -> SBool
-       p xs = length (reverse xs) .== ite (length xs .== 3) 5 (length xs)
-
-   lemma "badRevLen"
-         (\(Forall @"xs" xs) -> p xs)
-         []
+   lemma "badRevLen" (\(Forall @"xs" (xs :: SList A)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs)) []
 
    pure ()
 
