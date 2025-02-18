@@ -760,3 +760,41 @@ bookKeeping = runKD $ do
                      =: foldr f a (foldr f a xs .: mapFoldr a xss)
                      =: foldr f a (mapFoldr a (xs .: xss))
                      =: qed
+
+-- * Map and filter don't commute
+
+-- | In general, mapping and filtering operations do not commute. We'll see the kind of counter-example we get from SBV if
+-- we attempt to prove:
+--
+-- >>> mapFilter `catch` (\(_ :: SomeException) -> pure ())
+-- Lemma: badMapFilter
+-- *** Failed to prove badMapFilter.
+-- Falsifiable. Counter-example:
+--   xs  = [A_3] :: [A]
+--   lhs = [A_0] :: [A]
+--   rhs =    [] :: [A]
+-- -- <BLANKLINE>
+--   f :: A -> A
+--   f _ = A_0
+-- -- <BLANKLINE>
+--   p :: A -> Bool
+--   p A_3 = True
+--   p _   = False
+-- *** Exception: Failed
+--
+-- As expected, the function @f@ maps everything to @A_0@, and the predicate @p@ only lets @A_3@ through. As shown in the
+-- counter-example, for the input @[A_3]@, left-hand-side filters nothing and the result is the singleton @A_0@. But the
+-- map on the right-hand side maps everything to @[A_0]@ and the filter gets rid of the elements, resulting in an empty list.
+mapFilter :: IO ()
+mapFilter = runKD $ do
+   let f :: SA -> SA
+       f = uninterpret "f"
+
+       p :: SA -> SBool
+       p = uninterpret "p"
+
+   lemma "badMapFilter"
+          (\(Forall @"xs" xs) -> observe "lhs" (map f (filter p xs)) .== observe "rhs" (filter p (map f xs)))
+          []
+
+   pure ()
