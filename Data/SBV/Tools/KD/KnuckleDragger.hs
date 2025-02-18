@@ -40,7 +40,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (?), qed
+       , (|-), (⊢), (=:), (≡), (?), hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -107,7 +107,7 @@ class CalcLemma a steps where
 
   -- | Internal, shouldn't be needed outside the library
   {-# MINIMAL calcSteps #-}
-  calcSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Proof], SBool)]))
+  calcSteps :: a -> steps -> Symbolic (SBool, (SBool, [([Helper], SBool)]))
 
   calc    nm p steps = getKDConfig >>= \cfg -> calcWith    cfg nm p steps
   calcThm nm p steps = getKDConfig >>= \cfg -> calcThmWith cfg nm p steps
@@ -129,12 +129,12 @@ class CalcLemma a steps where
         (goal, (calcIntros, proofSteps)) <- calcSteps result steps
 
         let stepHelpers   = concatMap fst proofSteps
-            (ros, modulo) = calculateRootOfTrust nm stepHelpers
+            (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
             finish        = finishKD cfg ("Q.E.D." ++ modulo)
 
-        mapM_ (qSaturateSavingObservables . getProof) stepHelpers
+        mapM_ (qSaturateSavingObservables . getHelperBool) stepHelpers
 
-        let go :: Int -> SBool -> [([Proof], SBool)] -> Query Proof
+        let go :: Int -> SBool -> [([Helper], SBool)] -> Query Proof
             go _ accum [] = do
                 queryDebug [nm ++ ": Proof end: proving the result:"]
                 checkSatThen cfg kdSt "Result" True
@@ -153,10 +153,24 @@ class CalcLemma a steps where
                                                            }
 
             go i accum ((by, s):ss) = do
+
+                 -- Prove that the assumptions follow, if any
+                 case [a | HAssum a <- by] of
+                   [] -> pure ()
+                   as -> checkSatThen cfg kdSt "Asmps "
+                                               True
+                                               (Just calcIntros)
+                                               (sAnd as)
+                                               []
+                                               ["", show i]
+                                               (Just [nm, show i])
+                                               Nothing
+                                               (flip finish [])
+
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                  checkSatThen cfg kdSt "Step  "
                                        True
-                                       (Just (calcIntros .&& sAnd (map getProof by)))
+                                       (Just (sAnd (map getHelperBool by)))
                                        s
                                        []
                                        ["", show i]
@@ -169,7 +183,7 @@ class CalcLemma a steps where
         query $ go (1::Int) sTrue proofSteps
 
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Proof], SBool)])
+mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> (SBool, [([Helper], SBool)])
 mkCalcSteps (intros, xs) = (intros, zipWith merge xs (drop 1 xs))
   where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
 
@@ -209,7 +223,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 -- | Captures the schema for an inductive proof
 data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
                                            , inductionBaseCase       :: SBool
-                                           , inductionProofSteps     :: [([Proof], SBool)]
+                                           , inductionProofSteps     :: [([Helper], SBool)]
                                            , inductionBaseFailureMsg :: String
                                            , inductiveStep           :: SBool
                                            }
@@ -257,10 +271,10 @@ class Inductive a steps where
                            } <- inductionStrategy result steps
 
          let stepHelpers   = concatMap fst inductionProofSteps
-             (ros, modulo) = calculateRootOfTrust nm stepHelpers
+             (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
              finish et d   = finishKD cfg ("Q.E.D." ++ modulo) d et
 
-         mapM_ (qSaturateSavingObservables . getProof) stepHelpers
+         mapM_ (qSaturateSavingObservables . getHelperBool) stepHelpers
 
          query $ do
 
@@ -270,10 +284,24 @@ class Inductive a steps where
                        (finish [])
 
           let loop i accum ((by, s):ss) = do
+
+                  -- Prove that the assumptions follow, if any
+                  case [a | HAssum a <- by] of
+                    [] -> pure ()
+                    as -> checkSatThen cfg kdSt "Asmps "
+                                                True
+                                                (Just inductionIntros)
+                                                (sAnd as)
+                                                []
+                                                ["", show i]
+                                                (Just [nm, show i])
+                                                Nothing
+                                                (finish [])
+
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
                   checkSatThen cfg kdSt "Step"
                                         True
-                                        (Just (inductionIntros .&& sAnd (map getProof by)))
+                                        (Just (sAnd (map getHelperBool by)))
                                         s
                                         []
                                         [nm, show i]
@@ -686,8 +714,27 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | all (not . isSpace) s                    = s
                | True                                     = '(' : s ++ ")"
 
+-- | Helpers for a step
+data Helper = HProof Proof  -- A previously proven theorem
+            | HAssum SBool  -- A hypothesis
+
+-- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
+-- mixing proofs and booleans in one group of hints.
+hyp :: SBool -> Helper
+hyp = HAssum
+
+-- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
+-- mixing proofs and booleans in one group of hints.
+hprf :: Proof -> Helper
+hprf = HProof
+
+-- | Get the underlying boolean of a helper
+getHelperBool :: Helper -> SBool
+getHelperBool (HProof p) = getProof p
+getHelperBool (HAssum b) = b
+
 -- | A proof-step with associated helpers
-data ProofStep a = ProofStep a [Proof]
+data ProofStep a = ProofStep a [Helper]
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
@@ -697,11 +744,27 @@ class ProofHint a b where
 
 -- | Giving just one proof as a helper.
 instance ProofHint a Proof where
-  a ? p = ProofStep a [p]
+  a ? p = ProofStep a [HProof p]
+
+-- | Giving just one boolean as a helper.
+instance ProofHint a SBool where
+  a ? p = ProofStep a [HAssum p]
+
+-- | Giving just one helper
+instance ProofHint a Helper where
+  a ? h = ProofStep a [h]
 
 -- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
-  a ? ps = ProofStep a ps
+  a ? ps = ProofStep a (map HProof ps)
+
+-- | Giving a bunch of booleans as a helper.
+instance ProofHint a [SBool] where
+  a ? ps = ProofStep a (map HAssum ps)
+
+-- | Giving a set of helpers
+instance ProofHint a [Helper] where
+  a ? hs = ProofStep a hs
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
@@ -736,15 +799,15 @@ instance ChainStep (ProofStep a) [ProofStep a] where
 qed :: [ProofStep a]
 qed = []
 
--- | Start a calculational proof, with the given hypothesis. Use 'sTrue' as the
+-- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is
--- typically used to introduce hypotheses in proofs of implications such as @A .=> B@, where
--- we would put @A@ as the starting assumption.
-(|-) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
-hyp |- ps = (hyp, ps)
+-- typically used to introduce hypotheses in proofs of implications such as @A .=> B .=> C@, where
+-- we would put @[A, B]@ as the starting assumption. You can name these and later use in the derivation steps.
+(|-) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
+bs |- ps = (sAnd bs, ps)
 infixl 0 |-
 
 -- | Alternative unicode for `|-`:
-(⊢) :: SBool -> [ProofStep a] -> (SBool, [ProofStep a])
+(⊢) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
 (⊢) = (|-)
 infixl 0 ⊢

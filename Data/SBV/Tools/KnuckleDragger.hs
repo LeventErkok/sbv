@@ -43,8 +43,17 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Running KnuckleDragger proofs
        , KD, runKD, runKDWith, use
 
-       -- * Calculational proof combinators
-       , (|-), (⊢), (=:), (≡), (?), qed
+       -- * Starting a calculation proof
+       , (|-), (⊢)
+
+       -- * Sequence of calculation steps
+       , (=:), (≡)
+
+       -- * Supplying hints for a calculation step
+       , (?), hprf, hyp
+
+       -- * Finishing up a calculational proof
+       , qed
        ) where
 
 import Data.SBV.Tools.KD.KnuckleDragger
