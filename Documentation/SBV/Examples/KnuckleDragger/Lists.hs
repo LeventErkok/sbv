@@ -664,55 +664,35 @@ foldrFoldl = runKD $ do
 
    -- Assumptions about the operators
 
-   -- (x <+> y) <*> z == x <+> (y <*> z)
-   axm1 <- axiom "<+> over <*>" $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
+   let -- (x <+> y) <*> z == x <+> (y <*> z)
+       assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> (x <+> y) <*> z .== x <+> (y <*> z)
 
-   -- x <+> e == e <*> x
-   axm2 <- axiom "unit" $ \(Forall @"x" x) -> x <+> e .== e <*> x
+       -- x <+> e == e <*> x
+       unit  = quantifiedBool $ \(Forall @"x" x) -> x <+> e .== e <*> x
 
    -- Helper: x <+> foldl (<*>) y xs == foldl (<*>) (x <+> y) xs
-   -- NB. We prove this so y is explicitly quantified, as the inductive hypothesis needs to
-   -- instantiate it using a different expression, where @y@ will get @y <*> z@.
-   helper <- do
-      let hp x y xs = x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs
-
-      undefined axm1 hp
-      {-
+   helper <-
       induct "foldl over <*>/<+>"
-             (\(Forall @"x" x) (Forall @"xs" xs) -> quantifiedBool $ \(Forall y) -> hp x y xs)
+             (\(Forall @"xs" xs) (Forall @"x" x) (Forall @"y" y) -> assoc .=> x <+> foldl (<*>) y xs .== foldl (<*>) (x <+> y) xs) $
              -- Using z to avoid confusion with the variable x already present, following Bird.
-             (\x z xs -> let y = uninterpret "y"
-                         in ( [ x <+> foldl (<*>) y (z .: xs)
-                              , x <+> foldl (<*>) (y <*> z) xs
-                              , foldl (<*>) (x <+> (y <*> z)) xs  -- inductive hypothesis, y gets y <*> z
-                              , foldl (<*>) ((x <+> y) <*> z) xs  -- axiom 1
-                              ]
-                            , [ foldl (<*>) (x <+> y) (z .: xs)
-                              , foldl (<*>) ((x <+> y) <*> z) xs
-                              ]))
-             [axm1]
-             -}
-
-   let -- Equivalence predicate
-       p :: SList A -> SBool
-       p xs = foldr (<+>) e xs .== foldl (<*>) e xs
+             -- z3 can figure out the proper instantiation of ih so the at call is unnecessary, but being explicit is helpful.
+             \ih z xs x y -> assoc |- x <+> foldl (<*>) y (z .: xs)
+                                   =: x <+> foldl (<*>) (y <*> z) xs    ? ih `at` (Inst @"x" x, Inst @"y" (y <*> z))
+                                   =: foldl (<*>) (x <+> (y <*> z)) xs
+                                   =: foldl (<*>) ((x <+> y) <*> z) xs
+                                   =: foldl (<*>) (x <+> y) (z .: xs)
+                                   =: qed
 
    -- Final proof:
-   undefined [axm2, helper] p
-   {-
    induct "foldrFoldl"
-          (\(Forall @"xs" xs) -> p xs)
-          (\x xs -> ( [ foldr (<+>) e (x .: xs)
-                      , x <+> foldr (<+>) e xs     -- inductive hypothesis
-                      , x <+> foldl (<*>) e xs
-                      ]
-                    , [ foldl (<*>) e (x .: xs)
-                      , foldl (<*>) (e <*> x) xs
-                      , foldl (<*>) (x <+> e) xs   -- axm2
-                      , x <+> foldl (<*>) e xs     -- helper
-                      ]))
-          [axm2, helper]
-          -}
+          (\(Forall @"xs" xs) -> assoc .&& unit .=> foldr (<+>) e xs .== foldl (<*>) e xs) $
+          \ih x xs -> assoc .&& unit |- foldr (<+>) e (x .: xs)
+                                     =: x <+> foldr (<+>) e xs    ? ih
+                                     =: x <+> foldl (<*>) e xs    ? helper
+                                     =: foldl (<*>) (x <+> e) xs  -- unit
+                                     =: foldl (<*>) (e <*> x) xs
+                                     =: foldl (<*>) e (x .: xs)
+                                     =: qed
 
 -- * Bookkeeping law
 
