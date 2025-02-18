@@ -120,12 +120,9 @@ revCons = runKD $
 -- Lemma: revApp                           Q.E.D.
 -- [Proven] revApp
 revApp :: IO Proof
-revApp = runKD $ do
-   let p :: SList A -> SList A -> SBool
-       p xs ys = reverse (xs ++ ys) .== reverse ys ++ reverse xs
-
+revApp = runKD $
    induct "revApp"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> reverse (xs ++ ys) .== reverse ys ++ reverse xs) $
           \ih (x :: SA) xs ys -> sTrue |- reverse ((x .: xs) ++ ys)
                                        =: reverse (x .: (xs ++ ys))
                                        =: reverse (xs ++ ys) ++ singleton x           ? ih
@@ -147,13 +144,10 @@ revApp = runKD $ do
 reverseReverse :: IO Proof
 reverseReverse = runKD $ do
 
-   let p :: SList A -> SBool
-       p xs = reverse (reverse xs) .== xs
-
    ra <- use revApp
 
    induct "reverseReverse"
-          (\(Forall @"xs" xs) -> p xs) $
+          (\(Forall @"xs" (xs :: SList A)) -> reverse (reverse xs) .== xs) $
           \ih (x :: SA) xs -> sTrue |- reverse (reverse (x .: xs))
                                     =: reverse (reverse xs ++ singleton x)           ? ra
                                     =: reverse (singleton x) ++ reverse (reverse xs) ? ih
@@ -236,11 +230,9 @@ lenAppend2 = runKD $
 -- Lemma: allAny                           Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
-allAny = runKD $ do
-   let p xs = sNot (all id xs) .== any sNot xs
-
+allAny = runKD $
    induct "allAny"
-          (\(Forall @"xs" xs) -> p xs) $
+          (\(Forall @"xs" xs) -> sNot (all id xs) .== any sNot xs) $
           \ih x xs -> sTrue |- sNot (all id (x .: xs))
                             =: sNot (x .&& all id xs)
                             =: (sNot x .|| sNot (all id xs))   ? ih
@@ -255,11 +247,9 @@ allAny = runKD $ do
 -- Lemma: filterEx                         Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
-filterEx = runKD $ do
-  let p xs = (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)
-
+filterEx = runKD $
   induct "filterEx"
-         (\(Forall @"xs" xs) -> p xs) $
+         (\(Forall @"xs" xs) -> (2 :: SInteger) `notElem` xs .=> (filter (.> 2) xs .== filter (.>= 2) xs)) $
          \ih x xs -> (2 :: SInteger) `notElem` (x .:  xs)
                   |- filter (.> 2) (x .: xs)
                   =: ite (x .> 2) (x .: filter (.>  2) xs) (filter (.>  2) xs) ? ih
@@ -292,11 +282,8 @@ filterEx2 = runKD $ do
 -- [Proven] mapAppend
 mapAppend :: (SA -> SB) -> IO Proof
 mapAppend f = runKD $ do
-   let p :: SList A -> SList A -> SBool
-       p xs ys = map f (xs ++ ys) .== map f xs ++ map f ys
-
    induct "mapAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> map f (xs ++ ys) .== map f xs ++ map f ys) $
           \ih x xs ys -> sTrue |- map f ((x .: xs) ++ ys)
                                =: map f (x .: (xs ++ ys))
                                =: f x .: map f (xs ++ ys)        ? ih
@@ -352,12 +339,9 @@ mapReverse = runKD $ do
 -- Lemma: revLen                           Q.E.D.
 -- [Proven] revLen
 revLen :: IO Proof
-revLen = runKD $ do
-   let p :: SList A -> SBool
-       p xs = length (reverse xs) .== length xs
-
+revLen = runKD $
    induct "revLen"
-          (\(Forall @"xs" xs) -> p xs) $
+          (\(Forall @"xs" (xs :: SList A)) -> length (reverse xs) .== length xs) $
           \ih (x :: SA) xs -> sTrue |- length (reverse (x .: xs))
                                     =: length (reverse xs ++ singleton x)
                                     =: length (reverse xs) + length (singleton x)  ? ih
@@ -408,10 +392,8 @@ foldrMapFusion = runKD $ do
       f :: SB -> SA -> SA
       f = uninterpret "f"
 
-      p xs = foldr f a (map g xs) .== foldr (f . g) a xs
-
   induct "foldrMapFusion"
-         (\(Forall @"xs" xs) -> p xs) $
+         (\(Forall @"xs" xs) -> foldr f a (map g xs) .== foldr (f . g) a xs) $
          \ih x xs -> sTrue |- foldr f a (map g (x .: xs))
                            =: foldr f a (g x .: map g xs)
                            =: g x `f` foldr f a (map g xs) ? ih
@@ -478,10 +460,8 @@ foldrOverAppend = runKD $ do
        f :: SA -> SA -> SA
        f = uninterpret "f"
 
-       p xs ys = foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs
-
    induct "foldrOverAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys) $
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> foldr f a (xs ++ ys) .== foldr f (foldr f a ys) xs) $
           \ih x xs ys -> sTrue |- foldr f a ((x .: xs) ++ ys)
                                =: foldr f a (x .: (xs ++ ys))
                                =: x `f` foldr f a (xs ++ ys)       ? ih
