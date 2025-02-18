@@ -307,7 +307,7 @@ class Inductive a steps where
                          }
 
 -- | Induction over 'SInteger'.
-instance   (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
    inductionStrategy result steps = do
        let predicate k = result (Forall k)
            nk          = symbolVal (Proxy @nk)

@@ -17,6 +17,7 @@
 {-# LANGUAGE StandaloneDeriving  #-}
 {-# LANGUAGE TemplateHaskell     #-}
 {-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
 
@@ -510,13 +511,18 @@ foldrOverAppend = runKD $ do
 -- and hence won't converge.
 foldlOverAppend :: IO Proof
 foldlOverAppend = runKD $ do
-   let
+   let f :: SA -> SA -> SA
+       f = uninterpret "f"
 
-       p xs ys = (xs :: SList A) .== ys
+       p xs ys a = foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys
 
-   lemma "foldlOverAppend"
-         (\(Forall @"xs" xs) (Forall @"ys" ys) -> p xs ys)
-         []
+   induct "foldlOverAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> p xs ys a) $
+          \ih x xs ys a -> sTrue |- foldl f a ((x .: xs) ++ ys)
+                                 =: foldl f a (x .: (xs ++ ys))
+                                 =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"A" ys, Inst @"B" (a `f` x))
+                                 =: foldl f (foldl f (a `f` x) xs) ys
+                                 =: qed
 
 -- * Foldr-foldl correspondence
 
