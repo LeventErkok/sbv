@@ -326,8 +326,9 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
               }
 
 -- | Induction over 'SInteger' taking an extra argument.
-instance (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> Forall na a -> SBool)
-                                                                               (SInteger -> SBV a -> (SBool, [ProofStep z])) where
+instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic z)
+      => Inductive (Forall nk Integer -> Forall na a -> SBool)
+                   (SInteger -> SBV a -> (SBool, [ProofStep z])) where
    inductionStrategy result steps = do
        let predicate k a = result (Forall k) (Forall a)
            nk            = symbolVal (Proxy @nk)
@@ -336,7 +337,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic z) => Inductive (
        k <- free nk
        a <- free na
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') -> predicate k a'
+       let ih = internalAxiom "IH" $ \a' -> result (Forall k) (a' :: Forall na a)
            (intros, pSteps) = mkCalcSteps $ steps ih k a
 
        pure InductionStrategy {
@@ -348,12 +349,9 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic z) => Inductive (
               }
 
 -- | Induction over 'SInteger' taking two extra arguments.
-instance    ( KnownSymbol na, SymVal a
-            , KnownSymbol nb, SymVal b
-            , KnownSymbol nk, EqSymbolic z)
-         => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> SBool)
-                      (SInteger -> SBV a -> SBV b -> (SBool, [ProofStep z]))
- where
+instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nk, EqSymbolic z)
+      => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> SBool)
+                   (SInteger -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
    inductionStrategy result steps = do
        let predicate k a b = result (Forall k) (Forall a) (Forall b)
            nk              = symbolVal (Proxy @nk)
@@ -364,7 +362,7 @@ instance    ( KnownSymbol na, SymVal a
        a <- free na
        b <- free nb
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') -> predicate k a' b'
+       let ih = internalAxiom "IH" $ \a' b' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b)
            (intros, pSteps) = mkCalcSteps $ steps ih k a b
 
        pure InductionStrategy {
@@ -376,12 +374,9 @@ instance    ( KnownSymbol na, SymVal a
               }
 
 -- | Induction over 'SInteger' taking three extra arguments.
-instance    ( KnownSymbol na, SymVal a
-            , KnownSymbol nb, SymVal b
-            , KnownSymbol nc, SymVal c
-            , KnownSymbol nk, EqSymbolic z)
-         => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                      (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
+instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nk, EqSymbolic z)
+     => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
+                  (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
        let predicate k a b c = result (Forall k) (Forall a) (Forall b) (Forall c)
@@ -395,7 +390,7 @@ instance    ( KnownSymbol na, SymVal a
        b <- free nb
        c <- free nc
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') -> predicate k a' b' c'
+       let ih = internalAxiom "IH" $ \a' b' c' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
            (intros, pSteps) = mkCalcSteps $ steps ih k a b c
 
        pure InductionStrategy {
@@ -407,14 +402,9 @@ instance    ( KnownSymbol na, SymVal a
               }
 
 -- | Induction over 'SInteger' taking four extra arguments.
-instance    ( KnownSymbol na, SymVal a
-            , KnownSymbol nb, SymVal b
-            , KnownSymbol nc, SymVal c
-            , KnownSymbol nd, SymVal d
-            , KnownSymbol nk, EqSymbolic z)
-         => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                      (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
- where
+instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol nk, EqSymbolic z)
+      => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
+                   (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
    inductionStrategy result steps = do
        let predicate k a b c d = result (Forall k) (Forall a) (Forall b) (Forall c) (Forall d)
            nk                  = symbolVal (Proxy @nk)
@@ -429,7 +419,7 @@ instance    ( KnownSymbol na, SymVal a
        c <- free nc
        d <- free nd
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') (Forall @"D" d') -> predicate k a' b' c' d'
+       let ih = internalAxiom "IH" $ \a' b' c' d' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
            (intros, pSteps) = mkCalcSteps $ steps ih k a b c d
 
        pure InductionStrategy {
@@ -450,9 +440,9 @@ singular n = case reverse n of
                _       -> n ++ "Elt"
 
 -- | Induction over 'SList'.
-instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
-        => Inductive (Forall nk [k] -> SBool)
-                     (SBV k -> SList k -> (SBool, [ProofStep z]))
+instance (KnownSymbol nk, SymVal k, EqSymbolic z)
+      => Inductive (Forall nk [k] -> SBool)
+                   (SBV k -> SList k -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
        let predicate k = result (Forall k)
@@ -474,129 +464,153 @@ instance   (KnownSymbol nk, SymVal k, EqSymbolic z)
               }
 
 -- | Induction over 'SList' taking an extra argument
-instance   ( KnownSymbol na, SymVal a
-           , KnownSymbol nk, SymVal k, EqSymbolic z)
-        => Inductive (Forall nk [k] -> Forall na a -> SBool)
-                     (SBV k -> SList k -> SBV a -> (SBool, [ProofStep z]))
+instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall na a -> SBool)
+                   (SBV x -> SList x -> SBV a -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
-       let predicate k a = result (Forall k) (Forall a)
-           na            = symbolVal (Proxy @na)
-           nks           = symbolVal (Proxy @nk)
-           nk            = singular nks
+       let predicate xs a = result (Forall xs) (Forall a)
+           na             = symbolVal (Proxy @na)
+           nxs            = symbolVal (Proxy @nx)
+           nx             = singular nxs
 
-       k  <- free nk
-       ks <- free nks
+       x  <- free nx
+       xs <- free nxs
        a  <- free na
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') -> predicate ks a'
-           (intros, pSteps) = mkCalcSteps $ steps ih k ks a
+       let ih = internalAxiom "IH" $ \a' -> result (Forall xs) (a' :: Forall na a)
+           (intros, pSteps) = mkCalcSteps $ steps ih x xs a
 
        pure InductionStrategy {
                 inductionIntros         = intros
               , inductionBaseCase       = predicate SL.nil a
               , inductionProofSteps     = pSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
-              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks) a)
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a)
               }
 
 -- | Induction over 'SList' taking two extra arguments
-instance   ( KnownSymbol na, SymVal a
-           , KnownSymbol nb, SymVal b
-           , KnownSymbol nk, SymVal k, EqSymbolic z)
-        => Inductive (Forall nk [k] -> Forall na a -> Forall nb b -> SBool)
-                     (SBV k -> SList k -> SBV a -> SBV b -> (SBool, [ProofStep z]))
+instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> SBool)
+                   (SBV x -> SList x -> SBV a -> SBV b -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
-       let predicate k a b = result (Forall k) (Forall a) (Forall b)
-           na              = symbolVal (Proxy @na)
-           nb              = symbolVal (Proxy @nb)
-           nks             = symbolVal (Proxy @nk)
-           nk              = singular nks
+       let predicate xs a b = result (Forall xs) (Forall a) (Forall b)
+           na               = symbolVal (Proxy @na)
+           nb               = symbolVal (Proxy @nb)
+           nxs              = symbolVal (Proxy @nx)
+           nx               = singular nxs
 
+       x  <- free nx
+       xs <- free nxs
        a  <- free na
        b  <- free nb
-       k  <- free nk
-       ks <- free nks
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') -> predicate ks a' b'
-           (intros, pSteps) = mkCalcSteps $ steps ih k ks a b
+       let ih = internalAxiom "IH" $ \a' b' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b)
+           (intros, pSteps) = mkCalcSteps $ steps ih x xs a b
 
        pure InductionStrategy {
                 inductionIntros         = intros
               , inductionBaseCase       = predicate SL.nil a b
               , inductionProofSteps     = pSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
-              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks) a b)
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b)
               }
 
 -- | Induction over 'SList' taking three extra arguments
-instance   ( KnownSymbol na, SymVal a
-           , KnownSymbol nb, SymVal b
-           , KnownSymbol nc, SymVal c
-           , KnownSymbol nk, SymVal k, EqSymbolic z)
-        => Inductive (Forall nk [k] -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                     (SBV k -> SList k -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
+instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
+                   (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
-       let predicate k a b c = result (Forall k) (Forall a) (Forall b) (Forall c)
-           na                = symbolVal (Proxy @na)
-           nb                = symbolVal (Proxy @nb)
-           nc                = symbolVal (Proxy @nc)
-           nks               = symbolVal (Proxy @nk)
-           nk                = singular nks
+       let predicate xs a b c = result (Forall xs) (Forall a) (Forall b) (Forall c)
+           na                 = symbolVal (Proxy @na)
+           nb                 = symbolVal (Proxy @nb)
+           nc                 = symbolVal (Proxy @nc)
+           nxs                = symbolVal (Proxy @nx)
+           nx                 = singular nxs
 
+       x  <- free nx
+       xs <- free nxs
        a  <- free na
        b  <- free nb
        c  <- free nc
-       k  <- free nk
-       ks <- free nks
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') -> predicate ks a' b' c'
-           (intros, pSteps) = mkCalcSteps $ steps ih k ks a b c
+       let ih = internalAxiom "IH" $ \a' b' c' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+           (intros, pSteps) = mkCalcSteps $ steps ih x xs a b c
 
        pure InductionStrategy {
                 inductionIntros         = intros
               , inductionBaseCase       = predicate SL.nil a b c
               , inductionProofSteps     = pSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
-              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks) a b c)
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c)
               }
 
 -- | Induction over 'SList' taking four extra arguments
-instance   ( KnownSymbol na, SymVal a
-           , KnownSymbol nb, SymVal b
-           , KnownSymbol nc, SymVal c
-           , KnownSymbol nd, SymVal d
-           , KnownSymbol nk, SymVal k, EqSymbolic z)
-        => Inductive (Forall nk [k] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                     (SBV k -> SList k -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
+instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
+                   (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
  where
    inductionStrategy result steps = do
-       let predicate k a b c d = result (Forall k) (Forall a) (Forall b) (Forall c) (Forall d)
-           na                  = symbolVal (Proxy @na)
-           nb                  = symbolVal (Proxy @nb)
-           nc                  = symbolVal (Proxy @nc)
-           nd                  = symbolVal (Proxy @nd)
-           nks                 = symbolVal (Proxy @nk)
-           nk                  = singular nks
+       let predicate xs a b c d = result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)
+           na                   = symbolVal (Proxy @na)
+           nb                   = symbolVal (Proxy @nb)
+           nc                   = symbolVal (Proxy @nc)
+           nd                   = symbolVal (Proxy @nd)
+           nxs                  = symbolVal (Proxy @nx)
+           nx                   = singular nxs
 
+       x  <- free nx
+       xs <- free nxs
        a  <- free na
        b  <- free nb
        c  <- free nc
        d  <- free nd
-       k  <- free nk
-       ks <- free nks
 
-       let ih = internalAxiom "IH" $ \(Forall @"A" a') (Forall @"B" b') (Forall @"C" c') (Forall @"D" d') -> predicate ks a' b' c' d'
-           (intros, pSteps) = mkCalcSteps $ steps ih k ks a b c d
+       let ih = internalAxiom "IH" $ \a' b' c' d' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+           (intros, pSteps) = mkCalcSteps $ steps ih x xs a b c d
 
        pure InductionStrategy {
                 inductionIntros         = intros
               , inductionBaseCase       = predicate SL.nil a b c d
               , inductionProofSteps     = pSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
-              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks) a b c d)
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d)
+              }
+
+-- | Induction over 'SList' taking five extra arguments
+instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
+                   (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z]))
+ where
+   inductionStrategy result steps = do
+       let predicate xs a b c d e = result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           na                     = symbolVal (Proxy @na)
+           nb                     = symbolVal (Proxy @nb)
+           nc                     = symbolVal (Proxy @nc)
+           nd                     = symbolVal (Proxy @nd)
+           ne                     = symbolVal (Proxy @ne)
+           nxs                    = symbolVal (Proxy @nx)
+           nx                     = singular nxs
+
+       x  <- free nx
+       xs <- free nxs
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+       d  <- free nd
+       e  <- free ne
+
+       let ih = internalAxiom "IH" $ \a' b' c' d' e' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+           (intros, pSteps) = mkCalcSteps $ steps ih x xs a b c d e
+
+       pure InductionStrategy {
+                inductionIntros         = intros
+              , inductionBaseCase       = predicate SL.nil a b c d e
+              , inductionProofSteps     = pSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d e)
               }
 
 -- | Instantiation for a universally quantified variable
