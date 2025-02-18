@@ -1684,7 +1684,7 @@ setSMTOption cfg = set
         timeOut i = case name (solver cfg) of
                      CVC4 -> [":tlimit-per",  show i]
                      CVC5 -> [":tlimit-per",  show i]
-                     _    -> [":timeout", show i]
+                     _    -> [":timeout",     show i]
 
         -- SMTLib's True/False is spelled differently than Haskell's.
         smtBool :: Bool -> String
