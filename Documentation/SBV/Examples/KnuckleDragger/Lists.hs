@@ -581,50 +581,34 @@ foldrFoldlDualityGeneralized  = runKD $ do
        e :: SA
        e = uninterpret "e"
 
-   assoc <- axiom "@ is associative" (\(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z)
-   lunit <- axiom "e is left unit"   (\(Forall @"x" x) -> e @ x .== x)
-   runit <- axiom "e is right unit"  (\(Forall @"x" x) -> x @ e .== x)
+   -- Assumptions under which the equality holds
+   let assoc = quantifiedBool $ \(Forall @"x" x) (Forall @"y" y) (Forall @"z" z) -> x @ (y @ z) .== (x @ y) @ z
+       lunit = quantifiedBool $ \(Forall @"x" x) -> e @ x .== x
+       runit = quantifiedBool $ \(Forall @"x" x) -> x @ e .== x
 
    -- Helper: foldl (@) (y @ z) xs = y @ foldl (@) z xs
-   -- Note that we prove the more generalized lemma over forall-z, as the
-   -- inductive case requires a different substitution.
-   h <- do let hp y z xs = foldl (@) (y @ z) xs .== y @ foldl (@) z xs
-           undefined assoc hp
-           {-
-           induct "foldl over @"
-                  (\(Forall @"y" y) (Forall @"xs" xs) -> quantifiedBool $ \(Forall z) -> hp y z xs)
-                  (\y x xs -> let z = uninterpret "z"
-                              in ( [ foldl (@) (y @ z) (x .: xs)
-                                   , foldl (@) ((y @ z) @ x) xs
-                                   , foldl (@) (y @ (z @ x)) xs
-                                   , foldl (@) y (z @ x .: xs)
-                                   ]
-                                 , [ y @ foldl (@) z (x .: xs)
-                                   , y @ foldl (@) (z @ x) xs    -- inductive hypothesis, where z = z @ x in the inductive case
-                                   , foldl (@) (y @ (z @ x)) xs
-                                   , foldl (@) y (z @ x .: xs)
-                                   ]))
-                  [assoc]
-                  -}
+   -- Note the instantiation of the IH at a different value for z. It turns out
+   -- we don't have to actually specify this since z3 can figure it out by itself, but we're being explicit.
+   helper <- induct "helper"
+                     (\(Forall @"xs" xs) (Forall @"y" y) (Forall @"z" z) -> assoc .=> foldl (@) (y @ z) xs .== y @ foldl (@) z xs) $
+                     \ih x xs y z -> assoc |- foldl (@) (y @ z) (x .: xs)
+                                           =: foldl (@) ((y @ z) @ x) xs  -- assoc
+                                           =: foldl (@) (y @ (z @ x)) xs  ? ih `at` (Inst @"y" y, Inst @"z" (z @ x))
+                                           =: y @ foldl (@) (z @ x) xs
+                                           =: y @ foldl (@) z (x .: xs)
+                                           =: qed
 
-   let p xs = foldr (@) e xs .== foldl (@) e xs
-
-   undefined [assoc, lunit, runit, h] p
-   {-
    induct "foldrFoldlDuality"
-          (\(Forall @"xs" xs) -> p xs)
-          (\x xs -> ( [ foldr (@) e (x .: xs)
-                      , x @ foldr (@) e xs
-                      , x @ foldl (@) e xs    -- inductive hypothesis
-                      , foldl (@) (x @ e) xs  -- helper
-                      , foldl (@) x xs
-                      ]
-                    , [ foldl (@) e (x .: xs)
-                      , foldl (@) (e @ x) xs
-                      , foldl (@) x xs
-                      ]))
-          [assoc, lunit, runit, h]
-          -}
+          (\(Forall @"xs" xs) -> assoc .&& lunit .&& runit .=> foldr (@) e xs .== foldl (@) e xs) $
+          \ih x xs -> assoc .&& lunit .&& runit
+                   |- foldr (@) e (x .: xs)
+                   =: x @ foldr (@) e xs    ? ih
+                   =: x @ foldl (@) e xs    ? helper
+                   =: foldl (@) (x @ e) xs  -- runit
+                   =: foldl (@) x xs        -- lunit
+                   =: foldl (@) (e @ x) xs
+                   =: foldl (@) e (x .: xs)
+                   =: qed
 
 -- * Another foldl-foldr correspondence
 
