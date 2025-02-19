@@ -31,7 +31,6 @@ common common-settings
    build-depends   : base >= 4.19 && < 5
    other-extensions: BangPatterns
                      CPP
-                     ConstrainedClassMethods
                      ConstraintKinds
                      DataKinds
                      DefaultSignatures
@@ -72,7 +71,6 @@ common common-settings
                      TypeApplications
                      TypeFamilies
                      TypeOperators
-                     TypeSynonymInstances
                      UndecidableInstances
                      ViewPatterns
 
