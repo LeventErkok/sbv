@@ -233,7 +233,7 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | KindCast Kind Kind
         | Uninterpreted String
-        | QuantifiedBool [Op] String            -- When we generate a forall/exists (nested etc.) boolean value
+        | QuantifiedBool [Op] String            -- When we generate a forall/exists (nested etc.) boolean value. NB. The [Op] field is not directly used, but is "found" via uniplate to generate extra functions if needed. (Like calls to reverse.)
         | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately

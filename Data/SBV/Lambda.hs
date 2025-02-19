@@ -312,7 +312,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
          where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
                           frees
                           mbParam
-                          (nub (sort (G.universeBi asgnsSeq)))
+                          (nub (sort (G.universeBi asgnsSeq)))   -- NB. This call is really expensive for nested-lambdas. Can we somehow avoid it?
                           body
 
                params = case is of
