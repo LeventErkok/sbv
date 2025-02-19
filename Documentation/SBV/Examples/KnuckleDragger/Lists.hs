@@ -105,7 +105,14 @@ revCons = runKD $ lemma "revCons" (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) ->
 -- We have:
 --
 -- >>> revApp
--- Lemma: revApp                           Q.E.D.
+-- Inductive lemma: revApp
+--   Base: revApp.Base                     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: revApp.Step                     Q.E.D.
 -- [Proven] revApp
 revApp :: IO Proof
 revApp = runKD $
@@ -126,8 +133,21 @@ revApp = runKD $
 -- We have:
 --
 -- >>> reverseReverse
--- Lemma: revApp                           Q.E.D.
--- Lemma: reverseReverse                   Q.E.D.
+-- Inductive lemma: revApp
+--   Base: revApp.Base                     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: revApp.Step                     Q.E.D.
+-- Inductive lemma: reverseReverse
+--   Base: reverseReverse.Base             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: reverseReverse.Step             Q.E.D.
 -- [Proven] reverseReverse
 reverseReverse :: IO Proof
 reverseReverse = runKD $ do
@@ -204,7 +224,13 @@ lenAppend2 = runKD $
 -- A list of booleans is not all true, if any of them is false. We have:
 --
 -- >>> allAny
--- Lemma: allAny                           Q.E.D.
+-- Inductive lemma: allAny
+--   Base: allAny.Base                     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: allAny.Step                     Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
 allAny = runKD $
@@ -221,7 +247,12 @@ allAny = runKD $
 -- yields the same result. We have:
 --
 -- >>> filterEx
--- Lemma: filterEx                         Q.E.D.
+-- Inductive lemma: filterEx
+--   Base: filterEx.Base                   Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: filterEx.Step                   Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
 filterEx = runKD $
@@ -252,7 +283,14 @@ filterEx2 = runKD $ do
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
 -- >>> mapAppend (uninterpret "f")
--- Lemma: mapAppend                        Q.E.D.
+-- Inductive lemma: mapAppend
+--   Base: mapAppend.Base                  Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: mapAppend.Step                  Q.E.D.
 -- [Proven] mapAppend
 mapAppend :: (SA -> SB) -> IO Proof
 mapAppend f = runKD $ do
@@ -269,16 +307,22 @@ mapAppend f = runKD $ do
 -- | @map f . reverse == reverse . map f@
 --
 -- >>> mapReverse
--- Lemma: mapAppend                        Q.E.D.
+-- Inductive lemma: mapAppend
+--   Base: mapAppend.Base                  Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: mapAppend.Step                  Q.E.D.
 -- Inductive lemma: mapReverse
 --   Base: mapReverse.Base                 Q.E.D.
---   Help: mapReverse.L1 vs L2             Q.E.D.
---   Help: mapReverse.L2 vs L3             Q.E.D.
---   Help: mapReverse.L3 vs L4             Q.E.D.
---   Help: mapReverse.L4 vs L5             Q.E.D.
---   Help: mapReverse.R1 vs R2             Q.E.D.
---   Help: mapReverse.R2 vs R3             Q.E.D.
---   Help: mapReverse.L5 vs R3             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Step: mapReverse.Step                 Q.E.D.
 -- [Proven] mapReverse
 mapReverse :: IO Proof
@@ -307,7 +351,13 @@ mapReverse = runKD $ do
 -- We have:
 --
 -- >>> revLen
--- Lemma: revLen                           Q.E.D.
+-- Inductive lemma: revLen
+--   Base: revLen.Base                     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: revLen.Step                     Q.E.D.
 -- [Proven] revLen
 revLen :: IO Proof
 revLen = runKD $
@@ -345,7 +395,13 @@ badRevLen = runKD $ do
 -- We have:
 --
 -- >>> foldrMapFusion
--- Lemma: foldrMapFusion                   Q.E.D.
+-- Inductive lemma: foldrMapFusion
+--   Base: foldrMapFusion.Base             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: foldrMapFusion.Step             Q.E.D.
 -- [Proven] foldrMapFusion
 foldrMapFusion :: IO Proof
 foldrMapFusion = runKD $ do
@@ -377,7 +433,15 @@ foldrMapFusion = runKD $ do
 -- @
 --
 -- >>> foldrFusion
--- Lemma: foldrFusion                      Q.E.D.
+-- Inductive lemma: foldrFusion
+--   Base: foldrFusion.Base                Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: foldrFusion.Step                Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
 foldrFusion = runKD $ do
@@ -416,7 +480,13 @@ foldrFusion = runKD $ do
 -- We have:
 --
 -- >>> foldrOverAppend
--- Lemma: foldrOverAppend                  Q.E.D.
+-- Inductive lemma: foldrOverAppend
+--   Base: foldrOverAppend.Base            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: foldrOverAppend.Step            Q.E.D.
 -- [Proven] foldrOverAppend
 foldrOverAppend :: IO Proof
 foldrOverAppend = runKD $ do
@@ -442,7 +512,12 @@ foldrOverAppend = runKD $ do
 -- We have:
 --
 -- >>> foldlOverAppend (uninterpret "f")
--- Lemma: foldlOverAppend                  Q.E.D.
+-- Inductive lemma: foldlOverAppend
+--   Base: foldlOverAppend.Base            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: foldlOverAppend.Step            Q.E.D.
 -- [Proven] foldlOverAppend
 foldlOverAppend :: (SB -> SA -> SB) -> IO Proof
 foldlOverAppend f = runKD $
@@ -463,17 +538,20 @@ foldlOverAppend f = runKD $
 -- We have:
 --
 -- >>> foldrFoldlDuality
--- Lemma: foldlOverAppend                  Q.E.D.
+-- Inductive lemma: foldlOverAppend
+--   Base: foldlOverAppend.Base            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: foldlOverAppend.Step            Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
 --   Base: foldrFoldlDuality.Base          Q.E.D.
---   Help: foldrFoldlDuality.L1 vs L2      Q.E.D.
---   Help: foldrFoldlDuality.L2 vs L3      Q.E.D.
---   Help: foldrFoldlDuality.R1 vs R2      Q.E.D.
---   Help: foldrFoldlDuality.R2 vs R3      Q.E.D.
---   Help: foldrFoldlDuality.R3 vs R4      Q.E.D.
---   Help: foldrFoldlDuality.R4 vs R5      Q.E.D.
---   Help: foldrFoldlDuality.R5 vs R6      Q.E.D.
---   Help: foldrFoldlDuality.L3 vs R6      Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Step: foldrFoldlDuality.Step          Q.E.D.
 -- [Proven] foldrFoldlDuality
 foldrFoldlDuality :: IO Proof
@@ -515,28 +593,27 @@ foldrFoldlDuality = runKD $ do
 -- We have:
 --
 -- >>> foldrFoldlDualityGeneralized
--- Axiom: @ is associative
--- Axiom: e is left unit
--- Axiom: e is right unit
--- Inductive lemma: foldl over @
---   Base: foldl over @.Base               Q.E.D.
---   Help: foldl over @.L1 vs L2           Q.E.D.
---   Help: foldl over @.L2 vs L3           Q.E.D.
---   Help: foldl over @.L3 vs L4           Q.E.D.
---   Help: foldl over @.R1 vs R2           Q.E.D.
---   Help: foldl over @.R2 vs R3           Q.E.D.
---   Help: foldl over @.R3 vs R4           Q.E.D.
---   Help: foldl over @.L4 vs R4           Q.E.D.
---   Step: foldl over @.Step               Q.E.D.
+-- Inductive lemma: helper
+--   Base: helper.Base                     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: helper.Step                     Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
 --   Base: foldrFoldlDuality.Base          Q.E.D.
---   Help: foldrFoldlDuality.L1 vs L2      Q.E.D.
---   Help: foldrFoldlDuality.L2 vs L3      Q.E.D.
---   Help: foldrFoldlDuality.L3 vs L4      Q.E.D.
---   Help: foldrFoldlDuality.L4 vs L5      Q.E.D.
---   Help: foldrFoldlDuality.R1 vs R2      Q.E.D.
---   Help: foldrFoldlDuality.R2 vs R3      Q.E.D.
---   Help: foldrFoldlDuality.L5 vs R3      Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Asms: 5                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Step: foldrFoldlDuality.Step          Q.E.D.
 -- [Proven] foldrFoldlDuality
 foldrFoldlDualityGeneralized :: IO Proof
@@ -593,24 +670,25 @@ foldrFoldlDualityGeneralized  = runKD $ do
 -- In Bird's Introduction to Functional Programming book (2nd edition) this is called the second duality theorem. We have:
 --
 -- >>> foldrFoldl
--- Axiom: <+> over <*>
--- Axiom: unit
 -- Inductive lemma: foldl over <*>/<+>
 --   Base: foldl over <*>/<+>.Base         Q.E.D.
---   Help: foldl over <*>/<+>.L1 vs L2     Q.E.D.
---   Help: foldl over <*>/<+>.L2 vs L3     Q.E.D.
---   Help: foldl over <*>/<+>.L3 vs L4     Q.E.D.
---   Help: foldl over <*>/<+>.R1 vs R2     Q.E.D.
---   Help: foldl over <*>/<+>.L4 vs R2     Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
 --   Step: foldl over <*>/<+>.Step         Q.E.D.
 -- Inductive lemma: foldrFoldl
 --   Base: foldrFoldl.Base                 Q.E.D.
---   Help: foldrFoldl.L1 vs L2             Q.E.D.
---   Help: foldrFoldl.L2 vs L3             Q.E.D.
---   Help: foldrFoldl.R1 vs R2             Q.E.D.
---   Help: foldrFoldl.R2 vs R3             Q.E.D.
---   Help: foldrFoldl.R3 vs R4             Q.E.D.
---   Help: foldrFoldl.L3 vs R4             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Step: foldrFoldl.Step                 Q.E.D.
 -- [Proven] foldrFoldl
 foldrFoldl :: IO Proof
@@ -667,29 +745,32 @@ foldrFoldl = runKD $ do
 -- We have:
 --
 -- >>> bookKeeping
--- Axiom: f is associative
--- Axiom: a is right-unit
--- Axiom: a is left-unit
--- Lemma: foldrOverAppend                  Q.E.D.
 -- Inductive lemma: foldBase
 --   Base: foldBase.Base                   Q.E.D.
---   Help: foldBase.L1 vs L2               Q.E.D.
---   Help: foldBase.L2 vs L3               Q.E.D.
---   Help: foldBase.R1 vs R2               Q.E.D.
---   Help: foldBase.R2 vs R3               Q.E.D.
---   Help: foldBase.L3 vs R3               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
 --   Step: foldBase.Step                   Q.E.D.
+-- Inductive lemma: foldrOverAppend
+--   Base: foldrOverAppend.Base            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: foldrOverAppend.Step            Q.E.D.
 -- Inductive lemma: bookKeeping
 --   Base: bookKeeping.Base                Q.E.D.
---   Help: bookKeeping.L1 vs L2            Q.E.D.
---   Help: bookKeeping.L2 vs L3            Q.E.D.
---   Help: bookKeeping.L3 vs L4            Q.E.D.
---   Help: bookKeeping.L4 vs L5            Q.E.D.
---   Help: bookKeeping.L5 vs L6            Q.E.D.
---   Help: bookKeeping.R1 vs R2            Q.E.D.
---   Help: bookKeeping.R2 vs R3            Q.E.D.
---   Help: bookKeeping.R3 vs R4            Q.E.D.
---   Help: bookKeeping.L6 vs R4            Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Step: bookKeeping.Step                Q.E.D.
 -- [Proven] bookKeeping
 --
@@ -771,14 +852,13 @@ bookKeeping = runKD $ do
 --   xs  = [A_3] :: [A]
 --   lhs = [A_0] :: [A]
 --   rhs =    [] :: [A]
--- -- <BLANKLINE>
+-- <BLANKLINE>
 --   f :: A -> A
 --   f _ = A_0
--- -- <BLANKLINE>
+-- <BLANKLINE>
 --   p :: A -> Bool
 --   p A_3 = True
 --   p _   = False
--- *** Exception: Failed
 --
 -- As expected, the function @f@ maps everything to @A_0@, and the predicate @p@ only lets @A_3@ through. As shown in the
 -- counter-example, for the input @[A_3]@, left-hand-side filters nothing and the result is the singleton @A_0@. But the
