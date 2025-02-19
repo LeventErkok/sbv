@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE BangPatterns            #-}
-{-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE CPP                     #-}
 {-# LANGUAGE DataKinds               #-}
 {-# LANGUAGE DefaultSignatures       #-}

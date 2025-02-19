@@ -141,7 +141,6 @@ instance NFData Proof where
                                                                   `seq` rnf isUserAxiom
                                                                   `seq` rnf getProof
                                                                   `seq` rnf proofName
-                                                                  `seq` ()
 
 -- | Show instance for 'Proof'
 instance Show Proof where
