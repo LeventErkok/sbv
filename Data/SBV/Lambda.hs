@@ -221,7 +221,7 @@ constraintGen scope trans inState@State{rProgInfo} f = do
 -- | A constraint can be turned into a boolean
 instance Constraint Symbolic a => QuantifiedBool a where
   quantifiedBool qb = SBV $ SVal KBool $ Right $ cache f
-    where f st = liftIO $ constraint st qb 
+    where f st = liftIO $ constraint st qb
 
 -- | Generate a constraint.
 -- We allow free variables here (first arg of constraintGen). This might prove to be not kosher!
