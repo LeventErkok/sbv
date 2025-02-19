@@ -26,13 +26,16 @@ import Data.SBV.Tools.KnuckleDragger
 -- We have:
 --
 -- >>> notDiv3
--- Chain lemma: case_n_mod_3_eq_0
+-- Lemma: case_n_mod_3_eq_0
+--   Asms  : 1                             Q.E.D.
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
 --   Step  : 4                             Q.E.D.
+--   Step  : 5                             Q.E.D.
 --   Result:                               Q.E.D.
--- Chain lemma: case_n_mod_3_eq_1
+-- Lemma: case_n_mod_3_eq_1
+--   Asms  : 1                             Q.E.D.
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
@@ -40,7 +43,8 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step  : 5                             Q.E.D.
 --   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
--- Chain lemma: case_n_mod_3_eq_2
+-- Lemma: case_n_mod_3_eq_2
+--   Asms  : 1                             Q.E.D.
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
