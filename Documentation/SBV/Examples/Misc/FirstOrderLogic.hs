@@ -137,8 +137,8 @@ Falsifiable. Counter-example:
   P _   = False
 <BLANKLINE>
   Q :: U -> Bool
-  Q U_0 = False
   Q U_2 = False
+  Q U_0 = False
   Q _   = True
 
 The solver found us a falsifying instance: Pick a domain with at least three elements. We'll call
