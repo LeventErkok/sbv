@@ -154,17 +154,21 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 -- Axiom: ﬧﬧa == a
 -- Axiom: a ⏐ (b ⏐ ﬧb) == ﬧa
 -- Axiom: ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)
--- Chain lemma: a | b = b | a
+-- Lemma: a | b = b | a
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
+--   Step  : 5                                                 Q.E.D.
+--   Step  : 6                                                 Q.E.D.
+--   Step  : 7                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a | a′ = b | b′
+-- Lemma: a | a′ = b | b′
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
+--   Step  : 5                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a ⊔ b = b ⊔ a                                        Q.E.D.
 -- Lemma: a ⊓ b = b ⊓ a                                        Q.E.D.
@@ -174,7 +178,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 -- Lemma: a ⊓ (b ⊔ c) = (a ⊓ b) ⊔ (a ⊓ c)                      Q.E.D.
 -- Lemma: a ⊔ aᶜ = т                                           Q.E.D.
 -- Lemma: a ⊓ aᶜ = ⲳ                                           Q.E.D.
--- Chain lemma: a ⊔ т = т
+-- Lemma: a ⊔ т = т
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -182,7 +186,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 5                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊓ ⲳ = ⲳ
+-- Lemma: a ⊓ ⲳ = ⲳ
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -190,41 +194,43 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 5                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊔ (a ⊓ b) = a
+-- Lemma: a ⊔ (a ⊓ b) = a
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
 --   Step  : 5                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊓ (a ⊔ b)
+-- Lemma: a ⊓ (a ⊔ b) = a
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
 --   Step  : 5                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊓ a = a
+-- Lemma: a ⊓ a = a
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ
+-- Lemma: a ⊔ a' = т → a ⊓ a' = ⲳ → a' = aᶜ
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
 --   Step  : 5                                                 Q.E.D.
+--   Asms  : 6                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Step  : 7                                                 Q.E.D.
 --   Step  : 8                                                 Q.E.D.
 --   Step  : 9                                                 Q.E.D.
+--   Asms  : 10                                                Q.E.D.
 --   Step  : 10                                                Q.E.D.
 --   Step  : 11                                                Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: aᶜᶜ = a                                              Q.E.D.
 -- Lemma: aᶜ = bᶜ → a = b                                      Q.E.D.
 -- Lemma: a ⊔ bᶜ = т → a ⊓ bᶜ = ⲳ → a = b                      Q.E.D.
--- Chain lemma: a ⊔ (aᶜ ⊔ b) = т
+-- Lemma: a ⊔ (aᶜ ⊔ b) = т
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -232,7 +238,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 5                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ⊓ (aᶜ ⊓ b) = ⲳ
+-- Lemma: a ⊓ (aᶜ ⊓ b) = ⲳ
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -245,7 +251,7 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 -- Lemma: (a ⊔ (b ⊔ c)) ⊔ aᶜ = т                               Q.E.D.
 -- Lemma: b ⊓ (a ⊔ (b ⊔ c)) = b                                Q.E.D.
 -- Lemma: b ⊔ (a ⊓ (b ⊓ c)) = b                                Q.E.D.
--- Chain lemma: (a ⊔ (b ⊔ c)) ⊔ bᶜ = т
+-- Lemma: (a ⊔ (b ⊔ c)) ⊔ bᶜ = т
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -253,9 +259,11 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 5                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Step  : 7                                                 Q.E.D.
+--   Step  : 8                                                 Q.E.D.
+--   Step  : 9                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: (a ⊔ (b ⊔ c)) ⊔ cᶜ = т                               Q.E.D.
--- Chain lemma: (a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ
+-- Lemma: (a ⊔ b ⊔ c)ᶜ ⊓ a = ⲳ
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -263,15 +271,22 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 5                                                 Q.E.D.
 --   Step  : 6                                                 Q.E.D.
 --   Step  : 7                                                 Q.E.D.
+--   Step  : 8                                                 Q.E.D.
+--   Step  : 9                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: (a ⊔ b ⊔ c)ᶜ ⊓ b = ⲳ                                 Q.E.D.
 -- Lemma: (a ⊔ b ⊔ c)ᶜ ⊓ c = ⲳ                                 Q.E.D.
--- Chain lemma: (a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т
+-- Lemma: (a ⊔ (b ⊔ c)) ⊔ ((a ⊔ b) ⊔ c)ᶜ = т
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
+--   Step  : 4                                                 Q.E.D.
+--   Step  : 5                                                 Q.E.D.
+--   Step  : 6                                                 Q.E.D.
+--   Step  : 7                                                 Q.E.D.
+--   Step  : 8                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: (a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ
+-- Lemma: (a ⊔ (b ⊔ c)) ⊓ ((a ⊔ b) ⊔ c)ᶜ = ⲳ
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
@@ -282,57 +297,58 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 --   Step  : 8                                                 Q.E.D.
 --   Step  : 9                                                 Q.E.D.
 --   Step  : 10                                                Q.E.D.
+--   Step  : 11                                                Q.E.D.
+--   Step  : 12                                                Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a ⊔ (b ⊔ c) = (a ⊔ b) ⊔ c                            Q.E.D.
--- Chain lemma: (a ⊓ (b ⊓ c))ᶜ = ((a ⊓ b) ⊓ c)ᶜ
---   Step  : 1                                                 Q.E.D.
---   Step  : 2                                                 Q.E.D.
---   Step  : 3                                                 Q.E.D.
---   Step  : 4                                                 Q.E.D.
---   Step  : 5                                                 Q.E.D.
---   Result:                                                   Q.E.D.
--- Chain lemma: a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c
+-- Lemma: a ⊓ (b ⊓ c) = (a ⊓ b) ⊓ c
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: a ≤ b → b ≤ a → a = b
+-- Lemma: a ≤ b → b ≤ a → a = b
+--   Asms  : 1                                                 Q.E.D.
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
+--   Asms  : 3                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a ≤ a                                                Q.E.D.
--- Chain lemma: a ≤ b → b ≤ c → a ≤ c
+-- Lemma: a ≤ b → b ≤ c → a ≤ c
+--   Asms  : 1                                                 Q.E.D.
 --   Step  : 1                                                 Q.E.D.
+--   Asms  : 2                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
+--   Asms  : 4                                                 Q.E.D.
 --   Step  : 4                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a < b ↔ a ≤ b ∧ ¬b ≤ a                               Q.E.D.
 -- Lemma: a ≤ a ⊔ b                                            Q.E.D.
 -- Lemma: b ≤ a ⊔ b                                            Q.E.D.
--- Chain lemma: a ≤ c → b ≤ c → a ⊔ b ≤ c
+-- Lemma: a ≤ c → b ≤ c → a ⊔ b ≤ c
+--   Asms  : 1                                                 Q.E.D.
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a ⊓ b ≤ a                                            Q.E.D.
 -- Lemma: a ⊓ b ≤ b                                            Q.E.D.
--- Chain lemma: a ≤ b → a ≤ c → a ≤ b ⊓ c
+-- Lemma: a ≤ b → a ≤ c → a ≤ b ⊓ c
+--   Asms  : 1                                                 Q.E.D.
 --   Step  : 1                                                 Q.E.D.
+--   Asms  : 2                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z
---   Step  : 1                                                 Q.E.D.
---   Result:                                                   Q.E.D.
+-- Lemma: (x ⊔ y) ⊓ (x ⊔ z) ≤ x ⊔ y ⊓ z                        Q.E.D.
 -- Lemma: x ⊓ xᶜ ≤ ⊥                                           Q.E.D.
 -- Lemma: ⊤ ≤ x ⊔ xᶜ                                           Q.E.D.
--- Chain lemma: a ≤ ⊤
+-- Lemma: a ≤ ⊤
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Step  : 3                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
--- Chain lemma: ⊥ ≤ a
+-- Lemma: ⊥ ≤ a
 --   Step  : 1                                                 Q.E.D.
 --   Step  : 2                                                 Q.E.D.
 --   Result:                                                   Q.E.D.
