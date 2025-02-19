@@ -109,9 +109,25 @@
 [RECV] unsupported
 [SEND] (get-info :time)
 [SKIP] ; :memory line: 69 position: 0
+[SKIP] ; (get-info :reason-unknown)
+[SKIP] ; (get-info :status)
+[SKIP] ; (get-info :version)
+[SKIP] ; (get-info :authors)
+[SKIP] ; (get-info :error-behavior)
+[SKIP] ; (get-info :parameters)
+[SKIP] ; (get-info :rlimit)
+[SKIP] ; (get-info :assertion-stack-levels)
 [RECV] unsupported
 [SEND] (get-value (s0))
 [SKIP] ; :time line: 70 position: 0
+[SKIP] ; (get-info :reason-unknown)
+[SKIP] ; (get-info :status)
+[SKIP] ; (get-info :version)
+[SKIP] ; (get-info :authors)
+[SKIP] ; (get-info :error-behavior)
+[SKIP] ; (get-info :parameters)
+[SKIP] ; (get-info :rlimit)
+[SKIP] ; (get-info :assertion-stack-levels)
 [RECV] ((s0 5))
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
