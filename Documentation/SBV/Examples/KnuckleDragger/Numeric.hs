@@ -61,7 +61,7 @@ sumConstProof = runKD $ do
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
--- We have:
+-- Note that z3 (as of mid Feb 2025) can't converge on this quickly, but CVC5 does just fine. We have:
 --
 -- >>> sumProof
 -- Inductive lemma: sum_correct
@@ -84,7 +84,7 @@ sumProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   induct "sum_correct"
+   inductWith cvc5 "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih k -> [k .>= 0] |- sum (k+1)    ? k .>= 0
                              =: k+1 + sum k  ? [hprf ih, hyp (k .>= 0)]
@@ -94,7 +94,7 @@ sumProof = runKD $ do
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
 --
--- We have:
+-- Note that z3 (as of mid Feb 2025) can't converge on this quickly, but CVC5 does just fine. We have:
 --
 -- >>> sumSquareProof
 -- Inductive lemma: sumSquare_correct
@@ -117,7 +117,7 @@ sumSquareProof = runKD $ do
        p :: SInteger -> SBool
        p n = sumSquare n .== spec n
 
-   induct "sumSquare_correct"
+   inductWith cvc5 "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih k -> [k .>= 0] |- sumSquare (k+1)           ? k .>= 0
                              =: (k+1)*(k+1) + sumSquare k ? [hprf ih, hyp (k .>= 0)]
