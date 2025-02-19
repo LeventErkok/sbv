@@ -233,10 +233,10 @@ class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
    induct :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
-   -- | Inductively prove a theorem. Same as 'inductiveLemma', but tagged as a theorem, using the default config.
+   -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
    inductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
-   -- | Same as 'inductiveLemma', but with the given solver configuration.
+   -- | Same as 'induct', but with the given solver configuration.
    inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Same as 'inductiveTheorem, but with the given solver configuration.
