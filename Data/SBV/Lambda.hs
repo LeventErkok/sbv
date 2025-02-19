@@ -35,6 +35,8 @@ import Data.SBV.Core.Kind
 import Data.SBV.SMT.SMTLib2
 import Data.SBV.Utils.PrettyNum
 
+import qualified Data.Set as Set
+
 import           Data.SBV.Core.Symbolic hiding   (mkNewState)
 import qualified Data.SBV.Core.Symbolic as     S (mkNewState)
 
@@ -312,8 +314,12 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
          where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
                           frees
                           mbParam
-                          (nub (sort (G.universeBi asgnsSeq)))   -- NB. This call is really expensive for nested-lambdas. Can we somehow avoid it?
+                          allOps
                           body
+
+               -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
+               -- Alas, it turns out this is really expensive when we have nested lambdas, so we do an explicit walk
+               allOps = Set.toList $ foldl' (\sofar (_, SBVApp o _) -> Set.insert o sofar) Set.empty asgnsSeq
 
                params = case is of
                           ResultTopInps as -> bad [ "Top inputs"
