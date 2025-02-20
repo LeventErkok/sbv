@@ -109,6 +109,7 @@
 [RECV] unsupported
 [SEND] (get-info :time)
 [SKIP] ; :memory line: 69 position: 0
+[SKIP] ; Suppported get-info parameters:
 [SKIP] ; (get-info :reason-unknown)
 [SKIP] ; (get-info :status)
 [SKIP] ; (get-info :version)
@@ -120,6 +121,7 @@
 [RECV] unsupported
 [SEND] (get-value (s0))
 [SKIP] ; :time line: 70 position: 0
+[SKIP] ; Suppported get-info parameters:
 [SKIP] ; (get-info :reason-unknown)
 [SKIP] ; (get-info :status)
 [SKIP] ; (get-info :version)
