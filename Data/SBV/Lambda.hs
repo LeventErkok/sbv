@@ -311,7 +311,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                ]
          | True
          = res
-         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
+         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi allOps])
                           frees
                           mbParam
                           allOps
