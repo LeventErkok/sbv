@@ -3,7 +3,10 @@
 
 ### Version 11.0.5, Not yet released
 
-  * Generalize the signatures of the default project-embed implementations of the Queriable class.
+  * Completely reworked KnuckleDragger interfaces and proof styles, adding calculational and induction
+    based proof strategies. SBV can now prove many inductive theorems in this mode, where the user guides
+    the SMT solver to find tricky proofs. See Documentation/SBV/Examples/KnuckleDragger directory for many
+    examples demonstrating the new features.
 
   * Generalize support for polyorphic and higher-order functions. These are still experimental, as SMTLib's
     higher-order function support is nascent. (Version 3 of SMTLib will have proper support for such functions, which
@@ -15,9 +18,7 @@
     features itself.) Proof-support in backend solvers for higher-order functions is still quite weak,
     though KnuckleDragger makes things easier.
 
-  * Reworked KnuckleDragger examples, consolidating and improving the theorem statements.
-  
-  * Added new calculational and induction based proof strategies for Knuckledragger.
+  * Generalize the signatures of the default project-embed implementations of the Queriable class.
 
   * [BACKWARDS COMPATIBILITY] Removed rarely used functions mapi, foldli, foldri from Data.SBV.List. These
     can now be defined by the user as we have proper support for fold and map using lambdas.
@@ -38,6 +39,9 @@
   * [BACKWARDS COMPATIBILITY] The function 'registerSMTType' is renamed to 'registerType'.
 
   * Fix the time-out limit setting for CVC4/5. Thanks to Daniel Matichuk for reporting.
+
+  * Fix a performance issue with nested-lambda/quantifiers. Thanks to Blake C. Rawlings for reporting and
+    Jeff Young for analysis.
 
 ### Version 11.0, 2024-11-06
 
