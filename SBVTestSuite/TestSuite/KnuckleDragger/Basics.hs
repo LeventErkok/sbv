@@ -22,7 +22,7 @@ import Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
 tests :: TestTree
 tests =
   testGroup "KnuckleDragger.Basics"
-    [ silentlyCaptureIO "sheffer_stroke" (3000000, tag . clean) shefferBooleanAlgebra
+    [ silentlyCaptureIO "sheffer_stroke" (5000000, tag . clean) shefferBooleanAlgebra
     ]
 
 -- Avoid the silently droppings.. Anything before we see "Axiom"
