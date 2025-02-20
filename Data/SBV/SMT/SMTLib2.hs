@@ -33,7 +33,7 @@ import           Data.Set             (Set)
 import qualified Data.Set             as Set
 
 import Data.SBV.Core.Data
-import Data.SBV.Core.Kind (smtType, needsFlattening)
+import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
@@ -77,6 +77,10 @@ cvt :: SMTLibConverter ([String], [String])
 cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs (SBVPgm asgnsSeq) cstrs out cfg = (pgm, exportedDefs)
   where allKinds       = Set.toList kindInfo
 
+        -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
+        -- Alas, it turns out this is really expensive when we have nested lambdas, so we do an explicit walk
+        allTopOps = Set.toList $ foldl' (\sofar (_, SBVApp o _) -> Set.insert o sofar) Set.empty asgnsSeq
+
         hasInteger     = KUnbounded `Set.member` kindInfo
         hasArrays      = not (null [() | KArray{}     <- allKinds])
         hasNonBVArrays = not (null [() | KArray k1 k2 <- allKinds, not (isBounded k1 && isBounded k2)])
@@ -85,15 +89,15 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                        || KFloat     `Set.member` kindInfo
                        || KDouble    `Set.member` kindInfo
         hasString      = KString     `Set.member` kindInfo
-        hasRegExp      = (not . null) [() | (_ :: RegExOp) <- G.universeBi asgnsSeq]
+        hasRegExp      = (not . null) [() | (_ :: RegExOp) <- G.universeBi allTopOps]
         hasChar        = KChar      `Set.member` kindInfo
         hasRounding    = not $ null [s | (s, _) <- usorts, s == "RoundingMode"]
         hasBVs         = not (null [() | KBounded{} <- allKinds])
         usorts         = [(s, dt) | KUserSort s dt <- allKinds]
         trueUSorts     = [s | (s, _) <- usorts, s /= "RoundingMode"]
         tupleArities   = findTupleArities kindInfo
-        hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi asgnsSeq]
-        hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi asgnsSeq]
+        hasOverflows   = (not . null) [() | (_ :: OvOp) <- G.universeBi allTopOps]
+        hasQuantBools  = (not . null) [() | QuantifiedBool{} <- G.universeBi allTopOps]
         hasList        = any isList kindInfo
         hasSets        = any isSet kindInfo
         hasTuples      = not . null $ tupleArities
@@ -110,7 +114,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
                              needsLambda SBVAll{}     = True
                              needsLambda SBVAny{}     = True
                              needsLambda _            = False
-                         in (not . null) [ () | o :: SeqOp <- G.universeBi asgnsSeq, needsLambda o]
+                         in (not . null) [() | o :: SeqOp <- G.universeBi allTopOps, needsLambda o]
 
         (needsQuantifiers, needsSpecialRels, specialFuncs) = case curProgInfo of
            ProgInfo hasQ srs tcs sf -> (hasQ, not (null srs && null tcs), sf)
@@ -1418,7 +1422,11 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                           _  -> (init inputKS, last inputKS)
 
         -- Does the kind KChar and KRational *not* occur in the kind anywhere?
-        charRatFree k = null $ [() | KChar <- G.universe k] ++ [() | KRational <- G.universe k]
+        charRatFree k = null $ filter charOrRat (expandKinds k)
+           where charOrRat KChar     = True
+                 charOrRat KRational = True
+                 charOrRat _         = False
+
         noCharOrRat   = charRatFree result
         needsQuant    = not $ null args
 
