@@ -48,7 +48,7 @@ DOCTESTTIMEOUT = 300
 # Allow newer versions
 CABAL_OPTS=--allow-newer
 
-.PHONY: install docs testsuite release tags clean veryclean timeRelease
+.PHONY: install docs testsuite release tags clean veryclean
 
 all: quick
 
