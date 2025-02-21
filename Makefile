@@ -148,7 +148,7 @@ else
 	@tail -6 DOCTEST_OUTPUT | head -3 > SBVTestSuite/GoldFiles/doctest_sanity.gold_temp
 	@git diff -U0 --word-diff --no-index -- SBVTestSuite/GoldFiles/doctest_sanity.gold SBVTestSuite/GoldFiles/doctest_sanity.gold_temp
 	@/bin/rm -f DOCTEST_OUTPUT
-	echo "*** Doctest test-count matches the gold."
+	@echo "*** Doctest test-count matches the gold."
 endif
 
 test:
