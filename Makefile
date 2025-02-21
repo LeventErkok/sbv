@@ -143,7 +143,11 @@ else
 	cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 endif
 else
-	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT}
+	@/bin/rm -f DOCTEST_OUTPUT
+	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee DOCTEST_OUTPUT
+	@tail -6 DOCTEST_OUTPUT | head -3 > SBVTestSuite/GoldFiles/doctest_sanity.gold_temp
+	@diff SBVTestSuite/GoldFiles/doctest_sanity.gold_temp SBVTestSuite/GoldFiles/doctest_sanity.gold
+	@/bin/rm -f DOCTEST_OUTPUT
 endif
 
 test:
