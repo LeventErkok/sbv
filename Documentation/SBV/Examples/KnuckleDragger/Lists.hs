@@ -842,11 +842,11 @@ bookKeeping = runKD $ do
 
 -- * Filter-append
 
--- | @filter f (xs ++ ys) == filter f xs ++ filter f ys@
+-- | @filter p (xs ++ ys) == filter p xs ++ filter p ys@
 --
 -- We have:
 --
--- >>> filterAppend
+-- >>> filterAppend (uninterpret "p")
 -- Inductive lemma: filterAppend
 --   Base: filterAppend.Base               Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -856,21 +856,66 @@ bookKeeping = runKD $ do
 --   Step: 5                               Q.E.D.
 --   Step: filterAppend.Step               Q.E.D.
 -- [Proven] filterAppend
-filterAppend :: IO Proof
-filterAppend = runKD $ do
-   let -- For an arbitrary uninterpreted predicate 'f':
-       f :: SA -> SBool
-       f = uninterpret "f"
-
+filterAppend :: (SA -> SBool) -> IO Proof
+filterAppend p = runKD $
    induct "filterAppend"
-          (\(Forall @"xs" xs) (Forall @"ys" ys) -> filter f xs ++ filter f ys .== filter f (xs ++ ys)) $
-          \ih x xs ys -> [] |- filter f (x .: xs) ++ filter f ys
-                            =: ite (f x) (x .: filter f xs) (filter f xs) ++ filter f ys
-                            =: ite (f x) (x .: filter f xs ++ filter f ys) (filter f xs ++ filter f ys)  ? ih
-                            =: ite (f x) (x .: filter f (xs ++ ys)) (filter f (xs ++ ys))
-                            =: filter f (x .: (xs ++ ys))
-                            =: filter f ((x .: xs) ++ ys)
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> filter p xs ++ filter p ys .== filter p (xs ++ ys)) $
+          \ih x xs ys -> [] |- filter p (x .: xs) ++ filter p ys
+                            =: ite (p x) (x .: filter p xs) (filter p xs) ++ filter p ys
+                            =: ite (p x) (x .: filter p xs ++ filter p ys) (filter p xs ++ filter p ys)  ? ih
+                            =: ite (p x) (x .: filter p (xs ++ ys)) (filter p (xs ++ ys))
+                            =: filter p (x .: (xs ++ ys))
+                            =: filter p ((x .: xs) ++ ys)
                             =: qed
+
+-- | @filter p (concat xss) == concatMap (filter p xss)@
+--
+-- Similar to the book-keeping law, we cannot express this in SBV directly, since it involves a nested lambda.
+-- @concatMap (filter p)@ maps a higher-order function @filter p@, which itself has a nested lambda. So, we use
+-- our own merged definition. Hopefully we'll relax this as SMTLib gains more higher order features.
+--
+-- We have:
+--
+-- >>> filterConcat
+-- Inductive lemma: filterAppend
+--   Base: filterAppend.Base               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: filterAppend.Step               Q.E.D.
+-- Inductive lemma: filterConcat
+--   Base: filterConcat.Base               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: filterConcat.Step               Q.E.D.
+-- [Proven] filterConcat
+filterConcat :: IO Proof
+filterConcat = runKD $ do
+  let -- For an arbitrary uninterpreted prediate 'p':
+      p :: SA -> SBool
+      p = uninterpret "p"
+
+      -- Fuse concatMap (filter p) in the theorem to avoid nested lambdas. See above note
+      concatMapFilter :: (SA -> SBool) -> SList [A] -> SList A
+      concatMapFilter pred = smtFunction "concatMapFilter" $ \xs -> ite (null xs)
+                                                                        nil
+                                                                        (filter pred (head xs) ++ concatMapFilter pred (tail xs))
+
+
+  fa <- use $ filterAppend p
+
+  induct "filterConcat"
+         (\(Forall @"xss" xss) -> filter p (concat xss) .== concatMapFilter p xss) $
+         \ih xs xss -> [] |- filter p (concat (xs .: xss))
+                          =: filter p (xs ++ concat xss)           ? fa
+                          =: filter p xs ++ filter p (concat xss)  ? ih
+                          =: filter p xs ++ concatMapFilter p xss
+                          =: concatMapFilter p (xs .: xss)
+                          =: qed
 
 -- * Map and filter don't commute
 
@@ -908,3 +953,7 @@ mapFilter = runKD $ do
           []
 
    pure ()
+
+{- HLint ignore reverseReverse "Redundant reverse" -}
+{- HLint ignore allAny         "Use and"           -}
+{- HLint ignore foldrMapFusion "Fuse foldr/map     -}
