@@ -840,6 +840,38 @@ bookKeeping = runKD $ do
                                               =: foldr f a (mapFoldr a (xs .: xss))
                                               =: qed
 
+-- * Filter-append
+
+-- | @filter f (xs ++ ys) == filter f xs ++ filter f ys@
+--
+-- We have:
+--
+-- >>> filterAppend
+-- Inductive lemma: filterAppend
+--   Base: filterAppend.Base               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: filterAppend.Step               Q.E.D.
+-- [Proven] filterAppend
+filterAppend :: IO Proof
+filterAppend = runKD $ do
+   let -- For an arbitrary uninterpreted predicate 'f':
+       f :: SA -> SBool
+       f = uninterpret "f"
+
+   induct "filterAppend"
+          (\(Forall @"xs" xs) (Forall @"ys" ys) -> filter f xs ++ filter f ys .== filter f (xs ++ ys)) $
+          \ih x xs ys -> [] |- filter f (x .: xs) ++ filter f ys
+                            =: ite (f x) (x .: filter f xs) (filter f xs) ++ filter f ys
+                            =: ite (f x) (x .: filter f xs ++ filter f ys) (filter f xs ++ filter f ys)  ? ih
+                            =: ite (f x) (x .: filter f (xs ++ ys)) (filter f (xs ++ ys))
+                            =: filter f (x .: (xs ++ ys))
+                            =: filter f ((x .: xs) ++ ys)
+                            =: qed
+
 -- * Map and filter don't commute
 
 -- | In general, mapping and filtering operations do not commute. We'll see the kind of counter-example we get from SBV if
