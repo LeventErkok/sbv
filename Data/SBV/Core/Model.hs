@@ -3339,5 +3339,6 @@ lambdaArray f = SBV . SVal k . Right $ cache g
 listArray :: (SymVal a, SymVal b) => [(a, b)] -> b -> SArray a b
 listArray ascs def = literal $ ArrayModel ascs def
 
-{- HLint ignore module "Reduce duplication" -}
-{- HLint ignore module "Eta reduce"         -}
+{- HLint ignore module "Reduce duplication"  -}
+{- HLint ignore module "Eta reduce"          -}
+{- HLint ignore module "Avoid NonEmpty.unzip -}
