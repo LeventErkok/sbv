@@ -1782,7 +1782,20 @@ getUnsatAssumptions originals proxyMap = do
            EApp es | Just xs <- mapM fromECon es -> walk xs []
            _                                     -> bad r Nothing
 
--- | Generalization of 'Data.SBV.Control.timeout'
+-- | Timeout a query action, typically a command call to the underlying SMT solver.
+-- The duration is in microseconds (@1\/10^6@ seconds). If the duration
+-- is negative, then no timeout is imposed. When specifying long timeouts, be careful not to exceed
+-- @maxBound :: Int@. (On a 64 bit machine, this bound is practically infinite. But on a 32 bit
+-- machine, it corresponds to about 36 minutes!)
+--
+-- Semantics: The call @timeout n q@ causes the timeout value to be applied to all interactive calls that take place
+-- as we execute the query @q@. That is, each call that happens during the execution of @q@ gets a separate
+-- time-out value, as opposed to one timeout value that limits the whole query. This is typically the intended behavior.
+-- It is advisable to apply this combinator to calls that involve a single call to the solver for
+-- finer control, as opposed to an entire set of interactions. However, different use cases might call for different scenarios.
+--
+-- If the solver responds within the time-out specified, then we continue as usual. However, if the backend solver times-out
+-- using this mechanism, there is no telling what the state of the solver will be. Thus, we raise an error in this case.
 timeout :: (MonadIO m, MonadQuery m) => Int -> m a -> m a
 timeout n q = do modifyQueryState (\qs -> qs {queryTimeOutValue = Just n})
                  r <- q
