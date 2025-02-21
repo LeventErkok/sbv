@@ -61,7 +61,7 @@
                                                                   (let ((l3_s10 (bvadd l3_s3 l3_s9)))
                                                                   (let ((l3_s11 (ite l3_s2 l3_s1 l3_s10)))
                                                                   l3_s11)))))))))))
-          ; Definition of: f4 :: SWord8 -> SWord8. [Refers to: f4, f1]
+          ; Definition of: f4 :: SWord8 -> SWord8. [Refers to: f1, f4]
                                                                                   (let ((l4_s1 #x00))
                                                                                   (let ((l4_s3 #x01))
                                                                                   (let ((l4_s6 #x02))
