@@ -957,3 +957,4 @@ mapFilter = runKD $ do
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
+{- HLint ignore filterConcat   "Move filter"       -}
