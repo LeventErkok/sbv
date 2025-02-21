@@ -67,6 +67,7 @@ hackage-docs:
 	cabal new-haddock ${CABAL_OPTS} --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
+	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
 
 ghci:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
