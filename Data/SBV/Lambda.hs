@@ -311,7 +311,7 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                ]
          | True
          = res
-         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi asgnsSeq])
+         where res = Defn (nub [nm | Uninterpreted nm <- G.universeBi allOps])
                           frees
                           mbParam
                           allOps
@@ -378,9 +378,13 @@ toLambda level curProgInfo cfg expectedKind result@Result{resAsgns = SBVPgm asgn
                getLLI (NodeId (_, mbl, i)) = (fromMaybe 0 mbl, i)
 
                -- if we have just one definition returning it, and if the expression itself is simple enough (single-line), simplify
+               -- If the line has new-lines we typically don't want to mess with it, but that causes a memory leak
+               -- (see https://github.com/LeventErkok/sbv/issues/733), so only do it if we're being verbose for debugging purposes.
+               mkPretty = verbose cfg
+
                simpleBody :: [((SV, String), Maybe String)] -> SV -> Maybe String
-               simpleBody [((v, e), Nothing)] o | v == o, '\n' `notElem` e = Just e
-               simpleBody _                   _                            = Nothing
+               simpleBody [((v, e), Nothing)] o | v == o, not mkPretty || '\n' `notElem` e = Just e
+               simpleBody _                   _                                            = Nothing
 
                assignments = F.toList (pgmAssignments pgm)
 

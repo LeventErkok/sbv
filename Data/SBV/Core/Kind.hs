@@ -30,13 +30,12 @@ module Data.SBV.Core.Kind (
           Kind(..), HasKind(..), constructUKind, smtType, hasUninterpretedSorts
         , BVIsNonZero, ValidFloat, intOfProxy
         , showBaseKind, needsFlattening, RoundingMode(..), smtRoundingMode
-        , eqCheckIsObjectEq
+        , eqCheckIsObjectEq, expandKinds
         ) where
 
 import qualified Data.Generics as G (Data(..), DataType, dataTypeName, dataTypeOf, tyconUQname, dataTypeConstrs, constrFields)
 
 import Data.Char (isSpace)
-
 import Data.Int
 import Data.Word
 import Data.SBV.Core.AlgReals
@@ -44,8 +43,10 @@ import Data.SBV.Core.AlgReals
 import Data.Proxy
 import Data.Kind
 
-import Data.List (isPrefixOf, intercalate, nub, sort)
+import Data.List (isPrefixOf, intercalate, sort)
 import Control.DeepSeq (NFData)
+
+import Data.Containers.ListUtils (nubOrd)
 
 import Data.Typeable (Typeable)
 import Data.Type.Bool
@@ -80,7 +81,7 @@ data Kind = KBool
 
 -- Expand such that the resulting list has all the kinds we touch
 expandKinds :: Kind -> [Kind]
-expandKinds = nub . sort . G.universe
+expandKinds = sort . nubOrd . G.universe
 
 -- | The interesting about the show instance is that it can tell apart two kinds nicely; since it conveniently
 -- ignores the enumeration constructors. Also, when we construct a 'KUserSort', we make sure we don't use any of

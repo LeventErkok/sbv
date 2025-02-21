@@ -76,7 +76,7 @@ import Control.Monad.Trans.Maybe   (MaybeT)
 import Control.Monad.Writer.Strict (MonadWriter)
 import Data.Char                   (isSpace)
 import Data.IORef                  (IORef, newIORef, readIORef)
-import Data.List                   (intercalate, sortBy, isPrefixOf, nub)
+import Data.List                   (intercalate, sortBy, isPrefixOf)
 import Data.Maybe                  (fromMaybe, mapMaybe)
 import Data.String                 (IsString(fromString))
 
@@ -111,6 +111,8 @@ import Data.SBV.Core.Concrete
 import Data.SBV.SMT.SMTLibNames
 import Data.SBV.Utils.TDiff (Timing)
 import Data.SBV.Utils.Lib   (stringToQFS, checkObservableName, needsBars)
+
+import Data.Containers.ListUtils (nubOrd)
 
 import Data.SBV.Control.Types
 
@@ -1977,7 +1979,7 @@ runSymbolicInState st (SymbolicT c) = do
                  | True
                  = contextMismatchError (sbvContext st) ctx Nothing Nothing
 
-   mapM_ check $ nub $ G.universeBi res
+   mapM_ check $ nubOrd $ G.universeBi res
 
    return (r, res)
 

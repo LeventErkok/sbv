@@ -56,8 +56,6 @@ import Data.SBV.Core.Symbolic (SetOp(..))
 
 import Data.SBV.Core.Kind
 
-import qualified Data.Generics.Uniplate.Data as G
-
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding(null)
@@ -115,7 +113,7 @@ fromList = literal . RegularSet . Set.fromList
 -- Q.E.D.
 complement :: forall a. (Ord a, SymVal a) => SSet a -> SSet a
 complement ss
-  | KChar `elem` G.universe k
+  | KChar `elem` expandKinds k
   = error $ unlines [ "*** Data.SBV: Set.complement is not available for the type " ++ show k
                     , "***"
                     , "*** See: https://github.com/LeventErkok/sbv/issues/601 for a discussion"
