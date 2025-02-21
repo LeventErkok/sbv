@@ -55,9 +55,9 @@ fpMinH x y
 -- except careful on NaN, Infinities, and -0.
 fp2fp :: (RealFloat a, RealFloat b) => a -> b
 fp2fp x
- | isNaN x               =  0 / 0
- | isInfinite x && x < 0 = -1 / 0
- | isInfinite x          =  1 / 0
+ | isNaN x               =   0 / 0
+ | isInfinite x && x < 0 = -(1 / 0)
+ | isInfinite x          =   1 / 0
  | isNegativeZero x      = negate 0
  | True                  = fromRational (toRational x)
 

@@ -1566,7 +1566,7 @@ registerSpecialFunction :: State -> Op -> IO ()
 registerSpecialFunction st o =
   do progInfo <- readIORef (rProgInfo st)
      let upd p@ProgInfo{progSpecialFuncs} = p{progSpecialFuncs = o : progSpecialFuncs}
-     when (o `notElem` progSpecialFuncs progInfo) $ modifyState st rProgInfo upd (pure ())
+     unless (o `elem` progSpecialFuncs progInfo) $ modifyState st rProgInfo upd (pure ())
 
 -- | Create a new constant; hash-cons as necessary
 newConst :: State -> CV -> IO SV

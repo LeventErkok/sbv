@@ -177,3 +177,5 @@ puzzle = runSMT $ do
                          s <- getPerson son
                          pure [a, h, b, d, s]
                _   -> error $ "Solver said: " ++ show cs
+
+{- HLint ignore getPerson "Functor law" -}

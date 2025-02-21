@@ -436,7 +436,7 @@ module Data.SBV (
   , module Data.Ratio
   ) where
 
-import Control.Monad       (when)
+import Control.Monad       (unless)
 import Control.Monad.Trans (MonadIO)
 
 import Data.SBV.Core.AlgReals
@@ -1673,7 +1673,7 @@ mkTransitiveClosure nm rel = res
           where result st = do -- Is this new? If so create it, otherwise reuse
                                ProgInfo{progTransClosures = curProgTransClosures} <- readIORef (rProgInfo st)
 
-                               when (key `notElem` curProgTransClosures) $ do
+                               unless (key `elem` curProgTransClosures) $ do
 
                                   registerKind st ka
 
@@ -1707,7 +1707,7 @@ checkSpecialRelation op rel = SBV $ SVal KBool $ Right $ cache result
                        -- Is this new? If so create it, otherwise reuse
                        ProgInfo{progSpecialRels = curSpecialRels} <- readIORef (rProgInfo st)
 
-                       when (op `notElem` curSpecialRels) $ do
+                       unless (op `elem` curSpecialRels) $ do
 
                           registerKind st ka
                           nm' <- newUninterpreted st (UIGiven nm) Nothing (SBVType [ka, ka, KBool]) (UINone True)

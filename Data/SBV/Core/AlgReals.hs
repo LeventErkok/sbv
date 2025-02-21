@@ -106,9 +106,9 @@ mkPolyReal (Right (k, coeffs))
 
 instance Show AlgRealPoly where
   show (AlgRealPoly xs) = chkEmpty (join (concat [term p | p@(_, x) <- xs, x /= 0])) ++ " = " ++ show c
-     where c  = -1 * case [k | (k, 0) <- xs] of
-                       h:_ -> h
-                       _   -> 0
+     where c  = case [k | (k, 0) <- xs] of
+                  h:_ -> -h
+                  _   -> 0
 
            term ( 0, _) = []
            term ( 1, 1) = [ "x"]

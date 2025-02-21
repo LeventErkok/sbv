@@ -146,7 +146,7 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> a                                      -- ^ what we want to prove
    -> [Proof]                                -- ^ helpers in the context. NB. Only used for printing cex's. We assume they're already asserted.
    -> [String]                               -- ^ sub-proof
-   -> (Maybe [String])                       -- ^ full-path to the proof, if different than sub-proof
+   -> Maybe [String]                         -- ^ full-path to the proof, if different than sub-proof
    -> Maybe (IO ())                          -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
@@ -195,7 +195,7 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
        cex  = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
                  res <- if inQuery
-                        then Satisfiable <$> pure cfg <*> getModel
+                        then Satisfiable cfg <$> getModel
                         else -- When trying to get a counter-example not in query mode, we
                              -- do a skolemized sat call, which gets better counter-examples.
                              -- We only include the those facts that are user-given axioms. This
@@ -221,6 +221,6 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
 
                  liftIO $ case (isEmpty, mbSat) of
                            (True,  Just act) -> act
-                           _                 -> (print $ ThmResult res)
+                           _                 -> print $ ThmResult res
 
                  die

@@ -18,16 +18,12 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE FunctionalDependencies     #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures             #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeAbstractions           #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -165,7 +161,7 @@ class CalcLemma a steps where
                                                ["", show i]
                                                (Just [nm, show i])
                                                Nothing
-                                               (flip finish [])
+                                               (`finish` [])
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                  checkSatThen cfg kdSt "Step  "
@@ -176,7 +172,7 @@ class CalcLemma a steps where
                                        ["", show i]
                                        (Just [nm, show i])
                                        Nothing
-                                       (flip finish [])
+                                       (`finish` [])
 
                  go (i+1) (s .&& accum) ss
 
@@ -711,7 +707,7 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
 
        -- Add parens if necessary
        paren s | "(" `isPrefixOf` s && ")" `isSuffixOf` s = s
-               | all (not . isSpace) s                    = s
+               | not (any isSpace s)                      = s
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step

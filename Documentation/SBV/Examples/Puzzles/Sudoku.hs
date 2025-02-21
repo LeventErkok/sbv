@@ -65,7 +65,7 @@ type Puzzle = [[Integer]]
 -- | Fill a given board, replacing 0's with appropriate elements to solve the puzzle
 fillBoard :: Puzzle -> IO Puzzle
 fillBoard board = runSMT $ do
-     let emptyCellCount = length $ filter (== 0) $ concat board
+     let emptyCellCount = length $ concatMap (filter (== 0)) board
      subst <- mkFreeVars emptyCellCount
      constrain $ valid (fill literal subst)
 

@@ -718,7 +718,7 @@ cvtInc curProgInfo inps newKs (_, consts) tbls uis (SBVPgm asgnsSeq) cstrs cfg =
             -- table declarations
             ++ tableDecls
             -- expressions
-            ++ concatMap (declDef curProgInfo cfg tableMap) (F.toList asgnsSeq)
+            ++ concatMap (declDef curProgInfo cfg tableMap) asgnsSeq
             -- table setups
             ++ concat tableAssigns
             -- extra constraints
@@ -1422,10 +1422,10 @@ declareName s t@(SBVType inputKS) mbCmnt = decl : restrict
                           _  -> (init inputKS, last inputKS)
 
         -- Does the kind KChar and KRational *not* occur in the kind anywhere?
-        charRatFree k = null $ filter charOrRat (expandKinds k)
-           where charOrRat KChar     = True
-                 charOrRat KRational = True
-                 charOrRat _         = False
+        charRatFree k = all notCharOrRat (expandKinds k)
+           where notCharOrRat KChar     = False
+                 notCharOrRat KRational = False
+                 notCharOrRat _         = True
 
         noCharOrRat   = charRatFree result
         needsQuant    = not $ null args
