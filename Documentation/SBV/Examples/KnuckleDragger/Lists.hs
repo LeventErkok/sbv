@@ -6,7 +6,9 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- A variety of KnuckleDragger proofs on list processing functions.
+-- A variety of KnuckleDragger proofs on list processing functions. Note that
+-- these proofs only hold for finite lists. SMT-solvers do not model infinite
+-- lists, and hence all claims are for finite (but arbitrary-length) lists.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE CPP                 #-}
