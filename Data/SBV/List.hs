@@ -33,7 +33,7 @@ module Data.SBV.List (
         -- * Reverse
         , reverse
         -- * Mapping
-        , map
+        , map, concatMap
         -- * Folding
         , foldl, foldr
         -- * Zipping
@@ -45,7 +45,7 @@ module Data.SBV.List (
         ) where
 
 import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
-                       notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter,
+                       notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
                        all, any, and, or)
 import qualified Prelude as P
 
@@ -419,6 +419,10 @@ map f l
                   let op = SeqOp (SBVMap ka kb lam)
                   registerSpecialFunction st op
                   newExpr st klb (SBVApp op [sva])
+
+-- | @concatMap f xs@ maps f over elements and concats the result.
+concatMap :: (SymVal a, SymVal b) => (SBV a -> SList b) -> SList a -> SList b
+concatMap f xs = concat (map f xs)
 
 -- | @`foldl` f base s@ folds the from the left.
 --
