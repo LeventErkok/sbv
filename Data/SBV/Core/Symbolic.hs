@@ -66,7 +66,7 @@ module Data.SBV.Core.Symbolic
   ) where
 
 import Control.DeepSeq             (NFData(..))
-import Control.Monad               (when)
+import Control.Monad               (when, unless)
 import Control.Monad.Except        (MonadError, ExceptT)
 import Control.Monad.Reader        (MonadReader(..), ReaderT, runReaderT,
                                     mapReaderT)
@@ -235,7 +235,7 @@ data Op = Plus
         | LkUp (Int, Kind, Kind, Int) !SV !SV   -- (table-index, arg-type, res-type, length of the table) index out-of-bounds-value
         | KindCast Kind Kind
         | Uninterpreted String
-        | QuantifiedBool [Op] String            -- When we generate a forall/exists (nested etc.) boolean value. NB. The [Op] field is not directly used, but is "found" via uniplate to generate extra functions if needed. (Like calls to reverse.)
+        | QuantifiedBool String                 -- When we generate a forall/exists (nested etc.) boolean value. NB. This used to be "QuantifiedBool [Op] String", keeping track of Ops. That turned out to cause memory leaks. So avoid that.
         | SpecialRelOp Kind SpecialRelOp        -- Generate the equality to the internal operation
         | Label String                          -- Essentially no-op; useful for code generation to emit comments.
         | IEEEFP FPOp                           -- Floating-point ops, categorized separately
@@ -630,7 +630,7 @@ instance Show Op where
 
   show (KindCast fr to)     = "cast_" ++ show fr ++ "_" ++ show to
   show (Uninterpreted i)    = "[uninterpreted] " ++ i
-  show (QuantifiedBool _ i) = "[quantified boolean] " ++ i
+  show (QuantifiedBool i)   = "[quantified boolean] " ++ i
 
   show (Label s)            = "[label] " ++ s
 
@@ -1183,12 +1183,10 @@ lookupInput f sv ns
 data SMTDef = SMTDef String           -- ^ Defined functions -- name
                      Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ other definitions it refers to
-                     [Op]             -- ^ ops used in it, in case we need to generate extra defs
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
             | SMTLam Kind             -- ^ Final kind of the definition (resulting kind, not the params)
                      [String]         -- ^ Anonymous function -- other definitions it refers to
-                     [Op]             -- ^ ops used in it, in case we need to generate extra defs
                      (Maybe String)   -- ^ parameter string
                      (Int -> String)  -- ^ Body, in SMTLib syntax, given the tab amount
             deriving G.Data
@@ -1196,8 +1194,8 @@ data SMTDef = SMTDef String           -- ^ Defined functions -- name
 -- | For debug purposes
 instance Show SMTDef where
   show d = case d of
-             SMTDef nm fk frees _ p body -> shDef (Just nm) fk frees p body
-             SMTLam    fk frees _ p body -> shDef Nothing   fk frees p body
+             SMTDef nm fk frees p body -> shDef (Just nm) fk frees p body
+             SMTLam    fk frees p body -> shDef Nothing   fk frees p body
     where shDef mbNm fk frees p body = unlines [ "-- User defined function: " ++ fromMaybe "Anonymous" mbNm
                                                , "-- Final return type    : " ++ show fk
                                                , "-- Refers to            : " ++ intercalate ", " frees
@@ -1208,13 +1206,13 @@ instance Show SMTDef where
 
 -- The name of this definition
 smtDefGivenName :: SMTDef -> Maybe String
-smtDefGivenName (SMTDef n _ _ _ _ _) = Just n
-smtDefGivenName SMTLam{}             = Nothing
+smtDefGivenName (SMTDef n _ _ _ _) = Just n
+smtDefGivenName SMTLam{}           = Nothing
 
 -- | NFData instance for SMTDef
 instance NFData SMTDef where
-  rnf (SMTDef n fk frees ops params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf ops `seq` rnf params `seq` rnf body
-  rnf (SMTLam   fk frees ops params body) =             rnf fk `seq` rnf frees `seq` rnf ops `seq` rnf params `seq` rnf body
+  rnf (SMTDef n fk frees params body) = rnf n `seq` rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
+  rnf (SMTLam   fk frees params body) =             rnf fk `seq` rnf frees `seq` rnf params `seq` rnf body
 
 -- | The state of the symbolic interpreter
 data State  = State { sbvContext          :: SBVContext
@@ -1564,7 +1562,7 @@ registerLabel whence st nm
 -- We need to auto-generate certain functions, so keep track of them here
 registerSpecialFunction :: State -> Op -> IO ()
 registerSpecialFunction st o =
-  do progInfo <- readIORef (rProgInfo st)
+  do progInfo <- readIORef (rProgInfo (getRootState st))
      let upd p@ProgInfo{progSpecialFuncs} = p{progSpecialFuncs = o : progSpecialFuncs}
      unless (o `elem` progSpecialFuncs progInfo) $ modifyState st rProgInfo upd (pure ())
 

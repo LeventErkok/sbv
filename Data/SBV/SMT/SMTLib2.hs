@@ -808,11 +808,11 @@ declFuncs ds = map declGroup sorted
   where mkNode d = (d, getKey d, getDeps d)
 
         getKey (d, _) = case d of
-                         SMTDef n _ _ _ _ _ -> n
-                         SMTLam{}           -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
+                         SMTDef n _ _ _ _ -> n
+                         SMTLam{}         -> error $ "Data.SBV.declFuns: Unexpected definition kind: " ++ show d
 
-        getDeps (SMTDef _ _ d _ _ _, _) = d
-        getDeps (l@SMTLam{}, t)         = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
+        getDeps (SMTDef _ _ d _ _, _) = d
+        getDeps (l@SMTLam{}, t)       = error $ "Data.SBV.declFuns: Unexpected definition: " ++ show (l, t)
 
         mkDecl Nothing  rt = "() "    ++ rt
         mkDecl (Just p) rt = p ++ " " ++ rt
@@ -826,7 +826,7 @@ declFuncs ds = map declGroup sorted
                                          xs  -> declUserDefMulti xs
 
         declUserDef _ d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected anonymous lambda in user-defined functions: " ++ show d
-        declUserDef isRec (SMTDef nm fk deps _ops param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
+        declUserDef isRec (SMTDef nm fk deps param body, ty) = ("; " ++ nm ++ " :: " ++ show ty ++ recursive ++ frees ++ "\n") ++ s
            where (recursive, definer) | isRec = (" [Recursive]", "define-fun-rec")
                                       | True  = ("",             "define-fun")
 
@@ -841,7 +841,7 @@ declFuncs ds = map declGroup sorted
         -- declare a bunch of mutually-recursive functions
         declUserDefMulti bs = render $ map collect bs
           where collect d@(SMTLam{}, _) = error $ "Data.SBV.declFuns: Unexpected lambda in user-defined mutual-recursion group: " ++ show d
-                collect (SMTDef nm fk deps _ops param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
+                collect (SMTDef nm fk deps param body, ty) = (deps, nm, ty, '(' : nm ++ " " ++  decl ++ ")", body 3)
                   where decl = mkDecl param (smtType fk)
 
                 render defs = intercalate "\n" $
@@ -1139,8 +1139,8 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
         sh (SBVApp (Uninterpreted nm) [])   = nm
         sh (SBVApp (Uninterpreted nm) args) = "(" ++ nm ++ " " ++ unwords (map cvtSV args) ++ ")"
 
-        sh (SBVApp (QuantifiedBool _ i) [])   = i
-        sh (SBVApp (QuantifiedBool _ i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
+        sh (SBVApp (QuantifiedBool i) [])   = i
+        sh (SBVApp (QuantifiedBool i) args) = error $ "SBV.SMT.SMTLib2.cvtExp: unexpected arguments to quantified boolean: " ++ show (i, args)
 
         sh a@(SBVApp (SpecialRelOp k o) args)
           | not (null args)
