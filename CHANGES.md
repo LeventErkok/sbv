@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 11.1.5, Not yet released
+
+  * Added more KnuckleDragger proof examples
+
 ### Version 11.1, 2025-02-21
 
   * Completely reworked KnuckleDragger interfaces and proof styles, adding calculational and induction
