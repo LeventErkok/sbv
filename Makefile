@@ -134,6 +134,8 @@ testInterfaces:
 benchBuild:
 	@$(TIME) cabal new-build SBVBench
 
+DOCTEST_GOLD = SBVTestSuite/GoldFiles/doctest_sanity.gold
+
 # If you specify TGT, it'll just run on that target. Give the full path to the haskell file with .hs extension
 # If you also specify FAST, it won't compile first; good when you change the "comment" but not the code
 docTest:
@@ -144,9 +146,9 @@ else
 	cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 endif
 else
-	@/bin/rm -f DOCTEST_OUTPUT
-	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee DOCTEST_OUTPUT
-	ghc ./buildUtils/checkDocSpec.hs -e main ${ACCEPT}
+	@/bin/rm -f ${DOCTEST_GOLD}_temp
+	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
+	@ghc -package process buildUtils/checkDocSpec.hs -e "start \"${DOCTEST_GOLD} ${ACCEPT}\""
 endif
 
 test:
