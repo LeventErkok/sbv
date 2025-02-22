@@ -282,6 +282,37 @@ filterEx2 = runKD $ do
 
 -- * Map, append, and reverse
 
+-- | @f = g => map f xs = map g xs@
+--
+-- >>> mapEquiv
+-- Inductive lemma: mapEquiv
+--   Base: mapEquiv.Base                   Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: mapEquiv.Step                   Q.E.D.
+-- [Proven] mapEquiv
+mapEquiv :: IO Proof
+mapEquiv = runKD $ do
+   let f, g :: SA -> SB
+       f = uninterpret "f"
+       g = uninterpret "g"
+
+       f'eq'g :: SBool
+       f'eq'g = quantifiedBool $ \(Forall @"x" x) -> f x .== g x
+
+   induct "mapEquiv"
+          (\(Forall @"xs" xs) -> f'eq'g .=> map f xs .== map g xs) $
+          \ih x xs -> [f'eq'g] |- map f (x .: xs) .== map g (x .: xs)
+                               =: f x .: map f xs .== g x .: map g xs ? f'eq'g
+                               =: f x .: map f xs .== f x .: map g xs ? [hyp f'eq'g, hprf ih]
+                               =: f x .: map f xs .== f x .: map f xs
+                               =: map f (x .: xs) .== map f (x .: xs)
+                               =: qed
+
 -- | @map f (xs ++ ys) == map f xs ++ map f ys@
 --
 -- >>> mapAppend (uninterpret "f")
