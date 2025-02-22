@@ -146,10 +146,7 @@ endif
 else
 	@/bin/rm -f DOCTEST_OUTPUT
 	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee DOCTEST_OUTPUT
-	@tail -6 DOCTEST_OUTPUT | head -3 > SBVTestSuite/GoldFiles/doctest_sanity.gold_temp
-	@git diff -U0 --word-diff --no-index -- SBVTestSuite/GoldFiles/doctest_sanity.gold SBVTestSuite/GoldFiles/doctest_sanity.gold_temp
-	@/bin/rm -f DOCTEST_OUTPUT
-	@echo "*** Doctest test-count matches the gold."
+	ghc ./buildUtils/checkDocSpec.hs -e main ${ACCEPT}
 endif
 
 test:
