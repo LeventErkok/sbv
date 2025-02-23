@@ -30,6 +30,8 @@ module Data.SBV.Tuple (
   , swap
   -- * Extractors for 2-tuple
   , fst, snd
+  -- * Extractors for 3-tuple
+  , fst3, snd3, thd3
   ) where
 
 import GHC.TypeLits
@@ -66,6 +68,18 @@ fst t = a where (a, _) = untuple t
 -- | Second of a tuple
 snd :: (SymVal a, SymVal b) => STuple a b -> SBV b
 snd t = b where (_, b) = untuple t
+
+-- | First of a 3-tuple
+fst3 :: (SymVal a, SymVal b, SymVal c) => STuple3 a b c -> SBV a
+fst3 t = a where (a, _, _) = untuple t
+
+-- | Second of a 3-tuple
+snd3 :: (SymVal a, SymVal b, SymVal c) => STuple3 a b c -> SBV b
+snd3 t = b where (_, b, _) = untuple t
+
+-- | Thirdd of a 3-tuple
+thd3 :: (SymVal a, SymVal b, SymVal c) => STuple3 a b c -> SBV c
+thd3 t = c where (_, _, c) = untuple t
 
 -- | Dynamic interface to exporting tuples, this function is not
 -- exported on purpose; use it only via the field functions '_1', '_2', etc.
