@@ -28,6 +28,8 @@ module Data.SBV.Tuple (
   , tuple, untuple
   -- * Swapping, only for 2-tuples
   , swap
+  -- * Extractors for 2-tuple
+  , fst, snd
   ) where
 
 import GHC.TypeLits
@@ -35,6 +37,8 @@ import GHC.TypeLits
 import Data.SBV.Core.Data
 import Data.SBV.Core.Symbolic
 import Data.SBV.Core.Model
+
+import Prelude hiding (fst, snd)
 
 -- $setup
 -- >>> -- For doctest purposes only:
@@ -54,6 +58,14 @@ infixl 8 ^.
 swap :: (SymVal a, SymVal b) => STuple a b -> STuple b a
 swap t = tuple (b, a)
   where (a, b) = untuple t
+
+-- | First of a tuple
+fst :: (SymVal a, SymVal b) => STuple a b -> SBV a
+fst t = a where (a, _) = untuple t
+
+-- | Second of a tuple
+snd :: (SymVal a, SymVal b) => STuple a b -> SBV b
+snd t = b where (_, b) = untuple t
 
 -- | Dynamic interface to exporting tuples, this function is not
 -- exported on purpose; use it only via the field functions '_1', '_2', etc.
