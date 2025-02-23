@@ -1021,7 +1021,7 @@ partition1 = runKD $ do
 -- | @snd (partition f xs) == filter (not . f) xs@
 --
 -- >>> partition2
--- Inductive lemma: partition1
+-- Inductive lemma: partition2
 --   Base: partition2.Base                 Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
