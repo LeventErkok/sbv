@@ -544,16 +544,17 @@ data SeqOp = SeqConcat                           -- ^ See StrConcat
            | SeqSuffixOf                         -- ^ See StrSuffixOf
            | SeqReplace                          -- ^ See StrReplace
            -- Polymorphic and higher order functions
-           | SBVReverse Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
-           | SBVZip     Kind Kind                -- ^ zip a b.           Where we zip [a] and [b] to produce [(a, b)]
-           | SBVZipWith Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith :: (a -> b -> c) -> [a] -> [b] -> [c]
-           | SBVMap     Kind Kind SMTLambda      -- ^ map    a b fun.    Where fun :: a -> b,      and map    :: (a -> b) -> [a] -> [b]
-           | SBVFoldl   Kind Kind SMTLambda      -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl  :: (b -> a -> b) -> b -> [a] -> b
-           | SBVFoldr   Kind Kind SMTLambda      -- ^ foldr  a b fun.    Where fun :: a -> b -> b, and foldr  :: (a -> b -> b) -> b -> [a] -> b
-           | SBVFilter  Kind      SMTLambda      -- ^ filter a fun.      Where fun :: a -> Bool,   and filter :: (a -> Bool) -> [a] -> [a]
-           | SBVAll     Kind      SMTLambda      -- ^ all    a fun.      Where fun :: a -> Bool,   and all    :: (a -> Bool) -> [a] -> Bool
-           | SBVAny     Kind      SMTLambda      -- ^ any    a fun.      Where fun :: a -> Bool,   and any    :: (a -> Bool) -> [a] -> Bool
-           | SBVConcat  Kind                     -- ^ concat a.          Where we concat [[a]] to get [a] (a is the inside-element type)
+           | SBVReverse   Kind                     -- ^ reverse k.         Where k is either [a] or String. Reverses the argument, accordingly.
+           | SBVZip       Kind Kind                -- ^ zip a b.           Where we zip [a] and [b] to produce [(a, b)]
+           | SBVZipWith   Kind Kind Kind SMTLambda -- ^ zipWith a b c fun. Where fun :: a -> b -> c, and zipWith   :: (a -> b -> c) -> [a] -> [b] -> [c]
+           | SBVPartition Kind           SMTLambda -- ^ partition a fun.   Where fun :: a -> SBool,  and partition :: (a -> Bool) -> [a] -> ([a], [a])
+           | SBVMap       Kind Kind      SMTLambda -- ^ map    a b fun.    Where fun :: a -> b,      and map       :: (a -> b) -> [a] -> [b]
+           | SBVFoldl     Kind Kind      SMTLambda -- ^ foldl  a b fun.    Where fun :: b -> a -> b, and foldl     :: (b -> a -> b) -> b -> [a] -> b
+           | SBVFoldr     Kind Kind      SMTLambda -- ^ foldr  a b fun.    Where fun :: a -> b -> b, and foldr     :: (a -> b -> b) -> b -> [a] -> b
+           | SBVFilter    Kind           SMTLambda -- ^ filter a fun.      Where fun :: a -> Bool,   and filter    :: (a -> Bool) -> [a] -> [a]
+           | SBVAll       Kind           SMTLambda -- ^ all    a fun.      Where fun :: a -> Bool,   and all       :: (a -> Bool) -> [a] -> Bool
+           | SBVAny       Kind           SMTLambda -- ^ any    a fun.      Where fun :: a -> Bool,   and any       :: (a -> Bool) -> [a] -> Bool
+           | SBVConcat    Kind                     -- ^ concat a.          Where we concat [[a]] to get [a] (a is the inside-element type)
   deriving (Eq, Ord, G.Data, NFData, Generic)
 
 -- | Show instance for SeqOp. Again, mapping is important.
@@ -570,16 +571,17 @@ instance Show SeqOp where
   show SeqReplace       = "seq.replace"
 
   -- Note: The followings aren't part of SMTLib, we explicitly handle them
-  show (SBVReverse a)       = funcWithKind "sbv.reverse" a                  Nothing
-  show (SBVZip     a b)     = funcWithKind "sbv.zip"     (KTuple [a, b])    Nothing
-  show (SBVZipWith a b c f) = funcWithKind "sbv.zipWith" (KTuple [a, b, c]) (Just f)
-  show (SBVMap     a b   f) = funcWithKind "sbv.map"     (KTuple [a, b])    (Just f)
-  show (SBVFoldl   a b   f) = funcWithKind "sbv.foldl"   (KTuple [a, b])    (Just f)
-  show (SBVFoldr   a b   f) = funcWithKind "sbv.foldr"   (KTuple [a, b])    (Just f)
-  show (SBVFilter  a     f) = funcWithKind "sbv.filter"  a                  (Just f)
-  show (SBVAll     a     f) = funcWithKind "sbv.all"     a                  (Just f)
-  show (SBVAny     a     f) = funcWithKind "sbv.any"     a                  (Just f)
-  show (SBVConcat  a)       = funcWithKind "sbv.concat"  a                  Nothing
+  show (SBVReverse   a)       = funcWithKind "sbv.reverse"   a                  Nothing
+  show (SBVZip       a b)     = funcWithKind "sbv.zip"       (KTuple [a, b])    Nothing
+  show (SBVZipWith   a b c f) = funcWithKind "sbv.zipWith"   (KTuple [a, b, c]) (Just f)
+  show (SBVPartition a     f) = funcWithKind "sbv.partition" a                  (Just f)
+  show (SBVMap       a b   f) = funcWithKind "sbv.map"       (KTuple [a, b])    (Just f)
+  show (SBVFoldl     a b   f) = funcWithKind "sbv.foldl"     (KTuple [a, b])    (Just f)
+  show (SBVFoldr     a b   f) = funcWithKind "sbv.foldr"     (KTuple [a, b])    (Just f)
+  show (SBVFilter    a     f) = funcWithKind "sbv.filter"    a                  (Just f)
+  show (SBVAll       a     f) = funcWithKind "sbv.all"       a                  (Just f)
+  show (SBVAny       a     f) = funcWithKind "sbv.any"       a                  (Just f)
+  show (SBVConcat    a)       = funcWithKind "sbv.concat"    a                  Nothing
 
 -- helper for above
 funcWithKind :: String -> Kind -> Maybe SMTLambda -> String

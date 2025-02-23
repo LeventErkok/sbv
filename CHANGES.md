@@ -5,6 +5,8 @@
 
   * Renamed the all-sat partitioning function from 'partition' to 'allSatPartiton'
 
+  * Added support for 'partition' to Data.SBV.List
+
   * Added more KnuckleDragger proof examples
 
 ### Version 11.1, 2025-02-21

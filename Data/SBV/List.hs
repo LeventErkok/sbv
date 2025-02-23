@@ -39,7 +39,7 @@ module Data.SBV.List (
         -- * Zipping
         , zip, zipWith
         -- * Filtering
-        , filter
+        , filter, partition
         -- * Other list functions
         , all, any, and, or
         ) where
@@ -56,10 +56,12 @@ import Data.SBV.Core.Symbolic (registerSpecialFunction)
 
 import Data.SBV.Lambda
 
+import Data.SBV.Tuple hiding (fst, snd)
+
 import Data.Maybe (isNothing, catMaybes)
 
 import Data.List (genericLength, genericIndex, genericDrop, genericTake)
-import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
+import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, partition)
 
 import Data.Proxy
 
@@ -623,6 +625,28 @@ filter f l
         r st = do sva <- sbvToSV st l
                   lam <- lambdaStr st HigherOrderArg KBool f
                   let op = SeqOp (SBVFilter (kindOf (Proxy @a)) lam)
+                  registerSpecialFunction st op
+                  newExpr st k (SBVApp op [sva])
+
+-- | @partition f xs@ splits the list into two and returns those that satisfy the predicate in the
+-- first element, and those that don't in the second.
+partition :: forall a. SymVal a => (SBV a -> SBool) -> SList a -> STuple [a] [a]
+partition f l
+  | Just l' <- unliteral l, Just concResult <- concretePartition l'
+  = concResult
+  | True
+  = SBV $ SVal k $ Right $ cache r
+  where concretePartition l' = case P.map (unliteral . f . literal) l' of
+                                 xs | P.any isNothing xs -> Nothing
+                                    | True               -> let (ts, fs) = L.partition fst (P.zip (catMaybes xs) l')
+                                                            in Just $ tuple (literal (P.map snd ts), literal (P.map snd fs))
+
+
+        k = kindOf (Proxy @(STuple [a] [a]))
+
+        r st = do sva <- sbvToSV st l
+                  lam <- lambdaStr st HigherOrderArg KBool f
+                  let op = SeqOp (SBVPartition (kindOf (Proxy @a)) lam)
                   registerSpecialFunction st op
                   newExpr st k (SBVApp op [sva])
 
