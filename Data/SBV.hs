@@ -837,18 +837,18 @@ specialized type-signatures since Haskell insists on an 'Int' second argument fo
 -}
 
 {- $partitionIntro
-The function 'partition' allows one to restrict the results returned by calls to 'Data.SBV.allSat'.
+The function 'allSatPartition' one to restrict the results returned by calls to 'Data.SBV.allSat'.
 In certain cases, we might consider certain models to be "equivalent," i.e., we might want to
 create equivalence classes over the search space when it comes to what we consider all satisfying
-solutions. In these cases, we can use 'partition' to tell SBV what classes of solutions to consider
+solutions. In these cases, we can use 'allSatPartition' tell SBV what classes of solutions to consider
 as unique. Consider:
 
 >>> :{
 allSat $ do
    x <- sInteger "x"
    y <- sInteger "y"
-   partition "p1" $ x .>= 0
-   partition "p2" $ y .>= 0
+   allSatPartition "p1" $ x .>= 0
+   allSatPartition "p2" $ y .>= 0
 :}
 Solution #1:
   x  =     0 :: Integer
@@ -872,16 +872,16 @@ Solution #4:
   p2 = True :: Bool
 Found 4 different solutions.
 
-Without the call to 'partition' in the above example, 'allSat' would return all possible combinations of @x@ and @y@ subject to the constraints. (Since we have none here,
-the call would try to enumerate the infinite set of all integer tuples!) But 'partition' allows us to restrict our attention to the examples that satisfy the partitioning
-constraints. The first argument to 'partition' is simply a name, for diagnostic purposes. Note that the conditions given by 'partition' are /not/ imposed on the search
+Without the call to 'allSatPartition' the above example, 'allSat' would return all possible combinations of @x@ and @y@ subject to the constraints. (Since we have none here,
+the call would try to enumerate the infinite set of all integer tuples!) But 'allSatPartition' us to restrict our attention to the examples that satisfy the partitioning
+constraints. The first argument to 'allSatPartition' simply a name, for diagnostic purposes. Note that the conditions given by 'allSatPartition' /not/ imposed on the search
 space at all: They're only used when we construct the search space. In the above example, we pick one example from each quadrant. Furthermore, while it is typical to pass
 a boolean as a partitioning argument, it is not required: Any expression is OK, whose value creates the equivalence class:
 
 >>> :{
 allSat $ do
    x <- sInteger "x"
-   partition "p" $ x `sMod` 3
+   allSatPartition "p" $ x `sMod` 3
 :}
 Solution #1:
   x = 2 :: Integer
