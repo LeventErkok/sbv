@@ -335,7 +335,7 @@ module Data.SBV (
   , solve
   -- ** Partitioning result space
   -- $partitionIntro
-  , partition
+  , allSatPartition
 
   -- * Constraints and Quantifiers
   -- $constrainIntro

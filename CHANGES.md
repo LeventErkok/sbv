@@ -3,6 +3,8 @@
 
 ### Version 11.1.5, Not yet released
 
+  * Renamed the all-sat partitioning function from 'partition' to 'allSatPartiton'
+
   * Added more KnuckleDragger proof examples
 
 ### Version 11.1, 2025-02-21

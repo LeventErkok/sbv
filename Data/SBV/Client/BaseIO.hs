@@ -226,8 +226,8 @@ output :: Outputtable a => a -> Symbolic a
 output = Trans.output
 
 -- | Create a partitioning constraint, for all-sat calls.
-partition :: SymVal a => String -> SBV a -> Symbolic ()
-partition nm term = do
+allSatPartition :: SymVal a => String -> SBV a -> Symbolic ()
+allSatPartition nm term = do
    State{rPartitionVars} <- symbolicEnv
 
    -- Generate a unique variable with the prefix nm if necessary and

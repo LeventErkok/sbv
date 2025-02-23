@@ -42,7 +42,7 @@ d3 x y = ite (y .< -x + 3) 100 200
 d4 :: SInteger -> SInteger -> SInteger
 d4 x y = d1 x y + d2 y + d3 x y
 
--- | Compute all possible program paths. Note the call to `partition`, which
+-- | Compute all possible program paths. Note the call to `allSatPartition`, which
 -- causes `allSat` to find models that generate differing values for the given
 -- expression. We have:
 --
@@ -80,4 +80,4 @@ paths :: IO AllSatResult
 paths = allSat $ do
   x <- sInteger "x"
   y <- sInteger "y"
-  partition "r" $ d4 x y
+  allSatPartition "r" $ d4 x y
