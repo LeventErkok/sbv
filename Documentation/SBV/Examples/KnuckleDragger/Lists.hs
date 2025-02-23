@@ -29,6 +29,7 @@ import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
+import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
 #ifndef HADDOCK
@@ -986,6 +987,64 @@ mapFilter = runKD $ do
           []
 
    pure ()
+
+-- * Partition
+
+-- | @fst (partition f xs) == filter f xs@
+--
+-- >>> partition1
+-- Inductive lemma: partition1
+--   Base: partition1.Base                 Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: partition1.Step                 Q.E.D.
+-- [Proven] partition1
+partition1 :: IO Proof
+partition1 = runKD $ do
+   let f :: SA -> SBool
+       f = uninterpret "f"
+
+   induct "partition1"
+          (\(Forall @"xs" xs) -> fst (partition f xs) .== filter f xs) $
+          \ih x xs -> [] |- fst (partition f (x .: xs))
+                         =: fst (let res = partition f xs
+                                 in ite (f x)
+                                        (tuple (x .: fst res, snd res))
+                                        (tuple (fst res, x .: snd res)))
+                         =: ite (f x) (x .: fst (partition f xs)) (fst (partition f xs)) ? ih
+                         =: ite (f x) (x .: filter f xs) (filter f xs)
+                         =: filter f (x .: xs)
+                         =: qed
+
+-- | @snd (partition f xs) == filter (not . f) xs@
+--
+-- >>> partition2
+-- Inductive lemma: partition1
+--   Base: partition2.Base                 Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: partition2.Step                 Q.E.D.
+-- [Proven] partition2
+partition2 :: IO Proof
+partition2 = runKD $ do
+   let f :: SA -> SBool
+       f = uninterpret "f"
+
+   induct "partition2"
+          (\(Forall @"xs" xs) -> snd (partition f xs) .== filter (sNot . f) xs) $
+          \ih x xs -> [] |- snd (partition f (x .: xs))
+                         =: snd (let res = partition f xs
+                                 in ite (f x)
+                                        (tuple (x .: fst res, snd res))
+                                        (tuple (fst res, x .: snd res)))
+                         =: ite (f x) (snd (partition f xs)) (x .: snd (partition f xs)) ? ih
+                         =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
+                         =: filter (sNot . f) (x .: xs)
+                         =: qed
 
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
