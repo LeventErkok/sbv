@@ -21,16 +21,19 @@
 {-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 
-{-# OPTIONS_GHC -Wall -Werror -Wno-unused-do-bind #-}
+{-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
 import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
+import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
+
+import Control.Monad (void)
 
 #ifndef HADDOCK
 -- $setup
@@ -195,7 +198,6 @@ badLengthProof = runKD $ do
    let badLength :: SList Integer -> SInteger
        badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
 
-   lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []
 
    pure ()
 
@@ -276,10 +278,8 @@ filterEx = runKD $
 -- Falsifiable. Counter-example:
 --   xs = [2] :: [Integer]
 filterEx2 :: IO ()
-filterEx2 = runKD $ do
-        lemma "filterEx2" (\(Forall @"xs" xs) -> filter (.> (2 :: SInteger)) xs .== filter (.>= 2) xs) []
-
-        pure ()
+filterEx2 = runKD $
+   void $ lemma "filterEx2" (\(Forall @"xs" xs) -> filter (.> (2 :: SInteger)) xs .== filter (.>= 2) xs) []
 
 -- * Map, append, and reverse
 
@@ -417,10 +417,8 @@ revLen = runKD $
 -- Falsifiable. Counter-example:
 --   xs = [A_1,A_2,A_1] :: [A]
 badRevLen :: IO ()
-badRevLen = runKD $ do
-   lemma "badRevLen" (\(Forall @"xs" (xs :: SList A)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs)) []
-
-   pure ()
+badRevLen = runKD $
+   void $ lemma "badRevLen" (\(Forall @"xs" (xs :: SList A)) -> length (reverse xs) .== ite (length xs .== 3) 5 (length xs)) []
 
 -- * Foldr-map fusion
 
@@ -982,11 +980,9 @@ mapFilter = runKD $ do
        p :: SA -> SBool
        p = uninterpret "p"
 
-   lemma "badMapFilter"
-          (\(Forall @"xs" xs) -> observe "lhs" (map f (filter p xs)) .== observe "rhs" (filter p (map f xs)))
-          []
-
-   pure ()
+   void $ lemma "badMapFilter"
+                (\(Forall @"xs" xs) -> observe "lhs" (map f (filter p xs)) .== observe "rhs" (filter p (map f xs)))
+                []
 
 -- * Partition
 
