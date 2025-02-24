@@ -39,6 +39,7 @@ import Data.Proxy
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
+-- >>> :set -XTypeApplications
 -- >>> import Data.SBV
 -- >>> import Data.Proxy
 -- >>> import Control.Exception
@@ -1163,6 +1164,7 @@ drop_cons _ = runKD $
 --   Step  : 1                             Q.E.D.
 --   Step  : 2                             Q.E.D.
 --   Step  : 3                             Q.E.D.
+--   Step  : 4                             Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] drop_map
 drop_map :: IO Proof
@@ -1194,7 +1196,8 @@ drop_map = runKD $ do
    calc "drop_map"
         (\(Forall @"xs" xs) (Forall @"n" n) -> drop n (map f xs) .== map f (drop n xs)) $
         \xs n -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
-                    in ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result) ? h1
+                    in result
+                    =: ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result) ? h1
                     =: ite (n .<= 0) sTrue                (n .> 0 .=> result) ? h2
                     =: ite (n .<= 0) sTrue                sTrue
                     =: sTrue
