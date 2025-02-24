@@ -129,9 +129,10 @@ class CalcLemma a steps where
 
         (calcGoal, CalcStrategy {calcIntros, calcProofSteps}) <- calcSteps result steps
 
-        let stepHelpers   = concatMap fst calcProofSteps
-            (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
-            finish        = finishKD cfg ("Q.E.D." ++ modulo)
+        let stepHelpers = concatMap fst calcProofSteps
+
+            finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
+              where (_, modulo) = calculateRootOfTrust nm helpers
 
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $
@@ -149,7 +150,9 @@ class CalcLemma a steps where
                              ["", ""]
                              (Just [nm, "Result"])
                              Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
-                                                finish d $ catMaybes [mbElapsed]
+                                                let (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
+                                                finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+
                                                 pure Proof { rootOfTrust = ros
                                                            , isUserAxiom = False
                                                            , getProof    = label nm (quantifiedBool result)
@@ -170,7 +173,7 @@ class CalcLemma a steps where
                                                ["", show i]
                                                (Just [nm, show i])
                                                Nothing
-                                               (`finish` [])
+                                               (finish [] [])
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
                  checkSatThen cfg kdSt "Step  "
@@ -181,7 +184,7 @@ class CalcLemma a steps where
                                        ["", show i]
                                        (Just [nm, show i])
                                        Nothing
-                                       (`finish` [])
+                                       (finish [] [p | HProof p <- by])
 
                  go (i+1) (s .&& accum) ss
 
@@ -277,9 +280,10 @@ class Inductive a steps where
                            , inductiveStep
                            } <- inductionStrategy result steps
 
-         let stepHelpers   = concatMap fst inductionProofSteps
-             (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
-             finish et d   = finishKD cfg ("Q.E.D." ++ modulo) d et
+         let stepHelpers = concatMap fst inductionProofSteps
+
+             finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
+               where (_, modulo) = calculateRootOfTrust nm helpers
 
          -- Collect all subterms and saturate them
          mapM_ qSaturateSavingObservables $
@@ -293,7 +297,7 @@ class Inductive a steps where
           queryDebug [nm ++ ": Induction, proving base case:"]
           checkSatThen cfg kdSt "Base" True (Just inductionIntros) inductionBaseCase [] [nm, "Base"] Nothing
                        (Just (liftIO (putStrLn inductionBaseFailureMsg)))
-                       (finish [])
+                       (finish [] [])
 
           let loop i accum ((by, s):ss) = do
 
@@ -308,7 +312,7 @@ class Inductive a steps where
                                                 ["", show i]
                                                 (Just [nm, show i])
                                                 Nothing
-                                                (finish [])
+                                                (finish [] [])
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
                   checkSatThen cfg kdSt "Step"
@@ -319,7 +323,7 @@ class Inductive a steps where
                                         ["", show i]
                                         (Just [nm, show i])
                                         Nothing
-                                        (finish [])
+                                        (finish [] [p | HProof p <- by])
                   loop (i+1) (accum .&& s) ss
 
               loop _ accum [] = pure accum
@@ -339,7 +343,9 @@ class Inductive a steps where
                                 Nothing $ \d -> do
 
             mbElapsed <- getElapsedTime mbStartTime
-            finish (catMaybes [mbElapsed]) d
+
+            let (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
+            finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
             pure $ Proof { rootOfTrust = ros
                          , isUserAxiom = False
