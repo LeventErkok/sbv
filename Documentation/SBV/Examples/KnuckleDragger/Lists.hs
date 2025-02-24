@@ -40,6 +40,7 @@ import Data.Proxy
 -- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Data.SBV
+-- >>> import Data.Proxy
 -- >>> import Control.Exception
 #endif
 
@@ -1133,7 +1134,7 @@ take_map = runKD $ do
 
 -- | @n .> 0 => drop n (x .: xs) = drop (n - 1) xs@
 --
--- >>> drop_cons
+-- >>> drop_cons (Proxy @A)
 -- Lemma: drop_cons                        Q.E.D.
 -- [Proven] drop_cons
 drop_cons :: forall elt. SymVal elt => Proxy elt -> IO Proof
