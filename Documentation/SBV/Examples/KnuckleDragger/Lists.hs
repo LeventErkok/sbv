@@ -33,6 +33,7 @@ import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
 import Control.Monad (void)
+import Data.Proxy
 
 #ifndef HADDOCK
 -- $setup
@@ -1039,6 +1040,164 @@ partition2 = runKD $ do
                          =: ite (f x) (filter (sNot . f) xs) (x .: filter (sNot . f) xs)
                          =: filter (sNot . f) (x .: xs)
                          =: qed
+
+-- * Take and drop
+
+-- | @take n (take m xs) = take (n `min` m) xs@
+--
+-- >>> take_take
+-- Lemma: take_take                        Q.E.D.
+-- [Proven] take_take
+take_take :: IO Proof
+take_take = runKD $
+   lemma "take_take"
+         (\(Forall @"xs" (xs :: SList A)) (Forall @"m" m) (Forall @"n" n) -> take n (take m xs) .== take (n `smin` m) xs)
+         []
+
+
+-- | @n >= 0 && m >= 0 => drop n (drop m xs) = drop (n + m) xs@
+--
+-- >>> drop_drop
+-- Lemma: drop_drop                        Q.E.D.
+-- [Proven] drop_drop
+drop_drop :: IO Proof
+drop_drop = runKD $
+   lemma "drop_drop"
+          (\(Forall @"n" n) (Forall @"m" m) (Forall @"xs" (xs :: SList A)) ->
+                n .>= 0 .&& m .>= 0 .=> drop n (drop m xs) .== drop (n + m) xs)
+          []
+
+-- | @take n xs ++ drop n xs == xs@
+--
+-- >>> take_drop
+-- Lemma: take_drop                        Q.E.D.
+-- [Proven] take_drop
+take_drop :: IO Proof
+take_drop = runKD $
+    lemma "take_drop"
+           (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> take n xs ++ drop n xs .== xs)
+           []
+
+-- | @n .> 0 => take n (x .: xs) = x .: take (n - 1) xs@
+--
+-- >>> take_cons
+-- Lemma: take_cons                        Q.E.D.
+-- [Proven] take_cons
+take_cons :: IO Proof
+take_cons = runKD $
+   lemma "take_cons"
+         (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList A)) -> n .> 0 .=> take n (x .: xs) .== x .: take (n - 1) xs)
+         []
+
+-- | @take n (map f xs) == map f (take n xs)@
+--
+-- >>> take_map
+-- Lemma: take_cons                        Q.E.D.
+-- Lemma: map1                             Q.E.D.
+-- Lemma: take_map.n <= 0                  Q.E.D.
+-- Inductive lemma: take_map.n > 0
+--   Base: take_map.n > 0.Base             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Asms: 5                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: take_map.n > 0.Step             Q.E.D.
+-- Lemma: take_map                         Q.E.D.
+-- [Proven] take_map
+take_map :: IO Proof
+take_map = runKD $ do
+    let f :: SA -> SB
+        f = uninterpret "f"
+
+    tc   <- use take_cons
+    map1 <- lemma "map1" (\(Forall @"x" x) (Forall @"xs" xs) -> map f (x .: xs) .== f x .: map f xs) []
+
+    h1 <- lemma "take_map.n <= 0"
+                 (\(Forall @"xs" xs) (Forall @"n" n) -> n .<= 0 .=> take n (map f xs) .== map f (take n xs))
+                 []
+
+    h2 <- induct "take_map.n > 0"
+                 (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> take n (map f xs) .== map f (take n xs)) $
+                 \ih x xs n -> [n .> 0] |- take n (map f (x .: xs))
+                                        =: take n (f x .: map f xs)       ? n .> 0
+                                        =: f x .: take (n - 1) (map f xs) ? ih   `at` Inst @"n" (n-1)
+                                        =: f x .: map f (take (n - 1) xs) ? map1 `at` (Inst @"x" x, Inst @"xs" (take (n - 1) xs))
+                                        =: map f (x .: take (n - 1) xs)   ? [hyp (n .> 0), hprf tc]
+                                        =: map f (take n (x .: xs))
+                                        =: qed
+
+    lemma "take_map" (\(Forall @"xs" xs) (Forall @"n" n) -> take n (map f xs) .== map f (take n xs)) [h1, h2]
+
+-- | @n .> 0 => drop n (x .: xs) = drop (n - 1) xs@
+--
+-- >>> drop_cons
+-- Lemma: drop_cons                        Q.E.D.
+-- [Proven] drop_cons
+drop_cons :: forall elt. SymVal elt => Proxy elt -> IO Proof
+drop_cons _ = runKD $
+   lemma "drop_cons"
+         (\(Forall @"n" n) (Forall @"x" x) (Forall @"xs" (xs :: SList elt)) -> n .> 0 .=> drop n (x .: xs) .== drop (n - 1) xs)
+         []
+
+-- | @drop n (map f xs) == map f (drop n xs)@
+--
+-- >>> drop_map
+-- Lemma: drop_cons                        Q.E.D.
+-- Lemma: drop_cons                        Q.E.D.
+-- Lemma: drop_map.n <= 0                  Q.E.D.
+-- Inductive lemma: drop_map.n > 0
+--   Base: drop_map.n > 0.Base             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Asms: 2                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Asms: 3                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: drop_map.n > 0.Step             Q.E.D.
+-- Lemma: drop_map
+--   Step  : 1                             Q.E.D.
+--   Step  : 2                             Q.E.D.
+--   Step  : 3                             Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] drop_map
+drop_map :: IO Proof
+drop_map = runKD $ do
+   let f :: SA -> SB
+       f = uninterpret "f"
+
+   dcA <- use $ drop_cons (Proxy @A)
+   dcB <- use $ drop_cons (Proxy @B)
+
+   h1 <- lemma "drop_map.n <= 0"
+               (\(Forall @"xs" xs) (Forall @"n" n) -> n .<= 0 .=> drop n (map f xs) .== map f (drop n xs))
+               []
+
+   h2 <- induct "drop_map.n > 0"
+                (\(Forall @"xs" xs) (Forall @"n" n) -> n .> 0 .=> drop n (map f xs) .== map f (drop n xs)) $
+                \ih x xs n -> [n .> 0] |- drop n (map f (x .: xs))
+                                       =: drop n (f x .: map f xs)
+                                       ? [hyp (n .> 0), hprf (dcB `at` (Inst @"n" n, Inst @"x" (f x), Inst @"xs" (map f xs)))]
+                                       =: drop (n - 1) (map f xs)
+                                       ? [hyp (n .> 0), hprf (ih `at` Inst @"n" (n-1))]
+                                       =: map f (drop (n - 1) xs)
+                                       ? [hyp (n .> 0), hprf (dcA `at` (Inst @"n" n, Inst @"x" x, Inst @"xs" xs))]
+                                       =: map f (drop n (x .: xs))
+                                       =: qed
+
+   -- I'm a bit surprised that z3 can't deduce the following with a simple-lemma, which is essentially a simple case-split.
+   -- But the good thing about calc is that it lets us direct the tool in precise ways that we'd like.
+   calc "drop_map"
+        (\(Forall @"xs" xs) (Forall @"n" n) -> drop n (map f xs) .== map f (drop n xs)) $
+        \xs n -> [] |- let result = drop n (map f xs) .== map f (drop n xs)
+                    in ite (n .<= 0) (n .<= 0 .=> result) (n .> 0 .=> result) ? h1
+                    =: ite (n .<= 0) sTrue                (n .> 0 .=> result) ? h2
+                    =: ite (n .<= 0) sTrue                sTrue
+                    =: sTrue
+                    =: qed
 
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
