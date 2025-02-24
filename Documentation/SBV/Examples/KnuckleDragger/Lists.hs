@@ -25,7 +25,6 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), pure, id, (.), flip)
 import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
 
 import Data.SBV
