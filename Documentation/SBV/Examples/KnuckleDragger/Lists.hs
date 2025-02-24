@@ -197,8 +197,7 @@ badLengthProof = runKD $ do
    let badLength :: SList Integer -> SInteger
        badLength xs = ite (length xs .> 5 .&& 42 `elem` xs) 42 (length xs)
 
-
-   pure ()
+   void $ lemma "badLengthProof" (\(Forall @"xs" xs) -> observe "imp" (badLength xs) .== observe "spec" (length xs)) []
 
 -- | @length (xs ++ ys) == length xs + length ys@
 --
