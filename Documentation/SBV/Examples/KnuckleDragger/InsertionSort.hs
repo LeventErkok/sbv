@@ -100,8 +100,6 @@ correctness = runKDWith cvc5 $ do
     induct "sortNonDecreasing"
            (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
            \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
-                          ?  "unfold insertionSort"
-                          =: nonDecreasing (insertionSort (x .: xs))
                           ? "unfold insertionSort"
                           =: nonDecreasing (insert x (insertionSort xs))
                           ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
