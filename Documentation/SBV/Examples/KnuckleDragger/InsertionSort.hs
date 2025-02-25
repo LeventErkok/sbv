@@ -72,7 +72,7 @@ correctness = runKD $ do
                                  (nonDecreasing (x .: insert e xs))
                           ?  nonDecreasing (x .: xs)
                           =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                          ? [ hyp (nonDecreasing (x .: xs))
+                          ? [ hyp  (nonDecreasing (x .: xs))
                             , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
                             , hprf ih
                             ]
