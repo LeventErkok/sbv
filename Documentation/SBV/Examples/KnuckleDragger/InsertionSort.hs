@@ -46,6 +46,8 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 
 -- | Correctness of insertion-sort.
 --
+-- NB. As of Feb 25 2025, z3 gets stuck with this proof, but cvc5 can handle it just fine.
+--
 -- We have:
 --
 -- >>> correctness
