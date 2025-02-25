@@ -192,9 +192,17 @@ class CalcLemma a steps where
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
-mkCalcSteps (intros, xs) = CalcStrategy { calcIntros     = intros
-                                        , calcProofSteps = zipWith merge xs (drop 1 xs)
-                                        }
+mkCalcSteps (intros, xs) = case reverse xs of
+                             (ProofStep _ (_:_) : _) -> error $ unlines [ ""
+                                                                        , "*** Incorrect calc/induct lemma calculations."
+                                                                        , "***"
+                                                                        , "***  The last step in the proof has a helper, which isn't used."
+                                                                        , "***"
+                                                                        , "*** Perhaps the hint is off-by-one in its placement?"
+                                                                        ]
+                             _                       -> CalcStrategy { calcIntros     = intros
+                                                                     , calcProofSteps = zipWith merge xs (drop 1 xs)
+                                                                     }
   where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
