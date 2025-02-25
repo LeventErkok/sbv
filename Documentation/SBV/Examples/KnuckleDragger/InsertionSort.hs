@@ -125,18 +125,18 @@ correctness = runKD $ do
         removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
                                                               nil
                                                               (let (x, xs) = uncons l
-                                                               in ite (e .== x) xs (e .: removeFirst e xs))
+                                                               in ite (e .== x) xs (x .: removeFirst e xs))
 
         isPermutation :: SList Integer -> SList Integer -> SBool
-        isPermutation = smtFunction "isPermuation" $ \l r -> ite (null l)
-                                                                 (null r)
-                                                                 (let (x, xs) = uncons l
-                                                                  in x `elem` r .&& isPermutation xs (removeFirst x r))
+        isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
+                                                                  (null r)
+                                                                  (let (x, xs) = uncons l
+                                                                   in x `elem` r .&& isPermutation xs (removeFirst x r))
 
     sortIsPermutation <-
-        lemma  "sortIsPermutation"
+        lemmaWith z3{transcript = Just "bad.smt2"}  "sortIsPermutation"
                (\(Forall @"xs" xs) -> isPermutation xs (insertionSort xs))
-               [sorry]
+               []
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
