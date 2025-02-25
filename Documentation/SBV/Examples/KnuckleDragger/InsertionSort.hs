@@ -60,11 +60,11 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --   Asms: 5                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: insertNonDecreasing.Step        Q.E.D.
+-- Lemma: insertionSort1                   Q.E.D.
 -- Inductive lemma: sortNonDecreasing
 --   Base: sortNonDecreasing.Base          Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
 --   Step: sortNonDecreasing.Step          Q.E.D.
 -- [Proven] sortNonDecreasing
 correctness :: IO Proof
