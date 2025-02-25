@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -51,17 +52,31 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 correctness :: IO Proof
 correctness = runKD $ do
 
+    nonDecrTail <- lemma "nonDecTail"
+                         (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
+                         []
+
     insertNonDecreasing <-
         induct "insertNonDecreasing"
                (\(Forall @"xs" xs) (Forall @"e" e) -> nonDecreasing xs .=> nonDecreasing (insert e xs)) $
-               \_h x xs e -> [nonDecreasing (x .: xs)]
+               \ih x xs e -> [nonDecreasing (x .: xs)]
                           |- nonDecreasing (insert e (x .: xs))
+                          ? "unfold insert"
                           =: nonDecreasing (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                          =: ite (e .<= x) (nonDecreasing (e .: x .: xs)) (nonDecreasing (x .: insert e xs))
+                          ? "push nonDecreasing over the ite"
+                          =: ite (e .<= x) (nonDecreasing (e .: x .: xs))
+                                           (nonDecreasing (x .: insert e xs))
+                          ? "unfold nonDecreasing, simplify"
                           =: ite (e .<= x)
-                                 (e .<= x .&& nonDecreasing (x .: xs))
-                                 (nonDecreasing (x .: insert e xs))          ? nonDecreasing (x .: xs)
-                          =: (e .>= x .=> nonDecreasing (x .: insert e xs))
+                                 (nonDecreasing (x .: xs))
+                                 (nonDecreasing (x .: insert e xs))
+                          ?  nonDecreasing (x .: xs)
+                          =: (e .> x .=> nonDecreasing (x .: insert e xs))
+                          ? [ hyp (nonDecreasing (x .: xs))
+                            , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
+                            , hprf ih
+                            ]
+                          =: sTrue
                           =: qed
 
     pure insertNonDecreasing
