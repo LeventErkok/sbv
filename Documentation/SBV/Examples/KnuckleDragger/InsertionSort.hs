@@ -21,7 +21,7 @@ module Documentation.SBV.Examples.KnuckleDragger.InsertionSort where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-import Prelude hiding (null, length, head, tail)
+import Prelude hiding (null, length, head, tail, elem)
 import Data.SBV.List
 
 -- | Insert an element into an already sorted list in the correct place.
@@ -70,6 +70,10 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 correctness :: IO Proof
 correctness = runKD $ do
 
+    --------------------------------------------------------------------------------------------
+    -- Part I. Prove that the output of insertion sort is non-decreasing.
+    --------------------------------------------------------------------------------------------
+
     nonDecrTail <- lemma "nonDecTail"
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
                          []
@@ -101,14 +105,42 @@ correctness = runKD $ do
     -- Unfolding insertion sort just once. This helps z3, which otherwise gets stuck in the following proof.
     is1 <- lemma "insertionSort1" (\(Forall @"x" x) (Forall @"xs" xs) -> insertionSort (x .: xs) .== insert x (insertionSort xs)) []
 
-    induct "sortNonDecreasing"
-           (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
-           \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
-                          -- Surprisingly, z3 really needs to be told how to instantiate is1 below so it doesn't get stuck.
-                          ? is1 `at` (Inst @"x" x, Inst @"xs" xs)
-                          =: nonDecreasing (insert x (insertionSort xs))
-                          ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
-                            , hprf ih
-                            ]
-                          =: sTrue
-                          =: qed
+    sortNonDecreasing <-
+        induct "sortNonDecreasing"
+               (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
+               \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
+                              -- Surprisingly, z3 really needs to be told how to instantiate is1 below so it doesn't get stuck.
+                              ? is1 `at` (Inst @"x" x, Inst @"xs" xs)
+                              =: nonDecreasing (insert x (insertionSort xs))
+                              ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
+                                , hprf ih
+                                ]
+                              =: sTrue
+                              =: qed
+
+    --------------------------------------------------------------------------------------------
+    -- Part II. Prove that the output of insertion sort is a permuation of its input
+    --------------------------------------------------------------------------------------------
+    let removeFirst :: SInteger -> SList Integer -> SList Integer
+        removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
+                                                              nil
+                                                              (let (x, xs) = uncons l
+                                                               in ite (e .== x) xs (e .: removeFirst e xs))
+
+        isPermutation :: SList Integer -> SList Integer -> SBool
+        isPermutation = smtFunction "isPermuation" $ \l r -> ite (null l)
+                                                                 (null r)
+                                                                 (let (x, xs) = uncons l
+                                                                  in x `elem` r .&& isPermutation xs (removeFirst x r))
+
+    sortIsPermutation <-
+        lemma  "sortIsPermutation"
+               (\(Forall @"xs" xs) -> isPermutation xs (insertionSort xs))
+               [sorry]
+
+    --------------------------------------------------------------------------------------------
+    -- Put the two parts together for the final proof
+    --------------------------------------------------------------------------------------------
+    lemma "insertionSortIsCorrect"
+          (\(Forall @"xs" xs) -> let out = insertionSort xs in nonDecreasing out .&& isPermutation xs out)
+          [sortNonDecreasing, sortIsPermutation]
