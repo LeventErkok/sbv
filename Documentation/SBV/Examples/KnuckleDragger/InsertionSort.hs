@@ -49,8 +49,26 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 -- We have:
 --
 -- >>> correctness
+-- Lemma: nonDecTail                       Q.E.D.
+-- Inductive lemma: insertNonDecreasing
+--   Base: insertNonDecreasing.Base        Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Asms: 5                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: insertNonDecreasing.Step        Q.E.D.
+-- Inductive lemma: sortNonDecreasing
+--   Base: sortNonDecreasing.Base          Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: sortNonDecreasing.Step          Q.E.D.
+-- [Proven] sortNonDecreasing
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runKDWith cvc5 $ do
 
     nonDecrTail <- lemma "nonDecTail"
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
@@ -79,4 +97,15 @@ correctness = runKD $ do
                           =: sTrue
                           =: qed
 
-    pure insertNonDecreasing
+    induct "sortNonDecreasing"
+           (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
+           \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
+                          ?  "unfold insertionSort"
+                          =: nonDecreasing (insertionSort (x .: xs))
+                          ? "unfold insertionSort"
+                          =: nonDecreasing (insert x (insertionSort xs))
+                          ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
+                            , hprf ih
+                            ]
+                          =: sTrue
+                          =: qed
