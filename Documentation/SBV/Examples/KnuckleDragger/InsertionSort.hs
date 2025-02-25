@@ -46,8 +46,6 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 
 -- | Correctness of insertion-sort.
 --
--- NB. As of Feb 25 2025, z3 gets stuck with this proof, but cvc5 can handle it just fine.
---
 -- We have:
 --
 -- >>> correctness
@@ -70,7 +68,7 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --   Step: sortNonDecreasing.Step          Q.E.D.
 -- [Proven] sortNonDecreasing
 correctness :: IO Proof
-correctness = runKDWith cvc5 $ do
+correctness = runKD $ do
 
     nonDecrTail <- lemma "nonDecTail"
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
@@ -99,10 +97,15 @@ correctness = runKDWith cvc5 $ do
                           =: sTrue
                           =: qed
 
+
+    -- Unfolding insertion sort just once. This helps z3, which otherwise gets stuck in the following proof.
+    is1 <- lemma "insertionSort1" (\(Forall @"x" x) (Forall @"xs" xs) -> insertionSort (x .: xs) .== insert x (insertionSort xs)) []
+
     induct "sortNonDecreasing"
            (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
            \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
-                          ? "unfold insertionSort"
+                          -- Surprisingly, z3 really needs to be told how to instantiate is1 below so it doesn't get stuck.
+                          ? is1 `at` (Inst @"x" x, Inst @"xs" xs)
                           =: nonDecreasing (insert x (insertionSort xs))
                           ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
                             , hprf ih
