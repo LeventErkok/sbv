@@ -786,6 +786,10 @@ instance ProofHint a [SBool] where
 instance ProofHint a [Helper] where
   a ? hs = ProofStep a hs
 
+-- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
+instance ProofHint a String where
+  a ? _ = ProofStep a []
+
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
 -- but we'll cross that bridge if someone actually asks for it.
