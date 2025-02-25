@@ -66,7 +66,31 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: sortNonDecreasing.Step          Q.E.D.
--- [Proven] sortNonDecreasing
+-- Inductive lemma: insertIsElem
+--   Base: insertIsElem.Base               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: insertIsElem.Step               Q.E.D.
+-- Inductive lemma: removeAfterInsert
+--   Base: removeAfterInsert.Base          Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
+--   Step: removeAfterInsert.Step          Q.E.D.
+-- Inductive lemma: sortIsPermutation
+--   Base: sortIsPermutation.Base          Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: sortIsPermutation.Step          Q.E.D.
+-- Lemma: insertionSortIsCorrect           Q.E.D.
 correctness :: IO Proof
 correctness = runKD $ do
 
@@ -133,10 +157,48 @@ correctness = runKD $ do
                                                                   (let (x, xs) = uncons l
                                                                    in x `elem` r .&& isPermutation xs (removeFirst x r))
 
+    -- z3 is struggling with this goal, but cvc5 happily gets it
+    insertIsElem <-
+        inductWith cvc5 "insertIsElem"
+               (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` insert e xs) $
+               \ih x xs e -> [] |- e `elem` insert e (x .: xs)
+                                =: e `elem` ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
+                                =: ite (e .<= x) (e `elem` (e .: x .: xs)) (e `elem` (x .: insert e xs))
+                                =: ite (e .<= x) sTrue (e `elem` insert e xs) ? ih
+                                =: sTrue
+                                =: qed
+
+    removeAfterInsert <-
+        induct "removeAfterInsert"
+               (\(Forall @"xs" xs) (Forall @"e" e) -> removeFirst e (insert e xs) .== xs) $
+               \ih x xs e -> [] |- removeFirst e (insert e (x .: xs))
+                                ?  "expand insert"
+                                =: removeFirst e (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
+                                ?  "push removeFirst down the if-then-else"
+                                =: ite (e .<= x) (removeFirst e (e .: x .: xs)) (removeFirst e (x .: insert e xs))
+                                ?  "unfold removeFirst, then branch"
+                                =: ite (e .<= x) (x .: xs) (removeFirst e (x .: insert e xs))
+                                ?  "unfold removeFirst,  else branch. Note that e .== x is False, due to the pre-condition"
+                                =: ite (e .<= x) (x .: xs) (x .: removeFirst e (insert e xs))
+                                ?  ih
+                                =: ite (e .<= x) (x .: xs) (x .: xs)
+                                ?  "simplify"
+                                =: x .: xs
+                                =: qed
+
     sortIsPermutation <-
-        lemmaWith z3{transcript = Just "bad.smt2"}  "sortIsPermutation"
-               (\(Forall @"xs" xs) -> isPermutation xs (insertionSort xs))
-               []
+        induct "sortIsPermutation"
+               (\(Forall @"xs" xs) -> isPermutation xs (insertionSort xs)) $
+               \ih x xs -> [] |- isPermutation (x .: xs) (insertionSort (x .: xs))
+                              =: isPermutation (x .: xs) (insert x (insertionSort xs))
+                              =: x `elem` insert x (insertionSort xs) .&& isPermutation xs (removeFirst x (insert x (insertionSort xs)))
+                              ? insertIsElem
+                              =: isPermutation xs (removeFirst x (insert x (insertionSort xs)))
+                              ? removeAfterInsert
+                              =: isPermutation xs (insertionSort xs)
+                              ? ih
+                              =: sTrue
+                              =: qed
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
