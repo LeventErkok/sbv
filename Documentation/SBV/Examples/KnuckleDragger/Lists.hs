@@ -1245,6 +1245,24 @@ drop_all = runKD $
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> length xs .<= n .=> drop n xs .== nil)
           []
 
+-- | @take n (xs ++ ys) = (take n xs ++ take (n - length xs) ys)@
+--
+-- >>> take_append
+-- Lemma: take_append
+--   Step  : 1                             Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] take_append
+take_append :: IO Proof
+take_append = runKD $
+    calc "take_append"
+         (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys) $
+           \n (xs :: SList A) ys -> [] |- take n (xs ++ ys)
+                                       ?  "case split on xs"
+                                       =: ite (null xs)
+                                              (take n ys)
+                                              (take n (head xs .: (tail xs ++ ys)))
+                                       =: qed
+
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
