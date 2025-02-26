@@ -1265,6 +1265,19 @@ take_append = runKD $
                                             (take n (head xs .: (tail xs ++ ys)))
                                      =: qed
 
+-- | @drop n (xs ++ ys) = drop n xs ++ drop (n - length xs) ys@
+--
+-- NB. As of Feb 2025, z3 struggles to prove this, but cvc5 gets it out-of-the-box.
+--
+-- >>> drop_append
+-- Lemma: drop_append                      Q.E.D.
+-- [Proven] drop_append
+drop_append :: IO Proof
+drop_append = runKD $
+    lemmaWith cvc5 "drop_append"
+                   (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
+                   []
+
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
