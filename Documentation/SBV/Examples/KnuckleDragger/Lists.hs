@@ -1203,6 +1203,48 @@ drop_map = runKD $ do
                     =: sTrue
                     =: qed
 
+-- | @n >= 0 ==> length (take n xs) = length xs `min` n@
+--
+-- >>> length_take
+-- [Proven] length_take
+length_take :: IO Proof
+length_take = runKD $
+     lemma "length_take"
+           (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
+           []
+
+-- | @n >= 0 ==> length (drop n xs) = (length xs - n) `smax` 0"
+--
+-- >>> length_drop
+-- [Proven] length_drop
+length_drop :: IO Proof
+length_drop = runKD $
+     lemma "length_drop"
+           (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> n .>= 0 .=> length (drop n xs) .== (length xs - n) `smax` 0)
+           []
+
+-- | @length xs <= n ==> take n xs == xs@
+--
+-- >>> take_all
+-- Lemma: take_all                         Q.E.D.
+-- [Proven] take_all
+take_all :: IO Proof
+take_all = runKD $
+    lemma "take_all"
+          (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> length xs .<= n .=> take n xs .== xs)
+          []
+
+-- | @length xs <= n ==> drop n xs == nil@
+--
+-- >>> drop_all
+-- Lemma: drop_all                         Q.E.D.
+-- [Proven] drop_all
+drop_all :: IO Proof
+drop_all = runKD $
+    lemma "drop_all"
+          (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> length xs .<= n .=> drop n xs .== nil)
+          []
+
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
