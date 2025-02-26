@@ -10,7 +10,6 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
