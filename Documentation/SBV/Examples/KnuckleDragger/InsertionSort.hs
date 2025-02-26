@@ -47,7 +47,7 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                          (y, _)  = uncons l'
                                                      in x .<= y .&& nonDecreasing l'
 
--- | Remove the first occurrance of an number from a list, if any.
+-- | Remove the first occurrence of an number from a list, if any.
 removeFirst :: SInteger -> SList Integer -> SList Integer
 removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
                                                       nil
