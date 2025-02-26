@@ -968,11 +968,15 @@ recoverKindedValue k e = case k of
 
         interpretList ek topExpr = walk topExpr
           where walk (EApp [ECon "as", ECon "seq.empty", _]) = []
-                walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek v of
+                walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek (simp v) of
                                                                  Just w -> [cvVal w]
                                                                  Nothing -> error $ "Cannot parse a sequence item of kind " ++ show ek ++ " from: " ++ show v ++ extra v
                 walk (EApp (ECon "seq.++" : rest))           = concatMap walk rest
                 walk cur                                     = error $ "Expected a sequence constant, but received: " ++ show cur ++ extra cur
+
+                -- drop the extra cast, if present
+                simp (EApp [ECon "as", _, v]) = v
+                simp expr                     = expr
 
                 extra cur | show cur == t = ""
                           | True          = "\nWhile parsing: " ++ t
