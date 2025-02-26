@@ -66,6 +66,7 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: sortNonDecreasing.Step          Q.E.D.
+-- Lemma: elemITE                          Q.E.D.
 -- Inductive lemma: insertIsElem
 --   Base: insertIsElem.Base               Q.E.D.
 --   Step: 1                               Q.E.D.
@@ -91,6 +92,7 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --   Step: 5                               Q.E.D.
 --   Step: sortIsPermutation.Step          Q.E.D.
 -- Lemma: insertionSortIsCorrect           Q.E.D.
+-- [Proven] insertionSortIsCorrect
 correctness :: IO Proof
 correctness = runKD $ do
 
@@ -157,12 +159,19 @@ correctness = runKD $ do
                                                                   (let (x, xs) = uncons l
                                                                    in x `elem` r .&& isPermutation xs (removeFirst x r))
 
-    -- z3 is struggling with this goal, but cvc5 happily gets it
+    -- For whatever reason z3 can't figure this out in the below proof. This helper isn't needed for CVC5.
+    -- Note that z3 is able to prove this out-of-the box without any helpers, but needs it in the next as a helper.
+    elemITE <- lemma "elemITE" (\(Forall @"x" (x :: SInteger)) (Forall @"c" c) (Forall @"t" t) (Forall @"e" e)
+                                        -> x `elem` ite c t e .== ite c (x `elem` t) (x `elem` e))
+                     []
+
     insertIsElem <-
-        inductWith cvc5 "insertIsElem"
+        induct "insertIsElem"
                (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` insert e xs) $
                \ih x xs e -> [] |- e `elem` insert e (x .: xs)
                                 =: e `elem` ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
+                                -- z3 has hard time making the following step (though cvc5 is OK with it)
+                                ? elemITE `at` (Inst @"x" e, Inst @"c" (e .<= x), Inst @"t" (e .: x .: xs), Inst @"e" (x .: insert e xs))
                                 =: ite (e .<= x) (e `elem` (e .: x .: xs)) (e `elem` (x .: insert e xs))
                                 =: ite (e .<= x) sTrue (e `elem` insert e xs) ? ih
                                 =: sTrue
