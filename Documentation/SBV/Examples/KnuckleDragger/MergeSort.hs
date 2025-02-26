@@ -75,10 +75,31 @@ correctness = runKD $ do
     -- Part I. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
+    mergeKeepsSort <-
+        induct "mergeKeepsSort"
+               (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
+               \_h x xs ys -> [nonDecreasing (x .: xs), nonDecreasing ys]
+                           |- nonDecreasing (merge (x .: xs) ys)
+                           ?  "case split on ys, simplify"
+                           =: ite (null ys)
+                                  (nonDecreasing (merge (x .: xs) nil))
+                                  (sNot (null ys) .=> nonDecreasing (merge (x .: xs) (head ys .: tail ys)))
+                           ?  nonDecreasing (x .: xs)
+                           =: (null ys .|| nonDecreasing (merge (x .: xs) (head ys .: tail ys)))
+                           ?  "case split: x .<= head ys"
+                           =: (null ys .|| nonDecreasing (ite (x .<= head ys)
+                                                              (x       .: merge xs ys)
+                                                              (head ys .: merge (x .: xs) ys)))
+                           ?  "push nonDecreasing through ite"
+                           =: null ys .|| (ite (x .<= head ys)
+                                               (nonDecreasing (x       .: merge xs ys))
+                                               (nonDecreasing (head ys .: merge (x .: xs) ys)))
+                           =: qed
+
     sortNonDecreasing <-
         lemma "sortNonDecreasing"
               (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
-              [sorry]
+              [mergeKeepsSort]
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is a permuation of its input
