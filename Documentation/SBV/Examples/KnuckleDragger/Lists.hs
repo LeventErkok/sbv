@@ -1256,12 +1256,14 @@ take_append :: IO Proof
 take_append = runKD $
     calc "take_append"
          (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> take n (xs ++ ys) .== take n xs ++ take (n - length xs) ys) $
-           \n (xs :: SList A) ys -> [] |- take n (xs ++ ys)
-                                       ?  "case split on xs"
-                                       =: ite (null xs)
-                                              (take n ys)
-                                              (take n (head xs .: (tail xs ++ ys)))
-                                       =: qed
+
+         -- z3 requires an explicit split here on xs. cvc5 actually proves this out-of-the-box without any helping steps.
+         \n (xs :: SList A) ys -> [] |- take n (xs ++ ys)
+                                     ?  "case split on xs"
+                                     =: ite (null xs)
+                                            (take n ys)
+                                            (take n (head xs .: (tail xs ++ ys)))
+                                     =: qed
 
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
