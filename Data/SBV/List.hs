@@ -29,7 +29,7 @@ module Data.SBV.List (
         -- * Containment
         , elem, notElem, isInfixOf, isSuffixOf, isPrefixOf
         -- * Sublists
-        , take, drop, subList, replace, indexOf, offsetIndexOf
+        , take, drop, splitAt, subList, replace, indexOf, offsetIndexOf
         -- * Reverse
         , reverse
         -- * Mapping
@@ -44,7 +44,7 @@ module Data.SBV.List (
         , all, any, and, or
         ) where
 
-import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem,
+import Prelude hiding (head, tail, init, length, take, drop, splitAt, concat, null, elem,
                        notElem, reverse, (++), (!!), map, concatMap, foldl, foldr, zip, zipWith, filter,
                        all, any, and, or)
 import qualified Prelude as P
@@ -279,6 +279,10 @@ drop i s = ite (i .>= ls) (literal [])
          $ ite (i .<= 0)  s
          $ subList s i (ls - i)
   where ls = length s
+
+-- | @splitAt n xs = (take n xs, drop n xs)@
+splitAt :: SymVal a => SInteger -> SList a -> (SList a, SList a)
+splitAt n xs = (take n xs, drop n xs)
 
 -- | @`subList` s offset len@ is the sublist of @s@ at offset @offset@ with length @len@.
 -- This function is under-specified when the offset is outside the range of positions in @s@ or @len@
