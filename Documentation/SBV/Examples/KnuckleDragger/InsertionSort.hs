@@ -24,6 +24,8 @@ import Data.SBV.Tools.KnuckleDragger
 import Prelude hiding (null, length, head, tail, elem)
 import Data.SBV.List
 
+-- * Insertion sort
+
 -- | Insert an element into an already sorted list in the correct place.
 insert :: SInteger -> SList Integer -> SList Integer
 insert = smtFunction "insert" $ \e l -> ite (null l) (singleton e)
@@ -37,12 +39,30 @@ insertionSort = smtFunction "insertionSort" $ \l -> ite (null l) nil
                                                     in insert x (insertionSort xs)
 
 
+-- * Helper functions
+
 -- | A predicate testing whether a given list is non-decreasing.
 nonDecreasing :: SList Integer -> SBool
 nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                  .|| let (x, l') = uncons l
                                                          (y, _)  = uncons l'
                                                      in x .<= y .&& nonDecreasing l'
+
+-- | Remove the first occurrance of an number from a list, if any.
+removeFirst :: SInteger -> SList Integer -> SList Integer
+removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
+                                                      nil
+                                                      (let (x, xs) = uncons l
+                                                       in ite (e .== x) xs (x .: removeFirst e xs))
+
+-- | Are two lists permutations of each other?
+isPermutation :: SList Integer -> SList Integer -> SBool
+isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
+                                                          (null r)
+                                                          (let (x, xs) = uncons l
+                                                           in x `elem` r .&& isPermutation xs (removeFirst x r))
+
+-- * Correctness proof
 
 -- | Correctness of insertion-sort.
 --
@@ -147,17 +167,6 @@ correctness = runKD $ do
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of insertion sort is a permuation of its input
     --------------------------------------------------------------------------------------------
-    let removeFirst :: SInteger -> SList Integer -> SList Integer
-        removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
-                                                              nil
-                                                              (let (x, xs) = uncons l
-                                                               in ite (e .== x) xs (x .: removeFirst e xs))
-
-        isPermutation :: SList Integer -> SList Integer -> SBool
-        isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
-                                                                  (null r)
-                                                                  (let (x, xs) = uncons l
-                                                                   in x `elem` r .&& isPermutation xs (removeFirst x r))
 
     -- For whatever reason z3 can't figure this out in the below proof. This helper isn't needed for CVC5.
     -- Note that z3 is able to prove this out-of-the box without any helpers, but needs it in the next as a helper.
