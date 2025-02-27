@@ -18,7 +18,7 @@ module TestSuite.Queries.Tuples (tests)  where
 
 import Data.SBV
 import Data.SBV.Control
-import Data.SBV.Tuple
+import Data.SBV.Tuple hiding(fst)
 
 import Utils.SBVTestFramework
 

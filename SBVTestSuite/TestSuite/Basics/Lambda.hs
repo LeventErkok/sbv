@@ -36,7 +36,7 @@ import Data.SBV.Internals hiding(free_)
 import Documentation.SBV.Examples.Misc.Definitions
 
 import Data.SBV.List
-import Data.SBV.Tuple
+import Data.SBV.Tuple hiding (fst, snd)
 
 import Data.Proxy
 
