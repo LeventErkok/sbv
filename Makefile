@@ -83,7 +83,7 @@ else
 endif
 
 ghcid_withTests:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl --ghc-options=-ignore-dot-ghci sbv:SBVTest lib:sbv"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv"
 
 ghci_SBVTest:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
