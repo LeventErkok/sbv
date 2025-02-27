@@ -150,7 +150,7 @@ class CalcLemma a steps where
                              ["", ""]
                              (Just [nm, "Result"])
                              Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
-                                                let (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
+                                                let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
                                                 finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
                                                 pure Proof { rootOfTrust = ros
@@ -163,7 +163,7 @@ class CalcLemma a steps where
             go i accum ((by, s):ss) = do
 
                  -- Prove that the assumptions follow, if any
-                 case [a | HAssum a <- by] of
+                 case getHelperAssumes by of
                    [] -> pure ()
                    as -> checkSatThen cfg kdSt "Asms  "
                                                True
@@ -184,7 +184,7 @@ class CalcLemma a steps where
                                        ["", show i]
                                        (Just [nm, show i])
                                        Nothing
-                                       (finish [] [p | HProof p <- by])
+                                       (finish [] (getHelperProofs by))
 
                  go (i+1) (s .&& accum) ss
 
@@ -310,7 +310,7 @@ class Inductive a steps where
           let loop i accum ((by, s):ss) = do
 
                   -- Prove that the assumptions follow, if any
-                  case [a | HAssum a <- by] of
+                  case getHelperAssumes by of
                     [] -> pure ()
                     as -> checkSatThen cfg kdSt "Asms"
                                                 True
@@ -331,7 +331,7 @@ class Inductive a steps where
                                         ["", show i]
                                         (Just [nm, show i])
                                         Nothing
-                                        (finish [] [p | HProof p <- by])
+                                        (finish [] (getHelperProofs by))
                   loop (i+1) (accum .&& s) ss
 
               loop _ accum [] = pure accum
@@ -352,7 +352,7 @@ class Inductive a steps where
 
             mbElapsed <- getElapsedTime mbStartTime
 
-            let (ros, modulo) = calculateRootOfTrust nm [p | HProof p <- stepHelpers]
+            let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
             finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
             pure $ Proof { rootOfTrust = ros
@@ -743,23 +743,36 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
-data Helper = HProof Proof  -- A previously proven theorem
-            | HAssum SBool  -- A hypothesis
+data Helper = HelperProof Proof  -- A previously proven theorem
+            | HelperAssum SBool  -- A hypothesis
+
+
+-- | Get proofs from helpers
+getHelperProofs :: [Helper] -> [Proof]
+getHelperProofs = concatMap get
+  where get (HelperProof p) = [p]
+        get (HelperAssum _) = []
+
+-- | Get proofs from helpers
+getHelperAssumes :: [Helper] -> [SBool]
+getHelperAssumes = concatMap get
+  where get (HelperProof _) = []
+        get (HelperAssum b) = [b]
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
 hyp :: SBool -> Helper
-hyp = HAssum
+hyp = HelperAssum
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
 hprf :: Proof -> Helper
-hprf = HProof
+hprf = HelperProof
 
 -- | Get the underlying boolean of a helper
 getHelperBool :: Helper -> SBool
-getHelperBool (HProof p) = getProof p
-getHelperBool (HAssum b) = b
+getHelperBool (HelperProof p) = getProof p
+getHelperBool (HelperAssum b) = b
 
 -- | A proof-step with associated helpers
 data ProofStep a = ProofStep a [Helper]
@@ -772,11 +785,11 @@ class ProofHint a b where
 
 -- | Giving just one proof as a helper.
 instance ProofHint a Proof where
-  a ? p = ProofStep a [HProof p]
+  a ? p = ProofStep a [HelperProof p]
 
 -- | Giving just one boolean as a helper.
 instance ProofHint a SBool where
-  a ? p = ProofStep a [HAssum p]
+  a ? p = ProofStep a [HelperAssum p]
 
 -- | Giving just one helper
 instance ProofHint a Helper where
@@ -784,11 +797,11 @@ instance ProofHint a Helper where
 
 -- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
-  a ? ps = ProofStep a (map HProof ps)
+  a ? ps = ProofStep a (map HelperProof ps)
 
 -- | Giving a bunch of booleans as a helper.
 instance ProofHint a [SBool] where
-  a ? ps = ProofStep a (map HAssum ps)
+  a ? ps = ProofStep a (map HelperAssum ps)
 
 -- | Giving a set of helpers
 instance ProofHint a [Helper] where
