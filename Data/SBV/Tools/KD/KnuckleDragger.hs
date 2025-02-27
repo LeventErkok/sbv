@@ -193,17 +193,17 @@ class CalcLemma a steps where
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
 mkCalcSteps (intros, xs) = case reverse xs of
-                             (ProofStep _ (_:_) : _) -> error $ unlines [ ""
-                                                                        , "*** Incorrect calc/induct lemma calculations."
-                                                                        , "***"
-                                                                        , "***  The last step in the proof has a helper, which isn't used."
-                                                                        , "***"
-                                                                        , "*** Perhaps the hint is off-by-one in its placement?"
-                                                                        ]
+                             (SingleStep _ (_:_) : _) -> error $ unlines [ ""
+                                                                         , "*** Incorrect calc/induct lemma calculations."
+                                                                         , "***"
+                                                                         , "***  The last step in the proof has a helper, which isn't used."
+                                                                         , "***"
+                                                                         , "*** Perhaps the hint is off-by-one in its placement?"
+                                                                         ]
                              _                       -> CalcStrategy { calcIntros     = intros
                                                                      , calcProofSteps = zipWith merge xs (drop 1 xs)
                                                                      }
-  where merge (ProofStep a by) (ProofStep b _) = (by, a .== b)
+  where merge (SingleStep a by) (SingleStep b _) = (by, a .== b)
 
 -- | Chaining lemmas that depend on a single quantified variable.
 instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
@@ -775,7 +775,7 @@ getHelperBool (HelperProof p) = getProof p
 getHelperBool (HelperAssum b) = b
 
 -- | A proof-step with associated helpers
-data ProofStep a = ProofStep a [Helper]
+data ProofStep a = SingleStep a [Helper]
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
@@ -785,31 +785,31 @@ class ProofHint a b where
 
 -- | Giving just one proof as a helper.
 instance ProofHint a Proof where
-  a ? p = ProofStep a [HelperProof p]
+  a ? p = SingleStep a [HelperProof p]
 
 -- | Giving just one boolean as a helper.
 instance ProofHint a SBool where
-  a ? p = ProofStep a [HelperAssum p]
+  a ? p = SingleStep a [HelperAssum p]
 
 -- | Giving just one helper
 instance ProofHint a Helper where
-  a ? h = ProofStep a [h]
+  a ? h = SingleStep a [h]
 
 -- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
-  a ? ps = ProofStep a (map HelperProof ps)
+  a ? ps = SingleStep a (map HelperProof ps)
 
 -- | Giving a bunch of booleans as a helper.
 instance ProofHint a [SBool] where
-  a ? ps = ProofStep a (map HelperAssum ps)
+  a ? ps = SingleStep a (map HelperAssum ps)
 
 -- | Giving a set of helpers
 instance ProofHint a [Helper] where
-  a ? hs = ProofStep a hs
+  a ? hs = SingleStep a hs
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance ProofHint a String where
-  a ? _ = ProofStep a []
+  a ? _ = SingleStep a []
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
@@ -834,7 +834,7 @@ class ChainStep a b where
 
 -- | Chaining from a value without any annotation
 instance ChainStep a [ProofStep a] where
-  chain x y = ProofStep x [] : y
+  chain x y = SingleStep x [] : y
 
 -- | Chaining from another proof step
 instance ChainStep (ProofStep a) [ProofStep a] where
