@@ -72,12 +72,18 @@ hackage-docs:
 ghci:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
 
+ghci_withTests:
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv
+
 ghcid:
 ifdef TGT
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
 else
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
 endif
+
+ghcid_withTests:
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl --ghc-options=-ignore-dot-ghci sbv:SBVTest lib:sbv"
 
 ghci_SBVTest:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
