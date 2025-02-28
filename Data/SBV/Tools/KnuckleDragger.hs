@@ -52,6 +52,9 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Supplying hints for a calculation step
        , (?), hprf, hyp
 
+       -- * Case splits
+       , cases
+
        -- * Finishing up a calculational proof
        , qed
        ) where

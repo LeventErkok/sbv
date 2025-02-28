@@ -36,7 +36,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (?), hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (?), cases, hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -47,6 +47,7 @@ import Data.SBV.Control hiding (getProof)
 import Data.SBV.Tools.KD.Kernel
 import Data.SBV.Tools.KD.Utils
 
+import Control.Monad (forM_)
 import Control.Monad.Trans (liftIO)
 
 import qualified Data.SBV.List as SL
@@ -70,6 +71,39 @@ use = liftIO
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
                                  , calcProofSteps :: [([Helper], SBool)]
                                  }
+
+-- | Saturatable things in steps
+proofStepSaturatables :: [([Helper], SBool)] -> [SBool]
+proofStepSaturatables = concatMap getS
+  where getS (hs, b) = b : concatMap getH hs
+        getH (HelperProof  p)  = [getProof p]
+        getH (HelperAssum  b)  = [b]
+        getH (HelperCase _ ss) = ss
+
+-- | Things that are inside calc-strategy that we have to saturate
+getCalcStrategySaturatables :: CalcStrategy -> [SBool]
+getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps) = calcIntros : proofStepSaturatables calcProofSteps
+
+-- | Based on the helpers given, construct the proofs we have to do in the given case
+stepCases :: Int -> [Helper] -> [(String, SBool)]
+stepCases i helpers = caseSplits ++ cover
+  where join :: [(String, SBool)] -> Helper -> [(String, SBool)]
+        join sofar (HelperProof p)     =       map (\(n, cond) -> (n, cond .&& getProof p)) sofar
+        join sofar (HelperAssum b)     =       map (\(n, cond) -> (n, cond .&&          b)) sofar
+        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> [ (n ++ "." ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
+                                                                  | (j, b) <- zip [(1::Int)..] cs
+                                                                  ]) sofar
+
+        -- All case-splits. If there isn't any, we'll get just one case
+        caseSplits = foldl join [(show i, sTrue)] helpers
+
+        -- If there were any cases, then we also need coverage
+        isCase (HelperProof {}) = False
+        isCase (HelperAssum {}) = False
+        isCase (HelperCase  {}) = True
+
+        cover | any isCase helpers = [(show i ++ ".completeness", sNot (sOr [b | (_, b) <- caseSplits]))]
+              | True               = []
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -127,7 +161,7 @@ class CalcLemma a steps where
 
         mbStartTime <- getTimeStampIf measureTime
 
-        (calcGoal, CalcStrategy {calcIntros, calcProofSteps}) <- calcSteps result steps
+        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofSteps}) <- calcSteps result steps
 
         let stepHelpers = concatMap fst calcProofSteps
 
@@ -135,10 +169,7 @@ class CalcLemma a steps where
               where (_, modulo) = calculateRootOfTrust nm helpers
 
         -- Collect all subterms and saturate them
-        mapM_ qSaturateSavingObservables $
-                  calcIntros
-                : calcGoal
-                : concat [b : map getHelperBool hs | (hs, b) <- calcProofSteps]
+        mapM_ qSaturateSavingObservables $ calcIntros : getCalcStrategySaturatables strategy
 
         let go :: Int -> SBool -> [([Helper], SBool)] -> Query Proof
             go _ accum [] = do
@@ -176,15 +207,17 @@ class CalcLemma a steps where
                                                (finish [] [])
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
-                 checkSatThen cfg kdSt "Step  "
-                                       True
-                                       (Just (sAnd (map getHelperBool by)))
-                                       s
-                                       []
-                                       ["", show i]
-                                       (Just [nm, show i])
-                                       Nothing
-                                       (finish [] (getHelperProofs by))
+
+                 forM_ (stepCases i by) $ \(stepName, asmp) ->
+                     checkSatThen cfg kdSt "Step  "
+                                           True
+                                           (Just asmp)
+                                           s
+                                           []
+                                           ["", stepName]
+                                           (Just [nm, stepName])
+                                           Nothing
+                                           (finish [] (getHelperProofs by))
 
                  go (i+1) (s .&& accum) ss
 
@@ -246,6 +279,11 @@ data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
                                            , inductiveStep           :: SBool
                                            }
 
+getInductionStrategySaturatables :: InductionStrategy -> [SBool]
+getInductionStrategySaturatables (InductionStrategy inductionIntros inductionBaseCase inductionProofSteps _ inductiveStep)
+  = inductionIntros : inductionBaseCase : inductiveStep : proofStepSaturatables inductionProofSteps
+
+
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
@@ -281,12 +319,12 @@ class Inductive a steps where
 
          mbStartTime <- getTimeStampIf measureTime
 
-         InductionStrategy { inductionIntros
-                           , inductionBaseCase
-                           , inductionProofSteps
-                           , inductionBaseFailureMsg
-                           , inductiveStep
-                           } <- inductionStrategy result steps
+         strategy@InductionStrategy { inductionIntros
+                                    , inductionBaseCase
+                                    , inductionProofSteps
+                                    , inductionBaseFailureMsg
+                                    , inductiveStep
+                                    } <- inductionStrategy result steps
 
          let stepHelpers = concatMap fst inductionProofSteps
 
@@ -294,11 +332,7 @@ class Inductive a steps where
                where (_, modulo) = calculateRootOfTrust nm helpers
 
          -- Collect all subterms and saturate them
-         mapM_ qSaturateSavingObservables $
-                      inductionIntros
-                    : inductionBaseCase
-                    : inductiveStep
-                    : concat [b : map getHelperBool hs | (hs, b) <- inductionProofSteps]
+         mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
 
          query $ do
 
@@ -323,15 +357,18 @@ class Inductive a steps where
                                                 (finish [] [])
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
-                  checkSatThen cfg kdSt "Step"
-                                        True
-                                        (Just (sAnd (map getHelperBool by)))
-                                        s
-                                        []
-                                        ["", show i]
-                                        (Just [nm, show i])
-                                        Nothing
-                                        (finish [] (getHelperProofs by))
+
+                  forM_ (stepCases i by) $ \(stepName, asmp) ->
+                      checkSatThen cfg kdSt "Step"
+                                            True
+                                            (Just asmp)
+                                            s
+                                            []
+                                            ["", stepName]
+                                            (Just [nm, stepName])
+                                            Nothing
+                                            (finish [] (getHelperProofs by))
+
                   loop (i+1) (accum .&& s) ss
 
               loop _ accum [] = pure accum
@@ -743,21 +780,23 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
-data Helper = HelperProof Proof  -- A previously proven theorem
-            | HelperAssum SBool  -- A hypothesis
-
+data Helper = HelperProof Proof          -- A previously proven theorem
+            | HelperAssum SBool          -- A hypothesis
+            | HelperCase  String [SBool] -- Case split
 
 -- | Get proofs from helpers
 getHelperProofs :: [Helper] -> [Proof]
 getHelperProofs = concatMap get
   where get (HelperProof p) = [p]
-        get (HelperAssum _) = []
+        get HelperAssum {}  = []
+        get HelperCase  {}  = []
 
 -- | Get proofs from helpers
 getHelperAssumes :: [Helper] -> [SBool]
 getHelperAssumes = concatMap get
-  where get (HelperProof _) = []
+  where get HelperProof  {} = []
         get (HelperAssum b) = [b]
+        get HelperCase   {} = []
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
@@ -768,11 +807,6 @@ hyp = HelperAssum
 -- mixing proofs and booleans in one group of hints.
 hprf :: Proof -> Helper
 hprf = HelperProof
-
--- | Get the underlying boolean of a helper
-getHelperBool :: Helper -> SBool
-getHelperBool (HelperProof p) = getProof p
-getHelperBool (HelperAssum b) = b
 
 -- | A proof-step with associated helpers
 data ProofStep a = SingleStep a [Helper]
@@ -856,3 +890,7 @@ infixl 0 |-
 (⊢) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
 (⊢) = (|-)
 infixl 0 ⊢
+
+-- | Specifying a case-split
+cases :: String -> [SBool] -> Helper
+cases = HelperCase
