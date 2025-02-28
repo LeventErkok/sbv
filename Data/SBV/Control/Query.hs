@@ -157,7 +157,7 @@ getInfo flag = do
                          , ("timeout",    UnknownTimeOut)
                          ]
 
--- | Generalization of 'Data.SBV.Control.getInfo'
+-- | Generalization of 'Data.SBV.Control.getOption'
 getOption :: (MonadIO m, MonadQuery m) => (a -> SMTOption) -> m (Maybe SMTOption)
 getOption f = case f undefined of
                  DiagnosticOutputChannel{}   -> askFor "DiagnosticOutputChannel"   ":diagnostic-output-channel"   $ string     DiagnosticOutputChannel
