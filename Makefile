@@ -60,11 +60,11 @@ install: tags
 	@$(TIME) cabal new-install --lib ${CABAL_OPTS} --force-reinstalls
 
 docs:
-	cabal new-haddock ${CABAL_OPTS} --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
+	cabal new-haddock ${CABAL_OPTS} --ghc-options=-DHADDOCK --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:
-	cabal new-haddock ${CABAL_OPTS} --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
+	cabal new-haddock ${CABAL_OPTS} --ghc-options=-DHADDOCK --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
@@ -75,15 +75,19 @@ ghci:
 ghci_withTests:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv
 
-ghcid:
+ghcid_noTests:
 ifdef TGT
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
 else
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
 endif
 
-ghcid_withTests:
+ghcid:
+ifdef TGT
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
+else
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv"
+endif
 
 ghci_SBVTest:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
