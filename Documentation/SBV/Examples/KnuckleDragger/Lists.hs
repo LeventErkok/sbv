@@ -1045,7 +1045,7 @@ partition2 = runKD $ do
 
 -- * Take and drop
 
--- | @take n (take m xs) = take (n `min` m) xs@
+-- | @take n (take m xs) = take (n `smin` m) xs@
 --
 -- >>> take_take
 -- Lemma: take_take                        Q.E.D.
@@ -1203,7 +1203,7 @@ drop_map = runKD $ do
                     =: sTrue
                     =: qed
 
--- | @n >= 0 ==> length (take n xs) = length xs `min` n@
+-- | @n >= 0 ==> length (take n xs) = length xs \`min\` n@
 --
 -- >>> length_take
 -- Lemma length_take
@@ -1214,7 +1214,7 @@ length_take = runKD $
            (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> n .>= 0 .=> length (take n xs) .== length xs `smin` n)
            []
 
--- | @n >= 0 ==> length (drop n xs) = (length xs - n) `smax` 0"
+-- | @n >= 0 ==> length (drop n xs) = (length xs - n) \`max\` 0@
 --
 -- >>> length_drop
 -- Lemma length_drop
@@ -1225,7 +1225,7 @@ length_drop = runKD $
            (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> n .>= 0 .=> length (drop n xs) .== (length xs - n) `smax` 0)
            []
 
--- | @length xs <= n ==> take n xs == xs@
+-- | @length xs \<= n ==\> take n xs == xs@
 --
 -- >>> take_all
 -- Lemma: take_all                         Q.E.D.
@@ -1236,7 +1236,7 @@ take_all = runKD $
           (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) -> length xs .<= n .=> take n xs .== xs)
           []
 
--- | @length xs <= n ==> drop n xs == nil@
+-- | @length xs \<= n ==\> drop n xs == nil@
 --
 -- >>> drop_all
 -- Lemma: drop_all                         Q.E.D.
