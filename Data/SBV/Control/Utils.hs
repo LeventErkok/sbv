@@ -967,7 +967,8 @@ recoverKindedValue k e = case k of
         interpretRational xs = error $ "Expected a rational constant, received: <" ++ show xs ++ ">"
 
         interpretList ek topExpr = walk topExpr
-          where walk (EApp [ECon "as", ECon "seq.empty", _]) = []
+          where walk (ECon "seq.empty")                      = []
+                walk (EApp [ECon "as", ECon "seq.empty", _]) = []
                 walk (EApp [ECon "seq.unit", v])             = case recoverKindedValue ek (simp v) of
                                                                  Just w -> [cvVal w]
                                                                  Nothing -> error $ "Cannot parse a sequence item of kind " ++ show ek ++ " from: " ++ show v ++ extra v
@@ -975,7 +976,7 @@ recoverKindedValue k e = case k of
                 walk cur                                     = error $ "Expected a sequence constant, but received: " ++ show cur ++ extra cur
 
                 -- drop the extra cast, if present
-                simp (EApp [ECon "as", _, v]) = v
+                simp (EApp [ECon "as", v, _]) = v
                 simp expr                     = expr
 
                 extra cur | show cur == t = ""
