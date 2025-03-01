@@ -44,11 +44,13 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
+import Data.SBV.Core.Data(SolverContext)
+
 import Data.SBV.Tools.KD.Kernel
 import Data.SBV.Tools.KD.Utils
 
-import Control.Monad (forM_, void)
-import Control.Monad.Trans (liftIO)
+import Control.Monad (forM_)
+import Control.Monad.Trans (liftIO, MonadIO)
 
 import qualified Data.SBV.List as SL
 
@@ -62,6 +64,7 @@ import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
+import Data.Time (NominalDiffTime)
 
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
@@ -85,19 +88,17 @@ getCalcStrategySaturatables :: CalcStrategy -> [SBool]
 getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps) = calcIntros : proofStepSaturatables calcProofSteps
 
 -- | Based on the helpers given, construct the proofs we have to do in the given case
-stepCases :: Int -> [Helper] -> (Maybe String, Int -> String, [(String, SBool)])
-stepCases i helpers = (startTag, mkTag, result)
+stepCases :: Int -> [Helper] -> [(String, SBool)]
+stepCases i helpers = caseSplits ++ cover
   where join :: [(String, SBool)] -> Helper -> [(String, SBool)]
         join sofar (HelperProof p)     =       map (\(n, cond) -> (n, cond .&& getProof p)) sofar
         join sofar (HelperAssum b)     =       map (\(n, cond) -> (n, cond .&&          b)) sofar
-        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> let nDot "" = ""
-                                                                      nDot s  = s ++ "."
-                                                                  in  [ (nDot n ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
-                                                                      | (j, b) <- zip [(1::Int)..] cs
-                                                                      ]) sofar
+        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> [ (n ++ "." ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
+                                                                  | (j, b) <- zip [(1::Int)..] cs
+                                                                  ]) sofar
 
         -- All case-splits. If there isn't any, we'll get just one case
-        caseSplits = foldl join [("", sTrue)] helpers
+        caseSplits = foldl join [(show i, sTrue)] helpers
 
         -- If there were any cases, then we also need coverage
         isCase (HelperProof {}) = False
@@ -111,20 +112,8 @@ stepCases i helpers = (startTag, mkTag, result)
                 getHyp (HelperAssum b)  = [b]
                 getHyp (HelperCase  {}) = []
 
-        cover | hasCase = [("Completeness", sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits]))]
+        cover | hasCase = [(show i ++ ".Completeness", sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits]))]
               | True    = []
-
-        result = caseSplits ++ cover
-        caseCount = length result - 1  -- ignore the cover. Will be 0 if there are no cases
-
-        startTag | hasCase = Just $ "  Step " ++ show i ++ ": Case split " ++ show caseCount ++ " way" ++ plu
-                 | True    = Nothing
-         where plu= if caseCount > 1 then "s" else ""
-
-        mkTag cNo | not hasCase = "Step  "  ++ show i
-                  | True        = "  Case " ++ cNum cNo
-         where mLen   = length (show (caseCount + 1)) -- account for coverage
-               cNum n = reverse (take mLen (reverse (show n) ++ repeat ' '))
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -229,25 +218,26 @@ class CalcLemma a steps where
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
 
-                 let (mbStartTag, tag, cs) = stepCases i by
-                 maybe (pure ())
-                       (\startTag -> void $ liftIO (startKD cfg True startTag []))
-                       mbStartTag
-
-                 forM_ (zip [(1::Int)..] cs) $ \(cNo, (stepName, asmp)) ->
-                     checkSatThen cfg kdSt (tag cNo)
-                                           True
-                                           (Just asmp)
-                                           s
-                                           []
-                                           ["", stepName]
-                                           (Just [nm, "Step " ++ show i, stepName])
-                                           Nothing
-                                           (finish [] (getHelperProofs by))
+                 proveAllCases cfg kdSt (stepCases i by) s nm (finish [] (getHelperProofs by))
 
                  go (i+1) (s .&& accum) ss
 
         query $ go (1::Int) sTrue calcProofSteps
+
+proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
+              => SMTConfig -> KDState -> [(String, SBool)] -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO b) -> m ()
+proveAllCases cfg kdSt proofCases s nm finalize =
+  forM_ proofCases $ \(stepName, asmp) -> checkSatThen cfg
+                                                       kdSt
+                                                       "Step  "
+                                                       True
+                                                       (Just asmp)
+                                                       s
+                                                       []
+                                                       ["", stepName]
+                                                       (Just [nm, stepName])
+                                                       Nothing
+                                                       finalize
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
@@ -384,21 +374,7 @@ class Inductive a steps where
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
 
-                  let (mbStartTag, tag, cs) = stepCases i by
-                  maybe (pure ())
-                        (\startTag -> void $ liftIO (startKD cfg True startTag []))
-                        mbStartTag
-
-                  forM_ (zip [(1::Int)..] cs) $ \(cNo, (stepName, asmp)) ->
-                      checkSatThen cfg kdSt (tag cNo)
-                                            True
-                                            (Just asmp)
-                                            s
-                                            []
-                                            ["", stepName]
-                                            (Just [nm, "Step " ++ show i, stepName])
-                                            Nothing
-                                            (finish [] (getHelperProofs by))
+                  proveAllCases cfg kdSt (stepCases i by) s nm (finish [] (getHelperProofs by))
 
                   loop (i+1) (accum .&& s) ss
 
