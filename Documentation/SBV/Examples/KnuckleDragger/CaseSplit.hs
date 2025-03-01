@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -52,7 +53,12 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step  : 5                             Q.E.D.
 --   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: notDiv3                          Q.E.D.
+-- Lemma: notDiv3
+--   Step  : 1.n_mod_3[1]                  Q.E.D.
+--   Step  : 1.n_mod_3[2]                  Q.E.D.
+--   Step  : 1.n_mod_3[3]                  Q.E.D.
+--   Step  : 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
 notDiv3 = runKD $ do
@@ -105,6 +111,13 @@ notDiv3 = runKD $ do
                               =: 3*(6*w*w + 9*w + 3) + 2
                               =: qed
 
-   -- Note that z3 is smart enough to figure out the above cases are complete, so
-   -- no extra completeness helper is needed.
-   lemma "notDiv3" (\(Forall @"n" n) -> p n) [c0, c1, c2]
+   calc "notDiv3"
+        (\(Forall @"n" n) -> p n) $
+        \n -> [] |- p n
+                 ? [ cases "n_mod_3" [case0 n, case1 n, case2 n]
+                   , hprf $ c0 `at` Inst @"n" n
+                   , hprf $ c1 `at` Inst @"n" n
+                   , hprf $ c2 `at` Inst @"n" n
+                   ]
+                 =: sTrue
+                 =: qed
