@@ -184,7 +184,10 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
 
        die = error "Failed"
 
-       fullNm = intercalate "." (filter (not . null) (fromMaybe nms fullNms))
+       fullNm = intercalate "." $ squeeze $ (filter (not . null) (fromMaybe nms fullNms))
+       squeeze (x:y:rest) | x == y = squeeze (y:rest)
+       squeeze (x:rest)            = x : squeeze rest
+       squeeze []                  = []
 
        unknown = do r <- getUnknownReason
                     liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."

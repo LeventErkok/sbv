@@ -241,7 +241,7 @@ class CalcLemma a steps where
                                            s
                                            []
                                            ["", stepName]
-                                           (Just [nm, stepName])
+                                           (Just [nm, "Step " ++ show i, stepName])
                                            Nothing
                                            (finish [] (getHelperProofs by))
 
@@ -396,7 +396,7 @@ class Inductive a steps where
                                             s
                                             []
                                             ["", stepName]
-                                            (Just [nm, stepName])
+                                            (Just [nm, "Step " ++ show i, stepName])
                                             Nothing
                                             (finish [] (getHelperProofs by))
 
