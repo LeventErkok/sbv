@@ -554,13 +554,14 @@ foldrOverAppend = runKD $ do
 -- [Proven] foldlOverAppend
 foldlOverAppend :: (SB -> SA -> SB) -> IO Proof
 foldlOverAppend f = runKD $
-   -- z3 is smart enough to instantiate the IH correctly below, and the at clause isn't necessary. But we're being
-   -- explicit here to emphasize that the IH is used at a different value of a.
    induct "foldlOverAppend"
           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"a" a) -> foldl f a (xs ++ ys) .== foldl f (foldl f a xs) ys) $
           \ih x xs ys a -> [] |- foldl f a ((x .: xs) ++ ys)
                               =: foldl f a (x .: (xs ++ ys))
-                              =: foldl f (a `f` x) (xs ++ ys)       ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
+                              =: foldl f (a `f` x) (xs ++ ys)
+                              -- z3 is smart enough to instantiate the IH correctly below, but we're
+                              -- using an explicit instantiation to be clear about the use of @a@ at a different value
+                              ? ih `at` (Inst @"ys" ys, Inst @"a" (a `f` x))
                               =: foldl f (foldl f (a `f` x) xs) ys
                               =: qed
 
@@ -668,8 +669,10 @@ foldrFoldlDualityGeneralized  = runKD $ do
    helper <- induct "helper"
                      (\(Forall @"xs" xs) (Forall @"y" y) (Forall @"z" z) -> assoc .=> foldl (@) (y @ z) xs .== y @ foldl (@) z xs) $
                      \ih x xs y z -> [assoc] |- foldl (@) (y @ z) (x .: xs)
-                                             =: foldl (@) ((y @ z) @ x) xs  ? assoc
-                                             =: foldl (@) (y @ (z @ x)) xs  ? [hyp assoc, hprf (ih `at` (Inst @"y" y, Inst @"z" (z @ x)))]
+                                             =: foldl (@) ((y @ z) @ x) xs
+                                             ? assoc
+                                             =: foldl (@) (y @ (z @ x)) xs
+                                             ? [hyp assoc, hprf (ih `at` (Inst @"y" y, Inst @"z" (z @ x)))]
                                              =: y @ foldl (@) (z @ x) xs
                                              =: y @ foldl (@) z (x .: xs)
                                              =: qed
