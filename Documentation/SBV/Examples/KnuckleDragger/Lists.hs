@@ -1209,7 +1209,7 @@ drop_map = runKD $ do
 -- | @n >= 0 ==> length (take n xs) = length xs \`min\` n@
 --
 -- >>> length_take
--- Lemma length_take
+-- Lemma: length_take                      Q.E.D.
 -- [Proven] length_take
 length_take :: IO Proof
 length_take = runKD $
@@ -1220,7 +1220,7 @@ length_take = runKD $
 -- | @n >= 0 ==> length (drop n xs) = (length xs - n) \`max\` 0@
 --
 -- >>> length_drop
--- Lemma length_drop
+-- Lemma: length_drop                      Q.E.D.
 -- [Proven] length_drop
 length_drop :: IO Proof
 length_drop = runKD $
@@ -1287,3 +1287,6 @@ drop_append = runKD $
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
 {- HLint ignore filterConcat   "Move filter"       -}
+{- HLint ignore module         "Use camelCase"     -}
+{- HLint ignore module         "Use first"         -}
+{- HLint ignore module         "Use second"        -}
