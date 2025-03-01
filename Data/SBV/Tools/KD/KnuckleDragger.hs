@@ -218,18 +218,18 @@ class CalcLemma a steps where
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
 
-                 proveAllCases cfg kdSt (stepCases i by) s nm (finish [] (getHelperProofs by))
+                 proveAllCases cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
 
                  go (i+1) (s .&& accum) ss
 
         query $ go (1::Int) sTrue calcProofSteps
 
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
-              => SMTConfig -> KDState -> [(String, SBool)] -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO b) -> m ()
-proveAllCases cfg kdSt proofCases s nm finalize =
+              => SMTConfig -> KDState -> [(String, SBool)] -> String -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO b) -> m ()
+proveAllCases cfg kdSt proofCases stepTag s nm finalize =
   forM_ proofCases $ \(stepName, asmp) -> checkSatThen cfg
                                                        kdSt
-                                                       "Step  "
+                                                       stepTag
                                                        True
                                                        (Just asmp)
                                                        s
@@ -374,7 +374,7 @@ class Inductive a steps where
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
 
-                  proveAllCases cfg kdSt (stepCases i by) s nm (finish [] (getHelperProofs by))
+                  proveAllCases cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
 
                   loop (i+1) (accum .&& s) ss
 
