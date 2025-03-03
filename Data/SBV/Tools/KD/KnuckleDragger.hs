@@ -253,7 +253,7 @@ proveAllCases topStep cfg kdSt caseInfo stepTag s nm finalize
            clen  = length slen
            sh i  = reverse . take clen $ reverse (show i) ++ repeat ' '
 
-       _tab <- liftIO $ startKD cfg True "Step" ["", show topStep ++ ". Case split " ++ ways ++ ":"]
+       _tab <- liftIO $ startKD cfg True ("Step " ++ show topStep) ["", "Case split " ++ ways ++ ":"]
 
        forM_ (zip [(1::Int)..] proofCases) $ \(c, (stepName, asmp)) ->
              checker ("Case [" ++ sh c ++ " of " ++ show len ++ "]") asmp s ["", "", stepName] (Just [nm, stepName])
