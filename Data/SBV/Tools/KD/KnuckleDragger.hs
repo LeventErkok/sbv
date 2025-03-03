@@ -88,17 +88,30 @@ getCalcStrategySaturatables :: CalcStrategy -> [SBool]
 getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps) = calcIntros : proofStepSaturatables calcProofSteps
 
 -- | Based on the helpers given, construct the proofs we have to do in the given case
-stepCases :: Int -> [Helper] -> [(String, SBool)]
-stepCases i helpers = caseSplits ++ cover
+stepCases :: Int -> [Helper] -> Either (String, SBool) ([(String, SBool)], SBool)
+stepCases i helpers
+   | hasCase
+   = Right (caseSplits, cover)
+   | True
+   = Left (show i, sAnd (map getBools helpers))
   where join :: [(String, SBool)] -> Helper -> [(String, SBool)]
         join sofar (HelperProof p)     =       map (\(n, cond) -> (n, cond .&& getProof p)) sofar
         join sofar (HelperAssum b)     =       map (\(n, cond) -> (n, cond .&&          b)) sofar
-        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> [ (n ++ "." ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
+        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> [ (dotN n ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
                                                                   | (j, b) <- zip [(1::Int)..] cs
                                                                   ]) sofar
 
+        -- Add a dot if we have a legit prefix
+        dotN "" = ""
+        dotN s  = s ++ "."
+
+        -- Used only when we have ano case splits:
+        getBools (HelperProof p) = getProof p
+        getBools (HelperAssum b) = b
+        getBools (HelperCase{})  = error "Unexpected case in stepCases: Wasn't expecting to see a HelperCase here."
+
         -- All case-splits. If there isn't any, we'll get just one case
-        caseSplits = foldl join [(show i, sTrue)] helpers
+        caseSplits = foldl join [("", sTrue)] helpers
 
         -- If there were any cases, then we also need coverage
         isCase (HelperProof {}) = False
@@ -112,8 +125,7 @@ stepCases i helpers = caseSplits ++ cover
                 getHyp (HelperAssum b)  = [b]
                 getHyp (HelperCase  {}) = []
 
-        cover | hasCase = [(show i ++ ".Completeness", sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits]))]
-              | True    = []
+        cover = sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits])
 
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
@@ -218,26 +230,37 @@ class CalcLemma a steps where
 
                  queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
 
-                 proveAllCases cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
+                 proveAllCases i cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
 
                  go (i+1) (s .&& accum) ss
 
         query $ go (1::Int) sTrue calcProofSteps
 
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
-              => SMTConfig -> KDState -> [(String, SBool)] -> String -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO b) -> m ()
-proveAllCases cfg kdSt proofCases stepTag s nm finalize =
-  forM_ proofCases $ \(stepName, asmp) -> checkSatThen cfg
-                                                       kdSt
-                                                       stepTag
-                                                       True
-                                                       (Just asmp)
-                                                       s
-                                                       []
-                                                       ["", stepName]
-                                                       (Just [nm, stepName])
-                                                       Nothing
-                                                       finalize
+              => Int -> SMTConfig -> KDState
+              -> Either (String, SBool) ([(String, SBool)], SBool)
+              -> String -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO ()) -> m ()
+proveAllCases topStep cfg kdSt caseInfo stepTag s nm finalize
+  | Left (stepName, asmp) <- caseInfo
+  = checker stepTag asmp s ["", stepName] (Just [nm, stepName])
+  | Right (proofCases, coverCond) <- caseInfo
+  = do let len   = length proofCases
+           ways  = case len of
+                     1 -> "one way"
+                     n -> show n ++ " ways"
+
+           slen  = show len
+           clen  = length slen
+           sh i  = reverse . take clen $ reverse (show i) ++ repeat ' '
+
+       _tab <- liftIO $ startKD cfg True stepTag ["", show topStep ++ ". Case split " ++ ways ++ ":"]
+
+       forM_ (zip [(1::Int)..] proofCases) $ \(c, (stepName, asmp)) ->
+             checker ("Case " ++ sh c) asmp s ["", "", stepName] (Just [nm, stepName])
+
+       checker stepTag coverCond s [show topStep, " Completeness"] (Just [nm, "Completeness"])
+  where
+     checker tag caseAsmp cond cnm fnm = checkSatThen cfg kdSt tag True (Just caseAsmp) cond [] cnm fnm Nothing finalize
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
@@ -374,7 +397,7 @@ class Inductive a steps where
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
 
-                  proveAllCases cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
+                  proveAllCases i cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
 
                   loop (i+1) (accum .&& s) ss
 
