@@ -75,18 +75,11 @@ ghci:
 ghci_withTests:
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv
 
-ghcid_noTests:
-ifdef TGT
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
-else
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
-endif
-
 ghcid:
 ifdef TGT
 	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
 else
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
 endif
 
 ghci_SBVTest:
