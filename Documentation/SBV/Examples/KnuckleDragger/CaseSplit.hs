@@ -54,10 +54,11 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: notDiv3
---   Step  : 1.n_mod_3[1]                  Q.E.D.
---   Step  : 1.n_mod_3[2]                  Q.E.D.
---   Step  : 1.n_mod_3[3]                  Q.E.D.
---   Step  : 1.Completeness                Q.E.D.
+--   Step: 1. Case split 3 ways:
+--     Case [1 of 3]: n_mod_3[1]           Q.E.D.
+--     Case [2 of 3]: n_mod_3[2]           Q.E.D.
+--     Case [3 of 3]: n_mod_3[3]           Q.E.D.
+--     Completeness:                       Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
