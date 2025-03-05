@@ -29,7 +29,7 @@ endif
 
 ifdef ACCEPT
     TESTACCEPT = --accept
-    TESTHIDE   = 
+    TESTHIDE   =
 else
     TESTACCEPT = --no-create
     TESTHIDE   = --hide-successes

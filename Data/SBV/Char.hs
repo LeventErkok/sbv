@@ -208,7 +208,7 @@ isAlphaNumL1 = liftPredL1 C.isAlphaNum
 isPrintL1 :: SChar -> SBool
 isPrintL1 = liftPredL1 C.isPrint
 
--- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumberL1' 
+-- | Is this an ASCII digit, i.e., one of @0@..@9@. Note that this is a subset of 'isNumberL1'.
 --
 -- >>> prove $ \c -> isDigit c .=> isNumberL1 c
 -- Q.E.D.

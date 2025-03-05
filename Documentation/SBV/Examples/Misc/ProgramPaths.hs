@@ -8,7 +8,7 @@
 --
 -- A simple example of showing how to compute program paths. Consider the simple
 -- program:
--- 
+--
 -- @
 --   d1 x y = if y < x - 2  then   7 else   2
 --   d2   y = if y > 3      then  10 else  50

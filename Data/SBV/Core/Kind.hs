@@ -132,7 +132,7 @@ showBaseKind = sh
         noS ('S':s) = s
         noS s       = s
 
--- For historical reasons, we show 8-16-32-64 bit values with no space; others with a space. 
+-- For historical reasons, we show 8-16-32-64 bit values with no space; others with a space.
 pickType :: Int -> String -> String -> String
 pickType i standard other
   | i `elem` [8, 16, 32, 64] = standard

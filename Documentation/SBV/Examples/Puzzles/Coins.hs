@@ -18,7 +18,7 @@
 --   friend: No.
 --   you: How about a quarter?
 --   friend: Nope, and before you ask I cant make change for a dime or nickel either.
---   you: Really? and these six coins are all US government coins currently in production? 
+--   you: Really? and these six coins are all US government coins currently in production?
 --   friend: Yes.
 --   you: Well can you just put your coins into the vending machine and buy me a candy bar, and I'll pay you back?
 --   friend: Sorry, I would like to but I cant with the coins I have.

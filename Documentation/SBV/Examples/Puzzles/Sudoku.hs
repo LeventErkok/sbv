@@ -145,7 +145,7 @@ puzzle3 = [ [6, 0, 0,   0, 1, 0,   5, 0, 0]
           , [0, 0, 0,   0, 0, 0,   3, 0, 6]
           , [0, 0, 4,   0, 5, 0,   0, 0, 9] ]
 
--- | According to the web, this is the toughest 
+-- | According to the web, this is the toughest.
 -- sudoku puzzle ever.. It even has a name: Al Escargot:
 -- <http://zonkedyak.blogspot.com/2006/11/worlds-hardest-sudoku-puzzle-al.html>
 puzzle4 :: Puzzle

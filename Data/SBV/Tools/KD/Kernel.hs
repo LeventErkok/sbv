@@ -87,7 +87,7 @@ sorry = Proof { rootOfTrust = Self
               , getProp     = toDyn p
               , proofName   = "sorry"
               }
-  where -- ideally, I'd rather just use 
+  where -- ideally, I'd rather just use
         --   p = sFalse
         -- but then SBV constant folds the boolean, and the generated script
         -- doesn't contain the actual contents, as SBV determines unsatisfiability

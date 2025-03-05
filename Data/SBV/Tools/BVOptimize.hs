@@ -96,7 +96,7 @@ minMaxBV isMax cfg getUC v
  | hasSign v
  = error $ "minMaxBV works on unsigned bitvectors, received: " ++ show (kindOf v)
  | True
- = do when getUC $ setOption $ ProduceUnsatCores True 
+ = do when getUC $ setOption $ ProduceUnsatCores True
       query $ go (blastBE v)
  where uc | getUC = Just <$> getUnsatCore
           | True  = pure Nothing

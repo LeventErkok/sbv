@@ -17,8 +17,8 @@ Falsifiable. Counter-example:
 ```
 
 The function `prove` establishes theorem-hood, while `sat` finds a satisfying model if it exists.
-All satisfying models can be computed using `allSat`. 
-SBV can also perform static assertion checks, such as absence of division-by-0, and other user given properties. 
+All satisfying models can be computed using `allSat`.
+SBV can also perform static assertion checks, such as absence of division-by-0, and other user given properties.
 Furthermore, SBV can perform optimization, minimizing/maximizing arithmetic goals for their optimal values.
 
 SBV also allows for an incremental mode: Users are given a handle to the SMT solver as their programs execute, and they can issue SMTLib commands programmatically, query values, and direct the interaction using a high-level typed API. The incremental mode also allows for creation of constraints based on the current model, and access to internals of SMT solvers for advanced users. See the `runSMT` and `query` commands for details.
@@ -54,7 +54,7 @@ SBV library provides support for dealing with symbolic values in Haskell. It int
  - Uninterpreted sorts, and proofs over such sorts, potentially with axioms.
  - Ability to define SMTLib functions, generated directly from Haskell versions, including support for recursive and mutually recursive functions.
  - Reasoning with universal and existential quantifiers, including alternating quantifiers.
-  
+   
 The user can construct ordinary Haskell programs using these types, which behave like ordinary Haskell values when used concretely. However, when used with symbolic arguments, functions built out of these types can also be:
 
  - proven correct via an external SMT solver (the `prove` function),
@@ -91,7 +91,7 @@ Other SMT solvers can be used with SBV as well, with a relatively easy hook-up m
 
 ## Using multiple solvers, simultaneously
 
-SBV also allows for running multiple solvers at the same time, either picking the result of the first to complete, or getting results from all. 
+SBV also allows for running multiple solvers at the same time, either picking the result of the first to complete, or getting results from all.
 See `proveWithAny`/`proveWithAll` and `satWithAny`/`satWithAll` functions. The function `sbvAvailableSolvers` can be used to query the available solvers at run-time.
 
 ## Copyright, License
@@ -120,7 +120,7 @@ Christian Conkle,
 Matthew Danish,
 Iavor Diatchki,
 Alex Dixon,
-Robert Dockins, 
+Robert Dockins,
 Thomas DuBuisson,
 Trevor Elliott,
 Gergő Érdi,

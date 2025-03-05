@@ -47,7 +47,7 @@ class (Num a, Bits a) => Polynomial a where
  -- For instance
  --
  --     @polynomial [0, 1, 3] :: SWord8@
- -- 
+ --
  -- will evaluate to @11@, since it sets the bits @0@, @1@, and @3@. Mathematicians would write this polynomial
  -- as @x^3 + x + 1@. And in fact, 'showPoly' will show it like that.
  polynomial :: [Int] -> a

@@ -178,7 +178,7 @@ svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate negate negate
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs abs
 
--- | Signum. 
+-- | Signum.
 --
 -- NB. The following "carefully" tests the number for == 0, as Float/Double's NaN and +/-0
 -- cases would cause trouble with explicit equality tests.
