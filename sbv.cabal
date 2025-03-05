@@ -161,6 +161,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.Numeric
                   , Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
+                  , Documentation.SBV.Examples.KnuckleDragger.OddSequence
                   , Documentation.SBV.Examples.KnuckleDragger.Tao
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate
