@@ -51,12 +51,12 @@ sumConstProof = runKD $ do
 
    induct "sumConst_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> sum n .== spec n) $
-          \ih k -> [k .>= 0] |- sum (k+1)  ?? k .>= 0
-                             =: c + sum k  ?? [hprf ih, hyp (k .>= 0)]
-                             =: c + spec k
-                             =: c + c*k
-                             =: c*(k+1)
-                             =: spec (k+1)
+          \ih n -> [n .>= 0] |- sum (n+1)  ?? n .>= 0
+                             =: c + sum n  ?? [hprf ih, hyp (n .>= 0)]
+                             =: c + spec n
+                             =: c + c*n
+                             =: c*(n+1)
+                             =: spec (n+1)
                              =: qed
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
@@ -86,10 +86,10 @@ sumProof = runKD $ do
 
    inductWith cvc5 "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih k -> [k .>= 0] |- sum (k+1)    ?? k .>= 0
-                             =: k+1 + sum k  ?? [hprf ih, hyp (k .>= 0)]
-                             =: k+1 + spec k
-                             =: spec (k+1)
+          \ih n -> [n .>= 0] |- sum (n+1)    ?? n .>= 0
+                             =: n+1 + sum n  ?? [hprf ih, hyp (n .>= 0)]
+                             =: n+1 + spec n
+                             =: spec (n+1)
                              =: qed
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
@@ -119,10 +119,10 @@ sumSquareProof = runKD $ do
 
    inductWith cvc5 "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih k -> [k .>= 0] |- sumSquare (k+1)           ?? k .>= 0
-                             =: (k+1)*(k+1) + sumSquare k ?? [hprf ih, hyp (k .>= 0)]
-                             =: (k+1)*(k+1) + spec k
-                             =: spec (k+1)
+          \ih n -> [n .>= 0] |- sumSquare (n+1)           ?? n .>= 0
+                             =: (n+1)*(n+1) + sumSquare n ?? [hprf ih, hyp (n .>= 0)]
+                             =: (n+1)*(n+1) + spec n
+                             =: spec (n+1)
                              =: qed
 
 -- | Prove that @11^n - 4^n@ is always divisible by 7.
@@ -161,18 +161,18 @@ elevenMinusFour = runKD $ do
 
    inductWith cvc5 "elevenMinusFour"
           (\(Forall @"n" n) -> n .>= 0 .=> emf n) $
-          \ih k -> [k .>= 0]
-                |- emf (k+1)
-                =: 7 `sDivides` (11 `pow` (k+1) - 4 `pow` (k+1))
-                ?? [hyp (k .>= 0), hprf (powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" k))]
-                =: 7 `sDivides` (11 * 11 `pow` k - 4 `pow` (k+1))
-                ?? [hyp (k .>= 0), hprf (powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" k))]
-                =: 7 `sDivides` (11 * 11 `pow` k - 4 * 4 `pow` k)
-                =: 7 `sDivides` (7 * 11 `pow` k + 4 * 11 `pow` k - 4 * 4 `pow` k)
-                =: 7 `sDivides` (7 * 11 `pow` k + 4 * (11 `pow` k - 4 `pow` k))
-                ?? [hyp (k .>= 0), hprf ih]
-                =: let x = some "x" (\v -> 7*v .== 11 `pow` k - 4 `pow` k)   -- Apply the IH and grab the witness for it
-                in 7 `sDivides` (7 * 11 `pow` k + 4 * 7 * x)
-                =: 7 `sDivides` (7 * (11 `pow` k + 4 * x))
+          \ih n -> [n .>= 0]
+                |- emf (n+1)
+                =: 7 `sDivides` (11 `pow` (n+1) - 4 `pow` (n+1))
+                ?? [hyp (n .>= 0), hprf (powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n))]
+                =: 7 `sDivides` (11 * 11 `pow` n - 4 `pow` (n+1))
+                ?? [hyp (n .>= 0), hprf (powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n))]
+                =: 7 `sDivides` (11 * 11 `pow` n - 4 * 4 `pow` n)
+                =: 7 `sDivides` (7 * 11 `pow` n + 4 * 11 `pow` n - 4 * 4 `pow` n)
+                =: 7 `sDivides` (7 * 11 `pow` n + 4 * (11 `pow` n - 4 `pow` n))
+                ?? [hyp (n .>= 0), hprf ih]
+                =: let x = some "x" (\v -> 7*v .== 11 `pow` n - 4 `pow` n)   -- Apply the IH and grab the witness for it
+                in 7 `sDivides` (7 * 11 `pow` n + 4 * 7 * x)
+                =: 7 `sDivides` (7 * (11 `pow` n + 4 * x))
                 =: sTrue
                 =: qed
