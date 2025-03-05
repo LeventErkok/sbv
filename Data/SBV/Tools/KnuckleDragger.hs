@@ -23,16 +23,16 @@ module Data.SBV.Tools.KnuckleDragger (
        , axiom
 
        -- * Basic proofs
-       , lemma,   lemmaWith
-       , theorem, theoremWith
+       , lemma, lemmaWith, theorem, theoremWith
 
        -- * Reasoning via calculation
-       , calc,    calcWith
-       , calcThm, calcThmWith
+       , calc, calcWith, calcThm, calcThmWith
 
-       -- * Reasoning via induction
-       , induct,    inductWith
-       , inductThm, inductThmWith
+       -- * Reasoning via regular induction
+       , induct,  inductWith, inductThm, inductThmWith
+
+       -- * Reasoning via strong induction
+       , sInduct, sInductWith, sInductThm, sInductThmWith
 
        -- * Creating instances of proofs
        , at, Inst(..)

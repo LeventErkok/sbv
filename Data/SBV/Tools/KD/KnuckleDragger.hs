@@ -32,8 +32,9 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
-       , calc,   calcWith,   calcThm,   calcThmWith
-       , induct, inductWith, inductThm, inductThmWith
+       ,    calc,    calcWith,    calcThm,    calcThmWith
+       ,  induct,  inductWith,  inductThm,  inductThmWith
+       , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
        , (|-), (⊢), (=:), (≡), (??), (⁇), cases, hyp, hprf, qed
@@ -277,6 +278,10 @@ mkCalcSteps (intros, xs) = case reverse xs of
                                                                      }
   where merge (SingleStep a by) (SingleStep b _) = (by, a .== b)
 
+-- | Chaining lemmas that depend on no quantified variables
+instance EqSymbolic z => CalcLemma SBool (SBool, [ProofStep z]) where
+   calcSteps result steps = pure (result, mkCalcSteps steps)
+
 -- | Chaining lemmas that depend on a single quantified variable.
 instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
@@ -318,43 +323,71 @@ data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
                                            , inductiveStep           :: SBool
                                            }
 
+-- | Are we doing strong induction or regular induction?
+data InductionStyle = RegularInduction | StrongInduction
+
 getInductionStrategySaturatables :: InductionStrategy -> [SBool]
-getInductionStrategySaturatables (InductionStrategy inductionIntros inductionBaseCase inductionProofSteps _ inductiveStep)
+getInductionStrategySaturatables (InductionStrategy inductionIntros
+                                                    inductionBaseCase
+                                                    inductionProofSteps
+                                                    _inductionBaseFailureMsg
+                                                    inductiveStep)
   = inductionIntros : inductionBaseCase : inductiveStep : proofStepSaturatables inductionProofSteps
 
 
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
-   induct :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
+   induct  :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
+
+   -- | Inductively prove a lemma, using strong induction, using the default config.
+   sInduct :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
    inductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
+   -- | Inductively prove a theorem, using strong induction. Same as 'sInduct', but tagged as a theorem, using the default config.
+   sInductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
+
    -- | Same as 'induct', but with the given solver configuration.
    inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
-   -- | Same as 'inductiveTheorem, but with the given solver configuration.
+   -- | Same as 'sInduct', but with the given solver configuration.
+   sInductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
+
+   -- | Same as 'inductThm', but with the given solver configuration.
    inductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
+
+   -- | Same as 'sInductThm', but with the given solver configuration.
+   sInductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    induct    nm p steps = getKDConfig >>= \cfg -> inductWith    cfg nm p steps
    inductThm nm p steps = getKDConfig >>= \cfg -> inductThmWith cfg nm p steps
-   inductWith           = inductGeneric False
-   inductThmWith        = inductGeneric True
+   inductWith           = inductGeneric RegularInduction False
+   inductThmWith        = inductGeneric RegularInduction True
+
+   sInduct    nm p steps = getKDConfig >>= \cfg -> sInductWith    cfg nm p steps
+   sInductThm nm p steps = getKDConfig >>= \cfg -> sInductThmWith cfg nm p steps
+   sInductWith           = inductGeneric StrongInduction False
+   sInductThmWith        = inductGeneric StrongInduction True
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
-   inductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
+   inductionStrategy :: Proposition a => InductionStyle -> a -> (Proof -> steps) -> Symbolic InductionStrategy
 
-   inductGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
-   inductGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
+   inductGeneric :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
+   inductGeneric style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
       kdSt <- getKDState
 
       liftIO $ runSMTWith cfg $ do
 
          qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-         message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ ": " ++ nm ++ "\n"
+         let strong = case style of
+                        RegularInduction -> ""
+                        StrongInduction  -> " (strong)"
+
+         message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ strong ++ ": " ++ nm ++ "\n"
 
          mbStartTime <- getTimeStampIf measureTime
 
@@ -363,7 +396,7 @@ class Inductive a steps where
                                     , inductionProofSteps
                                     , inductionBaseFailureMsg
                                     , inductiveStep
-                                    } <- inductionStrategy result steps
+                                    } <- inductionStrategy style result steps
 
          let stepHelpers = concatMap fst inductionProofSteps
 
@@ -431,13 +464,15 @@ class Inductive a steps where
 
 -- | Induction over 'SInteger'.
 instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate k = result (Forall k)
            nk          = symbolVal (Proxy @nk)
 
        k <- free nk
 
-       let ih = internalAxiom "IH" $ predicate k
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $                                                   result (Forall k)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) -> k' .<= k .=> result (Forall k')
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k
 
        pure InductionStrategy {
@@ -452,7 +487,7 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
 instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic z)
       => Inductive (Forall nk Integer -> Forall na a -> SBool)
                    (SInteger -> SBV a -> (SBool, [ProofStep z])) where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate k a = result (Forall k) (Forall a)
            nk            = symbolVal (Proxy @nk)
            na            = symbolVal (Proxy @na)
@@ -460,7 +495,9 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
        k <- free nk
        a <- free na
 
-       let ih = internalAxiom "IH" $ \a' -> result (Forall k) (a' :: Forall na a)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                 a' ->                           result (Forall k)  (a' :: Forall na a)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a
 
        pure InductionStrategy {
@@ -475,7 +512,7 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
 instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nk, EqSymbolic z)
       => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> SBool)
                    (SInteger -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate k a b = result (Forall k) (Forall a) (Forall b)
            nk              = symbolVal (Proxy @nk)
            na              = symbolVal (Proxy @na)
@@ -485,7 +522,9 @@ instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVa
        a <- free na
        b <- free nb
 
-       let ih = internalAxiom "IH" $ \a' b' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                 a' b' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b
 
        pure InductionStrategy {
@@ -501,7 +540,7 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
      => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
                   (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate k a b c = result (Forall k) (Forall a) (Forall b) (Forall c)
            nk                = symbolVal (Proxy @nk)
            na                = symbolVal (Proxy @na)
@@ -513,7 +552,9 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
        b <- free nb
        c <- free nc
 
-       let ih = internalAxiom "IH" $ \a' b' c' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                 a' b' c' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' c' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b c
 
        pure InductionStrategy {
@@ -528,7 +569,7 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
 instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol nk, EqSymbolic z)
       => Inductive (Forall nk Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
                    (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate k a b c d = result (Forall k) (Forall a) (Forall b) (Forall c) (Forall d)
            nk                  = symbolVal (Proxy @nk)
            na                  = symbolVal (Proxy @na)
@@ -542,7 +583,9 @@ instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol
        c <- free nc
        d <- free nd
 
-       let ih = internalAxiom "IH" $ \a' b' c' d' -> result (Forall k) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                 a' b' c' d' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' c' d' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b c d
 
        pure InductionStrategy {
@@ -562,28 +605,35 @@ singular n = case reverse n of
                's':_:_ -> init n
                _       -> n ++ "Elt"
 
+-- | Metric for induction. Currently we simply require the list we're assuming correctness for is shorter in length, which
+-- is a measure that is guarenteed >= 0. -- Later on, we might want to generalize this to a user given measure.
+smaller :: SymVal a => SList a -> SList a -> SBool
+smaller xs ys = SL.length xs .<= SL.length ys
+
 -- | Induction over 'SList'.
-instance (KnownSymbol nk, SymVal k, EqSymbolic z)
-      => Inductive (Forall nk [k] -> SBool)
-                   (SBV k -> SList k -> (SBool, [ProofStep z]))
+instance (KnownSymbol nx, SymVal x, EqSymbolic z)
+      => Inductive (Forall nx [x] -> SBool)
+                   (SBV x -> SList x -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
-       let predicate k = result (Forall k)
-           nks         = symbolVal (Proxy @nk)
-           nk          = singular nks
+   inductionStrategy style result steps = do
+       let predicate xs = result (Forall xs)
+           nxs          = symbolVal (Proxy @nx)
+           nx           = singular nxs
 
-       k  <- free nk
-       ks <- free nks
+       x  <- free nx
+       xs <- free nxs
 
-       let ih = internalAxiom "IH" $ predicate ks
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k ks
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $                                                        result (Forall xs)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) -> xs' `smaller` xs .=> result (Forall xs')
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
               , inductionBaseCase       = predicate SL.nil
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nks ++ " = []."
-              , inductiveStep           = observeIf not ("P(" ++ nk ++ ":" ++ nks ++ ")") (predicate (k SL..: ks))
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs))
               }
 
 -- | Induction over 'SList' taking an extra argument
@@ -591,7 +641,7 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
       => Inductive (Forall nx [x] -> Forall na a -> SBool)
                    (SBV x -> SList x -> SBV a -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate xs a = result (Forall xs) (Forall a)
            na             = symbolVal (Proxy @na)
            nxs            = symbolVal (Proxy @nx)
@@ -601,7 +651,9 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
        xs <- free nxs
        a  <- free na
 
-       let ih = internalAxiom "IH" $ \a' -> result (Forall xs) (a' :: Forall na a)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                              a' ->                      result (Forall xs)  (a' :: Forall na a)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a
 
        pure InductionStrategy {
@@ -617,7 +669,7 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
       => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> SBool)
                    (SBV x -> SList x -> SBV a -> SBV b -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate xs a b = result (Forall xs) (Forall a) (Forall b)
            na               = symbolVal (Proxy @na)
            nb               = symbolVal (Proxy @nb)
@@ -629,7 +681,9 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
        a  <- free na
        b  <- free nb
 
-       let ih = internalAxiom "IH" $ \a' b' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b
 
        pure InductionStrategy {
@@ -645,7 +699,7 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
       => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
                    (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate xs a b c = result (Forall xs) (Forall a) (Forall b) (Forall c)
            na                 = symbolVal (Proxy @na)
            nb                 = symbolVal (Proxy @nb)
@@ -659,7 +713,9 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
        b  <- free nb
        c  <- free nc
 
-       let ih = internalAxiom "IH" $ \a' b' c' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c
 
        pure InductionStrategy {
@@ -675,7 +731,7 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
       => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
                    (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate xs a b c d = result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)
            na                   = symbolVal (Proxy @na)
            nb                   = symbolVal (Proxy @nb)
@@ -691,7 +747,9 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
        c  <- free nc
        d  <- free nd
 
-       let ih = internalAxiom "IH" $ \a' b' c' d' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d
 
        pure InductionStrategy {
@@ -707,7 +765,7 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
       => Inductive (Forall nx [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
                    (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z]))
  where
-   inductionStrategy result steps = do
+   inductionStrategy style result steps = do
        let predicate xs a b c d e = result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
            na                     = symbolVal (Proxy @na)
            nb                     = symbolVal (Proxy @nb)
@@ -725,7 +783,9 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
        d  <- free nd
        e  <- free ne
 
-       let ih = internalAxiom "IH" $ \a' b' c' d' e' -> result (Forall xs) (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' e' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' e' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d e
 
        pure InductionStrategy {
