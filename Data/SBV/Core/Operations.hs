@@ -601,6 +601,7 @@ svAnd x y
           | a == falseSV || b == falseSV = Just falseSV
           | a == trueSV                  = Just b
           | b == trueSV                  = Just a
+          | a == b                       = Just a
           | True                         = Nothing
 
 -- | Bitwise or.
@@ -616,6 +617,7 @@ svOr x y
           | a == trueSV || b == trueSV = Just trueSV
           | a == falseSV               = Just b
           | b == falseSV               = Just a
+          | a == b                     = Just a
           | True                       = Nothing
 
 -- | Bitwise xor.
