@@ -7,6 +7,8 @@
 
   * Added support for 'partition' and 'splitAt' to Data.SBV.List
 
+  * KnuckleDragger: Renamed ? to ?? (which aligns better), and added unicode equivalent of it, named ⁇
+
   * Added more KnuckleDragger proof examples, including a proof of the functional insertion sort
     algorithm.
 
