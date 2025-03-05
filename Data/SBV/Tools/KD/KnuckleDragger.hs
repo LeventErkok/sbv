@@ -36,7 +36,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , induct, inductWith, inductThm, inductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (?), cases, hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (??), (⁇), cases, hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -844,36 +844,36 @@ data ProofStep a = SingleStep a [Helper]
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
   -- | Specify a helper for the given proof step
-  (?) :: a -> b -> ProofStep a
-  infixl 2 ?
+  (??) :: a -> b -> ProofStep a
+  infixl 2 ??
 
 -- | Giving just one proof as a helper.
 instance ProofHint a Proof where
-  a ? p = SingleStep a [HelperProof p]
+  a ?? p = SingleStep a [HelperProof p]
 
 -- | Giving just one boolean as a helper.
 instance ProofHint a SBool where
-  a ? p = SingleStep a [HelperAssum p]
+  a ?? p = SingleStep a [HelperAssum p]
 
 -- | Giving just one helper
 instance ProofHint a Helper where
-  a ? h = SingleStep a [h]
+  a ?? h = SingleStep a [h]
 
 -- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
-  a ? ps = SingleStep a (map HelperProof ps)
+  a ?? ps = SingleStep a (map HelperProof ps)
 
 -- | Giving a bunch of booleans as a helper.
 instance ProofHint a [SBool] where
-  a ? ps = SingleStep a (map HelperAssum ps)
+  a ?? ps = SingleStep a (map HelperAssum ps)
 
 -- | Giving a set of helpers
 instance ProofHint a [Helper] where
-  a ? hs = SingleStep a hs
+  a ?? hs = SingleStep a hs
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance ProofHint a String where
-  a ? _ = SingleStep a []
+  a ?? _ = SingleStep a []
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
@@ -920,6 +920,11 @@ infixl 0 |-
 (⊢) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
 (⊢) = (|-)
 infixl 0 ⊢
+
+-- | Alternative unicode for `??`:
+(⁇) :: ProofHint a b => a -> b -> ProofStep a
+(⁇) = (??)
+infixl 2 ⁇
 
 -- | Specifying a case-split
 cases :: String -> [SBool] -> Helper

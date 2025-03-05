@@ -122,10 +122,10 @@ kleeneProofs = runKD $ do
   -- This one requires a chain of reasoning: x* x* == x*
   star_star_1  <- calc "star_star_1"
                        (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x) $
-                       \x -> [] |- star x * star x                     ? unfold
-                                =: (1 + x * star x) * (1 + x * star x) ? kleene
-                                =: (1 + 1) + (x * star x + x * star x) ? par_idem
-                                =: 1 + x * star x                      ? unfold
+                       \x -> [] |- star x * star x                     ?? unfold
+                                =: (1 + x * star x) * (1 + x * star x) ?? kleene
+                                =: (1 + 1) + (x * star x + x * star x) ?? par_idem
+                                =: 1 + x * star x                      ?? unfold
                                 =: star x
                                 =: qed
 

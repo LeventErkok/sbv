@@ -77,7 +77,7 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- calc "oddSquaredIsOdd"
                              (\(Forall @"a" a) -> odd a .=> odd (sq a)) $
-                             \a -> [odd a] |- sq a                           ? odd a
+                             \a -> [odd a] |- sq a                           ?? odd a
                                            =: sq (2 * ((a-1) `sEDiv` 2) + 1)
                                            =: qed
 
@@ -90,7 +90,7 @@ sqrt2IsIrrational = runKD $ do
     -- Prove that if @a@ is an even number, then its square is four times the square of another.
     evenSquaredIsMult4 <- calc "evenSquaredIsMult4"
                                 (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a) $
-                                \a -> [even a] |- sq a                   ? even a
+                                \a -> [even a] |- sq a                   ?? even a
                                                =: sq (2 * (a `sEDiv` 2))
                                                =: qed
 
