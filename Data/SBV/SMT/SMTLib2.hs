@@ -37,7 +37,7 @@ import Data.SBV.Core.Kind (smtType, needsFlattening, expandKinds)
 import Data.SBV.SMT.Utils
 import Data.SBV.Control.Types
 
-import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString
+import Data.SBV.Core.Symbolic ( QueryContext(..), SetOp(..), getUserName', getSV, regExpToSMTString, NROp(..)
                               , SMTDef(..), ResultInp(..), ProgInfo(..), SpecialRelOp(..), SMTLambda(..)
                               )
 
@@ -995,6 +995,14 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         addRM s = s ++ " " ++ smtRoundingMode rm
 
+        isZ3 = case name (solver cfg) of
+                 Z3 -> True
+                 _  -> False
+
+        isCVC5 = case name (solver cfg) of
+                   CVC5 -> True
+                   _    -> False
+
         hd _ (a:_) = a
         hd w []    = error $ "Impossible: " ++ w ++ ": Received empty list of args!"
 
@@ -1229,6 +1237,13 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
 
         sh (SBVApp (IEEEFP (FP_Cast kFrom kTo m)) args) = handleFPCast kFrom kTo (cvtSV m) (unwords (map cvtSV args))
         sh (SBVApp (IEEEFP w                    ) args) = "(" ++ show w ++ " " ++ unwords (map cvtSV args) ++ ")"
+
+        -- Some non-linear operators are supported by z3/CVC5 specifically, so do the custom translation Otherwise
+        -- we pass them along.
+        sh (SBVApp (NonLinear NR_Sqrt) [a])    | isZ3   = "(^ "    ++ cvtSV a ++ " 0.5)"
+                                               | isCVC5 = "(sqrt " ++ cvtSV a ++     ")"
+
+        sh (SBVApp (NonLinear NR_Pow)  [a, b]) | isZ3 || isCVC5  = "(^  " ++ cvtSV a ++ " " ++ cvtSV b ++ ")"
 
         sh (SBVApp (NonLinear w) args) = "(" ++ show w ++ " " ++ unwords (map cvtSV args) ++ ")"
 
