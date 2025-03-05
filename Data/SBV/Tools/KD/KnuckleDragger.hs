@@ -224,7 +224,7 @@ class CalcLemma a steps where
                                                (sAnd as)
                                                []
                                                ["", show i]
-                                               (Just [nm, show i])
+                                               (Just [nm, show i, "Assumptions"])
                                                Nothing
                                                (finish [] [])
 
@@ -391,7 +391,7 @@ class Inductive a steps where
                                                 (sAnd as)
                                                 []
                                                 ["", show i]
-                                                (Just [nm, show i])
+                                                (Just [nm, show i, "Assumptions"])
                                                 Nothing
                                                 (finish [] [])
 
