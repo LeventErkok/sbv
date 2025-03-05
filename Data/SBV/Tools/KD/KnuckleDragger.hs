@@ -334,31 +334,46 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductiveStep)
   = inductionIntros : inductionBaseCase : inductiveStep : proofStepSaturatables inductionProofSteps
 
-
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
    -- | Inductively prove a lemma, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    induct  :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Inductively prove a lemma, using strong induction, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    sInduct :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Inductively prove a theorem. Same as 'induct', but tagged as a theorem, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    inductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Inductively prove a theorem, using strong induction. Same as 'sInduct', but tagged as a theorem, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Same as 'induct', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    inductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Same as 'sInduct', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Same as 'inductThm', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    inductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    -- | Same as 'sInductThm', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
    induct    nm p steps = getKDConfig >>= \cfg -> inductWith    cfg nm p steps
