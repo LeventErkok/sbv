@@ -598,7 +598,7 @@ declSort :: (String, Maybe [String]) -> [String]
 declSort (s, _)
   | s == "RoundingMode" -- built-in-sort; so don't declare.
   = []
-declSort (s, Nothing) = [ "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort." 
+declSort (s, Nothing) = [ "(declare-sort " ++ s ++ " 0)  ; N.B. Uninterpreted sort."
                         , "(declare-fun " ++ witnessName s ++ " () " ++ s ++ ")"
                         ]
 declSort (s, Just fs) = [ "(declare-datatypes ((" ++ s ++ " 0)) ((" ++ unwords (map (\c -> "(" ++ c ++ ")") fs) ++ ")))"
@@ -799,7 +799,7 @@ declConst cfg (s, c)
 -- Make a function equality of nm against the internal function fun
 mkRelEq :: String -> (String, String) -> Kind -> String
 mkRelEq nm (fun, order) ak = res
-   where lhs = "(" ++ nm ++ " x y)" 
+   where lhs = "(" ++ nm ++ " x y)"
          rhs = "((_ " ++ fun ++ " " ++ order ++ ") x y)"
          tk  = smtType ak
          res = "(forall ((x " ++ tk ++ ") (y " ++ tk ++ ")) (= " ++ lhs ++ " " ++ rhs ++ "))"
