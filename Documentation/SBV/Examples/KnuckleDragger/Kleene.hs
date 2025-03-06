@@ -35,13 +35,13 @@ mkUninterpretedSort ''Kleene
 
 -- | Star operator over kleene algebras. We're leaving this uninterpreted.
 star :: SKleene -> SKleene
-star = uninterpret "star"
+star = uninterpret "STAR"
 
 -- | The 'Num' instance for Kleene makes it easy to write regular expressions
 -- in the more familiar form.
 instance Num SKleene where
-  (+) = uninterpret "par"
-  (*) = uninterpret "seq"
+  (+) = uninterpret "PAR"
+  (*) = uninterpret "SEQ"
 
   abs    = error "SKleene: not defined: abs"
   signum = error "SKleene: not defined: signum"
