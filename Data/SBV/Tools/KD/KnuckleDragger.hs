@@ -811,6 +811,37 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d e)
               }
 
+-- | Induction over two lists, simultaneously
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys = result (Forall xs) (Forall ys)
+           nxs             = symbolVal (Proxy @nx)
+           nx              = singular nxs
+           nys             = symbolVal (Proxy @ny)
+           ny              = singular nys
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $                                                                                                           result (Forall xs)  (Forall ys)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys')
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil .&& predicate SL.nil (y SL..: ys) .&& predicate (x SL..: xs) SL.nil
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys))
+              }
+
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
 
@@ -857,6 +888,7 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
   at = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
+-- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
 instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
 instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                                                  Nothing -> cantInstantiate
