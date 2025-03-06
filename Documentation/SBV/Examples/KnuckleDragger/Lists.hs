@@ -1301,6 +1301,7 @@ drop_append = runKD $
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Step: sumHalves.Step                  Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof
@@ -1336,6 +1337,8 @@ sumHalves = runKD $ do
                                =: sum f + sum s
                                ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
                                =: sum (f ++ s)
+                               ?? "simplify"
+                               =: sum (x .: xs)
                                =: qed
 
 {- HLint ignore reverseReverse "Redundant reverse" -}
