@@ -61,7 +61,7 @@ oddSequence1 = runKD $ do
           \ih n -> [n .>= 0] |- 2 `sDivides` s (n+1)
                              ?? [cases "n" [n .< 2],  hyp (n .>= 0)]
                              =: 2 `sDivides` (s (n-1) + 2 * s n)
-                             =: 2 `sDivides` (s (n-1))
+                             =: 2 `sDivides` s (n-1)
                              ?? ih `at` Inst @"n" (n - 1)
                              =: sFalse
                              =: qed
