@@ -158,6 +158,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.InsertionSort
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Lists
+                  , Documentation.SBV.Examples.KnuckleDragger.MergeSort
                   , Documentation.SBV.Examples.KnuckleDragger.Numeric
                   , Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
