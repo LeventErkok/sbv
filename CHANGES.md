@@ -10,6 +10,7 @@
   * KnuckleDragger:
       - Renamed ? to ?? (which aligns better), and added unicode equivalent of it, named ⁇
       - Added strong-induction as a proof-method, with examples for both numeric and list examples
+      - Added a case-splitting tactic for calculational style proofs
       - Added a proof of the (functional) insertion sort algorithm
 
 ### Version 11.1, 2025-02-21
