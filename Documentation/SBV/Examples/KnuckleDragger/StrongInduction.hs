@@ -9,6 +9,7 @@
 -- Examples of strong induction on integers.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
 {-# LANGUAGE TypeApplications #-}
@@ -17,8 +18,18 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.StrongInduction where
 
+import Prelude hiding (length, null, tail)
+
 import Data.SBV
+import Data.SBV.List
 import Data.SBV.Tools.KnuckleDragger
+
+#ifndef HADDOCK
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception
+#endif
 
 -- | Prove that the sequence @1@, @3@, @S_{k-2} + 2 S_{k-1}@ is always odd.
 --
@@ -96,3 +107,28 @@ oddSequence2 = runKD $ do
                              =: focus (2 * n + 2 + 1)
                              =: focus (2 * (n + 1) + 1)
                              =: qed
+
+-- | For strong induction to work, We have to instantiate the proof at a "smaller" value. This
+-- example demonstrates what happens if we don't. We have:
+--
+-- >>> won'tProve `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): lengthGood
+--   Base: lengthGood.Base                 Q.E.D.
+--   Step: 1
+-- *** Failed to prove lengthGood.1.
+-- <BLANKLINE>
+-- *** Solver reported: canceled
+won'tProve :: IO ()
+won'tProve = runKD $ do
+   let len :: SList Integer -> SInteger
+       len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
+
+   -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
+   _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
+                (\(Forall @"xs" xs) -> len xs .== length xs) $
+                \ih x xs -> [] |- len (x .: xs)
+                               -- incorrectly instantiate the IH at x .: xs
+                               ?? ih `at` Inst @"xs" (x .: xs)
+                               =: length (x .: xs)
+                               =: qed
+   pure ()
