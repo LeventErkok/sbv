@@ -1341,6 +1341,50 @@ sumHalves = runKD $ do
                                =: sum (x .: xs)
                                =: qed
 
+-- * Zip
+
+-- | @length xs = length ys ⟹ map fst (zip xs ys) = xs@
+--
+-- >>> map_fst_zip
+-- Inductive lemma: map_fst_zip
+--   Base: map_fst_zip.Base                Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: map_fst_zip.Step                Q.E.D.
+-- [Proven] map_fst_zip
+map_fst_zip :: IO Proof
+map_fst_zip = runKD $
+   induct "map_fst_zip"
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
+          \ih (x :: SA) xs (y :: SB) ys -> [length (x .: xs) .== length (y .: ys)]
+                                        |- map fst (zip (x .: xs) (y .: ys))
+                                        =: map fst (tuple (x, y) .: zip xs ys)
+                                        =: fst (tuple (x, y)) .: map fst (zip xs ys)
+                                        =: x .: map fst (zip xs ys)
+                                        ?? [hprf ih, hyp (length xs .== length ys)]
+                                        =: x .: xs
+                                        =: qed
+
+{-
+lemma map_snd_zip[simp]:
+  "length xs = length ys ⟹ map snd (zip xs ys) = ys"
+by (induct rule:list_induct2, simp_all)
+
+lemma map_fst_zip_take:
+  "map fst (zip xs ys) = take (min (length xs) (length ys)) xs"
+by (induct xs ys rule: list_induct2') simp_all
+
+lemma map_snd_zip_take:
+  "map snd (zip xs ys) = take (min (length xs) (length ys)) ys"
+by (induct xs ys rule: list_induct2') simp_all
+
+lemma map2_map_map: "map2 h (map f xs) (map g xs) = map (λx. h (f x) (g x)) xs"
+by (induction xs) (auto)
+-}
+
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
