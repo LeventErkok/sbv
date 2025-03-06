@@ -1368,11 +1368,32 @@ map_fst_zip = runKD $
                                         =: x .: xs
                                         =: qed
 
-{-
-lemma map_snd_zip[simp]:
-  "length xs = length ys ⟹ map snd (zip xs ys) = ys"
-by (induct rule:list_induct2, simp_all)
+-- | @length xs = length ys ⟹ map snd (zip xs ys) = xs@
+--
+-- >>> map_snd_zip
+-- Inductive lemma: map_snd_zip
+--   Base: map_snd_zip.Base                Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: map_snd_zip.Step                Q.E.D.
+-- [Proven] map_snd_zip
+map_snd_zip :: IO Proof
+map_snd_zip = runKD $
+   induct "map_snd_zip"
+          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
+          \ih (x :: SA) xs (y :: SB) ys -> [length (x .: xs) .== length (y .: ys)]
+                                        |- map snd (zip (x .: xs) (y .: ys))
+                                        =: map snd (tuple (x, y) .: zip xs ys)
+                                        =: snd (tuple (x, y)) .: map snd (zip xs ys)
+                                        =: y .: map snd (zip xs ys)
+                                        ?? [hprf ih, hyp (length xs .== length ys)]
+                                        =: y .: ys
+                                        =: qed
 
+{-
 lemma map_fst_zip_take:
   "map fst (zip xs ys) = take (min (length xs) (length ys)) xs"
 by (induct xs ys rule: list_induct2') simp_all
