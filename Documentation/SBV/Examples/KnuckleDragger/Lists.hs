@@ -1283,6 +1283,61 @@ drop_append = runKD $
                    (\(Forall @"n" n) (Forall @"xs" (xs :: SList A)) (Forall @"ys" ys) -> drop n (xs ++ ys) .== drop n xs ++ drop (n - length xs) ys)
                    []
 
+-- * Summing via halving
+
+-- | We prove that summing a list can be done by halving the list, summing parts, and adding the results. The proof uses
+-- strong induction. We have:
+--
+-- >>> sumHalves
+-- Inductive lemma: sumAppend
+--   Base: sumAppend.Base                  Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: sumAppend.Step                  Q.E.D.
+-- Inductive lemma (strong): sumHalves
+--   Base: sumHalves.Base                  Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: sumHalves.Step                  Q.E.D.
+-- [Proven] sumHalves
+sumHalves :: IO Proof
+sumHalves = runKD $ do
+
+    let halvingSum :: SList Integer -> SInteger
+        halvingSum = smtFunction "halvingSum" $ \xs -> ite (null xs .|| null (tail xs))
+                                                           (sum xs)
+                                                           (let (f, s) = splitAt (length xs `sDiv` 2) xs
+                                                            in halvingSum f + halvingSum s)
+
+        sum :: SList Integer -> SInteger
+        sum = smtFunction "sum" $ \xs -> ite (null xs) 0 (head xs + sum (tail xs))
+
+    helper <- induct "sumAppend"
+                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> sum (xs ++ ys) .== sum xs + sum ys) $
+                     \ih x xs ys -> [] |- sum (x .: xs ++ ys)
+                                       =: x + sum (xs ++ ys)
+                                       ?? ih
+                                       =: x + sum xs + sum ys
+                                       =: sum (x .: xs) + sum ys
+                                       =: qed
+
+    -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
+    sInductWith cvc5 "sumHalves"
+                (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
+                \ih x xs -> [] |- halvingSum (x .: xs)
+                               =: let (f, s) = splitAt (length (x .: xs) `sDiv` 2) (x .: xs)
+                                  in halvingSum f + halvingSum s
+                               ?? ih `at` Inst @"xs" f
+                               =: sum f + halvingSum s
+                               ?? ih `at` Inst @"xs" s
+                               =: sum f + sum s
+                               ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
+                               =: sum (f ++ s)
+                               =: qed
+
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
 {- HLint ignore foldrMapFusion "Fuse foldr/map"    -}
