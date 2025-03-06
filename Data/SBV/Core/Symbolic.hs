@@ -1416,6 +1416,14 @@ newUninterpreted st uiName mbArgNames t uiCode = do
                       UIPrefix n | not (nm `isPrefixOf` n) -> " (Given prefix: " ++ n ++ ")"
                       _                                    -> ""
 
+  -- Check if reserved:
+  when (isReserved nm) $
+      error $ unlines [ ""
+                      , "*** Data.SBV: User given name " ++ show nm ++ " is a reserved name in SMTLib."
+                      , "***"
+                      , "*** Please use a different name to avoid collisions."
+                      ]
+
   isCurried <- case uiCode of
                  UINone c -> pure c
                  UISMT d  -> do modifyState st rDefns (\defs -> (d, t) : filter (\(o, _) -> smtDefGivenName o /= Just nm) defs)
