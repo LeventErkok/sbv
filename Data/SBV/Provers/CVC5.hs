@@ -37,7 +37,6 @@ cvc5 = SMTSolver {
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
-                              , supportsInt2bv             = True
                               , supportsReals              = True  -- Not quite the same capability as Z3; but works more or less..
                               , supportsApproxReals        = False
                               , supportsDeltaSat           = Nothing

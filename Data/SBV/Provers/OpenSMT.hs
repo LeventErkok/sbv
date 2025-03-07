@@ -33,7 +33,6 @@ openSMT = SMTSolver {
                               , supportsBitVectors         = False
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = True
-                              , supportsInt2bv             = False
                               , supportsReals              = True
                               , supportsApproxReals        = False
                               , supportsDeltaSat           = Nothing

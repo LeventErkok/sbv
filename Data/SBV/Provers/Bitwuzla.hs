@@ -33,7 +33,6 @@ bitwuzla = SMTSolver {
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = True
                               , supportsUnboundedInts      = False
-                              , supportsInt2bv             = False
                               , supportsReals              = False
                               , supportsApproxReals        = False
                               , supportsDeltaSat           = Nothing
