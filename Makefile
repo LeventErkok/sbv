@@ -70,41 +70,18 @@ hackage-docs:
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
 
 ghci:
+ifdef TGT
+	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}
+else
 	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
-
-ghci_withTests:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages --enable-multi-repl sbv:SBVTest lib:sbv
+endif
 
 ghcid:
 ifdef TGT
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
 else
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
+	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
 endif
-
-ghci_SBVTest:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
-
-ghcid_SBVTest:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest"
-
-ghci_SBVDocTest:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest
-
-ghcid_SBVDocTest:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest"
-
-ghci_HLint:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint
-
-ghcid_HLint:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint"
-
-ghci_Bench:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench
-
-ghcid_Bench:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench"
 
 bench:
 	cabal new-bench
