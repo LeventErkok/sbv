@@ -18,7 +18,7 @@ solverName :: SMTConfig -> String
 solverName = show . name . solver
 
 main :: IO ()
-main = do let allSolvers = map (\s -> (solverName s, s)) (map defaultSolverConfig [minBound .. maxBound])
+main = do let allSolvers = map ((\s -> (solverName s, s)) . defaultSolverConfig) [minBound .. maxBound]
 
           args <- getArgs
 

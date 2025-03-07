@@ -1460,3 +1460,4 @@ map_snd_zip_take = runKD $ do
 {- HLint ignore module         "Use camelCase"     -}
 {- HLint ignore module         "Use first"         -}
 {- HLint ignore module         "Use second"        -}
+{- HLint ignore module         "Use zipWith"       -}
