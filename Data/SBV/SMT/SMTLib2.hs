@@ -22,7 +22,6 @@ import Crypto.Hash.SHA512 (hash)
 import qualified Data.ByteString.Base16 as B
 import qualified Data.ByteString.Char8  as BC
 
-import Data.Bits  (bit)
 import Data.List  (intercalate, partition, nub, elemIndex)
 import Data.Maybe (listToMaybe, catMaybes)
 
@@ -973,7 +972,6 @@ getTable m i
 cvtExp :: SMTConfig -> ProgInfo -> SolverCapabilities -> RoundingMode -> TableMap -> SBVExpr -> String
 cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
   where hasPB       = supportsPseudoBooleans caps
-        hasInt2bv   = supportsInt2bv         caps
         hasDistinct = supportsDistinct       caps
         specialRels = progSpecialRels        curProgInfo
 
@@ -1164,7 +1162,7 @@ cvtExp cfg curProgInfo caps rm tableMap expr@(SBVApp _ arguments) = sh expr
                 le0  = "(" ++ less ++ " " ++ cvtSV i ++ " " ++ mkCnst 0 ++ ")"
                 gtl  = "(" ++ leq  ++ " " ++ mkCnst l ++ " " ++ cvtSV i ++ ")"
 
-        sh (SBVApp (KindCast f t) [a]) = handleKindCast hasInt2bv f t (cvtSV a)
+        sh (SBVApp (KindCast f t) [a]) = handleKindCast f t (cvtSV a)
 
         sh (SBVApp (ArrayLambda s) [])        = show s
         sh (SBVApp ReadArray       [a, i])    = "(select " ++ cvtSV a ++ " " ++ cvtSV i ++ ")"
@@ -1614,20 +1612,21 @@ shft oW oS x c = "(" ++ o ++ " " ++ cvtSV x ++ " " ++ cvtSV c ++ ")"
    where o = if hasSign x then oS else oW
 
 -- Various casts
-handleKindCast :: Bool -> Kind -> Kind -> String -> String
-handleKindCast hasInt2bv kFrom kTo a
+handleKindCast :: Kind -> Kind -> String -> String
+handleKindCast kFrom kTo a
   | kFrom == kTo
   = a
   | True
   = case kFrom of
       KBounded s m -> case kTo of
                         KBounded _ n -> fromBV (if s then signExtend else zeroExtend) m n
-                        KUnbounded   -> b2i s m
+                        KUnbounded   -> if s then "(sbv_to_int " ++ a ++ ")"
+                                             else "(ubv_to_int " ++ a ++ ")"
                         _            -> tryFPCast
 
       KUnbounded   -> case kTo of
                         KReal        -> "(to_real " ++ a ++ ")"
-                        KBounded _ n -> i2b n
+                        KBounded _ n -> "((_ int_to_bv " ++ show n ++ ") " ++ a ++ ")"
                         _            -> tryFPCast
 
       KReal        -> case kTo of
@@ -1649,38 +1648,9 @@ handleKindCast hasInt2bv kFrom kTo a
          | m == n = a
          | True   = extract (n - 1)
 
-        b2i False _ = "(bv2nat " ++ a ++ ")"
-        b2i True  1 = "(ite (= " ++ a ++ " #b0) 0 (- 1))"
-        b2i True  m = "(ite (= " ++ msb ++ " #b0" ++ ") " ++ ifPos ++ " " ++ ifNeg ++ ")"
-          where offset :: Integer
-                offset = 2^(m-1)
-                rest   = extract (m - 2)
-
-                msb    = let top = show (m-1) in "((_ extract " ++ top ++ " " ++ top ++ ") " ++ a ++ ")"
-                ifPos  = "(bv2nat " ++ rest ++")"
-                ifNeg  = "(- " ++ ifPos ++ " " ++ show offset ++ ")"
-
         signExtend i = "((_ sign_extend " ++ show i ++  ") "  ++ a ++ ")"
         zeroExtend i = "((_ zero_extend " ++ show i ++  ") "  ++ a ++ ")"
         extract    i = "((_ extract "     ++ show i ++ " 0) " ++ a ++ ")"
-
-        -- Some solvers support int2bv, but not all. So, we use a capability to determine.
-        --
-        -- NB. The "manual" implementation works regardless n < 0 or not, because the first thing we
-        -- do is to compute "reduced" to bring it down to the correct range. It also works
-        -- regardless were mapping to signed or unsigned bit-vector; because the representation
-        -- is the same.
-        i2b n
-          | hasInt2bv
-          = "((_ int2bv " ++ show n ++ ") " ++ a ++ ")"
-          | True
-          = "(let (" ++ reduced ++ ") (let (" ++ defs ++ ") " ++ body ++ "))"
-          where b i      = show (bit i :: Integer)
-                reduced  = "(__a (mod " ++ a ++ " " ++ b n ++ "))"
-                mkBit 0  = "(__a0 (ite (= (mod __a 2) 0) #b0 #b1))"
-                mkBit i  = "(__a" ++ show i ++ " (ite (= (mod (div __a " ++ b i ++ ") 2) 0) #b0 #b1))"
-                defs     = unwords (map mkBit [0 .. n - 1])
-                body     = foldr1 (\c r -> "(concat " ++ c ++ " " ++ r ++ ")") ["__a" ++ show i | i <- [n-1, n-2 .. 0]]
 
 -- Translation of pseudo-booleans, in case the solver supports them
 handlePB :: PBOp -> [String] -> String
