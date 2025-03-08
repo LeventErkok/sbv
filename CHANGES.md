@@ -1,6 +1,10 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 11.2.5, Not yet released
+
+  * New dev version
+
 ### Version 11.2, 2025-03-08
 
   * Renamed the all-sat partitioning function from 'partition' to 'allSatPartiton'
