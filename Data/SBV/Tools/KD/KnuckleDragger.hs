@@ -842,6 +842,196 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys))
               }
 
+-- | Induction over two lists, simultaneously, taking one extra argument
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> Forall na a -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> SBV a -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys a = result (Forall xs) (Forall ys) (Forall a)
+           nxs               = symbolVal (Proxy @nx)
+           nx                = singular nxs
+           nys               = symbolVal (Proxy @ny)
+           ny                = singular nys
+           na                = symbolVal (Proxy @na)
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       a  <- free na
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a)
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil a .&& predicate SL.nil (y SL..: ys) a .&& predicate (x SL..: xs) SL.nil a
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a)
+              }
+
+-- | Induction over two lists, simultaneously, taking two extra arguments
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> Forall na a -> Forall nb b -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> SBV a -> SBV b -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys a b = result (Forall xs) (Forall ys) (Forall a) (Forall b)
+           nxs                 = symbolVal (Proxy @nx)
+           nx                  = singular nxs
+           nys                 = symbolVal (Proxy @ny)
+           ny                  = singular nys
+           na                  = symbolVal (Proxy @na)
+           nb                  = symbolVal (Proxy @nb)
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       a  <- free na
+       b  <- free nb
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b)
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil a b .&& predicate SL.nil (y SL..: ys) a b .&& predicate (x SL..: xs) SL.nil a b
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b)
+              }
+
+-- | Induction over two lists, simultaneously, taking three extra arguments
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> Forall na a -> Forall nb b -> Forall nc c -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys a b c = result (Forall xs) (Forall ys) (Forall a) (Forall b) (Forall c)
+           nxs                   = symbolVal (Proxy @nx)
+           nx                    = singular nxs
+           nys                   = symbolVal (Proxy @ny)
+           ny                    = singular nys
+           na                    = symbolVal (Proxy @na)
+           nb                    = symbolVal (Proxy @nb)
+           nc                    = symbolVal (Proxy @nc)
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil a b c .&& predicate SL.nil (y SL..: ys) a b c .&& predicate (x SL..: xs) SL.nil a b c
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c)
+              }
+
+-- | Induction over two lists, simultaneously, taking four extra arguments
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys a b c d = result (Forall xs) (Forall ys) (Forall a) (Forall b) (Forall c) (Forall d)
+           nxs                     = symbolVal (Proxy @nx)
+           nx                      = singular nxs
+           nys                     = symbolVal (Proxy @ny)
+           ny                      = singular nys
+           na                      = symbolVal (Proxy @na)
+           nb                      = symbolVal (Proxy @nb)
+           nc                      = symbolVal (Proxy @nc)
+           nd                      = symbolVal (Proxy @nd)
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+       d  <- free nd
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil a b c d .&& predicate SL.nil (y SL..: ys) a b c d .&& predicate (x SL..: xs) SL.nil a b c d
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d)
+              }
+
+-- | Induction over two lists, simultaneously, taking four extra arguments
+instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
+      => Inductive (Forall nx [x] -> Forall ny [y] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
+                   (SBV x -> SList x -> SBV y -> SList y -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z]))
+  where
+   inductionStrategy style result steps = do
+       let predicate xs ys a b c d e = result (Forall xs) (Forall ys) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)
+           nxs                       = symbolVal (Proxy @nx)
+           nx                        = singular nxs
+           nys                       = symbolVal (Proxy @ny)
+           ny                        = singular nys
+           na                        = symbolVal (Proxy @na)
+           nb                        = symbolVal (Proxy @nb)
+           nc                        = symbolVal (Proxy @nc)
+           nd                        = symbolVal (Proxy @nd)
+           ne                        = symbolVal (Proxy @ne)
+
+       x  <- free nx
+       xs <- free nxs
+
+       y  <- free ny
+       ys <- free nys
+
+       a  <- free na
+       b  <- free nb
+       c  <- free nc
+       d  <- free nd
+       e  <- free ne
+
+       let ih = case style of
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' e' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' e' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d e
+
+       pure InductionStrategy {
+                inductionIntros         = calcIntros
+              , inductionBaseCase       = predicate SL.nil SL.nil a b c d e .&& predicate SL.nil (y SL..: ys) a b c d e .&& predicate (x SL..: xs) SL.nil a b c d e
+              , inductionProofSteps     = calcProofSteps
+              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
+              , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d e)
+              }
+
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
 
