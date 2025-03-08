@@ -71,9 +71,13 @@ module Data.SBV.Control (
      , SMTOption(..)
      ) where
 
-import Data.SBV.Core.Symbolic (Symbolic, QueryContext(..))
+import Data.SBV.Core.Symbolic (Symbolic, QueryContext(..), Query, MonadQuery(..), SMTConfig(..))
 
-import Data.SBV.Trans.Control hiding (query)
+import Data.SBV.Control.BaseIO
+import Data.SBV.Control.Types
+import Data.SBV.Control.Query ((|->))
+
+import Data.SBV.Utils.ExtractIO (ExtractIO(..))
 
 import qualified Data.SBV.Control.Utils as Trans
 

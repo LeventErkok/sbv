@@ -36,7 +36,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 
 import Data.SBV.Core.Data hiding (None)
 import Data.SBV.Core.Symbolic (isEmptyModel)
-import Data.SBV.Control hiding (getProof)
+import Data.SBV.Trans.Control hiding (getProof)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
