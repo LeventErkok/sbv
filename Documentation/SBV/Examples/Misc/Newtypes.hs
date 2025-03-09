@@ -32,7 +32,7 @@ import qualified Data.SBV.Internals as SI
 -- | A t'Metres' is a newtype wrapper around 'Integer'.
 newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord)
 
--- | Symbolic version of 'Metres'.
+-- | Symbolic version of t'Metres'.
 type SMetres   = SBV Metres
 
 -- | To use t'Metres' symbolically, we associate it with the underlying symbolic
