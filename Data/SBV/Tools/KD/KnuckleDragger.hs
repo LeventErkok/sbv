@@ -1184,7 +1184,7 @@ type family ChainsTo a where
 (=:) = chain
 infixr 1 =:
 
--- | Unicode alternative for `=:`:
+-- | Unicode alternative for `=:`.
 (≡) :: ChainStep a (ChainsTo a) =>  a -> ChainsTo a -> ChainsTo a
 (≡) = (=:)
 infixr 1 ≡
@@ -1213,12 +1213,12 @@ qed = []
 bs |- ps = (sAnd bs, ps)
 infixl 0 |-
 
--- | Alternative unicode for `|-`:
+-- | Alternative unicode for `|-`.
 (⊢) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
 (⊢) = (|-)
 infixl 0 ⊢
 
--- | Alternative unicode for `??`:
+-- | Alternative unicode for `??`.
 (⁇) :: ProofHint a b => a -> b -> ProofStep a
 (⁇) = (??)
 infixl 2 ⁇
