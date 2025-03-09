@@ -425,7 +425,7 @@ module Data.SBV (
   , some
 
   -- * Queriable values
-  , Queriable(..), freshVar, freshVar_, getValue
+  , Queriable(..), freshVar, freshVar_
 
   -- * Module exports
   -- $moduleExportIntro

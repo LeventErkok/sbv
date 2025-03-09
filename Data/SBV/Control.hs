@@ -27,6 +27,9 @@ module Data.SBV.Control (
      -- ** Extracting the unsat core
      , getUnsatCore
 
+     -- ** Getting the model value for a symbolic variable
+     , getValue
+
      -- ** Extracting a proof
      , getProof
 
