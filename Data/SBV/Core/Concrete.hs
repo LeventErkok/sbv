@@ -192,7 +192,7 @@ instance Ord CVal where
                                                                  ]
                                             else cvRank a `compare` cvRank b
 
--- | t'CV' represents a concrete word of a fixed size:
+-- | A t'CV' represents a concrete word of a fixed size:
 -- For signed words, the most significant digit is considered to be the sign.
 data CV = CV { _cvKind  :: !Kind
              , cvVal    :: !CVal
@@ -515,7 +515,7 @@ randomCVal k =
     bounds False w = (0, 2^w - 1)
     bounds True  w = (-x, x-1) where x = 2^(w-1)
 
--- | Generate a random constant value (t'CV') of the correct kind.
+-- | Generate a random constant value (i.e., t'CV') of the correct kind.
 randomCV :: Kind -> IO CV
 randomCV k = CV k <$> randomCVal k
 
