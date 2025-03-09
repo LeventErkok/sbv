@@ -158,7 +158,7 @@ hence both disjuncts are false. Thus, the alleged conjecture is not an equivalen
 
 -- * Exists unique
 {- $existsUnique
-We can use the 'ExistsUnique' constructor to indicate a value must exists uniquely. For instance,
+We can use the t'ExistsUnique' constructor to indicate a value must exists uniquely. For instance,
 we can prove that there is an element in 'E' that's less than 'C', but it's not unique. However,
 there's a unique element that's less than all the elements in 'E':
 

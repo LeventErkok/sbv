@@ -24,7 +24,7 @@
 -- And similarly, 'sat' finds a satisfying instance. The types involved are:
 --
 -- @
---     'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
+--     'prove' :: 'Provable' a => a -> 'IO' t'ThmResult'
 --     'sat'   :: 'Data.SBV.Provers.Satisfiable' a => a -> 'IO' t'SatResult'
 -- @
 --
@@ -993,8 +993,8 @@ your other symbolic computations.  See the following files demonstrating reasoni
    * "Documentation.SBV.Examples.Puzzles.Rabbits"
    * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
 
-SBV also supports the constructors 'ExistsUnique' to create unique existentials, in addition to
-'ForallN' and 'ExistsN' for creating multiple variables at the same time.
+SBV also supports the constructors t'ExistsUnique' to create unique existentials, in addition to
+t'ForallN' and t'ExistsN' for creating multiple variables at the same time.
 
 In general, SBV will not display the values of quantified variables for a satisfying instance.
 For a satisfiability problem, you can apply skolemization manually to have these values
@@ -1774,7 +1774,7 @@ class Queriable m a where
   project :: a -> QueryT m (QueryResult a)
 
   -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
-  -- via the 'QueryT' monad transformer.
+  -- via the t'QueryT' monad transformer.
   embed   :: QueryResult a -> QueryT m a
 
   default project :: (a ~ t e, QueryResult (t e) ~ t (QueryResult e), Traversable t, Monad m, Queriable m e) =>  a -> QueryT m (QueryResult a)

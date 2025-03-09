@@ -48,7 +48,7 @@ data FibS a = FibS { n :: a    -- ^ The input value
                    }
                    deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
--- | Show instance for 'FibS'. The above deriving clause would work just as well,
+-- | Show instance for t'FibS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (FibS (SBV a)) where
    show (FibS n i k m) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", k = " ++ sh k ++ ", m = " ++ sh m ++ "}"
