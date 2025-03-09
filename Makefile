@@ -64,6 +64,9 @@ install: tags
 docs:
 	cabal new-haddock ${CABAL_OPTS} --ghc-options=-DHADDOCK --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
 
+new-docs:
+	cabal new-haddock --enable-documentation --haddock-option=--hyperlinked-source
+
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:
 ifeq ("${CABAL_VERSION}", "3.12.1.0")
