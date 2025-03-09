@@ -727,8 +727,8 @@ Optimal model:
 
        @
          'assertWithPenalty' "bounded_x" (x .< 5) 'DefaultPenalty'
-         'assertWithPenalty' "bounded_x" (x .< 5) (v'Penalty' 2.3 Nothing)
-         'assertWithPenalty' "bounded_x" (x .< 5) (v'Penalty' 4.7 (Just "group-1")) @
+         'assertWithPenalty' "bounded_x" (x .< 5) $ v'Penalty' 2.3 Nothing
+         'assertWithPenalty' "bounded_x" (x .< 5) $ v'Penalty' 4.7 (Just "group-1") @
 
   In the first form, we are saying that the constraint @x .< 5@ must be satisfied, if possible,
   but if this constraint can not be satisfied to find a model, it can be violated with the default penalty of 1.
@@ -993,8 +993,8 @@ your other symbolic computations.  See the following files demonstrating reasoni
    * "Documentation.SBV.Examples.Puzzles.Rabbits"
    * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
 
-SBV also supports the constructors t'ExistsUnique' to create unique existentials, in addition to
-t'ForallN' and t'ExistsN' for creating multiple variables at the same time.
+SBV also supports the constructors t'ExistsUnique' to create unique existentials, in addition
+to t'ForallN' and t'ExistsN' for creating multiple variables at the same time.
 
 In general, SBV will not display the values of quantified variables for a satisfying instance.
 For a satisfiability problem, you can apply skolemization manually to have these values
