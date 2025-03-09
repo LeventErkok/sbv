@@ -192,7 +192,7 @@ instance Ord CVal where
                                                                  ]
                                             else cvRank a `compare` cvRank b
 
--- | 'CV' represents a concrete word of a fixed size:
+-- | t'CV' represents a concrete word of a fixed size:
 -- For signed words, the most significant digit is considered to be the sign.
 data CV = CV { _cvKind  :: !Kind
              , cvVal    :: !CVal
@@ -300,15 +300,15 @@ normCV c@(CV KBool (CInteger v)) = c { cvVal = CInteger (v .&. 1) }
 normCV c                         = c
 {-# INLINE normCV #-}
 
--- | Constant False as a 'CV'. We represent it using the integer value 0.
+-- | Constant False as a t'CV'. We represent it using the integer value 0.
 falseCV :: CV
 falseCV = CV KBool (CInteger 0)
 
--- | Constant True as a 'CV'. We represent it using the integer value 1.
+-- | Constant True as a t'CV'. We represent it using the integer value 1.
 trueCV :: CV
 trueCV  = CV KBool (CInteger 1)
 
--- | Map a unary function through a 'CV'.
+-- | Map a unary function through a t'CV'.
 mapCV :: (AlgReal             -> AlgReal)
       -> (Integer             -> Integer)
       -> (Float               -> Float)
@@ -333,7 +333,7 @@ mapCV r i f d af ra x  = normCV $ CV (kindOf x) $ case cvVal x of
                                                     CEither{}   -> error "Data.SBV.mapCV: Unexpected call through mapCV with either!"
                                                     CArray{}    -> error "Data.SBV.mapCV: Unexpected call through mapCV with arrays!"
 
--- | Map a binary function through a 'CV'.
+-- | Map a binary function through a t'CV'.
 mapCV2 :: (AlgReal             -> AlgReal             -> AlgReal)
        -> (Integer             -> Integer             -> Integer)
        -> (Float               -> Float               -> Float)
@@ -361,11 +361,11 @@ mapCV2 r i f d af ra x y = case (cvSameType x y, cvVal x, cvVal y) of
                                         , "*** Please report this as a bug!"
                                         ]
 
--- | Show instance for 'CV'.
+-- | Show instance for t'CV'.
 instance Show CV where
   show = showCV True
 
--- | Show instance for Generalized 'CV'
+-- | Show instance for Generalized t'CV'
 instance Show GeneralizedCV where
   show (ExtendedCV k) = showExtCV True k
   show (RegularCV  c) = showCV    True c
@@ -515,7 +515,7 @@ randomCVal k =
     bounds False w = (0, 2^w - 1)
     bounds True  w = (-x, x-1) where x = 2^(w-1)
 
--- | Generate a random constant value ('CV') of the correct kind.
+-- | Generate a random constant value (t'CV') of the correct kind.
 randomCV :: Kind -> IO CV
 randomCV k = CV k <$> randomCVal k
 

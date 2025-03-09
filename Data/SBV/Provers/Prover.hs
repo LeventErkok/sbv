@@ -774,7 +774,7 @@ runWithQuery reducer isSAT q cfg a = fst <$> runSymbolic cfg (SMTMode QueryInter
   where comp =  do _ <- reducer a >>= output
                    Control.executeQuery QueryInternal q
 
--- | Check if a safe-call was safe or not, turning a 'SafeResult' to a Bool.
+-- | Check if a safe-call was safe or not, turning a t'SafeResult' to a Bool.
 isSafe :: SafeResult -> Bool
 isSafe (SafeResult (_, _, result)) = case result of
                                        Unsatisfiable{} -> True

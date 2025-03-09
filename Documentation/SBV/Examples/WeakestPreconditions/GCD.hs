@@ -54,7 +54,7 @@ data GCDS a = GCDS { x :: a    -- ^ First value
                    }
                    deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
--- | Show instance for 'GCDS'. The above deriving clause would work just as well,
+-- | Show instance for t'GCDS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (GCDS (SBV a)) where
    show (GCDS x y i j) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ ", i = " ++ sh i ++ ", j = " ++ sh j ++ "}"

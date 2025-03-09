@@ -101,24 +101,24 @@ resultConfig (SatExtField   c _  ) = c
 resultConfig (Unknown       c _  ) = c
 resultConfig (ProofError    c _ _) = c
 
--- | A 'Data.SBV.prove' call results in a 'ThmResult'
+-- | A 'Data.SBV.prove' call results in a t'ThmResult'
 newtype ThmResult = ThmResult SMTResult
                   deriving NFData
 
--- | A 'Data.SBV.sat' call results in a 'SatResult'
--- The reason for having a separate 'SatResult' is to have a more meaningful 'Show' instance.
+-- | A 'Data.SBV.sat' call results in a t'SatResult'
+-- The reason for having a separate t'SatResult' is to have a more meaningful 'Show' instance.
 newtype SatResult = SatResult SMTResult
                   deriving NFData
 
--- | An 'Data.SBV.allSat' call results in a 'AllSatResult'
+-- | An 'Data.SBV.allSat' call results in a t'AllSatResult'
 data AllSatResult = AllSatResult { allSatMaxModelCountReached  :: Bool          -- ^ Did we reach the user given model count limit?
                                  , allSatSolverReturnedUnknown :: Bool          -- ^ Did the solver report unknown at the end?
                                  , allSatSolverReturnedDSat    :: Bool          -- ^ Did the solver report delta-satisfiable at the end?
                                  , allSatResults               :: [SMTResult]   -- ^ All satisfying models
                                  }
 
--- | A 'Data.SBV.safe' call results in a 'SafeResult'
-newtype SafeResult   = SafeResult   (Maybe String, String, SMTResult)
+-- | A 'Data.SBV.safe' call results in a t'SafeResult'
+newtype SafeResult = SafeResult (Maybe String, String, SMTResult)
 
 -- | An 'Data.SBV.optimize' call results in a 'OptimizeResult'. In the 'ParetoResult' case, the boolean is 'True'
 -- if we reached pareto-query limit and so there might be more unqueried results remaining. If 'False',
@@ -449,7 +449,7 @@ getModelValues s AllSatResult{allSatResults = xs} =  map (s `getModelValue`) xs
 getModelUninterpretedValues :: String -> AllSatResult -> [Maybe String]
 getModelUninterpretedValues s AllSatResult{allSatResults = xs} =  map (s `getModelUninterpretedValue`) xs
 
--- | 'ThmResult' as a generic model provider
+-- | t'ThmResult' as a generic model provider
 instance Modelable ThmResult where
   getModelAssignment (ThmResult r) = getModelAssignment r
   modelExists        (ThmResult r) = modelExists        r
@@ -457,7 +457,7 @@ instance Modelable ThmResult where
   getModelObjectives (ThmResult r) = getModelObjectives r
   getModelUIFuns     (ThmResult r) = getModelUIFuns     r
 
--- | 'SatResult' as a generic model provider
+-- | t'SatResult' as a generic model provider
 instance Modelable SatResult where
   getModelAssignment (SatResult r) = getModelAssignment r
   modelExists        (SatResult r) = modelExists        r

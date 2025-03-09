@@ -142,7 +142,7 @@ instance NFData Proof where
                                                                   `seq` rnf getProof
                                                                   `seq` rnf proofName
 
--- | Show instance for 'Proof'
+-- | Show instance for t'Proof'
 instance Show Proof where
   show Proof{rootOfTrust, isUserAxiom, proofName} = '[' : tag ++ "] " ++ proofName
      where tag | isUserAxiom = "Axiom"

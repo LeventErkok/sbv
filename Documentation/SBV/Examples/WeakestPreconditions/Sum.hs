@@ -44,13 +44,13 @@ data SumS a = SumS { n :: a    -- ^ The input value
                    }
                    deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
--- | Show instance for 'SumS'. The above deriving clause would work just as well,
+-- | Show instance for t'SumS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (SumS (SBV a)) where
    show (SumS n i s) = "{n = " ++ sh n ++ ", i = " ++ sh i ++ ", s = " ++ sh s ++ "}"
      where sh v = maybe "<symbolic>" show (unliteral v)
 
--- | 'Queriable instance for our state
+-- | 'Queriable' instance for our state
 instance Queriable IO (SumS SInteger) where
   type QueryResult (SumS SInteger) = SumS Integer
   create = SumS <$> freshVar_ <*> freshVar_ <*> freshVar_

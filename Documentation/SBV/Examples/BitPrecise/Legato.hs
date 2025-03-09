@@ -81,7 +81,7 @@ type Memory = Array Location Value
 -- Unlike traditional hardware, we assume the program is stored in some other memory area that
 -- we need not model. (No self modifying programs!)
 --
--- 'Mostek' is equipped with an automatically derived 'Mergeable' instance
+-- t'Mostek' is equipped with an automatically derived 'Mergeable' instance
 -- because each field is 'Mergeable'.
 data Mostek = Mostek { memory    :: Memory
                      , registers :: Registers

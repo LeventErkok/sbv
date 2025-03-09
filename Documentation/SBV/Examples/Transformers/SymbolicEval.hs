@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- A demonstration of the use of the 'SymbolicT' and 'QueryT' transformers in
+-- A demonstration of the use of the t'SymbolicT' and 'QueryT' transformers in
 -- the setting of symbolic program evaluation.
 --
 -- In this example, we perform symbolic evaluation across three steps:

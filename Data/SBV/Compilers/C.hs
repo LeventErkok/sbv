@@ -62,7 +62,7 @@ compileToC mbDirName nm f = do (retVal, cfg, bundle) <- compileToC' nm f
                                renderCgPgmBundle mbDirName (cfg, bundle)
                                return retVal
 
--- | Lower level version of 'compileToC', producing a 'CgPgmBundle'
+-- | Lower level version of 'compileToC', producing a t'CgPgmBundle'
 compileToC' :: String -> SBVCodeGen a -> IO (a, CgConfig, CgPgmBundle)
 compileToC' nm f = do rands <- randoms `fmap` newStdGen
                       codeGen SBVToC (defaultCgConfig { cgDriverVals = rands }) nm f
@@ -82,7 +82,7 @@ compileToCLib mbDirName libName comps = do (retVal, cfg, pgm) <- compileToCLib' 
                                            renderCgPgmBundle mbDirName (cfg, pgm)
                                            return retVal
 
--- | Lower level version of 'compileToCLib', producing a 'CgPgmBundle'
+-- | Lower level version of 'compileToCLib', producing a t'CgPgmBundle'
 compileToCLib' :: String -> [(String, SBVCodeGen a)] -> IO ([a], CgConfig, CgPgmBundle)
 compileToCLib' libName comps = do resCfgBundles <- mapM (uncurry compileToC') comps
                                   let (finalCfg, finalPgm) = mergeToLib libName [(c, b) | (_, c, b) <- resCfgBundles]

@@ -195,11 +195,11 @@ swNodeId (SV _ nid) = nid
 forceSVArg :: SV -> IO ()
 forceSVArg (SV k n) = k `seq` n `seq` return ()
 
--- | Constant False as an 'SV'. Note that this value always occupies slot -2 and level 0.
+-- | Constant False as an t'SV'. Note that this value always occupies slot -2 and level 0.
 falseSV :: SV
 falseSV = SV KBool $ NodeId (globalSBVContext, Just 0, -2)
 
--- | Constant True as an 'SV'. Note that this value always occupies slot -1 and level 0.
+-- | Constant True as an t'SV'. Note that this value always occupies slot -1 and level 0.
 trueSV :: SV
 trueSV  = SV KBool $ NodeId (globalSBVContext, Just 0, -1)
 
@@ -752,7 +752,7 @@ newtype SBVPgm = SBVPgm {pgmAssignments :: S.Seq (SV, SBVExpr)}
 -- | Helper synonym for text, in case we switch to something else later.
 type Name = T.Text
 
--- | 'NamedSymVar' pairs symbolic values and user given/automatically generated names
+-- | t'NamedSymVar' pairs symbolic values and user given/automatically generated names
 data NamedSymVar = NamedSymVar !SV !Name
                  deriving (Show, Generic, G.Data)
 
@@ -799,7 +799,7 @@ data OptimizeStyle = Lexicographic      -- ^ Objectives are optimized in the ord
 
 -- | Penalty for a soft-assertion. The default penalty is @1@, with all soft-assertions belonging
 -- to the same objective goal. A positive weight and an optional group can be provided by using
--- the 'Penalty' constructor.
+-- the v'Penalty' constructor.
 data Penalty = DefaultPenalty                  -- ^ Default: Penalty of @1@ and no group attached
              | Penalty Rational (Maybe String) -- ^ Penalty with a weight and an optional group
              deriving Show
@@ -1285,7 +1285,7 @@ data SVal = SVal !Kind !(Either CV (Cached SV))
 instance HasKind SVal where
   kindOf (SVal k _) = k
 
--- Show instance for 'SVal'. Not particularly "desirable", but will do if needed
+-- Show instance for t'SVal'. Not particularly "desirable", but will do if needed
 -- NB. We do not show the type info on constant KBool values, since there's no
 -- implicit "fromBoolean" applied to Booleans in Haskell; and thus a statement
 -- of the form "True :: SBool" is just meaningless. (There should be a fromBoolean!)
@@ -1296,7 +1296,7 @@ instance Show SVal where
 
 -- | This instance is only defined so that we can define an instance for
 -- 'Data.Bits.Bits'. '==' and '/=' simply throw an error.
--- We really don't want an 'Eq' instance for 'Data.SBV.Core.SBV' or 'SVal'. As it really makes no sense.
+-- We really don't want an 'Eq' instance for 'Data.SBV.Core.SBV' or t'SVal'. As it really makes no sense.
 -- But since we do want the 'Data.Bits.Bits' instance, we're forced to define equality. See
 -- <http://github.com/LeventErkok/sbv/issues/301>. We simply error out.
 instance Eq SVal where
@@ -1706,7 +1706,7 @@ instance MonadReader r m => MonadReader r (SymbolicT m) where
   ask = lift ask
   local f = mapSymbolicT $ mapReaderT $ local f
 
--- | 'Symbolic' is specialization of 'SymbolicT' to the `IO` monad. Unless you are using
+-- | 'Symbolic' is specialization of t'SymbolicT' to the `IO` monad. Unless you are using
 -- transformers explicitly, this is the type you should prefer.
 type Symbolic = SymbolicT IO
 
@@ -2355,7 +2355,7 @@ isEmptyModel :: SMTModel -> Bool
 isEmptyModel SMTModel{modelAssocs, modelUIFuns} = null modelAssocs && null modelUIFuns
 
 -- | The result of an SMT solver call. Each constructor is tagged with
--- the 'SMTConfig' that created it so that further tools can inspect it
+-- the t'SMTConfig' that created it so that further tools can inspect it
 -- and build layers of results, if needed. For ordinary uses of the library,
 -- this type should not be needed, instead use the accessor functions on
 -- it. (Custom Show instances and model extractors.)
