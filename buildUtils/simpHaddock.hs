@@ -43,11 +43,15 @@ processWarns :: Bool -> Maybe String -> IO ()
 processWarns failed mbTopLine = do
    ln <- nextLine failed
    case () of
-     () | trigger ln -> processWarns failed (Just ln)
-     () | ignore  ln -> processWarns failed mbTopLine
-        | True       -> do maybe (pure ()) putStrLn mbTopLine
-                           putStrLn ln
-                           processWarns True Nothing
+     () | trigger  ln -> processWarns failed (Just ln)
+        | ignore   ln -> processWarns failed mbTopLine
+        | finalize ln -> go failed
+        | True        -> do maybe (pure ()) putStrLn mbTopLine
+                            putStrLn ln
+                            processWarns True Nothing
+
+finalize :: String -> Bool
+finalize ln = "Documentation created:" `isInfixOf` ln
 
 ignore :: String -> Bool
 ignore s = haddockBug s || sbvIgnore s
@@ -71,7 +75,32 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
   where s     = dropWhile isSpace input
         fmt p = "- Data.SBV." ++ p
 
-        patterns = [ "Core.Model.QSaturate"
+        patterns = [ "Core.Kind.BVZeroWidth"
+                   , "Core.Kind.constructUKind"
+                   , "Core.Kind.InvalidFloat"
+                   , "Core.Symbolic.SMTEngine"
+                   , "Core.Symbolic.UIName"
+                   , "Core.Data.skolem"
+                   , "Core.Data.GEqSymbolic"
+                   , "Core.Model.UIKind"
+                   , "Core.Model.GMergeable"
+                   , "Core.Model.QSaturate"
+                   , "Core.Symbolic.SMTDef"
+                   , "Core.Symbolic.CnstMap"
+                   , "Core.Symbolic.ProgInfo"
+                   , "Core.Symbolic.ResultInp"
+                   , "Core.Symbolic.Name"
+                   , "Core.Symbolic.SetOp"
+                   , "Core.Symbolic.SMTLambda"
+                   , "Core.Symbolic.NROp"
+                   , "Core.Symbolic.SpecialRelOp"
+                   , "Core.Symbolic.SBVContext"
+                   , "Core.Model.minimize"
+                   , "Core.Model.maximize"
+                   , "Client.BaseIO.ToSizedBV"
+                   , "Client.BaseIO.FromSizedBV"
+                   , "Control.Utils.SMTFunction"
+                   , "Control.Query.Assignment"
                    , "Tools.KD.KnuckleDragger.ChainStep"
                    , "Tools.KD.KnuckleDragger.ChainsTo"
                    , "Tools.KD.KnuckleDragger.ProofHint"
@@ -80,4 +109,8 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Tools.KD.KnuckleDragger.Instantiatable"
                    , "Tools.KD.KnuckleDragger.Inductive"
                    , "Tools.KD.KnuckleDragger.CalcLemma"
+                   , "Tools.STree.STreeInternal"
+                   , "Tuple.Tuple"
+                   , "Tuple.HasField"
+                   , "Utils.SExpr.SExpr"
                    ]

@@ -76,7 +76,7 @@ ifeq ("${CABAL_VERSION}", "3.12.1.0")
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
 	@echo "*** Don't forget to UPGRADE cabal version"
 else
-	@echo "Document builds require old-cabal version. Please downgrade to 3.12.1.0"
+	@echo "*** Document builds require old-cabal version. Please downgrade to 3.12.1.0"
 	@exit -1
 endif
 
