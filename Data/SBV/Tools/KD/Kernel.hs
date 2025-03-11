@@ -36,7 +36,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 
 import Data.SBV.Core.Data hiding (None)
 import Data.SBV.Core.Symbolic (isEmptyModel)
-import Data.SBV.Control hiding (getProof)
+import Data.SBV.Trans.Control hiding (getProof)
 
 import Data.SBV.SMT.SMT
 import Data.SBV.Core.Model
@@ -87,7 +87,7 @@ sorry = Proof { rootOfTrust = Self
               , getProp     = toDyn p
               , proofName   = "sorry"
               }
-  where -- ideally, I'd rather just use 
+  where -- ideally, I'd rather just use
         --   p = sFalse
         -- but then SBV constant folds the boolean, and the generated script
         -- doesn't contain the actual contents, as SBV determines unsatisfiability
@@ -184,7 +184,10 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
 
        die = error "Failed"
 
-       fullNm = intercalate "." (filter (not . null) (fromMaybe nms fullNms))
+       fullNm = intercalate "." $ squeeze $ filter (not . null) (fromMaybe nms fullNms)
+       squeeze (x:y:rest) | x == y = squeeze (y:rest)
+       squeeze (x:rest)            = x : squeeze rest
+       squeeze []                  = []
 
        unknown = do r <- getUnknownReason
                     liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."

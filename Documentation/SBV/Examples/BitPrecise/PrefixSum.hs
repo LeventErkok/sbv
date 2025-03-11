@@ -8,7 +8,7 @@
 --
 -- The PrefixSum algorithm over power-lists and proof of
 -- the Ladner-Fischer implementation.
--- See <http://dl.acm.org/citation.cfm?id=197356>
+-- See <https://www.cs.utexas.edu/~misra/psp.dir/powerlist.pdf>
 -- and <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>.
 -----------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ import Data.SBV
 ----------------------------------------------------------------------
 
 -- | A poor man's representation of powerlists and
--- basic operations on them: <http://dl.acm.org/citation.cfm?id=197356>
+-- basic operations on them: <https://www.cs.utexas.edu/~misra/psp.dir/powerlist.pdf>.
 -- We merely represent power-lists by ordinary lists.
 type PowerList a = [a]
 
@@ -67,8 +67,7 @@ ps (_, f) = scanl1 f
 -- * The Ladner-Fischer parallel version
 ----------------------------------------------------------------------
 
--- | The Ladner-Fischer (@lf@) implementation of prefix-sum. See <http://www.cs.utexas.edu/~plaxton/c/337/05f/slides/ParallelRecursion-4.pdf>
--- or pg. 16 of <http://dl.acm.org/citation.cfm?id=197356>
+-- | The Ladner-Fischer (@lf@) implementation of prefix-sum.
 lf :: (a, a -> a -> a) -> PowerList a -> PowerList a
 lf _ []         = error "lf: malformed (empty) powerlist"
 lf _ [x]        = [x]

@@ -35,13 +35,13 @@ mkUninterpretedSort ''Kleene
 
 -- | Star operator over kleene algebras. We're leaving this uninterpreted.
 star :: SKleene -> SKleene
-star = uninterpret "star"
+star = uninterpret "STAR"
 
 -- | The 'Num' instance for Kleene makes it easy to write regular expressions
 -- in the more familiar form.
 instance Num SKleene where
-  (+) = uninterpret "par"
-  (*) = uninterpret "seq"
+  (+) = uninterpret "PAR"
+  (*) = uninterpret "SEQ"
 
   abs    = error "SKleene: not defined: abs"
   signum = error "SKleene: not defined: signum"
@@ -122,10 +122,10 @@ kleeneProofs = runKD $ do
   -- This one requires a chain of reasoning: x* x* == x*
   star_star_1  <- calc "star_star_1"
                        (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x) $
-                       \x -> [] |- star x * star x                     ? unfold
-                                =: (1 + x * star x) * (1 + x * star x) ? kleene
-                                =: (1 + 1) + (x * star x + x * star x) ? par_idem
-                                =: 1 + x * star x                      ? unfold
+                       \x -> [] |- star x * star x                     ?? unfold
+                                =: (1 + x * star x) * (1 + x * star x) ?? kleene
+                                =: (1 + 1) + (x * star x + x * star x) ?? par_idem
+                                =: 1 + x * star x                      ?? unfold
                                 =: star x
                                 =: qed
 

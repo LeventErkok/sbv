@@ -42,22 +42,22 @@ import Test.QuickCheck(Arbitrary(..))
 -- | An unsigned bit-vector carrying its size info
 newtype WordN (n :: Nat) = WordN Integer deriving (Eq, Ord)
 
--- | Show instance for 'WordN'
+-- | Show instance for t'WordN'
 instance Show (WordN n) where
   show (WordN v) = show v
 
--- | 'WordN' has a kind
+-- | t'WordN' has a kind
 instance (KnownNat n, BVIsNonZero n) => HasKind (WordN n) where
   kindOf _ = KBounded False (intOfProxy (Proxy @n))
 
 -- | A signed bit-vector carrying its size info
 newtype IntN (n :: Nat) = IntN Integer deriving (Eq, Ord)
 
--- | Show instance for 'IntN'
+-- | Show instance for t'IntN'
 instance Show (IntN n) where
   show (IntN v) = show v
 
--- | 'IntN' has a kind
+-- | t'IntN' has a kind
 instance (KnownNat n, BVIsNonZero n) => HasKind (IntN n) where
   kindOf _ = KBounded True (intOfProxy (Proxy @n))
 
@@ -93,17 +93,17 @@ lift2IB nm op x i = uc $ c x `op` i
         uc (SVal _ (Left v)) = cvToBool v
         uc r                 = error $ "Impossible happened while lifting " ++ show nm ++ " over " ++ show (k, x, i, r)
 
--- | 'Bounded' instance for 'WordN'
+-- | 'Bounded' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Bounded (WordN n) where
    minBound = WordN 0
    maxBound = let sz = intOfProxy (Proxy @n) in WordN $ 2 ^ sz - 1
 
--- | 'Bounded' instance for 'IntN'
+-- | 'Bounded' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Bounded (IntN n) where
    minBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ - (2 ^ sz1)
    maxBound = let sz1 = intOfProxy (Proxy @n) - 1 in IntN $ 2 ^ sz1 - 1
 
--- | 'Num' instance for 'WordN'
+-- | 'Num' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Num (WordN n) where
    (+)         = lift2 "(+)"    svPlus
    (-)         = lift2 "(*)"    svMinus
@@ -113,7 +113,7 @@ instance (KnownNat n, BVIsNonZero n) => Num (WordN n) where
    signum      = WordN . signum   . toInteger
    fromInteger = WordN . fromJust . svAsInteger . svInteger (kindOf (undefined :: WordN n))
 
--- | 'Num' instance for 'IntN'
+-- | 'Num' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Num (IntN n) where
    (+)         = lift2 "(+)"    svPlus
    (-)         = lift2 "(*)"    svMinus
@@ -123,35 +123,35 @@ instance (KnownNat n, BVIsNonZero n) => Num (IntN n) where
    signum      = IntN . signum   . toInteger
    fromInteger = IntN . fromJust . svAsInteger . svInteger (kindOf (undefined :: IntN n))
 
--- | 'Enum' instance for 'WordN'
+-- | 'Enum' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Enum (WordN n) where
    toEnum   = fromInteger  . toInteger
    fromEnum = fromIntegral . toInteger
 
--- | 'Enum' instance for 'IntN'
+-- | 'Enum' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Enum (IntN n) where
    toEnum   = fromInteger  . toInteger
    fromEnum = fromIntegral . toInteger
 
--- | 'Real' instance for 'WordN'
+-- | 'Real' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Real (WordN n) where
    toRational (WordN x) = toRational x
 
--- | 'Real' instance for 'IntN'
+-- | 'Real' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Real (IntN n) where
    toRational (IntN x) = toRational x
 
--- | 'Integral' instance for 'WordN'
+-- | 'Integral' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Integral (WordN n) where
    toInteger (WordN x)           = x
    quotRem   (WordN x) (WordN y) = let (q, r) = quotRem x y in (WordN q, WordN r)
 
--- | 'Integral' instance for 'IntN'
+-- | 'Integral' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Integral (IntN n) where
    toInteger (IntN x)          = x
    quotRem   (IntN x) (IntN y) = let (q, r) = quotRem x y in (IntN q, IntN r)
 
---  'Bits' instance for 'WordN'
+--  'Bits' instance for t'WordN'
 instance (KnownNat n, BVIsNonZero n) => Bits (WordN n) where
    (.&.)        = lift2   "(.&.)"      svAnd
    (.|.)        = lift2   "(.|.)"      svOr
@@ -168,7 +168,7 @@ instance (KnownNat n, BVIsNonZero n) => Bits (WordN n) where
    bit i        = 1 `shiftL` i
    popCount     = fromIntegral . popCount . toInteger
 
---  'Bits' instance for 'IntN'
+--  'Bits' instance for t'IntN'
 instance (KnownNat n, BVIsNonZero n) => Bits (IntN n) where
    (.&.)        = lift2   "(.&.)"      svAnd
    (.|.)        = lift2   "(.|.)"      svOr

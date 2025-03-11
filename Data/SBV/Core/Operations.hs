@@ -178,7 +178,7 @@ svUNeg = liftSym1 (mkSymOp1 UNeg) negate negate negate negate negate negate
 svAbs :: SVal -> SVal
 svAbs = liftSym1 (mkSymOp1 Abs) abs abs abs abs abs abs
 
--- | Signum. 
+-- | Signum.
 --
 -- NB. The following "carefully" tests the number for == 0, as Float/Double's NaN and +/-0
 -- cases would cause trouble with explicit equality tests.
@@ -601,6 +601,7 @@ svAnd x y
           | a == falseSV || b == falseSV = Just falseSV
           | a == trueSV                  = Just b
           | b == trueSV                  = Just a
+          | a == b                       = Just a
           | True                         = Nothing
 
 -- | Bitwise or.
@@ -616,6 +617,7 @@ svOr x y
           | a == trueSV || b == trueSV = Just trueSV
           | a == falseSV               = Just b
           | b == falseSV               = Just a
+          | a == b                     = Just a
           | True                       = Nothing
 
 -- | Bitwise xor.

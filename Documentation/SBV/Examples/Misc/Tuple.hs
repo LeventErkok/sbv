@@ -38,7 +38,7 @@ type Dict a b = SBV [(a, b)]
 
 -- | Create a dictionary of length 5, such that each element
 -- has an string key and each value is the length of the key.
--- We impose a few more constraints to make the output interesting. 
+-- We impose a few more constraints to make the output interesting.
 -- For instance, you might get:
 --
 -- @ ghci> example

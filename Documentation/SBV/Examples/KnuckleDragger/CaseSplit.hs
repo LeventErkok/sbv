@@ -11,6 +11,7 @@
 
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE TypeApplications #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -52,7 +53,13 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step  : 5                             Q.E.D.
 --   Step  : 6                             Q.E.D.
 --   Result:                               Q.E.D.
--- Lemma: notDiv3                          Q.E.D.
+-- Lemma: notDiv3
+--   Step 1: Case split 3 ways:
+--     Case [1 of 3]: n_mod_3[1]           Q.E.D.
+--     Case [2 of 3]: n_mod_3[2]           Q.E.D.
+--     Case [3 of 3]: n_mod_3[3]           Q.E.D.
+--     Completeness:                       Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
 notDiv3 = runKD $ do
@@ -69,8 +76,8 @@ notDiv3 = runKD $ do
 
    -- Case 0: n = 0 (mod 3)
    c0 <- calc "case_n_mod_3_eq_0"
-              (\(Forall @"n" n) -> n `sEMod` 3 .== 0 .=> p n) $
-              \n -> [case0 n] |- s n                                       ? case0 n
+              (\(Forall @"n" n) -> case0 n .=> p n) $
+              \n -> [case0 n] |- s n                                       ?? case0 n
                               =: let w = some "witness" $ \k -> n .== 3*k  -- Grab the witness for the case
                               in s (3*w)
                               =: s (3*w)
@@ -81,8 +88,8 @@ notDiv3 = runKD $ do
 
    -- Case 1: n = 1 (mod 3)
    c1 <- calc "case_n_mod_3_eq_1"
-              (\(Forall @"n" n) -> n `sEMod` 3 .== 1 .=> p n) $
-              \n -> [case1 n] |- s n                                         ? case1 n
+              (\(Forall @"n" n) -> case1 n .=> p n) $
+              \n -> [case1 n] |- s n                                         ?? case1 n
                               =: let w = some "witness" $ \k -> n .== 3*k+1  -- Grab the witness for n being 1 modulo 3
                               in s (3*w+1)
                               =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
@@ -94,8 +101,8 @@ notDiv3 = runKD $ do
 
    -- Case 2: n = 2 (mod 3)
    c2 <- calc "case_n_mod_3_eq_2"
-              (\(Forall @"n" n) -> n `sEMod` 3 .== 2 .=> p n) $
-              \n -> [case2 n] |- s n                                        ? case2 n
+              (\(Forall @"n" n) -> case2 n .=> p n) $
+              \n -> [case2 n] |- s n                                        ?? case2 n
                               =: let w = some "witness" $ \k -> n .== 3*k+2 -- Grab the witness for n being 2 modulo 3
                               in s (3*w+2)
                               =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1
@@ -105,6 +112,13 @@ notDiv3 = runKD $ do
                               =: 3*(6*w*w + 9*w + 3) + 2
                               =: qed
 
-   -- Note that z3 is smart enough to figure out the above cases are complete, so
-   -- no extra completeness helper is needed.
-   lemma "notDiv3" (\(Forall @"n" n) -> p n) [c0, c1, c2]
+   calc "notDiv3"
+        (\(Forall @"n" n) -> p n) $
+        \n -> [] |- p n
+                 ?? [ cases "n_mod_3" [case0 n, case1 n, case2 n]
+                   , hprf $ c0 `at` Inst @"n" n
+                   , hprf $ c1 `at` Inst @"n" n
+                   , hprf $ c2 `at` Inst @"n" n
+                   ]
+                 =: sTrue
+                 =: qed

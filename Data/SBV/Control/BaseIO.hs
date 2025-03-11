@@ -191,7 +191,8 @@ exit = Trans.exit
 --     'Data.SBV.setOption' $ 'Data.SBV.Control.ProduceUnsatCores' 'True'
 -- @
 --
--- for this call to not error out!
+-- for this call to not error out! Furthermore, unsat-cores require for the user to name the
+-- constraints to be considered as part of the set, which is done via 'Data.SBV.namedConstraint'.
 --
 -- NB. There is no notion of a minimal unsat-core, in case unsatisfiability can be derived
 -- in multiple ways. Furthermore, Z3 does not guarantee that the generated unsat

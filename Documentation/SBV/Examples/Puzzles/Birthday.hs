@@ -22,7 +22,7 @@
 --
 -- "My birthday is one of these," she said.
 --
--- Then Cheryl whispered in Albert’s ear the month — and only the month — of her birthday. To Bernard, she whispered the day, and only the day. 
+-- Then Cheryl whispered in Albert’s ear the month — and only the month — of her birthday. To Bernard, she whispered the day, and only the day.
 -- “Can you figure it out now?” she asked Albert.
 --
 -- Albert: I don’t know when your birthday is, but I know Bernard doesn’t know, either.

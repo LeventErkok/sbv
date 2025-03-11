@@ -51,7 +51,7 @@ isClosed (Closed _) = True
 -- | A range is a pair of boundaries: Lower and upper bounds
 data Range a = Range (Boundary a) (Boundary a)
 
--- | Show instance for 'Range'
+-- | Show instance for t'Range'
 instance Show a => Show (Range a) where
    show (Range l u) = sh True l ++ "," ++ sh False u
      where sh onLeft b = case b of

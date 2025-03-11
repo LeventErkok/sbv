@@ -6,6 +6,8 @@
 OS := $(shell uname)
 SHELL := /usr/bin/env bash
 
+CABAL_VERSION := $(shell cabal --numeric-version)
+
 CONFIGOPTS = "-Wall -fhide-source-paths"
 
 ALLSOURCES := $(shell find Data/SBV -name "*.hs") $(shell find Documentation/SBV -name "*.hs")
@@ -29,7 +31,7 @@ endif
 
 ifdef ACCEPT
     TESTACCEPT = --accept
-    TESTHIDE   = 
+    TESTHIDE   =
 else
     TESTACCEPT = --no-create
     TESTHIDE   = --hide-successes
@@ -53,86 +55,75 @@ CABAL_OPTS=--allow-newer
 all: quick
 
 quick: tags
-	@$(TIME) cabal new-install --lib ${CABAL_OPTS} --force-reinstalls
+	@$(TIME) cabal install --lib ${CABAL_OPTS} --force-reinstalls
 	
 install: tags
-	@$(TIME) cabal new-configure --enable-tests ${CABAL_OPTS} --ghc-options=$(CONFIGOPTS)
-	@$(TIME) cabal new-install --lib ${CABAL_OPTS} --force-reinstalls
+	@$(TIME) cabal configure --enable-tests ${CABAL_OPTS} --ghc-options=$(CONFIGOPTS)
+	@$(TIME) cabal install --lib ${CABAL_OPTS} --force-reinstalls
+
+
+HADDOCK_OPTS=${CABAL_OPTS} --enable-documentation --ghc-options=-DHADDOCK --haddock-option="--optghc=-DHADDOCK"
 
 docs:
-	cabal new-haddock ${CABAL_OPTS} --haddock-option=--hyperlinked-source --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
+	@cabal haddock ${HADDOCK_OPTS} --haddock-option=--hyperlinked-source | ghc ./buildUtils/simpHaddock.hs -e main
 
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:
-	cabal new-haddock ${CABAL_OPTS} --haddock-for-hackage --enable-doc --haddock-option=--no-warnings --haddock-option="--optghc=-DHADDOCK" | ghc ./buildUtils/simpHaddock.hs -e main
+ifeq ("${CABAL_VERSION}", "3.12.1.0")
+	@cabal haddock ${HADDOCK_OPTS} --haddock-for-hackage                 | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
+	@echo "*** Don't forget to UPGRADE cabal version"
+else
+	@echo "*** Document builds require old-cabal version. Please downgrade to 3.12.1.0"
+	@exit -1
+endif
 
 ghci:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
+ifdef TGT
+	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}
+else
+	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
+endif
 
 ghcid:
 ifdef TGT
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages" -T $(subst /,.,${TGT})
+	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
 else
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages"
+	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
 endif
 
-ghci_SBVTest:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest
-
-ghcid_SBVTest:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVTest"
-
-ghci_SBVDocTest:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest
-
-ghcid_SBVDocTest:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVDocTest"
-
-ghci_HLint:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint
-
-ghcid_HLint:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVHLint"
-
-ghci_Bench:
-	cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench
-
-ghcid_Bench:
-	ghcid --command="cabal new-repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages SBVBench"
-
 bench:
-	cabal new-bench
+	cabal bench
 
 testsuite: lintTest docTest test
 
 # Run this target, which updates the golds for those tests that rely on version updates
 # for SBV and Z3. Saves time before doing "make release"
 updateForVersionChange:
-	@cabal new-run SBVTest -- -p nested1 --accept --quiet
-	@cabal new-run SBVTest -- -p nested2 --accept --quiet
-	@cabal new-run SBVTest -- -p nested3 --accept --quiet
-	@cabal new-run SBVTest -- -p nested4 --accept --quiet
-	@cabal new-run SBVTest -- -p allSat8 --accept --quiet
-	@cabal new-run SBVTest -- -p query1  --accept --quiet
-	@cabal new-run SBVTest -- -p noOpt1  --accept --quiet
-	@cabal new-run SBVTest -- -p noOpt2  --accept --quiet
+	@cabal run SBVTest -- -p nested1 --accept --quiet
+	@cabal run SBVTest -- -p nested2 --accept --quiet
+	@cabal run SBVTest -- -p nested3 --accept --quiet
+	@cabal run SBVTest -- -p nested4 --accept --quiet
+	@cabal run SBVTest -- -p allSat8 --accept --quiet
+	@cabal run SBVTest -- -p query1  --accept --quiet
+	@cabal run SBVTest -- -p noOpt1  --accept --quiet
+	@cabal run SBVTest -- -p noOpt2  --accept --quiet
 
 # To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
 ifdef FAST
 	hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error" --cpp-simple
 else
-	@$(TIME) cabal new-test SBVHLint
+	@$(TIME) cabal test SBVHLint
 endif
 
 testInterfaces:
-	@$(TIME) cabal new-test SBVConnections
+	@$(TIME) cabal test SBVConnections
 
 benchBuild:
-	@$(TIME) cabal new-build SBVBench
+	@$(TIME) cabal build SBVBench
 
 DOCTEST_GOLD = SBVTestSuite/GoldFiles/doctest_sanity.gold
 
@@ -143,22 +134,22 @@ ifdef TGT
 ifdef FAST
 	cabal-docspec --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 else
-	cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+	cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 endif
 else
 	@/bin/rm -f ${DOCTEST_GOLD}_temp
-	@$(TIME) cabal new-run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
+	@$(TIME) cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
 	@ghc -package process buildUtils/checkDocSpec.hs -e "start \"${DOCTEST_GOLD} ${ACCEPT}\""
 endif
 
 test:
-	@$(TIME) cabal new-run ${CABAL_OPTS} SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
+	@$(TIME) cabal run ${CABAL_OPTS} SBVTest -- -j $(NO_OF_CORES) ${TESTTARGET} ${TESTACCEPT} ${TESTHIDE} --quickcheck-tests ${QCCOUNT}
 
 checkLinks:
 	@brok --no-cache --only-failures $(ALLSOURCES) COPYRIGHT INSTALL LICENSE $(wildcard *.md)
 
 mkDistro:
-	$(TIME) cabal new-sdist
+	$(TIME) cabal sdist
 
 # Useful if we update z3 (or some other solver) but don't make any changes to SBV
 releaseNoBuild: testsuite testInterfaces benchBuild mkDistro checkLinks

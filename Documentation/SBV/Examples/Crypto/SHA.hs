@@ -175,7 +175,7 @@ sha512_256P = sha512P { h0 = [ 0x22312194FC2BF72C, 0x9F555FA3C84C64C2, 0x2393B86
 -- * Section 5, Preprocessing
 -----------------------------------------------------------------------------
 
--- | 'Block' is a  synonym for lists, but makes the intent clear.
+-- | t'Block' is a  synonym for lists, but makes the intent clear.
 newtype Block a = Block [a]
 
 -- | Prepare the message by turning it into blocks. We also check for the message

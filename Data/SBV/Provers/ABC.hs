@@ -35,7 +35,6 @@ abc = SMTSolver {
                               , supportsBitVectors         = True
                               , supportsUninterpretedSorts = False
                               , supportsUnboundedInts      = False
-                              , supportsInt2bv             = False
                               , supportsReals              = False
                               , supportsApproxReals        = False
                               , supportsDeltaSat           = Nothing

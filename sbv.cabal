@@ -1,7 +1,7 @@
 Cabal-Version: 2.2
 
 Name        : sbv
-Version     : 11.1.5
+Version     : 11.3
 Category    : Formal Methods, Theorem Provers, Bit vectors, Symbolic Computation, Math, SMT
 Synopsis    : SMT Based Verification: Symbolic Haskell theorem prover using SMT solving.
 Description : Express properties about Haskell programs and automatically prove them using SMT
@@ -162,6 +162,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.Numeric
                   , Documentation.SBV.Examples.KnuckleDragger.ShefferStroke
                   , Documentation.SBV.Examples.KnuckleDragger.Sqrt2IsIrrational
+                  , Documentation.SBV.Examples.KnuckleDragger.StrongInduction
                   , Documentation.SBV.Examples.KnuckleDragger.Tao
                   , Documentation.SBV.Examples.Misc.Definitions
                   , Documentation.SBV.Examples.Misc.Enumerate

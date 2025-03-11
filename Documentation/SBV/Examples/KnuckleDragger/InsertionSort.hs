@@ -128,21 +128,21 @@ correctness = runKD $ do
                (\(Forall @"xs" xs) (Forall @"e" e) -> nonDecreasing xs .=> nonDecreasing (insert e xs)) $
                \ih x xs e -> [nonDecreasing (x .: xs)]
                           |- nonDecreasing (insert e (x .: xs))
-                          ? "unfold insert"
+                          ?? "unfold insert"
                           =: nonDecreasing (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                          ? "push nonDecreasing over the ite"
+                          ?? "push nonDecreasing over the ite"
                           =: ite (e .<= x) (nonDecreasing (e .: x .: xs))
                                            (nonDecreasing (x .: insert e xs))
-                          ? "unfold nonDecreasing, simplify"
+                          ?? "unfold nonDecreasing, simplify"
                           =: ite (e .<= x)
                                  (nonDecreasing (x .: xs))
                                  (nonDecreasing (x .: insert e xs))
-                          ?  nonDecreasing (x .: xs)
+                          ??  nonDecreasing (x .: xs)
                           =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                          ? [ hyp  (nonDecreasing (x .: xs))
-                            , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
-                            , hprf ih
-                            ]
+                          ?? [ hyp  (nonDecreasing (x .: xs))
+                             , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
+                             , hprf ih
+                             ]
                           =: sTrue
                           =: qed
 
@@ -155,9 +155,9 @@ correctness = runKD $ do
                (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
                \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
                               -- Surprisingly, z3 really needs to be told how to instantiate is1 below so it doesn't get stuck.
-                              ? is1 `at` (Inst @"x" x, Inst @"xs" xs)
+                              ?? is1 `at` (Inst @"x" x, Inst @"xs" xs)
                               =: nonDecreasing (insert x (insertionSort xs))
-                              ? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
+                              ?? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
                                 , hprf ih
                                 ]
                               =: sTrue
@@ -179,9 +179,9 @@ correctness = runKD $ do
                \ih x xs e -> [] |- e `elem` insert e (x .: xs)
                                 =: e `elem` ite (e .<= x) (e .: x .: xs) (x .: insert e xs)
                                 -- z3 has hard time making the following step (though cvc5 is OK with it)
-                                ? elemITE `at` (Inst @"x" e, Inst @"c" (e .<= x), Inst @"t" (e .: x .: xs), Inst @"e" (x .: insert e xs))
+                                ?? elemITE `at` (Inst @"x" e, Inst @"c" (e .<= x), Inst @"t" (e .: x .: xs), Inst @"e" (x .: insert e xs))
                                 =: ite (e .<= x) (e `elem` (e .: x .: xs)) (e `elem` (x .: insert e xs))
-                                =: ite (e .<= x) sTrue (e `elem` insert e xs) ? ih
+                                =: ite (e .<= x) sTrue (e `elem` insert e xs) ?? ih
                                 =: sTrue
                                 =: qed
 
@@ -189,17 +189,17 @@ correctness = runKD $ do
         induct "removeAfterInsert"
                (\(Forall @"xs" xs) (Forall @"e" e) -> removeFirst e (insert e xs) .== xs) $
                \ih x xs e -> [] |- removeFirst e (insert e (x .: xs))
-                                ?  "expand insert"
+                                ??  "expand insert"
                                 =: removeFirst e (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                                ?  "push removeFirst down the if-then-else"
+                                ??  "push removeFirst down the if-then-else"
                                 =: ite (e .<= x) (removeFirst e (e .: x .: xs)) (removeFirst e (x .: insert e xs))
-                                ?  "unfold removeFirst, then branch"
+                                ??  "unfold removeFirst, then branch"
                                 =: ite (e .<= x) (x .: xs) (removeFirst e (x .: insert e xs))
-                                ?  "unfold removeFirst,  else branch. Note that e .== x is False, due to the pre-condition"
+                                ??  "unfold removeFirst,  else branch. Note that e .== x is False, due to the pre-condition"
                                 =: ite (e .<= x) (x .: xs) (x .: removeFirst e (insert e xs))
-                                ?  ih
+                                ??  ih
                                 =: ite (e .<= x) (x .: xs) (x .: xs)
-                                ?  "simplify"
+                                ??  "simplify"
                                 =: x .: xs
                                 =: qed
 
@@ -209,11 +209,11 @@ correctness = runKD $ do
                \ih x xs -> [] |- isPermutation (x .: xs) (insertionSort (x .: xs))
                               =: isPermutation (x .: xs) (insert x (insertionSort xs))
                               =: x `elem` insert x (insertionSort xs) .&& isPermutation xs (removeFirst x (insert x (insertionSort xs)))
-                              ? insertIsElem
+                              ?? insertIsElem
                               =: isPermutation xs (removeFirst x (insert x (insertionSort xs)))
-                              ? removeAfterInsert
+                              ?? removeAfterInsert
                               =: isPermutation xs (insertionSort xs)
-                              ? ih
+                              ?? ih
                               =: sTrue
                               =: qed
 

@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- A demonstration of the use of the 'SymbolicT' and 'QueryT' transformers in
+-- A demonstration of the use of the t'SymbolicT' and t'QueryT' transformers in
 -- the setting of symbolic program evaluation.
 --
 -- In this example, we perform symbolic evaluation across three steps:
@@ -29,8 +29,6 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.Transformers.SymbolicEval where
-
-import Data.SBV (getValue)
 
 import Control.Monad.Except   (Except, ExceptT, MonadError, mapExceptT, runExceptT, throwError)
 import Control.Monad.Identity (Identity(runIdentity))
@@ -72,7 +70,7 @@ alloc :: String -> Alloc (SBV Integer)
 alloc "" = throwError "tried to allocate unnamed value"
 alloc nm = free nm
 
--- | Allocate an 'Env' holding all input variables for the program.
+-- | Allocate an t'Env' holding all input variables for the program.
 allocEnv :: Alloc Env
 allocEnv = do
     x <- alloc "x"
@@ -133,28 +131,28 @@ newtype Program a = Program (Term a)
 -- output.
 newtype Result = Result SVal
 
--- | Makes a 'Result' from a symbolic value.
+-- | Makes a t'Result' from a symbolic value.
 mkResult :: SBV a -> Result
 mkResult = Result . unSBV
 
--- | Performs symbolic evaluation of a 'Program'.
+-- | Performs symbolic evaluation of a t'Program'.
 runProgramEval :: Env -> Program a -> Except String Result
 runProgramEval env (Program term) = mkResult <$> runEval env term
 
 -- * Property evaluation
 
--- | A property describes a quality of a 'Program'. It is a 'Term' yields a
+-- | A property describes a quality of a t'Program'. It is a 'Term' yields a
 -- boolean value.
 newtype Property = Property (Term Bool)
 
--- | Performs symbolic evaluation of a 'Property.
+-- | Performs symbolic evaluation of a t'Property.
 runPropertyEval :: Result -> Env -> Property -> Except String (SBV Bool)
 runPropertyEval (Result res) env (Property term) =
     runEval (env { result = Just res }) term
 
 -- * Checking whether a program satisfies a property
 
--- | The result of 'check'ing the combination of a 'Program' and a 'Property'.
+-- | The result of 'check'ing the combination of a t'Program' and a t'Property'.
 data CheckResult = Proved | Counterexample Integer Integer
     deriving (Eq, Show)
 
@@ -177,7 +175,7 @@ mkQuery env = do
         DSat{} -> throwError "delta-sat"
         Unk    -> throwError "unknown"
 
--- | Checks a 'Property' of a 'Program' (or fails).
+-- | Checks a t'Property' of a t'Program' (or fails).
 check :: Program a -> Property -> IO (Either String CheckResult)
 check program prop = runExceptT $ runSMTWith z3 $ do
     env <- runAlloc allocEnv

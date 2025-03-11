@@ -160,7 +160,7 @@ mergeSExpr (x:xs)
        skipBar []       = []                     -- Oh dear, line finished, but the string didn't. We're in trouble. Ignore!
 
 -- | An exception thrown from SBV. If the solver ever responds with a non-success value for a command,
--- SBV will throw an 'SBVException', it so the user can process it as required. The provided 'Show' instance
+-- SBV will throw an t'SBVException', it so the user can process it as required. The provided 'Show' instance
 -- will render the failure nicely. Note that if you ever catch this exception, the solver is no longer alive:
 -- You should either -- throw the exception up, or do other proper clean-up before continuing.
 data SBVException = SBVException {

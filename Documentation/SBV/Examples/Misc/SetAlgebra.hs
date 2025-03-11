@@ -243,13 +243,13 @@ Q.E.D.
 {- $subsetChar
 There are multiple equivalent ways of characterizing the subset relationship:
 
-\( A\subseteq B  \iff A \cap B = A \) 
+\( A\subseteq B  \iff A \cap B = A \)
 
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `intersection` b .== a
 Q.E.D.
 
 
-\( A\subseteq B \iff A \cup B = B \) 
+\( A\subseteq B \iff A \cup B = B \)
 
 >>> prove $ \(a :: SI) b -> a `isSubsetOf` b .<=> a `union` b .== b
 Q.E.D.

@@ -29,13 +29,13 @@ import qualified Data.SBV.Internals as SI
 -- >>> import Data.SBV
 #endif
 
--- | A 'Metres' is a newtype wrapper around 'Integer'.
+-- | A t'Metres' is a newtype wrapper around 'Integer'.
 newtype Metres = Metres Integer deriving (Real, Integral, Num, Enum, Eq, Ord)
 
--- | Symbolic version of 'Metres'.
+-- | Symbolic version of t'Metres'.
 type SMetres   = SBV Metres
 
--- | To use 'Metres' symbolically, we associate it with the underlying symbolic
+-- | To use t'Metres' symbolically, we associate it with the underlying symbolic
 -- type's kind.
 instance HasKind Metres where
    kindOf _ = KUnbounded
@@ -53,10 +53,10 @@ instance SymVal Metres where
 -- suits our needs.
 newtype HumanHeightInCm = HumanHeightInCm Word16 deriving (Real, Integral, Num, Enum, Eq, Ord)
 
--- | Symbolic version of 'HumanHeightInCm'.
+-- | Symbolic version of t'HumanHeightInCm'.
 type SHumanHeightInCm = SBV HumanHeightInCm
 
--- | Symbolic instance simply follows the underlying type, just like 'Metres'.
+-- | Symbolic instance simply follows the underlying type, just like t'Metres'.
 instance HasKind HumanHeightInCm where
     kindOf _ = KBounded False 16
 

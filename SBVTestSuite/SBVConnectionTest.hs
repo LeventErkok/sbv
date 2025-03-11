@@ -4,7 +4,7 @@
 
 module Main (main) where
 
-import Data.SBV hiding (partition)
+import Data.SBV
 import Data.List
 import Control.Monad
 import System.Exit
@@ -18,7 +18,7 @@ solverName :: SMTConfig -> String
 solverName = show . name . solver
 
 main :: IO ()
-main = do let allSolvers = map (\s -> (solverName s, s)) [abc, boolector, bitwuzla, cvc4, cvc5, mathSAT, yices, z3, dReal, openSMT]
+main = do let allSolvers = map ((\s -> (solverName s, s)) . defaultSolverConfig) [minBound .. maxBound]
 
           args <- getArgs
 

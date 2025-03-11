@@ -4,54 +4,21 @@ module Main where
 
 import Data.Char
 import Data.List
+import System.Exit
 import qualified Control.Exception as C
 
-verbose :: Bool
-verbose = False
-
-msg :: String -> IO ()
-msg s | verbose = putStrLn $ "HADDOCK SIMPLIFY: " ++ s
-      | True    = pure ()
-
 main :: IO ()
-main = go False Nothing
+main = go False
 
-go :: Bool -> Maybe String -> IO ()
-go failed mbInp = do
-  mbLn <- case mbInp of
-           Just s  -> pure $ Just s
-           Nothing -> (Just <$> getLine) `C.catch` (\(_ :: C.SomeException) -> return Nothing)
-  case mbLn of
-    Nothing -> if failed
-                  then error "*** There were files that had missing haddock-documentation. Stopping."
-                  else pure ()
-    Just ln -> if "Warning: '" `isPrefixOf` ln && "' is ambiguous. It is defined" `isSuffixOf` ln
-                  then do l1 <- getLine
-                          l2 <- getLine
-                          l3 <- getLine
-                          l4 <- getLine
-                          l5 <- getLine
-                          if    l1 == "    You may be able to disambiguate the identifier by qualifying it or"
-                             && l2 == "    by specifying the type/value namespace explicitly."
-                             then do msg "Skipped lines"
-                                     go failed Nothing
-                             else do msg ln
-                                     msg l1
-                                     msg l2
-                                     msg l3
-                                     msg l4
-                                     msg l5
-                                     go failed Nothing
-                  else if "Warning: " `isPrefixOf` ln && ": could not find link destinations for:" `isInfixOf` ln
-                          then do let skip = do l <- getLine
-                                                if ("-" `isPrefixOf` dropWhile isSpace l)
-                                                   then skip
-                                                   else pure l
-                                  l <- skip
-                                  go failed (Just l)
-                          else do putStrLn ln
-                                  go (failed || bad ln) Nothing
+nextLine :: Bool -> IO String
+nextLine failed = do mbL <- (Just <$> getLine) `C.catch` (\(_ :: C.SomeException) -> return Nothing)
+                     case mbL of
+                       Nothing -> if failed then do putStrLn "*** There were haddock issues"
+                                                    exitFailure
+                                            else exitSuccess
+                       Just l  -> pure l
 
+-- If there's a percentage, it better be 100%!
 bad :: String -> Bool
 bad ln
   | '%' `notElem` ln
@@ -60,3 +27,90 @@ bad ln
   = case words ln of
      "100%" : _ -> False
      _          -> True
+
+trigger :: String -> Bool
+trigger ln = "Warning: " `isPrefixOf` ln && ": could not find link destinations for:" `isInfixOf` ln
+
+go :: Bool -> IO ()
+go failed = do
+    ln <- nextLine failed
+    case () of
+      () | trigger ln -> processWarns failed (Just ln)
+      () | True       -> do putStrLn ln
+                            go (failed || bad ln)
+
+processWarns :: Bool -> Maybe String -> IO ()
+processWarns failed mbTopLine = do
+   ln <- nextLine failed
+   case () of
+     () | trigger  ln -> processWarns failed (Just ln)
+        | ignore   ln -> processWarns failed mbTopLine
+        | finalize ln -> go failed
+        | True        -> do maybe (pure ()) putStrLn mbTopLine
+                            putStrLn ln
+                            processWarns True Nothing
+
+finalize :: String -> Bool
+finalize ln = "Documentation created:" `isInfixOf` ln
+
+ignore :: String -> Bool
+ignore s = haddockBug s || sbvIgnore s
+
+-- These are haddock bugs..
+haddockBug :: String -> Bool
+haddockBug input
+   | not ("-" `isPrefixOf` dropWhile isSpace input)
+   = False
+   | True
+   = bug1 || bug2 || bug3
+  where
+   -- See: https://github.com/haskell/haddock/issues/1071 amongst others
+   bug1 = ".R:"    `isInfixOf` input
+   bug2 = ".D:R:"  `isInfixOf` input
+   bug3 = ".Rep_"  `isInfixOf` input
+
+-- These are things that SBV doesn't export so Haddock can't really link to
+sbvIgnore :: String -> Bool
+sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
+  where s     = dropWhile isSpace input
+        fmt p = "- Data.SBV." ++ p
+
+        patterns = [ "Core.Kind.BVZeroWidth"
+                   , "Core.Kind.constructUKind"
+                   , "Core.Kind.InvalidFloat"
+                   , "Core.Symbolic.SMTEngine"
+                   , "Core.Symbolic.UIName"
+                   , "Core.Data.skolem"
+                   , "Core.Data.GEqSymbolic"
+                   , "Core.Model.UIKind"
+                   , "Core.Model.GMergeable"
+                   , "Core.Model.QSaturate"
+                   , "Core.Symbolic.SMTDef"
+                   , "Core.Symbolic.CnstMap"
+                   , "Core.Symbolic.ProgInfo"
+                   , "Core.Symbolic.ResultInp"
+                   , "Core.Symbolic.Name"
+                   , "Core.Symbolic.SetOp"
+                   , "Core.Symbolic.SMTLambda"
+                   , "Core.Symbolic.NROp"
+                   , "Core.Symbolic.SpecialRelOp"
+                   , "Core.Symbolic.SBVContext"
+                   , "Core.Model.minimize"
+                   , "Core.Model.maximize"
+                   , "Client.BaseIO.ToSizedBV"
+                   , "Client.BaseIO.FromSizedBV"
+                   , "Control.Utils.SMTFunction"
+                   , "Control.Query.Assignment"
+                   , "Tools.KD.KnuckleDragger.ChainStep"
+                   , "Tools.KD.KnuckleDragger.ChainsTo"
+                   , "Tools.KD.KnuckleDragger.ProofHint"
+                   , "Tools.KD.KnuckleDragger.ProofStep"
+                   , "Tools.KD.KnuckleDragger.Helper"
+                   , "Tools.KD.KnuckleDragger.Instantiatable"
+                   , "Tools.KD.KnuckleDragger.Inductive"
+                   , "Tools.KD.KnuckleDragger.CalcLemma"
+                   , "Tools.STree.STreeInternal"
+                   , "Tuple.Tuple"
+                   , "Tuple.HasField"
+                   , "Utils.SExpr.SExpr"
+                   ]

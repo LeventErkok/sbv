@@ -24,8 +24,8 @@
 -- And similarly, 'sat' finds a satisfying instance. The types involved are:
 --
 -- @
---     'prove' :: 'Provable' a => a -> 'IO' 'ThmResult'
---     'sat'   :: 'Data.SBV.Provers.Satisfiable' a => a -> 'IO' 'SatResult'
+--     'prove' :: 'Provable' a => a -> 'IO' t'ThmResult'
+--     'sat'   :: 'Data.SBV.Provers.Satisfiable' a => a -> 'IO' t'SatResult'
 -- @
 --
 -- The classes 'Provable' and 'Data.SBV.Provers.Satisfiable' come with instances for n-ary predicates, for arbitrary n.
@@ -385,7 +385,7 @@ module Data.SBV (
   -- $softAssertions
   , assertWithPenalty , Penalty(..)
   -- ** Field extensions
-  -- | If an optimization results in an infinity/epsilon value, the returned `CV` value will be in the corresponding extension field.
+  -- | If an optimization results in an infinity/epsilon value, the returned t'CV' value will be in the corresponding extension field.
   , ExtCV(..), GeneralizedCV(..)
 
   -- * Model extraction
@@ -425,7 +425,7 @@ module Data.SBV (
   , some
 
   -- * Queriable values
-  , Queriable(..), freshVar, freshVar_, getValue
+  , Queriable(..), freshVar, freshVar_
 
   -- * Module exports
   -- $moduleExportIntro
@@ -727,8 +727,8 @@ Optimal model:
 
        @
          'assertWithPenalty' "bounded_x" (x .< 5) 'DefaultPenalty'
-         'assertWithPenalty' "bounded_x" (x .< 5) ('Penalty' 2.3 Nothing)
-         'assertWithPenalty' "bounded_x" (x .< 5) ('Penalty' 4.7 (Just "group-1")) @
+         'assertWithPenalty' "bounded_x" (x .< 5) $ v'Penalty' 2.3 Nothing
+         'assertWithPenalty' "bounded_x" (x .< 5) $ v'Penalty' 4.7 (Just "group-1") @
 
   In the first form, we are saying that the constraint @x .< 5@ must be satisfied, if possible,
   but if this constraint can not be satisfied to find a model, it can be violated with the default penalty of 1.
@@ -749,7 +749,7 @@ aims at simplifying this task.
 -}
 
 {- $resultTypes
-'ThmResult', 'SatResult', and 'AllSatResult' are simple newtype wrappers over 'SMTResult'. Their
+t'ThmResult', t'SatResult', and t'AllSatResult' are simple newtype wrappers over t'SMTResult'. Their
 main purpose is so that we can provide custom 'Show' instances to print results accordingly.
 -}
 
@@ -993,8 +993,8 @@ your other symbolic computations.  See the following files demonstrating reasoni
    * "Documentation.SBV.Examples.Puzzles.Rabbits"
    * "Documentation.SBV.Examples.Misc.FirstOrderLogic"
 
-SBV also supports the constructors 'ExistsUnique' to create unique existentials, in addition to
-'ForallN' and 'ExistsN' for creating multiple variables at the same time.
+SBV also supports the constructors t'ExistsUnique' to create unique existentials, in addition
+to t'ForallN' and t'ExistsN' for creating multiple variables at the same time.
 
 In general, SBV will not display the values of quantified variables for a satisfying instance.
 For a satisfiability problem, you can apply skolemization manually to have these values
@@ -1168,7 +1168,7 @@ SBV will translate these to equivalent terms that do not require special functio
 
 {- $verbosity
 
-SBV provides various levels of verbosity to aid in debugging, by using the 'SMTConfig' fields:
+SBV provides various levels of verbosity to aid in debugging, by using the t'SMTConfig' fields:
 
   * ['verbose'] Print on stdout a shortened account of what is sent/received. This is specifically trimmed to reduce noise
     and is good for quick debugging. The output is not supposed to be machine-readable.
@@ -1774,7 +1774,7 @@ class Queriable m a where
   project :: a -> QueryT m (QueryResult a)
 
   -- | ^ Create a literal value. Morally, 'embed' and 'project' are inverses of each other
-  -- via the 'QueryT' monad transformer.
+  -- via the t'QueryT' monad transformer.
   embed   :: QueryResult a -> QueryT m a
 
   default project :: (a ~ t e, QueryResult (t e) ~ t (QueryResult e), Traversable t, Monad m, Queriable m e) =>  a -> QueryT m (QueryResult a)

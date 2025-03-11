@@ -45,7 +45,7 @@ data IncS a = IncS { x :: a    -- ^ Input value
                    }
                    deriving (Show, Generic, Mergeable, Traversable, Functor, Foldable)
 
--- | Show instance for 'IncS'. The above deriving clause would work just as well,
+-- | Show instance for t'IncS'. The above deriving clause would work just as well,
 -- but we want it to be a little prettier here, and hence the @OVERLAPS@ directive.
 instance {-# OVERLAPS #-} (SymVal a, Show a) => Show (IncS (SBV a)) where
    show (IncS x y) = "{x = " ++ sh x ++ ", y = " ++ sh y ++ "}"

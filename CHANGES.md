@@ -1,15 +1,25 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.1.5, Not yet released
+### Version 11.3, 2025-03-10
+
+  * Fix various haddock documentation links
+
+  * KD: Clean-up proofs using the cases tactic
+
+### Version 11.2, 2025-03-08
 
   * Renamed the all-sat partitioning function from 'partition' to 'allSatPartiton'
 
   * Added support for 'partition' and 'splitAt' to Data.SBV.List
 
-  * Added more KnuckleDragger proof examples, including a proof of the functional insertion sort
-    algorithm.
-
+  * KnuckleDragger:
+      - Renamed ? to ?? (which aligns better), and added unicode equivalent of it, named ⁇
+      - Added strong-induction as a proof-method, with examples for both numeric and list examples
+      - Added a double-induction principle, allowing inductive proofs over two lists simultaneously
+      - Added a case-splitting tactic for calculational style proofs
+      - Added many other example KD proofs, for lists in particular
+      - Added a proof of the (functional) insertion sort algorithm
 
 ### Version 11.1, 2025-02-21
 
@@ -91,7 +101,7 @@
   * [BACKWARDS COMPATIBILITY] Changed the signature of the functions bmc (and bmcWith), induct (and inductWith)
     functions, so they take the transition as a relation, instead of a function returning multiple values. This
     generalizes the use cases, and it is easy to translate from existing applications. Simply change your old
-    'State -> [State]' function to 'State -> State -> SBool', which can be achieved by 
+    'State -> [State]' function to 'State -> State -> SBool', which can be achieved by
     'newTrans s1 s2 = s2 `sElem` oldTrans s1', though you probably want to code this in a more readable way
     depending on the actual transition relation you want to model. Furthermore, the function bmc is now
     split into two bmcRefute and bmcCover, to indicate use cases more clearly.
@@ -153,7 +163,7 @@
 ### Version 10.7, 2024-03-23
 
   * Fix SMTDefinable instances for functions of arity 8-12. Thanks to Nick Lewchenko for the patch.
-    
+
 ### Version 10.6, 2024-03-16
 
   * Added Data.SBV.Tools.BVOptimize module, which implements a custom optimizer for unsigned bit-vector
@@ -271,7 +281,7 @@
     formula has no existential (replaced by uninterpeted functions), and is equisatisfiable to the original.
 
     See the following files demonstrating reasoning with quantifiers:
-    
+
        * Documentation/SBV/Examples/Puzzles/Birthday.hs
        * Documentation/SBV/Examples/Puzzles/KnightsAndKnaves.hs
        * Documentation/SBV/Examples/Puzzles/Rabbits.hs
@@ -397,7 +407,7 @@
    * Added concrete type instances of Mergeable class.
 
    * Fixed a bug in the implementation of the concrete-path for sPopCount
-   
+
    * Added complement, power, and difference operators for regular expressions. Also added `everything`, `nothing`,
      `anyChar` as new recognizers.
 
@@ -587,11 +597,11 @@
   * Add "extraArgs" parameter to SMTConfig to simplify passing extra command line
     arguments to the solver.
 
-  * Add a method 
+  * Add a method
 
         sListArray :: (HasKind a, SymVal b) => b -> [(SBV a, SBV b)] -> array a b
 
-    to the `SymArray` class, which allows for creation of arrays from lists of constant or 
+    to the `SymArray` class, which allows for creation of arrays from lists of constant or
     symbolic lists of pairs. The first argument is the value to use for uninitialized entries.
     Note that the initializer must be a known constant, i.e., it cannot be symbolic. Latter
     elements of the list will overwrite the earlier ones, if there are repeated keys.

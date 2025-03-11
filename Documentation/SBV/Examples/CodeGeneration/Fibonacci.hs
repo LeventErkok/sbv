@@ -119,7 +119,7 @@ a look-up table, as follows.
 -}
 
 -- | Compute the fibonacci numbers statically at /code-generation/ time and
--- put them in a table, accessed by the 'select' call. 
+-- put them in a table, accessed by the 'select' call.
 fib2 :: SWord64 -> SWord64 -> SWord64
 fib2 top = select table 0
   where table = map (fib1 top) [0 .. top]

@@ -34,18 +34,18 @@ class MonadIO m => ExtractIO m where
 instance ExtractIO IO where
     extractIO = fmap pure
 
--- | IO extraction for 'MaybeT'.
+-- | IO extraction for t'MaybeT'.
 instance ExtractIO m => ExtractIO (MaybeT m) where
     extractIO = fmap MaybeT . extractIO . runMaybeT
 
--- | IO extraction for 'ExceptT'.
+-- | IO extraction for t'ExceptT'.
 instance ExtractIO m => ExtractIO (ExceptT e m) where
     extractIO = fmap ExceptT . extractIO . runExceptT
 
--- | IO extraction for lazy 'LW.WriterT'.
+-- | IO extraction for lazy t'LW.WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (LW.WriterT w m) where
     extractIO = fmap LW.WriterT . extractIO . LW.runWriterT
 
--- | IO extraction for strict 'SW.WriterT'.
+-- | IO extraction for strict t'SW.WriterT'.
 instance (Monoid w, ExtractIO m) => ExtractIO (SW.WriterT w m) where
     extractIO = fmap SW.WriterT . extractIO . SW.runWriterT
