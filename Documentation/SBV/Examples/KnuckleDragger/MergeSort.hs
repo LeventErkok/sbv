@@ -20,7 +20,7 @@ module Documentation.SBV.Examples.KnuckleDragger.MergeSort where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-import Prelude hiding (null, length, head, tail, elem, splitAt)
+import Prelude hiding (null, length, head, tail, elem, splitAt, (++), take, drop)
 import Data.SBV.List
 
 -- * Merge sort
@@ -155,11 +155,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
 
-    _ergeCount <-
+    mergeCount <-
         sInduct "mergeCount"
                 (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys) $
                 \ih x xs y ys e -> [] |- count e (merge (x .: xs) (y .: ys))
-                                      ?? "unfold"
+                                      ?? "unfold merge"
                                       =: count e (ite (x .<= y)
                                                       (x .: merge xs (y .: ys))
                                                       (y .: merge (x .: xs) ys))
@@ -187,13 +187,41 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                       =: count e (x .: xs) + count e (y .: ys)
                                       =: qed
 
+    countAppend <-
+      induct "countAppend"
+             (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
+             \ih x xs ys e -> [] |- count e ((x .: xs) ++ ys)
+                                 =: count e (x .: (xs ++ ys))
+                                 ?? "unfold count"
+                                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                                 ?? ih
+                                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                                 ?? "simplify"
+                                 =: count e (x .: xs) + count e ys
+                                 =: qed
+
+    takeDropCount <- do
+
+       takeDrop <- lemma "take_drop"
+                         (\(Forall @"n" n) (Forall @"xs" (xs :: SList Integer)) -> take n xs ++ drop n xs .== xs)
+                         []
+
+       calc "takeDropCount"
+            (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" e) -> count e (take n xs) + count e (drop n xs) .== count e xs) $
+            \xs n e -> [] |- count e (take n xs) + count e (drop n xs)
+                          ?? countAppend `at` (Inst @"xs" (take n xs), Inst @"ys" (drop n xs), Inst @"e" e)
+                          =: count e (take n xs ++ drop n xs)
+                          ?? takeDrop
+                          =: count e xs
+                          =: qed
+
     sortIsPermutation <-
         sInduct "sortIsPermutation"
                 (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs)) $
                 \_h x xs e -> [] |- count e (x .: xs) .== count e (mergeSort (x .: xs))
                                  ?? "unfold"
                                  =: ite (e .== x) (1 + count e xs) (count e xs) .== count e (mergeSort (x .: xs))
-                                 ?? sorry
+                                 ?? [mergeCount, takeDropCount, sorry]
                                  =: sTrue
                                  =: qed
 
