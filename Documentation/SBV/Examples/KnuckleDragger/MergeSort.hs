@@ -75,6 +75,11 @@ correctness = runKD $ do
     -- Part I. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
+    nonDecrIns  <- lemma "nonDecrInsert"
+                         (\(Forall @"x" x) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
+                                                            .=> nonDecreasing (x .: ys))
+                         [sorry]
+
     nonDecrTail <- lemma "nonDecTail"
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
                          []
@@ -92,7 +97,17 @@ correctness = runKD $ do
                              =: ite (x .<= y)
                                     (nonDecreasing (x .: merge xs (y .: ys)))
                                     (nonDecreasing (y .: merge (x .: xs) ys))
-                             ?? sorry
+                             ?? [ hprf $ nonDecrIns `at` (Inst @"x" x, Inst @"ys" (merge xs (y .: ys)))
+                                , hyp  $ nonDecreasing (x .: xs)
+                                , hyp  $ nonDecreasing (y .: ys)
+                                ]
+                             =: ite (x .<= y)
+                                    (nonDecreasing (merge xs (y .: ys)))
+                                    (nonDecreasing (y .: merge (x .: xs) ys))
+                             ?? [ hprf $ nonDecrIns `at` (Inst @"x" y, Inst @"ys" (merge (x .: xs) ys))
+                                , hyp  $ nonDecreasing (x .: xs)
+                                , hyp  $ nonDecreasing (y .: ys)
+                                ]
                              =: ite (x .<= y)
                                     (nonDecreasing (merge xs (y .: ys)))
                                     (nonDecreasing (merge (x .: xs) ys))
