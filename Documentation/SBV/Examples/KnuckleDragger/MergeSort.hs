@@ -115,9 +115,28 @@ correctness = runKD $ do
                              =: qed
 
     sortNonDecreasing <-
-        lemma "sortNonDecreasing"
-              (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
-              [mergeKeepsSort]
+        sInduct "sortNonDecreasing"
+                (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs)) $
+                \ih x xs -> [] |- nonDecreasing (mergeSort (x .: xs))
+                               ?? "unfold"
+                               =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                               in nonDecreasing (ite (length (x .: xs) .<= 1)
+                                                     (x .: xs)
+                                                     (merge (mergeSort h1) (mergeSort h2)))
+                               ?? "push nonDecreasing down"
+                               =: ite (length (x .: xs) .<= 1)
+                                      (nonDecreasing (x .: xs))
+                                      (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                               ?? ih `at` (Inst @"xs" xs)
+                               =: ite (length (x .: xs) .<= 1)
+                                      sTrue
+                                      (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                               ?? [ ih `at` (Inst @"xs" h1)
+                                  , ih `at` (Inst @"xs" h2)
+                                  , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                  ]
+                               =: sTrue
+                               =: qed
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is a permuation of its input
