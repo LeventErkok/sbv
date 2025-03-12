@@ -75,26 +75,44 @@ correctness = runKD $ do
     -- Part I. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
+    nonDecrTail <- lemma "nonDecTail"
+                         (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
+                         []
+
     mergeKeepsSort <-
-        induct "mergeKeepsSort"
+        sInductWith cvc5 "mergeKeepsSort"
                (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
-               \_h x xs ys -> [nonDecreasing (x .: xs), nonDecreasing ys]
-                           |- nonDecreasing (merge (x .: xs) ys)
-                           ?  "case split on ys, simplify"
-                           =: ite (null ys)
-                                  (nonDecreasing (merge (x .: xs) nil))
-                                  (sNot (null ys) .=> nonDecreasing (merge (x .: xs) (head ys .: tail ys)))
-                           ?  nonDecreasing (x .: xs)
-                           =: (null ys .|| nonDecreasing (merge (x .: xs) (head ys .: tail ys)))
-                           ?  "case split: x .<= head ys"
-                           =: (null ys .|| nonDecreasing (ite (x .<= head ys)
-                                                              (x       .: merge xs ys)
-                                                              (head ys .: merge (x .: xs) ys)))
-                           ?  "push nonDecreasing through ite"
-                           =: null ys .|| (ite (x .<= head ys)
-                                               (nonDecreasing (x       .: merge xs ys))
-                                               (nonDecreasing (head ys .: merge (x .: xs) ys)))
-                           =: qed
+               \ih x xs y ys -> [nonDecreasing (x .: xs), nonDecreasing (y .: ys)]
+                             |- nonDecreasing (merge (x .: xs) (y .: ys))
+                             ?? "unfold merge"
+                             =: nonDecreasing (ite (x .<= y)
+                                                   (x .: merge xs (y .: ys))
+                                                   (y .: merge (x .: xs) ys))
+                             ?? "push nonDecreasing down"
+                             =: ite (x .<= y)
+                                    (nonDecreasing (x .: merge xs (y .: ys)))
+                                    (nonDecreasing (y .: merge (x .: xs) ys))
+                             ?? sorry
+                             =: ite (x .<= y)
+                                    (nonDecreasing (merge xs (y .: ys)))
+                                    (nonDecreasing (merge (x .: xs) ys))
+                             ?? [ hprf $ ih          `at` (Inst @"xs" xs, Inst @"ys" (y .: ys))
+                                , hprf $ nonDecrTail `at` (Inst @"x" x,   Inst @"xs" xs)
+                                , hyp  $ nonDecreasing (y .: ys)
+                                , hyp  $ nonDecreasing (x .: xs)
+                                ]
+                             =: ite (x .<= y)
+                                    sTrue
+                                    (nonDecreasing (merge (x .: xs) ys))
+                             ?? [ hprf $ ih          `at` (Inst @"xs" (x .: xs), Inst @"ys" ys)
+                                , hprf $ nonDecrTail `at` (Inst @"x"  y,         Inst @"xs" ys)
+                                , hyp  $ nonDecreasing (y .: ys)
+                                , hyp  $ nonDecreasing (x .: xs)
+                                ]
+                             =: ite (x .<= y) sTrue sTrue
+                             ?? "simplify"
+                             =: sTrue
+                             =: qed
 
     sortNonDecreasing <-
         lemma "sortNonDecreasing"
