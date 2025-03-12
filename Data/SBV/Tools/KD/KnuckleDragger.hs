@@ -128,6 +128,11 @@ stepCases i helpers
 
         cover = sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits])
 
+-- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
+-- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for KD.
+kdMergeCfg :: SMTConfig -> SMTConfig -> SMTConfig
+kdMergeCfg cur top = cur{kdOptions = kdOptions top}
+
 -- | A class for doing equational reasoning style calculational proofs. Use 'calc' to prove a given theorem
 -- as a sequence of equalities, each step following from the previous.
 class CalcLemma a steps where
@@ -167,10 +172,10 @@ class CalcLemma a steps where
   {-# MINIMAL calcSteps #-}
   calcSteps :: a -> steps -> Symbolic (SBool, CalcStrategy)
 
-  calc    nm p steps = getKDConfig >>= \cfg -> calcWith    cfg nm p steps
-  calcThm nm p steps = getKDConfig >>= \cfg -> calcThmWith cfg nm p steps
-  calcWith           = calcGeneric False
-  calcThmWith        = calcGeneric True
+  calc            nm p steps = getKDConfig >>= \cfg  -> calcWith          cfg                   nm p steps
+  calcThm         nm p steps = getKDConfig >>= \cfg  -> calcThmWith       cfg                   nm p steps
+  calcWith    cfg nm p steps = getKDConfig >>= \cfg' -> calcGeneric False (kdMergeCfg cfg cfg') nm p steps
+  calcThmWith cfg nm p steps = getKDConfig >>= \cfg' -> calcGeneric True  (kdMergeCfg cfg cfg') nm p steps
 
   calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
   calcGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
@@ -376,15 +381,15 @@ class Inductive a steps where
    -- partial correctness is guaranteed if non-terminating functions are involved.
    sInductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
 
-   induct    nm p steps = getKDConfig >>= \cfg -> inductWith    cfg nm p steps
-   inductThm nm p steps = getKDConfig >>= \cfg -> inductThmWith cfg nm p steps
-   inductWith           = inductGeneric RegularInduction False
-   inductThmWith        = inductGeneric RegularInduction True
+   induct            nm p steps = getKDConfig >>= \cfg  -> inductWith                           cfg nm p steps
+   inductThm         nm p steps = getKDConfig >>= \cfg  -> inductThmWith                        cfg nm p steps
+   inductWith    cfg nm p steps = getKDConfig >>= \cfg' -> inductGeneric RegularInduction False (kdMergeCfg cfg cfg') nm p steps
+   inductThmWith cfg nm p steps = getKDConfig >>= \cfg' -> inductGeneric RegularInduction True  (kdMergeCfg cfg cfg') nm p steps
 
-   sInduct    nm p steps = getKDConfig >>= \cfg -> sInductWith    cfg nm p steps
-   sInductThm nm p steps = getKDConfig >>= \cfg -> sInductThmWith cfg nm p steps
-   sInductWith           = inductGeneric StrongInduction False
-   sInductThmWith        = inductGeneric StrongInduction True
+   sInduct            nm p steps = getKDConfig >>= \cfg  -> sInductWith                          cfg nm p steps
+   sInductThm         nm p steps = getKDConfig >>= \cfg  -> sInductThmWith                       cfg nm p steps
+   sInductWith    cfg nm p steps = getKDConfig >>= \cfg' -> inductGeneric  StrongInduction False (kdMergeCfg cfg cfg') nm p steps
+   sInductThmWith cfg nm p steps = getKDConfig >>= \cfg' -> inductGeneric  StrongInduction True  (kdMergeCfg cfg cfg') nm p steps
 
    -- | Internal, shouldn't be needed outside the library
    {-# MINIMAL inductionStrategy #-}
