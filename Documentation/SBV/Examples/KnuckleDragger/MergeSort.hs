@@ -66,6 +66,62 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- We have:
 --
 -- >>> correctness
+-- Lemma: nonDecrInsert                              Q.E.D.
+-- Lemma: nonDecTail                                 Q.E.D.
+-- Inductive lemma (strong): mergeKeepsSort
+--   Base: mergeKeepsSort.Base                       Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Asms: 3                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Asms: 4                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Asms: 5                                         Q.E.D.
+--   Step: 5                                         Q.E.D.
+--   Asms: 6                                         Q.E.D.
+--   Step: 6                                         Q.E.D.
+--   Step: 7                                         Q.E.D.
+--   Step: mergeKeepsSort.Step                       Q.E.D.
+-- Inductive lemma (strong): sortNonDecreasing
+--   Base: sortNonDecreasing.Base                    Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: sortNonDecreasing.Step                    Q.E.D.
+-- Inductive lemma (strong): mergeCount
+--   Base: mergeCount.Base                           Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: 5                                         Q.E.D.
+--   Step: 6                                         Q.E.D.
+--   Step: 7                                         Q.E.D.
+--   Step: mergeCount.Step                           Q.E.D.
+-- Inductive lemma: countAppend
+--   Base: countAppend.Base                          Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: countAppend.Step                          Q.E.D.
+-- Lemma: take_drop                                  Q.E.D.
+-- Lemma: takeDropCount
+--   Step  : 1                                       Q.E.D.
+--   Step  : 2                                       Q.E.D.
+--   Result:                                         Q.E.D.
+-- Inductive lemma (strong): sortIsPermutation
+--   Base: sortIsPermutation.Base                    Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3                                         Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: 5                                         Q.E.D.
+--   Step: 6                                         Q.E.D.
+--   Step: sortIsPermutation.Step                    Q.E.D.
+-- Lemma: mergeSortIsCorrect                         Q.E.D.
+-- [Proven] mergeSortIsCorrect
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 
@@ -194,7 +250,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                  =: count e (x .: (xs ++ ys))
                                  ?? "unfold count"
                                  =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
-                                 ?? ih
+                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
                                  =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
                                  ?? "simplify"
                                  =: count e (x .: xs) + count e ys
@@ -218,11 +274,31 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     sortIsPermutation <-
         sInduct "sortIsPermutation"
                 (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs)) $
-                \_h x xs e -> [] |- count e (x .: xs) .== count e (mergeSort (x .: xs))
-                                 ?? "unfold"
-                                 =: ite (e .== x) (1 + count e xs) (count e xs) .== count e (mergeSort (x .: xs))
-                                 ?? [mergeCount, takeDropCount, sorry]
-                                 =: sTrue
+                \ih x xs e -> [] |- count e (mergeSort (x .: xs))
+                                 ?? "unfold mergeSort"
+                                 =: count e (ite (length (x .: xs) .<= 1)
+                                                 (x .: xs)
+                                                 (let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                                  in merge (mergeSort h1) (mergeSort h2)))
+                                 ?? "push count down, simplify, rearrange"
+                                 =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
+                                 in ite (null xs)
+                                        (count e (singleton x))
+                                        (count e (merge (mergeSort h1) (mergeSort h2)))
+                                 ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
+                                 =: ite (null xs)
+                                        (count e (singleton x))
+                                        (count e (mergeSort h1) + count e (mergeSort h2))
+                                 ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
+                                 =: ite (null xs) (count e (singleton x)) (count e h1 + count e (mergeSort h2))
+                                 ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
+                                 =: ite (null xs)
+                                        (count e (singleton x))
+                                        (count e h1 + count e h2)
+                                 ?? takeDropCount `at` (Inst @"xs" (x .: xs), Inst @"n" (length (x .: xs) `sEDiv` 2), Inst @"e" e)
+                                 =: ite (null xs)
+                                        (count e (singleton x))
+                                        (count e (x .: xs))
                                  =: qed
 
     --------------------------------------------------------------------------------------------

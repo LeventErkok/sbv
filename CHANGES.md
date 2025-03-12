@@ -6,6 +6,8 @@
   * Generalize the strong-induction principle to use lexicographic order for simultanous
     induction over two lists.
 
+  * Added a proof of correctness for the merge-sort algorithm using KnuckleDragger
+
   * More exports from Data.SBV.Internals to enable compilation of SBVPlugin.
 
 ### Version 11.3, 2025-03-10
