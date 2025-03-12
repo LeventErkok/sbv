@@ -6,7 +6,12 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Symbolic implementation of merge-sort and its correctness.
+-- Symbolic implementation of merge-sort and its correctness. Note that this
+-- version, while fully push-button, proves merge-sort correct for fixed number
+-- of elements, i.e., not in its generality. A general proof would require
+-- non-trivial applications of induction and more manual guiding. We do
+-- such a proof in "Documentation.SBV.Examples.KnuckleDragger.MergeSort", which
+-- shows the full-power of the theorem-proving like aspects of SBV.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE TupleSections #-}
