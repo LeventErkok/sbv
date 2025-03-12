@@ -157,10 +157,21 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
 
+    firstIsElem <-
+       lemma   "firstIsElem"
+              (\(Forall @"xs" xs) (Forall @"x" x) -> x `elem` mergeSort (x .: xs))
+              [sorry]
+
     sortIsPermutation <-
-        lemma  "sortIsPermutation"
-               (\(Forall @"xs" xs) -> isPermutation xs (mergeSort xs))
-               [sorry]
+        sInduct "sortIsPermutation"
+                (\(Forall @"xs" xs) -> isPermutation xs (mergeSort xs)) $
+                \_h x xs -> [] |- isPermutation (x .: xs) (mergeSort (x .: xs))
+                               =: x `elem` mergeSort (x .: xs) .&& isPermutation xs (removeFirst x (mergeSort (x .: xs)))
+                               ?? firstIsElem `at` (Inst @"xs" xs, Inst @"x" x)
+                               =: isPermutation xs (removeFirst x (mergeSort (x .: xs)))
+                               ?? sorry
+                               =: sTrue
+                               =: qed
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
