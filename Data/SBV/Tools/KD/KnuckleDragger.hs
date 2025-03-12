@@ -620,10 +620,24 @@ singular n = case reverse n of
                's':_:_ -> init n
                _       -> n ++ "Elt"
 
--- | Metric for induction. Currently we simply require the list we're assuming correctness for is shorter in length, which
--- is a measure that is guarenteed >= 0. -- Later on, we might want to generalize this to a user given measure.
-smaller :: SymVal a => SList a -> SList a -> SBool
-smaller xs ys = SL.length xs .<= SL.length ys
+-- | Metric for induction over lists. Currently we simply require the list we're assuming correctness for is shorter in length, which
+-- is a measure that is guarenteed >= 0. Note that we use .<= here, since when called, the second argument is always the tail
+-- of the induction argument. Later on, we might want to generalize this to a user given measure.
+lexLeq :: SymVal a => SList a -> SList a -> SBool
+lexLeq xs ys = SL.length xs .<= SL.length ys
+
+-- | Metric for induction over two lists. We use lexicographic ordering. Again, we don't expose this directly. The
+-- second argument is always the tail of the induction argument, so we use .<=. Later on, we might want to generalize
+-- this to a user given measure.
+lexLeq2 :: (SymVal a, SymVal b) => (SList a, SList b) -> (SList a, SList b) -> SBool
+lexLeq2 (xs', ys') (xs, ys) =   lxs' .<= lxs                     -- tail of the first is the same, i.e., the first went down. So, we're good.
+                            .|| (    lxs' .== 1 + SL.length xs   -- OR, the tail did not grow (note the +1 due to us receiving the tail)
+                                 .&& lys' .<= lys                -- and the tail of the second went down. 
+                                )
+ where lxs  = SL.length xs
+       lys  = SL.length ys
+       lxs' = SL.length xs'
+       lys' = SL.length ys'
 
 -- | Induction over 'SList'.
 instance (KnownSymbol nx, SymVal x, EqSymbolic z)
@@ -639,8 +653,8 @@ instance (KnownSymbol nx, SymVal x, EqSymbolic z)
        xs <- free nxs
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $                                                        result (Forall xs)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) -> xs' `smaller` xs .=> result (Forall xs')
+                  RegularInduction -> internalAxiom "IH" $                                                       result (Forall xs)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) -> xs' `lexLeq` xs .=> result (Forall xs')
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs
 
        pure InductionStrategy {
@@ -667,8 +681,8 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
        a  <- free na
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                              a' ->                      result (Forall xs)  (a' :: Forall na a)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a)
+                  RegularInduction -> internalAxiom "IH" $ \                              a' ->                     result (Forall xs)  (a' :: Forall na a)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a
 
        pure InductionStrategy {
@@ -697,8 +711,8 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
        b  <- free nb
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                              a' b' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b)
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b
 
        pure InductionStrategy {
@@ -729,8 +743,8 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
        c  <- free nc
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c
 
        pure InductionStrategy {
@@ -763,8 +777,8 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
        d  <- free nd
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d
 
        pure InductionStrategy {
@@ -799,8 +813,8 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
        e  <- free ne
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' e' ->                      result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' e' -> xs' `smaller` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' e' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' e' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d e
 
        pure InductionStrategy {
@@ -830,8 +844,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
        ys <- free nys
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $                                                                                                           result (Forall xs)  (Forall ys)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys')
+                  RegularInduction -> internalAxiom "IH" $                                                                                                   result (Forall xs)  (Forall ys)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys')
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys
 
        pure InductionStrategy {
@@ -864,8 +878,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        a  <- free na
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                                                            a' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a)
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a
 
        pure InductionStrategy {
@@ -900,8 +914,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        b  <- free nb
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b)
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b
 
        pure InductionStrategy {
@@ -938,8 +952,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        c  <- free nc
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c
 
        pure InductionStrategy {
@@ -978,8 +992,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        d  <- free nd
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d
 
        pure InductionStrategy {
@@ -1020,8 +1034,8 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        e  <- free ne
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' e' ->                                           result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' e' -> xs' `smaller` xs .&& ys' `smaller` ys .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' e' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' e' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
            CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d e
 
        pure InductionStrategy {
