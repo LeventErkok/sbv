@@ -69,7 +69,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Prove that the output of merge sort is non-decreasing.
