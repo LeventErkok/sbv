@@ -78,7 +78,7 @@ correctness = runKD $ do
     nonDecrIns  <- lemma "nonDecrInsert"
                          (\(Forall @"x" x) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
                                                             .=> nonDecreasing (x .: ys))
-                         [sorry]
+                         []
 
     nonDecrTail <- lemma "nonDecTail"
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
