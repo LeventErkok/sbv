@@ -33,6 +33,9 @@ module Data.SBV.Internals (
   -- * Internal structures useful for low-level programming
   , module Data.SBV.Core.Data
 
+  -- * Is this name reserved?
+  , isReserved, UIName(..)
+
   -- * Operations useful for instantiating SBV type classes
   , genLiteral, genFromCV, CV(..), genMkSymVar, genParse, showModel, SMTModel(..), liftQRem, liftDMod, registerKind, svToSV
   , ProvableM(), SatisfiableM(), UICodeKind(..)
@@ -74,7 +77,7 @@ import Data.SBV.Core.Data hiding (Forall(..), Exists(..), ForallN(..), ExistsN(.
 
 import Data.SBV.Core.Kind       (BVIsNonZero, ValidFloat)
 import Data.SBV.Core.Model      (genLiteral, genFromCV, genMkSymVar, liftQRem, liftDMod)
-import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState, UICodeKind(..))
+import Data.SBV.Core.Symbolic   (IStage(..), QueryContext(..), MonadQuery, addSValOptGoal, registerKind, VarContext(..), svToSV, mkNewState, UICodeKind(..), UIName(..))
 
 import Data.SBV.Core.Floating   (sFloatAsComparableSWord32,  sDoubleAsComparableSWord64,  sFloatingPointAsComparableSWord, svFloatingPointAsSWord)
 
@@ -83,6 +86,7 @@ import qualified Data.SBV.Core.Floating as CF (sComparableSWord32AsSFloat, sComp
 import Data.SBV.Compilers.C       (compileToC', compileToCLib')
 import Data.SBV.Compilers.CodeGen
 
+import Data.SBV.SMT.SMTLibNames
 import Data.SBV.SMT.SMT (genParse, showModel, SatModel(..))
 
 import Data.SBV.Provers.Prover (ProvableM, SatisfiableM)
