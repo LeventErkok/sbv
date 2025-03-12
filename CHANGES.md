@@ -1,6 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 11.3.5, Not yet released
 ### Version 11.3, 2025-03-10
 
   * Fix various haddock documentation links
