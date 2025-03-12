@@ -21,7 +21,7 @@
 --   you: Really? and these six coins are all US government coins currently in production?
 --   friend: Yes.
 --   you: Well can you just put your coins into the vending machine and buy me a candy bar, and I'll pay you back?
---   friend: Sorry, I would like to but I cant with the coins I have.
+--   friend: Sorry, I would like to but I can't with the coins I have.
 -- What coins are your friend holding?
 -- @
 --
