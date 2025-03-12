@@ -1,6 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
+### Version 11.3.5, Not yet released
+
+  * Generalize the strong-induction principle to use lexicographic order for simultanous
+    induction over two lists.
+
+  * More exports from Data.SBV.Internals to enable compilation of SBVPlugin.
+
 ### Version 11.3, 2025-03-10
 
   * Fix various haddock documentation links
