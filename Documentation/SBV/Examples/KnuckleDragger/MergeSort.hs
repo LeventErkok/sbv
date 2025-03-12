@@ -47,19 +47,17 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                          (y, _)  = uncons l'
                                                      in x .<= y .&& nonDecreasing l'
 
--- | Remove the first occurrance of an number from a list, if any.
-removeFirst :: SInteger -> SList Integer -> SList Integer
-removeFirst = smtFunction "removeFirst" $ \e l -> ite (null l)
-                                                      nil
-                                                      (let (x, xs) = uncons l
-                                                       in ite (e .== x) xs (x .: removeFirst e xs))
+-- | Count the number of occurrences of an element in a list
+count :: SInteger -> SList Integer -> SInteger
+count = smtFunction "count" $ \e l -> ite (null l)
+                                          0
+                                          (let (x, xs) = uncons l
+                                               cxs     = count e xs
+                                           in ite (e .== x) (1 + cxs) cxs)
 
 -- | Are two lists permutations of each other?
 isPermutation :: SList Integer -> SList Integer -> SBool
-isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
-                                                          (null r)
-                                                          (let (x, xs) = uncons l
-                                                           in x `elem` r .&& isPermutation xs (removeFirst x r))
+isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x ys)
 
 -- * Correctness proof
 
@@ -157,21 +155,47 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
 
-    firstIsElem <-
-       lemma   "firstIsElem"
-              (\(Forall @"xs" xs) (Forall @"x" x) -> x `elem` mergeSort (x .: xs))
-              [sorry]
+    _ergeCount <-
+        sInduct "mergeCount"
+                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys) $
+                \ih x xs y ys e -> [] |- count e (merge (x .: xs) (y .: ys))
+                                      ?? "unfold"
+                                      =: count e (ite (x .<= y)
+                                                      (x .: merge xs (y .: ys))
+                                                      (y .: merge (x .: xs) ys))
+                                      ?? "push count inside"
+                                      =: ite (x .<= y)
+                                             (count e (x .: merge xs (y .: ys)))
+                                             (count e (y .: merge (x .: xs) ys))
+                                      ?? "unfold count, twice"
+                                      =: ite (x .<= y)
+                                             (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
+                                             (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
+                                      ?? ih `at` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
+                                      =: ite (x .<= y)
+                                             (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
+                                             (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
+                                      ?? ih `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
+                                      =: ite (x .<= y)
+                                             (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
+                                             (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
+                                      ?? "unfold count in reverse, twice"
+                                      =: ite (x .<= y)
+                                             (count e (x .: xs) + count e (y .: ys))
+                                             (count e (x .: xs) + count e (y .: ys))
+                                      ?? "simplify"
+                                      =: count e (x .: xs) + count e (y .: ys)
+                                      =: qed
 
     sortIsPermutation <-
         sInduct "sortIsPermutation"
-                (\(Forall @"xs" xs) -> isPermutation xs (mergeSort xs)) $
-                \_h x xs -> [] |- isPermutation (x .: xs) (mergeSort (x .: xs))
-                               =: x `elem` mergeSort (x .: xs) .&& isPermutation xs (removeFirst x (mergeSort (x .: xs)))
-                               ?? firstIsElem `at` (Inst @"xs" xs, Inst @"x" x)
-                               =: isPermutation xs (removeFirst x (mergeSort (x .: xs)))
-                               ?? sorry
-                               =: sTrue
-                               =: qed
+                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs)) $
+                \_h x xs e -> [] |- count e (x .: xs) .== count e (mergeSort (x .: xs))
+                                 ?? "unfold"
+                                 =: ite (e .== x) (1 + count e xs) (count e xs) .== count e (mergeSort (x .: xs))
+                                 ?? sorry
+                                 =: sTrue
+                                 =: qed
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
