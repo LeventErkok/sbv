@@ -196,12 +196,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                =: ite (length (x .: xs) .<= 1)
                                       (nonDecreasing (x .: xs))
                                       (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                               ?? ih `at` (Inst @"xs" xs)
+                               ?? ih `at` Inst @"xs" xs
                                =: ite (length (x .: xs) .<= 1)
                                       sTrue
                                       (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                               ?? [ ih `at` (Inst @"xs" h1)
-                                  , ih `at` (Inst @"xs" h2)
+                               ?? [ ih `at` Inst @"xs" h1
+                                  , ih `at` Inst @"xs" h2
                                   , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
                                   ]
                                =: sTrue
