@@ -36,12 +36,12 @@ import Data.SBV.Tools.KnuckleDragger
 --  Using these helpers, we can argue:
 --
 --   (4)  Start with the premise @a^2 = 2b^2@.
---   (5)  Thus, @a^2@ must be even. (Since it equals @2b^2@ by a.)
---   (6)  Thus, @a@ must be even. (Using 2 and b.)
---   (7)  Thus, @a^2@ must be divisible by @4@. (Using 3 and c. That is, 2b^2 == 4*K for someK.)
---   (8)  Thus, @b^2@ must be even. (Using d, b^2 = 2K.)
---   (9)  Thus, @b@ must be even. (Using 2 and e.)
---   (10) Since @a@ and @b@ are both even, they cannot be co-prime. (Using c and f.)
+--   (5)  Thus, @a^2@ must be even. (Since it equals @2b^2@ by 4.)
+--   (6)  Thus, @a@ must be even. (Using 2 and 5.)
+--   (7)  Thus, @a^2@ must be divisible by @4@. (Using 3 and 6. That is, @2b^2 == 4K@ for some @K@.)
+--   (8)  Thus, @b^2@ must be even. (Using 7, and @b^2 = 2K@.)
+--   (9)  Thus, @b@ must be even. (Using 2 and 8.)
+--   (10) Since @a@ and @b@ are both even, they cannot be co-prime. (Using 6 and 9.)
 --
 -- Note that our proof is mostly about the first 3 facts above, then z3 and KnuckleDragger fills in the rest.
 --
