@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.3.5, Not yet released
+### Version 11.4, 2025-03-12
 
   * Generalize the strong-induction principle to use lexicographic order for simultanous
     induction over two lists.
