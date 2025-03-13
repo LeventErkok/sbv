@@ -17,7 +17,7 @@ report any issues you might see with newer releases.
         on Jul 27, 2020.
   * CVC5:
       * https://github.com/cvc5/cvc5
-      * Version 1.2.0
+      * Version 1.2.1, downloaded on Mar 12, 2025
   * dReal:
       * http://dreal.github.io/
       * Version installed via `brew tap dreal/dreal; brew rm dreal; brew install dreal --HEAD`
@@ -33,7 +33,7 @@ report any issues you might see with newer releases.
       * Version 2.6.2 as downloaded from the above site on Apr 7, 2020
   * Z3:
       * http://github.com/Z3Prover/z3
-      * Version as downloaded from the above site on Mar 8th, 2025
+      * Version as downloaded from the above site on Mar 12th, 2025
       * SBV typically relies on latest features of z3, so compiling directly
         from the sources is recommended. If that's not possible, you should
         always use their latest release.
