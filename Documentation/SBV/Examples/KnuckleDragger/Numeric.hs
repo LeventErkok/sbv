@@ -61,8 +61,6 @@ sumConstProof = runKD $ do
 
 -- | Prove that sum of numbers from @0@ to @n@ is @n*(n-1)/2@.
 --
--- Note that z3 (as of mid Feb 2025) can't converge on this quickly, but CVC5 does just fine. We have:
---
 -- >>> sumProof
 -- Inductive lemma: sum_correct
 --   Base: sum_correct.Base                Q.E.D.
@@ -76,7 +74,7 @@ sumConstProof = runKD $ do
 sumProof :: IO Proof
 sumProof = runKD $ do
    let sum :: SInteger -> SInteger
-       sum = smtFunction "sum" $ \n -> ite (n .== 0) 0 (n + sum (n - 1))
+       sum = smtFunction "sum" $ \n -> ite (n .<= 0) 0 (n + sum (n - 1))
 
        spec :: SInteger -> SInteger
        spec n = (n * (n+1)) `sDiv` 2
@@ -84,7 +82,7 @@ sumProof = runKD $ do
        p :: SInteger -> SBool
        p n = sum n .== spec n
 
-   inductWith cvc5 "sum_correct"
+   induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih n -> [n .>= 0] |- sum (n+1)    ?? n .>= 0
                              =: n+1 + sum n  ?? [hprf ih, hyp (n .>= 0)]
@@ -93,8 +91,6 @@ sumProof = runKD $ do
                              =: qed
 
 -- | Prove that sum of square of numbers from @0@ to @n@ is @n*(n+1)*(2n+1)/6@.
---
--- Note that z3 (as of mid Feb 2025) can't converge on this quickly, but CVC5 does just fine. We have:
 --
 -- >>> sumSquareProof
 -- Inductive lemma: sumSquare_correct
@@ -109,7 +105,7 @@ sumProof = runKD $ do
 sumSquareProof :: IO Proof
 sumSquareProof = runKD $ do
    let sumSquare :: SInteger -> SInteger
-       sumSquare = smtFunction "sumSquare" $ \n -> ite (n .== 0) 0 (n * n + sumSquare (n - 1))
+       sumSquare = smtFunction "sumSquare" $ \n -> ite (n .<= 0) 0 (n * n + sumSquare (n - 1))
 
        spec :: SInteger -> SInteger
        spec n = (n * (n+1) * (2*n+1)) `sDiv` 6
@@ -117,7 +113,7 @@ sumSquareProof = runKD $ do
        p :: SInteger -> SBool
        p n = sumSquare n .== spec n
 
-   inductWith cvc5 "sumSquare_correct"
+   induct "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)           ?? n .>= 0
                              =: (n+1)*(n+1) + sumSquare n ?? [hprf ih, hyp (n .>= 0)]
