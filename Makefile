@@ -165,8 +165,8 @@ veryclean: clean
 	@make -C buildUtils clean
 
 # Just test the KD output for doctest
-KD_FILES = $(basename $(subst /,.,$(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs)))
+KD_FILES = $(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs)
 kdDocTest:
-	@for KDF in ${KD_FILES}; do \
-		cabal run SBVDocTest ${CABAL_OPTS} -- --module $${KDF}; \
+	for KDF in ${KD_FILES}; do                  \
+		make docTest TGT=$${KDF} || exit 1; \
 	done
