@@ -167,6 +167,6 @@ veryclean: clean
 # Just test the KD output for doctest
 KD_FILES = $(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs)
 kdDocTest:
-	for KDF in ${KD_FILES}; do                  \
+	@for KDF in ${KD_FILES}; do                 \
 		make docTest TGT=$${KDF} || exit 1; \
 	done
