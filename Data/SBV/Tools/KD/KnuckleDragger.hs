@@ -333,6 +333,7 @@ data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
                                            , inductionProofSteps     :: [([Helper], SBool)]
                                            , inductionBaseFailureMsg :: String
                                            , inductiveStep           :: SBool
+                                           , inductiveResult         :: SBool
                                            }
 
 -- | Are we doing strong induction or regular induction?
@@ -343,8 +344,9 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductionBaseCase
                                                     inductionProofSteps
                                                     _inductionBaseFailureMsg
-                                                    inductiveStep)
-  = inductionIntros : inductionBaseCase : inductiveStep : proofStepSaturatables inductionProofSteps
+                                                    inductiveStep
+                                                    inductiveResult)
+  = inductionIntros : inductionBaseCase : inductiveStep : inductiveResult : proofStepSaturatables inductionProofSteps
 
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
@@ -423,6 +425,7 @@ class Inductive a steps where
                                     , inductionProofSteps
                                     , inductionBaseFailureMsg
                                     , inductiveStep
+                                    , inductiveResult
                                     } <- inductionStrategy style result steps
 
          let stepHelpers = concatMap fst inductionProofSteps
@@ -440,7 +443,7 @@ class Inductive a steps where
                        (Just (liftIO (putStrLn inductionBaseFailureMsg)))
                        (finish [] [])
 
-          let loop i accum ((by, s):ss) = do
+          let loop i ((by, s):ss) = do
 
                   -- Prove that the assumptions follow, if any
                   case getHelperAssumes by of
@@ -459,18 +462,18 @@ class Inductive a steps where
 
                   proveAllCases i cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
 
-                  loop (i+1) (accum .&& s) ss
+                  loop (i+1) ss
 
-              loop _ accum [] = pure accum
+              loop _ [] = pure ()
 
-          -- Get the schema
-          indSchema <- loop (1::Int) sTrue inductionProofSteps
+          -- Do the steps
+          loop (1::Int) inductionProofSteps
 
           -- Do the final proof:
           queryDebug [nm ++ ": Induction, proving inductive step:"]
           checkSatThen cfg kdSt "Step"
                                 True
-                                (Just (inductionIntros .=> indSchema))
+                                (Just (inductionIntros .=> inductiveResult))
                                 inductiveStep
                                 []
                                 [nm, "Step"]
@@ -500,7 +503,7 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $                                                   result (Forall k)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) -> k' .<= k .=> result (Forall k')
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
@@ -508,6 +511,7 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SInteger' taking an extra argument.
@@ -525,7 +529,7 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                 a' ->                           result (Forall k)  (a' :: Forall na a)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k a
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
@@ -533,6 +537,7 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SInteger' taking two extra arguments.
@@ -552,7 +557,7 @@ instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVa
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                 a' b' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k a b
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
@@ -560,6 +565,7 @@ instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVa
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SInteger' taking three extra arguments.
@@ -582,7 +588,7 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                 a' b' c' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' c' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b c
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k a b c
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
@@ -590,6 +596,7 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SInteger' taking four extra arguments.
@@ -613,7 +620,7 @@ instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                 a' b' c' d' ->                           result (Forall k)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) a' b' c' d' -> 0 .<= k' .&& k' .<= k .=> result (Forall k') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih k a b c d
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k a b c d
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
@@ -621,6 +628,7 @@ instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c d)
+              , inductiveResult         = calcResult
               }
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
@@ -667,7 +675,7 @@ instance (KnownSymbol nx, SymVal x, EqSymbolic z)
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $                                                       result (Forall xs)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) -> xs' `lexLeq` xs .=> result (Forall xs')
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -675,6 +683,7 @@ instance (KnownSymbol nx, SymVal x, EqSymbolic z)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs))
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SList' taking an extra argument
@@ -695,7 +704,7 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                              a' ->                     result (Forall xs)  (a' :: Forall na a)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs a
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -703,6 +712,7 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SList' taking two extra arguments
@@ -725,7 +735,7 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                              a' b' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs a b
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -733,6 +743,7 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SList' taking three extra arguments
@@ -757,7 +768,7 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                              a' b' c' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs a b c
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -765,6 +776,7 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SList' taking four extra arguments
@@ -791,7 +803,7 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs a b c d
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -799,6 +811,7 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over 'SList' taking five extra arguments
@@ -827,7 +840,7 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                              a' b' c' d' e' ->                     result (Forall xs)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) a' b' c' d' e' -> xs' `lexLeq` xs .=> result (Forall xs') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs a b c d e
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs a b c d e
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -835,6 +848,7 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d e)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously
@@ -858,7 +872,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $                                                                                                   result (Forall xs)  (Forall ys)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys')
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -866,6 +880,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys))
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously, taking one extra argument
@@ -892,7 +907,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                                            a' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys a
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -900,6 +915,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously, taking two extra arguments
@@ -928,7 +944,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                                            a' b' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys a b
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -936,6 +952,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously, taking three extra arguments
@@ -966,7 +983,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys a b c
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -974,6 +991,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously, taking four extra arguments
@@ -1006,7 +1024,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys a b c d
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -1014,6 +1032,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d)
+              , inductiveResult         = calcResult
               }
 
 -- | Induction over two lists, simultaneously, taking four extra arguments
@@ -1048,7 +1067,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
        let ih = case style of
                   RegularInduction -> internalAxiom "IH" $ \                                                            a' b' c' d' e' ->                                   result (Forall xs)  (Forall ys)  (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
                   StrongInduction  -> internalAxiom "IH" $ \(Forall xs' :: Forall nx [x]) (Forall ys' :: Forall ny [y]) a' b' c' d' e' -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs') (Forall ys') (a' :: Forall na a) (b' :: Forall nb b) (c' :: Forall nc c) (d' :: Forall nd d) (e' :: Forall ne e)
-           CalcStrategy { calcIntros, calcProofSteps } = mkCalcSteps $ steps ih x xs y ys a b c d e
+           CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih x xs y ys a b c d e
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
@@ -1056,6 +1075,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d e)
+              , inductiveResult         = calcResult
               }
 
 -- | Instantiation for a universally quantified variable
