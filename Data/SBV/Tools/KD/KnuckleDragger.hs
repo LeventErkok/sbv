@@ -74,6 +74,7 @@ use = liftIO
 -- | Captures the steps for a calculationa proof
 data CalcStrategy = CalcStrategy { calcIntros     :: SBool
                                  , calcProofSteps :: [([Helper], SBool)]
+                                 , calcResult     :: SBool
                                  }
 
 -- | Saturatable things in steps
@@ -86,7 +87,7 @@ proofStepSaturatables = concatMap getS
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
-getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps) = calcIntros : proofStepSaturatables calcProofSteps
+getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps calcResult) = calcIntros : calcResult : proofStepSaturatables calcProofSteps
 
 -- | Based on the helpers given, construct the proofs we have to do in the given case
 stepCases :: Int -> [Helper] -> Either (String, SBool) ([(String, SBool)], SBool)
@@ -189,7 +190,7 @@ class CalcLemma a steps where
 
         mbStartTime <- getTimeStampIf measureTime
 
-        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofSteps}) <- calcSteps result steps
+        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofSteps, calcResult}) <- calcSteps result steps
 
         let stepHelpers = concatMap fst calcProofSteps
 
@@ -199,11 +200,11 @@ class CalcLemma a steps where
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $ calcIntros : getCalcStrategySaturatables strategy
 
-        let go :: Int -> SBool -> [([Helper], SBool)] -> Query Proof
-            go _ accum [] = do
+        let go :: Int -> [([Helper], SBool)] -> Query Proof
+            go _ [] = do
                 queryDebug [nm ++ ": Proof end: proving the result:"]
                 checkSatThen cfg kdSt "Result" True
-                             (Just (calcIntros .=> accum))
+                             (Just (calcIntros .=> calcResult))
                              calcGoal
                              []
                              ["", ""]
@@ -219,7 +220,7 @@ class CalcLemma a steps where
                                                            , proofName   = nm
                                                            }
 
-            go i accum ((by, s):ss) = do
+            go i ((by, s):ss) = do
 
                  -- Prove that the assumptions follow, if any
                  case getHelperAssumes by of
@@ -238,9 +239,9 @@ class CalcLemma a steps where
 
                  proveAllCases i cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
 
-                 go (i+1) (s .&& accum) ss
+                 go (i+1) ss
 
-        query $ go (1::Int) sTrue calcProofSteps
+        query $ go (1::Int) calcProofSteps
 
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
               => Int -> SMTConfig -> KDState
@@ -280,8 +281,14 @@ mkCalcSteps (intros, xs) = case reverse xs of
                                                                          ]
                              _                       -> CalcStrategy { calcIntros     = intros
                                                                      , calcProofSteps = zipWith merge xs (drop 1 xs)
+                                                                     , calcResult     = calcResult
                                                                      }
   where merge (SingleStep a by) (SingleStep b _) = (by, a .== b)
+        calcResult
+          | length xs <= 1 = sTrue
+          | True           = case (xs, reverse xs) of
+                               (SingleStep a _ : _, SingleStep b _ : _) -> a .== b
+                               _                                        -> sTrue
 
 -- | Chaining lemmas that depend on no quantified variables
 instance EqSymbolic z => CalcLemma SBool (SBool, [ProofStep z]) where
