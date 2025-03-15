@@ -106,13 +106,9 @@ updateForVersionChange:
 	@cabal run SBVTest -- -p noOpt1  --accept --quiet
 	@cabal run SBVTest -- -p noOpt2  --accept --quiet
 
-# To do a faster hlint without compiling, use FAST=1 as a parameter: make lintTest FAST=1
 lintTest:
-ifdef FAST
 	hlint Data SBVTestSuite -i "Use otherwise" -i "Parse error" --cpp-simple
-else
 	@$(TIME) cabal test SBVHLint
-endif
 
 testInterfaces:
 	@$(TIME) cabal test SBVConnections
@@ -123,14 +119,9 @@ benchBuild:
 DOCTEST_GOLD = SBVTestSuite/GoldFiles/doctest_sanity.gold
 
 # If you specify TGT, it'll just run on that target. Give the full path to the haskell file with .hs extension
-# If you also specify FAST, it won't compile first; good when you change the "comment" but not the code
 docTest:
 ifdef TGT
-ifdef FAST
-	cabal-docspec --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
-else
 	cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
-endif
 else
 	@/bin/rm -f ${DOCTEST_GOLD}_temp
 	@$(TIME) cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
@@ -172,3 +163,10 @@ clean:
 
 veryclean: clean
 	@make -C buildUtils clean
+
+# Just test the KD output for doctest
+KD_FILES = $(basename $(subst /,.,$(wildcard Documentation/SBV/Examples/KnuckleDragger/*.hs)))
+kdDocTest:
+	@for KDF in ${KD_FILES}; do \
+		cabal run SBVDocTest ${CABAL_OPTS} -- --module $${KDF}; \
+	done
