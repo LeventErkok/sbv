@@ -50,7 +50,7 @@ import Data.SBV.Core.Data(SolverContext)
 import Data.SBV.Tools.KD.Kernel
 import Data.SBV.Tools.KD.Utils
 
-import Control.Monad (forM_)
+import Control.Monad (forM_, zipWithM_)
 import Control.Monad.Trans (liftIO, MonadIO)
 
 import qualified Data.SBV.List as SL
@@ -200,48 +200,47 @@ class CalcLemma a steps where
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $ calcIntros : getCalcStrategySaturatables strategy
 
-        let go :: Int -> [([Helper], SBool)] -> Query Proof
-            go _ [] = do
-                queryDebug [nm ++ ": Proof end: proving the result:"]
-                checkSatThen cfg kdSt "Result" True
-                             (Just (calcIntros .=> calcResult))
-                             calcGoal
-                             []
-                             ["", ""]
-                             (Just [nm, "Result"])
-                             Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
-                                                let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
-                                                finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+        query $ do
 
-                                                pure Proof { rootOfTrust = ros
-                                                           , isUserAxiom = False
-                                                           , getProof    = label nm (quantifiedBool result)
-                                                           , getProp     = toDyn result
-                                                           , proofName   = nm
-                                                           }
+           let proveStep i (by, s) = do
 
-            go i ((by, s):ss) = do
+                    -- Prove that the assumptions follow, if any
+                    case getHelperAssumes by of
+                      [] -> pure ()
+                      as -> checkSatThen cfg kdSt "Asms  "
+                                                  True
+                                                  (Just calcIntros)
+                                                  (sAnd as)
+                                                  []
+                                                  ["", show i]
+                                                  (Just [nm, show i, "Assumptions"])
+                                                  Nothing
+                                                  (finish [] [])
 
-                 -- Prove that the assumptions follow, if any
-                 case getHelperAssumes by of
-                   [] -> pure ()
-                   as -> checkSatThen cfg kdSt "Asms  "
-                                               True
-                                               (Just calcIntros)
-                                               (sAnd as)
-                                               []
-                                               ["", show i]
-                                               (Just [nm, show i, "Assumptions"])
-                                               Nothing
-                                               (finish [] [])
+                    queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
 
-                 queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
+                    proveAllCases i cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
 
-                 proveAllCases i cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
+           zipWithM_ proveStep [1::Int ..] calcProofSteps
 
-                 go (i+1) ss
+           queryDebug [nm ++ ": Proof end: proving the result:"]
 
-        query $ go (1::Int) calcProofSteps
+           checkSatThen cfg kdSt "Result" True
+                        (Just (calcIntros .=> calcResult))
+                        calcGoal
+                        []
+                        ["", ""]
+                        (Just [nm, "Result"])
+                        Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
+                                           let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
+                                           finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+
+                                           pure Proof { rootOfTrust = ros
+                                                      , isUserAxiom = False
+                                                      , getProof    = label nm (quantifiedBool result)
+                                                      , getProp     = toDyn result
+                                                      , proofName   = nm
+                                                      }
 
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
               => Int -> SMTConfig -> KDState
@@ -443,7 +442,7 @@ class Inductive a steps where
                        (Just (liftIO (putStrLn inductionBaseFailureMsg)))
                        (finish [] [])
 
-          let loop i ((by, s):ss) = do
+          let proveStep i (by, s) = do
 
                   -- Prove that the assumptions follow, if any
                   case getHelperAssumes by of
@@ -462,12 +461,8 @@ class Inductive a steps where
 
                   proveAllCases i cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
 
-                  loop (i+1) ss
-
-              loop _ [] = pure ()
-
           -- Do the steps
-          loop (1::Int) inductionProofSteps
+          zipWithM_ proveStep [1::Int ..] inductionProofSteps
 
           -- Do the final proof:
           queryDebug [nm ++ ": Induction, proving inductive step:"]
