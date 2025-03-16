@@ -129,14 +129,14 @@ oddSequence2 = runKD $ do
 -- | For strong induction to work, We have to instantiate the proof at a "smaller" value. This
 -- example demonstrates what happens if we don't. We have:
 --
--- >>> won'tProve `catch` (\(_ :: SomeException) -> pure ())
+-- >>> won'tProve1 `catch` (\(_ :: SomeException) -> pure ())
 -- Inductive lemma (strong): lengthGood
 --   Step: 1
 -- *** Failed to prove lengthGood.1.
 -- <BLANKLINE>
 -- *** Solver reported: canceled
-won'tProve :: IO ()
-won'tProve = runKD $ do
+won'tProve1 :: IO ()
+won'tProve1 = runKD $ do
    let len :: SList Integer -> SInteger
        len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
 
@@ -146,6 +146,34 @@ won'tProve = runKD $ do
                 \ih x xs -> [] |- len (x .: xs)
                                -- incorrectly instantiate the IH at x .: xs
                                ?? ih `at` Inst @"xs" (x .: xs)
+                               =: length (x .: xs)
+                               =: qed
+   pure ()
+
+-- | Note that strong induction does not need an explicit base case, as the base-cases is folded into the
+-- inductive step. Here's an example demonstrating what happens when the failure is only at the base case.
+--
+-- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): lengthGood
+--   Step: 1
+-- *** Failed to prove lengthGood.1.
+-- <BLANKLINE>
+-- *** Solver reported: canceled
+won'tProve2 :: IO ()
+won'tProve2 = runKD $ do
+   let len :: SList Integer -> SInteger
+       len = smtFunction "badLength" $ \xs -> ite (null xs)
+                                                  123
+                                                  (ite (null xs)
+                                                       0
+                                                       (1 + len (tail xs)))
+
+   _ <- sInduct "badLength"
+                (\(Forall @"xs" xs) -> len xs .== length xs) $
+                \ih x xs -> [] |- len (x .: xs)
+                               =: 1 + len xs
+                               ?? ih `at` Inst @"xs" xs
+                               =: 1 + length xs
                                =: length (x .: xs)
                                =: qed
    pure ()
