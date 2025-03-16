@@ -35,7 +35,6 @@ import Data.List  (intercalate)
 import Data.Maybe (catMaybes, fromMaybe)
 
 import Data.SBV.Core.Data hiding (None)
-import Data.SBV.Core.Symbolic (isEmptyModel)
 import Data.SBV.Trans.Control hiding (getProof)
 
 import Data.SBV.SMT.SMT
@@ -102,7 +101,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag False Nothing inputProp by nms Nothing Nothing (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag False Nothing inputProp by nms Nothing (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -147,10 +146,9 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> [Proof]                                -- ^ helpers in the context. NB. Only used for printing cex's. We assume they're already asserted.
    -> [String]                               -- ^ sub-proof
    -> Maybe [String]                         -- ^ full-path to the proof, if different than sub-proof
-   -> Maybe (IO ())                          -- ^ special code to run if model is empty (if any)
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag inQuery mbCtx prop by nms fullNms mbSat unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag inQuery mbCtx prop by nms fullNms unsat = do
 
         case mbCtx of
            Just{}  -> inNewAssertionStack check
@@ -211,19 +209,6 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                                                    pure $ skolemize (qNot prop)
                                 pure res
 
-                 let isEmpty = case res of
-                                 Unsatisfiable{} -> -- Shouldn't really happen! bail out
-                                                    error $ unlines [" SBV.KnuckleDragger: Unexpected unsat-result while extracting a model."
-                                                                    , "Please report this as a bug!"
-                                                                    ]
-                                 Satisfiable _ m -> isEmptyModel m  -- Expected case
-                                 DeltaSat _ _  m -> isEmptyModel m  -- Unlikely but why not
-                                 SatExtField _ m -> isEmptyModel m  -- Can't really happen
-                                 Unknown{}       -> False           -- Possible, I suppose. Just print it
-                                 ProofError{}    -> False           -- Ditto
-
-                 liftIO $ case (isEmpty, mbSat) of
-                           (True,  Just act) -> act
-                           _                 -> print $ ThmResult res
+                 liftIO $ print $ ThmResult res
 
                  die

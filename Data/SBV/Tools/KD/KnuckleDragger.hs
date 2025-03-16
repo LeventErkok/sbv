@@ -214,7 +214,6 @@ class CalcLemma a steps where
                                                   []
                                                   ["", show i]
                                                   (Just [nm, show i, "Assumptions"])
-                                                  Nothing
                                                   (finish [] [])
 
                     queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
@@ -230,17 +229,17 @@ class CalcLemma a steps where
                         calcGoal
                         []
                         ["", ""]
-                        (Just [nm, "Result"])
-                        Nothing $ \d -> do mbElapsed <- getElapsedTime mbStartTime
-                                           let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
-                                           finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+                        (Just [nm, "Result"]) $ \d ->
+                          do mbElapsed <- getElapsedTime mbStartTime
+                             let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
+                             finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-                                           pure Proof { rootOfTrust = ros
-                                                      , isUserAxiom = False
-                                                      , getProof    = label nm (quantifiedBool result)
-                                                      , getProp     = toDyn result
-                                                      , proofName   = nm
-                                                      }
+                             pure Proof { rootOfTrust = ros
+                                        , isUserAxiom = False
+                                        , getProof    = label nm (quantifiedBool result)
+                                        , getProp     = toDyn result
+                                        , proofName   = nm
+                                        }
 
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
               => Int -> SMTConfig -> KDState
@@ -266,7 +265,7 @@ proveAllCases topStep cfg kdSt caseInfo stepTag s nm finalize
 
        checker "Completeness" coverCond s ["", "", ""] (Just [nm, show topStep, "Completeness"])
   where
-     checker tag caseAsmp cond cnm fnm = checkSatThen cfg kdSt tag True (Just caseAsmp) cond [] cnm fnm Nothing finalize
+     checker tag caseAsmp cond cnm fnm = checkSatThen cfg kdSt tag True (Just caseAsmp) cond [] cnm fnm finalize
 
 -- | Turn a sequence of steps into a chain of equalities
 mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
@@ -330,7 +329,6 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
                                            , inductionBaseCase       :: Maybe SBool
                                            , inductionProofSteps     :: [([Helper], SBool)]
-                                           , inductionBaseFailureMsg :: String
                                            , inductiveStep           :: SBool
                                            , inductiveResult         :: SBool
                                            }
@@ -342,7 +340,6 @@ getInductionStrategySaturatables :: InductionStrategy -> [SBool]
 getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductionBaseCase
                                                     inductionProofSteps
-                                                    _inductionBaseFailureMsg
                                                     inductiveStep
                                                     inductiveResult)
   = inductionIntros : inductiveStep : inductiveResult : proofStepSaturatables inductionProofSteps ++ maybeToList inductionBaseCase
@@ -422,7 +419,6 @@ class Inductive a steps where
          strategy@InductionStrategy { inductionIntros
                                     , inductionBaseCase
                                     , inductionProofSteps
-                                    , inductionBaseFailureMsg
                                     , inductiveStep
                                     , inductiveResult
                                     } <- inductionStrategy style result steps
@@ -440,9 +436,7 @@ class Inductive a steps where
           case inductionBaseCase of
              Nothing -> pure ()
              Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
-                           checkSatThen cfg kdSt "Base" True (Just inductionIntros) bc [] [nm, "Base"] Nothing
-                                        (Just (liftIO (putStrLn inductionBaseFailureMsg)))
-                                        (finish [] [])
+                           checkSatThen cfg kdSt "Base" True (Just inductionIntros) bc [] [nm, "Base"] Nothing (finish [] [])
 
           let proveStep i (by, s) = do
 
@@ -456,7 +450,6 @@ class Inductive a steps where
                                                 []
                                                 ["", show i]
                                                 (Just [nm, show i, "Assumptions"])
-                                                Nothing
                                                 (finish [] [])
 
                   queryDebug [nm ++ ": Induction, proving step: " ++ show i]
@@ -474,7 +467,6 @@ class Inductive a steps where
                                 inductiveStep
                                 []
                                 [nm, "Step"]
-                                Nothing
                                 Nothing $ \d -> do
 
             mbElapsed <- getElapsedTime mbStartTime
@@ -511,7 +503,6 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
                 inductionIntros         = k .>= 0 .&& calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate 0)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
               , inductiveResult         = calcResult
               }
@@ -537,7 +528,6 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
                 inductionIntros         = k .>= 0 .&& calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate 0 a)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a)
               , inductiveResult         = calcResult
               }
@@ -565,7 +555,6 @@ instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVa
                 inductionIntros         = k .>= 0 .&& calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate 0 a b)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b)
               , inductiveResult         = calcResult
               }
@@ -596,7 +585,6 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
                 inductionIntros         = k .>= 0 .&& calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate 0 a b c)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c)
               , inductiveResult         = calcResult
               }
@@ -628,7 +616,6 @@ instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol
                 inductionIntros         = k .>= 0 .&& calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate 0 a b c d)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c d)
               , inductiveResult         = calcResult
               }
@@ -683,7 +670,6 @@ instance (KnownSymbol nx, SymVal x, EqSymbolic z)
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs))
               , inductiveResult         = calcResult
               }
@@ -712,7 +698,6 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil a)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a)
               , inductiveResult         = calcResult
               }
@@ -743,7 +728,6 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b)
               , inductiveResult         = calcResult
               }
@@ -776,7 +760,6 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c)
               , inductiveResult         = calcResult
               }
@@ -811,7 +794,6 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c d)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d)
               , inductiveResult         = calcResult
               }
@@ -848,7 +830,6 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c d e)
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d e)
               , inductiveResult         = calcResult
               }
@@ -880,7 +861,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil .&& predicate SL.nil (y SL..: ys) .&& predicate (x SL..: xs) SL.nil
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys))
               , inductiveResult         = calcResult
               }
@@ -915,7 +895,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a .&& predicate SL.nil (y SL..: ys) a .&& predicate (x SL..: xs) SL.nil a
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a)
               , inductiveResult         = calcResult
               }
@@ -952,7 +931,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b .&& predicate SL.nil (y SL..: ys) a b .&& predicate (x SL..: xs) SL.nil a b
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b)
               , inductiveResult         = calcResult
               }
@@ -991,7 +969,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c .&& predicate SL.nil (y SL..: ys) a b c .&& predicate (x SL..: xs) SL.nil a b c
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c)
               , inductiveResult         = calcResult
               }
@@ -1032,7 +1009,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c d .&& predicate SL.nil (y SL..: ys) a b c d .&& predicate (x SL..: xs) SL.nil a b c d
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d)
               , inductiveResult         = calcResult
               }
@@ -1075,7 +1051,6 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
                 inductionIntros         = calcIntros
               , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c d e .&& predicate SL.nil (y SL..: ys) a b c d e .&& predicate (x SL..: xs) SL.nil a b c d e
               , inductionProofSteps     = calcProofSteps
-              , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d e)
               , inductiveResult         = calcResult
               }
