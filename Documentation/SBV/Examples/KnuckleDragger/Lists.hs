@@ -1296,7 +1296,6 @@ drop_append = runKD $
 --   Step: 3                               Q.E.D.
 --   Step: sumAppend.Step                  Q.E.D.
 -- Inductive lemma (strong): sumHalves
---   Base: sumHalves.Base                  Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.

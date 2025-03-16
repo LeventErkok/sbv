@@ -57,7 +57,7 @@ import qualified Data.SBV.List as SL
 
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf)
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, maybeToList)
 
 import Data.Proxy
 import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
@@ -326,9 +326,9 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
 
--- | Captures the schema for an inductive proof
+-- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
-                                           , inductionBaseCase       :: SBool
+                                           , inductionBaseCase       :: Maybe SBool
                                            , inductionProofSteps     :: [([Helper], SBool)]
                                            , inductionBaseFailureMsg :: String
                                            , inductiveStep           :: SBool
@@ -345,7 +345,7 @@ getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     _inductionBaseFailureMsg
                                                     inductiveStep
                                                     inductiveResult)
-  = inductionIntros : inductionBaseCase : inductiveStep : inductiveResult : proofStepSaturatables inductionProofSteps
+  = inductionIntros : inductiveStep : inductiveResult : proofStepSaturatables inductionProofSteps ++ maybeToList inductionBaseCase
 
 -- | A class for doing inductive proofs, with the possibility of explicit steps.
 class Inductive a steps where
@@ -437,10 +437,12 @@ class Inductive a steps where
 
          query $ do
 
-          queryDebug [nm ++ ": Induction, proving base case:"]
-          checkSatThen cfg kdSt "Base" True (Just inductionIntros) inductionBaseCase [] [nm, "Base"] Nothing
-                       (Just (liftIO (putStrLn inductionBaseFailureMsg)))
-                       (finish [] [])
+          case inductionBaseCase of
+             Nothing -> pure ()
+             Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
+                           checkSatThen cfg kdSt "Base" True (Just inductionIntros) bc [] [nm, "Base"] Nothing
+                                        (Just (liftIO (putStrLn inductionBaseFailureMsg)))
+                                        (finish [] [])
 
           let proveStep i (by, s) = do
 
@@ -487,6 +489,11 @@ class Inductive a steps where
                          , proofName   = nm
                          }
 
+-- | Pick the correct base-case. For strong induction, we don't need a base case, since it automatically gets proven by the weaker induction step
+mkBaseCase :: InductionStyle -> SBool -> Maybe SBool
+mkBaseCase RegularInduction a = Just a
+mkBaseCase StrongInduction  _ = Nothing
+
 -- | Induction over 'SInteger'.
 instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
    inductionStrategy style result steps = do
@@ -496,13 +503,13 @@ instance (KnownSymbol nk, EqSymbolic z) => Inductive (Forall nk Integer -> SBool
        k <- free nk
 
        let ih = case style of
-                  RegularInduction -> internalAxiom "IH" $                                                   result (Forall k)
-                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) -> k' .<= k .=> result (Forall k')
+                  RegularInduction -> internalAxiom "IH" $                                                                result (Forall k)
+                  StrongInduction  -> internalAxiom "IH" $ \(Forall k' :: Forall nk Integer) -> 0 .<= k' .&& k' .<= k .=> result (Forall k')
            CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps $ steps ih k
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
-              , inductionBaseCase       = predicate 0
+              , inductionBaseCase       = mkBaseCase style (predicate 0)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1))
@@ -528,7 +535,7 @@ instance forall na a nk z. (KnownSymbol na, SymVal a, KnownSymbol nk, EqSymbolic
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
-              , inductionBaseCase       = predicate 0 a
+              , inductionBaseCase       = mkBaseCase style (predicate 0 a)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a)
@@ -556,7 +563,7 @@ instance forall na a nb b nk z. (KnownSymbol na, SymVal a, KnownSymbol nb, SymVa
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
-              , inductionBaseCase       = predicate 0 a b
+              , inductionBaseCase       = mkBaseCase style (predicate 0 a b)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b)
@@ -587,7 +594,7 @@ instance forall na a nb b nc c nk z. (KnownSymbol na, SymVal a , KnownSymbol nb,
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
-              , inductionBaseCase       = predicate 0 a b c
+              , inductionBaseCase       = mkBaseCase style (predicate 0 a b c)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c)
@@ -619,7 +626,7 @@ instance forall na a nb b nc c nd d nk z. (KnownSymbol na, SymVal a, KnownSymbol
 
        pure InductionStrategy {
                 inductionIntros         = k .>= 0 .&& calcIntros
-              , inductionBaseCase       = predicate 0 a b c d
+              , inductionBaseCase       = mkBaseCase style (predicate 0 a b c d)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nk ++ " = 0."
               , inductiveStep           = observeIf not ("P(" ++ nk ++ "+1)") (predicate (k+1) a b c d)
@@ -674,7 +681,7 @@ instance (KnownSymbol nx, SymVal x, EqSymbolic z)
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs))
@@ -703,7 +710,7 @@ instance forall na a nx x z. (KnownSymbol na, SymVal a, KnownSymbol nx, SymVal x
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil a
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil a)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a)
@@ -734,7 +741,7 @@ instance forall na a nb b nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb, Sym
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil a b
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b)
@@ -767,7 +774,7 @@ instance forall na a nb b nc c nx x z. (KnownSymbol na, SymVal a, KnownSymbol nb
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil a b c
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c)
@@ -802,7 +809,7 @@ instance forall na a nb b nc c nd d nx x z. (KnownSymbol na, SymVal a, KnownSymb
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil a b c d
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c d)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d)
@@ -839,7 +846,7 @@ instance forall na a nb b nc c nd d ne e nx x z. (KnownSymbol na, SymVal a, Know
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil a b c d e
+              , inductionBaseCase       = mkBaseCase style (predicate SL.nil a b c d e)
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = []."
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ")") (predicate (x SL..: xs) a b c d e)
@@ -871,7 +878,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, EqSymbolic z)
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil .&& predicate SL.nil (y SL..: ys) .&& predicate (x SL..: xs) SL.nil
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil .&& predicate SL.nil (y SL..: ys) .&& predicate (x SL..: xs) SL.nil
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys))
@@ -906,7 +913,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil a .&& predicate SL.nil (y SL..: ys) a .&& predicate (x SL..: xs) SL.nil a
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a .&& predicate SL.nil (y SL..: ys) a .&& predicate (x SL..: xs) SL.nil a
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a)
@@ -943,7 +950,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil a b .&& predicate SL.nil (y SL..: ys) a b .&& predicate (x SL..: xs) SL.nil a b
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b .&& predicate SL.nil (y SL..: ys) a b .&& predicate (x SL..: xs) SL.nil a b
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b)
@@ -982,7 +989,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil a b c .&& predicate SL.nil (y SL..: ys) a b c .&& predicate (x SL..: xs) SL.nil a b c
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c .&& predicate SL.nil (y SL..: ys) a b c .&& predicate (x SL..: xs) SL.nil a b c
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c)
@@ -1023,7 +1030,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil a b c d .&& predicate SL.nil (y SL..: ys) a b c d .&& predicate (x SL..: xs) SL.nil a b c d
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c d .&& predicate SL.nil (y SL..: ys) a b c d .&& predicate (x SL..: xs) SL.nil a b c d
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d)
@@ -1066,7 +1073,7 @@ instance (KnownSymbol nx, SymVal x, KnownSymbol ny, SymVal y, KnownSymbol na, Sy
 
        pure InductionStrategy {
                 inductionIntros         = calcIntros
-              , inductionBaseCase       = predicate SL.nil SL.nil a b c d e .&& predicate SL.nil (y SL..: ys) a b c d e .&& predicate (x SL..: xs) SL.nil a b c d e
+              , inductionBaseCase       = mkBaseCase style $ predicate SL.nil SL.nil a b c d e .&& predicate SL.nil (y SL..: ys) a b c d e .&& predicate (x SL..: xs) SL.nil a b c d e
               , inductionProofSteps     = calcProofSteps
               , inductionBaseFailureMsg = "Property fails for " ++ nxs ++ " = [] OR " ++ nys ++ " = []"
               , inductiveStep           = observeIf not ("P(" ++ nx ++ ":" ++ nxs ++ ", " ++ ny ++ ":" ++ nys ++ ")") (predicate (x SL..: xs) (y SL..: ys) a b c d e)

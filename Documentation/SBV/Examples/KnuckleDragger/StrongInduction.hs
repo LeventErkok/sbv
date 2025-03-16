@@ -37,7 +37,6 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> oddSequence1
 -- Inductive lemma (strong): oddSequence
---   Base: oddSequence.Base                Q.E.D.
 --   Asms: 1                               Q.E.D.
 --   Step 1: Case split one way:
 --     Case [1 of 1]: n[1]                 Q.E.D.
@@ -74,7 +73,6 @@ oddSequence1 = runKD $ do
 -- Lemma: oddSequence_0                    Q.E.D.
 -- Lemma: oddSequence_1                    Q.E.D.
 -- Inductive lemma (strong): oddSequence_sNp2
---   Base: oddSequence_sNp2.Base           Q.E.D.
 --   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
@@ -133,7 +131,6 @@ oddSequence2 = runKD $ do
 --
 -- >>> won'tProve `catch` (\(_ :: SomeException) -> pure ())
 -- Inductive lemma (strong): lengthGood
---   Base: lengthGood.Base                 Q.E.D.
 --   Step: 1
 -- *** Failed to prove lengthGood.1.
 -- <BLANKLINE>
