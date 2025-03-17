@@ -134,6 +134,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                          (\(Forall @"x" x) (Forall @"xs" xs) -> nonDecreasing (x .: xs) .=> nonDecreasing xs)
                          []
 
+    error "need to fix this" nonDecrIns nonDecrTail
+    {-
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
                (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
@@ -202,6 +204,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                   ]
                                =: sTrue
                                =: qed
+
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is a permuation of its input
@@ -303,3 +306,4 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     lemma "mergeSortIsCorrect"
           (\(Forall @"xs" xs) -> let out = mergeSort xs in nonDecreasing out .&& isPermutation xs out)
           [sortNonDecreasing, sortIsPermutation]
+ -}

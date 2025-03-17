@@ -1325,7 +1325,7 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
-    error "need to fix this"
+    error "need to fix this" halvingSum helper
     {-
     sInductWith cvc5 "sumHalves"
                 (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
@@ -1385,15 +1385,15 @@ map_fst_zip = runKD $
 map_snd_zip :: IO Proof
 map_snd_zip = runKD $
    induct "map_snd_zip"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
-          \ih (x :: SA) xs (y :: SB) ys -> [length (x .: xs) .== length (y .: ys)]
-                                        |- map snd (zip (x .: xs) (y .: ys))
-                                        =: map snd (tuple (x, y) .: zip xs ys)
-                                        =: snd (tuple (x, y)) .: map snd (zip xs ys)
-                                        =: y .: map snd (zip xs ys)
-                                        ?? [hprf ih, hyp (length xs .== length ys)]
-                                        =: y .: ys
-                                        =: qed
+          (\(Forall @"xs" (xs :: SList A), Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map snd (zip xs ys) .== ys) $
+          \ih (x :: SA, xs, y :: SB, ys) -> [length (x .: xs) .== length (y .: ys)]
+                                         |- map snd (zip (x .: xs) (y .: ys))
+                                         =: map snd (tuple (x, y) .: zip xs ys)
+                                         =: snd (tuple (x, y)) .: map snd (zip xs ys)
+                                         =: y .: map snd (zip xs ys)
+                                         ?? [hprf ih, hyp (length xs .== length ys)]
+                                         =: y .: ys
+                                         =: qed
 
 -- | @map fst (zip xs ys) = take (min (length xs) (length ys)) xs@
 --
@@ -1413,17 +1413,17 @@ map_fst_zip_take = runKD $ do
    tc <- use take_cons
 
    induct "map_fst_zip_take"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> map fst (zip xs ys) .== take (length xs `smin` length ys) xs) $
-          \ih (x :: SA) xs (y :: SB) ys -> []
-                                        |- map fst (zip (x .: xs) (y .: ys))
-                                        =: map fst (tuple (x, y) .: zip xs ys)
-                                        =: x .: map fst (zip xs ys)
-                                        ?? ih
-                                        =: x .: take (length xs `smin` length ys) xs
-                                        ?? tc
-                                        =: take (1 + (length xs `smin` length ys)) (x .: xs)
-                                        =: take (length (x .: xs) `smin` length (y .: ys)) (x .: xs)
-                                        =: qed
+          (\(Forall @"xs" (xs :: SList A), Forall @"ys" (ys :: SList B)) -> map fst (zip xs ys) .== take (length xs `smin` length ys) xs) $
+          \ih (x :: SA, xs, y :: SB, ys) -> []
+                                         |- map fst (zip (x .: xs) (y .: ys))
+                                         =: map fst (tuple (x, y) .: zip xs ys)
+                                         =: x .: map fst (zip xs ys)
+                                         ?? ih
+                                         =: x .: take (length xs `smin` length ys) xs
+                                         ?? tc
+                                         =: take (1 + (length xs `smin` length ys)) (x .: xs)
+                                         =: take (length (x .: xs) `smin` length (y .: ys)) (x .: xs)
+                                         =: qed
 
 -- | @map snd (zip xs ys) = take (min (length xs) (length ys)) xs@
 --
@@ -1443,17 +1443,17 @@ map_snd_zip_take = runKD $ do
    tc <- use take_cons
 
    induct "map_snd_zip_take"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> map snd (zip xs ys) .== take (length xs `smin` length ys) ys) $
-          \ih (x :: SA) xs (y :: SB) ys -> []
-                                        |- map snd (zip (x .: xs) (y .: ys))
-                                        =: map snd (tuple (x, y) .: zip xs ys)
-                                        =: y .: map snd (zip xs ys)
-                                        ?? ih
-                                        =: y .: take (length xs `smin` length ys) ys
-                                        ?? tc
-                                        =: take (1 + (length xs `smin` length ys)) (y .: ys)
-                                        =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
-                                        =: qed
+          (\(Forall @"xs" (xs :: SList A), Forall @"ys" (ys :: SList B)) -> map snd (zip xs ys) .== take (length xs `smin` length ys) ys) $
+          \ih (x :: SA, xs, y :: SB, ys) -> []
+                                         |- map snd (zip (x .: xs) (y .: ys))
+                                         =: map snd (tuple (x, y) .: zip xs ys)
+                                         =: y .: map snd (zip xs ys)
+                                         ?? ih
+                                         =: y .: take (length xs `smin` length ys) ys
+                                         ?? tc
+                                         =: take (1 + (length xs `smin` length ys)) (y .: ys)
+                                         =: take (length (x .: xs) `smin` length (y .: ys)) (y .: ys)
+                                         =: qed
 
 {- HLint ignore reverseReverse "Redundant reverse" -}
 {- HLint ignore allAny         "Use and"           -}
