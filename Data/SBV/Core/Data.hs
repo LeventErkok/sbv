@@ -481,6 +481,12 @@ instance (SymVal a, Constraint m r) => Constraint m (Forall nm a -> r) where
 instance (KnownNat n, SymVal a, Constraint m r) => Constraint m (ForallN n nm a -> r) where
   mkConstraint st fn = replicateM (intOfProxy (Proxy @n)) (mkQArg st ALL) >>= mkConstraint st . fn . ForallN
 
+-- | Functions of a pair of universals
+instance (SymVal a, SymVal b, Constraint m r) => Constraint m ((Forall na a, Forall nb b) -> r) where
+  mkConstraint st fn = do a <- mkQArg st ALL
+                          b <- mkQArg st ALL
+                          mkConstraint st $ fn (Forall a, Forall b)
+
 -- | Values that we can turn into a lambda abstraction
 class MonadSymbolic m => Lambda m a where
   mkLambda :: State -> a -> m ()
