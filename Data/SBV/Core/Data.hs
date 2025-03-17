@@ -996,6 +996,16 @@ instance (QNot r, QuantifiedBool r, EqSymbolic (SBV a)) => QNot (ExistsUnique nm
                                           -> SBool
   qNot = qNot . rewriteExistsUnique
 
+-- | Negate over a pair of universals
+instance QNot r => QNot ((Forall na a, Forall nb b) -> r) where
+  type NegatesTo ((Forall na a, Forall nb b) -> r) = (Exists na a, Exists nb b) -> NegatesTo r
+  qNot f (Exists a, Exists b) = qNot (f (Forall a, Forall b))
+
+-- | Negate over a pair of existentials
+instance QNot r => QNot ((Exists na a, Exists nb b) -> r) where
+  type NegatesTo ((Exists na a, Exists nb b) -> r) = (Forall na a, Forall nb b) -> NegatesTo r
+  qNot f (Forall a, Forall b) = qNot (f (Exists a, Exists b))
+
 -- | Get rid of exists unique.
 rewriteExistsUnique :: ( QuantifiedBool b                 -- If b can be turned into a boolean
                        , EqSymbolic (SBV a)               -- If we can do equality on symbolic a's
