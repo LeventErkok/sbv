@@ -3228,7 +3228,15 @@ instance SolverContext m => QSaturate m SBool where
 instance (HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (Forall nm a -> r) where
   qSaturate f = qSaturate . f . Forall =<< internalVariable (kindOf (Proxy @a))
 
--- | Saturate over an a number of universal quantifiers
+-- | Saturate over a pair of universal quantifiers
+instance (HasKind a, HasKind b, Monad m, SolverContext m, QSaturate m r) => QSaturate m ((Forall na a, Forall nb b) -> r) where
+  qSaturate = qSaturate . curry
+
+-- | Saturate over a pair of existential quantifiers
+instance (HasKind a, HasKind b, Monad m, SolverContext m, QSaturate m r) => QSaturate m ((Exists na a, Exists nb b) -> r) where
+  qSaturate = qSaturate . curry
+
+-- | Saturate over a number of universal quantifiers
 instance (KnownNat n, HasKind a, Monad m, SolverContext m, QSaturate m r) => QSaturate m (ForallN n nm a -> r) where
   qSaturate f = qSaturate . f . ForallN =<< replicateM (intOfProxy (Proxy @n)) (internalVariable (kindOf (Proxy @a)))
 

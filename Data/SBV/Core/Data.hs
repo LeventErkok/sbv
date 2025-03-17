@@ -926,6 +926,11 @@ instance (KnownSymbol nm, Skolemize r) => Skolemize (Forall nm a -> r) where
   type SkolemsTo (Forall nm a -> r) = Forall nm a -> SkolemsTo r
   skolem scope args f arg@(Forall a) = skolem scope (args ++ [(unSBV a, symbolVal (Proxy @nm))]) (f arg)
 
+-- | Skolemize over a o pair universal quantifier
+instance (KnownSymbol na, KnownSymbol nb, Skolemize r) => Skolemize ((Forall na a, Forall nb b) -> r) where
+  type SkolemsTo ((Forall na a, Forall nb b) -> r) = (Forall na a, Forall nb b) -> SkolemsTo r
+  skolem scope args f = uncurry (skolem scope args (curry f))
+
 -- | Skolemize over a number of universal quantifiers
 instance (KnownSymbol nm, Skolemize r) => Skolemize (ForallN n nm a -> r) where
   type SkolemsTo (ForallN n nm a -> r) = ForallN n nm a -> SkolemsTo r
@@ -938,6 +943,11 @@ instance (HasKind a, KnownSymbol nm, Skolemize r) => Skolemize (Exists nm a -> r
   type SkolemsTo (Exists nm a -> r) = SkolemsTo r
   skolem scope args f = skolem scope args (f (Exists skolemized))
     where skolemized = SBV $ svUninterpretedNamedArgs (kindOf (Proxy @a)) (UIGiven (scope ++ symbolVal (Proxy @nm))) (UINone True) args
+
+-- | Skolemize over a o pair existential quantifier
+instance (HasKind a, HasKind b, KnownSymbol na, KnownSymbol nb, Skolemize r) => Skolemize ((Exists na a, Exists nb b) -> r) where
+  type SkolemsTo ((Exists na a, Exists nb b) -> r) = SkolemsTo r
+  skolem scope args = skolem scope args . curry
 
 -- | Skolemize over a number of existential quantifiers
 instance (HasKind a, KnownNat n, KnownSymbol nm, Skolemize r) => Skolemize (ExistsN n nm a -> r) where
