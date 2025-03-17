@@ -143,11 +143,11 @@ won'tProve1 = runKD $ do
    -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
    _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
                 (\(Forall @"xs" xs) -> len xs .== length xs) $
-                \ih x xs -> [] |- len (x .: xs)
-                               -- incorrectly instantiate the IH at x .: xs
-                               ?? ih `at` Inst @"xs" (x .: xs)
-                               =: length (x .: xs)
-                               =: qed
+                \ih xs -> [] |- len xs
+                             -- incorrectly instantiate the IH at xs!
+                             ?? ih `at` Inst @"xs" xs
+                             =: length xs
+                             =: qed
    pure ()
 
 -- | Note that strong induction does not need an explicit base case, as the base-cases is folded into the
@@ -170,10 +170,8 @@ won'tProve2 = runKD $ do
 
    _ <- sInduct "badLength"
                 (\(Forall @"xs" xs) -> len xs .== length xs) $
-                \ih x xs -> [] |- len (x .: xs)
-                               =: 1 + len xs
-                               ?? ih `at` Inst @"xs" xs
-                               =: 1 + length xs
-                               =: length (x .: xs)
-                               =: qed
+                \ih xs -> [] |- len xs
+                             ?? ih `at` Inst @"xs" xs
+                             =: length xs
+                             =: qed
    pure ()
