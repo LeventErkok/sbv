@@ -25,7 +25,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
+import Prelude (IO, ($), Integer, Num(..), id, (.), flip, error)
 
 import Data.SBV
 import Data.SBV.List
@@ -1325,6 +1325,8 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
+    error "need to fix this"
+    {-
     sInductWith cvc5 "sumHalves"
                 (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
                 \ih x xs -> [] |- halvingSum (x .: xs)
@@ -1339,6 +1341,7 @@ sumHalves = runKD $ do
                                ?? "simplify"
                                =: sum (x .: xs)
                                =: qed
+                               -}
 
 -- * Zip
 
@@ -1357,15 +1360,15 @@ sumHalves = runKD $ do
 map_fst_zip :: IO Proof
 map_fst_zip = runKD $
    induct "map_fst_zip"
-          (\(Forall @"xs" (xs :: SList A)) (Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
-          \ih (x :: SA) xs (y :: SB) ys -> [length (x .: xs) .== length (y .: ys)]
-                                        |- map fst (zip (x .: xs) (y .: ys))
-                                        =: map fst (tuple (x, y) .: zip xs ys)
-                                        =: fst (tuple (x, y)) .: map fst (zip xs ys)
-                                        =: x .: map fst (zip xs ys)
-                                        ?? [hprf ih, hyp (length xs .== length ys)]
-                                        =: x .: xs
-                                        =: qed
+          (\(Forall @"xs" (xs :: SList A), Forall @"ys" (ys :: SList B)) -> length xs .== length ys .=> map fst (zip xs ys) .== xs) $
+          \ih (x :: SA, xs, y :: SB, ys) -> [length (x .: xs) .== length (y .: ys)]
+                                         |- map fst (zip (x .: xs) (y .: ys))
+                                         =: map fst (tuple (x, y) .: zip xs ys)
+                                         =: fst (tuple (x, y)) .: map fst (zip xs ys)
+                                         =: x .: map fst (zip xs ys)
+                                         ?? [hprf ih, hyp (length xs .== length ys)]
+                                         =: x .: xs
+                                         =: qed
 
 -- | @length xs = length ys ⟹ map snd (zip xs ys) = xs@
 --
