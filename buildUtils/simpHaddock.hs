@@ -108,6 +108,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Tools.KD.KnuckleDragger.Helper"
                    , "Tools.KD.KnuckleDragger.Instantiatable"
                    , "Tools.KD.KnuckleDragger.Inductive"
+                   , "Tools.KD.KnuckleDragger.SInductive"
                    , "Tools.KD.KnuckleDragger.CalcLemma"
                    , "Tools.STree.STreeInternal"
                    , "Tuple.Tuple"
