@@ -20,7 +20,7 @@
 module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
        , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
-       , RootOfTrust(..), calculateRootOfTrust, message, updStats
+       , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -56,6 +56,10 @@ data KDState = KDState { stats  :: IORef KDStats
 -- | Monad for running KnuckleDragger proofs in.
 newtype KD a = KD (ReaderT KDState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
+
+-- | The context in which we make a check-sat call
+data KDProofContext = KDProofOneShot String [Proof]    -- ^ A one shot proof, with helpers used (latter only used for cex generation)
+                    | KDProofStep    String [String]   -- ^ A step in a full proof, running in a query
 
 -- | Run a KD proof, using the default configuration.
 runKD :: KD a -> IO a
@@ -98,14 +102,15 @@ message SMTConfig{kdOptions = KDOptions{quiet}} s
   | True  = liftIO $ putStr s
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-startKD :: SMTConfig -> Bool -> String -> [String] -> IO Int
-startKD cfg newLine what nms = do message cfg $ line ++ if newLine then "\n" else ""
+startKD :: SMTConfig -> Bool -> String -> KDProofContext -> IO Int
+startKD cfg newLine what ctx = do message cfg $ line ++ if newLine then "\n" else ""
                                   hFlush stdout
                                   return (length line)
-  where tab    = 2 * length (drop 1 nms)
-        indent = replicate tab ' '
-        tag    = what ++ ": " ++ intercalate "." (filter (not . null) nms)
-        line   = indent ++ tag
+  where (nm, tab) = case ctx of
+                      KDProofOneShot n _  -> (n, 0)
+                      KDProofStep    _ ss -> (intercalate "." ss, 2 * length ss)
+
+        line   = replicate tab ' ' ++ what ++ ": " ++ nm
 
 -- | Finish a proof. First argument is what we got from the call of 'startKD' above.
 finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()

@@ -26,7 +26,7 @@ module Data.SBV.Tools.KD.Kernel (
        , theorem, theoremWith
        , sorry
        , internalAxiom
-       , CheckSatContext(..), checkSatThen
+       , KDProofContext (..), checkSatThen
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -64,7 +64,7 @@ type Proposition a = ( QNot a
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
 axiom nm p = do cfg <- getKDConfig
-                _   <- liftIO $ startKD cfg True "Axiom" [nm]
+                _   <- liftIO $ startKD cfg True "Axiom" (KDProofOneShot nm [])
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
@@ -101,7 +101,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag (CheckSatOneShot nm by) Nothing inputProp (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -132,9 +132,6 @@ theorem nm f by = do cfg <- getKDConfig
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg = lemmaGen cfg "Theorem"
 
-data CheckSatContext = CheckSatOneShot String [Proof]    -- ^ A one shot proof, with helpers used (latter only used for cex generation)
-                     | CheckSatStep    String [String]   -- ^ A step in a full proof, running in a query
-
 -- | Capture the general flow after a checkSat. We run the sat case if model is empty.
 -- NB. This is the only place in Knuckledragger where we actually call check-sat;
 -- so all interaction goes through here.
@@ -142,7 +139,7 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
-   -> CheckSatContext                        -- ^ the context in which we're doing the proof
+   -> KDProofContext                         -- ^ the context in which we're doing the proof
    -> Maybe SBool                            -- ^ Assumptions under which we do the check-sat. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
@@ -157,11 +154,7 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                                                    check
 
  where check = do
-           let (fullNm, nms) = case ctx of
-                                 CheckSatOneShot s _  -> (s,                        [s])
-                                 CheckSatStep    s ss -> (intercalate "." (s : ss), ss)
-
-           tab <- liftIO $ startKD cfg verbose tag nms
+           tab <- liftIO $ startKD cfg verbose tag ctx
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
@@ -176,25 +169,29 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
              Just t  -> updStats kdState (\s -> s{solverElapsed = solverElapsed s + t})
 
            case r of
-             Unk    -> unknown fullNm
-             Sat    -> cex fullNm
-             DSat{} -> cex fullNm
+             Unk    -> unknown
+             Sat    -> cex
+             DSat{} -> cex
              Unsat  -> liftIO $ unsat (tab, mbT)
 
        die = error "Failed"
 
-       unknown fullNm = do r <- getUnknownReason
-                           liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
-                                       putStrLn $ "\n*** Solver reported: " ++ show r
-                                       die
+       fullNm = case ctx of
+                  KDProofOneShot s _  -> s
+                  KDProofStep    s ss -> intercalate "." (s : ss)
+
+       unknown = do r <- getUnknownReason
+                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+                                putStrLn $ "\n*** Solver reported: " ++ show r
+                                die
 
        -- What to do if the proof fails
-       cex fullNm = do
+       cex = do
          liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
          res <- case ctx of
-                  CheckSatStep{}       -> Satisfiable cfg <$> getModel
-                  CheckSatOneShot _ by ->
+                  KDProofStep{}       -> Satisfiable cfg <$> getModel
+                  KDProofOneShot _ by ->
                      -- When trying to get a counter-example not in query mode, we
                      -- do a skolemized sat call, which gets better counter-examples.
                      -- We only include the those facts that are user-given axioms. This

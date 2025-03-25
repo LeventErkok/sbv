@@ -227,7 +227,7 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
            case concatMap getHelperAssumes hs of
              [] -> pure ()
              as -> checkSatThen cfg kdSt "Asms  "
-                                         (CheckSatStep nm stepName)
+                                         (KDProofStep nm stepName)
                                          (Just calcIntros)
                                          (sAnd as)
                                          (finish [] [])
@@ -235,7 +235,7 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
            -- Now prove the step
            let by = concatMap getHelperProofs hs
            checkSatThen cfg kdSt "Step  "
-                                 (CheckSatStep nm stepName)
+                                 (KDProofStep nm stepName)
                                  (Just (sAnd (calcIntros : map getProof by)))
                                  cur
                                  (finish [] by)
@@ -248,7 +248,7 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
   checkSatThen cfg kdSt "Result"
-               (CheckSatStep nm [])
+               (KDProofStep nm [])
                (Just (calcIntros .=> sAnd results))
                calcGoal $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
