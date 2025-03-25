@@ -21,6 +21,7 @@
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -45,15 +46,13 @@ import Data.SBV.Core.Model (qSaturateSavingObservables)
 
 import Data.SBV.Control hiding (getProof)
 
-import Data.SBV.Core.Data(SolverContext)
-
 import Data.SBV.Tools.KD.Kernel
 import Data.SBV.Tools.KD.Utils
 
 import qualified Data.SBV.List as SL
 
-import Control.Monad (forM_, zipWithM_)
-import Control.Monad.Trans (liftIO, MonadIO)
+import Control.Monad (zipWithM_)
+import Control.Monad.Trans (liftIO)
 
 import Data.Char (isSpace)
 import Data.List (isPrefixOf, isSuffixOf, intercalate)
@@ -65,29 +64,31 @@ import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
-import Data.Time (NominalDiffTime)
+-- import Data.Time (NominalDiffTime)
 
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
 use = liftIO
 
 -- | Captures the steps for a calculationa proof
-data CalcStrategy = CalcStrategy { calcIntros     :: SBool
-                                 , calcProofSteps :: [([Helper], SBool)]
-                                 , calcResult     :: SBool
+data CalcStrategy = CalcStrategy { calcIntros    :: SBool
+                                 , calcProofTree :: KDProof SBool SBool
                                  }
 
 -- | Saturatable things in steps
-proofStepSaturatables :: [([Helper], SBool)] -> [SBool]
-proofStepSaturatables = concatMap getS
-  where getS (hs, b) = b : concatMap getH hs
+proofTreeSaturatables :: KDProof SBool SBool -> [SBool]
+proofTreeSaturatables = go
+  where go (ProofEnd b)       = [b]
+        go (ProofStep a hs r) = a : concatMap getH hs ++ go r
+        go (ProofBranch ps)   = concatMap go ps
+
         getH (HelperProof  p)  = [getProof p]
         getH (HelperAssum  b)  = [b]
         getH (HelperCase _ ss) = ss
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
-getCalcStrategySaturatables (CalcStrategy calcIntros calcProofSteps calcResult) = calcIntros : calcResult : proofStepSaturatables calcProofSteps
+getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree) = calcIntros : proofTreeSaturatables calcProofTree
 
 -- | Based on the helpers given, construct the proofs we have to do in the given case
 stepCases :: Int -> [Helper] -> Either (String, SBool) ([(String, SBool)], SBool)
@@ -179,7 +180,7 @@ class CalcLemma a steps where
   calcThmWith cfg nm p steps = getKDConfig >>= \cfg' -> calcGeneric True  (kdMergeCfg cfg cfg') nm p steps
 
   calcGeneric :: Proposition a => Bool -> SMTConfig -> String -> a -> steps -> KD Proof
-  calcGeneric tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result steps = do
+  calcGeneric tagTheorem cfg nm result steps = do
      kdSt <- getKDState
 
      liftIO $ runSMTWith cfg $ do
@@ -188,59 +189,81 @@ class CalcLemma a steps where
 
         message cfg $ (if tagTheorem then "Theorem" else "Lemma") ++ ": " ++ nm ++ "\n"
 
-        mbStartTime <- getTimeStampIf measureTime
-
-        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofSteps, calcResult}) <- calcSteps result steps
-
-        let stepHelpers = concatMap fst calcProofSteps
-
-            finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
-              where (_, modulo) = calculateRootOfTrust nm helpers
+        (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $ calcIntros : getCalcStrategySaturatables strategy
 
-        query $ do
+        query $ proveProofTree cfg kdSt nm result calcIntros calcProofTree calcGoal
 
-           let proveStep i (by, s) = do
+-- | Prove the proof tree
+proveProofTree :: Proposition a => SMTConfig -> KDState -> String -> a -> SBool -> KDProof SBool SBool -> SBool -> Query Proof
+proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result calcIntros calcProofTree calcGoal = do
 
-                    -- Prove that the assumptions follow, if any
-                    case getHelperAssumes by of
-                      [] -> pure ()
-                      as -> checkSatThen cfg kdSt "Asms  "
-                                                  True
-                                                  (Just calcIntros)
-                                                  (sAnd as)
-                                                  []
-                                                  ["", show i]
-                                                  (Just [nm, show i, "Assumptions"])
-                                                  (finish [] [])
+  mbStartTime <- getTimeStampIf measureTime
 
-                    queryDebug [nm ++ ": Proof step: " ++ show i ++ " to " ++ show (i+1) ++ ":"]
+  let next :: [Int] -> [Int]
+      next bs = case reverse bs of
+                  i : rs -> i + 1 : rs
+                  []     -> [1]
 
-                    proveAllCases i cfg kdSt (stepCases i by) "Step  " s nm (finish [] (getHelperProofs by))
+      walk :: ([Int], KDProof SBool SBool) -> Query [SBool]
 
-           zipWithM_ proveStep [1::Int ..] calcProofSteps
+      -- End of proof, return what it established
+      walk (_,  ProofEnd calcResult) = pure [calcResult]
 
-           queryDebug [nm ++ ": Proof end: proving the result:"]
+      -- Do the branches separately and collect th results
+      walk (bn, ProofBranch ps) = concat <$> mapM walk [(bn ++ [i], p) | (i, p) <- zip [1..] ps]
 
-           checkSatThen cfg kdSt "Result" True
-                        (Just (calcIntros .=> calcResult))
-                        calcGoal
-                        []
-                        ["", ""]
-                        (Just [nm, "Result"]) $ \d ->
-                          do mbElapsed <- getElapsedTime mbStartTime
-                             let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
-                             finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+      -- Do a proof step
+      walk (bn, ProofStep cur hs p) = do
 
-                             pure Proof { rootOfTrust = ros
-                                        , isUserAxiom = False
-                                        , getProof    = label nm (quantifiedBool result)
-                                        , getProp     = toDyn result
-                                        , proofName   = nm
-                                        }
+           let finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
+                  where (_, modulo) = calculateRootOfTrust nm helpers
 
+               stepName = map show bn
+
+           -- First prove the assumptions, if there are any
+           case concatMap getHelperAssumes hs of
+             [] -> pure ()
+             as -> checkSatThen cfg kdSt "Asms  "
+                                         (CheckSatStep nm stepName)
+                                         (Just calcIntros)
+                                         (sAnd as)
+                                         (finish [] [])
+
+           -- Now prove the step
+           let by = concatMap getHelperProofs hs
+           checkSatThen cfg kdSt "Step  "
+                                 (CheckSatStep nm stepName)
+                                 (Just (sAnd (calcIntros : map getProof by)))
+                                 cur
+                                 (finish [] by)
+
+           -- Move to next
+           walk (next bn, p)
+
+  results <- walk ([1], calcProofTree)
+
+  queryDebug [nm ++ ": Proof end: proving the result:"]
+
+  checkSatThen cfg kdSt "Result"
+               (CheckSatStep nm [])
+               (Just (calcIntros .=> sAnd results))
+               calcGoal $ \d ->
+                 do mbElapsed <- getElapsedTime mbStartTime
+                    let (ros, modulo) = calculateRootOfTrust nm (concatMap getHelperProofs (getAllHelpers calcProofTree))
+                    finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
+
+                    pure Proof { rootOfTrust = ros
+                               , isUserAxiom = False
+                               , getProof    = label nm (quantifiedBool result)
+                               , getProp     = toDyn result
+                               , proofName   = nm
+                               }
+
+
+{-
 proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
               => Int -> SMTConfig -> KDState
               -> Either (String, SBool) ([(String, SBool)], SBool)
@@ -267,70 +290,85 @@ proveAllCases topStep cfg kdSt caseInfo stepTag s nm finalize
   where
      checker tag caseAsmp cond cnm fnm = checkSatThen cfg kdSt tag True (Just caseAsmp) cond [] cnm fnm finalize
 
+-}
+
+-- Helper data-type for calc-step below
+data CalcContext a = CalcStart              -- Haven't started yet
+                   | CalcStep  a a [Helper] -- Intermediate step: first value, prev value
+
 -- | Turn a sequence of steps into a chain of equalities
-mkCalcSteps :: EqSymbolic a => (SBool, [ProofStep a]) -> CalcStrategy
-mkCalcSteps (intros, xs) = case reverse xs of
-                             (SingleStep _ (_:_) : _) -> error $ unlines [ ""
-                                                                         , "*** Incorrect calc/induct lemma calculations."
-                                                                         , "***"
-                                                                         , "***  The last step in the proof has a helper, which isn't used."
-                                                                         , "***"
-                                                                         , "*** Perhaps the hint is off-by-one in its placement?"
-                                                                         ]
-                             _                       -> CalcStrategy { calcIntros     = intros
-                                                                     , calcProofSteps = zipWith merge xs (drop 1 xs)
-                                                                     , calcResult     = calcResult
-                                                                     }
-  where merge (SingleStep a by) (SingleStep b _) = (by, a .== b)
-        calcResult
-          | length xs <= 1 = sTrue
-          | True           = case (xs, reverse xs) of
-                               (SingleStep a _ : _, SingleStep b _ : _) -> a .== b
-                               _                                        -> sTrue
+mkCalcSteps :: EqSymbolic a => (SBool, KDProof a ()) -> CalcStrategy
+mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
+                                         , calcProofTree = go CalcStart kdp
+                                         }
+  where go :: EqSymbolic a => CalcContext a -> KDProof a () -> KDProof SBool SBool
+
+        -- End of the proof; tie the begin and end
+        go step (ProofEnd ()) = case step of
+                                  CalcStart                             -> incomplete
+                                  CalcStep begin end hs | not (null hs) -> badHint
+                                                        | True          -> ProofEnd $ begin .== end
+
+        -- Branch: Just push it own. We use the hints from previous step, and pass the current ones down.
+        go step (ProofBranch ps) = ProofBranch (map (go step) ps)
+
+        -- Step:
+        go CalcStart                (ProofStep cur hs' p) =                               go (CalcStep cur   cur hs') p
+        go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs') p)
+
+        badHint    = bad "The last step in the proof has a helper, which isn't used." "Perhaps the hint is off-by-one in its placement?"
+        incomplete = bad "Incomplete sequence of proof steps."                        "Each proof-branch must have at least two steps."
+
+        bad w h = error $ unlines [ ""
+                                  , "*** Incorrect calc/induct lemma calculations."
+                                  , "***"
+                                  , "*** " ++ w
+                                  , "***"
+                                  , "*** " ++ h
+                                  ]
 
 -- | Chaining lemmas that depend on no extra variables
-instance EqSymbolic z => CalcLemma SBool (SBool, [ProofStep z]) where
+instance EqSymbolic z => CalcLemma SBool (SBool, KDProof z ()) where
    calcSteps result steps = pure (result, mkCalcSteps steps)
 
 -- | Chaining lemmas that depend on a single extra variable.
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => CalcLemma (Forall na a -> SBool) (SBV a -> (SBool, KDProof z ())) where
    calcSteps result steps = do a <- free (symbolVal (Proxy @na))
                                pure (result (Forall a), mkCalcSteps (steps a))
 
 -- | Chaining lemmas that depend on two extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z)
       => CalcLemma (Forall na a -> Forall nb b -> SBool)
-                   (SBV a -> SBV b -> (SBool, [ProofStep z])) where
+                   (SBV a -> SBV b -> (SBool, KDProof z ())) where
    calcSteps result steps = do (a, b) <- (,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb))
                                pure (result (Forall a) (Forall b), mkCalcSteps (steps a b))
 
 -- | Chaining lemmas that depend on three extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z)
       => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> SBool)
-                   (SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+                   (SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
    calcSteps result steps = do (a, b, c) <- (,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc))
                                pure (result (Forall a) (Forall b) (Forall c), mkCalcSteps (steps a b c))
 
 -- | Chaining lemmas that depend on four extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z)
       => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool)
-                   (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+                   (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
    calcSteps result steps = do (a, b, c, d) <- (,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd))
                                pure (result (Forall a) (Forall b) (Forall c) (Forall d), mkCalcSteps (steps a b c d))
 
 -- | Chaining lemmas that depend on five extra variables.
 instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z)
       => CalcLemma (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool)
-                   (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+                   (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
    calcSteps result steps = do (a, b, c, d, e) <- (,,,,) <$> free (symbolVal (Proxy @na)) <*> free (symbolVal (Proxy @nb)) <*> free (symbolVal (Proxy @nc)) <*> free (symbolVal (Proxy @nd)) <*> free (symbolVal (Proxy @ne))
                                pure (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e), mkCalcSteps (steps a b c d e))
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
-data InductionStrategy = InductionStrategy { inductionIntros         :: SBool
-                                           , inductionBaseCase       :: Maybe SBool
-                                           , inductionProofSteps     :: [([Helper], SBool)]
-                                           , inductiveStep           :: SBool
-                                           , inductiveResult         :: SBool
+data InductionStrategy = InductionStrategy { inductionIntros    :: SBool
+                                           , inductionBaseCase  :: Maybe SBool
+                                           , inductionProofTree :: KDProof SBool SBool
+                                           , inductiveStep      :: SBool
                                            }
 
 -- | Are we doing strong induction or regular induction?
@@ -340,9 +378,8 @@ getInductionStrategySaturatables :: InductionStrategy -> [SBool]
 getInductionStrategySaturatables (InductionStrategy inductionIntros
                                                     inductionBaseCase
                                                     inductionProofSteps
-                                                    inductiveStep
-                                                    inductiveResult)
-  = inductionIntros : inductiveStep : inductiveResult : proofStepSaturatables inductionProofSteps ++ maybeToList inductionBaseCase
+                                                    inductiveStep)
+  = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase
 
 -- | A class for doing regular inductive proofs.
 class Inductive a steps where
@@ -423,14 +460,17 @@ inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime
 
       strategy@InductionStrategy { inductionIntros
                                  , inductionBaseCase
-                                 , inductionProofSteps
+                                 , inductionProofTree
                                  , inductiveStep
-                                 , inductiveResult
                                  } <- getStrategy
 
       mbStartTime <- getTimeStampIf measureTime
 
-      let stepHelpers = concatMap fst inductionProofSteps
+      error "hmm" (zipWithM_ :: (Int -> Int -> IO ()) -> [Int] -> [Int] -> IO ()) catMaybes stepCases kdSt strategy inductionIntros inductionBaseCase inductionProofTree
+                  inductiveStep mbStartTime getHelperProofs getHelperAssumes getInductionStrategySaturatables
+
+{-
+      let stepHelpers = concatMap fst inductionProofTree
 
           finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
             where (_, modulo) = calculateRootOfTrust nm helpers
@@ -444,7 +484,6 @@ inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime
           Nothing -> pure ()
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
                         checkSatThen cfg kdSt "Base" True (Just inductionIntros) bc [] [nm, "Base"] Nothing (finish [] [])
-
        let proveStep i (by, s) = do
 
                -- Prove that the assumptions follow, if any
@@ -464,7 +503,7 @@ inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime
                proveAllCases i cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
 
        -- Do the steps
-       zipWithM_ proveStep [1::Int ..] inductionProofSteps
+       zipWithM_ proveStep [1::Int ..] $ error "hmm" inductionProofTree
 
        -- Do the final proof:
        queryDebug [nm ++ ": Induction, proving inductive step:"]
@@ -487,16 +526,16 @@ inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime
                       , getProp     = toDyn result
                       , proofName   = nm
                       }
+-}
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, [ProofStep a]) -> SBool -> InductionStrategy
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, KDProof a ()) -> SBool -> InductionStrategy
 mkIndStrategy mbExtraConstraint mbBaseCase indSteps step =
-        let CalcStrategy { calcIntros, calcProofSteps, calcResult } = mkCalcSteps indSteps
-        in InductionStrategy { inductionIntros     = maybe id (.&&) mbExtraConstraint calcIntros
-                             , inductionBaseCase   = mbBaseCase
-                             , inductionProofSteps = calcProofSteps
-                             , inductiveStep       = step
-                             , inductiveResult     = calcResult
+        let CalcStrategy { calcIntros, calcProofTree } = mkCalcSteps indSteps
+        in InductionStrategy { inductionIntros    = maybe id (.&&) mbExtraConstraint calcIntros
+                             , inductionBaseCase  = mbBaseCase
+                             , inductionProofTree = calcProofTree
+                             , inductiveStep      = step
                              }
 
 -- | Create a new variable with the given name, return both the variable and the name
@@ -518,7 +557,7 @@ indResult :: [String] -> SBool -> SBool
 indResult nms = observeIf not ("P(" ++ intercalate ", " nms ++ ")")
 
 -- | Induction over 'SInteger'
-instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool) (SInteger -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0)))
@@ -526,7 +565,7 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
 
 -- | Strong induction over 'SInteger'
-instance (KnownSymbol nn, EqSymbolic z) => SInductive (Forall nn Integer -> SBool) (SInteger -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, EqSymbolic z) => SInductive (Forall nn Integer -> SBool) (SInteger -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        pure $ mkIndStrategy (Just (n .>= 0)) Nothing
@@ -534,7 +573,7 @@ instance (KnownSymbol nn, EqSymbolic z) => SInductive (Forall nn Integer -> SBoo
                             (indResult [nn] (result (Forall n)))
 
 -- | Induction over 'SInteger', taking an extra argument
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -543,7 +582,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
 
 -- | Strong induction over 'SInteger', taking an extra argument
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -552,7 +591,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive 
                             (indResult [nn, na] (result (Forall n) (Forall a)))
 
 -- | Induction over 'SInteger', taking two extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -562,7 +601,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
 -- | Strong induction over 'SInteger', taking two extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -572,7 +611,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
                             (indResult [nn, na, nb] (result (Forall n) (Forall a) (Forall b)))
 
 -- | Induction over 'SInteger', taking three extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -583,7 +622,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
 
 -- | Strong induction over 'SInteger', taking three extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -594,7 +633,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn, na, nb, nc] (result (Forall n) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SInteger', taking four extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -606,7 +645,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Strong induction over 'SInteger', taking four extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -618,7 +657,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn, na, nb, nc, nd] (result (Forall n) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SInteger', taking five extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -631,7 +670,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Strong induction over 'SInteger', taking five extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
@@ -658,7 +697,7 @@ lexLeq :: SymVal a => SList a -> SList a -> SBool
 lexLeq xs ys = SL.length xs .< SL.length ys
 
 -- | Induction over 'SList'
-instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) (SBV x -> SList x -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) (SBV x -> SList x -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil)))
@@ -666,7 +705,7 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] 
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
 
 -- | Strong induction over 'SList'
-instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => SInductive (Forall nxs [x] -> SBool) (SList x -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => SInductive (Forall nxs [x] -> SBool) (SList x -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        pure $ mkIndStrategy Nothing Nothing
@@ -674,7 +713,7 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => SInductive (Forall nxs [x]
                             (indResult [nxs] (result (Forall xs)))
 
 -- | Induction over 'SList', taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> SBool) (SBV x -> SList x -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> SBool) (SBV x -> SList x -> SBV a -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -683,7 +722,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
 
 -- | Strong induction over 'SList', taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> SBool) (SList x -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> SBool) (SList x -> SBV a -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a,  na)  <- mkVar (Proxy @na)
@@ -692,7 +731,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
                             (indResult [nxs, na] (result (Forall xs) (Forall a)))
 
 -- | Induction over 'SList', taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -702,7 +741,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
 
 -- | Strong induction over 'SList', taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SList x -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SList x -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a, na)   <- mkVar (Proxy @na)
@@ -712,7 +751,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxs, na, nb] (result (Forall xs) (Forall a) (Forall b)))
 
 -- | Induction over 'SList', taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -723,7 +762,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
 
 -- | Strong induction over 'SList', taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a, na)   <- mkVar (Proxy @na)
@@ -734,7 +773,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxs, na, nb, nc] (result (Forall xs) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SList', taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -746,7 +785,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Strong induction over 'SList', taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a, na)   <- mkVar (Proxy @na)
@@ -758,7 +797,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxs, na, nb, nc, nd] (result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SList', taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
@@ -771,7 +810,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Strong induction over 'SList', taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a, na)   <- mkVar (Proxy @na)
@@ -795,7 +834,7 @@ lexLeq2 (xs', ys') (xs, ys) =   lxs' .<  lxs        -- First one got smaller
        lys  = SL.length ys
 
 -- | Induction over two 'SList', simultaneously
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SBV x, SList x, SBV y, SList y) -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SBV x, SList x, SBV y, SList y) -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -804,7 +843,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
 
 -- | Strong induction over two 'SList', simultaneously
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SList x, SList y) -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SList x, SList y) -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -813,7 +852,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
                             (indResult [nxs, nys] (result (Forall xs, Forall ys)))
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -823,7 +862,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
 
 -- | Strong induction over two 'SList', simultaneously, taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SList x, SList y) -> SBV a -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SList x, SList y) -> SBV a -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -833,7 +872,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxs, nys, na] (result (Forall xs, Forall ys) (Forall a)))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -844,7 +883,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
 
 -- | Strong induction over two 'SList', simultaneously, taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -855,7 +894,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxs, nys, na, nb] (result (Forall xs, Forall ys) (Forall a) (Forall b)))
 
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -867,7 +906,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
 
 -- | Strong induction over two 'SList', simultaneously, taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -879,7 +918,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxs, nys, na, nb, nc] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -892,7 +931,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Strong induction over two 'SList', simultaneously, taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -905,7 +944,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxs, nys, na, nb, nc, nd] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
@@ -919,7 +958,7 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Strong induction over two 'SList', simultaneously, taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, [ProofStep z])) where
+instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProof z ())) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
@@ -1011,19 +1050,23 @@ data Helper = HelperProof Proof          -- A previously proven theorem
             | HelperAssum SBool          -- A hypothesis
             | HelperCase  String [SBool] -- Case split
 
--- | Get proofs from helpers
-getHelperProofs :: [Helper] -> [Proof]
-getHelperProofs = concatMap get
-  where get (HelperProof p) = [p]
-        get HelperAssum {}  = []
-        get HelperCase  {}  = []
+-- | Get all helpers used in a proof
+getAllHelpers :: KDProof a b -> [Helper]
+getAllHelpers (ProofStep _ hs p) = hs ++ getAllHelpers p
+getAllHelpers (ProofBranch ps)   = concatMap getAllHelpers ps
+getAllHelpers (ProofEnd _)       = []
 
 -- | Get proofs from helpers
-getHelperAssumes :: [Helper] -> [SBool]
-getHelperAssumes = concatMap get
-  where get HelperProof  {} = []
-        get (HelperAssum b) = [b]
-        get HelperCase   {} = []
+getHelperProofs :: Helper -> [Proof]
+getHelperProofs (HelperProof p) = [p]
+getHelperProofs HelperAssum {}  = []
+getHelperProofs HelperCase  {}  = []
+
+-- | Get proofs from helpers
+getHelperAssumes :: Helper -> [SBool]
+getHelperAssumes HelperProof  {} = []
+getHelperAssumes (HelperAssum b) = [b]
+getHelperAssumes HelperCase   {} = []
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
@@ -1035,49 +1078,51 @@ hyp = HelperAssum
 hprf :: Proof -> Helper
 hprf = HelperProof
 
--- | A proof-step with associated helpers
-data ProofStep a = SingleStep a [Helper]
+-- | A proof is a sequence of steps, supporting branching
+data KDProof a b = ProofStep   a [Helper] (KDProof a b) -- ^ A single step
+                 | ProofBranch [KDProof a b]            -- ^ A branching step
+                 | ProofEnd    b                        -- ^ End of proof
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
   -- | Specify a helper for the given proof step
-  (??) :: a -> b -> ProofStep a
+  (??) :: a -> b -> KDProof a ()
   infixl 2 ??
 
 -- | Giving just one proof as a helper.
 instance ProofHint a Proof where
-  a ?? p = SingleStep a [HelperProof p]
+  a ?? p = ProofStep a [HelperProof p] qed
 
 -- | Giving just one boolean as a helper.
 instance ProofHint a SBool where
-  a ?? p = SingleStep a [HelperAssum p]
+  a ?? p = ProofStep a [HelperAssum p] qed
 
 -- | Giving just one helper
 instance ProofHint a Helper where
-  a ?? h = SingleStep a [h]
+  a ?? h = ProofStep a [h] qed
 
 -- | Giving a bunch of proofs as a helper.
 instance ProofHint a [Proof] where
-  a ?? ps = SingleStep a (map HelperProof ps)
+  a ?? ps = ProofStep a (map HelperProof ps) qed
 
 -- | Giving a bunch of booleans as a helper.
 instance ProofHint a [SBool] where
-  a ?? ps = SingleStep a (map HelperAssum ps)
+  a ?? ps = ProofStep a (map HelperAssum ps) qed
 
 -- | Giving a set of helpers
 instance ProofHint a [Helper] where
-  a ?? hs = SingleStep a hs
+  a ?? hs = ProofStep a hs qed
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance ProofHint a String where
-  a ?? _ = SingleStep a []
+  a ?? _ = ProofStep a [] qed
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
 -- but we'll cross that bridge if someone actually asks for it.
 type family ChainsTo a where
-  ChainsTo (ProofStep a) = [ProofStep a]
-  ChainsTo a             = [ProofStep a]
+  ChainsTo (KDProof a ()) = KDProof a ()
+  ChainsTo a              = KDProof a ()
 
 -- | Chain steps in a calculational proof.
 (=:) :: ChainStep a (ChainsTo a) =>  a -> ChainsTo a -> ChainsTo a
@@ -1094,32 +1139,34 @@ class ChainStep a b where
   chain :: a -> b -> b
 
 -- | Chaining from a value without any annotation
-instance ChainStep a [ProofStep a] where
-  chain x y = SingleStep x [] : y
+instance ChainStep a (KDProof a ()) where
+  chain x y = ProofStep x [] y
 
 -- | Chaining from another proof step
-instance ChainStep (ProofStep a) [ProofStep a] where
-  chain x y = x : y
+instance ChainStep (KDProof a ()) (KDProof a ()) where
+  chain (ProofStep a hs p)  y = ProofStep a hs (chain p y)
+  chain (ProofBranch ps)    y = ProofBranch (map (\p -> chain p y) ps)
+  chain (ProofEnd ())       y = y
 
 -- | Mark the end of a calculational proof.
-qed :: [ProofStep a]
-qed = []
+qed :: KDProof a ()
+qed = ProofEnd ()
 
 -- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is
 -- typically used to introduce hypotheses in proofs of implications such as @A .=> B .=> C@, where
 -- we would put @[A, B]@ as the starting assumption. You can name these and later use in the derivation steps.
-(|-) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
-bs |- ps = (sAnd bs, ps)
+(|-) :: [SBool] -> KDProof a () -> (SBool, KDProof a ())
+bs |- p = (sAnd bs, p)
 infixl 0 |-
 
 -- | Alternative unicode for `|-`.
-(⊢) :: [SBool] -> [ProofStep a] -> (SBool, [ProofStep a])
+(⊢) :: [SBool] -> KDProof a () -> (SBool, KDProof a ())
 (⊢) = (|-)
 infixl 0 ⊢
 
 -- | Alternative unicode for `??`.
-(⁇) :: ProofHint a b => a -> b -> ProofStep a
+(⁇) :: ProofHint a b => a -> b -> KDProof a ()
 (⁇) = (??)
 infixl 2 ⁇
 

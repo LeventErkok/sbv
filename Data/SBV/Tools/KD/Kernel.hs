@@ -26,13 +26,13 @@ module Data.SBV.Tools.KD.Kernel (
        , theorem, theoremWith
        , sorry
        , internalAxiom
-       , checkSatThen
+       , CheckSatContext(..), checkSatThen
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
 
 import Data.List  (intercalate)
-import Data.Maybe (catMaybes, fromMaybe)
+import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data hiding (None)
 import Data.SBV.Trans.Control hiding (getProof)
@@ -95,13 +95,13 @@ sorry = Proof { rootOfTrust = Self
         p (Forall @"__sbvKD_sorry" (x :: SBool)) = label "SORRY: KnuckleDragger, proof uses \"sorry\"" x
 
 -- | Helper to generate lemma/theorem statements.
-lemmaGen :: Proposition a => SMTConfig -> String -> [String] -> a -> [Proof] -> KD Proof
-lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by = do
+lemmaGen :: Proposition a => SMTConfig -> String -> String -> a -> [Proof] -> KD Proof
+lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by = do
         kdSt <- getKDState
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag False Nothing inputProp by nms Nothing (good mbStartTime)
+                                 query $ checkSatThen cfg kdSt tag (CheckSatOneShot nm by) Nothing inputProp (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -113,7 +113,6 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nms inputProp by 
                                        , proofName   = nm
                                        }
           where (ros, modulo) = calculateRootOfTrust nm by
-                nm = intercalate "." nms
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the default solver.
 lemma :: Proposition a => String -> a -> [Proof] -> KD Proof
@@ -122,7 +121,7 @@ lemma nm f by = do cfg <- getKDConfig
 
 -- | Prove a given statement, using auxiliaries as helpers. Using the given solver.
 lemmaWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
-lemmaWith cfg nm = lemmaGen cfg "Lemma" [nm]
+lemmaWith cfg = lemmaGen cfg "Lemma"
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemma', except for the name, using the default solver.
 theorem :: Proposition a => String -> a -> [Proof] -> KD Proof
@@ -131,7 +130,10 @@ theorem nm f by = do cfg <- getKDConfig
 
 -- | Prove a given statement, using auxiliaries as helpers. Essentially the same as 'lemmaWith', except for the name.
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
-theoremWith cfg nm = lemmaGen cfg "Theorem" [nm]
+theoremWith cfg = lemmaGen cfg "Theorem"
+
+data CheckSatContext = CheckSatOneShot String [Proof]    -- ^ A one shot proof, with helpers used (latter only used for cex generation)
+                     | CheckSatStep    String [String]   -- ^ A step in a full proof, running in a query
 
 -- | Capture the general flow after a checkSat. We run the sat case if model is empty.
 -- NB. This is the only place in Knuckledragger where we actually call check-sat;
@@ -140,27 +142,26 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
-   -> Bool                                   -- in query mode already (True), or lemmaGen (False)?
-   -> Maybe SBool                            -- ^ context if any. If there's one we'll push/pop
+   -> CheckSatContext                        -- ^ the context in which we're doing the proof
+   -> Maybe SBool                            -- ^ Assumptions under which we do the check-sat. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
-   -> [Proof]                                -- ^ helpers in the context. NB. Only used for printing cex's. We assume they're already asserted.
-   -> [String]                               -- ^ sub-proof
-   -> Maybe [String]                         -- ^ full-path to the proof, if different than sub-proof
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag inQuery mbCtx prop by nms fullNms unsat = do
+checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx mbAssumptions prop unsat = do
 
-        case mbCtx of
-           Just{}  -> inNewAssertionStack check
-           Nothing -> check
+        case mbAssumptions of
+           Nothing  -> do queryDebug ["; checkSatThen: No context value to push."]
+                          check
+           Just asm -> do queryDebug ["; checkSatThen: Pushing in the context: " ++ show asm]
+                          inNewAssertionStack $ do constrain asm
+                                                   check
 
  where check = do
-           tab <- liftIO $ startKD cfg verbose tag nms
+           let (fullNm, nms) = case ctx of
+                                 CheckSatOneShot s _  -> (s,                        [s])
+                                 CheckSatStep    s ss -> (intercalate "." (s : ss), ss)
 
-           case mbCtx of
-             Nothing  -> queryDebug ["; checkSatThen: No context value to push."]
-             Just ctx -> do queryDebug ["; checkSatThen: Pushing in the context: " ++ show ctx]
-                            constrain ctx
+           tab <- liftIO $ startKD cfg verbose tag nms
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!
@@ -175,40 +176,37 @@ checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
              Just t  -> updStats kdState (\s -> s{solverElapsed = solverElapsed s + t})
 
            case r of
-             Unk    -> unknown
-             Sat    -> cex
-             DSat{} -> cex
+             Unk    -> unknown fullNm
+             Sat    -> cex fullNm
+             DSat{} -> cex fullNm
              Unsat  -> liftIO $ unsat (tab, mbT)
 
        die = error "Failed"
 
-       fullNm = intercalate "." $ squeeze $ filter (not . null) (fromMaybe nms fullNms)
-       squeeze (x:y:rest) | x == y = squeeze (y:rest)
-       squeeze (x:rest)            = x : squeeze rest
-       squeeze []                  = []
-
-       unknown = do r <- getUnknownReason
-                    liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
-                                putStrLn $ "\n*** Solver reported: " ++ show r
-                                die
+       unknown fullNm = do r <- getUnknownReason
+                           liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+                                       putStrLn $ "\n*** Solver reported: " ++ show r
+                                       die
 
        -- What to do if the proof fails
-       cex  = do liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
+       cex fullNm = do
+         liftIO $ putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."
 
-                 res <- if inQuery
-                        then Satisfiable cfg <$> getModel
-                        else -- When trying to get a counter-example not in query mode, we
-                             -- do a skolemized sat call, which gets better counter-examples.
-                             -- We only include the those facts that are user-given axioms. This
-                             -- way our counter-example will be more likely to be relevant
-                             -- to the proposition we're currently proving. (Hopefully.)
-                             -- Remember that we first have to negate, and then skolemize!
-                             do SatResult res <- liftIO $ satWith cfg $ do
-                                                   qSaturateSavingObservables prop
-                                                   mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
-                                                   pure $ skolemize (qNot prop)
-                                pure res
+         res <- case ctx of
+                  CheckSatStep{}       -> Satisfiable cfg <$> getModel
+                  CheckSatOneShot _ by ->
+                     -- When trying to get a counter-example not in query mode, we
+                     -- do a skolemized sat call, which gets better counter-examples.
+                     -- We only include the those facts that are user-given axioms. This
+                     -- way our counter-example will be more likely to be relevant
+                     -- to the proposition we're currently proving. (Hopefully.)
+                     -- Remember that we first have to negate, and then skolemize!
+                     do SatResult res <- liftIO $ satWith cfg $ do
+                                           qSaturateSavingObservables prop
+                                           mapM_ constrain [getProof | Proof{isUserAxiom, getProof} <- by, isUserAxiom] :: Symbolic ()
+                                           pure $ skolemize (qNot prop)
+                        pure res
 
-                 liftIO $ print $ ThmResult res
+         liftIO $ print $ ThmResult res
 
-                 die
+         die
