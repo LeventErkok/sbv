@@ -192,7 +192,7 @@ class CalcLemma a steps where
         (calcGoal, strategy@CalcStrategy {calcIntros, calcProofTree}) <- calcSteps result steps
 
         -- Collect all subterms and saturate them
-        mapM_ qSaturateSavingObservables $ calcIntros : getCalcStrategySaturatables strategy
+        mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
         query $ proveProofTree cfg kdSt nm result calcIntros calcProofTree calcGoal
 
