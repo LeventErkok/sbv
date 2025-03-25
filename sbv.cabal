@@ -436,41 +436,17 @@ Test-Suite SBVConnections
 Test-Suite SBVDocTest
     import          : common-settings
     default-language: Haskell2010
-    build-depends   : QuickCheck
-                    , bytestring
-                    , deepseq
-                    , directory
-                    , filepath
-                    , mtl
-                    , process
-                    , sbv
-                    , tasty
-                    , tasty-golden
-                    , tasty-hunit
-                    , tasty-quickcheck
+    build-depends   : process
     hs-source-dirs  : SBVTestSuite
     main-is:          SBVDocTest.hs
-    other-modules   : Utils.SBVTestFramework
     type:             exitcode-stdio-1.0
 
 Test-Suite SBVHLint
     import          : common-settings
     default-language: Haskell2010
 
-    build-depends   : QuickCheck
-                    , bytestring
-                    , deepseq
-                    , directory
-                    , filepath
-                    , mtl
-                    , process
-                    , sbv
-                    , tasty
-                    , tasty-golden
-                    , tasty-hunit
-                    , tasty-quickcheck
+    build-depends   : process
     hs-source-dirs  : SBVTestSuite
-    other-modules   : Utils.SBVTestFramework
     main-is         : SBVHLint.hs
     type            : exitcode-stdio-1.0
 
