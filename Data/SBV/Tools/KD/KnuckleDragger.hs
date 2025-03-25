@@ -51,7 +51,6 @@ import Data.SBV.Tools.KD.Utils
 
 import qualified Data.SBV.List as SL
 
-import Control.Monad (zipWithM_)
 import Control.Monad.Trans (liftIO)
 
 import Data.Char (isSpace)
@@ -89,46 +88,6 @@ proofTreeSaturatables = go
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
 getCalcStrategySaturatables (CalcStrategy calcIntros calcProofTree) = calcIntros : proofTreeSaturatables calcProofTree
-
--- | Based on the helpers given, construct the proofs we have to do in the given case
-stepCases :: Int -> [Helper] -> Either (String, SBool) ([(String, SBool)], SBool)
-stepCases i helpers
-   | hasCase
-   = Right (caseSplits, cover)
-   | True
-   = Left (show i, sAnd (map getBools helpers))
-  where join :: [(String, SBool)] -> Helper -> [(String, SBool)]
-        join sofar (HelperProof p)     =       map (\(n, cond) -> (n, cond .&& getProof p)) sofar
-        join sofar (HelperAssum b)     =       map (\(n, cond) -> (n, cond .&&          b)) sofar
-        join sofar (HelperCase  cn cs) = concatMap (\(n, cond) -> [ (dotN n ++ cn ++ "[" ++ show j ++ "]", cond .&& b)
-                                                                  | (j, b) <- zip [(1::Int)..] cs
-                                                                  ]) sofar
-
-        -- Add a dot if we have a legit prefix
-        dotN "" = ""
-        dotN s  = s ++ "."
-
-        -- Used only when we have ano case splits:
-        getBools (HelperProof p) = getProof p
-        getBools (HelperAssum b) = b
-        getBools (HelperCase{})  = error "Unexpected case in stepCases: Wasn't expecting to see a HelperCase here."
-
-        -- All case-splits. If there isn't any, we'll get just one case
-        caseSplits = foldl join [("", sTrue)] helpers
-
-        -- If there were any cases, then we also need coverage
-        isCase (HelperProof {}) = False
-        isCase (HelperAssum {}) = False
-        isCase (HelperCase  {}) = True
-
-        hasCase = any isCase helpers
-
-        regulars = concatMap getHyp helpers
-          where getHyp (HelperProof p)  = [getProof p]
-                getHyp (HelperAssum b)  = [b]
-                getHyp (HelperCase  {}) = []
-
-        cover = sAnd regulars .&& sNot (sOr [b | (_, b) <- caseSplits])
 
 -- | Propagate the settings for ribbon/timing from top to current. Because in any subsequent configuration
 -- in a lemmaWith, inductWith etc., we just want to change the solver, not the actual settings for KD.
@@ -194,12 +153,35 @@ class CalcLemma a steps where
         -- Collect all subterms and saturate them
         mapM_ qSaturateSavingObservables $ getCalcStrategySaturatables strategy
 
-        query $ proveProofTree cfg kdSt nm result calcIntros calcProofTree calcGoal
+        query $ proveProofTree cfg kdSt nm (result, calcGoal) calcIntros calcProofTree
 
--- | Prove the proof tree
-proveProofTree :: Proposition a => SMTConfig -> KDState -> String -> a -> SBool -> KDProof SBool SBool -> SBool -> Query Proof
-proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result calcIntros calcProofTree calcGoal = do
+-- | Prove the proof tree. The players here are:
+--
+--      result    : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
+--      resultBool: The instance of result that, if we prove it, establishes the result itself
+--      intros    : Hypotheses (conjuncted)
+--      proofTree : A tree of steps, which give rise to a bunch of equalities
+--
+-- Note that we do not check the resultBool is the result itself just "instantiated" appropriately. This is the contract with the caller who
+-- has to establish that by whatever means it chooses to do so.
+--
+-- The final proof we have has the following form:
+--
+--     - For each "link" in the proofTree, prove that intros .=> link
+--     - The above will give us a bunch of results, for each leaf node in the tree.
+--     - Then prove: (intros .=> sAnd results) .=> resultBool
+--     - Then conclude result, based on what assumption that proving resultBool establishes result
+proveProofTree :: Proposition a
+               => SMTConfig
+               -> KDState
+               -> String                   -- ^ the name of the top result
+               -> (a, SBool)               -- ^ goal: as a proposition and as a boolean
+               -> SBool                    -- ^ hypotheses
+               -> KDProof SBool SBool      -- ^ proof tree
+               -> Query Proof
+proveProofTree cfg kdSt nm (result, resultBool) intros calcProofTree = do
 
+  let SMTConfig{kdOptions = KDOptions{measureTime}} = cfg
   mbStartTime <- getTimeStampIf measureTime
 
   let next :: [Int] -> [Int]
@@ -226,17 +208,17 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
            -- First prove the assumptions, if there are any
            case concatMap getHelperAssumes hs of
              [] -> pure ()
-             as -> checkSatThen cfg kdSt "Asms  "
+             as -> smtProofStep cfg kdSt "Asms"
                                          (KDProofStep nm stepName)
-                                         (Just calcIntros)
+                                         (Just intros)
                                          (sAnd as)
                                          (finish [] [])
 
            -- Now prove the step
            let by = concatMap getHelperProofs hs
-           checkSatThen cfg kdSt "Step  "
+           smtProofStep cfg kdSt "Step"
                                  (KDProofStep nm stepName)
-                                 (Just (sAnd (calcIntros : map getProof by)))
+                                 (Just (sAnd (intros : map getProof by)))
                                  cur
                                  (finish [] by)
 
@@ -247,10 +229,10 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
-  checkSatThen cfg kdSt "Result"
+  smtProofStep cfg kdSt "Result"
                (KDProofStep nm [])
-               (Just (calcIntros .=> sAnd results))
-               calcGoal $ \d ->
+               (Just (intros .=> sAnd results))
+               resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
                     let (ros, modulo) = calculateRootOfTrust nm (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
@@ -261,36 +243,6 @@ proveProofTree cfg@SMTConfig{kdOptions = KDOptions{measureTime}} kdSt nm result 
                                , getProp     = toDyn result
                                , proofName   = nm
                                }
-
-
-{-
-proveAllCases :: (Monad m, SolverContext m, MonadIO m, MonadQuery m, Proposition a)
-              => Int -> SMTConfig -> KDState
-              -> Either (String, SBool) ([(String, SBool)], SBool)
-              -> String -> a -> String -> ((Int, Maybe NominalDiffTime) -> IO ()) -> m ()
-proveAllCases topStep cfg kdSt caseInfo stepTag s nm finalize
-  | Left (stepName, asmp) <- caseInfo
-  = checker stepTag asmp s ["", stepName] (Just [nm, stepName])
-  | Right (proofCases, coverCond) <- caseInfo
-  = do let len   = length proofCases
-           ways  = case len of
-                     1 -> "one way"
-                     n -> show n ++ " ways"
-
-           slen  = show len
-           clen  = length slen
-           sh i  = reverse . take clen $ reverse (show i) ++ repeat ' '
-
-       _tab <- liftIO $ startKD cfg True ("Step " ++ show topStep) ["", "Case split " ++ ways ++ ":"]
-
-       forM_ (zip [(1::Int)..] proofCases) $ \(c, (stepName, asmp)) ->
-             checker ("Case [" ++ sh c ++ " of " ++ show len ++ "]") asmp s ["", "", stepName] (Just [nm, stepName])
-
-       checker "Completeness" coverCond s ["", "", ""] (Just [nm, show topStep, "Completeness"])
-  where
-     checker tag caseAsmp cond cnm fnm = checkSatThen cfg kdSt tag True (Just caseAsmp) cond [] cnm fnm finalize
-
--}
 
 -- Helper data-type for calc-step below
 data CalcContext a = CalcStart              -- Haven't started yet
@@ -445,7 +397,7 @@ class SInductive a steps where
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> KD Proof
-inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime}} nm result getStrategy = do
+inductionEngine style tagTheorem cfg nm result getStrategy = do
    kdSt <- getKDState
 
    liftIO $ runSMTWith cfg $ do
@@ -464,69 +416,20 @@ inductionEngine style tagTheorem cfg@SMTConfig{kdOptions = KDOptions{measureTime
                                  , inductiveStep
                                  } <- getStrategy
 
-      mbStartTime <- getTimeStampIf measureTime
-
-      error "hmm" (zipWithM_ :: (Int -> Int -> IO ()) -> [Int] -> [Int] -> IO ()) catMaybes stepCases kdSt strategy inductionIntros inductionBaseCase inductionProofTree
-                  inductiveStep mbStartTime getHelperProofs getHelperAssumes getInductionStrategySaturatables
-
-{-
-      let stepHelpers = concatMap fst inductionProofTree
-
-          finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
-            where (_, modulo) = calculateRootOfTrust nm helpers
-
-      -- Collect all subterms and saturate them
       mapM_ qSaturateSavingObservables $ getInductionStrategySaturatables strategy
 
       query $ do
 
        case inductionBaseCase of
-          Nothing -> pure ()
+          Nothing -> queryDebug [nm ++ ": Induction" ++ strong ++ ", there is no proving base case:"]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
-                        checkSatThen cfg kdSt "Base" True (Just inductionIntros) bc [] [nm, "Base"] Nothing (finish [] [])
-       let proveStep i (by, s) = do
+                        smtProofStep cfg kdSt "Step"
+                                              (KDProofStep nm ["Base"])
+                                              (Just inductionIntros)
+                                              bc
+                                              (\d -> finishKD cfg "Q.E.D." d [])
 
-               -- Prove that the assumptions follow, if any
-               case getHelperAssumes by of
-                 [] -> pure ()
-                 as -> checkSatThen cfg kdSt "Asms"
-                                             True
-                                             (Just inductionIntros)
-                                             (sAnd as)
-                                             []
-                                             ["", show i]
-                                             (Just [nm, show i, "Assumptions"])
-                                             (finish [] [])
-
-               queryDebug [nm ++ ": Induction, proving step: " ++ show i]
-
-               proveAllCases i cfg kdSt (stepCases i by) "Step" s nm (finish [] (getHelperProofs by))
-
-       -- Do the steps
-       zipWithM_ proveStep [1::Int ..] $ error "hmm" inductionProofTree
-
-       -- Do the final proof:
-       queryDebug [nm ++ ": Induction, proving inductive step:"]
-       checkSatThen cfg kdSt "Step"
-                             True
-                             (Just (inductionIntros .=> inductiveResult))
-                             inductiveStep
-                             []
-                             [nm, "Step"]
-                             Nothing $ \d -> do
-
-         mbElapsed <- getElapsedTime mbStartTime
-
-         let (ros, modulo) = calculateRootOfTrust nm (getHelperProofs stepHelpers)
-         finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
-
-         pure $ Proof { rootOfTrust = ros
-                      , isUserAxiom = False
-                      , getProof    = label nm $ quantifiedBool result
-                      , getProp     = toDyn result
-                      , proofName   = nm
-                      }
--}
+       proveProofTree cfg kdSt nm (result, inductiveStep) inductionIntros inductionProofTree
 
 -- Induction strategy helper
 mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, KDProof a ()) -> SBool -> InductionStrategy

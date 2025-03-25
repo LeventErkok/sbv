@@ -26,7 +26,7 @@ module Data.SBV.Tools.KD.Kernel (
        , theorem, theoremWith
        , sorry
        , internalAxiom
-       , KDProofContext (..), checkSatThen
+       , KDProofContext (..), smtProofStep
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -101,7 +101,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ checkSatThen cfg kdSt tag (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
+                                 query $ smtProofStep cfg kdSt tag (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -132,10 +132,8 @@ theorem nm f by = do cfg <- getKDConfig
 theoremWith :: Proposition a => SMTConfig -> String -> a -> [Proof] -> KD Proof
 theoremWith cfg = lemmaGen cfg "Theorem"
 
--- | Capture the general flow after a checkSat. We run the sat case if model is empty.
--- NB. This is the only place in Knuckledragger where we actually call check-sat;
--- so all interaction goes through here.
-checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
+-- | Capture the general flow of a proof-step.
+smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
@@ -144,12 +142,12 @@ checkSatThen :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    -> a                                      -- ^ what we want to prove
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-checkSatThen cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx mbAssumptions prop unsat = do
+smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx mbAssumptions prop unsat = do
 
         case mbAssumptions of
-           Nothing  -> do queryDebug ["; checkSatThen: No context value to push."]
+           Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
                           check
-           Just asm -> do queryDebug ["; checkSatThen: Pushing in the context: " ++ show asm]
+           Just asm -> do queryDebug ["; smtProofStep: Pushing in the context: " ++ show asm]
                           inNewAssertionStack $ do constrain asm
                                                    check
 
