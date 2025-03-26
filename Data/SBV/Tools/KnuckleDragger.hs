@@ -53,7 +53,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , (??), (⁇), hprf, hyp
 
        -- * Case splits
-       , split, cases, (⟹), (==>)
+       , split, split2, cases, (⟹), (==>)
 
        -- * Finishing up a calculational proof
        , qed

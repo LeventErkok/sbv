@@ -37,7 +37,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, cases, (==>), (⟹), hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -191,7 +191,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
       -- End of proof, return what it established. Note if we're in a sub-proof, otherwise ignore at the top.
       walk _ (bn, ProofEnd calcResult) | length bn >= 2 = do
-                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn))
+                -- simplify: if we're the 1'st and the last, there's no point in putting it in
+                let bn' = case reverse bn of
+                            1 : xs -> reverse xs
+                            _      -> bn
+
+                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn'))
                         finishKD cfg "Q.E.D." (tab, Nothing) []
                 pure [calcResult]
 
@@ -276,8 +281,15 @@ mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
 
         -- End of the proof; tie the begin and end
         go step (ProofEnd ()) = case step of
-                                  CalcStart                             -> incomplete
-                                  CalcStep begin end hs | not (null hs) -> badHint
+                                  -- It's tempting to error out if we're at the start and already reached the end
+                                  -- This means we're given a sequence of no-steps. While this is useless in the
+                                  -- general case, it's quite valid in a case-split; where one of the case-splits
+                                  -- might be easy enough for the solver to deduce so the user simply says "just derive it for me."
+                                  CalcStart                             -> ProofEnd sTrue -- Nothing proven!
+
+                                  -- We do complain if there was a hint to use in the last step; as it contributes
+                                  -- nothing. Most likely incorrectly placed.
+                                  CalcStep begin end hs | not (null hs) -> bad
                                                         | True          -> ProofEnd $ begin .== end
 
         -- Branch: Just push it own. We use the hints from previous step, and pass the current ones down.
@@ -287,16 +299,13 @@ mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
         go CalcStart                (ProofStep cur hs' p) =                               go (CalcStep cur   cur hs') p
         go (CalcStep first prev hs) (ProofStep cur hs' p) = ProofStep (prev  .== cur) hs (go (CalcStep first cur hs') p)
 
-        badHint    = bad "The last step in the proof has a helper, which isn't used." "Perhaps the hint is off-by-one in its placement?"
-        incomplete = bad "Incomplete sequence of proof steps."                        "Each proof-branch must have at least two steps."
-
-        bad w h = error $ unlines [ ""
-                                  , "*** Incorrect calc/induct lemma calculations."
-                                  , "***"
-                                  , "*** " ++ w
-                                  , "***"
-                                  , "*** " ++ h
-                                  ]
+        bad = error $ unlines [ ""
+                              , "*** Incorrect calc/induct lemma calculations."
+                              , "***"
+                              , "***    The last step in the proof has a helper, which isn't used."
+                              , "***"
+                              , "*** Perhaps the hint is off-by-one in its placement?"
+                              ]
 
 -- | Chaining lemmas that depend on no extra variables
 instance EqSymbolic z => CalcLemma SBool (SBool, KDProof z ()) where
@@ -1094,10 +1103,25 @@ cases :: [(SBool, KDProof a ())] -> KDProof a ()
 cases = ProofBranch True
 
 -- | Case splitting over a list; empty and full cases
-split :: SymVal a => SList a -> KDProof b () -> (SBV a -> SList a -> KDProof b ()) -> KDProof b ()
+split :: SymVal a => SList a -> KDProof r () -> (SBV a -> SList a -> KDProof r ()) -> KDProof r ()
 split xs empty cons = ProofBranch False [ (        SL.null xs,  empty)
                                           , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
                                         ]
+
+-- | Case splitting over two lists; empty and full cases for each
+split2 :: (SymVal a, SymVal b)
+       => (SList a, SList b)
+       -> KDProof r ()                                           -- empty both
+       -> ((SBV b, SList b)                     -> KDProof r ()) -- empty first
+       -> ((SBV a, SList a)                     -> KDProof r ()) -- empty second
+       -> ((SBV a, SList a) -> (SBV b, SList b) -> KDProof r ()) -- neither empty
+       -> KDProof r ()
+split2 (xs, ys) ee ec ce cc = ProofBranch False
+                                          [ (      SL.null xs  .&&       SL.null ys , ee)
+                                          , (      SL.null xs  .&& sNot (SL.null ys), ec (SL.head ys, SL.tail ys))
+                                          , (sNot (SL.null xs) .&&       SL.null ys , ce (SL.head xs, SL.tail xs))
+                                          , (sNot (SL.null xs) .&& sNot (SL.null ys), cc (SL.head xs, SL.tail xs) (SL.head ys, SL.tail ys))
+                                          ]
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> KDProof a () -> (SBool, KDProof a ())
