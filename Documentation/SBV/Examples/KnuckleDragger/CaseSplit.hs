@@ -28,37 +28,36 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> notDiv3
 -- Lemma: case_n_mod_3_eq_0
---   Asms  : 1                             Q.E.D.
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Step  : 5                             Q.E.D.
+--   Asms: 1                               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_1
---   Asms  : 1                             Q.E.D.
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Step  : 5                             Q.E.D.
---   Step  : 6                             Q.E.D.
+--   Asms: 1                               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_2
---   Asms  : 1                             Q.E.D.
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
---   Step  : 5                             Q.E.D.
---   Step  : 6                             Q.E.D.
+--   Asms: 1                               Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
+--   Step: 5                               Q.E.D.
+--   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: notDiv3
---   Step 1: Case split 3 ways:
---     Case [1 of 3]: n_mod_3[1]           Q.E.D.
---     Case [2 of 3]: n_mod_3[2]           Q.E.D.
---     Case [3 of 3]: n_mod_3[3]           Q.E.D.
---     Completeness:                       Q.E.D.
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
 notDiv3 :: IO Proof
@@ -114,11 +113,7 @@ notDiv3 = runKD $ do
 
    calc "notDiv3"
         (\(Forall @"n" n) -> p n) $
-        \n -> [] |- p n
-                 ?? [ cases "n_mod_3" [case0 n, case1 n, case2 n]
-                   , hprf $ c0 `at` Inst @"n" n
-                   , hprf $ c1 `at` Inst @"n" n
-                   , hprf $ c2 `at` Inst @"n" n
-                   ]
-                 =: sTrue
-                 =: qed
+        \n -> [] |- cases [ case0 n ==> p n ?? c0 `at` Inst @"n" n =: sTrue =: qed
+                          , case1 n ==> p n ?? c1 `at` Inst @"n" n =: sTrue =: qed
+                          , case2 n ==> p n ?? c2 `at` Inst @"n" n =: sTrue =: qed
+                          ]
