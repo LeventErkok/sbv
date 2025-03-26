@@ -18,6 +18,11 @@ import System.Exit(exitWith)
 
 import System.Process
 
+-- This "fake" import creates a dependency to sbv,
+-- thus allowing cabal to recognize it has to compile
+-- sbv first before running the doctests. Otherwise it plays no role.
+import Data.SBV ()
+
 main :: IO ()
 main = do args <- getArgs
           exitWith =<< rawSystem "cabal-docspec" args
