@@ -19,10 +19,8 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE FunctionalDependencies     #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TupleSections              #-}
 {-# LANGUAGE TypeAbstractions           #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
@@ -1102,3 +1100,5 @@ infix 0 ==>
 (⟹) :: SBool -> KDProof a () -> (SBool, KDProof a ())
 (⟹) = (==>)
 infix 0 ⟹
+
+{- HLint ignore module "Eta reduce" -}
