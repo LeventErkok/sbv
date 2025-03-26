@@ -81,9 +81,8 @@ proofTreeSaturatables = go
         go (ProofStep a hs r) = a : concatMap getH hs ++ go r
         go (ProofBranch ps)   = concatMap go ps
 
-        getH (HelperProof  p)  = [getProof p]
-        getH (HelperAssum  b)  = [b]
-        getH (HelperCase _ ss) = ss
+        getH (HelperProof  p) = [getProof p]
+        getH (HelperAssum  b) = [b]
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
@@ -949,9 +948,8 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
-data Helper = HelperProof Proof          -- A previously proven theorem
-            | HelperAssum SBool          -- A hypothesis
-            | HelperCase  String [SBool] -- Case split
+data Helper = HelperProof Proof -- A previously proven theorem
+            | HelperAssum SBool -- A hypothesis
 
 -- | Get all helpers used in a proof
 getAllHelpers :: KDProof a b -> [Helper]
@@ -963,13 +961,11 @@ getAllHelpers (ProofEnd _)       = []
 getHelperProofs :: Helper -> [Proof]
 getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
-getHelperProofs HelperCase  {}  = []
 
 -- | Get proofs from helpers
 getHelperAssumes :: Helper -> [SBool]
 getHelperAssumes HelperProof  {} = []
 getHelperAssumes (HelperAssum b) = [b]
-getHelperAssumes HelperCase   {} = []
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
@@ -1075,4 +1071,4 @@ infixl 2 ⁇
 
 -- | Specifying a case-split
 cases :: String -> [SBool] -> Helper
-cases = HelperCase
+cases = error "cases will go away"
