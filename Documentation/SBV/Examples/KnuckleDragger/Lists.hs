@@ -25,7 +25,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), id, (.), flip, error)
+import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
 
 import Data.SBV
 import Data.SBV.List
@@ -1296,11 +1296,14 @@ drop_append = runKD $
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): sumHalves
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
+--   Step: 1 (2 way case split)
+--       Step: 1.1.1                       Q.E.D.
+--       Step: 1.2.1                       Q.E.D.
+--       Step: 1.2.2                       Q.E.D.
+--       Step: 1.2.3                       Q.E.D.
+--       Step: 1.2.4                       Q.E.D.
+--       Step: 1.2.5                       Q.E.D.
+--       Step: 1.2.6                       Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof
@@ -1325,23 +1328,22 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
-    error "need to fix this" halvingSum helper
-    {-
     sInductWith cvc5 "sumHalves"
                 (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
-                \ih x xs -> [] |- halvingSum (x .: xs)
-                               =: let (f, s) = splitAt (length (x .: xs) `sDiv` 2) (x .: xs)
-                                  in halvingSum f + halvingSum s
-                               ?? ih `at` Inst @"xs" f
-                               =: sum f + halvingSum s
-                               ?? ih `at` Inst @"xs" s
-                               =: sum f + sum s
-                               ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
-                               =: sum (f ++ s)
-                               ?? "simplify"
-                               =: sum (x .: xs)
-                               =: qed
-                               -}
+                \ih xs -> [] |- halvingSum xs
+                             =: split xs
+                                      qed
+                                      (\e es -> let (f, s) = splitAt (length (e .: es) `sDiv` 2) (e .: es)
+                                                in halvingSum f + halvingSum s
+                                                ?? ih `at` Inst @"xs" f
+                                                =: sum f + halvingSum s
+                                                ?? ih `at` Inst @"xs" s
+                                                =: sum f + sum s
+                                                ?? helper `at` (Inst @"xs" f, Inst @"ys" s)
+                                                =: sum (f ++ s)
+                                                ?? "simplify"
+                                                =: sum (e .: es)
+                                                =: qed)
 
 -- * Zip
 
