@@ -37,7 +37,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), cases, (==>), (⟹), hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, cases, (==>), (⟹), hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -184,18 +184,30 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
   let next :: [Int] -> [Int]
       next bs = case reverse bs of
-                  i : rs -> i + 1 : rs
+                  i : rs -> reverse $ i + 1 : rs
                   []     -> [1]
 
       walk :: SBool -> ([Int], KDProof SBool SBool) -> Query [SBool]
 
-      -- End of proof, return what it established
-      walk _ (_,  ProofEnd calcResult) = pure [calcResult]
+      -- End of proof, return what it established. Note if we're in a sub-proof, otherwise ignore at the top.
+      walk _ (bn, ProofEnd calcResult) | length bn >= 2 = do
+                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn))
+                        finishKD cfg "Q.E.D." (tab, Nothing) []
+                pure [calcResult]
+
+      walk _ (_, ProofEnd calcResult) = pure [calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
       walk intros (bn, ProofBranch checkCompleteness ps) = do
-        results <- concat <$> sequence [walk (intros .&& branchCond) (bn ++ [i], p) | (i, (branchCond, p)) <- zip [1..] ps]
+
+        let addSuffix xs s = case reverse xs of
+                                l : p -> reverse $ (l ++ s) : p
+                                []    -> [s]
+
+        _ <- io $ startKD cfg True "Step" (KDProofStep nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
+
+        results <- concat <$> sequence [walk (intros .&& branchCond) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step"
                                                        (KDProofStep nm (map show bn ++ ["Completeness"]))
@@ -1077,19 +1089,15 @@ infixl 0 ⊢
 (⁇) = (??)
 infixl 2 ⁇
 
--- | Specifying a case-split
-class KDCaseSplit a b | a -> b where
-  cases :: a -> KDProof b ()
-
--- | The boolean case, over a bunch of booleans
-instance KDCaseSplit [(SBool, KDProof a ())] a where
-   cases = ProofBranch True
+-- | The boolean case-split
+cases :: [(SBool, KDProof a ())] -> KDProof a ()
+cases = ProofBranch True
 
 -- | Case splitting over a list; empty and full cases
-instance SymVal a => KDCaseSplit (SList a, (KDProof a (), SBV a -> SList a -> KDProof a ())) a where
-   cases (xs, (empty, cons)) = ProofBranch False [ (      SL.null xs,  empty)
-                                                 , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
-                                                 ]
+split :: SymVal a => SList a -> KDProof b () -> (SBV a -> SList a -> KDProof b ()) -> KDProof b ()
+split xs empty cons = ProofBranch False [ (        SL.null xs,  empty)
+                                          , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
+                                        ]
 
 -- | Specifying a case-split, helps with the boolean case.
 (==>) :: SBool -> KDProof a () -> (SBool, KDProof a ())
