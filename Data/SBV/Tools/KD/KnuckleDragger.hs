@@ -18,6 +18,7 @@
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE FunctionalDependencies     #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -38,7 +39,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), cases, hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (??), (⁇), cases, (==>), (⟹), hyp, hprf, qed
        ) where
 
 import Data.SBV
@@ -51,6 +52,7 @@ import Data.SBV.Tools.KD.Utils
 
 import qualified Data.SBV.List as SL
 
+import Control.Monad (when)
 import Control.Monad.Trans (liftIO)
 
 import Data.Char (isSpace)
@@ -63,7 +65,6 @@ import GHC.TypeLits (KnownSymbol, symbolVal, Symbol)
 import Data.SBV.Utils.TDiff
 
 import Data.Dynamic
--- import Data.Time (NominalDiffTime)
 
 -- | Bring an IO proof into current proof context.
 use :: IO Proof -> KD Proof
@@ -79,7 +80,7 @@ proofTreeSaturatables :: KDProof SBool SBool -> [SBool]
 proofTreeSaturatables = go
   where go (ProofEnd b)       = [b]
         go (ProofStep a hs r) = a : concatMap getH hs ++ go r
-        go (ProofBranch ps)   = concatMap go ps
+        go (ProofBranch _ ps) = concat [b : go p | (b, p) <- ps]
 
         getH (HelperProof  p) = [getProof p]
         getH (HelperAssum  b) = [b]
@@ -178,7 +179,7 @@ proveProofTree :: Proposition a
                -> SBool                    -- ^ hypotheses
                -> KDProof SBool SBool      -- ^ proof tree
                -> Query Proof
-proveProofTree cfg kdSt nm (result, resultBool) intros calcProofTree = do
+proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree = do
 
   let SMTConfig{kdOptions = KDOptions{measureTime}} = cfg
   mbStartTime <- getTimeStampIf measureTime
@@ -188,16 +189,25 @@ proveProofTree cfg kdSt nm (result, resultBool) intros calcProofTree = do
                   i : rs -> i + 1 : rs
                   []     -> [1]
 
-      walk :: ([Int], KDProof SBool SBool) -> Query [SBool]
+      walk :: SBool -> ([Int], KDProof SBool SBool) -> Query [SBool]
 
       -- End of proof, return what it established
-      walk (_,  ProofEnd calcResult) = pure [calcResult]
+      walk _ (_,  ProofEnd calcResult) = pure [calcResult]
 
-      -- Do the branches separately and collect th results
-      walk (bn, ProofBranch ps) = concat <$> mapM walk [(bn ++ [i], p) | (i, p) <- zip [1..] ps]
+      -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
+      -- is essentially the assumption here.
+      walk intros (bn, ProofBranch checkCompleteness ps) = do
+        results <- concat <$> sequence [walk (intros .&& branchCond) (bn ++ [i], p) | (i, (branchCond, p)) <- zip [1..] ps]
+
+        when checkCompleteness $ smtProofStep cfg kdSt "Step"
+                                                       (KDProofStep nm (map show bn ++ ["Completeness"]))
+                                                       (Just intros)
+                                                       (sOr (map fst ps))
+                                                       (\d -> finishKD cfg "Q.E.D." d [])
+        pure results
 
       -- Do a proof step
-      walk (bn, ProofStep cur hs p) = do
+      walk intros (bn, ProofStep cur hs p) = do
 
            let finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
                   where (_, modulo) = calculateRootOfTrust nm helpers
@@ -222,15 +232,15 @@ proveProofTree cfg kdSt nm (result, resultBool) intros calcProofTree = do
                                  (finish [] by)
 
            -- Move to next
-           walk (next bn, p)
+           walk intros (next bn, p)
 
-  results <- walk ([1], calcProofTree)
+  results <- walk initialHypotheses ([1], calcProofTree)
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
   smtProofStep cfg kdSt "Result"
                (KDProofStep nm [""])
-               (Just (intros .=> sAnd results))
+               (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
                     let (ros, modulo) = calculateRootOfTrust nm (concatMap getHelperProofs (getAllHelpers calcProofTree))
@@ -261,7 +271,7 @@ mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
                                                         | True          -> ProofEnd $ begin .== end
 
         -- Branch: Just push it own. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch ps) = ProofBranch (map (go step) ps)
+        go step (ProofBranch c ps) = ProofBranch c [(branchCond, go step p) | (branchCond, p) <- ps]
 
         -- Step:
         go CalcStart                (ProofStep cur hs' p) =                               go (CalcStep cur   cur hs') p
@@ -954,7 +964,7 @@ data Helper = HelperProof Proof -- A previously proven theorem
 -- | Get all helpers used in a proof
 getAllHelpers :: KDProof a b -> [Helper]
 getAllHelpers (ProofStep _ hs p) = hs ++ getAllHelpers p
-getAllHelpers (ProofBranch ps)   = concatMap getAllHelpers ps
+getAllHelpers (ProofBranch _ ps) = concatMap (getAllHelpers . snd) ps
 getAllHelpers (ProofEnd _)       = []
 
 -- | Get proofs from helpers
@@ -978,9 +988,9 @@ hprf :: Proof -> Helper
 hprf = HelperProof
 
 -- | A proof is a sequence of steps, supporting branching
-data KDProof a b = ProofStep   a [Helper] (KDProof a b) -- ^ A single step
-                 | ProofBranch [KDProof a b]            -- ^ A branching step
-                 | ProofEnd    b                        -- ^ End of proof
+data KDProof a b = ProofStep   a [Helper] (KDProof a b)     -- ^ A single step
+                 | ProofBranch Bool [(SBool, KDProof a b)]  -- ^ A branching step. If bool is true, then we need a completeness check
+                 | ProofEnd    b                            -- ^ End of proof
 
 -- | Class capturing giving a proof-step helper
 class ProofHint a b where
@@ -1044,7 +1054,7 @@ instance ChainStep a (KDProof a ()) where
 -- | Chaining from another proof step
 instance ChainStep (KDProof a ()) (KDProof a ()) where
   chain (ProofStep a hs p)  y = ProofStep a hs (chain p y)
-  chain (ProofBranch ps)    y = ProofBranch (map (\p -> chain p y) ps)
+  chain (ProofBranch c ps)  y = ProofBranch c [(branchCond, chain p y) | (branchCond, p) <- ps]
   chain (ProofEnd ())       y = y
 
 -- | Mark the end of a calculational proof.
@@ -1070,5 +1080,25 @@ infixl 0 ⊢
 infixl 2 ⁇
 
 -- | Specifying a case-split
-cases :: String -> [SBool] -> Helper
-cases = error "cases will go away"
+class KDCaseSplit a b | a -> b where
+  cases :: a -> KDProof b ()
+
+-- | The boolean case, over a bunch of booleans
+instance KDCaseSplit [(SBool, KDProof a ())] a where
+   cases = ProofBranch True
+
+-- | Case splitting over a list; empty and full cases
+instance SymVal a => KDCaseSplit (SList a, (KDProof a (), SBV a -> SList a -> KDProof a ())) a where
+   cases (xs, (empty, cons)) = ProofBranch False [ (      SL.null xs,  empty)
+                                                 , (sNot (SL.null xs), cons (SL.head xs) (SL.tail xs))
+                                                 ]
+
+-- | Specifying a case-split, helps with the boolean case.
+(==>) :: SBool -> KDProof a () -> (SBool, KDProof a ())
+(==>) = (,)
+infix 0 ==>
+
+-- | Alternative unicode for `==>`
+(⟹) :: SBool -> KDProof a () -> (SBool, KDProof a ())
+(⟹) = (==>)
+infix 0 ⟹
