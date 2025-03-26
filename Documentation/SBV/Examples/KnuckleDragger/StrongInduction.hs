@@ -154,11 +154,11 @@ won'tProve1 = runKD $ do
 -- inductive step. Here's an example demonstrating what happens when the failure is only at the base case.
 --
 -- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
--- Inductive lemma (strong): lengthGood
+-- Inductive lemma (strong): badLength
 --   Step: 1
--- *** Failed to prove lengthGood.1.
--- <BLANKLINE>
--- *** Solver reported: canceled
+-- *** Failed to prove badLength.1.
+-- Falsifiable. Counter-example:
+--   xs = [] :: [Integer]
 won'tProve2 :: IO ()
 won'tProve2 = runKD $ do
    let len :: SList Integer -> SInteger
