@@ -63,14 +63,14 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 
 -- * Correctness proof
 
--- | Correctness of insertion-sort.
+-- | Correctness of insertion-sort. z3 struggles with this, but CVC5 proves it just fine.
 --
 -- We have:
 --
 -- >>> correctness
 -- Lemma: nonDecTail                       Q.E.D.
 -- Inductive lemma: insertNonDecreasing
---   Base: insertNonDecreasing.Base        Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
@@ -78,42 +78,41 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Step: 4                               Q.E.D.
 --   Asms: 5                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: insertNonDecreasing.Step        Q.E.D.
--- Lemma: insertionSort1                   Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: sortNonDecreasing
---   Base: sortNonDecreasing.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
---   Step: sortNonDecreasing.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: elemITE                          Q.E.D.
 -- Inductive lemma: insertIsElem
---   Base: insertIsElem.Base               Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: insertIsElem.Step               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: removeAfterInsert
---   Base: removeAfterInsert.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: removeAfterInsert.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: sortIsPermutation
---   Base: sortIsPermutation.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: sortIsPermutation.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: insertionSortIsCorrect           Q.E.D.
 -- [Proven] insertionSortIsCorrect
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runKDWith cvc5 $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Prove that the output of insertion sort is non-decreasing.
@@ -147,15 +146,11 @@ correctness = runKD $ do
                           =: qed
 
 
-    -- Unfolding insertion sort just once. This helps z3, which otherwise gets stuck in the following proof.
-    is1 <- lemma "insertionSort1" (\(Forall @"x" x) (Forall @"xs" xs) -> insertionSort (x .: xs) .== insert x (insertionSort xs)) []
-
     sortNonDecreasing <-
         induct "sortNonDecreasing"
                (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
                \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
-                              -- Surprisingly, z3 really needs to be told how to instantiate is1 below so it doesn't get stuck.
-                              ?? is1 `at` (Inst @"x" x, Inst @"xs" xs)
+                              ?? "unfold insertionSort"
                               =: nonDecreasing (insert x (insertionSort xs))
                               ?? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
                                 , hprf ih
