@@ -114,13 +114,13 @@ revCons = runKD $ lemma "revCons" (\(Forall @"x" (x :: SA)) (Forall @"xs" xs) ->
 --
 -- >>> revApp
 -- Inductive lemma: revApp
---   Base: revApp.Base                     Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: revApp.Step                     Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] revApp
 revApp :: IO Proof
 revApp = runKD $
@@ -142,20 +142,20 @@ revApp = runKD $
 --
 -- >>> reverseReverse
 -- Inductive lemma: revApp
---   Base: revApp.Base                     Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: revApp.Step                     Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: reverseReverse
---   Base: reverseReverse.Base             Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: reverseReverse.Step             Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] reverseReverse
 reverseReverse :: IO Proof
 reverseReverse = runKD $ do
@@ -231,12 +231,12 @@ lenAppend2 = runKD $
 --
 -- >>> allAny
 -- Inductive lemma: allAny
---   Base: allAny.Base                     Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: allAny.Step                     Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] allAny
 allAny :: IO Proof
 allAny = runKD $
@@ -254,11 +254,11 @@ allAny = runKD $
 --
 -- >>> filterEx
 -- Inductive lemma: filterEx
---   Base: filterEx.Base                   Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
---   Step: filterEx.Step                   Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] filterEx
 filterEx :: IO Proof
 filterEx = runKD $
@@ -288,14 +288,14 @@ filterEx2 = runKD $
 --
 -- >>> mapEquiv
 -- Inductive lemma: mapEquiv
---   Base: mapEquiv.Base                   Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: mapEquiv.Step                   Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] mapEquiv
 mapEquiv :: IO Proof
 mapEquiv = runKD $ do
@@ -319,13 +319,13 @@ mapEquiv = runKD $ do
 --
 -- >>> mapAppend (uninterpret "f")
 -- Inductive lemma: mapAppend
---   Base: mapAppend.Base                  Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: mapAppend.Step                  Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] mapAppend
 mapAppend :: (SA -> SB) -> IO Proof
 mapAppend f = runKD $ do
@@ -343,22 +343,22 @@ mapAppend f = runKD $ do
 --
 -- >>> mapReverse
 -- Inductive lemma: mapAppend
---   Base: mapAppend.Base                  Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: mapAppend.Step                  Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: mapReverse
---   Base: mapReverse.Base                 Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: mapReverse.Step                 Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] mapReverse
 mapReverse :: IO Proof
 mapReverse = runKD $ do
@@ -387,12 +387,12 @@ mapReverse = runKD $ do
 --
 -- >>> revLen
 -- Inductive lemma: revLen
---   Base: revLen.Base                     Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: revLen.Step                     Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] revLen
 revLen :: IO Proof
 revLen = runKD $
@@ -429,12 +429,12 @@ badRevLen = runKD $
 --
 -- >>> foldrMapFusion
 -- Inductive lemma: foldrMapFusion
---   Base: foldrMapFusion.Base             Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldrMapFusion.Step             Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrMapFusion
 foldrMapFusion :: IO Proof
 foldrMapFusion = runKD $ do
@@ -467,14 +467,14 @@ foldrMapFusion = runKD $ do
 --
 -- >>> foldrFusion
 -- Inductive lemma: foldrFusion
---   Base: foldrFusion.Base                Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldrFusion.Step                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrFusion
 foldrFusion :: IO Proof
 foldrFusion = runKD $ do
@@ -514,12 +514,12 @@ foldrFusion = runKD $ do
 --
 -- >>> foldrOverAppend
 -- Inductive lemma: foldrOverAppend
---   Base: foldrOverAppend.Base            Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldrOverAppend.Step            Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrOverAppend
 foldrOverAppend :: IO Proof
 foldrOverAppend = runKD $ do
@@ -546,11 +546,11 @@ foldrOverAppend = runKD $ do
 --
 -- >>> foldlOverAppend (uninterpret "f")
 -- Inductive lemma: foldlOverAppend
---   Base: foldlOverAppend.Base            Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: foldlOverAppend.Step            Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldlOverAppend
 foldlOverAppend :: (SB -> SA -> SB) -> IO Proof
 foldlOverAppend f = runKD $
@@ -573,20 +573,20 @@ foldlOverAppend f = runKD $
 --
 -- >>> foldrFoldlDuality
 -- Inductive lemma: foldlOverAppend
---   Base: foldlOverAppend.Base            Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: foldlOverAppend.Step            Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
---   Base: foldrFoldlDuality.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: foldrFoldlDuality.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality
 foldrFoldlDuality :: IO Proof
 foldrFoldlDuality = runKD $ do
@@ -628,16 +628,16 @@ foldrFoldlDuality = runKD $ do
 --
 -- >>> foldrFoldlDualityGeneralized
 -- Inductive lemma: helper
---   Base: helper.Base                     Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: helper.Step                     Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: foldrFoldlDuality
---   Base: foldrFoldlDuality.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -648,7 +648,7 @@ foldrFoldlDuality = runKD $ do
 --   Asms: 5                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: foldrFoldlDuality.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrFoldlDuality
 foldrFoldlDualityGeneralized :: IO Proof
 foldrFoldlDualityGeneralized  = runKD $ do
@@ -707,16 +707,16 @@ foldrFoldlDualityGeneralized  = runKD $ do
 --
 -- >>> foldrFoldl
 -- Inductive lemma: foldl over <*>/<+>
---   Base: foldl over <*>/<+>.Base         Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldl over <*>/<+>.Step         Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: foldrFoldl
---   Base: foldrFoldl.Base                 Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -725,7 +725,7 @@ foldrFoldlDualityGeneralized  = runKD $ do
 --   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: foldrFoldl.Step                 Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] foldrFoldl
 foldrFoldl :: IO Proof
 foldrFoldl = runKD $ do
@@ -782,23 +782,23 @@ foldrFoldl = runKD $ do
 --
 -- >>> bookKeeping
 -- Inductive lemma: foldBase
---   Base: foldBase.Base                   Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldBase.Step                   Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: foldrOverAppend
---   Base: foldrOverAppend.Base            Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: foldrOverAppend.Step            Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: bookKeeping
---   Base: bookKeeping.Base                Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Asms: 3                               Q.E.D.
@@ -807,7 +807,7 @@ foldrFoldl = runKD $ do
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: bookKeeping.Step                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] bookKeeping
 --
 -- NB. As of early 2025, we cannot express the above theorem in SBV directly, since it involves nested lambdas.
@@ -884,13 +884,13 @@ bookKeeping = runKD $ do
 --
 -- >>> filterAppend (uninterpret "p")
 -- Inductive lemma: filterAppend
---   Base: filterAppend.Base               Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: filterAppend.Step               Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] filterAppend
 filterAppend :: (SA -> SBool) -> IO Proof
 filterAppend p = runKD $
@@ -914,20 +914,20 @@ filterAppend p = runKD $
 --
 -- >>> filterConcat
 -- Inductive lemma: filterAppend
---   Base: filterAppend.Base               Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: filterAppend.Step               Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma: filterConcat
---   Base: filterConcat.Base               Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: filterConcat.Step               Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] filterConcat
 filterConcat :: IO Proof
 filterConcat = runKD $ do
@@ -994,12 +994,12 @@ mapFilter = runKD $ do
 --
 -- >>> partition1
 -- Inductive lemma: partition1
---   Base: partition1.Base                 Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: partition1.Step                 Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] partition1
 partition1 :: IO Proof
 partition1 = runKD $ do
@@ -1022,12 +1022,12 @@ partition1 = runKD $ do
 --
 -- >>> partition2
 -- Inductive lemma: partition2
---   Base: partition2.Base                 Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: partition2.Step                 Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] partition2
 partition2 :: IO Proof
 partition2 = runKD $ do
@@ -1101,7 +1101,7 @@ take_cons = runKD $
 -- Lemma: map1                             Q.E.D.
 -- Lemma: take_map.n <= 0                  Q.E.D.
 -- Inductive lemma: take_map.n > 0
---   Base: take_map.n > 0.Base             Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -1109,7 +1109,7 @@ take_cons = runKD $
 --   Step: 4                               Q.E.D.
 --   Asms: 5                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: take_map.n > 0.Step             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: take_map                         Q.E.D.
 -- [Proven] take_map
 take_map :: IO Proof
@@ -1154,7 +1154,7 @@ drop_cons _ = runKD $
 -- Lemma: drop_cons                        Q.E.D.
 -- Lemma: drop_map.n <= 0                  Q.E.D.
 -- Inductive lemma: drop_map.n > 0
---   Base: drop_map.n > 0.Base             Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -1162,12 +1162,12 @@ drop_cons _ = runKD $
 --   Step: 3                               Q.E.D.
 --   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: drop_map.n > 0.Step             Q.E.D.
+--   Result:                               Q.E.D.
 -- Lemma: drop_map
---   Step  : 1                             Q.E.D.
---   Step  : 2                             Q.E.D.
---   Step  : 3                             Q.E.D.
---   Step  : 4                             Q.E.D.
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Step: 3                               Q.E.D.
+--   Step: 4                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] drop_map
 drop_map :: IO Proof
@@ -1254,7 +1254,7 @@ drop_all = runKD $
 --
 -- >>> take_append
 -- Lemma: take_append
---   Step  : 1                             Q.E.D.
+--   Step: 1                               Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] take_append
 take_append :: IO Proof
@@ -1290,18 +1290,18 @@ drop_append = runKD $
 --
 -- >>> sumHalves
 -- Inductive lemma: sumAppend
---   Base: sumAppend.Base                  Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: sumAppend.Step                  Q.E.D.
+--   Result:                               Q.E.D.
 -- Inductive lemma (strong): sumHalves
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: sumHalves.Step                  Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof
 sumHalves = runKD $ do
@@ -1349,13 +1349,13 @@ sumHalves = runKD $ do
 --
 -- >>> map_fst_zip
 -- Inductive lemma: map_fst_zip
---   Base: map_fst_zip.Base                Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: map_fst_zip.Step                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] map_fst_zip
 map_fst_zip :: IO Proof
 map_fst_zip = runKD $
@@ -1374,13 +1374,13 @@ map_fst_zip = runKD $
 --
 -- >>> map_snd_zip
 -- Inductive lemma: map_snd_zip
---   Base: map_snd_zip.Base                Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Step: map_snd_zip.Step                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] map_snd_zip
 map_snd_zip :: IO Proof
 map_snd_zip = runKD $
@@ -1400,13 +1400,13 @@ map_snd_zip = runKD $
 -- >>> map_fst_zip_take
 -- Lemma: take_cons                        Q.E.D.
 -- Inductive lemma: map_fst_zip_take
---   Base: map_fst_zip_take.Base           Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: map_fst_zip_take.Step           Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] map_fst_zip_take
 map_fst_zip_take :: IO Proof
 map_fst_zip_take = runKD $ do
@@ -1430,13 +1430,13 @@ map_fst_zip_take = runKD $ do
 -- >>> map_snd_zip_take
 -- Lemma: take_cons                        Q.E.D.
 -- Inductive lemma: map_snd_zip_take
---   Base: map_snd_zip_take.Base           Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: map_snd_zip_take.Step           Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] map_snd_zip_take
 map_snd_zip_take :: IO Proof
 map_snd_zip_take = runKD $ do
