@@ -229,7 +229,7 @@ proveProofTree cfg kdSt nm (result, resultBool) intros calcProofTree = do
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
   smtProofStep cfg kdSt "Result"
-               (KDProofStep nm [])
+               (KDProofStep nm [""])
                (Just (intros .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
