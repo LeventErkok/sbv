@@ -37,13 +37,16 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> oddSequence1
 -- Inductive lemma (strong): oddSequence
---   Asms: 1                               Q.E.D.
---   Step 1: Case split one way:
---     Case [1 of 1]: n[1]                 Q.E.D.
---     Completeness:                       Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: oddSequence.Step                Q.E.D.
+--     Asms: 1.1                           Q.E.D.
+--     Step: 1.1                           Q.E.D.
+--     Asms: 1.2                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Asms: 1.3                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Step: 4.1                           Q.E.D.
+--     Step: 2.4                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] oddSequence
 oddSequence1 :: IO Proof
 oddSequence1 = runKD $ do
@@ -57,13 +60,16 @@ oddSequence1 = runKD $ do
   -- the negation of the goal leads to falsehood.
   sInductWith cvc5 "oddSequence"
           (\(Forall @"n" n) -> n .>= 0 .=> sNot (2 `sDivides` s n)) $
-          \ih n -> [n .>= 0] |- 2 `sDivides` s (n+1)
-                             ?? [cases "n" [n .< 2],  hyp (n .>= 0)]
-                             =: 2 `sDivides` (s (n-1) + 2 * s n)
-                             =: 2 `sDivides` s (n-1)
-                             ?? ih `at` Inst @"n" (n - 1)
-                             =: sFalse
-                             =: qed
+          \ih n -> [n .>= 0] |- 2 `sDivides` s n
+                             ?? n .>= 0
+                             =: cases [ n .== 0 ==> sFalse =: qed
+                                      , n .== 1 ==> sFalse =: qed
+                                      , n .>= 2 ==>    2 `sDivides` (s (n-2) + 2 * s (n-1))
+                                                    =: 2 `sDivides` s (n-2)
+                                                    ?? ih `at` Inst @"n" (n - 2)
+                                                    =: sFalse
+                                                    =: qed
+                                      ]
 
 -- | Prove that the sequence @1@, @3@, @2 S_{k-1} - S_{k-2}@ generates sequence of odd numbers.
 --
@@ -77,22 +83,24 @@ oddSequence1 = runKD $ do
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
---   Asms: 3                               Q.E.D.
 --   Step: 3                               Q.E.D.
+--   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Step: 6                               Q.E.D.
---   Step: 7                               Q.E.D.
---   Step: oddSequence_sNp2.Step           Q.E.D.
--- Lemma: oddSequence
---   Asms  : 1                             Q.E.D.
---   Step 1: Case split 3 ways:
---     Case [1 of 3]: n[1]                 Q.E.D.
---     Case [2 of 3]: n[2]                 Q.E.D.
---     Case [3 of 3]: n[3]                 Q.E.D.
---     Completeness:                       Q.E.D.
 --   Result:                               Q.E.D.
--- [Proven] oddSequence
+-- Lemma: oddSequence2
+--     Asms: 1.1                           Q.E.D.
+--     Step: 1.1                           Q.E.D.
+--     Asms: 1.2                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Asms: 1.3                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Asms: 4.1                           Q.E.D.
+--     Step: 4.1                           Q.E.D.
+--     Step: 1.Completeness                Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] oddSequence2
 oddSequence2 :: IO Proof
 oddSequence2 = runKD $ do
   let s :: SInteger -> SInteger
@@ -105,26 +113,36 @@ oddSequence2 = runKD $ do
 
   sNp2 <- sInduct "oddSequence_sNp2"
                   (\(Forall @"n" n) -> n .>= 2 .=> s n .== 2 * n + 1) $
-                  \ih n -> [n .>= 2] |- s (n+1)                  ?? n .>= 2
-                                     =: 2 * s n - s (n-1)        ?? [hyp (n .>= 2), hprf (ih `at` Inst @"n" n)    ]
-                                     =: 2*(2*n+1) - s (n-1)      ?? [hyp (n .>= 2), hprf (ih `at` Inst @"n" (n-1))]
-                                     =: 2*(2*n+1)-(2*(n-1) + 1)
-                                     =: 4*n+2-(2*n-1)
-                                     =: 4*n+2-2*n+1
-                                     =: 2*n+2+1
-                                     =: 2*(n+1)+1
+                  \ih n -> [n .>= 2] |- s n
+                                     ?? n .>= 2
+                                     =: 2 * s (n-1) - s (n-2)
+                                     ?? [ hyp (n .>= 2)
+                                        , hprf (ih `at` Inst @"n" (n-1))
+                                        ]
+                                     =: 2 * (2 * (n-1) + 1) - s (n-2)
+                                     ?? "simplify"
+                                     =: 4*n - 4 + 2 - s (n-2)
+                                     ?? [hyp (n .>= 2), hprf (ih `at` Inst @"n" (n-2))]
+                                     =: 4*n - 2 - (2 * (n-2) + 1)
+                                     ?? "simplify"
+                                     =: 4*n - 2 - 2*n + 4 - 1
+                                     =: 2*n + 1
                                      =: qed
 
-  calc "oddSequence" (\(Forall @"n" n) -> n .>= 0 .=> s n .== 2 * n + 1) $
-                     \n -> [n .>= 0] |- s n
-                                     ?? [ cases "n" [n .== 0, n .== 1, n .>= 2]
-                                        , hyp (n .>= 0)
-                                        , hprf s0
-                                        , hprf s1
-                                        , hprf $ sNp2 `at` Inst @"n" n
-                                        ]
-                                     =: 2 * n + 1
-                                     =: qed
+  calc "oddSequence2" (\(Forall @"n" n) -> n .>= 0 .=> s n .== 2 * n + 1) $
+                      \n -> [n .>= 0] |- s n
+                                      ?? n .>= 0
+                                      =: cases [ n .== 0 ==> (1 :: SInteger) =: qed
+                                               , n .== 1 ==> (3 :: SInteger) =: qed
+                                               , n .>= 2 ==>    s n
+                                                             ?? [ hyp (n .>= 0)
+                                                                , hprf s0
+                                                                , hprf s1
+                                                                , hprf $ sNp2 `at` Inst @"n" n
+                                                                ]
+                                                             =: 2 * n + 1
+                                                             =: qed
+                                               ]
 
 -- | For strong induction to work, We have to instantiate the proof at a "smaller" value. This
 -- example demonstrates what happens if we don't. We have:
