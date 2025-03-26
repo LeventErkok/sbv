@@ -54,9 +54,13 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: notDiv3
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3                           Q.E.D.
+--   Step: 1 (3 way case split)
+--       Step: 1.1.1                       Q.E.D.
+--       Step: 1.1.2                       Q.E.D.
+--       Step: 1.2.1                       Q.E.D.
+--       Step: 1.2.2                       Q.E.D.
+--       Step: 1.3.1                       Q.E.D.
+--       Step: 1.3.2                       Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] notDiv3
