@@ -28,7 +28,7 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> sumConstProof
 -- Inductive lemma: sumConst_correct
---   Base: sumConst_correct.Base           Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
@@ -36,7 +36,7 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step: 3                               Q.E.D.
 --   Step: 4                               Q.E.D.
 --   Step: 5                               Q.E.D.
---   Step: sumConst_correct.Step           Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] sumConst_correct
 sumConstProof :: IO Proof
 sumConstProof = runKD $ do
@@ -63,13 +63,13 @@ sumConstProof = runKD $ do
 --
 -- >>> sumProof
 -- Inductive lemma: sum_correct
---   Base: sum_correct.Base                Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: sum_correct.Step                Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] sum_correct
 sumProof :: IO Proof
 sumProof = runKD $ do
@@ -94,13 +94,13 @@ sumProof = runKD $ do
 --
 -- >>> sumSquareProof
 -- Inductive lemma: sumSquare_correct
---   Base: sumSquare_correct.Base          Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Step: sumSquare_correct.Step          Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] sumSquare_correct
 sumSquareProof :: IO Proof
 sumSquareProof = runKD $ do
@@ -130,7 +130,7 @@ sumSquareProof = runKD $ do
 -- >>> elevenMinusFour
 -- Lemma: powN                             Q.E.D.
 -- Inductive lemma: elevenMinusFour
---   Base: elevenMinusFour.Base            Q.E.D.
+--   Step: Base                            Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Asms: 2                               Q.E.D.
 --   Step: 2                               Q.E.D.
@@ -142,7 +142,7 @@ sumSquareProof = runKD $ do
 --   Step: 6                               Q.E.D.
 --   Step: 7                               Q.E.D.
 --   Step: 8                               Q.E.D.
---   Step: elevenMinusFour.Step            Q.E.D.
+--   Result:                               Q.E.D.
 -- [Proven] elevenMinusFour
 elevenMinusFour :: IO Proof
 elevenMinusFour = runKD $ do
