@@ -150,86 +150,51 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                            (b .: merge (a .: as) bs))
                                      ?? "case split"
                                      =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                         ?? nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                         =: nonDecreasing (merge as (b .: bs))
-                                                         ?? ih how do I instantiate this?
+                                                         ?? [ ih `at2`        (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                            , nonDecrIns `at` (Inst @"x"  a,  Inst @"ys" (merge as (b .: bs)))
+                                                            ]
                                                          =: sTrue
                                                          =: qed
                                               , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                                         ?? [ ih `at2`        (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                            , nonDecrIns `at` (Inst @"x"  b,  Inst @"ys" (merge (a .: as) bs))
+                                                            ]
+                                                         =: sTrue
                                                          =: qed
                                               ])
 
-                {-
-                                                     ?? "push nonDecreasing down"
-                                                     =: ite (a .<= b)
-                                                            (nonDecreasing (a .: merge as (b .: bs)))
-                                                            (nonDecreasing (b .: merge (a .: as) bs))
-                                                     ?? [ hprf $ nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                        , hyp  $ nonDecreasing (a .: as)
-                                                        , hyp  $ nonDecreasing (b .: bs)
-                                                        ]
-                                                     =: ite (a .<= b)
-                                                            (nonDecreasing (merge as (b .: bs)))
-                                                            (nonDecreasing (b .: merge (a .: as) bs))
-                                                     ?? [ hprf $ nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
-                                                        , hyp  $ nonDecreasing (a .: as)
-                                                        , hyp  $ nonDecreasing (b .: bs)
-                                                        ]
-                                                     =: ite (a .<= b)
-                                                            (nonDecreasing (merge as (b .: bs)))
-                                                            (nonDecreasing (merge (a .: as) bs))
-                                                     ?? [ 
-                                                        , hprf $ nonDecrTail `at` (Inst @"x" a,   Inst @"xs" as)
-                                                        , hprf $ nonDecrTail `at` (Inst @"x" b,   Inst @"xs" bs)
-                                                        , hyp  $ nonDecreasing (a .: as)
-                                                        , hyp  $ nonDecreasing (b .: bs)
-                                                        ]
-                                                     =: ite (a .<= b)
-                                                            sTrue
-                                                            (nonDecreasing (merge (a .: as) bs))
-                                                     ?? [ hprf $ ih          `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                        , hprf $ nonDecrTail `at` (Inst @"x"  a,         Inst @"xs" as)
-                                                        , hprf $ nonDecrTail `at` (Inst @"x"  b,         Inst @"xs" bs)
-                                                        , hyp  $ nonDecreasing (a .: as)
-                                                        , hyp  $ nonDecreasing (b .: bs)
-                                                        ]
-                                                     =: ite (a .<= b) sTrue sTrue
-                                                     ?? "simplify"
-                                                     =: sTrue
-                                                     =.: qed)
-                                                     -}
-
-    error "need to fix this" mergeKeepsSort nonDecrIns nonDecrTail
-{-
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
                 (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs)) $
-                \ih x xs -> [] |- nonDecreasing (mergeSort (x .: xs))
-                               ?? "unfold"
-                               =: let (h1, h2) = splitAt (length (x .: xs) `sEDiv` 2) (x .: xs)
-                               in nonDecreasing (ite (length (x .: xs) .<= 1)
-                                                     (x .: xs)
-                                                     (merge (mergeSort h1) (mergeSort h2)))
-                               ?? "push nonDecreasing down"
-                               =: ite (length (x .: xs) .<= 1)
-                                      (nonDecreasing (x .: xs))
-                                      (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                               ?? ih `at` Inst @"xs" xs
-                               =: ite (length (x .: xs) .<= 1)
-                                      sTrue
-                                      (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
-                               ?? [ ih `at` Inst @"xs" h1
-                                  , ih `at` Inst @"xs" h2
-                                  , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
-                                  ]
-                               =: sTrue
-                               =: qed
-
+                \ih xs -> [] |- split xs
+                                      qed
+                                      (\e es -> nonDecreasing (mergeSort (e .: es))
+                                             ?? "unfold"
+                                             =: let (h1, h2) = splitAt (length (e .: es) `sEDiv` 2) (e .: es)
+                                                in nonDecreasing (ite (length (e .: es) .<= 1)
+                                                                      (e .: es)
+                                                                      (merge (mergeSort h1) (mergeSort h2)))
+                                             ?? "push nonDecreasing down"
+                                             =: ite (length (e .: es) .<= 1)
+                                                    (nonDecreasing (e .: es))
+                                                    (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                             ?? ih `at` Inst @"xs" es
+                                             =: ite (length (e .: es) .<= 1)
+                                                    sTrue
+                                                    (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
+                                             ?? [ ih `at` Inst @"xs" h1
+                                                , ih `at` Inst @"xs" h2
+                                                , mergeKeepsSort `at2` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                                ]
+                                             =: sTrue
+                                             =: qed)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
 
+    error "todo" sortNonDecreasing nonDecrTail
+    {-
     mergeCount <-
         sInduct "mergeCount"
                 (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys) $
@@ -326,4 +291,4 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     lemma "mergeSortIsCorrect"
           (\(Forall @"xs" xs) -> let out = mergeSort xs in nonDecreasing out .&& isPermutation xs out)
           [sortNonDecreasing, sortIsPermutation]
--}
+          -}
