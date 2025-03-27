@@ -13,17 +13,17 @@
 -- See the directory Documentation.SBV.Examples.KnuckleDragger for various examples.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE FunctionalDependencies     #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeAbstractions           #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DerivingStrategies    #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns        #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeAbstractions      #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
