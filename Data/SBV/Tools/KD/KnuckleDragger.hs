@@ -190,7 +190,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       walk :: SBool -> ([Int], KDProof SBool SBool) -> Query [SBool]
 
       -- End of proof, return what it established. Note if we're in a sub-proof, otherwise ignore at the top.
-      walk _ (bn, ProofEnd calcResult) | length bn >= 2 = do
+      walk intros (bn, ProofEnd calcResult) | length bn >= 2 = do
                 -- simplify: if we're the 1'st and the last, there's no point in putting it in
                 let bn' = case reverse bn of
                             1 : xs -> reverse xs
@@ -198,9 +198,9 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
                 io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn'))
                         finishKD cfg "Q.E.D." (tab, Nothing) []
-                pure [calcResult]
+                pure [intros .=> calcResult]
 
-      walk _ (_, ProofEnd calcResult) = pure [calcResult]
+      walk intros (_, ProofEnd calcResult) = pure [intros .=> calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
