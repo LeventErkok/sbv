@@ -103,6 +103,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Control.Query.Assignment"
                    , "Tools.KD.KnuckleDragger.ChainStep"
                    , "Tools.KD.KnuckleDragger.ChainsTo"
+                   , "Tools.KD.KnuckleDragger.KDProof"
                    , "Tools.KD.KnuckleDragger.ProofHint"
                    , "Tools.KD.KnuckleDragger.ProofStep"
                    , "Tools.KD.KnuckleDragger.Helper"
