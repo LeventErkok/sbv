@@ -1334,10 +1334,8 @@ sumHalves = runKD $ do
     sInductWith cvc5 "sumHalves"
       (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
       \ih xs -> [] |- halvingSum xs
-                   =: split xs
-                            qed
-                            (\a as -> split as
-                                            qed
+                   =: split xs qed
+                            (\a as -> split as qed
                                             (\b bs -> halvingSum (a .: b .: bs)
                                                    =: let (f, s) = splitAt (length (a .: b .: bs) `sDiv` 2) (a .: b .: bs)
                                                    in halvingSum f + halvingSum s
