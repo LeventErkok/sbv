@@ -914,22 +914,28 @@ class Instantiatable a where
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
   at :: Proof -> a -> Proof
 
+  -- | Apply a universal proof to some arguments, for a pair of arguments, creating an instance of the proof itself
+  at2 :: Proof -> a -> Proof
+
 -- | Single parameter
 instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
-  at = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
+  at  = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
+  at2 = at  -- Single parameter, so no chance of having a pair. Just use at.
 
 -- | Two parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nb, HasKind b, Typeable b
          ) => Instantiatable (Inst na a, Inst nb b) where
-  at = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
+  at  = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
+  at2 = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b)
 
 -- | Three parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nb, HasKind b, Typeable b
          , KnownSymbol nc, HasKind c, Typeable c
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
-  at = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
+  at  = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
+  at2 = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c)
 
 -- | Four parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -937,7 +943,8 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nc, HasKind c, Typeable c
          , KnownSymbol nd, HasKind d, Typeable d
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
-  at = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
+  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
+  at2 = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
 
 -- | Five parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -946,7 +953,8 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nd, HasKind d, Typeable d
          , KnownSymbol ne, HasKind e, Typeable e
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
-  at = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
+  at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
+  at2 = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
 -- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
 instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
