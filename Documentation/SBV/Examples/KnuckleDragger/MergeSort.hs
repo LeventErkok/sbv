@@ -150,14 +150,26 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                            (b .: merge (a .: as) bs))
                                      ?? "case split"
                                      =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                         ?? [ ih `at2`        (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                            , nonDecrIns `at` (Inst @"x"  a,  Inst @"ys" (merge as (b .: bs)))
+                                                         ?? [ hprf $ nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
+                                                            , hyp  $ nonDecreasing xs
+                                                            , hyp  $ nonDecreasing ys
+                                                            ]
+                                                         =: nonDecreasing (merge as (b .: bs))
+                                                         ?? [ hprf $ ih `at2` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                            , hyp  $ nonDecreasing xs
+                                                            , hyp  $ nonDecreasing ys
                                                             ]
                                                          =: sTrue
                                                          =: qed
                                               , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                         ?? [ ih `at2`        (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                            , nonDecrIns `at` (Inst @"x"  b,  Inst @"ys" (merge (a .: as) bs))
+                                                         ?? [ hprf $ nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
+                                                            , hyp  $ nonDecreasing xs
+                                                            , hyp  $ nonDecreasing ys
+                                                            ]
+                                                         =: nonDecreasing (merge (a .: as) bs)
+                                                         ?? [ hprf $ ih `at2` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                            , hyp  $ nonDecreasing xs
+                                                            , hyp  $ nonDecreasing ys
                                                             ]
                                                          =: sTrue
                                                          =: qed
@@ -192,8 +204,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
-
-    error "todo" sortNonDecreasing nonDecrTail
+    error "todo" nonDecrTail sortNonDecreasing
     {-
     mergeCount <-
         sInduct "mergeCount"
