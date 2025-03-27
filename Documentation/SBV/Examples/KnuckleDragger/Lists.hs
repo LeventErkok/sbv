@@ -1297,16 +1297,16 @@ drop_append = runKD $
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): sumHalves
 --   Step: 1 (2 way case split)
---       Step: 1.1.1                       Q.E.D.
---       Step: 1.2.1 (2 way case split)
---           Step: 1.2.1.1.1               Q.E.D.
---           Step: 1.2.1.2.1               Q.E.D.
---           Step: 1.2.1.2.2               Q.E.D.
---           Step: 1.2.1.2.3               Q.E.D.
---           Step: 1.2.1.2.4               Q.E.D.
---           Step: 1.2.1.2.5               Q.E.D.
---           Step: 1.2.1.2.6               Q.E.D.
---           Step: 1.2.1.2.7               Q.E.D.
+--     Step: 1.1.1                         Q.E.D.
+--     Step: 1.2.1 (2 way case split)
+--       Step: 1.2.1.1.1                   Q.E.D.
+--       Step: 1.2.1.2.1                   Q.E.D.
+--       Step: 1.2.1.2.2                   Q.E.D.
+--       Step: 1.2.1.2.3                   Q.E.D.
+--       Step: 1.2.1.2.4                   Q.E.D.
+--       Step: 1.2.1.2.5                   Q.E.D.
+--       Step: 1.2.1.2.6                   Q.E.D.
+--       Step: 1.2.1.2.7                   Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof

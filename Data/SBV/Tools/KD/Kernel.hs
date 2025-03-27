@@ -64,7 +64,7 @@ type Proposition a = ( QNot a
 -- definitions, or basic axioms (like commutativity, associativity) of uninterpreted function symbols.
 axiom :: Proposition a => String -> a -> KD Proof
 axiom nm p = do cfg <- getKDConfig
-                _   <- liftIO $ startKD cfg True "Axiom" (KDProofOneShot nm [])
+                _   <- liftIO $ startKD cfg True "Axiom" 0 (KDProofOneShot nm [])
                 pure (internalAxiom nm p) { isUserAxiom = True }
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
@@ -101,7 +101,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         liftIO $ getTimeStampIf measureTime >>= runSMTWith cfg . go kdSt
   where go kdSt mbStartTime = do qSaturateSavingObservables inputProp
                                  mapM_ (constrain . getProof) by
-                                 query $ smtProofStep cfg kdSt tag (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
+                                 query $ smtProofStep cfg kdSt tag 0 (KDProofOneShot nm by) Nothing inputProp (good mbStartTime)
 
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
@@ -137,12 +137,13 @@ smtProofStep :: (SolverContext m, MonadIO m, MonadQuery m, Proposition a)
    => SMTConfig                              -- ^ config
    -> KDState                                -- ^ KDState
    -> String                                 -- ^ tag
+   -> Int                                    -- ^ level
    -> KDProofContext                         -- ^ the context in which we're doing the proof
    -> Maybe SBool                            -- ^ Assumptions under which we do the check-sat. If there's one we'll push/pop
    -> a                                      -- ^ what we want to prove
    -> ((Int, Maybe NominalDiffTime) -> IO r) -- ^ what to do when unsat, with the tab amount and time elapsed (if asked)
    -> m r
-smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag ctx mbAssumptions prop unsat = do
+smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState tag level ctx mbAssumptions prop unsat = do
 
         case mbAssumptions of
            Nothing  -> do queryDebug ["; smtProofStep: No context value to push."]
@@ -152,7 +153,7 @@ smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
                                                    check
 
  where check = do
-           tab <- liftIO $ startKD cfg verbose tag ctx
+           tab <- liftIO $ startKD cfg verbose tag level ctx
 
            -- It's tempting to skolemize here.. But skolemization creates fresh constants
            -- based on the name given, and they mess with all else. So, don't skolemize!

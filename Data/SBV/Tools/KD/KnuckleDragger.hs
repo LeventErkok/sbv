@@ -187,29 +187,28 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                   i : rs -> reverse $ i + 1 : rs
                   []     -> [1]
 
-      walk :: SBool -> ([Int], KDProof SBool SBool) -> Query [SBool]
+      walk :: SBool -> Int -> ([Int], KDProof SBool SBool) -> Query [SBool]
 
       -- End of proof, return what it established. Note if we're in a sub-proof, otherwise ignore at the top.
-      walk intros (bn, ProofEnd calcResult) | length bn >= 2 = do
-                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn))
+      walk intros level (bn, ProofEnd calcResult) | level >= 2 = do
+                io $ do tab <- startKD cfg False "Step" level (KDProofStep nm (map show bn))
                         finishKD cfg "Q.E.D." (tab, Nothing) []
                 pure [initialHypotheses .&& intros .=> calcResult]
-
-      walk intros (_, ProofEnd calcResult) = pure [initialHypotheses .&& intros .=> calcResult]
+      walk intros _ (_, ProofEnd calcResult) = pure [initialHypotheses .&& intros .=> calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
-      walk intros (bn, ProofBranch checkCompleteness ps) = do
+      walk intros level (bn, ProofBranch checkCompleteness ps) = do
 
         let addSuffix xs s = case reverse xs of
                                 l : p -> reverse $ (l ++ s) : p
                                 []    -> [s]
 
-        _ <- io $ startKD cfg True "Step" (KDProofStep nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
+        _ <- io $ startKD cfg True "Step" level (KDProofStep nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
 
-        results <- concat <$> sequence [walk (intros .&& branchCond) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
+        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i,1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
-        when checkCompleteness $ smtProofStep cfg kdSt "Step"
+        when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
                                                        (KDProofStep nm (map show bn ++ ["Completeness"]))
                                                        (Just (initialHypotheses .&& intros))
                                                        (sOr (map fst ps))
@@ -217,7 +216,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
         pure results
 
       -- Do a proof step
-      walk intros (bn, ProofStep cur hs p) = do
+      walk intros level (bn, ProofStep cur hs p) = do
 
            let finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
                   where (_, modulo) = calculateRootOfTrust nm helpers
@@ -228,7 +227,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            let as = concatMap getHelperAssumes hs
            case as of
              [] -> pure ()
-             _  -> smtProofStep cfg kdSt "Asms"
+             _  -> smtProofStep cfg kdSt "Asms" level
                                          (KDProofStep nm stepName)
                                          (Just (initialHypotheses .&& intros))
                                          (sAnd as)
@@ -236,20 +235,20 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
            -- Now prove the step
            let by = concatMap getHelperProofs hs
-           smtProofStep cfg kdSt "Step"
+           smtProofStep cfg kdSt "Step" level
                                  (KDProofStep nm stepName)
                                  (Just (sAnd (intros : as ++ map getProof by)))
                                  cur
                                  (finish [] by)
 
            -- Move to next
-           walk intros (next bn, p)
+           walk intros level (next bn, p)
 
-  results <- walk sTrue ([1], calcProofTree)
+  results <- walk sTrue 1 ([1], calcProofTree)
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
-  smtProofStep cfg kdSt "Result"
+  smtProofStep cfg kdSt "Result" 1
                (KDProofStep nm [""])
                (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
@@ -447,7 +446,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
        case inductionBaseCase of
           Nothing -> queryDebug [nm ++ ": Induction" ++ strong ++ ", there is no proving base case:"]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
-                        smtProofStep cfg kdSt "Step"
+                        smtProofStep cfg kdSt "Step" 1
                                               (KDProofStep nm ["Base"])
                                               (Just inductionIntros)
                                               bc

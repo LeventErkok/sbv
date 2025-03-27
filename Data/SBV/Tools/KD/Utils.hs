@@ -102,15 +102,17 @@ message SMTConfig{kdOptions = KDOptions{quiet}} s
   | True  = liftIO $ putStr s
 
 -- | Start a proof. We return the number of characters we printed, so the finisher can align the result.
-startKD :: SMTConfig -> Bool -> String -> KDProofContext -> IO Int
-startKD cfg newLine what ctx = do message cfg $ line ++ if newLine then "\n" else ""
-                                  hFlush stdout
-                                  return (length line)
-  where (nm, tab) = case ctx of
-                      KDProofOneShot n _  -> (n, 0)
-                      KDProofStep    _ ss -> (intercalate "." ss, 2 * length ss)
+startKD :: SMTConfig -> Bool -> String -> Int -> KDProofContext -> IO Int
+startKD cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\n" else ""
+                                        hFlush stdout
+                                        return (length line)
+  where nm = case ctx of
+               KDProofOneShot n _  -> n
+               KDProofStep    _ ss -> intercalate "." ss
 
-        line   = replicate tab ' ' ++ what ++ ": " ++ nm
+        tab = 2 * level
+
+        line = replicate tab ' ' ++ what ++ ": " ++ nm
 
 -- | Finish a proof. First argument is what we got from the call of 'startKD' above.
 finishKD :: SMTConfig -> String -> (Int, Maybe NominalDiffTime) -> [NominalDiffTime] -> IO ()
