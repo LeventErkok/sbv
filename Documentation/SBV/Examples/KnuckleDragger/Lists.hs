@@ -25,7 +25,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.Lists where
 
-import Prelude (IO, ($), Integer, Num(..), id, (.), flip)
+import Prelude (IO, ($), Integer, Num(..), id, (.), flip, error)
 
 import Data.SBV
 import Data.SBV.List
@@ -1328,6 +1328,7 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
+    () <- error "this shouldn't work, but it does. why? note that we need to further split on es here"
     sInductWith cvc5 "sumHalves"
                 (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
                 \ih xs -> [] |- halvingSum xs

@@ -136,23 +136,28 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
-               (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
-               \_h xs ys -> [nonDecreasing xs, nonDecreasing ys]
-                         |- split2 (xs, ys)
-                                   qed           -- when both xs and ys are empty.  Trivial.
-                                   (const qed)   -- when xs is empty, but ys isn't. Trivial.
-                                   (const qed)   -- when ys is empty, but xs isn't. Trivial.
-                                   (\(a, as) (b, bs) -> nonDecreasing (merge (a .: as) (b .: bs))
-                                                     ?? "unfold merge"
-                                                     =: nonDecreasing (ite (a .<= b)
-                                                                           (a .: merge as (b .: bs))
-                                                                           (b .: merge (a .: as) bs))
-                                                     ?? "case split"
-                                                     =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                                         =: qed
-                                                              , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                                         =: qed
-                                                              ])
+           (\(Forall @"xs" xs, Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
+           \ih (xs, ys) -> [nonDecreasing xs, nonDecreasing ys]
+                        |- split2 (xs, ys)
+                                  qed           -- when both xs and ys are empty.  Trivial.
+                                  (const qed)   -- when xs is empty, but ys isn't. Trivial.
+                                  (const qed)   -- when ys is empty, but xs isn't. Trivial.
+                                  (\(a, as) (b, bs) ->
+                                        nonDecreasing (merge (a .: as) (b .: bs))
+                                     ?? "unfold merge"
+                                     =: nonDecreasing (ite (a .<= b)
+                                                           (a .: merge as (b .: bs))
+                                                           (b .: merge (a .: as) bs))
+                                     ?? "case split"
+                                     =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
+                                                         ?? nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
+                                                         =: nonDecreasing (merge as (b .: bs))
+                                                         ?? ih how do I instantiate this?
+                                                         =: sTrue
+                                                         =: qed
+                                              , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                                         =: qed
+                                              ])
 
                 {-
                                                      ?? "push nonDecreasing down"
@@ -173,7 +178,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                      =: ite (a .<= b)
                                                             (nonDecreasing (merge as (b .: bs)))
                                                             (nonDecreasing (merge (a .: as) bs))
-                                                     ?? [ hprf $ ih          `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                     ?? [ 
                                                         , hprf $ nonDecrTail `at` (Inst @"x" a,   Inst @"xs" as)
                                                         , hprf $ nonDecrTail `at` (Inst @"x" b,   Inst @"xs" bs)
                                                         , hyp  $ nonDecreasing (a .: as)
