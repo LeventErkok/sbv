@@ -191,16 +191,11 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
       -- End of proof, return what it established. Note if we're in a sub-proof, otherwise ignore at the top.
       walk intros (bn, ProofEnd calcResult) | length bn >= 2 = do
-                -- simplify: if we're the 1'st and the last, there's no point in putting it in
-                let bn' = case reverse bn of
-                            1 : xs -> reverse xs
-                            _      -> bn
-
-                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn'))
+                io $ do tab <- startKD cfg False "Step" (KDProofStep nm (map show bn))
                         finishKD cfg "Q.E.D." (tab, Nothing) []
-                pure [intros .=> calcResult]
+                pure [initialHypotheses .&& intros .=> calcResult]
 
-      walk intros (_, ProofEnd calcResult) = pure [intros .=> calcResult]
+      walk intros (_, ProofEnd calcResult) = pure [initialHypotheses .&& intros .=> calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
@@ -216,7 +211,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step"
                                                        (KDProofStep nm (map show bn ++ ["Completeness"]))
-                                                       (Just intros)
+                                                       (Just (initialHypotheses .&& intros))
                                                        (sOr (map fst ps))
                                                        (\d -> finishKD cfg "Q.E.D." d [])
         pure results
@@ -230,11 +225,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                stepName = map show bn
 
            -- First prove the assumptions, if there are any
-           case concatMap getHelperAssumes hs of
+           let as = concatMap getHelperAssumes hs
+           case as of
              [] -> pure ()
-             as -> smtProofStep cfg kdSt "Asms"
+             _  -> smtProofStep cfg kdSt "Asms"
                                          (KDProofStep nm stepName)
-                                         (Just intros)
+                                         (Just (initialHypotheses .&& intros))
                                          (sAnd as)
                                          (finish [] [])
 
@@ -242,14 +238,14 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            let by = concatMap getHelperProofs hs
            smtProofStep cfg kdSt "Step"
                                  (KDProofStep nm stepName)
-                                 (Just (sAnd (intros : map getProof by)))
+                                 (Just (sAnd (intros : as ++ map getProof by)))
                                  cur
                                  (finish [] by)
 
            -- Move to next
            walk intros (next bn, p)
 
-  results <- walk initialHypotheses ([1], calcProofTree)
+  results <- walk sTrue ([1], calcProofTree)
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
