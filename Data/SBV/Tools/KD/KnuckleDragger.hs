@@ -188,7 +188,6 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                   i : rs -> reverse $ i + 1 : rs
                   []     -> [1]
 
-
       walk :: SBool -> Int -> ([Int], KDProof) -> Query [SBool]
 
       -- End of proof, return what it established. If there's a hint associated here, it was probably by mistake; so tell it to the user.
