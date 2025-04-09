@@ -176,8 +176,9 @@ smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
        die = error "Failed"
 
        fullNm = case ctx of
-                  KDProofOneShot s _  -> s
-                  KDProofStep    s ss -> intercalate "." (s : ss)
+                  KDProofOneShot       s _  -> s
+                  KDProofStep    True  s ss -> "assumptions for " ++ intercalate "." (s : ss)
+                  KDProofStep    False s ss ->                       intercalate "." (s : ss)
 
        unknown = do r <- getUnknownReason
                     liftIO $ do putStrLn $ "\n*** Failed to prove " ++ fullNm ++ "."

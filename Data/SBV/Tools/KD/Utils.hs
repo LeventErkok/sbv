@@ -58,8 +58,8 @@ newtype KD a = KD (ReaderT KDState IO a)
             deriving newtype (Applicative, Functor, Monad, MonadIO, MonadReader KDState, MonadFail)
 
 -- | The context in which we make a check-sat call
-data KDProofContext = KDProofOneShot String [Proof]    -- ^ A one shot proof, with helpers used (latter only used for cex generation)
-                    | KDProofStep    String [String]   -- ^ A step in a full proof, running in a query
+data KDProofContext = KDProofOneShot      String [Proof]  -- ^ A one shot proof, with helpers used (latter only used for cex generation)
+                    | KDProofStep    Bool String [String] -- ^ A step in a full proof, running in a query. Bool indicates if these are the assumptions for that step
 
 -- | Run a KD proof, using the default configuration.
 runKD :: KD a -> IO a
@@ -107,8 +107,8 @@ startKD cfg newLine what level ctx = do message cfg $ line ++ if newLine then "\
                                         hFlush stdout
                                         return (length line)
   where nm = case ctx of
-               KDProofOneShot n _  -> n
-               KDProofStep    _ ss -> intercalate "." ss
+               KDProofOneShot   n _  -> n
+               KDProofStep    _ _ ss -> intercalate "." ss
 
         tab = 2 * level
 

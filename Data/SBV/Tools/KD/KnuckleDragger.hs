@@ -203,7 +203,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
          | True
          =  do -- If this is the only step, then mark it as such. At the top-level, the noise isn't necessary.
                case reverse bn of
-                 1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep nm (map show bn))
+                 1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm (map show bn))
                                       finishKD cfg "Q.E.D." (tab, Nothing) []
                  _     -> pure ()
 
@@ -217,7 +217,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                                 l : p -> reverse $ (l ++ s) : p
                                 []    -> [s]
 
-        _ <- io $ startKD cfg True "Step" level (KDProofStep nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
+        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
 
         let deepen cur i p
               | isMultiStep p = cur ++ [i, 1]
@@ -229,7 +229,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
         results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (deepen bn i p, p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
-                                                       (KDProofStep nm (map show bn ++ ["Completeness"]))
+                                                       (KDProofStep False nm (map show bn ++ ["Completeness"]))
                                                        (Just (initialHypotheses .&& intros))
                                                        (sOr (map fst ps))
                                                        (\d -> finishKD cfg "Q.E.D." d [])
@@ -252,7 +252,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            case as of
              [] -> pure ()
              _  -> smtProofStep quietCfg kdSt "Asms" level
-                                         (KDProofStep nm stepName)
+                                         (KDProofStep True nm stepName)
                                          (Just (initialHypotheses .&& intros))
                                          (sAnd as)
                                          finalizer
@@ -260,7 +260,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            -- Now prove the step
            let by = concatMap getHelperProofs hs
            smtProofStep cfg kdSt "Step" level
-                                 (KDProofStep nm stepName)
+                                 (KDProofStep False nm stepName)
                                  (Just (sAnd (intros : as ++ map getProof by)))
                                  cur
                                  (finish [] by)
@@ -273,7 +273,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
   smtProofStep cfg kdSt "Result" 1
-               (KDProofStep nm [""])
+               (KDProofStep False nm [""])
                (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
@@ -462,7 +462,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
           Nothing -> queryDebug [nm ++ ": Induction" ++ strong ++ ", there is no proving base case:"]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
                         smtProofStep cfg kdSt "Step" 1
-                                              (KDProofStep nm ["Base"])
+                                              (KDProofStep False nm ["Base"])
                                               (Just inductionIntros)
                                               bc
                                               (\d -> finishKD cfg "Q.E.D." d [])
