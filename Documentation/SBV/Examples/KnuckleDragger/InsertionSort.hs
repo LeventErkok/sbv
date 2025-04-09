@@ -74,9 +74,7 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
---   Asms: 4                               Q.E.D.
 --   Step: 4                               Q.E.D.
---   Asms: 5                               Q.E.D.
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma: sortNonDecreasing

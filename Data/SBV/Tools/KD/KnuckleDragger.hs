@@ -243,15 +243,19 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
                stepName = map show bn
 
-           -- First prove the assumptions, if there are any
-           let as = concatMap getHelperAssumes hs
+           -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
+           let (quietCfg, finalizer)
+                 | measureTime = (cfg,                                              finish [] [])
+                 | True        = (cfg{kdOptions = (kdOptions cfg) { quiet = True}}, const (pure ()))
+
+               as = concatMap getHelperAssumes hs
            case as of
              [] -> pure ()
-             _  -> smtProofStep cfg kdSt "Asms" level
+             _  -> smtProofStep quietCfg kdSt "Asms" level
                                          (KDProofStep nm stepName)
                                          (Just (initialHypotheses .&& intros))
                                          (sAnd as)
-                                         (finish [] [])
+                                         finalizer
 
            -- Now prove the step
            let by = concatMap getHelperProofs hs

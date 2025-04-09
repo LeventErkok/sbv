@@ -28,7 +28,6 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> notDiv3
 -- Lemma: case_n_mod_3_eq_0
---   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
@@ -36,7 +35,6 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step: 5                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_1
---   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
@@ -45,7 +43,6 @@ import Data.SBV.Tools.KnuckleDragger
 --   Step: 6                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: case_n_mod_3_eq_2
---   Asms: 1                               Q.E.D.
 --   Step: 1                               Q.E.D.
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.

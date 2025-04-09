@@ -2318,7 +2318,7 @@ data SMTConfig = SMTConfig {
 data KDOptions = KDOptions {
          ribbonLength      :: Int  -- ^ Line length for KD proofs
        , firstifyUniqueLen :: Int  -- ^ Unique length used for firstified names.
-       , quiet             :: Bool -- ^ No messages what-so-ever
+       , quiet             :: Bool -- ^ No messages what-so-ever for successful steps. (Will print if something fails)
        , measureTime       :: Bool -- ^ Print time/statistics. If quiet is True, then measureTime is ignored.
        }
 
