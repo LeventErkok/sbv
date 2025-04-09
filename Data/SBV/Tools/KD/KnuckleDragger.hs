@@ -201,9 +201,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                            , "*** Perhaps the hint is off-by-one in its placement?"
                            ]
          | True
-         =  do when (level >= 2) $ io $ do -- We're in a subproof, mark it as such. At the top-level, the noise isn't necessary.
-                                           tab <- startKD cfg False "Step" level (KDProofStep nm (map show bn))
-                                           finishKD cfg "Q.E.D." (tab, Nothing) []
+         =  do -- If this is the only step, then mark it as such. At the top-level, the noise isn't necessary.
+               case reverse bn of
+                 1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep nm (map show bn))
+                                      finishKD cfg "Q.E.D." (tab, Nothing) []
+                 _     -> pure ()
+
                pure [initialHypotheses .&& intros .=> calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
@@ -216,7 +219,14 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
         _ <- io $ startKD cfg True "Step" level (KDProofStep nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
 
-        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i,1], p) | (i, (branchCond, p)) <- zip [1..] ps]
+        let deepen cur i p
+              | isMultiStep p = cur ++ [i, 1]
+              | True          = cur ++ [i]
+
+            isMultiStep (ProofStep _ _ (ProofStep{})) = True
+            isMultiStep _                             = False
+
+        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (deepen bn i p, p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
                                                        (KDProofStep nm (map show bn ++ ["Completeness"]))

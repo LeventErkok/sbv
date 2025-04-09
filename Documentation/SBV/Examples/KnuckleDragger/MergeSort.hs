@@ -69,35 +69,28 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- Lemma: nonDecrInsert                              Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
 --   Step: 1 (4 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.3.1                                   Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
---     Step: 1.4.2 (2 way case split)
---       Step: 1.4.2.1.1                             Q.E.D.
---       Asms: 1.4.2.1.2                             Q.E.D.
---       Step: 1.4.2.1.2                             Q.E.D.
---       Step: 1.4.2.1.3                             Q.E.D.
---       Step: 1.4.2.2.1                             Q.E.D.
---       Asms: 1.4.2.2.2                             Q.E.D.
---       Step: 1.4.2.2.2                             Q.E.D.
---       Step: 1.4.2.2.3                             Q.E.D.
---       Step: 1.4.2.Completeness                    Q.E.D.
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.4                                     Q.E.D.
+--     Step: 1.5 (2 way case split)
+--       Step: 1.5.1.1                               Q.E.D.
+--       Asms: 1.5.1.2                               Q.E.D.
+--       Step: 1.5.1.2                               Q.E.D.
+--       Step: 1.5.2.1                               Q.E.D.
+--       Asms: 1.5.2.2                               Q.E.D.
+--       Step: 1.5.2.2                               Q.E.D.
+--       Step: 1.5.Completeness                      Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): sortNonDecreasing
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1                                     Q.E.D.
 --     Step: 1.2.1                                   Q.E.D.
 --     Step: 1.2.2                                   Q.E.D.
 --     Step: 1.2.3                                   Q.E.D.
 --     Step: 1.2.4                                   Q.E.D.
---     Step: 1.2.5                                   Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): mergeCount
 --   Step: 1 (4 way case split)
---     Step: 1.1.1                                   Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.3.1                                   Q.E.D.
+--     Step: 1.1                                     Q.E.D.
 --     Step: 1.4.1                                   Q.E.D.
 --     Step: 1.4.2                                   Q.E.D.
 --     Step: 1.4.3                                   Q.E.D.
@@ -105,7 +98,6 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.4.5                                   Q.E.D.
 --     Step: 1.4.6                                   Q.E.D.
 --     Step: 1.4.7                                   Q.E.D.
---     Step: 1.4.8                                   Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma: countAppend
 --   Step: Base                                      Q.E.D.
@@ -121,18 +113,16 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
 --   Step: 1 (2 way case split)
---     Step: 1.1.1                                   Q.E.D.
+--     Step: 1.1                                     Q.E.D.
 --     Step: 1.2.1                                   Q.E.D.
 --     Step: 1.2.2                                   Q.E.D.
 --     Step: 1.2.3                                   Q.E.D.
 --     Step: 1.2.4                                   Q.E.D.
 --     Step: 1.2.5                                   Q.E.D.
 --     Step: 1.2.6                                   Q.E.D.
---     Step: 1.2.7                                   Q.E.D.
 --   Result:                                         Q.E.D.
 -- Lemma: mergeSortIsCorrect                         Q.E.D.
 -- [Proven] mergeSortIsCorrect
-
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 

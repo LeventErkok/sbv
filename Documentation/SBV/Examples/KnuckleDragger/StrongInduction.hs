@@ -38,17 +38,14 @@ import Data.SBV.Tools.KnuckleDragger
 -- >>> oddSequence1
 -- Inductive lemma (strong): oddSequence
 --   Step: 1 (3 way case split)
---     Asms: 1.1.1                         Q.E.D.
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Asms: 1.2.1                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
+--     Asms: 1.1                           Q.E.D.
+--     Step: 1.1                           Q.E.D.
+--     Asms: 1.2                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
 --     Asms: 1.3.1                         Q.E.D.
 --     Step: 1.3.1                         Q.E.D.
 --     Step: 1.3.2                         Q.E.D.
 --     Step: 1.3.3                         Q.E.D.
---     Step: 1.3.4                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] oddSequence
@@ -95,17 +92,14 @@ oddSequence1 = runKD $ do
 --   Result:                               Q.E.D.
 -- Lemma: oddSequence2
 --   Step: 1 (3 way case split)
---     Asms: 1.1.1                         Q.E.D.
---     Step: 1.1.1                         Q.E.D.
---     Step: 1.1.2                         Q.E.D.
---     Asms: 1.2.1                         Q.E.D.
---     Step: 1.2.1                         Q.E.D.
---     Step: 1.2.2                         Q.E.D.
+--     Asms: 1.1                           Q.E.D.
+--     Step: 1.1                           Q.E.D.
+--     Asms: 1.2                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
 --     Asms: 1.3.1                         Q.E.D.
 --     Step: 1.3.1                         Q.E.D.
 --     Asms: 1.3.2                         Q.E.D.
 --     Step: 1.3.2                         Q.E.D.
---     Step: 1.3.3                         Q.E.D.
 --     Step: 1.Completeness                Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] oddSequence2
