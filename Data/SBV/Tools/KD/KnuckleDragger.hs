@@ -38,7 +38,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hyp, hprf, qed
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hyp, hprf, qed, trivial
        ) where
 
 import Data.SBV
@@ -1154,6 +1154,10 @@ instance ChainStep (KDProofRaw a) (KDProofRaw a) where
 -- | Mark the end of a calculational proof.
 qed :: KDProofRaw a
 qed = ProofEnd () []
+
+-- | Mark a trivial proof. This is the same as 'qed', but reads better in proof scripts.
+trivial :: KDProofRaw a
+trivial = qed
 
 -- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is

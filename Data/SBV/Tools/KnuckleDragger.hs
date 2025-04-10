@@ -56,7 +56,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , split, split2, cases, (⟹), (==>)
 
        -- * Finishing up a calculational proof
-       , qed
+       , qed, trivial
        ) where
 
 import Data.SBV.Tools.KD.KnuckleDragger

@@ -138,9 +138,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
            (\(Forall @"xs" xs, Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
            \ih (xs, ys) -> [nonDecreasing xs, nonDecreasing ys]
                         |- split2 (xs, ys)
-                                  qed           -- when both xs and ys are empty.  Trivial.
-                                  (const qed)   -- when xs is empty, but ys isn't. Trivial.
-                                  (const qed)   -- when ys is empty, but xs isn't. Trivial.
+                                  trivial           -- when both xs and ys are empty.  Trivial.
+                                  (const trivial)   -- when xs is empty, but ys isn't. Trivial.
+                                  (const trivial)   -- when ys is empty, but xs isn't. Trivial.
                                   (\(a, as) (b, bs) ->
                                         nonDecreasing (merge (a .: as) (b .: bs))
                                      ?? "unfold merge"
@@ -200,9 +200,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                 (\(Forall @"xs" xs, Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys) $
                 \ih (as, bs) e -> [] |-
                         split2 (as, bs)
-                               qed
-                               (const qed)
-                               (const qed)
+                               trivial
+                               (const trivial)
+                               (const trivial)
                                (\(x, xs) (y, ys) -> count e (merge (x .: xs) (y .: ys))
                                                  ?? "unfold merge"
                                                  =: count e (ite (x .<= y)
