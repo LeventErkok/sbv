@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving insertion-sort correct.
+-- Proving insertion sort correct.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}

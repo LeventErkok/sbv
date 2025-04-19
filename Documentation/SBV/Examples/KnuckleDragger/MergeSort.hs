@@ -6,7 +6,7 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving merge-sort correct.
+-- Proving merge sort correct.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
