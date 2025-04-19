@@ -31,17 +31,20 @@ import Data.SBV.Tools.KnuckleDragger
 -- access to arbitrary elements, this isn't really a fast implementation.
 -- The idea here is to prove the algorithm correct, not it's complexity!
 bsearch :: SInteger -> SList Integer -> SMaybe Integer
-bsearch target elems = go target elems 0 (length elems - 1)
-  where go = smtFunction "bsearch" $ \x xs low high ->
-                ite (low .> high)
-                    sNothing
-                    (let mid  = low + (high - low) `sEDiv` 2
-                         xmid = xs !! mid
-                     in ite (xmid .== x)
-                            (sJust mid)
-                            (ite (xmid .< x)
-                                 (go x xs (mid + 1) high)
-                                 (go x xs low (mid - 1))))
+bsearch target elems = bsearchLH target elems 0 (length elems - 1)
+
+-- | Binary search with search bounds made explicit.
+bsearchLH :: SInteger -> SList Integer -> SInteger -> SInteger -> SMaybe Integer
+bsearchLH = smtFunction "bsearch" $ \x xs low high ->
+              ite (low .> high)
+                  sNothing
+                  (let mid  = low + (high - low) `sEDiv` 2
+                       xmid = xs !! mid
+                   in ite (xmid .== x)
+                          (sJust mid)
+                          (ite (xmid .< x)
+                               (bsearchLH x xs (mid + 1) high)
+                               (bsearchLH x xs low (mid - 1))))
 
 -- * Correctness proof
 
@@ -57,8 +60,11 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 -- is not used by the function explicitly, it simply allows us to track the length of the
 -- sublist of the input list that we are currently searching.
 bsearchWithInv :: SInteger -> SInteger -> SList Integer -> SMaybe Integer
-bsearchWithInv inv target elems = go inv target elems 0 (length elems - 1)
-  where go = smtFunction "bsearchWithInv" $ \_inv x xs low high ->
+bsearchWithInv inv target elems = bsearchWithInvLH inv target elems 0 (length elems - 1)
+
+-- | Binary search with invariant and search bounds made explicit.
+bsearchWithInvLH :: SInteger -> SInteger -> SList Integer -> SInteger -> SInteger -> SMaybe Integer
+bsearchWithInvLH = smtFunction "bsearchWithInv" $ \_inv x xs low high ->
                 ite (low .> high)
                     sNothing
                     (let mid  = low + (high - low) `sEDiv` 2
@@ -66,8 +72,8 @@ bsearchWithInv inv target elems = go inv target elems 0 (length elems - 1)
                      in ite (xmid .== x)
                             (sJust mid)
                             (ite (xmid .< x)
-                                 (go (high - mid) x xs (mid + 1) high)
-                                 (go (mid - low)  x xs low (mid - 1))))
+                                 (bsearchWithInvLH (high - mid) x xs (mid + 1) high)
+                                 (bsearchWithInvLH (mid - low)  x xs low (mid - 1))))
 
 -- | Correctness of binary search.
 --
@@ -80,11 +86,55 @@ correctness = runKD $ do
   -- First establish that our two variants of binary search are equivalent:
   let bsearchI x xs = bsearchWithInv (length xs) x xs
 
-  bsearchEq <- lemma "bsearchEq"
-                     (\(Forall @"x" x) (Forall @"xs" xs) -> bsearch x xs .== bsearchI x xs)
-               [sorry]
-
-  -- Invariant: If @x@ is in @xs@ then, @x@ is between @xs[low .. high]@ at all times.
+  bsearchEq <- sInduct "bsearchEq"
+                       (\(Forall @"inv" inv) (Forall @"x" x) (Forall @"xs" xs) (Forall @"low" low) (Forall @"high" high)
+                             -> inv .== high - low + 1 .=> bsearchWithInvLH inv x xs low high .== bsearchLH x xs low high) $
+                       \ih inv x xs low high ->
+                             [inv .== high - low + 1]
+                          |- bsearchWithInvLH inv x xs low high
+                          =: ite (low .> high)
+                                 sNothing
+                                 (let mid  = low + (high - low) `sEDiv` 2
+                                      xmid = xs !! mid
+                                  in ite (xmid .== x)
+                                         (sJust mid)
+                                         (ite (xmid .< x)
+                                              (bsearchWithInvLH (high - mid) x xs (mid + 1) high)
+                                              (bsearchWithInvLH (mid - low)  x xs low (mid - 1))))
+                          ?? [ hprf (ih `at` ( Inst @"inv" (high - (low + (high - low) `sEDiv` 2))
+                                             , Inst @"x" x
+                                             , Inst @"xs" xs
+                                             , Inst @"low"  (low + (high - low) `sEDiv` 2 + 1)
+                                             , Inst @"high" high))
+                             , hyp (inv .== high - low + 1)
+                             ]
+                          =: ite (low .> high)
+                                 sNothing
+                                 (let mid  = low + (high - low) `sEDiv` 2
+                                      xmid = xs !! mid
+                                  in ite (xmid .== x)
+                                         (sJust mid)
+                                         (ite (xmid .< x)
+                                              (bsearchLH                    x xs (mid + 1) high)
+                                              (bsearchWithInvLH (mid - low) x xs low (mid - 1))))
+                          ?? [ hprf (ih `at` ( Inst @"inv" (low + (high - low) `sEDiv` 2 - low)
+                                             , Inst @"x" x
+                                             , Inst @"xs" xs
+                                             , Inst @"low"  low
+                                             , Inst @"high" (low + (high - low) `sEDiv` 2 - 1)))
+                             , hyp (inv .== high - low + 1)
+                             ]
+                          =: ite (low .> high)
+                                 sNothing
+                                 (let mid  = low + (high - low) `sEDiv` 2
+                                      xmid = xs !! mid
+                                  in ite (xmid .== x)
+                                         (sJust mid)
+                                         (ite (xmid .< x)
+                                              (bsearchLH x xs (mid + 1) high)
+                                              (bsearchLH x xs low (mid - 1))))
+                          =: bsearchLH x xs low high
+                          =: qed
 
   -- First prove the result when the target is in the list
   bsearchP <- lemma "bsearchPresent"
@@ -136,7 +186,12 @@ correctness = runKD $ do
                     (xs !! fromJust res .== x)
                     (isNothing res)
               ?? [ hprf (bsearchICorrect `at` (Inst @"x" x, Inst @"xs" xs))
-                 , hprf (bsearchEq       `at` (Inst @"x" x, Inst @"xs" xs))
+                 , hprf (bsearchEq       `at` ( Inst @"inv"  (length xs)
+                                              , Inst @"x"    x
+                                              , Inst @"xs"   xs
+                                              , Inst @"low"  (0 :: SInteger)
+                                              , Inst @"high" (length xs - 1)
+                                              ))
                  , hyp  (nonDecreasing xs)
                  ]
               =: sTrue
