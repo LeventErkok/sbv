@@ -205,8 +205,8 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                -- Otherwise the noise isn't necessary.
                when (level > 1) $ case reverse bn of
                                     1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm (map show (init bn)))
-                                      finishKD cfg "Q.E.D." (tab, Nothing) []
-                 _     -> pure ()
+                                                         finishKD cfg "Q.E.D." (tab, Nothing) []
+                                    _     -> pure ()
 
                pure [initialHypotheses .&& intros .=> calcResult]
 
