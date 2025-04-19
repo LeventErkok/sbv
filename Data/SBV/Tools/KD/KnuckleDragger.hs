@@ -154,12 +154,12 @@ class CalcLemma a steps where
 
         query $ proveProofTree cfg kdSt nm (result, calcGoal) calcIntros calcProofTree
 
--- | Prove the proof tree. The players here are:
+-- | Prove the proof tree. The arguments are:
 --
---      result    : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
---      resultBool: The instance of result that, if we prove it, establishes the result itself
---      intros    : Hypotheses (conjuncted)
---      proofTree : A tree of steps, which give rise to a bunch of equalities
+--      result           : The ultimate goal we want to prove. Note that this is a general proposition, and we don't actually prove it. See the next param.
+--      resultBool       : The instance of result that, if we prove it, establishes the result itself
+--      initialHypotheses: Hypotheses (conjuncted)
+--      calcProofTree    : A tree of steps, which give rise to a bunch of equalities
 --
 -- Note that we do not check the resultBool is the result itself just "instantiated" appropriately. This is the contract with the caller who
 -- has to establish that by whatever means it chooses to do so.
