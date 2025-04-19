@@ -77,9 +77,9 @@ data CalcStrategy = CalcStrategy { calcIntros    :: SBool
 -- | Saturatable things in steps
 proofTreeSaturatables :: KDProof -> [SBool]
 proofTreeSaturatables = go
-  where go (ProofEnd    b            hs)    = b : concatMap getH hs
-        go (ProofStep   a            hs r)  = a : concatMap getH hs ++ go r
-        go (ProofBranch  (_ :: Bool) () ps) = concat [b : go p | (b, p) <- ps]
+  where go (ProofEnd    b            hs)   = b : concatMap getH hs
+        go (ProofStep   a            hs r) = a : concatMap getH hs ++ go r
+        go (ProofBranch (_ :: Bool) () ps) = concat [b : go p | (b, p) <- ps]
 
         getH (HelperProof  p) = [getProof p]
         getH (HelperAssum  b) = [b]
@@ -201,9 +201,10 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                            , "*** Perhaps the hint is off-by-one in its placement?"
                            ]
          | True
-         =  do -- If this is the only step, then mark it as such. At the top-level, the noise isn't necessary.
-               case reverse bn of
-                 1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm (map show bn))
+         =  do -- If we're not at the top-level and this is the only step, print it.
+               -- Otherwise the noise isn't necessary.
+               when (level > 1) $ case reverse bn of
+                                    1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm (map show (init bn)))
                                       finishKD cfg "Q.E.D." (tab, Nothing) []
                  _     -> pure ()
 
@@ -217,16 +218,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                                 l : p -> reverse $ (l ++ s) : p
                                 []    -> [s]
 
-        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way case split)")))
+            full | checkCompleteness = ""
+                 | True              = "full "
 
-        let deepen cur i p
-              | isMultiStep p = cur ++ [i, 1]
-              | True          = cur ++ [i]
+        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
 
-            isMultiStep (ProofStep _ _ (ProofStep{})) = True
-            isMultiStep _                             = False
-
-        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (deepen bn i p, p) | (i, (branchCond, p)) <- zip [1..] ps]
+        results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
                                                        (KDProofStep False nm (map show bn ++ ["Completeness"]))
