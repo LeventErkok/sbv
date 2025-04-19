@@ -66,12 +66,12 @@ correctness = runKD $ do
   bsearchP <- lemma "bsearchPresent"
                     (\(Forall @"x" x) (Forall @"xs" xs) ->
                          nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch x xs) .== x)
-              [sorry]
+                    [sorry]
 
   -- Now prove the result when the target is not in the list
   bsearchA <- lemma "bsearchAbsent"
                     (\(Forall @"x" x) (Forall @"xs" xs) -> x `notElem` xs .=> isNothing (bsearch x xs))
-              [sorry]
+                    [sorry]
 
   -- Prove the correctness using the helpers when target is in the list and otherwise:
   calc "bsearchCorrect"
