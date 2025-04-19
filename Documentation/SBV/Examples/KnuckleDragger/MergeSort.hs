@@ -68,18 +68,20 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- >>> correctness
 -- Lemma: nonDecrInsert                              Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
---   Step: 1 (4 way case split)
+--   Step: 1 (4 way full case split)
 --     Step: 1.1                                     Q.E.D.
---     Step: 1.4                                     Q.E.D.
---     Step: 1.5 (2 way case split)
---       Step: 1.5.1.1                               Q.E.D.
---       Step: 1.5.1.2                               Q.E.D.
---       Step: 1.5.2.1                               Q.E.D.
---       Step: 1.5.2.2                               Q.E.D.
---       Step: 1.5.Completeness                      Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
+--     Step: 1.4.1                                   Q.E.D.
+--     Step: 1.4.2 (2 way case split)
+--       Step: 1.4.2.1.1                             Q.E.D.
+--       Step: 1.4.2.1.2                             Q.E.D.
+--       Step: 1.4.2.2.1                             Q.E.D.
+--       Step: 1.4.2.2.2                             Q.E.D.
+--       Step: 1.4.2.Completeness                    Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): sortNonDecreasing
---   Step: 1 (2 way case split)
+--   Step: 1 (2 way full case split)
 --     Step: 1.1                                     Q.E.D.
 --     Step: 1.2.1                                   Q.E.D.
 --     Step: 1.2.2                                   Q.E.D.
@@ -87,8 +89,10 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.4                                   Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): mergeCount
---   Step: 1 (4 way case split)
+--   Step: 1 (4 way full case split)
 --     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3                                     Q.E.D.
 --     Step: 1.4.1                                   Q.E.D.
 --     Step: 1.4.2                                   Q.E.D.
 --     Step: 1.4.3                                   Q.E.D.
@@ -110,7 +114,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --   Step: 2                                         Q.E.D.
 --   Result:                                         Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
---   Step: 1 (2 way case split)
+--   Step: 1 (2 way full case split)
 --     Step: 1.1                                     Q.E.D.
 --     Step: 1.2.1                                   Q.E.D.
 --     Step: 1.2.2                                   Q.E.D.

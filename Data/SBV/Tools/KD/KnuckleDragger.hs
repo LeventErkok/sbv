@@ -188,6 +188,17 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                   i : rs -> reverse $ i + 1 : rs
                   []     -> [1]
 
+      isEnd ProofEnd{}    = True
+      isEnd ProofStep{}   = False
+      isEnd ProofBranch{} = False
+
+      -- If the next step is ending and we're the 1st step; our number can be skipped
+      mkStepName level bn nextStep
+         | level > 1, isEnd nextStep, 1 : _ <- reverse bn
+         = map show (init bn)
+         | True
+         = map show bn
+
       walk :: SBool -> Int -> ([Int], KDProof) -> Query [SBool]
 
       -- End of proof, return what it established. If there's a hint associated here, it was probably by mistake; so tell it to the user.
@@ -238,7 +249,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            let finish et helpers d = finishKD cfg ("Q.E.D." ++ modulo) d et
                   where (_, modulo) = calculateRootOfTrust nm helpers
 
-               stepName = map show bn
+               stepName = mkStepName level bn p
 
            -- First prove the assumptions, if there are any. We stay quiet, unless timing is asked for
            let (quietCfg, finalizer)
