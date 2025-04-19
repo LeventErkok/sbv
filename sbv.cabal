@@ -163,6 +163,7 @@ Library
                   , Documentation.SBV.Examples.Lists.BoundedMutex
                   , Documentation.SBV.Examples.Lists.CountOutAndTransfer
                   , Documentation.SBV.Examples.KnuckleDragger.Basics
+                  , Documentation.SBV.Examples.KnuckleDragger.BinarySearch
                   , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
                   , Documentation.SBV.Examples.KnuckleDragger.InsertionSort
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
