@@ -192,18 +192,13 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       isEnd ProofStep{}   = False
       isEnd ProofBranch{} = False
 
-      trimLevel level bn
-         | level > 1, 1 : _ <- reverse bn
-         = init bn
-         | True
-         = bn
+      -- trim the branch-name, if we're in a deeper level, and we're at the end
+      trimBN level bn | level > 1, 1 : _ <- reverse bn = init bn
+                      | True                           = bn
 
       -- If the next step is ending and we're the 1st step; our number can be skipped
-      mkStepName level bn nextStep
-         | isEnd nextStep
-         = map show (trimLevel level bn)
-         | True
-         = map show bn
+      mkStepName level bn nextStep | isEnd nextStep = map show (trimBN level bn)
+                                   | True           = map show bn
 
       walk :: SBool -> Int -> ([Int], KDProof) -> Query [SBool]
 
@@ -231,7 +226,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       -- is essentially the assumption here.
       walk intros level (bnTop, ProofBranch checkCompleteness () ps) = do
 
-        let bn = trimLevel level bnTop
+        let bn = trimBN level bnTop
 
             addSuffix xs s = case reverse xs of
                                 l : p -> reverse $ (l ++ s) : p
