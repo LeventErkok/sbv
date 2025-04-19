@@ -52,6 +52,23 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                          (y, _)  = uncons l'
                                                      in x .<= y .&& nonDecreasing l'
 
+-- | The proof will crucially depend on the quantity @high - low + 1@ at each recursive call.
+-- So, we first rewrite the function making this quantity explicit. Note that this value
+-- is not used by the function explicitly, it simply allows us to track the length of the
+-- sublist of the input list that we are currently searching.
+bsearchWithInv :: SInteger -> SInteger -> SList Integer -> SMaybe Integer
+bsearchWithInv inv target elems = go inv target elems 0 (length elems - 1)
+  where go = smtFunction "bsearchWithInv" $ \_inv x xs low high ->
+                ite (low .> high)
+                    sNothing
+                    (let mid  = low + (high - low) `sEDiv` 2
+                         xmid = xs !! mid
+                     in ite (xmid .== x)
+                            (sJust mid)
+                            (ite (xmid .< x)
+                                 (go (high - mid) x xs (mid + 1) high)
+                                 (go (mid - low)  x xs low (mid - 1))))
+
 -- | Correctness of binary search.
 --
 -- We have:
@@ -60,37 +77,67 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 correctness :: IO Proof
 correctness = runKD $ do
 
+  -- First establish that our two variants of binary search are equivalent:
+  let bsearchI x xs = bsearchWithInv (length xs) x xs
+
+  bsearchEq <- lemma "bsearchEq"
+                     (\(Forall @"x" x) (Forall @"xs" xs) -> bsearch x xs .== bsearchI x xs)
+               [sorry]
+
   -- Invariant: If @x@ is in @xs@ then, @x@ is between @xs[low .. high]@ at all times.
 
   -- First prove the result when the target is in the list
   bsearchP <- lemma "bsearchPresent"
                     (\(Forall @"x" x) (Forall @"xs" xs) ->
-                         nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch x xs) .== x)
+                         nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearchI x xs) .== x)
                     [sorry]
 
   -- Now prove the result when the target is not in the list
   bsearchA <- lemma "bsearchAbsent"
-                    (\(Forall @"x" x) (Forall @"xs" xs) -> x `notElem` xs .=> isNothing (bsearch x xs))
+                    (\(Forall @"x" x) (Forall @"xs" xs) -> x `notElem` xs .=> isNothing (bsearchI x xs))
                     [sorry]
 
   -- Prove the correctness using the helpers when target is in the list and otherwise:
-  calc "bsearchCorrect"
+  bsearchICorrect <- calc "bsearchICorrect"
         (\(Forall @"x" x) (Forall @"xs" xs) ->
-             nonDecreasing xs .=> let res = bsearch x xs
+             nonDecreasing xs .=> let res = bsearchI x xs
                                   in ite (x `elem` xs)
                                          (xs !! fromJust res .== x)
                                          (isNothing res)) $
         \x xs -> [nonDecreasing xs]
-              |- let res = bsearch x xs
+              |- let res = bsearchI x xs
                  in ite (x `elem` xs)
                         (xs !! fromJust res .== x)
                         (isNothing res)
-              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearch x xs) .== x
-                                         ?? [hprf (bsearchP `at` (Inst @"x" x, Inst @"xs" xs)), hyp (nonDecreasing xs)]
+              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearchI x xs) .== x
+                                         ?? [ hyp (nonDecreasing xs)
+                                            , hprf (bsearchP `at` (Inst @"x" x, Inst @"xs" xs))
+                                            ]
                                          =: sTrue
                                          =: qed
-                       , x `notElem` xs ==> isNothing (bsearch x xs)
-                                         ?? [hprf (bsearchA `at` (Inst @"x" x, Inst @"xs" xs)), hyp (nonDecreasing xs)]
+                       , x `notElem` xs ==> isNothing (bsearchI x xs)
+                                         ?? [ hyp (nonDecreasing xs)
+                                            , hprf (bsearchA `at` (Inst @"x" x, Inst @"xs" xs))
+                                            ]
                                          =: sTrue
                                          =: qed
                        ]
+
+  -- Finally prove the same holds for bsearch itself:
+  calc "bsearchCorrect"
+        (\(Forall @"x" x) (Forall @"xs" xs) ->
+            nonDecreasing xs .=> let res = bsearch x xs
+                                 in ite (x `elem` xs)
+                                        (xs !! fromJust res .== x)
+                                        (isNothing res)) $
+        \x xs -> [nonDecreasing xs]
+              |- let res = bsearch x xs
+                 in ite (x `elem` xs)
+                    (xs !! fromJust res .== x)
+                    (isNothing res)
+              ?? [ hprf (bsearchICorrect `at` (Inst @"x" x, Inst @"xs" xs))
+                 , hprf (bsearchEq       `at` (Inst @"x" x, Inst @"xs" xs))
+                 , hyp  (nonDecreasing xs)
+                 ]
+              =: sTrue
+              =: qed
