@@ -143,7 +143,6 @@ correctness = runKDWith cvc5 $ do
                           =: sTrue
                           =: qed
 
-
     sortNonDecreasing <-
         induct "sortNonDecreasing"
                (\(Forall @"xs" xs) -> nonDecreasing (insertionSort xs)) $
