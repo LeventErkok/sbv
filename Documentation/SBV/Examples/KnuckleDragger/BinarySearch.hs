@@ -84,8 +84,6 @@ correctness :: IO Proof
 correctness = runKD $ do
 
   -- First establish that our two variants of binary search are equivalent:
-  let bsearchI x xs = bsearchWithInv (length xs) x xs
-
   bsearchEq <- sInduct "bsearchEq"
                        (\(Forall @"inv" inv) (Forall @"x" x) (Forall @"xs" xs) (Forall @"low" low) (Forall @"high" high)
                              -> inv .== high - low + 1 .=> bsearchWithInvLH inv x xs low high .== bsearchLH x xs low high) $
@@ -135,6 +133,8 @@ correctness = runKD $ do
                                               (bsearchLH x xs low (mid - 1))))
                           =: bsearchLH x xs low high
                           =: qed
+
+  let bsearchI x xs = bsearchWithInv (length xs) x xs
 
   -- First prove the result when the target is in the list
   bsearchP <- lemma "bsearchPresent"
