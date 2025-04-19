@@ -4,6 +4,7 @@
 ### Version 11.4.5, Not yet released
 
   * Documentation updates
+  * KD: Add support for case-splitting, trivial proofs, and other improvements.
 
 ### Version 11.4, 2025-03-12
 

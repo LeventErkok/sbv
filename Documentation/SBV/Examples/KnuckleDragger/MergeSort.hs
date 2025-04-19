@@ -143,8 +143,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
            \ih (xs, ys) -> [nonDecreasing xs, nonDecreasing ys]
                         |- split2 (xs, ys)
                                   trivial           -- when both xs and ys are empty.  Trivial.
-                                  (const trivial)   -- when xs is empty, but ys isn't. Trivial.
-                                  (const trivial)   -- when ys is empty, but xs isn't. Trivial.
+                                  trivial           -- when xs is empty, but ys isn't. Trivial.
+                                  trivial           -- when ys is empty, but xs isn't. Trivial.
                                   (\(a, as) (b, bs) ->
                                         nonDecreasing (merge (a .: as) (b .: bs))
                                      ?? "unfold merge"
@@ -205,8 +205,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                 \ih (as, bs) e -> [] |-
                         split2 (as, bs)
                                trivial
-                               (const trivial)
-                               (const trivial)
+                               trivial
+                               trivial
                                (\(x, xs) (y, ys) -> count e (merge (x .: xs) (y .: ys))
                                                  ?? "unfold merge"
                                                  =: count e (ite (x .<= y)

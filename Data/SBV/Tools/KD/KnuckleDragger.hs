@@ -1169,8 +1169,16 @@ qed :: KDProofRaw a
 qed = ProofEnd () []
 
 -- | Mark a trivial proof. This is the same as 'qed', but reads better in proof scripts.
-trivial :: KDProofRaw a
-trivial = qed
+class Trivial a where
+   trivial :: a
+
+-- | Proofs with no arguments
+instance Trivial (KDProofRaw a) where
+   trivial = qed
+
+-- | Proofs with many arguments arguments
+instance Trivial a => Trivial (b -> a) where
+   trivial = const trivial
 
 -- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is
