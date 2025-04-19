@@ -1271,9 +1271,9 @@ drop_append = runKD $
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Inductive lemma (strong): sumHalves
---   Step: 1 (2 way case split)
+--   Step: 1 (2 way full case split)
 --     Step: 1.1                           Q.E.D.
---     Step: 1.2 (2 way case split)
+--     Step: 1.2 (2 way full case split)
 --       Step: 1.2.1                       Q.E.D.
 --       Step: 1.2.2.1                     Q.E.D.
 --       Step: 1.2.2.2                     Q.E.D.

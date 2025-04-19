@@ -192,10 +192,16 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
       isEnd ProofStep{}   = False
       isEnd ProofBranch{} = False
 
+      trimLevel level bn
+         | level > 1, 1 : _ <- reverse bn
+         = init bn
+         | True
+         = bn
+
       -- If the next step is ending and we're the 1st step; our number can be skipped
       mkStepName level bn nextStep
-         | level > 1, isEnd nextStep, 1 : _ <- reverse bn
-         = map show (init bn)
+         | isEnd nextStep
+         = map show (trimLevel level bn)
          | True
          = map show bn
 
@@ -223,21 +229,25 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
-      walk intros level (bn, ProofBranch checkCompleteness () ps) = do
+      walk intros level (bnTop, ProofBranch checkCompleteness () ps) = do
 
-        let addSuffix xs s = case reverse xs of
+        let bn = trimLevel level bnTop
+
+            addSuffix xs s = case reverse xs of
                                 l : p -> reverse $ (l ++ s) : p
                                 []    -> [s]
 
             full | checkCompleteness = ""
                  | True              = "full "
 
-        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix (map show bn) (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
+            stepName = map show bn
+
+        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix stepName (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
 
         results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
-                                                       (KDProofStep False nm (map show bn ++ ["Completeness"]))
+                                                       (KDProofStep False nm (stepName ++ ["Completeness"]))
                                                        (Just (initialHypotheses .&& intros))
                                                        (sOr (map fst ps))
                                                        (\d -> finishKD cfg "Q.E.D." d [])
