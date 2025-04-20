@@ -143,9 +143,80 @@ correctness = runKD $ do
                     [sorry]
 
   -- Now prove the result when the target is not in the list
-  bsearchA <- lemma "bsearchAbsent"
-                    (\(Forall @"x" x) (Forall @"xs" xs) -> x `notElem` xs .=> isNothing (bsearchI x xs))
-                    [sorry]
+  bsearchA <- sInduct "bsearchAbsent"
+                      (\(Forall @"inv" inv) (Forall @"x" x) (Forall @"xs" xs) (Forall @"low" low) (Forall @"high" high)
+                           -> inv .== high - low + 1 .&& x `notElem` xs .=> isNothing (bsearchWithInvLH inv x xs 0 (length xs - 1))) $
+                      \ih inv x xs low high ->
+                          [inv .== high - low + 1, x `notElem` xs]
+                       |- isNothing (bsearchWithInvLH inv x xs 0 (length xs - 1))
+                       =: isNothing (ite (0 .> length xs - 1)
+                                         sNothing
+                                         (let mid  = 0 + (length xs - 1 - 0) `sEDiv` 2
+                                              xmid = xs !! mid
+                                          in ite (xmid .== x)
+                                                 (sJust mid)
+                                                 (ite (xmid .< x)
+                                                      (bsearchWithInvLH (length xs - 1 - mid) x xs (mid + 1) (length xs - 1))
+                                                      (bsearchWithInvLH (mid - 0)             x xs 0         (mid - 1)))))
+                       ?? "push isNothing down and simplify"
+                       =: ite (0 .> length xs - 1)
+                              sTrue
+                              (let mid  = 0 + (length xs - 1 - 0) `sEDiv` 2
+                                   xmid = xs !! mid
+                               in ite (xmid .== x)
+                                      sFalse
+                                      (ite (xmid .< x)
+                                           (isNothing (bsearchWithInvLH (length xs - 1 - mid) x xs (mid + 1) (length xs - 1)))
+                                           (isNothing (bsearchWithInvLH (mid - 0)             x xs 0         (mid - 1)))))
+                       ?? [ hprf (ih `at` ( Inst @"inv"  (length xs - 1 - (0 + (length xs - 1 - 0) `sEDiv` 2))
+                                          , Inst @"x"    x
+                                          , Inst @"xs"   xs
+                                          , Inst @"low"  (0 + (length xs - 1 - 0) `sEDiv` 2 + 1)
+                                          , Inst @"high" (length xs - 1)
+                                          ))
+                          , hyp (inv .== high - low + 1)
+                          , hyp (x `notElem` xs)
+                          , hprf sorry
+                          ]
+                       =: ite (0 .> length xs - 1)
+                              sTrue
+                              (let mid  = 0 + (length xs - 1 - 0) `sEDiv` 2
+                                   xmid = xs !! mid
+                               in ite (xmid .== x)
+                                      sFalse
+                                      (ite (xmid .< x)
+                                           sTrue
+                                           (isNothing ((bsearchWithInvLH (mid - 0) x xs 0 (mid - 1))))))
+                       ?? [ hprf (ih `at` ( Inst @"inv"  ((length xs - 1) `sEDiv` 2)
+                                          , Inst @"x"    x
+                                          , Inst @"xs"   xs
+                                          , Inst @"low"  (0 :: SInteger)
+                                          , Inst @"high" ((length xs - 1) `sEDiv` 2  - 1)
+                                          ))
+                          , hyp (inv .== high - low + 1)
+                          , hyp (x `notElem` xs)
+                          , hprf sorry
+                          ]
+                       =: ite (0 .> length xs - 1)
+                              sTrue
+                              (let mid  = 0 + (length xs - 1 - 0) `sEDiv` 2
+                                   xmid = xs !! mid
+                               in ite (xmid .== x)
+                                      sFalse
+                                      (ite (xmid .< x)
+                                           sTrue
+                                           sTrue))
+                       ?? "simplify"
+                       =: ite (0 .> length xs - 1)
+                              sTrue
+                              (let mid  = 0 + (length xs - 1 - 0) `sEDiv` 2
+                                   xmid = xs !! mid
+                               in xmid ./= x)
+                       ?? [ hyp (x `notElem` xs)
+                          , hprf sorry
+                          ]
+                       =: sTrue
+                       =: qed
 
   -- Prove the correctness using the helpers when target is in the list and otherwise:
   bsearchICorrect <- calc "bsearchICorrect"
