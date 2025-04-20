@@ -17,7 +17,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.BinarySearch where
 
-import Prelude hiding (null, length, (!!), drop, take, tail, elem)
+import Prelude hiding (null, length, (!!), drop, take, tail, elem, notElem)
 
 import Data.SBV
 import Data.SBV.List
@@ -63,10 +63,40 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 correctness :: IO Proof
 correctness = runKD $ do
 
-  lemma "bsearchCorrect"
+  -- Prove the case when the target is in the list
+  bsearchPresent <- lemma "bsearchPresent"
+        (\(Forall @"xs" xs) (Forall @"x" x) ->
+            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x)
+        [sorry]
+
+  -- Prove the case when the target is not in the list
+  bsearchAbsent <- lemma "bsearchAbsent"
+        (\(Forall @"xs" xs) (Forall @"x" x) ->
+            nonDecreasing xs .&& x `notElem` xs .=> isNothing (bsearch xs x))
+        [sorry]
+
+  -- Combine the above two results for the final theorem:
+  calc "bsearchCorrect"
         (\(Forall @"xs" xs) (Forall @"x" x) ->
             nonDecreasing xs .=> let res = bsearch xs x
                                  in ite (x `elem` xs)
                                         (xs !! fromJust res .== x)
-                                        (isNothing res))
-        []
+                                        (isNothing res)) $
+        \xs x -> [nonDecreasing xs]
+              |- let res = bsearch xs x
+                 in ite (x `elem` xs)
+                        (xs !! fromJust res .== x)
+                        (isNothing res)
+              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearch xs x) .== x
+                                         ?? [ hyp  (nonDecreasing xs)
+                                            , hprf (bsearchPresent `at` (Inst @"xs" xs, Inst @"x" x))
+                                            ]
+                                         =: sTrue
+                                         =: qed
+                       , x `notElem` xs ==> isNothing (bsearch xs x)
+                                         ?? [ hyp  (nonDecreasing xs)
+                                            , hprf (bsearchAbsent `at` (Inst @"xs" xs, Inst @"x" x))
+                                            ]
+                                         =: sTrue
+                                         =: qed
+                       ]
