@@ -65,22 +65,22 @@ correctness = runKD $ do
 
   -- helper: if an element is not in a list, then it isn't an element of any of its suffixes either
   notElemSuffix <- lemma "notElemSuffix"
-        (\(Forall @"xs" xs) (Forall @"x" (x :: SInteger)) (Forall @"n" n) -> x `notElem` xs .=> x `notElem` drop n xs)
+        (\(Forall @"n" n) (Forall @"x" (x :: SInteger)) (Forall @"xs" xs) -> x `notElem` xs .=> x `notElem` drop n xs)
         []
 
   -- helper: if an element is not in a list, then it isn't an element of any of its prefixes either
   notElemPrefix <- lemma "notElemPrefix"
-        (\(Forall @"xs" xs) (Forall @"x" (x :: SInteger)) (Forall @"n" n) -> x `notElem` xs .=> x `notElem` take n xs)
+        (\(Forall @"n" n) (Forall @"x" (x :: SInteger)) (Forall @"xs" xs) -> x `notElem` xs .=> x `notElem` take n xs)
         []
 
   -- helper: if a list is non-decreasing, so is any suffix of it
   nonDecreasingSuffix <- lemma "nonDecreasingSuffix"
-        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (drop n xs))
+        (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (drop n xs))
         [sorry]
 
   -- helper: if a list is non-decreasing, so is any prefix of it
   nonDecreasingPrefix <- lemma "nonDecreasingPrefix"
-        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (take n xs))
+        (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (take n xs))
         [sorry]
 
   -- Prove the case when the target is in the list
@@ -107,8 +107,8 @@ correctness = runKD $ do
                                   (isNothing (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
                                   (isNothing (                 bsearch (take mid  xs) x))))
                  ?? [ hprf (ih                  `at` (Inst @"xs" (drop mid1 xs), Inst @"x" x))
-                    , hprf (notElemSuffix       `at` (Inst @"xs" xs,             Inst @"x" x, Inst @"n" mid1))
-                    , hprf (nonDecreasingSuffix `at` (Inst @"xs" xs,                          Inst @"n" mid1))
+                    , hprf (notElemSuffix       `at` (Inst @"n" mid1, Inst @"x" x, Inst @"xs" xs))
+                    , hprf (nonDecreasingSuffix `at` (Inst @"n" mid1, Inst @"xs" xs))
                     , hyp  (nonDecreasing xs)
                     , hyp  (x `notElem` xs)
                     ]
@@ -120,8 +120,8 @@ correctness = runKD $ do
                                   (isNothing (SM.map (+ mid1) sNothing))
                                   (isNothing (bsearch (take mid xs) x))))
                  ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
-                    , hprf (notElemPrefix       `at` (Inst @"xs" xs,            Inst @"x" x, Inst @"n" mid))
-                    , hprf (nonDecreasingPrefix `at` (Inst @"xs" xs,                         Inst @"n" mid))
+                    , hprf (notElemPrefix       `at` (Inst @"n" mid, Inst @"x" x, Inst @"xs" xs))
+                    , hprf (nonDecreasingPrefix `at` (Inst @"n" mid, Inst @"xs" xs))
                     , hyp  (nonDecreasing xs)
                     , hyp  (x `notElem` xs)
                     ]
