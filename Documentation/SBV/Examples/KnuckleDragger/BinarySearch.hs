@@ -99,11 +99,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 60 }} $ d
                                           , n .> 0  ==> split as
                                                               trivial
                                                               (\b bs -> nonDecreasing (a .: b .: take (n-1) bs)
-                                                                     ?? nonDecreasing xs
-                                                                     =: nonDecreasing (b .: take (n - 1) bs)
-                                                                     =: nonDecreasing (take n (b .: bs))
-                                                                     =: nonDecreasing (take n as)
-                                                                     ?? [hprf ih, hyp (nonDecreasing xs)]
+                                                                     ?? [ hprf ih
+                                                                        , hyp (nonDecreasing xs)
+                                                                        ]
                                                                      =: sTrue
                                                                      =: qed)
                                           ])
