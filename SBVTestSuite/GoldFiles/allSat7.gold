@@ -16250,67 +16250,12 @@ Fast allSat, Looking for solution 1283
 [SEND] (get-value (s0))
 [RECV] ((s0 8))
 [SEND] (get-value (s1))
-[RECV] ((s1 10))
+[RECV] ((s1 15))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s47)
+[GOOD] (assert s87)
 Fast allSat, Looking for solution 1284
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s46)
-Fast allSat, Looking for solution 1285
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s45)
-Fast allSat, Looking for solution 1286
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 6))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s51)
-Fast allSat, Looking for solution 1287
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s43)
-Fast allSat, Looking for solution 1288
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s52)
-Fast allSat, Looking for solution 1289
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -16321,7 +16266,73 @@ Fast allSat, Looking for solution 1289
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s57)
+Fast allSat, Looking for solution 1285
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s43)
+Fast allSat, Looking for solution 1286
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s45)
+Fast allSat, Looking for solution 1287
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s46)
+Fast allSat, Looking for solution 1288
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s47)
+Fast allSat, Looking for solution 1289
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 6))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s51)
 Fast allSat, Looking for solution 1290
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 5))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s52)
+Fast allSat, Looking for solution 1291
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -16332,17 +16343,6 @@ Fast allSat, Looking for solution 1290
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s53)
-Fast allSat, Looking for solution 1291
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s87)
 Fast allSat, Looking for solution 1292
 [SEND] (check-sat)
 [RECV] sat
@@ -17000,183 +17000,31 @@ Fast allSat, Looking for solution 1344
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s72)
-[GOOD] (assert s89)
+[GOOD] (assert s69)
+[GOOD] (assert s76)
 Fast allSat, Looking for solution 1344
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 8))
 [SEND] (get-value (s1))
-[RECV] ((s1 15))
+[RECV] ((s1 4))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 2))
 [GOOD] (push 1)
-[GOOD] (assert s63)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 1345
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 8))
 [SEND] (get-value (s1))
-[RECV] ((s1 15))
+[RECV] ((s1 4))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 1))
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1346
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1347
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1348
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1349
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1350
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1351
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1352
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1353
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1354
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1355
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1356
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s69)
-[GOOD] (assert s76)
-Fast allSat, Looking for solution 1356
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1357
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1358
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17187,7 +17035,7 @@ Fast allSat, Looking for solution 1358
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1359
+Fast allSat, Looking for solution 1347
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17198,7 +17046,7 @@ Fast allSat, Looking for solution 1359
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1360
+Fast allSat, Looking for solution 1348
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17209,7 +17057,7 @@ Fast allSat, Looking for solution 1360
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1361
+Fast allSat, Looking for solution 1349
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17220,7 +17068,7 @@ Fast allSat, Looking for solution 1361
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1362
+Fast allSat, Looking for solution 1350
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17231,7 +17079,7 @@ Fast allSat, Looking for solution 1362
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1363
+Fast allSat, Looking for solution 1351
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17242,7 +17090,7 @@ Fast allSat, Looking for solution 1363
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1364
+Fast allSat, Looking for solution 1352
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17253,7 +17101,7 @@ Fast allSat, Looking for solution 1364
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1365
+Fast allSat, Looking for solution 1353
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17264,7 +17112,7 @@ Fast allSat, Looking for solution 1365
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 1366
+Fast allSat, Looking for solution 1354
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17275,7 +17123,7 @@ Fast allSat, Looking for solution 1366
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1367
+Fast allSat, Looking for solution 1355
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17286,159 +17134,7 @@ Fast allSat, Looking for solution 1367
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1368
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s58)
-[GOOD] (assert s59)
-Fast allSat, Looking for solution 1368
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1369
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1370
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1371
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1372
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1373
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1374
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1375
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1376
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1377
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1378
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1379
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1380
+Fast allSat, Looking for solution 1356
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -17458,29 +17154,7 @@ Fast allSat, Looking for solution 1380
 [GOOD] (push 1)
 [GOOD] (assert s68)
 [GOOD] (assert s77)
-Fast allSat, Looking for solution 1380
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1381
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1382
+Fast allSat, Looking for solution 1356
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17491,7 +17165,29 @@ Fast allSat, Looking for solution 1382
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1383
+Fast allSat, Looking for solution 1357
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 5))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1358
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 5))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1359
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17502,7 +17198,7 @@ Fast allSat, Looking for solution 1383
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1384
+Fast allSat, Looking for solution 1360
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17513,7 +17209,7 @@ Fast allSat, Looking for solution 1384
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1385
+Fast allSat, Looking for solution 1361
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17524,7 +17220,7 @@ Fast allSat, Looking for solution 1385
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1386
+Fast allSat, Looking for solution 1362
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17535,7 +17231,7 @@ Fast allSat, Looking for solution 1386
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1387
+Fast allSat, Looking for solution 1363
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17546,7 +17242,7 @@ Fast allSat, Looking for solution 1387
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1388
+Fast allSat, Looking for solution 1364
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17557,7 +17253,7 @@ Fast allSat, Looking for solution 1388
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1389
+Fast allSat, Looking for solution 1365
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17568,7 +17264,7 @@ Fast allSat, Looking for solution 1389
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1390
+Fast allSat, Looking for solution 1366
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17579,7 +17275,7 @@ Fast allSat, Looking for solution 1390
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 1391
+Fast allSat, Looking for solution 1367
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17590,159 +17286,7 @@ Fast allSat, Looking for solution 1391
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1392
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s60)
-[GOOD] (assert s85)
-Fast allSat, Looking for solution 1392
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1393
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1394
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1395
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1396
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1397
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1398
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1399
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1400
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1401
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1402
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1403
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1404
+Fast allSat, Looking for solution 1368
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -17762,40 +17306,7 @@ Fast allSat, Looking for solution 1404
 [GOOD] (push 1)
 [GOOD] (assert s67)
 [GOOD] (assert s78)
-Fast allSat, Looking for solution 1404
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 6))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1405
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 6))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1406
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 6))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1407
+Fast allSat, Looking for solution 1368
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17806,7 +17317,40 @@ Fast allSat, Looking for solution 1407
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1408
+Fast allSat, Looking for solution 1369
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 6))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1370
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 6))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1371
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 6))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1372
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17817,7 +17361,7 @@ Fast allSat, Looking for solution 1408
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1409
+Fast allSat, Looking for solution 1373
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17828,7 +17372,7 @@ Fast allSat, Looking for solution 1409
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1410
+Fast allSat, Looking for solution 1374
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17839,7 +17383,7 @@ Fast allSat, Looking for solution 1410
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1411
+Fast allSat, Looking for solution 1375
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17850,7 +17394,7 @@ Fast allSat, Looking for solution 1411
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1412
+Fast allSat, Looking for solution 1376
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17861,7 +17405,7 @@ Fast allSat, Looking for solution 1412
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1413
+Fast allSat, Looking for solution 1377
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17872,7 +17416,7 @@ Fast allSat, Looking for solution 1413
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1414
+Fast allSat, Looking for solution 1378
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17883,7 +17427,7 @@ Fast allSat, Looking for solution 1414
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1415
+Fast allSat, Looking for solution 1379
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -17894,311 +17438,7 @@ Fast allSat, Looking for solution 1415
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 1416
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s63)
-[GOOD] (assert s84)
-Fast allSat, Looking for solution 1416
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1417
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1418
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1419
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1420
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1421
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1422
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1423
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1424
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1425
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1426
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1427
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1428
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s63)
-[GOOD] (assert s83)
-Fast allSat, Looking for solution 1428
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1429
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1430
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1431
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1432
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1433
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1434
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1435
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1436
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1437
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1438
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1439
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1440
+Fast allSat, Looking for solution 1380
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -18218,73 +17458,7 @@ Fast allSat, Looking for solution 1440
 [GOOD] (push 1)
 [GOOD] (assert s63)
 [GOOD] (assert s82)
-Fast allSat, Looking for solution 1440
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1441
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1442
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1443
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1444
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1445
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1446
+Fast allSat, Looking for solution 1380
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18295,7 +17469,73 @@ Fast allSat, Looking for solution 1446
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 1447
+Fast allSat, Looking for solution 1381
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1382
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1383
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1384
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1385
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1386
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1387
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18306,7 +17546,7 @@ Fast allSat, Looking for solution 1447
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1448
+Fast allSat, Looking for solution 1388
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18317,7 +17557,7 @@ Fast allSat, Looking for solution 1448
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1449
+Fast allSat, Looking for solution 1389
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18328,7 +17568,7 @@ Fast allSat, Looking for solution 1449
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1450
+Fast allSat, Looking for solution 1390
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18339,7 +17579,7 @@ Fast allSat, Looking for solution 1450
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1451
+Fast allSat, Looking for solution 1391
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18350,6 +17590,766 @@ Fast allSat, Looking for solution 1451
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
+Fast allSat, Looking for solution 1392
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s62)
+[GOOD] (assert s83)
+Fast allSat, Looking for solution 1392
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1393
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1394
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1395
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1396
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1397
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1398
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1399
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1400
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1401
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1402
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1403
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1404
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s61)
+[GOOD] (assert s84)
+Fast allSat, Looking for solution 1404
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1405
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1406
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1407
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1408
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1409
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1410
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1411
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1412
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1413
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1414
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1415
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1416
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s60)
+[GOOD] (assert s85)
+Fast allSat, Looking for solution 1416
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1417
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1418
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1419
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1420
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1421
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1422
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1423
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1424
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1425
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1426
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1427
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1428
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s58)
+[GOOD] (assert s59)
+Fast allSat, Looking for solution 1428
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1429
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1430
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1431
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1432
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1433
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1434
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1435
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1436
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1437
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1438
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1439
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1440
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s72)
+[GOOD] (assert s89)
+Fast allSat, Looking for solution 1440
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1441
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1442
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1443
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1444
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1445
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1446
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1447
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1448
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1449
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1450
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1451
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1452
 [SEND] (check-sat)
 [RECV] unsat
@@ -18379,43 +18379,10 @@ Fast allSat, Looking for solution 1452
 [SEND] (get-value (s1))
 [RECV] ((s1 7))
 [SEND] (get-value (s2))
-[RECV] ((s2 6))
+[RECV] ((s2 1))
 [GOOD] (push 1)
-[GOOD] (assert s66)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1453
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1454
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1455
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 8))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1456
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18426,6 +18393,39 @@ Fast allSat, Looking for solution 1456
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
+Fast allSat, Looking for solution 1454
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1455
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1456
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 8))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
 Fast allSat, Looking for solution 1457
 [SEND] (check-sat)
 [RECV] sat
@@ -18434,9 +18434,9 @@ Fast allSat, Looking for solution 1457
 [SEND] (get-value (s1))
 [RECV] ((s1 7))
 [SEND] (get-value (s2))
-[RECV] ((s2 1))
+[RECV] ((s2 6))
 [GOOD] (push 1)
-[GOOD] (assert s71)
+[GOOD] (assert s66)
 Fast allSat, Looking for solution 1458
 [SEND] (check-sat)
 [RECV] sat
@@ -18530,89 +18530,12 @@ Fast allSat, Looking for solution 1464
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 9))
+[RECV] ((s1 15))
 [SEND] (get-value (s2))
-[RECV] ((s2 8))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s48)
+[GOOD] (assert s87)
 Fast allSat, Looking for solution 1465
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s47)
-Fast allSat, Looking for solution 1466
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s46)
-Fast allSat, Looking for solution 1467
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s52)
-Fast allSat, Looking for solution 1468
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s45)
-Fast allSat, Looking for solution 1469
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s53)
-Fast allSat, Looking for solution 1470
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s43)
-Fast allSat, Looking for solution 1471
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 3))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s54)
-Fast allSat, Looking for solution 1472
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18623,7 +18546,95 @@ Fast allSat, Looking for solution 1472
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s57)
+Fast allSat, Looking for solution 1466
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s43)
+Fast allSat, Looking for solution 1467
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s45)
+Fast allSat, Looking for solution 1468
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s46)
+Fast allSat, Looking for solution 1469
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s47)
+Fast allSat, Looking for solution 1470
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s48)
+Fast allSat, Looking for solution 1471
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 5))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s52)
+Fast allSat, Looking for solution 1472
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 4))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s53)
 Fast allSat, Looking for solution 1473
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 3))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s54)
+Fast allSat, Looking for solution 1474
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -18634,17 +18645,6 @@ Fast allSat, Looking for solution 1473
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s55)
-Fast allSat, Looking for solution 1474
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s87)
 Fast allSat, Looking for solution 1475
 [SEND] (check-sat)
 [RECV] sat
@@ -18976,227 +18976,20 @@ Fast allSat, Looking for solution 1501
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s72)
-[GOOD] (assert s89)
+[GOOD] (assert s71)
+[GOOD] (assert s74)
 Fast allSat, Looking for solution 1501
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 15))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 13))
+[RECV] ((s2 15))
 [GOOD] (push 1)
-[GOOD] (assert s58)
+[GOOD] (assert s88)
 Fast allSat, Looking for solution 1502
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1503
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1504
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1505
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1506
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1507
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1508
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1509
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1510
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1511
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1512
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 15))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1513
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s71)
-[GOOD] (assert s74)
-Fast allSat, Looking for solution 1513
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1514
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1515
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1516
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1517
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1518
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1519
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19207,7 +19000,7 @@ Fast allSat, Looking for solution 1519
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1520
+Fast allSat, Looking for solution 1503
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19215,206 +19008,109 @@ Fast allSat, Looking for solution 1520
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1521
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1522
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1523
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1524
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 2))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1525
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
+[RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-[GOOD] (assert s59)
-Fast allSat, Looking for solution 1525
+Fast allSat, Looking for solution 1504
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1526
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1527
+Fast allSat, Looking for solution 1505
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1528
+Fast allSat, Looking for solution 1506
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1529
+Fast allSat, Looking for solution 1507
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1530
+Fast allSat, Looking for solution 1508
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 1531
+Fast allSat, Looking for solution 1509
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1532
+Fast allSat, Looking for solution 1510
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1533
+Fast allSat, Looking for solution 1511
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1534
+Fast allSat, Looking for solution 1512
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 14))
+[RECV] ((s1 2))
 [SEND] (get-value (s2))
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1535
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1536
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 14))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1537
+Fast allSat, Looking for solution 1513
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -19434,7 +19130,7 @@ Fast allSat, Looking for solution 1537
 [GOOD] (push 1)
 [GOOD] (assert s70)
 [GOOD] (assert s75)
-Fast allSat, Looking for solution 1537
+Fast allSat, Looking for solution 1513
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19445,40 +19141,7 @@ Fast allSat, Looking for solution 1537
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
-Fast allSat, Looking for solution 1538
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 3))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1539
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 3))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1540
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 3))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1541
+Fast allSat, Looking for solution 1514
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19489,7 +19152,7 @@ Fast allSat, Looking for solution 1541
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 1542
+Fast allSat, Looking for solution 1515
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19500,7 +19163,7 @@ Fast allSat, Looking for solution 1542
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1543
+Fast allSat, Looking for solution 1516
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19511,7 +19174,7 @@ Fast allSat, Looking for solution 1543
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1544
+Fast allSat, Looking for solution 1517
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19522,7 +19185,7 @@ Fast allSat, Looking for solution 1544
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1545
+Fast allSat, Looking for solution 1518
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19533,7 +19196,7 @@ Fast allSat, Looking for solution 1545
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1546
+Fast allSat, Looking for solution 1519
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19544,7 +19207,7 @@ Fast allSat, Looking for solution 1546
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1547
+Fast allSat, Looking for solution 1520
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19555,7 +19218,7 @@ Fast allSat, Looking for solution 1547
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1548
+Fast allSat, Looking for solution 1521
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19566,159 +19229,40 @@ Fast allSat, Looking for solution 1548
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1549
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s60)
-[GOOD] (assert s85)
-Fast allSat, Looking for solution 1549
+Fast allSat, Looking for solution 1522
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1550
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1551
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1552
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1553
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1554
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1555
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
+[RECV] ((s1 3))
 [SEND] (get-value (s2))
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1556
+Fast allSat, Looking for solution 1523
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 13))
+[RECV] ((s1 3))
 [SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1557
+Fast allSat, Looking for solution 1524
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 13))
+[RECV] ((s1 3))
 [SEND] (get-value (s2))
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1558
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1559
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1560
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1561
+Fast allSat, Looking for solution 1525
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -19738,7 +19282,7 @@ Fast allSat, Looking for solution 1561
 [GOOD] (push 1)
 [GOOD] (assert s69)
 [GOOD] (assert s76)
-Fast allSat, Looking for solution 1561
+Fast allSat, Looking for solution 1525
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19749,7 +19293,7 @@ Fast allSat, Looking for solution 1561
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1562
+Fast allSat, Looking for solution 1526
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19760,29 +19304,7 @@ Fast allSat, Looking for solution 1562
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
-Fast allSat, Looking for solution 1563
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1564
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1565
+Fast allSat, Looking for solution 1527
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19793,7 +19315,7 @@ Fast allSat, Looking for solution 1565
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 1566
+Fast allSat, Looking for solution 1528
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19804,7 +19326,7 @@ Fast allSat, Looking for solution 1566
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1567
+Fast allSat, Looking for solution 1529
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19815,7 +19337,7 @@ Fast allSat, Looking for solution 1567
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1568
+Fast allSat, Looking for solution 1530
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19826,7 +19348,7 @@ Fast allSat, Looking for solution 1568
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1569
+Fast allSat, Looking for solution 1531
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19837,7 +19359,7 @@ Fast allSat, Looking for solution 1569
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1570
+Fast allSat, Looking for solution 1532
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19848,7 +19370,7 @@ Fast allSat, Looking for solution 1570
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1571
+Fast allSat, Looking for solution 1533
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19859,7 +19381,7 @@ Fast allSat, Looking for solution 1571
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1572
+Fast allSat, Looking for solution 1534
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -19870,159 +19392,29 @@ Fast allSat, Looking for solution 1572
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1573
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s61)
-[GOOD] (assert s84)
-Fast allSat, Looking for solution 1573
+Fast allSat, Looking for solution 1535
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1574
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1575
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1576
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1577
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1578
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1579
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
+[RECV] ((s1 4))
 [SEND] (get-value (s2))
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1580
+Fast allSat, Looking for solution 1536
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 12))
+[RECV] ((s1 4))
 [SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1581
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1582
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1583
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1584
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1585
+Fast allSat, Looking for solution 1537
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -20042,7 +19434,7 @@ Fast allSat, Looking for solution 1585
 [GOOD] (push 1)
 [GOOD] (assert s68)
 [GOOD] (assert s77)
-Fast allSat, Looking for solution 1585
+Fast allSat, Looking for solution 1537
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20053,7 +19445,7 @@ Fast allSat, Looking for solution 1585
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1586
+Fast allSat, Looking for solution 1538
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20064,7 +19456,7 @@ Fast allSat, Looking for solution 1586
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1587
+Fast allSat, Looking for solution 1539
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20075,18 +19467,7 @@ Fast allSat, Looking for solution 1587
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
-Fast allSat, Looking for solution 1588
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1589
+Fast allSat, Looking for solution 1540
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20097,7 +19478,7 @@ Fast allSat, Looking for solution 1589
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 1590
+Fast allSat, Looking for solution 1541
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20108,7 +19489,7 @@ Fast allSat, Looking for solution 1590
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 1591
+Fast allSat, Looking for solution 1542
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20119,7 +19500,7 @@ Fast allSat, Looking for solution 1591
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 1592
+Fast allSat, Looking for solution 1543
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20130,7 +19511,7 @@ Fast allSat, Looking for solution 1592
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 1593
+Fast allSat, Looking for solution 1544
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20141,7 +19522,7 @@ Fast allSat, Looking for solution 1593
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 1594
+Fast allSat, Looking for solution 1545
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20152,7 +19533,7 @@ Fast allSat, Looking for solution 1594
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1595
+Fast allSat, Looking for solution 1546
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20163,7 +19544,7 @@ Fast allSat, Looking for solution 1595
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 1596
+Fast allSat, Looking for solution 1547
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20174,311 +19555,18 @@ Fast allSat, Looking for solution 1596
 [RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s88)
-Fast allSat, Looking for solution 1597
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s64)
-[GOOD] (assert s83)
-Fast allSat, Looking for solution 1597
+Fast allSat, Looking for solution 1548
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
 [RECV] ((s0 7))
 [SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1598
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1599
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1600
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1601
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1602
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1603
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
+[RECV] ((s1 5))
 [SEND] (get-value (s2))
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1604
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1605
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1606
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1607
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1608
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1609
-[SEND] (check-sat)
-[RECV] unsat
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (pop 1)
-[GOOD] (push 1)
-[GOOD] (assert s64)
-[GOOD] (assert s82)
-Fast allSat, Looking for solution 1609
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 6))
-[GOOD] (push 1)
-[GOOD] (assert s66)
-Fast allSat, Looking for solution 1610
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1611
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1612
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1613
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1614
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1615
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1616
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1617
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1618
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1619
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1620
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1621
+Fast allSat, Looking for solution 1549
 [SEND] (check-sat)
 [RECV] unsat
 [GOOD] (pop 1)
@@ -20498,73 +19586,7 @@ Fast allSat, Looking for solution 1621
 [GOOD] (push 1)
 [GOOD] (assert s64)
 [GOOD] (assert s81)
-Fast allSat, Looking for solution 1621
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
-Fast allSat, Looking for solution 1622
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1623
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1624
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1625
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1626
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 7))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1627
+Fast allSat, Looking for solution 1549
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20575,7 +19597,7 @@ Fast allSat, Looking for solution 1627
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 1628
+Fast allSat, Looking for solution 1550
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20586,7 +19608,7 @@ Fast allSat, Looking for solution 1628
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1629
+Fast allSat, Looking for solution 1551
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20597,7 +19619,7 @@ Fast allSat, Looking for solution 1629
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1630
+Fast allSat, Looking for solution 1552
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20608,7 +19630,7 @@ Fast allSat, Looking for solution 1630
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1631
+Fast allSat, Looking for solution 1553
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20619,7 +19641,7 @@ Fast allSat, Looking for solution 1631
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1632
+Fast allSat, Looking for solution 1554
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -20630,6 +19652,984 @@ Fast allSat, Looking for solution 1632
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
+Fast allSat, Looking for solution 1555
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1556
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1557
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1558
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1559
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1560
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1561
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s63)
+[GOOD] (assert s82)
+Fast allSat, Looking for solution 1561
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1562
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1563
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1564
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1565
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1566
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1567
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1568
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1569
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1570
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1571
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1572
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1573
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s62)
+[GOOD] (assert s83)
+Fast allSat, Looking for solution 1573
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1574
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1575
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1576
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1577
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1578
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1579
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1580
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1581
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1582
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1583
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1584
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1585
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s61)
+[GOOD] (assert s84)
+Fast allSat, Looking for solution 1585
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1586
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1587
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1588
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1589
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1590
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1591
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1592
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1593
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1594
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1595
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1596
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1597
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s60)
+[GOOD] (assert s85)
+Fast allSat, Looking for solution 1597
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1598
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1599
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1600
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1601
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1602
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1603
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1604
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1605
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1606
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1607
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
+Fast allSat, Looking for solution 1608
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1609
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s58)
+[GOOD] (assert s59)
+Fast allSat, Looking for solution 1609
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 15))
+[GOOD] (push 1)
+[GOOD] (assert s88)
+Fast allSat, Looking for solution 1610
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1611
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1612
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1613
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1614
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1615
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1616
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1617
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1618
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1619
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1620
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 14))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1621
+[SEND] (check-sat)
+[RECV] unsat
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (pop 1)
+[GOOD] (push 1)
+[GOOD] (assert s72)
+[GOOD] (assert s89)
+Fast allSat, Looking for solution 1621
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 1622
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1623
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1624
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1625
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1626
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
+Fast allSat, Looking for solution 1627
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1628
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1629
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1630
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1631
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1632
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 7))
+[SEND] (get-value (s1))
+[RECV] ((s1 15))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
 Fast allSat, Looking for solution 1633
 [SEND] (check-sat)
 [RECV] unsat
@@ -21332,21 +21332,10 @@ Fast allSat, Looking for solution 1688
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1689
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1690
+Fast allSat, Looking for solution 1689
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21357,7 +21346,7 @@ Fast allSat, Looking for solution 1690
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1691
+Fast allSat, Looking for solution 1690
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21368,7 +21357,7 @@ Fast allSat, Looking for solution 1691
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1692
+Fast allSat, Looking for solution 1691
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21379,7 +21368,7 @@ Fast allSat, Looking for solution 1692
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1693
+Fast allSat, Looking for solution 1692
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21390,6 +21379,17 @@ Fast allSat, Looking for solution 1693
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
+Fast allSat, Looking for solution 1693
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1694
 [SEND] (check-sat)
 [RECV] unsat
@@ -21418,120 +21418,10 @@ Fast allSat, Looking for solution 1694
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
-[GOOD] (push 1)
-[GOOD] (assert s67)
-Fast allSat, Looking for solution 1695
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1696
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1697
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1698
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1699
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1700
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1701
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1702
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1703
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1704
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 1705
+Fast allSat, Looking for solution 1695
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21542,6 +21432,116 @@ Fast allSat, Looking for solution 1705
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
+Fast allSat, Looking for solution 1696
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1697
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1698
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1699
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1700
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1701
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1702
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1703
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1704
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 1705
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 1))
+[GOOD] (push 1)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1706
 [SEND] (check-sat)
 [RECV] unsat
@@ -21570,87 +21570,10 @@ Fast allSat, Looking for solution 1706
 [SEND] (get-value (s1))
 [RECV] ((s1 11))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1707
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1708
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1709
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1710
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1711
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1712
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1713
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1714
+Fast allSat, Looking for solution 1707
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21661,7 +21584,7 @@ Fast allSat, Looking for solution 1714
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1715
+Fast allSat, Looking for solution 1708
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21672,7 +21595,7 @@ Fast allSat, Looking for solution 1715
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1716
+Fast allSat, Looking for solution 1709
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21683,7 +21606,7 @@ Fast allSat, Looking for solution 1716
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1717
+Fast allSat, Looking for solution 1710
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21694,6 +21617,83 @@ Fast allSat, Looking for solution 1717
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
+Fast allSat, Looking for solution 1711
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1712
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1713
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1714
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1715
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1716
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1717
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1718
 [SEND] (check-sat)
 [RECV] unsat
@@ -21722,109 +21722,10 @@ Fast allSat, Looking for solution 1718
 [SEND] (get-value (s1))
 [RECV] ((s1 10))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1719
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1720
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1721
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1722
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1723
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1724
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1725
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1726
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1727
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1728
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21835,6 +21736,105 @@ Fast allSat, Looking for solution 1728
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
+Fast allSat, Looking for solution 1720
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1721
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1722
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1723
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1724
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1725
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1726
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1727
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1728
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 1729
 [SEND] (check-sat)
 [RECV] sat
@@ -21843,9 +21843,9 @@ Fast allSat, Looking for solution 1729
 [SEND] (get-value (s1))
 [RECV] ((s1 10))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
+[RECV] ((s2 1))
 [GOOD] (push 1)
-[GOOD] (assert s72)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1730
 [SEND] (check-sat)
 [RECV] unsat
@@ -21874,87 +21874,10 @@ Fast allSat, Looking for solution 1730
 [SEND] (get-value (s1))
 [RECV] ((s1 9))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1731
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1732
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1733
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1734
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1735
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1736
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1737
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1738
+Fast allSat, Looking for solution 1731
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21965,7 +21888,7 @@ Fast allSat, Looking for solution 1738
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1739
+Fast allSat, Looking for solution 1732
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21976,7 +21899,7 @@ Fast allSat, Looking for solution 1739
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1740
+Fast allSat, Looking for solution 1733
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21987,7 +21910,7 @@ Fast allSat, Looking for solution 1740
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1741
+Fast allSat, Looking for solution 1734
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -21998,6 +21921,83 @@ Fast allSat, Looking for solution 1741
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
+Fast allSat, Looking for solution 1735
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1736
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1737
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1738
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1739
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1740
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1741
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1742
 [SEND] (check-sat)
 [RECV] unsat
@@ -22026,109 +22026,10 @@ Fast allSat, Looking for solution 1742
 [SEND] (get-value (s1))
 [RECV] ((s1 8))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1743
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1744
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1745
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1746
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 1))
-[GOOD] (push 1)
-[GOOD] (assert s71)
-Fast allSat, Looking for solution 1747
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1748
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1749
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1750
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1751
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1752
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22139,6 +22040,105 @@ Fast allSat, Looking for solution 1752
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
+Fast allSat, Looking for solution 1744
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1745
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1746
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1747
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1748
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1749
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1750
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1751
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 1752
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 1753
 [SEND] (check-sat)
 [RECV] sat
@@ -22147,9 +22147,9 @@ Fast allSat, Looking for solution 1753
 [SEND] (get-value (s1))
 [RECV] ((s1 8))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
+[RECV] ((s2 1))
 [GOOD] (push 1)
-[GOOD] (assert s72)
+[GOOD] (assert s71)
 Fast allSat, Looking for solution 1754
 [SEND] (check-sat)
 [RECV] unsat
@@ -22178,87 +22178,10 @@ Fast allSat, Looking for solution 1754
 [SEND] (get-value (s1))
 [RECV] ((s1 7))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
-[GOOD] (push 1)
-[GOOD] (assert s72)
-Fast allSat, Looking for solution 1755
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 13))
-[GOOD] (push 1)
-[GOOD] (assert s58)
-Fast allSat, Looking for solution 1756
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1757
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1758
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1759
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1760
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1761
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 1762
+Fast allSat, Looking for solution 1755
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22269,7 +22192,7 @@ Fast allSat, Looking for solution 1762
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 1763
+Fast allSat, Looking for solution 1756
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22280,7 +22203,7 @@ Fast allSat, Looking for solution 1763
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 1764
+Fast allSat, Looking for solution 1757
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22291,7 +22214,7 @@ Fast allSat, Looking for solution 1764
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 1765
+Fast allSat, Looking for solution 1758
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22302,6 +22225,83 @@ Fast allSat, Looking for solution 1765
 [RECV] ((s2 1))
 [GOOD] (push 1)
 [GOOD] (assert s71)
+Fast allSat, Looking for solution 1759
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1760
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1761
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1762
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1763
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1764
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 13))
+[GOOD] (push 1)
+[GOOD] (assert s58)
+Fast allSat, Looking for solution 1765
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
+[RECV] ((s2 14))
+[GOOD] (push 1)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1766
 [SEND] (check-sat)
 [RECV] unsat
@@ -22330,109 +22330,10 @@ Fast allSat, Looking for solution 1766
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1767
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 4))
-[GOOD] (push 1)
-[GOOD] (assert s68)
-Fast allSat, Looking for solution 1768
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
-Fast allSat, Looking for solution 1769
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 1770
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 7))
-[GOOD] (push 1)
-[GOOD] (assert s65)
-Fast allSat, Looking for solution 1771
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 8))
-[GOOD] (push 1)
-[GOOD] (assert s64)
-Fast allSat, Looking for solution 1772
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 9))
-[GOOD] (push 1)
-[GOOD] (assert s63)
-Fast allSat, Looking for solution 1773
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 10))
-[GOOD] (push 1)
-[GOOD] (assert s62)
-Fast allSat, Looking for solution 1774
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 11))
-[GOOD] (push 1)
-[GOOD] (assert s61)
-Fast allSat, Looking for solution 1775
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 6))
-[SEND] (get-value (s1))
-[RECV] ((s1 1))
-[SEND] (get-value (s2))
-[RECV] ((s2 12))
-[GOOD] (push 1)
-[GOOD] (assert s60)
-Fast allSat, Looking for solution 1776
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -22443,6 +22344,105 @@ Fast allSat, Looking for solution 1776
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
+Fast allSat, Looking for solution 1768
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 1769
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 1770
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 1771
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 1772
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 1773
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 1774
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 1775
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 1776
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 6))
+[SEND] (get-value (s1))
+[RECV] ((s1 1))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
 Fast allSat, Looking for solution 1777
 [SEND] (check-sat)
 [RECV] sat
@@ -22451,9 +22451,9 @@ Fast allSat, Looking for solution 1777
 [SEND] (get-value (s1))
 [RECV] ((s1 1))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
+[RECV] ((s2 2))
 [GOOD] (push 1)
-[GOOD] (assert s72)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 1778
 [SEND] (check-sat)
 [RECV] unsat
@@ -22482,9 +22482,9 @@ Fast allSat, Looking for solution 1778
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 14))
+[RECV] ((s2 5))
 [GOOD] (push 1)
-[GOOD] (assert s72)
+[GOOD] (assert s67)
 Fast allSat, Looking for solution 1779
 [SEND] (check-sat)
 [RECV] sat
@@ -22493,9 +22493,9 @@ Fast allSat, Looking for solution 1779
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 13))
+[RECV] ((s2 4))
 [GOOD] (push 1)
-[GOOD] (assert s58)
+[GOOD] (assert s68)
 Fast allSat, Looking for solution 1780
 [SEND] (check-sat)
 [RECV] sat
@@ -22504,9 +22504,9 @@ Fast allSat, Looking for solution 1780
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 12))
+[RECV] ((s2 3))
 [GOOD] (push 1)
-[GOOD] (assert s60)
+[GOOD] (assert s69)
 Fast allSat, Looking for solution 1781
 [SEND] (check-sat)
 [RECV] sat
@@ -22515,9 +22515,9 @@ Fast allSat, Looking for solution 1781
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 11))
+[RECV] ((s2 7))
 [GOOD] (push 1)
-[GOOD] (assert s61)
+[GOOD] (assert s65)
 Fast allSat, Looking for solution 1782
 [SEND] (check-sat)
 [RECV] sat
@@ -22526,9 +22526,9 @@ Fast allSat, Looking for solution 1782
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 8))
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s64)
 Fast allSat, Looking for solution 1783
 [SEND] (check-sat)
 [RECV] sat
@@ -22548,9 +22548,9 @@ Fast allSat, Looking for solution 1784
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 8))
+[RECV] ((s2 10))
 [GOOD] (push 1)
-[GOOD] (assert s64)
+[GOOD] (assert s62)
 Fast allSat, Looking for solution 1785
 [SEND] (check-sat)
 [RECV] sat
@@ -22559,9 +22559,9 @@ Fast allSat, Looking for solution 1785
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 7))
+[RECV] ((s2 11))
 [GOOD] (push 1)
-[GOOD] (assert s65)
+[GOOD] (assert s61)
 Fast allSat, Looking for solution 1786
 [SEND] (check-sat)
 [RECV] sat
@@ -22570,9 +22570,9 @@ Fast allSat, Looking for solution 1786
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 12))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s60)
 Fast allSat, Looking for solution 1787
 [SEND] (check-sat)
 [RECV] sat
@@ -22581,9 +22581,9 @@ Fast allSat, Looking for solution 1787
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 4))
+[RECV] ((s2 13))
 [GOOD] (push 1)
-[GOOD] (assert s68)
+[GOOD] (assert s58)
 Fast allSat, Looking for solution 1788
 [SEND] (check-sat)
 [RECV] sat
@@ -22592,9 +22592,9 @@ Fast allSat, Looking for solution 1788
 [SEND] (get-value (s1))
 [RECV] ((s1 2))
 [SEND] (get-value (s2))
-[RECV] ((s2 3))
+[RECV] ((s2 14))
 [GOOD] (push 1)
-[GOOD] (assert s69)
+[GOOD] (assert s72)
 Fast allSat, Looking for solution 1789
 [SEND] (check-sat)
 [RECV] sat
@@ -32212,7 +32212,7 @@ Fast allSat, Looking for solution 2550
 [SEND] (get-value (s1))
 [RECV] ((s1 3))
 [SEND] (get-value (s2))
-[RECV] ((s2 2))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s54)
 Fast allSat, Looking for solution 2551
@@ -32223,7 +32223,7 @@ Fast allSat, Looking for solution 2551
 [SEND] (get-value (s1))
 [RECV] ((s1 4))
 [SEND] (get-value (s2))
-[RECV] ((s2 3))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s53)
 Fast allSat, Looking for solution 2552
@@ -32234,7 +32234,7 @@ Fast allSat, Looking for solution 2552
 [SEND] (get-value (s1))
 [RECV] ((s1 5))
 [SEND] (get-value (s2))
-[RECV] ((s2 4))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s52)
 Fast allSat, Looking for solution 2553
@@ -32245,7 +32245,7 @@ Fast allSat, Looking for solution 2553
 [SEND] (get-value (s1))
 [RECV] ((s1 6))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s51)
 Fast allSat, Looking for solution 2554
@@ -32256,7 +32256,7 @@ Fast allSat, Looking for solution 2554
 [SEND] (get-value (s1))
 [RECV] ((s1 7))
 [SEND] (get-value (s2))
-[RECV] ((s2 6))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s50)
 Fast allSat, Looking for solution 2555
@@ -32267,7 +32267,7 @@ Fast allSat, Looking for solution 2555
 [SEND] (get-value (s1))
 [RECV] ((s1 8))
 [SEND] (get-value (s2))
-[RECV] ((s2 7))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s49)
 Fast allSat, Looking for solution 2556
@@ -32278,7 +32278,7 @@ Fast allSat, Looking for solution 2556
 [SEND] (get-value (s1))
 [RECV] ((s1 9))
 [SEND] (get-value (s2))
-[RECV] ((s2 8))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s48)
 Fast allSat, Looking for solution 2557
@@ -32289,7 +32289,7 @@ Fast allSat, Looking for solution 2557
 [SEND] (get-value (s1))
 [RECV] ((s1 10))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s47)
 Fast allSat, Looking for solution 2558
@@ -32300,7 +32300,7 @@ Fast allSat, Looking for solution 2558
 [SEND] (get-value (s1))
 [RECV] ((s1 11))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s46)
 Fast allSat, Looking for solution 2559
@@ -32311,7 +32311,7 @@ Fast allSat, Looking for solution 2559
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 11))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s45)
 Fast allSat, Looking for solution 2560
@@ -32322,7 +32322,7 @@ Fast allSat, Looking for solution 2560
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 12))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s43)
 Fast allSat, Looking for solution 2561
@@ -32333,7 +32333,7 @@ Fast allSat, Looking for solution 2561
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 13))
+[RECV] ((s2 15))
 [GOOD] (push 1)
 [GOOD] (assert s57)
 Fast allSat, Looking for solution 2562
@@ -32504,7 +32504,7 @@ Fast allSat, Looking for solution 2575
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s58)
+[GOOD] (assert s88)
 [GOOD] (assert s59)
 Fast allSat, Looking for solution 2575
 [SEND] (check-sat)
@@ -32514,9 +32514,9 @@ Fast allSat, Looking for solution 2575
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 12))
+[RECV] ((s2 2))
 [GOOD] (push 1)
-[GOOD] (assert s60)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 2576
 [SEND] (check-sat)
 [RECV] sat
@@ -32525,9 +32525,9 @@ Fast allSat, Looking for solution 2576
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 11))
+[RECV] ((s2 3))
 [GOOD] (push 1)
-[GOOD] (assert s61)
+[GOOD] (assert s69)
 Fast allSat, Looking for solution 2577
 [SEND] (check-sat)
 [RECV] sat
@@ -32536,9 +32536,9 @@ Fast allSat, Looking for solution 2577
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 4))
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s68)
 Fast allSat, Looking for solution 2578
 [SEND] (check-sat)
 [RECV] sat
@@ -32547,9 +32547,9 @@ Fast allSat, Looking for solution 2578
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 5))
 [GOOD] (push 1)
-[GOOD] (assert s63)
+[GOOD] (assert s67)
 Fast allSat, Looking for solution 2579
 [SEND] (check-sat)
 [RECV] sat
@@ -32558,9 +32558,9 @@ Fast allSat, Looking for solution 2579
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 8))
+[RECV] ((s2 6))
 [GOOD] (push 1)
-[GOOD] (assert s64)
+[GOOD] (assert s66)
 Fast allSat, Looking for solution 2580
 [SEND] (check-sat)
 [RECV] sat
@@ -32580,9 +32580,9 @@ Fast allSat, Looking for solution 2581
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 6))
+[RECV] ((s2 8))
 [GOOD] (push 1)
-[GOOD] (assert s66)
+[GOOD] (assert s64)
 Fast allSat, Looking for solution 2582
 [SEND] (check-sat)
 [RECV] sat
@@ -32591,9 +32591,9 @@ Fast allSat, Looking for solution 2582
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 9))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s63)
 Fast allSat, Looking for solution 2583
 [SEND] (check-sat)
 [RECV] sat
@@ -32602,9 +32602,9 @@ Fast allSat, Looking for solution 2583
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 4))
+[RECV] ((s2 10))
 [GOOD] (push 1)
-[GOOD] (assert s68)
+[GOOD] (assert s62)
 Fast allSat, Looking for solution 2584
 [SEND] (check-sat)
 [RECV] sat
@@ -32613,9 +32613,9 @@ Fast allSat, Looking for solution 2584
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 3))
+[RECV] ((s2 11))
 [GOOD] (push 1)
-[GOOD] (assert s69)
+[GOOD] (assert s61)
 Fast allSat, Looking for solution 2585
 [SEND] (check-sat)
 [RECV] sat
@@ -32624,9 +32624,9 @@ Fast allSat, Looking for solution 2585
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 2))
+[RECV] ((s2 12))
 [GOOD] (push 1)
-[GOOD] (assert s70)
+[GOOD] (assert s60)
 Fast allSat, Looking for solution 2586
 [SEND] (check-sat)
 [RECV] sat
@@ -32635,9 +32635,9 @@ Fast allSat, Looking for solution 2586
 [SEND] (get-value (s1))
 [RECV] ((s1 14))
 [SEND] (get-value (s2))
-[RECV] ((s2 15))
+[RECV] ((s2 13))
 [GOOD] (push 1)
-[GOOD] (assert s88)
+[GOOD] (assert s58)
 Fast allSat, Looking for solution 2587
 [SEND] (check-sat)
 [RECV] unsat
@@ -32656,7 +32656,7 @@ Fast allSat, Looking for solution 2587
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s60)
+[GOOD] (assert s88)
 [GOOD] (assert s85)
 Fast allSat, Looking for solution 2587
 [SEND] (check-sat)
@@ -32666,9 +32666,9 @@ Fast allSat, Looking for solution 2587
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 11))
+[RECV] ((s2 5))
 [GOOD] (push 1)
-[GOOD] (assert s61)
+[GOOD] (assert s67)
 Fast allSat, Looking for solution 2588
 [SEND] (check-sat)
 [RECV] sat
@@ -32677,9 +32677,9 @@ Fast allSat, Looking for solution 2588
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 6))
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s66)
 Fast allSat, Looking for solution 2589
 [SEND] (check-sat)
 [RECV] sat
@@ -32688,9 +32688,9 @@ Fast allSat, Looking for solution 2589
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 7))
 [GOOD] (push 1)
-[GOOD] (assert s63)
+[GOOD] (assert s65)
 Fast allSat, Looking for solution 2590
 [SEND] (check-sat)
 [RECV] sat
@@ -32710,9 +32710,9 @@ Fast allSat, Looking for solution 2591
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 7))
+[RECV] ((s2 9))
 [GOOD] (push 1)
-[GOOD] (assert s65)
+[GOOD] (assert s63)
 Fast allSat, Looking for solution 2592
 [SEND] (check-sat)
 [RECV] sat
@@ -32721,9 +32721,9 @@ Fast allSat, Looking for solution 2592
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 6))
+[RECV] ((s2 10))
 [GOOD] (push 1)
-[GOOD] (assert s66)
+[GOOD] (assert s62)
 Fast allSat, Looking for solution 2593
 [SEND] (check-sat)
 [RECV] sat
@@ -32732,10 +32732,21 @@ Fast allSat, Looking for solution 2593
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 11))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s61)
 Fast allSat, Looking for solution 2594
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 12))
+[GOOD] (push 1)
+[GOOD] (assert s60)
+Fast allSat, Looking for solution 2595
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32746,29 +32757,7 @@ Fast allSat, Looking for solution 2594
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2595
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 3))
-[GOOD] (push 1)
-[GOOD] (assert s69)
 Fast allSat, Looking for solution 2596
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 13))
-[SEND] (get-value (s2))
-[RECV] ((s2 2))
-[GOOD] (push 1)
-[GOOD] (assert s70)
-Fast allSat, Looking for solution 2597
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32779,6 +32768,17 @@ Fast allSat, Looking for solution 2597
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
+Fast allSat, Looking for solution 2597
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 13))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
 Fast allSat, Looking for solution 2598
 [SEND] (check-sat)
 [RECV] sat
@@ -32787,9 +32787,9 @@ Fast allSat, Looking for solution 2598
 [SEND] (get-value (s1))
 [RECV] ((s1 13))
 [SEND] (get-value (s2))
-[RECV] ((s2 15))
+[RECV] ((s2 2))
 [GOOD] (push 1)
-[GOOD] (assert s88)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 2599
 [SEND] (check-sat)
 [RECV] unsat
@@ -32808,7 +32808,7 @@ Fast allSat, Looking for solution 2599
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s61)
+[GOOD] (assert s88)
 [GOOD] (assert s84)
 Fast allSat, Looking for solution 2599
 [SEND] (check-sat)
@@ -32818,9 +32818,9 @@ Fast allSat, Looking for solution 2599
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 10))
+[RECV] ((s2 2))
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s70)
 Fast allSat, Looking for solution 2600
 [SEND] (check-sat)
 [RECV] sat
@@ -32829,9 +32829,9 @@ Fast allSat, Looking for solution 2600
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 9))
+[RECV] ((s2 3))
 [GOOD] (push 1)
-[GOOD] (assert s63)
+[GOOD] (assert s69)
 Fast allSat, Looking for solution 2601
 [SEND] (check-sat)
 [RECV] sat
@@ -32840,9 +32840,9 @@ Fast allSat, Looking for solution 2601
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 8))
+[RECV] ((s2 4))
 [GOOD] (push 1)
-[GOOD] (assert s64)
+[GOOD] (assert s68)
 Fast allSat, Looking for solution 2602
 [SEND] (check-sat)
 [RECV] sat
@@ -32851,9 +32851,9 @@ Fast allSat, Looking for solution 2602
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 7))
+[RECV] ((s2 5))
 [GOOD] (push 1)
-[GOOD] (assert s65)
+[GOOD] (assert s67)
 Fast allSat, Looking for solution 2603
 [SEND] (check-sat)
 [RECV] sat
@@ -32873,9 +32873,9 @@ Fast allSat, Looking for solution 2604
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 5))
+[RECV] ((s2 7))
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s65)
 Fast allSat, Looking for solution 2605
 [SEND] (check-sat)
 [RECV] sat
@@ -32884,9 +32884,9 @@ Fast allSat, Looking for solution 2605
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 4))
+[RECV] ((s2 8))
 [GOOD] (push 1)
-[GOOD] (assert s68)
+[GOOD] (assert s64)
 Fast allSat, Looking for solution 2606
 [SEND] (check-sat)
 [RECV] sat
@@ -32895,9 +32895,9 @@ Fast allSat, Looking for solution 2606
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 3))
+[RECV] ((s2 9))
 [GOOD] (push 1)
-[GOOD] (assert s69)
+[GOOD] (assert s63)
 Fast allSat, Looking for solution 2607
 [SEND] (check-sat)
 [RECV] sat
@@ -32906,10 +32906,21 @@ Fast allSat, Looking for solution 2607
 [SEND] (get-value (s1))
 [RECV] ((s1 12))
 [SEND] (get-value (s2))
-[RECV] ((s2 2))
+[RECV] ((s2 10))
 [GOOD] (push 1)
-[GOOD] (assert s70)
+[GOOD] (assert s62)
 Fast allSat, Looking for solution 2608
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 12))
+[SEND] (get-value (s2))
+[RECV] ((s2 11))
+[GOOD] (push 1)
+[GOOD] (assert s61)
+Fast allSat, Looking for solution 2609
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32920,7 +32931,7 @@ Fast allSat, Looking for solution 2608
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2609
+Fast allSat, Looking for solution 2610
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32931,17 +32942,6 @@ Fast allSat, Looking for solution 2609
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2610
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 12))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2611
 [SEND] (check-sat)
 [RECV] unsat
@@ -32960,7 +32960,7 @@ Fast allSat, Looking for solution 2611
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s62)
+[GOOD] (assert s88)
 [GOOD] (assert s83)
 Fast allSat, Looking for solution 2611
 [SEND] (check-sat)
@@ -32970,10 +32970,21 @@ Fast allSat, Looking for solution 2611
 [SEND] (get-value (s1))
 [RECV] ((s1 11))
 [SEND] (get-value (s2))
+[RECV] ((s2 10))
+[GOOD] (push 1)
+[GOOD] (assert s62)
+Fast allSat, Looking for solution 2612
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 11))
+[SEND] (get-value (s2))
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2612
+Fast allSat, Looking for solution 2613
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32984,7 +32995,7 @@ Fast allSat, Looking for solution 2612
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2613
+Fast allSat, Looking for solution 2614
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -32995,7 +33006,7 @@ Fast allSat, Looking for solution 2613
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2614
+Fast allSat, Looking for solution 2615
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33006,7 +33017,7 @@ Fast allSat, Looking for solution 2614
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2615
+Fast allSat, Looking for solution 2616
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33017,7 +33028,7 @@ Fast allSat, Looking for solution 2615
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2616
+Fast allSat, Looking for solution 2617
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33028,7 +33039,7 @@ Fast allSat, Looking for solution 2616
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2617
+Fast allSat, Looking for solution 2618
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33039,7 +33050,7 @@ Fast allSat, Looking for solution 2617
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2618
+Fast allSat, Looking for solution 2619
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33050,7 +33061,7 @@ Fast allSat, Looking for solution 2618
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2619
+Fast allSat, Looking for solution 2620
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33061,7 +33072,7 @@ Fast allSat, Looking for solution 2619
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2620
+Fast allSat, Looking for solution 2621
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33072,7 +33083,7 @@ Fast allSat, Looking for solution 2620
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2621
+Fast allSat, Looking for solution 2622
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33083,17 +33094,6 @@ Fast allSat, Looking for solution 2621
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2622
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 11))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2623
 [SEND] (check-sat)
 [RECV] unsat
@@ -33112,7 +33112,7 @@ Fast allSat, Looking for solution 2623
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s63)
+[GOOD] (assert s88)
 [GOOD] (assert s82)
 Fast allSat, Looking for solution 2623
 [SEND] (check-sat)
@@ -33122,10 +33122,21 @@ Fast allSat, Looking for solution 2623
 [SEND] (get-value (s1))
 [RECV] ((s1 10))
 [SEND] (get-value (s2))
+[RECV] ((s2 9))
+[GOOD] (push 1)
+[GOOD] (assert s63)
+Fast allSat, Looking for solution 2624
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 10))
+[SEND] (get-value (s2))
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2624
+Fast allSat, Looking for solution 2625
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33136,7 +33147,7 @@ Fast allSat, Looking for solution 2624
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2625
+Fast allSat, Looking for solution 2626
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33147,7 +33158,7 @@ Fast allSat, Looking for solution 2625
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2626
+Fast allSat, Looking for solution 2627
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33158,7 +33169,7 @@ Fast allSat, Looking for solution 2626
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2627
+Fast allSat, Looking for solution 2628
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33169,7 +33180,7 @@ Fast allSat, Looking for solution 2627
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2628
+Fast allSat, Looking for solution 2629
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33180,7 +33191,7 @@ Fast allSat, Looking for solution 2628
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2629
+Fast allSat, Looking for solution 2630
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33191,7 +33202,7 @@ Fast allSat, Looking for solution 2629
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2630
+Fast allSat, Looking for solution 2631
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33202,7 +33213,7 @@ Fast allSat, Looking for solution 2630
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2631
+Fast allSat, Looking for solution 2632
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33213,7 +33224,7 @@ Fast allSat, Looking for solution 2631
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2632
+Fast allSat, Looking for solution 2633
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33224,7 +33235,7 @@ Fast allSat, Looking for solution 2632
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2633
+Fast allSat, Looking for solution 2634
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33235,17 +33246,6 @@ Fast allSat, Looking for solution 2633
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2634
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 10))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2635
 [SEND] (check-sat)
 [RECV] unsat
@@ -33264,7 +33264,7 @@ Fast allSat, Looking for solution 2635
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s64)
+[GOOD] (assert s88)
 [GOOD] (assert s81)
 Fast allSat, Looking for solution 2635
 [SEND] (check-sat)
@@ -33274,10 +33274,21 @@ Fast allSat, Looking for solution 2635
 [SEND] (get-value (s1))
 [RECV] ((s1 9))
 [SEND] (get-value (s2))
+[RECV] ((s2 8))
+[GOOD] (push 1)
+[GOOD] (assert s64)
+Fast allSat, Looking for solution 2636
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 9))
+[SEND] (get-value (s2))
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2636
+Fast allSat, Looking for solution 2637
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33288,7 +33299,7 @@ Fast allSat, Looking for solution 2636
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2637
+Fast allSat, Looking for solution 2638
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33299,7 +33310,7 @@ Fast allSat, Looking for solution 2637
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2638
+Fast allSat, Looking for solution 2639
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33310,7 +33321,7 @@ Fast allSat, Looking for solution 2638
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2639
+Fast allSat, Looking for solution 2640
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33321,7 +33332,7 @@ Fast allSat, Looking for solution 2639
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2640
+Fast allSat, Looking for solution 2641
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33332,7 +33343,7 @@ Fast allSat, Looking for solution 2640
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2641
+Fast allSat, Looking for solution 2642
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33343,7 +33354,7 @@ Fast allSat, Looking for solution 2641
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2642
+Fast allSat, Looking for solution 2643
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33354,7 +33365,7 @@ Fast allSat, Looking for solution 2642
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2643
+Fast allSat, Looking for solution 2644
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33365,7 +33376,7 @@ Fast allSat, Looking for solution 2643
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2644
+Fast allSat, Looking for solution 2645
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33376,7 +33387,7 @@ Fast allSat, Looking for solution 2644
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2645
+Fast allSat, Looking for solution 2646
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33387,17 +33398,6 @@ Fast allSat, Looking for solution 2645
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2646
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 9))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2647
 [SEND] (check-sat)
 [RECV] unsat
@@ -33416,7 +33416,7 @@ Fast allSat, Looking for solution 2647
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s65)
+[GOOD] (assert s88)
 [GOOD] (assert s80)
 Fast allSat, Looking for solution 2647
 [SEND] (check-sat)
@@ -33426,10 +33426,21 @@ Fast allSat, Looking for solution 2647
 [SEND] (get-value (s1))
 [RECV] ((s1 8))
 [SEND] (get-value (s2))
+[RECV] ((s2 7))
+[GOOD] (push 1)
+[GOOD] (assert s65)
+Fast allSat, Looking for solution 2648
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 8))
+[SEND] (get-value (s2))
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2648
+Fast allSat, Looking for solution 2649
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33440,7 +33451,7 @@ Fast allSat, Looking for solution 2648
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2649
+Fast allSat, Looking for solution 2650
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33451,7 +33462,7 @@ Fast allSat, Looking for solution 2649
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2650
+Fast allSat, Looking for solution 2651
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33462,7 +33473,7 @@ Fast allSat, Looking for solution 2650
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2651
+Fast allSat, Looking for solution 2652
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33473,7 +33484,7 @@ Fast allSat, Looking for solution 2651
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2652
+Fast allSat, Looking for solution 2653
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33484,7 +33495,7 @@ Fast allSat, Looking for solution 2652
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2653
+Fast allSat, Looking for solution 2654
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33495,7 +33506,7 @@ Fast allSat, Looking for solution 2653
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2654
+Fast allSat, Looking for solution 2655
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33506,7 +33517,7 @@ Fast allSat, Looking for solution 2654
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2655
+Fast allSat, Looking for solution 2656
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33517,7 +33528,7 @@ Fast allSat, Looking for solution 2655
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2656
+Fast allSat, Looking for solution 2657
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33528,7 +33539,7 @@ Fast allSat, Looking for solution 2656
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2657
+Fast allSat, Looking for solution 2658
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33539,17 +33550,6 @@ Fast allSat, Looking for solution 2657
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2658
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 8))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2659
 [SEND] (check-sat)
 [RECV] unsat
@@ -33568,7 +33568,7 @@ Fast allSat, Looking for solution 2659
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s66)
+[GOOD] (assert s88)
 [GOOD] (assert s79)
 Fast allSat, Looking for solution 2659
 [SEND] (check-sat)
@@ -33578,10 +33578,21 @@ Fast allSat, Looking for solution 2659
 [SEND] (get-value (s1))
 [RECV] ((s1 7))
 [SEND] (get-value (s2))
+[RECV] ((s2 6))
+[GOOD] (push 1)
+[GOOD] (assert s66)
+Fast allSat, Looking for solution 2660
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 7))
+[SEND] (get-value (s2))
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2660
+Fast allSat, Looking for solution 2661
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33592,7 +33603,7 @@ Fast allSat, Looking for solution 2660
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2661
+Fast allSat, Looking for solution 2662
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33603,7 +33614,7 @@ Fast allSat, Looking for solution 2661
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2662
+Fast allSat, Looking for solution 2663
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33614,7 +33625,7 @@ Fast allSat, Looking for solution 2662
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2663
+Fast allSat, Looking for solution 2664
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33625,7 +33636,7 @@ Fast allSat, Looking for solution 2663
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2664
+Fast allSat, Looking for solution 2665
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33636,7 +33647,7 @@ Fast allSat, Looking for solution 2664
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2665
+Fast allSat, Looking for solution 2666
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33647,7 +33658,7 @@ Fast allSat, Looking for solution 2665
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2666
+Fast allSat, Looking for solution 2667
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33658,7 +33669,7 @@ Fast allSat, Looking for solution 2666
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2667
+Fast allSat, Looking for solution 2668
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33669,7 +33680,7 @@ Fast allSat, Looking for solution 2667
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2668
+Fast allSat, Looking for solution 2669
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33680,7 +33691,7 @@ Fast allSat, Looking for solution 2668
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2669
+Fast allSat, Looking for solution 2670
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33691,17 +33702,6 @@ Fast allSat, Looking for solution 2669
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2670
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 7))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2671
 [SEND] (check-sat)
 [RECV] unsat
@@ -33720,7 +33720,7 @@ Fast allSat, Looking for solution 2671
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s67)
+[GOOD] (assert s88)
 [GOOD] (assert s78)
 Fast allSat, Looking for solution 2671
 [SEND] (check-sat)
@@ -33730,10 +33730,21 @@ Fast allSat, Looking for solution 2671
 [SEND] (get-value (s1))
 [RECV] ((s1 6))
 [SEND] (get-value (s2))
+[RECV] ((s2 5))
+[GOOD] (push 1)
+[GOOD] (assert s67)
+Fast allSat, Looking for solution 2672
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 6))
+[SEND] (get-value (s2))
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2672
+Fast allSat, Looking for solution 2673
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33744,7 +33755,7 @@ Fast allSat, Looking for solution 2672
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2673
+Fast allSat, Looking for solution 2674
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33755,7 +33766,7 @@ Fast allSat, Looking for solution 2673
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2674
+Fast allSat, Looking for solution 2675
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33766,7 +33777,7 @@ Fast allSat, Looking for solution 2674
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2675
+Fast allSat, Looking for solution 2676
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33777,7 +33788,7 @@ Fast allSat, Looking for solution 2675
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2676
+Fast allSat, Looking for solution 2677
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33788,7 +33799,7 @@ Fast allSat, Looking for solution 2676
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2677
+Fast allSat, Looking for solution 2678
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33799,7 +33810,7 @@ Fast allSat, Looking for solution 2677
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2678
+Fast allSat, Looking for solution 2679
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33810,7 +33821,7 @@ Fast allSat, Looking for solution 2678
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2679
+Fast allSat, Looking for solution 2680
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33821,7 +33832,7 @@ Fast allSat, Looking for solution 2679
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2680
+Fast allSat, Looking for solution 2681
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33832,7 +33843,7 @@ Fast allSat, Looking for solution 2680
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2681
+Fast allSat, Looking for solution 2682
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33843,17 +33854,6 @@ Fast allSat, Looking for solution 2681
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2682
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 6))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2683
 [SEND] (check-sat)
 [RECV] unsat
@@ -33872,7 +33872,7 @@ Fast allSat, Looking for solution 2683
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s68)
+[GOOD] (assert s88)
 [GOOD] (assert s77)
 Fast allSat, Looking for solution 2683
 [SEND] (check-sat)
@@ -33882,10 +33882,21 @@ Fast allSat, Looking for solution 2683
 [SEND] (get-value (s1))
 [RECV] ((s1 5))
 [SEND] (get-value (s2))
+[RECV] ((s2 4))
+[GOOD] (push 1)
+[GOOD] (assert s68)
+Fast allSat, Looking for solution 2684
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 5))
+[SEND] (get-value (s2))
 [RECV] ((s2 3))
 [GOOD] (push 1)
 [GOOD] (assert s69)
-Fast allSat, Looking for solution 2684
+Fast allSat, Looking for solution 2685
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33896,7 +33907,7 @@ Fast allSat, Looking for solution 2684
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2685
+Fast allSat, Looking for solution 2686
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33907,7 +33918,7 @@ Fast allSat, Looking for solution 2685
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2686
+Fast allSat, Looking for solution 2687
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33918,7 +33929,7 @@ Fast allSat, Looking for solution 2686
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2687
+Fast allSat, Looking for solution 2688
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33929,7 +33940,7 @@ Fast allSat, Looking for solution 2687
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2688
+Fast allSat, Looking for solution 2689
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33940,7 +33951,7 @@ Fast allSat, Looking for solution 2688
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2689
+Fast allSat, Looking for solution 2690
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33951,7 +33962,7 @@ Fast allSat, Looking for solution 2689
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2690
+Fast allSat, Looking for solution 2691
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33962,7 +33973,7 @@ Fast allSat, Looking for solution 2690
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2691
+Fast allSat, Looking for solution 2692
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33973,7 +33984,7 @@ Fast allSat, Looking for solution 2691
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2692
+Fast allSat, Looking for solution 2693
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33984,7 +33995,7 @@ Fast allSat, Looking for solution 2692
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2693
+Fast allSat, Looking for solution 2694
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -33995,17 +34006,6 @@ Fast allSat, Looking for solution 2693
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2694
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 5))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2695
 [SEND] (check-sat)
 [RECV] unsat
@@ -34024,9 +34024,20 @@ Fast allSat, Looking for solution 2695
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s69)
+[GOOD] (assert s88)
 [GOOD] (assert s76)
 Fast allSat, Looking for solution 2695
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 4))
+[SEND] (get-value (s2))
+[RECV] ((s2 3))
+[GOOD] (push 1)
+[GOOD] (assert s69)
+Fast allSat, Looking for solution 2696
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34037,7 +34048,7 @@ Fast allSat, Looking for solution 2695
 [RECV] ((s2 2))
 [GOOD] (push 1)
 [GOOD] (assert s70)
-Fast allSat, Looking for solution 2696
+Fast allSat, Looking for solution 2697
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34048,7 +34059,7 @@ Fast allSat, Looking for solution 2696
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2697
+Fast allSat, Looking for solution 2698
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34059,7 +34070,7 @@ Fast allSat, Looking for solution 2697
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2698
+Fast allSat, Looking for solution 2699
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34070,7 +34081,7 @@ Fast allSat, Looking for solution 2698
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2699
+Fast allSat, Looking for solution 2700
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34081,7 +34092,7 @@ Fast allSat, Looking for solution 2699
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2700
+Fast allSat, Looking for solution 2701
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34092,7 +34103,7 @@ Fast allSat, Looking for solution 2700
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2701
+Fast allSat, Looking for solution 2702
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34103,7 +34114,7 @@ Fast allSat, Looking for solution 2701
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2702
+Fast allSat, Looking for solution 2703
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34114,7 +34125,7 @@ Fast allSat, Looking for solution 2702
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2703
+Fast allSat, Looking for solution 2704
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34125,7 +34136,7 @@ Fast allSat, Looking for solution 2703
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2704
+Fast allSat, Looking for solution 2705
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34136,7 +34147,7 @@ Fast allSat, Looking for solution 2704
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2705
+Fast allSat, Looking for solution 2706
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34147,17 +34158,6 @@ Fast allSat, Looking for solution 2705
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2706
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 4))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2707
 [SEND] (check-sat)
 [RECV] unsat
@@ -34176,9 +34176,20 @@ Fast allSat, Looking for solution 2707
 [GOOD] (pop 1)
 [GOOD] (pop 1)
 [GOOD] (push 1)
-[GOOD] (assert s70)
+[GOOD] (assert s88)
 [GOOD] (assert s75)
 Fast allSat, Looking for solution 2707
+[SEND] (check-sat)
+[RECV] sat
+[SEND] (get-value (s0))
+[RECV] ((s0 1))
+[SEND] (get-value (s1))
+[RECV] ((s1 3))
+[SEND] (get-value (s2))
+[RECV] ((s2 2))
+[GOOD] (push 1)
+[GOOD] (assert s70)
+Fast allSat, Looking for solution 2708
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34189,7 +34200,7 @@ Fast allSat, Looking for solution 2707
 [RECV] ((s2 4))
 [GOOD] (push 1)
 [GOOD] (assert s68)
-Fast allSat, Looking for solution 2708
+Fast allSat, Looking for solution 2709
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34200,7 +34211,7 @@ Fast allSat, Looking for solution 2708
 [RECV] ((s2 5))
 [GOOD] (push 1)
 [GOOD] (assert s67)
-Fast allSat, Looking for solution 2709
+Fast allSat, Looking for solution 2710
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34211,7 +34222,7 @@ Fast allSat, Looking for solution 2709
 [RECV] ((s2 6))
 [GOOD] (push 1)
 [GOOD] (assert s66)
-Fast allSat, Looking for solution 2710
+Fast allSat, Looking for solution 2711
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34222,7 +34233,7 @@ Fast allSat, Looking for solution 2710
 [RECV] ((s2 7))
 [GOOD] (push 1)
 [GOOD] (assert s65)
-Fast allSat, Looking for solution 2711
+Fast allSat, Looking for solution 2712
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34233,7 +34244,7 @@ Fast allSat, Looking for solution 2711
 [RECV] ((s2 8))
 [GOOD] (push 1)
 [GOOD] (assert s64)
-Fast allSat, Looking for solution 2712
+Fast allSat, Looking for solution 2713
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34244,7 +34255,7 @@ Fast allSat, Looking for solution 2712
 [RECV] ((s2 9))
 [GOOD] (push 1)
 [GOOD] (assert s63)
-Fast allSat, Looking for solution 2713
+Fast allSat, Looking for solution 2714
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34255,7 +34266,7 @@ Fast allSat, Looking for solution 2713
 [RECV] ((s2 10))
 [GOOD] (push 1)
 [GOOD] (assert s62)
-Fast allSat, Looking for solution 2714
+Fast allSat, Looking for solution 2715
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34266,7 +34277,7 @@ Fast allSat, Looking for solution 2714
 [RECV] ((s2 11))
 [GOOD] (push 1)
 [GOOD] (assert s61)
-Fast allSat, Looking for solution 2715
+Fast allSat, Looking for solution 2716
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34277,7 +34288,7 @@ Fast allSat, Looking for solution 2715
 [RECV] ((s2 12))
 [GOOD] (push 1)
 [GOOD] (assert s60)
-Fast allSat, Looking for solution 2716
+Fast allSat, Looking for solution 2717
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34288,7 +34299,7 @@ Fast allSat, Looking for solution 2716
 [RECV] ((s2 13))
 [GOOD] (push 1)
 [GOOD] (assert s58)
-Fast allSat, Looking for solution 2717
+Fast allSat, Looking for solution 2718
 [SEND] (check-sat)
 [RECV] sat
 [SEND] (get-value (s0))
@@ -34299,17 +34310,6 @@ Fast allSat, Looking for solution 2717
 [RECV] ((s2 14))
 [GOOD] (push 1)
 [GOOD] (assert s72)
-Fast allSat, Looking for solution 2718
-[SEND] (check-sat)
-[RECV] sat
-[SEND] (get-value (s0))
-[RECV] ((s0 1))
-[SEND] (get-value (s1))
-[RECV] ((s1 3))
-[SEND] (get-value (s2))
-[RECV] ((s2 15))
-[GOOD] (push 1)
-[GOOD] (assert s88)
 Fast allSat, Looking for solution 2719
 [SEND] (check-sat)
 [RECV] unsat
