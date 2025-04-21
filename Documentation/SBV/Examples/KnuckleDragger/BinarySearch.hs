@@ -45,7 +45,6 @@ bsearch = smtFunction "bsearch" $ \xs x ->
                      (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
                      (                 bsearch (take mid  xs) x)))
 
-
 -- * Correctness proof
 
 -- | A predicate testing whether a given list is non-decreasing.
@@ -154,10 +153,23 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                  =: qed
 
   -- Prove the case when the target is in the list
-  bsearchPresent <- lemma "bsearchPresent"
+  bsearchPresent <- sInductWith cvc5 "bsearchPresent"
         (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x)
-        [sorry]
+            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x) $
+        \_h xs x -> [nonDecreasing xs, x `elem` xs]
+                 |- fromJust (bsearch xs x) .== x
+                 ?? "expand bsearch and push fromJust down"
+                 =: let mid  = (length xs - 1) `sEDiv` 2
+                        xmid = xs !! mid
+                        mid1 = mid + 1
+                 in ite (null xs)
+                        sFalse
+                        (ite (xmid .== x)
+                             sTrue
+                             (ite (xmid .< x)
+                                  (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
+                                  (x .== xs !! fromJust (                 bsearch (take mid  xs) x))))
+                 =: qed
 
   -- Combine the above two results for the final theorem:
   calc "bsearchCorrect"
