@@ -88,9 +88,20 @@ correctness = runKD $ do
                             ]
 
   -- helper: if a list is non-decreasing, so is any prefix of it
-  nonDecreasingPrefix <- lemma "nonDecreasingPrefix"
-        (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (take n xs))
-        [sorry]
+  nonDecreasingPrefix <- inductWith cvc5 "nonDecreasingPrefix"
+        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (take n xs)) $
+        \_h x xs n -> [nonDecreasing (x .: xs)]
+                   |- sNot (nonDecreasing (take n (x .: xs)))
+                   =: cases [ n .<= 0 ==> sFalse
+                                       =: qed
+                            , n .> 0  ==> sNot (nonDecreasing (x .: take (n-1) xs))
+                                       =: sNot (null (take (n-1) xs)
+                                                .|| let (y, _) = uncons (take (n-1) xs)
+                                                    in x .<= y .&& nonDecreasing (take (n-1) xs))
+                                       ?? sorry
+                                       =: sFalse
+                                       =: qed
+                            ]
 
   -- Prove the case when the target is in the list
   bsearchPresent <- lemma "bsearchPresent"
@@ -130,7 +141,7 @@ correctness = runKD $ do
                                   (isNothing (bsearch (take mid xs) x))))
                  ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
                     , hprf (notElemPrefix       `at` (Inst @"n" mid, Inst @"x" x, Inst @"xs" xs))
-                    , hprf (nonDecreasingPrefix `at` (Inst @"n" mid, Inst @"xs" xs))
+                    , hprf (nonDecreasingPrefix `at` (Inst @"xs" xs, Inst @"n" mid))
                     , hyp  (nonDecreasing xs)
                     , hyp  (x `notElem` xs)
                     ]
