@@ -176,9 +176,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                              (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
                              (x .== xs !! fromJust (                 bsearch (take mid  xs) x)))
                  =: cases [ xmid .== x ==> trivial
-                          , xmid ./= x ==> ite (xmid .< x)
-                                               (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
-                                               (x .== xs !! fromJust (                 bsearch (take mid  xs) x))
+                          , xmid .< x  ==> x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
+                                        ?? sorry
+                                        =: sTrue
+                                        =: qed
+                          , xmid .> x  ==> x .== xs !! fromJust (bsearch (take mid  xs) x)
                                         ?? sorry
                                         =: sTrue
                                         =: qed
