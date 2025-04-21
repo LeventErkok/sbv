@@ -63,6 +63,26 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 correctness :: IO Proof
 correctness = runKD $ do
 
+  -- helper: if an element is not in a list, then it isn't an element of any of its suffixes either
+  notElemSuffix <- lemma "notElemSuffix"
+        (\(Forall @"xs" xs) (Forall @"x" (x :: SInteger)) (Forall @"n" n) -> x `notElem` xs .=> x `notElem` drop n xs)
+        []
+
+  -- helper: if an element is not in a list, then it isn't an element of any of its prefixes either
+  notElemPrefix <- lemma "notElemPrefix"
+        (\(Forall @"xs" xs) (Forall @"x" (x :: SInteger)) (Forall @"n" n) -> x `notElem` xs .=> x `notElem` take n xs)
+        []
+
+  -- helper: if a list is non-decreasing, so is any suffix of it
+  nonDecreasingSuffix <- lemma "nonDecreasingSuffix"
+        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (drop n xs))
+        [sorry]
+
+  -- helper: if a list is non-decreasing, so is any prefix of it
+  nonDecreasingPrefix <- lemma "nonDecreasingPrefix"
+        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (take n xs))
+        [sorry]
+
   -- Prove the case when the target is in the list
   bsearchPresent <- lemma "bsearchPresent"
         (\(Forall @"xs" xs) (Forall @"x" x) ->
@@ -70,10 +90,51 @@ correctness = runKD $ do
         [sorry]
 
   -- Prove the case when the target is not in the list
-  bsearchAbsent <- lemma "bsearchAbsent"
+  bsearchAbsent <- sInductWith cvc5 "bsearchAbsent"
         (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .&& x `notElem` xs .=> isNothing (bsearch xs x))
-        [sorry]
+            nonDecreasing xs .&& x `notElem` xs .=> isNothing (bsearch xs x)) $
+        \ih xs x -> [nonDecreasing xs, x `notElem` xs]
+                 |- isNothing (bsearch xs x)
+                 ?? "expand bsearch and push isNothing down"
+                 =: let mid  = (length xs - 1) `sEDiv` 2
+                        xmid = xs !! mid
+                        mid1 = mid + 1
+                 in ite (null xs)
+                        sTrue
+                        (ite (xmid .== x)
+                             sFalse
+                             (ite (xmid .< x)
+                                  (isNothing (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
+                                  (isNothing (                 bsearch (take mid  xs) x))))
+                 ?? [ hprf (ih                  `at` (Inst @"xs" (drop mid1 xs), Inst @"x" x))
+                    , hprf (notElemSuffix       `at` (Inst @"xs" xs,             Inst @"x" x, Inst @"n" mid1))
+                    , hprf (nonDecreasingSuffix `at` (Inst @"xs" xs,                          Inst @"n" mid1))
+                    , hyp  (nonDecreasing xs)
+                    , hyp  (x `notElem` xs)
+                    ]
+                 =: ite (null xs)
+                        sTrue
+                        (ite (xmid .== x)
+                             sFalse
+                             (ite (xmid .< x)
+                                  (isNothing (SM.map (+ mid1) sNothing))
+                                  (isNothing (bsearch (take mid xs) x))))
+                 ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
+                    , hprf (notElemPrefix       `at` (Inst @"xs" xs,            Inst @"x" x, Inst @"n" mid))
+                    , hprf (nonDecreasingPrefix `at` (Inst @"xs" xs,                         Inst @"n" mid))
+                    , hyp  (nonDecreasing xs)
+                    , hyp  (x `notElem` xs)
+                    ]
+                 =: ite (null xs)
+                        sTrue
+                        (ite (xmid .== x)
+                             sFalse
+                             (ite (xmid .< x)
+                                  (isNothing (SM.map (+ mid1) sNothing))
+                                  (isNothing (sNothing :: SMaybe Integer))))
+                 ?? "simplify"
+                 =: null xs .|| xmid ./== x
+                 =: qed
 
   -- Combine the above two results for the final theorem:
   calc "bsearchCorrect"
