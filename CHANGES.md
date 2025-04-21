@@ -6,6 +6,8 @@
   * Documentation updates
   * KD: Add support for case-splitting, trivial proofs, and other improvements.
 
+  * KD: Add support for strong-induction principle over integers and lists.
+
 ### Version 11.4, 2025-03-12
 
   * Generalize the strong-induction principle to use lexicographic order for simultanous
