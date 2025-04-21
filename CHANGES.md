@@ -4,6 +4,7 @@
 ### Version 11.4.5, Not yet released
 
   * Documentation updates
+
   * KD: Add support for case-splitting, trivial proofs, and other improvements.
 
   * KD: Add support for strong-induction principle over integers and lists.
