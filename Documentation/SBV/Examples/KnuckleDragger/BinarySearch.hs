@@ -61,7 +61,7 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 60 }} $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ do
 
   -- helper: if an element is not in a list, then it isn't an element of any of its suffixes either
   notElemSuffix <- lemma "notElemSuffix"
@@ -105,12 +105,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 60 }} $ d
                                                                      =: sTrue
                                                                      =: qed)
                                           ])
-
-  -- Prove the case when the target is in the list
-  bsearchPresent <- lemma "bsearchPresent"
-        (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x)
-        [sorry]
 
   -- Prove the case when the target is not in the list
   bsearchAbsent <- sInductWith cvc5 "bsearchAbsent"
@@ -158,6 +152,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 60 }} $ d
                  ?? "simplify"
                  =: null xs .|| xmid ./== x
                  =: qed
+
+  -- Prove the case when the target is in the list
+  bsearchPresent <- lemma "bsearchPresent"
+        (\(Forall @"xs" xs) (Forall @"x" x) ->
+            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x)
+        [sorry]
 
   -- Combine the above two results for the final theorem:
   calc "bsearchCorrect"
