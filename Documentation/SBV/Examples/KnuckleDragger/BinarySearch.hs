@@ -74,9 +74,18 @@ correctness = runKD $ do
         []
 
   -- helper: if a list is non-decreasing, so is any suffix of it
-  nonDecreasingSuffix <- lemma "nonDecreasingSuffix"
-        (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (drop n xs))
-        [sorry]
+  nonDecreasingSuffix <- inductWith cvc5 "nonDecreasingSuffix"
+        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (drop n xs)) $
+        \ih x xs n -> [nonDecreasing (x .: xs)]
+                   |- nonDecreasing (drop n (x .: xs))
+                   =: cases [ n .<= 0 ==> trivial
+                            , n .> 0  ==> nonDecreasing (drop (n-1) xs)
+                                       ?? [ hprf (ih `at` Inst @"n" (n-1))
+                                          , hyp  (nonDecreasing xs)
+                                          ]
+                                       =: sTrue
+                                       =: qed
+                            ]
 
   -- helper: if a list is non-decreasing, so is any prefix of it
   nonDecreasingPrefix <- lemma "nonDecreasingPrefix"
@@ -108,7 +117,7 @@ correctness = runKD $ do
                                   (isNothing (                 bsearch (take mid  xs) x))))
                  ?? [ hprf (ih                  `at` (Inst @"xs" (drop mid1 xs), Inst @"x" x))
                     , hprf (notElemSuffix       `at` (Inst @"n" mid1, Inst @"x" x, Inst @"xs" xs))
-                    , hprf (nonDecreasingSuffix `at` (Inst @"n" mid1, Inst @"xs" xs))
+                    , hprf (nonDecreasingSuffix `at` (Inst @"xs" xs, Inst @"n" mid1))
                     , hyp  (nonDecreasing xs)
                     , hyp  (x `notElem` xs)
                     ]
