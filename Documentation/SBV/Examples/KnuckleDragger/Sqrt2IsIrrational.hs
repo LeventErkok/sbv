@@ -50,10 +50,12 @@ import Data.SBV.Tools.KnuckleDragger
 -- >>> sqrt2IsIrrational
 -- Lemma: oddSquaredIsOdd
 --   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: squareEvenImpliesEven            Q.E.D.
 -- Lemma: evenSquaredIsMult4
 --   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
