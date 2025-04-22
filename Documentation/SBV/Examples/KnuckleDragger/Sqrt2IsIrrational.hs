@@ -50,10 +50,12 @@ import Data.SBV.Tools.KnuckleDragger
 -- >>> sqrt2IsIrrational
 -- Lemma: oddSquaredIsOdd
 --   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: squareEvenImpliesEven            Q.E.D.
 -- Lemma: evenSquaredIsMult4
 --   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: sqrt2IsIrrational                Q.E.D.
 -- [Proven] sqrt2IsIrrational
@@ -75,8 +77,12 @@ sqrt2IsIrrational = runKD $ do
     -- it to deduce that fact automatically.
     oddSquaredIsOdd <- calc "oddSquaredIsOdd"
                              (\(Forall @"a" a) -> odd a .=> odd (sq a)) $
-                             \a -> [odd a] |- sq a                           ?? odd a
-                                           =: sq (2 * ((a-1) `sEDiv` 2) + 1)
+                             \a -> [odd a] |- sq a
+                                           ?? odd a
+                                           =: let k = some "k" $ \_k -> a .== 2*_k + 1  -- Grab the witness that a is odd
+                                           in sq (2 * k + 1)
+                                           ?? "expand square"
+                                           =: 4*k*k + 4*k + 1
                                            =: qed
 
     -- Prove that if a perfect square is even, then it be the square of an even number. For z3, the above proof
@@ -87,10 +93,14 @@ sqrt2IsIrrational = runKD $ do
 
     -- Prove that if @a@ is an even number, then its square is four times the square of another.
     evenSquaredIsMult4 <- calc "evenSquaredIsMult4"
-                                (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a) $
-                                \a -> [even a] |- sq a                   ?? even a
-                                               =: sq (2 * (a `sEDiv` 2))
-                                               =: qed
+                               (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a) $
+                               \a -> [even a] |- sq a
+                                              ?? even a
+                                              =: let k = some "k" $ \_k -> a .== 2*_k -- Grab the witness that a is even
+                                              in sq (2 * k)
+                                              ?? "expand square"
+                                              =: 4*(k*k)
+                                              =: qed
 
     -- Define what it means to be co-prime. Note that we use euclidian notion of modulus here
     -- as z3 deals with that much better. Two numbers are co-prime if 1 is their only common divisor.

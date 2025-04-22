@@ -4,7 +4,10 @@
 ### Version 11.4.5, Not yet released
 
   * Documentation updates
+
   * KD: Add support for case-splitting, trivial proofs, and other improvements.
+
+  * KD: Add support for strong-induction principle over integers and lists.
 
 ### Version 11.4, 2025-03-12
 
@@ -2396,7 +2399,7 @@ uninterpreted.
 
 ### Version 3.1, 2014-07-12
 
- NB: GHC 7.8.1 and 7.8.2 has a serious bug <http://ghc.haskell.org/trac/ghc/ticket/9078>
+ NB: GHC 7.8.1 and 7.8.2 has a serious bug <https://gitlab.haskell.org/ghc/ghc/-/issues/9078>
      that causes SBV to crash under heavy/repeated calls. The bug is addressed
      in GHC 7.8.3; so upgrading to GHC 7.8.3 is essential for using SBV!
 

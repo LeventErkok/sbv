@@ -1170,6 +1170,7 @@ qed = ProofEnd () []
 
 -- | Mark a trivial proof. This is the same as 'qed', but reads better in proof scripts.
 class Trivial a where
+   -- | Mark a proof as trivial, i.e., the solver should be able to deduce it without any help.
    trivial :: a
 
 -- | Proofs with no arguments

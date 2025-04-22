@@ -14,6 +14,7 @@
 ***    Received  : (error "line 5 column 37: unknown parameter 'there_is_no_such_option'
 ***                Legal parameters are:
 ***                  auto_config (bool) (default: true)
+***                  ctrl_c (bool) (default: true)
 ***                  debug_ref_count (bool) (default: false)
 ***                  dot_proof_file (string) (default: proof.dot)
 ***                  dump_models (bool) (default: false)

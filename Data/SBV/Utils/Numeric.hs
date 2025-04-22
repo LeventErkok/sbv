@@ -25,7 +25,7 @@ import GHC.ST            (runST, ST)
 
 -- | The SMT-Lib (in particular Z3) implementation for min/max for floats does not agree with
 -- Haskell's; and also it does not agree with what the hardware does. Sigh.. See:
---      <http://ghc.haskell.org/trac/ghc/ticket/10378>
+--      <https://gitlab.haskell.org/ghc/ghc/-/issues/10378>
 --      <http://github.com/Z3Prover/z3/issues/68>
 -- So, we codify here what the Z3 (SMTLib) is implementing for fpMax.
 -- The discrepancy with Haskell is that the NaN propagation doesn't work in Haskell
