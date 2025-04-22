@@ -22,37 +22,41 @@ import Prelude hiding (null, length, (!!), drop, take, tail, elem, notElem)
 import Data.SBV
 import Data.SBV.List
 import Data.SBV.Maybe
+import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
 import qualified Data.SBV.Maybe as SM
 
 -- * Binary search
 
--- | Encode binary search in a functional style. Note that since
--- functional lists in Haskell (or SMTLib) don't have constant time
--- access to arbitrary elements, this isn't really a fast implementation.
--- The idea here is to prove the algorithm correct, not its complexity!
-bsearch :: SList Integer -> SInteger -> SMaybe Integer
-bsearch = smtFunction "bsearch" $ \xs x ->
-    ite (null xs)
-        sNothing
-        (let mid  = (length xs - 1) `sEDiv` 2
-             xmid = xs !! mid
-             mid1 = mid + 1
-         in ite (xmid .== x)
+-- | We will work with arrays containing integers, indexed by integers. Note that since SMTLib arrays
+-- are indexed by their entire domain, we explicitly take a lower/upper bounds as parameters, which fits well
+-- with the binary search algorithm.
+type Arr = (SArray Integer Integer, SInteger, SInteger)
+
+-- | Encode binary search in a functional style.
+bsearch :: Arr -> SInteger -> SMaybe Integer
+bsearch = smtFunction "bsearch" $ \(arr, low, high, x) ->
+    let mid  = (low + high) `sEDiv` 2
+        xmid = arr `readArray` mid
+    in ite (low .> high)
+           sNothing
+           (ite (xmid .== x)
                 (sJust mid)
                 (ite (xmid .< x)
-                     (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
-                     (                 bsearch (take mid  xs) x)))
+                     (bsearch (arr, mid+1, high, x)
+                     (bsearch (arr, low, mid-1,  x)))))
 
 -- * Correctness proof
 
--- | A predicate testing whether a given list is non-decreasing.
-nonDecreasing :: SList Integer -> SBool
-nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
-                                                 .|| let (x, l') = uncons l
-                                                         (y, _)  = uncons l'
-                                                     in x .<= y .&& nonDecreasing l'
+-- | A predicate testing whether a given array is non-decreasing in the given range
+nonDecreasing :: Arr -> SBool
+nonDecreasing (arr, low, high) = quantifiedBool $
+    \i j -> low .<= i .&& i .<= j .&& j .<= high .=> arr `readArray` i .<= arr `readArray` j
+
+{-
+-- | A predicate testing whether an element is in the array within the given bounds
+inArray :: Arr -> SInteger -> SInteger -> SInteger -> SBool
 
 -- | Correctness of binary search.
 --
@@ -61,7 +65,12 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
 -- >>> correctness
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ do
-
+  lemma "bsearchCorrect"
+        (\(Forall @"arr" arr) (Forall @"low" low) (Forall @"high" high) (Forall @"x" x) ->
+            nonDecreasing arr 0  .=> let res = bsearch xs x
+                                 in ite (x `elem` xs)
+                                        (xs !! fromJust res .== x)
+                                        (isNothing res)) $
   -- helper: if an element is not in a list, then it isn't an element of any of its suffixes either
   notElemSuffix <- lemma "notElemSuffix"
         (\(Forall @"n" n) (Forall @"x" (x :: SInteger)) (Forall @"xs" xs) -> x `notElem` xs .=> x `notElem` drop n xs)
@@ -88,22 +97,45 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
 
   -- helper: if a list is non-decreasing, so is any prefix of it
   nonDecreasingPrefix <- inductWith cvc5 "nonDecreasingPrefix"
-        (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (take n xs)) $
-        \ih n xs -> [nonDecreasing xs]
-                 |- nonDecreasing (take (n+1) xs)
-                 =: split xs
-                          trivial
-                          (\a as -> nonDecreasing (a .: take n as)
-                                 =: cases [ n .<= 0 ==> trivial
-                                          , n .> 0  ==> split as
-                                                              trivial
-                                                              (\b bs -> nonDecreasing (a .: b .: take (n-1) bs)
-                                                                     ?? [ hprf ih
-                                                                        , hyp (nonDecreasing xs)
-                                                                        ]
-                                                                     =: sTrue
-                                                                     =: qed)
-                                          ])
+      (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (take n xs)) $
+      \ih n xs -> [nonDecreasing xs]
+               |- nonDecreasing (take (n+1) xs)
+               =: split xs
+                        trivial
+                        (\a as -> nonDecreasing (a .: take n as)
+                               =: cases [ n .<= 0 ==> trivial
+                                        , n .> 0  ==> split as
+                                                            trivial
+                                                            (\b bs -> nonDecreasing (a .: b .: take (n-1) bs)
+                                                                   ?? [ hprf ih
+                                                                      , hyp (nonDecreasing xs)
+                                                                      ]
+                                                                   =: sTrue
+                                                                   =: qed)
+                                        ])
+
+  -- helper: if an element is present and is less than another element, it must be in the prefix
+  presentInPrefix <- induct "presentInPrefix"
+      (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" e) ->
+          n .>= 0 .&& n .< length xs .&& nonDecreasing xs .&& e `elem` xs .&& e .< xs !! n .=> e `elem` take n xs) $
+      \ih x xs n e -> [ n .>= 0
+                      , n .< length (x .: xs)
+                      , nonDecreasing (x .: xs)
+                      , e `elem` (x .: xs)
+                      , e .< (x .: xs) !! n
+                      ]
+                   |- e `elem` take n (x .: xs)
+                   =: cases [ n .<= 0 ==> trivial
+                            , n .>  0 ==> e `elem` (x .: take (n-1) xs)
+                                       =: cases [ e .== x ==> trivial
+                                                , e ./= x ==> e `elem` take (n-1) xs
+                                                           ?? [ ih                  `at` (Inst @"n" (n-1), Inst @"e" e)
+                                                              , nonDecreasingSuffix `at` (Inst @"xs" xs, Inst @"n" (1::SInteger))
+                                                              ]
+                                                           =: sTrue
+                                                           =: qed
+                                                ]
+                            ]
 
   -- Prove the case when the target is not in the list
   bsearchAbsent <- sInductWith cvc5 "bsearchAbsent"
@@ -156,7 +188,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
   bsearchPresent <- sInductWith cvc5 "bsearchPresent"
         (\(Forall @"xs" xs) (Forall @"x" x) ->
             nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x) $
-        \_h xs x -> [nonDecreasing xs, x `elem` xs]
+        \ih xs x -> [nonDecreasing xs, x `elem` xs]
                  |- xs !! fromJust (bsearch xs x) .== x
                  ?? "expand bsearch and push fromJust down"
                  =: let mid  = (length xs - 1) `sEDiv` 2
@@ -176,11 +208,14 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                              (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
                              (x .== xs !! fromJust (                 bsearch (take mid  xs) x)))
                  =: cases [ xmid .== x ==> trivial
-                          , xmid .< x  ==> x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
-                                        ?? sorry
+                          , xmid .> x  ==> x .== xs !! fromJust (bsearch (take mid xs) x)
+                                        ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
+                                           , hprf (nonDecreasingPrefix `at` (Inst @"n" mid, Inst @"xs" xs))
+                                           , hprf (presentInPrefix     `at` (Inst @"n" mid, Inst @"x" x, Inst @"xs" xs))
+                                           ]
                                         =: sTrue
                                         =: qed
-                          , xmid .> x  ==> x .== xs !! fromJust (bsearch (take mid  xs) x)
+                          , xmid .< x  ==> x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
                                         ?? sorry
                                         =: sTrue
                                         =: qed
@@ -211,3 +246,4 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                          =: sTrue
                                          =: qed
                        ]
+-}
