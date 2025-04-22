@@ -20,43 +20,43 @@ module Documentation.SBV.Examples.KnuckleDragger.BinarySearch where
 import Prelude hiding (null, length, (!!), drop, take, tail, elem, notElem)
 
 import Data.SBV
-import Data.SBV.List
 import Data.SBV.Maybe
-import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
-
-import qualified Data.SBV.Maybe as SM
 
 -- * Binary search
 
 -- | We will work with arrays containing integers, indexed by integers. Note that since SMTLib arrays
 -- are indexed by their entire domain, we explicitly take a lower/upper bounds as parameters, which fits well
 -- with the binary search algorithm.
-type Arr = (SArray Integer Integer, SInteger, SInteger)
+type Arr = SArray Integer Integer
+
+-- | Bounds: This is the focus into the array; both indexes are inclusive.
+type Idx = (SInteger, SInteger)
 
 -- | Encode binary search in a functional style.
-bsearch :: Arr -> SInteger -> SMaybe Integer
-bsearch = smtFunction "bsearch" $ \(arr, low, high, x) ->
-    let mid  = (low + high) `sEDiv` 2
-        xmid = arr `readArray` mid
-    in ite (low .> high)
-           sNothing
-           (ite (xmid .== x)
-                (sJust mid)
-                (ite (xmid .< x)
-                     (bsearch (arr, mid+1, high, x)
-                     (bsearch (arr, low, mid-1,  x)))))
+bsearch :: Arr -> Idx -> SInteger -> SMaybe Integer
+bsearch arr (low, high) = f arr low high
+  where f = smtFunction "bsearch" $ \a lo hi x ->
+               let mid  = (lo + hi) `sEDiv` 2
+                   xmid = a `readArray` mid
+               in ite (lo .> hi)
+                      sNothing
+                      (ite (xmid .== x)
+                           (sJust mid)
+                           (ite (xmid .< x)
+                                (bsearch a (mid+1, hi)    x)
+                                (bsearch a (lo,    mid-1) x)))
 
 -- * Correctness proof
 
 -- | A predicate testing whether a given array is non-decreasing in the given range
-nonDecreasing :: Arr -> SBool
-nonDecreasing (arr, low, high) = quantifiedBool $
-    \i j -> low .<= i .&& i .<= j .&& j .<= high .=> arr `readArray` i .<= arr `readArray` j
+nonDecreasing :: Arr -> Idx -> SBool
+nonDecreasing arr (low, high) = quantifiedBool $
+    \(Forall @"i" i) (Forall @"j" j) -> low .<= i .&& i .<= j .&& j .<= high .=> arr `readArray` i .<= arr `readArray` j
 
-{-
 -- | A predicate testing whether an element is in the array within the given bounds
-inArray :: Arr -> SInteger -> SInteger -> SInteger -> SBool
+inArray :: Arr -> Idx -> SInteger -> SBool
+inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&& i .<= high .&& arr `readArray` i .== elt
 
 -- | Correctness of binary search.
 --
@@ -64,7 +64,67 @@ inArray :: Arr -> SInteger -> SInteger -> SInteger -> SBool
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ do
+correctness = runKD $ do
+
+  -- Prove the case when the target is not in the array
+  bsearchAbsent <- lemma "bsearchAbsent"
+        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+            nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
+        [sorry]
+
+  -- Prove the case when the target is in the array
+  bsearchPresent <- lemma "bsearchPresent"
+        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+            nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
+        [sorry]
+
+  calc "bsearchCorrect"
+        (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
+            nonDecreasing arr (lo, hi) .=> let res = bsearch arr (lo, hi) x
+                                           in ite (inArray arr (lo, hi) x)
+                                                  (arr `readArray` fromJust res .== x)
+                                                  (isNothing res)) $
+        \arr lo hi x -> [nonDecreasing arr (lo, hi)]
+                     |- let res = bsearch arr (lo, hi) x
+                        in ite (inArray arr (lo, hi) x)
+                               (arr `readArray` fromJust res .== x)
+                               (isNothing res)
+                     =: cases [ inArray arr (lo, hi) x
+                                  ==> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x
+                                   ?? [ hyp  (nonDecreasing arr (lo, hi))
+                                      , hprf (bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
+                                      ]
+                                   =: sTrue
+                                   =: qed
+                              , sNot (inArray arr (lo, hi) x)
+                                  ==> isNothing (bsearch arr (lo, hi) x)
+                                   ?? [ hyp  (nonDecreasing arr (lo, hi))
+                                      , hprf (bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
+                                      ]
+                                   =: sTrue
+                                   =: qed
+                              ]
+                     =: qed
+
+{-
+        \xs x -> [nonDecreasing xs]
+              |- let res = bsearch xs x
+                 in ite (x `elem` xs)
+                        (xs !! fromJust res .== x)
+                        (isNothing res)
+              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearch xs x) .== x
+                                         ?? [ hyp  (nonDecreasing xs)
+                                            , hprf (bsearchPresent `at` (Inst @"xs" xs, Inst @"x" x))
+                                            ]
+                                         =: sTrue
+                                         =: qed
+                       , x `notElem` xs ==> isNothing (bsearch xs x)
+                                         ?? [ hyp  (nonDecreasing xs)
+                                            , hprf (bsearchAbsent `at` (Inst @"xs" xs, Inst @"x" x))
+                                            ]
+                                         =: sTrue
+                                         =: qed
+                       ]
   lemma "bsearchCorrect"
         (\(Forall @"arr" arr) (Forall @"low" low) (Forall @"high" high) (Forall @"x" x) ->
             nonDecreasing arr 0  .=> let res = bsearch xs x
