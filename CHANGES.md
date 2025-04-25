@@ -1,13 +1,13 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.4.5, Not yet released
+### Version 11.5, 2025-04-25
 
   * Documentation updates
 
-  * KD: Add support for case-splitting, trivial proofs, and other improvements.
+  * KnuckleDragger: Add support for case-splitting, trivial proofs, and other improvements.
 
-  * KD: Add support for strong-induction principle over integers and lists.
+  * KnuckleDragger: Add support for strong-induction principle over integers and lists.
 
 ### Version 11.4, 2025-03-12
 
