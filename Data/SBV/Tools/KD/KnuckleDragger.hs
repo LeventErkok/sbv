@@ -492,7 +492,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
       let qual = case style of
                    RegularInduction -> ""
                    StrongInduction  -> " (strong)"
-                   MeasureInduction -> " (measure based)"
+                   MeasureInduction -> " (generalized)"
 
       message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
 
@@ -511,7 +511,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
           Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
           Just ms -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
                         smtProofStep cfg kdSt "Step" 1
-                                              (KDProofStep False nm ["Measure"])
+                                              (KDProofStep False nm ["Measure is non-negative"])
                                               (Just inductionIntros)
                                               ms
                                               (\d -> finishKD cfg "Q.E.D." d [])

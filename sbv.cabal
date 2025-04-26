@@ -165,6 +165,7 @@ Library
                   , Documentation.SBV.Examples.KnuckleDragger.Basics
                   , Documentation.SBV.Examples.KnuckleDragger.CaseSplit
                   , Documentation.SBV.Examples.KnuckleDragger.InsertionSort
+                  , Documentation.SBV.Examples.KnuckleDragger.GeneralizedInduction
                   , Documentation.SBV.Examples.KnuckleDragger.Kleene
                   , Documentation.SBV.Examples.KnuckleDragger.Lists
                   , Documentation.SBV.Examples.KnuckleDragger.MergeSort
