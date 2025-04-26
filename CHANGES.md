@@ -2,6 +2,10 @@
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
 ### Version 11.5.5, Not yet released
+ 
+  * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,
+    unless you can't use anything newer.
+
 ### Version 11.5, 2025-04-25
 
   * Documentation updates

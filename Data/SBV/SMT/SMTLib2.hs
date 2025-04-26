@@ -25,7 +25,7 @@ import qualified Data.ByteString.Char8  as BC
 import Data.List  (intercalate, partition, nub, elemIndex)
 import Data.Maybe (listToMaybe, catMaybes)
 
-import qualified Data.Foldable as F (toList)
+import qualified Data.Foldable as F (toList, foldl')
 import qualified Data.Map.Strict      as M
 import qualified Data.IntMap.Strict   as IM
 import           Data.Set             (Set)
@@ -79,7 +79,7 @@ cvt ctx curProgInfo kindInfo isSat comments allInputs (_, consts) tbls uis defs 
 
         -- Below can simply be defined as: nub (sort (G.universeBi asgnsSeq))
         -- Alas, it turns out this is really expensive when we have nested lambdas, so we do an explicit walk
-        allTopOps = Set.toList $ foldl' (\sofar (_, SBVApp o _) -> Set.insert o sofar) Set.empty asgnsSeq
+        allTopOps = Set.toList $ F.foldl' (\sofar (_, SBVApp o _) -> Set.insert o sofar) Set.empty asgnsSeq
 
         hasInteger     = KUnbounded `Set.member` kindInfo
         hasArrays      = not (null [() | KArray{}     <- allKinds])
