@@ -64,6 +64,6 @@ interleaveLen = runKD $ do
                           trivial
                           (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
                                  =: 1 + length as + length ys .== 1 + length (interleave ys as)
-                                 ?? hprf (ih `at` (Inst @"xs" ys, Inst @"ys" as))
+                                 ?? ih `at` (Inst @"xs" ys, Inst @"ys" as)
                                  =: sTrue
                                  =: qed)
