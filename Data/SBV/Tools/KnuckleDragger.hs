@@ -34,6 +34,9 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Reasoning via strong induction
        , sInduct, sInductWith, sInductThm, sInductThmWith
 
+       -- * Reasoning via generalized measure based induction
+       , gInduct, gInductWith, gInductThm, gInductThmWith
+
        -- * Creating instances of proofs
        , at, at2, Inst(..)
 

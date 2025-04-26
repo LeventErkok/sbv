@@ -36,6 +36,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        ,    calc,    calcWith,    calcThm,    calcThmWith
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
+       , gInduct, gInductWith, gInductThm, gInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hyp, hprf, qed, trivial
@@ -369,20 +370,22 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
 
 -- | Captures the schema for an inductive proof. Base case might be nothing, to cover strong induction.
 data InductionStrategy = InductionStrategy { inductionIntros    :: SBool
+                                           , inductionMeasure   :: Maybe SBool
                                            , inductionBaseCase  :: Maybe SBool
                                            , inductionProofTree :: KDProof
                                            , inductiveStep      :: SBool
                                            }
 
 -- | Are we doing strong induction or regular induction?
-data InductionStyle = RegularInduction | StrongInduction
+data InductionStyle = RegularInduction | StrongInduction | MeasureInduction
 
 getInductionStrategySaturatables :: InductionStrategy -> [SBool]
 getInductionStrategySaturatables (InductionStrategy inductionIntros
+                                                    inductionMeasure
                                                     inductionBaseCase
                                                     inductionProofSteps
                                                     inductiveStep)
-  = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase
+  = inductionIntros : inductiveStep : proofTreeSaturatables inductionProofSteps ++ maybeToList inductionBaseCase ++ maybeToList inductionMeasure
 
 -- | A class for doing regular inductive proofs.
 class Inductive a steps where
@@ -446,6 +449,37 @@ class SInductive a steps where
    {-# MINIMAL sInductionStrategy #-}
    sInductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
 
+-- | A class for doing generalized measure based proofs.
+class GInductive a measure steps where
+   -- | Inductively prove a lemma, using measure based induction, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
+   gInduct :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
+
+   -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
+   gInductThm :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
+
+   -- | Same as 'gInduct', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
+   gInductWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
+
+   -- | Same as 'gInductThm', but with the given solver configuration.
+   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
+   -- partial correctness is guaranteed if non-terminating functions are involved.
+   gInductThmWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
+
+   gInduct            nm p m steps = getKDConfig >>= \cfg  -> gInductWith                           cfg                   nm p m steps
+   gInductThm         nm p m steps = getKDConfig >>= \cfg  -> gInductThmWith                        cfg                   nm p m steps
+   gInductWith    cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine MeasureInduction False (kdMergeCfg cfg cfg') nm p (gInductionStrategy p m steps)
+   gInductThmWith cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine MeasureInduction True  (kdMergeCfg cfg cfg') nm p (gInductionStrategy p m steps)
+
+   -- | Internal, shouldn't be needed outside the library
+   {-# MINIMAL gInductionStrategy #-}
+   gInductionStrategy :: Proposition a => a -> measure -> (Proof -> steps) -> Symbolic InductionStrategy
+
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> KD Proof
 inductionEngine style tagTheorem cfg nm result getStrategy = do
@@ -455,13 +489,15 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
 
       qSaturateSavingObservables result -- make sure we saturate the result, i.e., get all it's UI's, types etc. pop out
 
-      let strong = case style of
-                     RegularInduction -> ""
-                     StrongInduction  -> " (strong)"
+      let qual = case style of
+                   RegularInduction -> ""
+                   StrongInduction  -> " (strong)"
+                   MeasureInduction -> " (measure based)"
 
-      message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ strong ++ ": " ++ nm ++ "\n"
+      message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
 
       strategy@InductionStrategy { inductionIntros
+                                 , inductionMeasure
                                  , inductionBaseCase
                                  , inductionProofTree
                                  , inductiveStep
@@ -471,8 +507,16 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
 
       query $ do
 
+       case inductionMeasure of
+          Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
+          Just ms -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
+                        smtProofStep cfg kdSt "Step" 1
+                                              (KDProofStep False nm ["Measure"])
+                                              (Just inductionIntros)
+                                              ms
+                                              (\d -> finishKD cfg "Q.E.D." d [])
        case inductionBaseCase of
-          Nothing -> queryDebug [nm ++ ": Induction" ++ strong ++ ", there is no proving base case:"]
+          Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
                         smtProofStep cfg kdSt "Step" 1
                                               (KDProofStep False nm ["Base"])
@@ -483,10 +527,11 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
        proveProofTree cfg kdSt nm (result, inductiveStep) inductionIntros inductionProofTree
 
 -- Induction strategy helper
-mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> (SBool, KDProofRaw a) -> SBool -> InductionStrategy
-mkIndStrategy mbExtraConstraint mbBaseCase indSteps step =
+mkIndStrategy :: EqSymbolic a => Maybe SBool -> Maybe SBool -> Maybe SBool -> (SBool, KDProofRaw a) -> SBool -> InductionStrategy
+mkIndStrategy mbExtraConstraint mbMeasure mbBaseCase indSteps step =
         let CalcStrategy { calcIntros, calcProofTree } = mkCalcSteps indSteps
         in InductionStrategy { inductionIntros    = maybe id (.&&) mbExtraConstraint calcIntros
+                             , inductionMeasure   = mbMeasure
                              , inductionBaseCase  = mbBaseCase
                              , inductionProofTree = calcProofTree
                              , inductiveStep      = step
@@ -514,7 +559,9 @@ indResult nms = observeIf not ("P(" ++ intercalate ", " nms ++ ")")
 instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool) (SInteger -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0)))
                             (steps (internalAxiom "IH" (result (Forall n))) n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
 
@@ -522,7 +569,9 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
 instance (KnownSymbol nn, EqSymbolic z) => SInductive (Forall nn Integer -> SBool) (SInteger -> (SBool, KDProofRaw z)) where
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) -> 0 .<= n' .&& n' .< n .=> result (Forall n'))) n)
                             (indResult [nn] (result (Forall n)))
 
@@ -531,7 +580,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
   inductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0) (Forall a)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall n) (Forall a'))) n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
 
@@ -540,7 +591,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive 
   sInductionStrategy result steps = do
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a'))) n a)
                             (indResult [nn, na] (result (Forall n) (Forall a)))
 
@@ -550,7 +603,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0) (Forall a) (Forall b)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall n) (Forall a') (Forall b'))) n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
@@ -560,7 +615,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
        (n, nn) <- mkVar (Proxy @nn)
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b'))) n a b)
                             (indResult [nn, na, nb] (result (Forall n) (Forall a) (Forall b)))
 
@@ -571,7 +628,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
 
@@ -582,7 +641,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (a, na) <- mkVar (Proxy @na)
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn, na, nb, nc] (result (Forall n) (Forall a) (Forall b) (Forall c)))
 
@@ -594,7 +655,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -606,7 +669,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (b, nb) <- mkVar (Proxy @nb)
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn, na, nb, nc, nd] (result (Forall n) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -619,7 +684,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
        (e, ne) <- mkVar (Proxy @ne)
-       pure $ mkIndStrategy (Just (n .>= 0)) (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
@@ -632,7 +699,9 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        (d, nd) <- mkVar (Proxy @nd)
        (e, ne) <- mkVar (Proxy @ne)
-       pure $ mkIndStrategy (Just (n .>= 0)) Nothing
+       pure $ mkIndStrategy (Just (n .>= 0))
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn, na, nb, nc, nd, ne] (result (Forall n) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
@@ -654,7 +723,9 @@ lexLeq xs ys = SL.length xs .< SL.length ys
 instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) (SBV x -> SList x -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs))) x xs)
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
 
@@ -662,7 +733,9 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] 
 instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => SInductive (Forall nxs [x] -> SBool) (SList x -> (SBool, KDProofRaw z)) where
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) -> xs' `lexLeq` xs .=> result (Forall xs'))) xs)
                             (indResult [nxs] (result (Forall xs)))
 
@@ -671,7 +744,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil) (Forall a)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) x xs a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
 
@@ -680,7 +755,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a,  na)  <- mkVar (Proxy @na)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a'))) xs a)
                             (indResult [nxs, na] (result (Forall xs) (Forall a)))
 
@@ -690,7 +767,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil) (Forall a) (Forall b)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) x xs a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
 
@@ -700,7 +779,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (xs, nxs) <- mkVar (Proxy @nxs)
        (a, na)   <- mkVar (Proxy @na)
        (b, nb)   <- mkVar (Proxy @nb)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b'))) xs a b)
                             (indResult [nxs, na, nb] (result (Forall xs) (Forall a) (Forall b)))
 
@@ -711,7 +792,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) x xs a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
 
@@ -722,7 +805,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (a, na)   <- mkVar (Proxy @na)
        (b, nb)   <- mkVar (Proxy @nb)
        (c, nc)   <- mkVar (Proxy @nc)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c'))) xs a b c)
                             (indResult [nxs, na, nb, nc] (result (Forall xs) (Forall a) (Forall b) (Forall c)))
 
@@ -734,7 +819,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) x xs a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -746,7 +833,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (b, nb)   <- mkVar (Proxy @nb)
        (c, nc)   <- mkVar (Proxy @nc)
        (d, nd)   <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c') (Forall d'))) xs a b c d)
                             (indResult [nxs, na, nb, nc, nd] (result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -759,7 +848,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
        (e, ne)       <- mkVar  (Proxy @ne)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) x xs a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
@@ -772,7 +863,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
        (c, nc)   <- mkVar (Proxy @nc)
        (d, nd)   <- mkVar (Proxy @nd)
        (e, ne)   <- mkVar (Proxy @ne)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) xs a b c d e)
                             (indResult [nxs, na, nb, nc, nd, ne] (result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
@@ -792,7 +885,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
   inductionStrategy result steps = do
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs, Forall ys))) (x, xs, y, ys))
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
 
@@ -801,7 +896,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
   sInductionStrategy result steps = do
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys'))) (xs, ys))
                             (indResult [nxs, nys] (result (Forall xs, Forall ys)))
 
@@ -811,7 +908,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (x, xs, nxxs) <- mkLVar (Proxy @nxs)
        (y, ys, nyys) <- mkLVar (Proxy @nys)
        (a, na)       <- mkVar  (Proxy @na)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
 
@@ -821,7 +920,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (xs, nxs) <- mkVar (Proxy @nxs)
        (ys, nys) <- mkVar (Proxy @nys)
        (a, na)   <- mkVar  (Proxy @na)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a'))) (xs, ys) a)
                             (indResult [nxs, nys, na] (result (Forall xs, Forall ys) (Forall a)))
 
@@ -832,9 +933,71 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (y, ys, nyys) <- mkLVar (Proxy @nys)
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs, Forall ys) (Forall a') (Forall b'))) (x, xs, y, ys) a b)
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
+
+-- | Generalized induction with one parameter
+instance (KnownSymbol na, SymVal a, EqSymbolic z) => GInductive (Forall na a -> SBool) (SBV a -> SInteger) (SBV a -> (SBool, KDProofRaw z)) where
+  gInductionStrategy result measure steps = do
+      (a, na) <- mkVar (Proxy @na)
+      pure $ mkIndStrategy Nothing
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) -> measure a' .>= 0)))
+                           Nothing
+                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))) a)
+                           (indResult [na] (result (Forall a)))
+
+-- | Generalized induction with two parameters
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> SBool) (SBV a -> SBV b -> SInteger) (SBV a -> SBV b -> (SBool, KDProofRaw z)) where
+  gInductionStrategy result measure steps = do
+      (a, na) <- mkVar (Proxy @na)
+      (b, nb) <- mkVar (Proxy @nb)
+      pure $ mkIndStrategy Nothing
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .>= 0)))
+                           Nothing
+                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))) a b)
+                           (indResult [na, nb] (result (Forall a) (Forall b)))
+
+-- | Generalized induction with three parameters
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV a -> SBV b -> SBV c -> SInteger) (SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
+  gInductionStrategy result measure steps = do
+      (a, na) <- mkVar (Proxy @na)
+      (b, nb) <- mkVar (Proxy @nb)
+      (c, nc) <- mkVar (Proxy @nc)
+      pure $ mkIndStrategy Nothing
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .>= 0)))
+                           Nothing
+                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))) a b c)
+                           (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
+
+-- | Generalized induction with four parameters
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SInteger) (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
+  gInductionStrategy result measure steps = do
+      (a, na) <- mkVar (Proxy @na)
+      (b, nb) <- mkVar (Proxy @nb)
+      (c, nc) <- mkVar (Proxy @nc)
+      (d, nd) <- mkVar (Proxy @nd)
+      pure $ mkIndStrategy Nothing
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .>= 0)))
+                           Nothing
+                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))) a b c d)
+                           (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
+
+-- | Generalized induction with five parameters
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SInteger) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
+  gInductionStrategy result measure steps = do
+      (a, na) <- mkVar (Proxy @na)
+      (b, nb) <- mkVar (Proxy @nb)
+      (c, nc) <- mkVar (Proxy @nc)
+      (d, nd) <- mkVar (Proxy @nd)
+      (e, ne) <- mkVar (Proxy @ne)
+      pure $ mkIndStrategy Nothing
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .>= 0)))
+                           Nothing
+                           (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) a b c d e)
+                           (indResult [na, nb, nc, nd, ne] (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- | Strong induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
@@ -843,7 +1006,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (ys, nys) <- mkVar (Proxy @nys)
        (a, na)   <- mkVar  (Proxy @na)
        (b, nb)   <- mkVar  (Proxy @nb)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b'))) (xs, ys) a b)
                             (indResult [nxs, nys, na, nb] (result (Forall xs, Forall ys) (Forall a) (Forall b)))
 
@@ -855,7 +1020,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (a, na)       <- mkVar  (Proxy @na)
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
 
@@ -867,7 +1034,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (a, na)   <- mkVar  (Proxy @na)
        (b, nb)   <- mkVar  (Proxy @nb)
        (c, nc)   <- mkVar  (Proxy @nc)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c'))) (xs, ys) a b c)
                             (indResult [nxs, nys, na, nb, nc] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c)))
 
@@ -880,7 +1049,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (b, nb)       <- mkVar  (Proxy @nb)
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -893,7 +1064,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (b, nb)   <- mkVar  (Proxy @nb)
        (c, nc)   <- mkVar  (Proxy @nc)
        (d, nd)   <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c') (Forall d'))) (xs, ys) a b c d)
                             (indResult [nxs, nys, na, nb, nc, nd] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c) (Forall d)))
 
@@ -907,7 +1080,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (c, nc)       <- mkVar  (Proxy @nc)
        (d, nd)       <- mkVar  (Proxy @nd)
        (e, ne)       <- mkVar  (Proxy @ne)
-       pure $ mkIndStrategy Nothing (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
@@ -921,7 +1096,9 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
        (c, nc)   <- mkVar  (Proxy @nc)
        (d, nd)   <- mkVar  (Proxy @nd)
        (e, ne)   <- mkVar  (Proxy @ne)
-       pure $ mkIndStrategy Nothing Nothing
+       pure $ mkIndStrategy Nothing
+                            Nothing
+                            Nothing
                             (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (xs, ys) a b c d e)
                             (indResult [nxs, nys, na, nb, nc, nd, ne] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
