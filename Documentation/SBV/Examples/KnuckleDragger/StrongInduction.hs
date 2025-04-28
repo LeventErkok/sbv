@@ -41,6 +41,7 @@ import Data.SBV.Tools.KnuckleDragger
 --
 -- >>> oddSequence1
 -- Inductive lemma (strong): oddSequence
+--   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (3 way case split)
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2                           Q.E.D.
@@ -81,6 +82,7 @@ oddSequence1 = runKD $ do
 -- Lemma: oddSequence_0                              Q.E.D.
 -- Lemma: oddSequence_1                              Q.E.D.
 -- Inductive lemma (strong): oddSequence_sNp2
+--   Step: Measure is non-negative                   Q.E.D.
 --   Step: 1                                         Q.E.D.
 --   Step: 2                                         Q.E.D.
 --   Step: 3 (simplify)                              Q.E.D.
