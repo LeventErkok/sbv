@@ -69,49 +69,49 @@ isPermutation = smtFunction "isPermutation" $ \l r -> ite (null l)
 -- We have:
 --
 -- >>> correctness
--- Lemma: nonDecTail                       Q.E.D.
+-- Lemma: nonDecTail                            Q.E.D.
 -- Inductive lemma: insertNonDecreasing
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                                 Q.E.D.
+--   Step: 1 (unfold insert)                    Q.E.D.
+--   Step: 2 (push nonDecreasing down)          Q.E.D.
+--   Step: 3 (unfold simplify)                  Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Step: 5                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Inductive lemma: sortNonDecreasing
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: elemITE                          Q.E.D.
+--   Step: Base                                 Q.E.D.
+--   Step: 1 (unfold insertionSort)             Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- Lemma: elemITE                               Q.E.D.
 -- Inductive lemma: insertIsElem
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Result:                                    Q.E.D.
 -- Inductive lemma: removeAfterInsert
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: Base                                 Q.E.D.
+--   Step: 1 (expand insert)                    Q.E.D.
+--   Step: 2 (push removeFirst down ite)        Q.E.D.
+--   Step: 3 (unfold removeFirst on 'then')     Q.E.D.
+--   Step: 4 (unfold removeFirst on 'else')     Q.E.D.
+--   Step: 5                                    Q.E.D.
+--   Step: 6 (simplify)                         Q.E.D.
+--   Result:                                    Q.E.D.
 -- Inductive lemma: sortIsPermutation
---   Step: Base                            Q.E.D.
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Result:                               Q.E.D.
--- Lemma: insertionSortIsCorrect           Q.E.D.
+--   Step: Base                                 Q.E.D.
+--   Step: 1                                    Q.E.D.
+--   Step: 2                                    Q.E.D.
+--   Step: 3                                    Q.E.D.
+--   Step: 4                                    Q.E.D.
+--   Step: 5                                    Q.E.D.
+--   Result:                                    Q.E.D.
+-- Lemma: insertionSortIsCorrect                Q.E.D.
 -- [Proven] insertionSortIsCorrect
 correctness :: IO Proof
-correctness = runKDWith cvc5 $ do
+correctness = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Prove that the output of insertion sort is non-decreasing.
@@ -128,16 +128,16 @@ correctness = runKDWith cvc5 $ do
                           |- nonDecreasing (insert e (x .: xs))
                           ?? "unfold insert"
                           =: nonDecreasing (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                          ?? "push nonDecreasing over the ite"
+                          ?? "push nonDecreasing down"
                           =: ite (e .<= x) (nonDecreasing (e .: x .: xs))
                                            (nonDecreasing (x .: insert e xs))
-                          ?? "unfold nonDecreasing, simplify"
+                          ?? "unfold simplify"
                           =: ite (e .<= x)
                                  (nonDecreasing (x .: xs))
                                  (nonDecreasing (x .: insert e xs))
                           ??  nonDecreasing (x .: xs)
                           =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                          ?? [ hyp  (nonDecreasing (x .: xs))
+                          ?? [ hasm (nonDecreasing (x .: xs))
                              , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
                              , hprf ih
                              ]
@@ -184,11 +184,11 @@ correctness = runKDWith cvc5 $ do
                \ih x xs e -> [] |- removeFirst e (insert e (x .: xs))
                                 ??  "expand insert"
                                 =: removeFirst e (ite (e .<= x) (e .: x .: xs) (x .: insert e xs))
-                                ??  "push removeFirst down the if-then-else"
+                                ??  "push removeFirst down ite"
                                 =: ite (e .<= x) (removeFirst e (e .: x .: xs)) (removeFirst e (x .: insert e xs))
-                                ??  "unfold removeFirst, then branch"
+                                ??  "unfold removeFirst on 'then'"
                                 =: ite (e .<= x) (x .: xs) (removeFirst e (x .: insert e xs))
-                                ??  "unfold removeFirst,  else branch. Note that e .== x is False, due to the pre-condition"
+                                ??  "unfold removeFirst on 'else'"
                                 =: ite (e .<= x) (x .: xs) (x .: removeFirst e (insert e xs))
                                 ??  ih
                                 =: ite (e .<= x) (x .: xs) (x .: xs)

@@ -74,27 +74,27 @@ oddSequence1 = runKD $ do
 -- We have:
 --
 -- >>> oddSequence2
--- Lemma: oddSequence_0                    Q.E.D.
--- Lemma: oddSequence_1                    Q.E.D.
+-- Lemma: oddSequence_0                              Q.E.D.
+-- Lemma: oddSequence_1                              Q.E.D.
 -- Inductive lemma (strong): oddSequence_sNp2
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
---   Step: 5                               Q.E.D.
---   Step: 6                               Q.E.D.
---   Result:                               Q.E.D.
+--   Step: 1                                         Q.E.D.
+--   Step: 2                                         Q.E.D.
+--   Step: 3 (simplify)                              Q.E.D.
+--   Step: 4                                         Q.E.D.
+--   Step: 5 (simplify)                              Q.E.D.
+--   Step: 6                                         Q.E.D.
+--   Result:                                         Q.E.D.
 -- Lemma: oddSequence2
 --   Step: 1 (3 way case split)
---     Step: 1.1                           Q.E.D.
---     Step: 1.2                           Q.E.D.
---     Step: 1.3.1                         Q.E.D.
---     Step: 1.3.2                         Q.E.D.
---     Step: 1.Completeness                Q.E.D.
---   Result:                               Q.E.D.
+--     Step: 1.1                                     Q.E.D.
+--     Step: 1.2                                     Q.E.D.
+--     Step: 1.3.1                                   Q.E.D.
+--     Step: 1.3.2                                   Q.E.D.
+--     Step: 1.Completeness                          Q.E.D.
+--   Result:                                         Q.E.D.
 -- [Proven] oddSequence2
 oddSequence2 :: IO Proof
-oddSequence2 = runKD $ do
+oddSequence2 = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
   let s :: SInteger -> SInteger
       s = smtFunction "seq" $ \n -> ite (n .<= 0) 1
                                   $ ite (n .== 1) 3
@@ -108,13 +108,13 @@ oddSequence2 = runKD $ do
                   \ih n -> [n .>= 2] |- s n
                                      ?? n .>= 2
                                      =: 2 * s (n-1) - s (n-2)
-                                     ?? [ hyp (n .>= 2)
+                                     ?? [ hasm (n .>= 2)
                                         , hprf (ih `at` Inst @"n" (n-1))
                                         ]
                                      =: 2 * (2 * (n-1) + 1) - s (n-2)
                                      ?? "simplify"
                                      =: 4*n - 4 + 2 - s (n-2)
-                                     ?? [hyp (n .>= 2), hprf (ih `at` Inst @"n" (n-2))]
+                                     ?? [hasm (n .>= 2), hprf (ih `at` Inst @"n" (n-2))]
                                      =: 4*n - 2 - (2 * (n-2) + 1)
                                      ?? "simplify"
                                      =: 4*n - 2 - 2*n + 4 - 1
@@ -127,7 +127,7 @@ oddSequence2 = runKD $ do
                                       =: cases [ n .== 0 ==> (1 :: SInteger) =: qed
                                                , n .== 1 ==> (3 :: SInteger) =: qed
                                                , n .>= 2 ==>    s n
-                                                             ?? [ hyp (n .>= 0)
+                                                             ?? [ hasm (n .>= 0)
                                                                 , hprf s0
                                                                 , hprf s1
                                                                 , hprf $ sNp2 `at` Inst @"n" n
@@ -140,7 +140,8 @@ oddSequence2 = runKD $ do
 -- example demonstrates what happens if we don't. We have:
 --
 -- >>> won'tProve1 `catch` (\(_ :: SomeException) -> pure ())
--- Inductive lemma (strong): lengthGood
+-- Inductive lemma (generalized): lengthGood
+--   Step: Measure is non-negative         Q.E.D.
 --   Step: 1
 -- *** Failed to prove lengthGood.1.
 -- <BLANKLINE>
@@ -151,8 +152,9 @@ won'tProve1 = runKD $ do
        len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
 
    -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
-   _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
-                (\(Forall @"xs" xs) -> len xs .== length xs) $
+   _ <- gInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
+                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (length @Integer) $
                 \ih xs -> [] |- len xs
                              -- incorrectly instantiate the IH at xs!
                              ?? ih `at` Inst @"xs" xs
@@ -164,7 +166,8 @@ won'tProve1 = runKD $ do
 -- inductive step. Here's an example demonstrating what happens when the failure is only at the base case.
 --
 -- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
--- Inductive lemma (strong): badLength
+-- Inductive lemma (generalized): badLength
+--   Step: Measure is non-negative         Q.E.D.
 --   Step: 1
 -- *** Failed to prove badLength.1.
 -- Falsifiable. Counter-example:
@@ -178,8 +181,9 @@ won'tProve2 = runKD $ do
                                                        0
                                                        (1 + len (tail xs)))
 
-   _ <- sInduct "badLength"
-                (\(Forall @"xs" xs) -> len xs .== length xs) $
+   _ <- gInduct "badLength"
+                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (length @Integer) $
                 \ih xs -> [] |- len xs
                              ?? ih `at` Inst @"xs" xs
                              =: length xs

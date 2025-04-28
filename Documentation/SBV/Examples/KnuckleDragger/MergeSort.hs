@@ -67,67 +67,71 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- We have:
 --
 -- >>> correctness
--- Lemma: nonDecrInsert                              Q.E.D.
--- Inductive lemma (strong): mergeKeepsSort
+-- Lemma: nonDecrInsert                                        Q.E.D.
+-- Inductive lemma (generalized): mergeKeepsSort
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2                                               Q.E.D.
+--     Step: 1.3                                               Q.E.D.
+--     Step: 1.4.1 (unfold merge)                              Q.E.D.
 --     Step: 1.4.2 (2 way case split)
---       Step: 1.4.2.1.1                             Q.E.D.
---       Step: 1.4.2.1.2                             Q.E.D.
---       Step: 1.4.2.2.1                             Q.E.D.
---       Step: 1.4.2.2.2                             Q.E.D.
---       Step: 1.4.2.Completeness                    Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): sortNonDecreasing
+--       Step: 1.4.2.1.1 (case split)                          Q.E.D.
+--       Step: 1.4.2.1.2                                       Q.E.D.
+--       Step: 1.4.2.2.1 (case split)                          Q.E.D.
+--       Step: 1.4.2.2.2                                       Q.E.D.
+--       Step: 1.4.2.Completeness                              Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (generalized): sortNonDecreasing
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.2.3                                   Q.E.D.
---     Step: 1.2.4                                   Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): mergeCount
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1 (unfold)                                    Q.E.D.
+--     Step: 1.2.2 (push nonDecreasing down)                   Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (generalized): mergeCount
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
---     Step: 1.4.2                                   Q.E.D.
---     Step: 1.4.3                                   Q.E.D.
---     Step: 1.4.4                                   Q.E.D.
---     Step: 1.4.5                                   Q.E.D.
---     Step: 1.4.6                                   Q.E.D.
---     Step: 1.4.7                                   Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2                                               Q.E.D.
+--     Step: 1.3                                               Q.E.D.
+--     Step: 1.4.1 (unfold merge)                              Q.E.D.
+--     Step: 1.4.2 (push count inside)                         Q.E.D.
+--     Step: 1.4.3 (unfold count, twice)                       Q.E.D.
+--     Step: 1.4.4                                             Q.E.D.
+--     Step: 1.4.5                                             Q.E.D.
+--     Step: 1.4.6 (unfold count in reverse, twice)            Q.E.D.
+--     Step: 1.4.7 (simplify)                                  Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma: countAppend
---   Step: Base                                      Q.E.D.
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Step: 3                                         Q.E.D.
---   Step: 4                                         Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: take_drop                                  Q.E.D.
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (unfold count)                                    Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Step: 4 (simplify)                                        Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: take_drop                                            Q.E.D.
 -- Lemma: takeDropCount
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Result:                                         Q.E.D.
--- Inductive lemma (strong): sortIsPermutation
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (generalized): sortIsPermutation
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.2.3                                   Q.E.D.
---     Step: 1.2.4                                   Q.E.D.
---     Step: 1.2.5                                   Q.E.D.
---     Step: 1.2.6                                   Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: mergeSortIsCorrect                         Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1 (unfold mergeSort)                          Q.E.D.
+--     Step: 1.2.2 (push count down, simplify, rearrange)      Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.2.5                                             Q.E.D.
+--     Step: 1.2.6                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Prove that the output of merge sort is non-decreasing.
@@ -194,7 +198,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                     (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
                                              ?? [ ih `at` Inst @"xs" h1
                                                 , ih `at` Inst @"xs" h2
-                                                , mergeKeepsSort `at2` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                                , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
                                                 ]
                                              =: sTrue
                                              =: qed)

@@ -1229,7 +1229,7 @@ drop_all = runKD $
 --
 -- >>> take_append
 -- Lemma: take_append
---   Step: 1                               Q.E.D.
+--   Step: 1 (case split on xs)            Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] take_append
 take_append :: IO Proof
@@ -1270,7 +1270,8 @@ drop_append = runKD $
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma (strong): sumHalves
+-- Inductive lemma (generalized): sumHalves
+--   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                           Q.E.D.
 --     Step: 1.2 (2 way full case split)
@@ -1280,7 +1281,7 @@ drop_append = runKD $
 --       Step: 1.2.2.3                     Q.E.D.
 --       Step: 1.2.2.4                     Q.E.D.
 --       Step: 1.2.2.5                     Q.E.D.
---       Step: 1.2.2.6                     Q.E.D.
+--       Step: 1.2.2.6 (simplify)          Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] sumHalves
 sumHalves :: IO Proof
