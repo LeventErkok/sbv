@@ -142,60 +142,6 @@ oddSequence2 = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                              =: qed
                                                ]
 
--- | For strong induction to work, We have to instantiate the proof at a "smaller" value. This
--- example demonstrates what happens if we don't. We have:
---
--- >>> won'tProve1 `catch` (\(_ :: SomeException) -> pure ())
--- Inductive lemma (strong): lengthGood
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1
--- *** Failed to prove lengthGood.1.
--- <BLANKLINE>
--- *** Solver reported: canceled
-won'tProve1 :: IO ()
-won'tProve1 = runKD $ do
-   let len :: SList Integer -> SInteger
-       len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
-
-   -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
-   _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
-                (\(Forall @"xs" xs) -> len xs .== length xs)
-                (length @Integer) $
-                \ih xs -> [] |- len xs
-                             -- incorrectly instantiate the IH at xs!
-                             ?? ih `at` Inst @"xs" xs
-                             =: length xs
-                             =: qed
-   pure ()
-
--- | Note that strong induction does not need an explicit base case, as the base-cases is folded into the
--- inductive step. Here's an example demonstrating what happens when the failure is only at the base case.
---
--- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
--- Inductive lemma (strong): badLength
---   Step: Measure is non-negative         Q.E.D.
---   Step: 1
--- *** Failed to prove badLength.1.
--- Falsifiable. Counter-example:
---   xs = [] :: [Integer]
-won'tProve2 :: IO ()
-won'tProve2 = runKD $ do
-   let len :: SList Integer -> SInteger
-       len = smtFunction "badLength" $ \xs -> ite (null xs)
-                                                  123
-                                                  (ite (null xs)
-                                                       0
-                                                       (1 + len (tail xs)))
-
-   _ <- sInduct "badLength"
-                (\(Forall @"xs" xs) -> len xs .== length xs)
-                (length @Integer) $
-                \ih xs -> [] |- len xs
-                             ?? ih `at` Inst @"xs" xs
-                             =: length xs
-                             =: qed
-   pure ()
-
 -- * List examples
 
 -- | Interleave the elements of two lists. If one ends, we take the rest from the other.
@@ -322,3 +268,80 @@ interleaveRoundTrip = runKDWith cvc5 $ do
                      ]
                   =: tuple (reverse nil ++ xs, reverse nil ++ ys)
                   =: qed
+
+-- * Strong induction checks
+
+-- | For strong induction to work, We have to instantiate the proof at a "smaller" value. This
+-- example demonstrates what happens if we don't. We have:
+--
+-- >>> won'tProve1 `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): lengthGood
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1
+-- *** Failed to prove lengthGood.1.
+-- <BLANKLINE>
+-- *** Solver reported: canceled
+won'tProve1 :: IO ()
+won'tProve1 = runKD $ do
+   let len :: SList Integer -> SInteger
+       len = smtFunction "len" $ \xs -> ite (null xs) 0 (1 + len (tail xs))
+
+   -- Run it for 5 seconds, as otherwise z3 will hang as it can't prove make the inductive step
+   _ <- sInductWith z3{extraArgs = ["-t:5000"]} "lengthGood"
+                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (length @Integer) $
+                \ih xs -> [] |- len xs
+                             -- incorrectly instantiate the IH at xs!
+                             ?? ih `at` Inst @"xs" xs
+                             =: length xs
+                             =: qed
+   pure ()
+
+-- | Note that strong induction does not need an explicit base case, as the base-cases is folded into the
+-- inductive step. Here's an example demonstrating what happens when the failure is only at the base case.
+--
+-- >>> won'tProve2 `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): badLength
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1
+-- *** Failed to prove badLength.1.
+-- Falsifiable. Counter-example:
+--   xs = [] :: [Integer]
+won'tProve2 :: IO ()
+won'tProve2 = runKD $ do
+   let len :: SList Integer -> SInteger
+       len = smtFunction "badLength" $ \xs -> ite (null xs)
+                                                  123
+                                                  (ite (null xs)
+                                                       0
+                                                       (1 + len (tail xs)))
+
+   _ <- sInduct "badLength"
+                (\(Forall @"xs" xs) -> len xs .== length xs)
+                (length @Integer) $
+                \ih xs -> [] |- len xs
+                             ?? ih `at` Inst @"xs" xs
+                             =: length xs
+                             =: qed
+   pure ()
+
+-- | The measure for strong induction should always produce a non-negative measure. The measure, in general, is an integer, or
+-- a tuple of integers, for tuples upto size 5. The ordering is lexicographic. This allows us to do proofs over 5-different arguments
+-- where their total measure goes down. If the measure can be negative, then we flag that as a failure, as demonstrated here. We have:
+--
+-- >>> won'tProve3 `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): badMeasure
+--   Step: Measure is non-negative
+-- *** Failed to prove badMeasure.Measure is non-negative.
+-- Falsifiable. Counter-example:
+--   x = -1 :: Integer
+won'tProve3 :: IO ()
+won'tProve3 = runKD $ do
+   _ <- sInduct "badMeasure"
+                (\(Forall @"x" (x :: SInteger)) -> x .== x)
+                (id @SInteger) $
+                \_h (x :: SInteger) -> [] |- x
+                                          =: x
+                                          =: qed
+
+   pure ()
