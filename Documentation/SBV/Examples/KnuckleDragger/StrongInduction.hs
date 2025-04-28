@@ -345,3 +345,38 @@ won'tProve3 = runKD $ do
                                           =: qed
 
    pure ()
+
+-- | The measure must always go down using lexicographic ordering. If not, SBV will flag this as a failure. We have:
+--
+-- >>> won'tProve4 `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma (strong): badMeasure
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2.1                         Q.E.D.
+--     Step: 1.2.2
+-- *** Failed to prove badMeasure.1.2.2.
+-- <BLANKLINE>
+-- *** Solver reported: canceled
+won'tProve4 :: IO ()
+won'tProve4 = runKD $ do
+
+   let -- a bizarre (but valid!) way to sum two integers
+       weirdSum = smtFunction "weirdSum" (\x y -> ite (x .<= 0) y (weirdSum (x - 1) (y + 1)))
+
+   _ <- sInductWith z3{extraArgs = ["-t:5000"]} "badMeasure"
+                (\(Forall @"x" (x :: SInteger)) (Forall @"y" (y :: SInteger)) -> x .>= 0 .=> weirdSum x y .== x + y)
+                -- This measure is not good, since it remains the same. Note that we do not get a
+                -- failure, but the proof will never converge either; so we put a time bound
+                (\x y -> abs x + abs @SInteger y) $
+                \ih (x :: SInteger) (y :: SInteger) ->
+                    [x .>= 0] |- ite (x .<= 0) y (weirdSum (x - 1) (y + 1))
+                              =: cases [ x .<= 0 ==> trivial
+                                       , x .>  0 ==> weirdSum (x - 1) (y + 1)
+                                                  ?? ih `at` (Inst @"x" (x - 1), Inst @"y" (y + 1))
+                                                  =: x - 1 + y + 1
+                                                  =: x + y
+                                                  =: qed
+                                       ]
+
+   pure ()
