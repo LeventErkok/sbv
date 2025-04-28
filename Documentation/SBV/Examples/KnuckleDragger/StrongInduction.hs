@@ -19,7 +19,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.StrongInduction where
 
-import Prelude hiding (length, null, head, tail, reverse)
+import Prelude hiding (length, null, head, tail, reverse, (++))
 
 import Data.SBV
 import Data.SBV.List
@@ -244,21 +244,18 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
                                                                  (tuple (reverse es, reverse os))
                                                                  (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))
 
-{-
 -- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length.
 -- We have:
 --
--- >>> roundTrip
-roundTrip :: IO Proof
-roundTrip = runKD $ do
+-- >>> interleaveRoundTrip
+interleaveRoundTrip :: IO Proof
+interleaveRoundTrip = runKD $ do
    -- Generalize the theorem first to take the helper lists explicitly
-   roundTripGen <- lemma
+   roundTripGen <- sInduct
          "roundTripGen"
          (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"alts" alts) ->
                length xs .== length ys .=> let (es, os) = untuple alts
                                            in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
-         [sorry]
-         {-
          (\(xs :: SList Integer) (ys :: SList Integer) (_alts :: STuple [Integer] [Integer]) -> length xs + length ys) $
          \ih (xs :: SList Integer) (ys :: SList Integer) (alts :: STuple [Integer] [Integer]) ->
              [length xs .== length ys] |- let (es, os) = untuple alts
@@ -268,25 +265,21 @@ roundTrip = runKD $ do
                                                    (\a as -> uninterleaveGen (a .: interleave ys as) alts
                                                           =: uninterleaveGen (interleave ys as) (tuple (os, a .: es))
                                                           ?? [ hprf (ih `at` (Inst @"xs" ys, Inst @"ys" as, Inst @"alts" (tuple (os, a .: es))))
-                                                             , hyp  (length xs .== length ys)
+                                                             , hasm (length xs .== length ys)
                                                              ]
                                                           =: tuple (reverse es ++ xs, reverse os ++ ys)
                                                           =: qed)
-                                                          -}
 
    -- Round-trip theorem:
-   lemma "roundTrip"
-         (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) ->
-               length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $ [sorry, roundTripGen]
-               {-
-         \(xs :: SList Integer) ys ->
-                [length xs .== length ys] |- uninterleave (interleave xs ys)
-                                          =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                                          ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
-                                             , hyp  (length xs .== length ys)
-                                             , hprf sorry
-                                             ]
-                                          =: tuple (reverse nil ++ xs, reverse nil ++ ys)
-                                          =: qed
-                                          -}
--}
+   calc "interleaveRoundTrip"
+           (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) ->
+               length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $
+           \(xs :: SList Integer) ys ->
+                  [length xs .== length ys] |- uninterleave (interleave xs ys)
+                                            =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
+                                            ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
+                                               , hasm (length xs .== length ys)
+                                               , hprf sorry
+                                               ]
+                                            =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                                            =: qed
