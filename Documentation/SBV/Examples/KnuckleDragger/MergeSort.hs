@@ -273,7 +273,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                           =: qed
 
     sortIsPermutation <-
-        sInduct "sortIsPermutation"
+        sInductWith cvc5 "sortIsPermutation"
                 (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
                 (\(xs :: SList Integer) (_e :: SInteger) -> length xs) $
                 \ih as e -> [] |- split as
@@ -296,7 +296,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                                ?? [ hprf  (ih `at` (Inst @"xs" h1, Inst @"e" e))
                                                   , hasm  (length h1 .< length (x .: xs))
                                                   ]
-                                               =: ite (null xs) (count e (singleton x)) (count e h1 + count e (mergeSort h2))
+                                               =: ite (null xs)
+                                                      (count e (singleton x))
+                                                      (count e h1 + count e (mergeSort h2))
                                                ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
                                                =: ite (null xs)
                                                       (count e (singleton x))
