@@ -449,6 +449,30 @@ class SInductive a steps where
    {-# MINIMAL sInductionStrategy #-}
    sInductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
 
+-- | A class of measures, used for inductive arguments.
+class OrdSymbolic a => Measure a where
+  zero :: a
+
+-- | An integer as a measure
+instance Measure SInteger where
+   zero = 0
+
+-- | A tuple of integers as a measure
+instance Measure (SInteger, SInteger) where
+  zero = (0, 0)
+
+-- | A triple of integers as a measure
+instance Measure (SInteger, SInteger, SInteger) where
+  zero = (0, 0, 0)
+
+-- | A quadruple of integers as a measure
+instance Measure (SInteger, SInteger, SInteger, SInteger) where
+  zero = (0, 0, 0, 0)
+
+instance Measure (SInteger, SInteger, SInteger, SInteger, SInteger) where
+  zero = (0, 0, 0, 0, 0)
+
+
 -- | A class for doing generalized measure based proofs.
 class GInductive a measure steps where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
@@ -940,53 +964,53 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
 
 -- | Generalized induction with one parameter
-instance (KnownSymbol na, SymVal a, EqSymbolic z) => GInductive (Forall na a -> SBool) (SBV a -> SInteger) (SBV a -> (SBool, KDProofRaw z)) where
+instance (KnownSymbol na, SymVal a, EqSymbolic z, Measure m) => GInductive (Forall na a -> SBool) (SBV a -> m) (SBV a -> (SBool, KDProofRaw z)) where
   gInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       pure $ mkIndStrategy Nothing
-                           (Just (quantifiedBool (\(Forall a' :: Forall na a) -> measure a' .>= 0)))
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) -> measure a' .>= zero)))
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> measure a' .< measure a .=> result (Forall a'))) a)
                            (indResult [na] (result (Forall a)))
 
 -- | Generalized induction with two parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> SBool) (SBV a -> SBV b -> SInteger) (SBV a -> SBV b -> (SBool, KDProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> SBool) (SBV a -> SBV b -> m) (SBV a -> SBV b -> (SBool, KDProofRaw z)) where
   gInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       pure $ mkIndStrategy Nothing
-                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .>= 0)))
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .>= zero)))
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> measure a' b' .< measure a b .=> result (Forall a') (Forall b'))) a b)
                            (indResult [na, nb] (result (Forall a) (Forall b)))
 
 -- | Generalized induction with three parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV a -> SBV b -> SBV c -> SInteger) (SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV a -> SBV b -> SBV c -> m) (SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
   gInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
       pure $ mkIndStrategy Nothing
-                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .>= 0)))
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .>= zero)))
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> measure a' b' c' .< measure a b c .=> result (Forall a') (Forall b') (Forall c'))) a b c)
                            (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
 
 -- | Generalized induction with four parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SInteger) (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> m) (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
   gInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
       (d, nd) <- mkVar (Proxy @nd)
       pure $ mkIndStrategy Nothing
-                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .>= 0)))
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .>= zero)))
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> measure a' b' c' d' .< measure a b c d .=> result (Forall a') (Forall b') (Forall c') (Forall d'))) a b c d)
                            (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Generalized induction with five parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> SInteger) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> m) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
   gInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
@@ -994,7 +1018,7 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
       (d, nd) <- mkVar (Proxy @nd)
       (e, ne) <- mkVar (Proxy @ne)
       pure $ mkIndStrategy Nothing
-                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .>= 0)))
+                           (Just (quantifiedBool (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .>= zero)))
                            Nothing
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) a b c d e)
                            (indResult [na, nb, nc, nd, ne] (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))

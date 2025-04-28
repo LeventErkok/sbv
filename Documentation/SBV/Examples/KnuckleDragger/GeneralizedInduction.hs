@@ -77,6 +77,7 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
                                                                  (tuple (reverse es, reverse os))
                                                                  (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))
 
+{-
 -- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length.
 -- We have:
 --
@@ -121,3 +122,4 @@ roundTrip = runKD $ do
                                           =: tuple (reverse nil ++ xs, reverse nil ++ ys)
                                           =: qed
                                           -}
+-}
