@@ -78,12 +78,13 @@ data CalcStrategy = CalcStrategy { calcIntros    :: SBool
 -- | Saturatable things in steps
 proofTreeSaturatables :: KDProof -> [SBool]
 proofTreeSaturatables = go
-  where go (ProofEnd    b            hs)   = b : concatMap getH hs
-        go (ProofStep   a            hs r) = a : concatMap getH hs ++ go r
-        go (ProofBranch (_ :: Bool) () ps) = concat [b : go p | (b, p) <- ps]
+  where go (ProofEnd    b           hs                ) = b : concatMap getH hs
+        go (ProofStep   a           hs               r) = a : concatMap getH hs ++ go r
+        go (ProofBranch (_ :: Bool) (_ :: [String]) ps) = concat [b : go p | (b, p) <- ps]
 
         getH (HelperProof  p) = [getProof p]
         getH (HelperAssum  b) = [b]
+        getH HelperString{}   = []
 
 -- | Things that are inside calc-strategy that we have to saturate
 getCalcStrategySaturatables :: CalcStrategy -> [SBool]
@@ -217,7 +218,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
          =  do -- If we're not at the top-level and this is the only step, print it.
                -- Otherwise the noise isn't necessary.
                when (level > 1) $ case reverse bn of
-                                    1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm (map show (init bn)))
+                                    1 : _ -> liftIO $ do tab <- startKD cfg False "Step" level (KDProofStep False nm [] (map show (init bn)))
                                                          finishKD cfg "Q.E.D." (tab, Nothing) []
                                     _     -> pure ()
 
@@ -225,7 +226,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
-      walk intros level (bnTop, ProofBranch checkCompleteness () ps) = do
+      walk intros level (bnTop, ProofBranch checkCompleteness hintStrings ps) = do
 
         let bn = trimBN level bnTop
 
@@ -238,12 +239,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
             stepName = map show bn
 
-        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm (addSuffix stepName (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
+        _ <- io $ startKD cfg True "Step" level (KDProofStep False nm hintStrings (addSuffix stepName (" (" ++ show (length ps) ++ " way " ++ full ++ "case split)")))
 
         results <- concat <$> sequence [walk (intros .&& branchCond) (level + 1) (bn ++ [i, 1], p) | (i, (branchCond, p)) <- zip [1..] ps]
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
-                                                       (KDProofStep False nm (stepName ++ ["Completeness"]))
+                                                       (KDProofStep False nm [] (stepName ++ ["Completeness"]))
                                                        (Just (initialHypotheses .&& intros))
                                                        (sOr (map fst ps))
                                                        (\d -> finishKD cfg "Q.E.D." d [])
@@ -263,10 +264,11 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                  | True        = (cfg{kdOptions = (kdOptions cfg) { quiet = True}}, const (pure ()))
 
                as = concatMap getHelperAssumes hs
+               ss = concatMap getHelperStrings hs
            case as of
              [] -> pure ()
              _  -> smtProofStep quietCfg kdSt "Asms" level
-                                         (KDProofStep True nm stepName)
+                                         (KDProofStep True nm [] stepName)
                                          (Just (initialHypotheses .&& intros))
                                          (sAnd as)
                                          finalizer
@@ -274,7 +276,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            -- Now prove the step
            let by = concatMap getHelperProofs hs
            smtProofStep cfg kdSt "Step" level
-                                 (KDProofStep False nm stepName)
+                                 (KDProofStep False nm ss stepName)
                                  (Just (sAnd (intros : as ++ map getProof by)))
                                  cur
                                  (finish [] by)
@@ -287,7 +289,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 
   smtProofStep cfg kdSt "Result" 1
-               (KDProofStep False nm [""])
+               (KDProofStep False nm [] [""])
                (Just (initialHypotheses .=> sAnd results))
                resultBool $ \d ->
                  do mbElapsed <- getElapsedTime mbStartTime
@@ -322,7 +324,7 @@ mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
                                      CalcStep begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch c hs ps) = ProofBranch c () [(branchCond, go step' p) | (branchCond, p) <- ps]
+        go step (ProofBranch c hs ps) = ProofBranch c (concatMap getHelperStrings hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
            where step' = case step of
                            CalcStart hs'     -> CalcStart (hs' ++ hs)
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
@@ -534,7 +536,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
           Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no custom measure to show non-negativeness."]
           Just ms -> do queryDebug [nm ++ ": Induction, proving measure is always non-negative:"]
                         smtProofStep cfg kdSt "Step" 1
-                                              (KDProofStep False nm ["Measure is non-negative"])
+                                              (KDProofStep False nm [] ["Measure is non-negative"])
                                               (Just inductionIntros)
                                               ms
                                               (\d -> finishKD cfg "Q.E.D." d [])
@@ -542,7 +544,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
           Nothing -> queryDebug [nm ++ ": Induction" ++ qual ++ ", there is no base case to prove."]
           Just bc -> do queryDebug [nm ++ ": Induction, proving base case:"]
                         smtProofStep cfg kdSt "Step" 1
-                                              (KDProofStep False nm ["Base"])
+                                              (KDProofStep False nm [] ["Base"])
                                               (Just inductionIntros)
                                               bc
                                               (\d -> finishKD cfg "Q.E.D." d [])
@@ -1208,34 +1210,47 @@ instantiate ap p@Proof{getProp, proofName} a = case fromDynamic getProp of
                | True                                     = '(' : s ++ ")"
 
 -- | Helpers for a step
-data Helper = HelperProof Proof -- A previously proven theorem
-            | HelperAssum SBool -- A hypothesis
+data Helper = HelperProof  Proof  -- A previously proven theorem
+            | HelperAssum  SBool  -- A hypothesis
+            | HelperString String -- Just a text, only used for diagnostics
 
 -- | Get all helpers used in a proof
 getAllHelpers :: KDProof -> [Helper]
-getAllHelpers (ProofStep   _           hs p)  = hs ++ getAllHelpers p
-getAllHelpers (ProofBranch (_ :: Bool) () ps) = concatMap (getAllHelpers . snd) ps
-getAllHelpers (ProofEnd    _           hs)    = hs
+getAllHelpers (ProofStep   _           hs               p)  = hs ++ getAllHelpers p
+getAllHelpers (ProofBranch (_ :: Bool) (_ :: [String]) ps) = concatMap (getAllHelpers . snd) ps
+getAllHelpers (ProofEnd    _           hs                ) = hs
 
 -- | Get proofs from helpers
 getHelperProofs :: Helper -> [Proof]
 getHelperProofs (HelperProof p) = [p]
 getHelperProofs HelperAssum {}  = []
+getHelperProofs HelperString{}  = []
 
 -- | Get proofs from helpers
 getHelperAssumes :: Helper -> [SBool]
 getHelperAssumes HelperProof  {} = []
 getHelperAssumes (HelperAssum b) = [b]
+getHelperAssumes HelperString {} = []
+
+-- | Get hint strings helpers
+getHelperStrings :: Helper -> [String]
+getHelperStrings HelperProof  {}  = []
+getHelperStrings HelperAssum  {}  = []
+getHelperStrings (HelperString s) = [s]
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
-hyp :: SBool -> Helper
-hyp = HelperAssum
+hasm :: SBool -> Helper
+hasm = HelperAssum
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
 hprf :: Proof -> Helper
 hprf = HelperProof
+
+-- | Smart constructor for adding a comment.
+hcmnt :: String -> Helper
+hcmnt = HelperString
 
 -- | A proof is a sequence of steps, supporting branching
 data KDProofGen a bh b = ProofStep   a    [Helper] (KDProofGen a bh b)          -- ^ A single step
@@ -1245,8 +1260,8 @@ data KDProofGen a bh b = ProofStep   a    [Helper] (KDProofGen a bh b)          
 -- | A proof, as written by the user. No produced result, but helpers on branches
 type KDProofRaw a = KDProofGen a [Helper] ()
 
--- | A proof, as processed by KD. Producing a boolean result and each step is a boolean. Helpers on branches dispersed down, and thus empty
-type KDProof = KDProofGen SBool () SBool
+-- | A proof, as processed by KD. Producing a boolean result and each step is a boolean. Helpers on branches dispersed down, only strings are left for printing
+type KDProof = KDProofGen SBool [String] SBool
 
 -- | Class capturing giving a proof-step helper
 type family Hinted a where
@@ -1288,7 +1303,7 @@ instance Hinted a ~ KDProofRaw a => HintsTo a [Helper] where
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance Hinted a ~ KDProofRaw a => HintsTo a String where
-  a `addHint` _ = ProofStep a [] qed
+  a `addHint` s = ProofStep a [HelperString s] qed
 
 -- | Giving just one proof as a helper, starting from a proof
 instance {-# OVERLAPPING #-} Hinted (KDProofRaw a) ~ KDProofRaw a => HintsTo (KDProofRaw a) Proof where
@@ -1328,7 +1343,11 @@ instance {-# OVERLAPPING #-} Hinted (KDProofRaw a) ~ KDProofRaw a => HintsTo (KD
 
 -- | Giving user a hint as a string. This doesn't actually do anything for the solver, it just helps with readability
 instance {-# OVERLAPPING #-} Hinted (KDProofRaw a) ~ KDProofRaw a => HintsTo (KDProofRaw a) String where
-  a `addHint` _ = a
+  a `addHint` s = a `addHint` HelperString s
+
+-- | Giving a bunch of strings as hints. This doesn't actually do anything for the solver, it just helps with readability
+instance {-# OVERLAPPING #-} Hinted (KDProofRaw a) ~ KDProofRaw a => HintsTo (KDProofRaw a) [String] where
+  a `addHint` ss = a `addHint` map HelperString ss
 
 -- | Capture what a given step can chain-to. This is a closed-type family, i.e.,
 -- we don't allow users to change this and write other chainable things. Probably it is not really necessary,
