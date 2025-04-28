@@ -472,7 +472,6 @@ instance Measure (SInteger, SInteger, SInteger, SInteger) where
 instance Measure (SInteger, SInteger, SInteger, SInteger, SInteger) where
   zero = (0, 0, 0, 0, 0)
 
-
 -- | A class for doing generalized measure based proofs.
 class GInductive a measure steps where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
