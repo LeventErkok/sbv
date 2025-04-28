@@ -244,14 +244,41 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
                                                                  (tuple (reverse es, reverse os))
                                                                  (uninterleaveGen (tail xs) (tuple (os, head xs .: es))))
 
--- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length.
+-- | The functions 'uninterleave' and 'interleave' are inverses so long as the inputs are of the same length. (The equality
+-- would even hold if the first argument has one extra element, but we keep things simple here.)
+--
 -- We have:
 --
 -- >>> interleaveRoundTrip
+-- Lemma: revCons                          Q.E.D.
+-- Inductive lemma (strong): roundTripGen
+--   Step: Measure is non-negative         Q.E.D.
+--   Step: 1 (4 way full case split)
+--     Step: 1.1                           Q.E.D.
+--     Step: 1.2                           Q.E.D.
+--     Step: 1.3                           Q.E.D.
+--     Step: 1.4.1                         Q.E.D.
+--     Step: 1.4.2                         Q.E.D.
+--     Step: 1.4.3                         Q.E.D.
+--     Step: 1.4.4                         Q.E.D.
+--     Step: 1.4.5                         Q.E.D.
+--     Step: 1.4.6                         Q.E.D.
+--     Step: 1.4.7                         Q.E.D.
+--     Step: 1.4.8                         Q.E.D.
+--   Result:                               Q.E.D.
+-- Lemma: interleaveRoundTrip
+--   Step: 1                               Q.E.D.
+--   Step: 2                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] interleaveRoundTrip
 interleaveRoundTrip :: IO Proof
-interleaveRoundTrip = runKD $ do
+interleaveRoundTrip = runKDWith cvc5 $ do
+
+   revHelper <- lemma "revCons" (\(Forall @"a" a) (Forall @"as" as) (Forall @"bs" bs)
+                                        -> reverse @Integer (a .: as) ++ bs .== reverse as ++ (a .: bs)) []
+
    -- Generalize the theorem first to take the helper lists explicitly
-   roundTripGen <- sInductWith cvc5
+   roundTripGen <- sInduct
          "roundTripGen"
          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"alts" alts) ->
                length @Integer xs .== length ys
@@ -261,19 +288,28 @@ interleaveRoundTrip = runKD $ do
          \ih xs ys alts -> [length @Integer xs .== length ys]
                         |- let (es, os) = untuple alts
                         in uninterleaveGen (interleave xs ys) alts
-                        =: split xs
-                        trivial
-                        (\a as -> uninterleaveGen (a .: interleave ys as) alts
-                               ?? [ hasm $ head xs .== a
-                                  , hasm $ tail xs .== as
-                                  ]
-                               =: uninterleaveGen (interleave ys as) (tuple (os, a .: es))
-                               ?? [ hprf (ih `at` (Inst @"xs" ys, Inst @"ys" as, Inst @"alts" (tuple (os, a .: es))))
-                                  , hasm (length xs .== length ys)
-                                  , hcmnt "slow"
-                                  ]
-                               =: tuple (reverse es ++ xs, reverse os ++ ys)
-                               =: qed)
+                        =: split2 (xs, ys)
+                                  trivial
+                                  trivial
+                                  trivial
+                                  (\(a, as) (b, bs) -> uninterleaveGen (interleave (a .: as) (b .: bs)) alts
+                                                    =: uninterleaveGen (a .: interleave (b .: bs) as) alts
+                                                    =: uninterleaveGen (a .: b .: interleave as bs) alts
+                                                    =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
+                                                    ?? [ hprf $ ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
+                                                       , hasm $ length xs .== length ys
+                                                       , hasm $ length as .== length bs
+                                                       ]
+                                                    =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
+                                                    ?? [ hprf $ revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as) ]
+                                                    =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
+                                                    ?? [ hprf $ revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs) ]
+                                                    =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
+                                                    ?? [ hasm $ xs .== a .: as
+                                                       , hasm $ ys .== b .: bs
+                                                       ]
+                                                    =: tuple (reverse es ++ xs, reverse os ++ ys)
+                                                    =: qed)
 
    -- Round-trip theorem:
    calc "interleaveRoundTrip"
@@ -283,7 +319,6 @@ interleaveRoundTrip = runKD $ do
                   =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
                   ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
                      , hasm (length xs .== length ys)
-                     , hprf sorry
                      ]
                   =: tuple (reverse nil ++ xs, reverse nil ++ ys)
                   =: qed
