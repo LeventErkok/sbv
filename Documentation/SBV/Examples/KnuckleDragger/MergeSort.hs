@@ -68,7 +68,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- >>> correctness
 -- Lemma: nonDecrInsert                                        Q.E.D.
--- Inductive lemma (generalized): mergeKeepsSort
+-- Inductive lemma (strong): mergeKeepsSort
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
 --     Step: 1.1                                               Q.E.D.
@@ -82,7 +82,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --       Step: 1.4.2.2.2                                       Q.E.D.
 --       Step: 1.4.2.Completeness                              Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma (generalized): sortNonDecreasing
+-- Inductive lemma (strong): sortNonDecreasing
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                                               Q.E.D.
@@ -91,7 +91,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.3                                             Q.E.D.
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma (generalized): mergeCount
+-- Inductive lemma (strong): mergeCount
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
 --     Step: 1.1                                               Q.E.D.
@@ -117,7 +117,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --   Step: 1                                                   Q.E.D.
 --   Step: 2                                                   Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma (generalized): sortIsPermutation
+-- Inductive lemma (strong): sortIsPermutation
 --   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                                               Q.E.D.
@@ -143,7 +143,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                         []
 
     mergeKeepsSort <-
-        gInductWith cvc5 "mergeKeepsSort"
+        sInductWith cvc5 "mergeKeepsSort"
            (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
            (\(xs :: SList Integer) (ys :: SList Integer) -> (length xs, length ys)) $
            \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
@@ -177,7 +177,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                            ])
 
     sortNonDecreasing <-
-        gInduct "sortNonDecreasing"
+        sInduct "sortNonDecreasing"
                 (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
                 (length @Integer) $
                 \ih xs -> [] |- split xs
@@ -207,7 +207,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
     -- Part II. Prove that the output of merge sort is a permuation of its input
     --------------------------------------------------------------------------------------------
     mergeCount <-
-        gInduct "mergeCount"
+        sInduct "mergeCount"
                 (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys)
                 (\(xs :: SList Integer) (ys :: SList Integer) (_e :: SInteger) -> (length xs, length ys)) $
                 \ih as bs e -> [] |-
@@ -273,7 +273,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                           =: qed
 
     sortIsPermutation <-
-        gInduct "sortIsPermutation"
+        sInduct "sortIsPermutation"
                 (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
                 (\(xs :: SList Integer) (_e :: SInteger) -> length xs) $
                 \ih as e -> [] |- split as

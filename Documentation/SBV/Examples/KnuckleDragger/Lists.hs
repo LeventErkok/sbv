@@ -1270,7 +1270,7 @@ drop_append = runKD $
 --   Step: 2                               Q.E.D.
 --   Step: 3                               Q.E.D.
 --   Result:                               Q.E.D.
--- Inductive lemma (generalized): sumHalves
+-- Inductive lemma (strong): sumHalves
 --   Step: Measure is non-negative         Q.E.D.
 --   Step: 1 (2 way full case split)
 --     Step: 1.1                           Q.E.D.
@@ -1306,7 +1306,7 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
-    gInductWith cvc5 "sumHalves"
+    sInductWith cvc5 "sumHalves"
       (\(Forall @"xs" xs) -> halvingSum xs .== sum xs)
       (length @Integer) $
       \ih xs -> [] |- halvingSum xs

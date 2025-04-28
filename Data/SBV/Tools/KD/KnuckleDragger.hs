@@ -36,7 +36,6 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        ,    calc,    calcWith,    calcThm,    calcThmWith
        ,  induct,  inductWith,  inductThm,  inductThmWith
        , sInduct, sInductWith, sInductThm, sInductThmWith
-       , gInduct, gInductWith, gInductThm, gInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
        , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hasm, hprf, hcmnt, qed, trivial
@@ -378,8 +377,8 @@ data InductionStrategy = InductionStrategy { inductionIntros    :: SBool
                                            , inductiveStep      :: SBool
                                            }
 
--- | Are we doing strong induction or regular induction?
-data InductionStyle = RegularInduction | StrongInduction | MeasureInduction
+-- | Are we doing regular induction or measure based general induction?
+data InductionStyle = RegularInduction | GeneralInduction
 
 getInductionStrategySaturatables :: InductionStrategy -> [SBool]
 getInductionStrategySaturatables (InductionStrategy inductionIntros
@@ -420,37 +419,6 @@ class Inductive a steps where
    {-# MINIMAL inductionStrategy #-}
    inductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
 
--- | A class for doing strong inductive proofs.
-class SInductive a steps where
-   -- | Inductively prove a lemma, using strong induction, using the default config.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInduct :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
-
-   -- | Inductively prove a theorem, using strong induction. Same as 'sInduct', but tagged as a theorem, using the default config.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThm :: Proposition a => String -> a -> (Proof -> steps) -> KD Proof
-
-   -- | Same as 'sInduct', but with the given solver configuration.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
-
-   -- | Same as 'sInductThm', but with the given solver configuration.
-   -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
-   -- partial correctness is guaranteed if non-terminating functions are involved.
-   sInductThmWith :: Proposition a => SMTConfig -> String -> a -> (Proof -> steps) -> KD Proof
-
-   sInduct            nm p steps = getKDConfig >>= \cfg  -> sInductWith                          cfg                   nm p steps
-   sInductThm         nm p steps = getKDConfig >>= \cfg  -> sInductThmWith                       cfg                   nm p steps
-   sInductWith    cfg nm p steps = getKDConfig >>= \cfg' -> inductionEngine StrongInduction False (kdMergeCfg cfg cfg') nm p (sInductionStrategy p steps)
-   sInductThmWith cfg nm p steps = getKDConfig >>= \cfg' -> inductionEngine StrongInduction True  (kdMergeCfg cfg cfg') nm p (sInductionStrategy p steps)
-
-   -- | Internal, shouldn't be needed outside the library
-   {-# MINIMAL sInductionStrategy #-}
-   sInductionStrategy :: Proposition a => a -> (Proof -> steps) -> Symbolic InductionStrategy
-
 -- | A class of measures, used for inductive arguments.
 class OrdSymbolic a => Measure a where
   zero :: a
@@ -474,36 +442,36 @@ instance Measure (SInteger, SInteger, SInteger, SInteger) where
 instance Measure (SInteger, SInteger, SInteger, SInteger, SInteger) where
   zero = (0, 0, 0, 0, 0)
 
--- | A class for doing generalized measure based proofs.
-class GInductive a measure steps where
+-- | A class for doing generalized measure based strong inductive proofs.
+class SInductive a measure steps where
    -- | Inductively prove a lemma, using measure based induction, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   gInduct :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
+   sInduct :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
 
    -- | Inductively prove a theorem, using measure based induction. Same as 'sInduct', but tagged as a theorem, using the default config.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   gInductThm :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
+   sInductThm :: Proposition a => String -> a -> measure -> (Proof -> steps) -> KD Proof
 
-   -- | Same as 'gInduct', but with the given solver configuration.
+   -- | Same as 'sInduct', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   gInductWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
+   sInductWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
 
-   -- | Same as 'gInductThm', but with the given solver configuration.
+   -- | Same as 'sInductThm', but with the given solver configuration.
    -- Inductive proofs over lists only hold for finite lists. We also assume that all functions involved are terminating. SBV does not prove termination, so only
    -- partial correctness is guaranteed if non-terminating functions are involved.
-   gInductThmWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
+   sInductThmWith :: Proposition a => SMTConfig -> String -> a -> measure -> (Proof -> steps) -> KD Proof
 
-   gInduct            nm p m steps = getKDConfig >>= \cfg  -> gInductWith                           cfg                   nm p m steps
-   gInductThm         nm p m steps = getKDConfig >>= \cfg  -> gInductThmWith                        cfg                   nm p m steps
-   gInductWith    cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine MeasureInduction False (kdMergeCfg cfg cfg') nm p (gInductionStrategy p m steps)
-   gInductThmWith cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine MeasureInduction True  (kdMergeCfg cfg cfg') nm p (gInductionStrategy p m steps)
+   sInduct            nm p m steps = getKDConfig >>= \cfg  -> sInductWith                            cfg                   nm p m steps
+   sInductThm         nm p m steps = getKDConfig >>= \cfg  -> sInductThmWith                         cfg                   nm p m steps
+   sInductWith    cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine GeneralInduction False (kdMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
+   sInductThmWith cfg nm p m steps = getKDConfig >>= \cfg' -> inductionEngine GeneralInduction True  (kdMergeCfg cfg cfg') nm p (sInductionStrategy p m steps)
 
    -- | Internal, shouldn't be needed outside the library
-   {-# MINIMAL gInductionStrategy #-}
-   gInductionStrategy :: Proposition a => a -> measure -> (Proof -> steps) -> Symbolic InductionStrategy
+   {-# MINIMAL sInductionStrategy #-}
+   sInductionStrategy :: Proposition a => a -> measure -> (Proof -> steps) -> Symbolic InductionStrategy
 
 -- | Do an inductive proof, based on the given strategy
 inductionEngine :: Proposition a => InductionStyle -> Bool -> SMTConfig -> String -> a -> Symbolic InductionStrategy -> KD Proof
@@ -516,8 +484,7 @@ inductionEngine style tagTheorem cfg nm result getStrategy = do
 
       let qual = case style of
                    RegularInduction -> ""
-                   StrongInduction  -> " (strong)"
-                   MeasureInduction -> " (generalized)"
+                   GeneralInduction  -> " (strong)"
 
       message cfg $ "Inductive " ++ (if tagTheorem then "theorem" else "lemma") ++ qual ++ ": " ++ nm ++ "\n"
 
@@ -590,16 +557,6 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
                             (steps (internalAxiom "IH" (result (Forall n))) n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
 
--- | Strong induction over 'SInteger'
-instance (KnownSymbol nn, EqSymbolic z) => SInductive (Forall nn Integer -> SBool) (SInteger -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) -> 0 .<= n' .&& n' .< n .=> result (Forall n'))) n)
-                            (indResult [nn] (result (Forall n)))
-
 -- | Induction over 'SInteger', taking an extra argument
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -610,17 +567,6 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
                             (Just (result (Forall 0) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall n) (Forall a'))) n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
-
--- | Strong induction over 'SInteger', taking an extra argument
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> SBool) (SInteger -> SBV a -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       (a, na) <- mkVar (Proxy @na)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a'))) n a)
-                            (indResult [nn, na] (result (Forall n) (Forall a)))
 
 -- | Induction over 'SInteger', taking two extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
@@ -634,18 +580,6 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall n) (Forall a') (Forall b'))) n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
--- | Strong induction over 'SInteger', taking two extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> SBool) (SInteger -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       (a, na) <- mkVar (Proxy @na)
-       (b, nb) <- mkVar (Proxy @nb)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b'))) n a b)
-                            (indResult [nn, na, nb] (result (Forall n) (Forall a) (Forall b)))
-
 -- | Induction over 'SInteger', taking three extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -658,19 +592,6 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
-
--- | Strong induction over 'SInteger', taking three extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       (a, na) <- mkVar (Proxy @na)
-       (b, nb) <- mkVar (Proxy @nb)
-       (c, nc) <- mkVar (Proxy @nc)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c'))) n a b c)
-                            (indResult [nn, na, nb, nc] (result (Forall n) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SInteger', taking four extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
@@ -686,20 +607,6 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
--- | Strong induction over 'SInteger', taking four extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       (a, na) <- mkVar (Proxy @na)
-       (b, nb) <- mkVar (Proxy @nb)
-       (c, nc) <- mkVar (Proxy @nc)
-       (d, nd) <- mkVar (Proxy @nd)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
-                            (indResult [nn, na, nb, nc, nd] (result (Forall n) (Forall a) (Forall b) (Forall c) (Forall d)))
-
 -- | Induction over 'SInteger', taking five extra arguments
 instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -714,21 +621,6 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-
--- | Strong induction over 'SInteger', taking five extra arguments
-instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nn Integer -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SInteger -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (n, nn) <- mkVar (Proxy @nn)
-       (a, na) <- mkVar (Proxy @na)
-       (b, nb) <- mkVar (Proxy @nb)
-       (c, nc) <- mkVar (Proxy @nc)
-       (d, nd) <- mkVar (Proxy @nd)
-       (e, ne) <- mkVar (Proxy @ne)
-       pure $ mkIndStrategy (Just (n .>= 0))
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall n' :: Forall nn Integer) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> 0 .<= n' .&& n' .< n .=> result (Forall n') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
-                            (indResult [nn, na, nb, nc, nd, ne] (result (Forall n) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
 --   xs  -> x
@@ -851,8 +743,8 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (indResult [nxxs, nyys, na, nb] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b)))
 
 -- | Generalized induction with one parameter
-instance (KnownSymbol na, SymVal a, EqSymbolic z, Measure m) => GInductive (Forall na a -> SBool) (SBV a -> m) (SBV a -> (SBool, KDProofRaw z)) where
-  gInductionStrategy result measure steps = do
+instance (KnownSymbol na, SymVal a, EqSymbolic z, Measure m) => SInductive (Forall na a -> SBool) (SBV a -> m) (SBV a -> (SBool, KDProofRaw z)) where
+  sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       pure $ mkIndStrategy Nothing
                            (Just (quantifiedBool (\(Forall a' :: Forall na a) -> measure a' .>= zero)))
@@ -861,8 +753,8 @@ instance (KnownSymbol na, SymVal a, EqSymbolic z, Measure m) => GInductive (Fora
                            (indResult [na] (result (Forall a)))
 
 -- | Generalized induction with two parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> SBool) (SBV a -> SBV b -> m) (SBV a -> SBV b -> (SBool, KDProofRaw z)) where
-  gInductionStrategy result measure steps = do
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z, Measure m) => SInductive (Forall na a -> Forall nb b -> SBool) (SBV a -> SBV b -> m) (SBV a -> SBV b -> (SBool, KDProofRaw z)) where
+  sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       pure $ mkIndStrategy Nothing
@@ -872,8 +764,8 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z, Meas
                            (indResult [na, nb] (result (Forall a) (Forall b)))
 
 -- | Generalized induction with three parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV a -> SBV b -> SBV c -> m) (SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
-  gInductionStrategy result measure steps = do
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z, Measure m) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV a -> SBV b -> SBV c -> m) (SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
+  sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
@@ -884,8 +776,8 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            (indResult [na, nb, nc] (result (Forall a) (Forall b) (Forall c)))
 
 -- | Generalized induction with four parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> m) (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
-  gInductionStrategy result measure steps = do
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z, Measure m) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> m) (SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
+  sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
@@ -897,8 +789,8 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            (indResult [na, nb, nc, nd] (result (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Generalized induction with five parameters
-instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z, Measure m) => GInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> m) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
-  gInductionStrategy result measure steps = do
+instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z, Measure m) => SInductive (Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> m) (SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
+  sInductionStrategy result measure steps = do
       (a, na) <- mkVar (Proxy @na)
       (b, nb) <- mkVar (Proxy @nb)
       (c, nc) <- mkVar (Proxy @nc)
