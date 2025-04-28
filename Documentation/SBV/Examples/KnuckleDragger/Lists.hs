@@ -1305,8 +1305,9 @@ sumHalves = runKD $ do
                                        =: qed
 
     -- Use strong induction to prove the theorem. CVC5 solves this with ease, but z3 struggles.
-    sInductWith cvc5 "sumHalves"
-      (\(Forall @"xs" xs) -> halvingSum xs .== sum xs) $
+    gInductWith cvc5 "sumHalves"
+      (\(Forall @"xs" xs) -> halvingSum xs .== sum xs)
+      (length @Integer) $
       \ih xs -> [] |- halvingSum xs
                    =: split xs qed
                             (\a as -> split as qed

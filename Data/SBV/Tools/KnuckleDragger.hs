@@ -38,7 +38,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , gInduct, gInductWith, gInductThm, gInductThmWith
 
        -- * Creating instances of proofs
-       , at, at2, Inst(..)
+       , at, Inst(..)
 
        -- * Faking proofs
        , sorry

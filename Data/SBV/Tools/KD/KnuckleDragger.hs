@@ -739,11 +739,6 @@ singular n = case reverse n of
                's':_:_ -> init n
                _       -> n ++ "Elt"
 
--- | Metric for induction over lists. Currently we simply require the list we're assuming correctness for is shorter in length, which
--- is a measure that is guarenteed >= 0. Later on, we might want to generalize this to a user given measure.
-lexLeq :: SymVal a => SList a -> SList a -> SBool
-lexLeq xs ys = SL.length xs .< SL.length ys
-
 -- | Induction over 'SList'
 instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] -> SBool) (SBV x -> SList x -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -753,16 +748,6 @@ instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => Inductive (Forall nxs [x] 
                             (Just (result (Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs))) x xs)
                             (indResult [nxxs] (result (Forall (x SL..: xs))))
-
--- | Strong induction over 'SList'
-instance (KnownSymbol nxs, SymVal x, EqSymbolic z) => SInductive (Forall nxs [x] -> SBool) (SList x -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) -> xs' `lexLeq` xs .=> result (Forall xs'))) xs)
-                            (indResult [nxs] (result (Forall xs)))
 
 -- | Induction over 'SList', taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> SBool) (SBV x -> SList x -> SBV a -> (SBool, KDProofRaw z)) where
@@ -775,17 +760,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => 
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs) (Forall a'))) x xs a)
                             (indResult [nxxs, na] (result (Forall (x SL..: xs)) (Forall a)))
 
--- | Strong induction over 'SList', taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> SBool) (SList x -> SBV a -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (a,  na)  <- mkVar (Proxy @na)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a'))) xs a)
-                            (indResult [nxs, na] (result (Forall xs) (Forall a)))
-
 -- | Induction over 'SList', taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -797,18 +771,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> result (Forall xs) (Forall a') (Forall b'))) x xs a b)
                             (indResult [nxxs, na, nb] (result (Forall (x SL..: xs)) (Forall a) (Forall b)))
-
--- | Strong induction over 'SList', taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> SBool) (SList x -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (a, na)   <- mkVar (Proxy @na)
-       (b, nb)   <- mkVar (Proxy @nb)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b'))) xs a b)
-                            (indResult [nxs, na, nb] (result (Forall xs) (Forall a) (Forall b)))
 
 -- | Induction over 'SList', taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
@@ -823,19 +785,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs) (Forall a') (Forall b') (Forall c'))) x xs a b c)
                             (indResult [nxxs, na, nb, nc] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c)))
 
--- | Strong induction over 'SList', taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (a, na)   <- mkVar (Proxy @na)
-       (b, nb)   <- mkVar (Proxy @nb)
-       (c, nc)   <- mkVar (Proxy @nc)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c'))) xs a b c)
-                            (indResult [nxs, na, nb, nc] (result (Forall xs) (Forall a) (Forall b) (Forall c)))
-
 -- | Induction over 'SList', taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -849,20 +798,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (Just (result (Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d'))) x xs a b c d)
                             (indResult [nxxs, na, nb, nc, nd] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d)))
-
--- | Strong induction over 'SList', taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (a, na)   <- mkVar (Proxy @na)
-       (b, nb)   <- mkVar (Proxy @nb)
-       (c, nc)   <- mkVar (Proxy @nc)
-       (d, nd)   <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c') (Forall d'))) xs a b c d)
-                            (indResult [nxs, na, nb, nc, nd] (result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SList', taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SBV x -> SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
@@ -879,32 +814,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, S
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) x xs a b c d e)
                             (indResult [nxxs, na, nb, nc, nd, ne] (result (Forall (x SL..: xs)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
--- | Strong induction over 'SList', taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive (Forall nxs [x] -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) (SList x -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (a, na)   <- mkVar (Proxy @na)
-       (b, nb)   <- mkVar (Proxy @nb)
-       (c, nc)   <- mkVar (Proxy @nc)
-       (d, nd)   <- mkVar (Proxy @nd)
-       (e, ne)   <- mkVar (Proxy @ne)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> xs' `lexLeq` xs .=> result (Forall xs') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) xs a b c d e)
-                            (indResult [nxs, na, nb, nc, nd, ne] (result (Forall xs) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-
--- | Metric for induction over two lists. We use lexicographic ordering. 
-lexLeq2 :: (SymVal a, SymVal b) => (SList a, SList b) -> (SList a, SList b) -> SBool
-lexLeq2 (xs', ys') (xs, ys) =   lxs' .<  lxs        -- First one got smaller
-                            .|| (    lxs' .== lxs   -- OR, the first one did not grow
-                                 .&& lys' .<  lys   -- and the second went down
-                                )
- where lxs' = SL.length xs'
-       lys' = SL.length ys'
-       lxs  = SL.length xs
-       lys  = SL.length ys
-
 -- | Induction over two 'SList', simultaneously
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SBV x, SList x, SBV y, SList y) -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -915,17 +824,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) =>
                             (Just (result (Forall SL.nil, Forall SL.nil) .&& result (Forall SL.nil, Forall (y SL..: ys)) .&& result (Forall (x SL..: xs), Forall SL.nil)))
                             (steps (internalAxiom "IH" (result (Forall xs, Forall ys))) (x, xs, y, ys))
                             (indResult [nxxs, nyys] (result (Forall (x SL..: xs), Forall (y SL..: ys))))
-
--- | Strong induction over two 'SList', simultaneously
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> SBool) ((SList x, SList y) -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys'))) (xs, ys))
-                            (indResult [nxs, nys] (result (Forall xs, Forall ys)))
 
 -- | Induction over two 'SList', simultaneously, taking an extra argument
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> (SBool, KDProofRaw z)) where
@@ -938,18 +836,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> result (Forall xs, Forall ys) (Forall a'))) (x, xs, y, ys) a)
                             (indResult [nxxs, nyys, na] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a)))
-
--- | Strong induction over two 'SList', simultaneously, taking an extra argument
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> SBool) ((SList x, SList y) -> SBV a -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       (a, na)   <- mkVar  (Proxy @na)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a'))) (xs, ys) a)
-                            (indResult [nxs, nys, na] (result (Forall xs, Forall ys) (Forall a)))
 
 -- | Induction over two 'SList', simultaneously, taking two extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
@@ -1024,19 +910,6 @@ instance (KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, Sy
                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> measure a' b' c' d' e' .< measure a b c d e .=> result (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) a b c d e)
                            (indResult [na, nb, nc, nd, ne] (result (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
--- | Strong induction over two 'SList', simultaneously, taking two extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       (a, na)   <- mkVar  (Proxy @na)
-       (b, nb)   <- mkVar  (Proxy @nb)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b'))) (xs, ys) a b)
-                            (indResult [nxs, nys, na, nb] (result (Forall xs, Forall ys) (Forall a) (Forall b)))
-
 -- | Induction over two 'SList', simultaneously, taking three extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
   inductionStrategy result steps = do
@@ -1050,20 +923,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c'))) (x, xs, y, ys) a b c)
                             (indResult [nxxs, nyys, na, nb, nc] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c)))
-
--- | Strong induction over two 'SList', simultaneously, taking three extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       (a, na)   <- mkVar  (Proxy @na)
-       (b, nb)   <- mkVar  (Proxy @nb)
-       (c, nc)   <- mkVar  (Proxy @nc)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c'))) (xs, ys) a b c)
-                            (indResult [nxs, nys, na, nb, nc] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over two 'SList', simultaneously, taking four extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
@@ -1079,21 +938,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (Just (result (Forall SL.nil, Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall SL.nil, Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) .&& result (Forall (x SL..: xs), Forall SL.nil) (Forall a) (Forall b) (Forall c) (Forall d)))
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d'))) (x, xs, y, ys) a b c d)
                             (indResult [nxxs, nyys, na, nb, nc, nd] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d)))
-
--- | Strong induction over two 'SList', simultaneously, taking four extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       (a, na)   <- mkVar  (Proxy @na)
-       (b, nb)   <- mkVar  (Proxy @nb)
-       (c, nc)   <- mkVar  (Proxy @nc)
-       (d, nd)   <- mkVar  (Proxy @nd)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c') (Forall d'))) (xs, ys) a b c d)
-                            (indResult [nxs, nys, na, nb, nc, nd] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over two 'SList', simultaneously, taking five extra arguments
 instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => Inductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SBV x, SList x, SBV y, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
@@ -1111,22 +955,6 @@ instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, 
                             (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> result (Forall xs, Forall ys) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (x, xs, y, ys) a b c d e)
                             (indResult [nxxs, nyys, na, nb, nc, nd, ne] (result (Forall (x SL..: xs), Forall (y SL..: ys)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
--- | Strong induction over two 'SList', simultaneously, taking five extra arguments
-instance (KnownSymbol nxs, SymVal x, KnownSymbol nys, SymVal y, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, KnownSymbol nc, SymVal c, KnownSymbol nd, SymVal d, KnownSymbol ne, SymVal e, EqSymbolic z) => SInductive ((Forall nxs [x], Forall nys [y]) -> Forall na a -> Forall nb b -> Forall nc c -> Forall nd d -> Forall ne e -> SBool) ((SList x, SList y) -> SBV a -> SBV b -> SBV c -> SBV d -> SBV e -> (SBool, KDProofRaw z)) where
-  sInductionStrategy result steps = do
-       (xs, nxs) <- mkVar (Proxy @nxs)
-       (ys, nys) <- mkVar (Proxy @nys)
-       (a, na)   <- mkVar  (Proxy @na)
-       (b, nb)   <- mkVar  (Proxy @nb)
-       (c, nc)   <- mkVar  (Proxy @nc)
-       (d, nd)   <- mkVar  (Proxy @nd)
-       (e, ne)   <- mkVar  (Proxy @ne)
-       pure $ mkIndStrategy Nothing
-                            Nothing
-                            Nothing
-                            (steps (internalAxiom "IH" (\(Forall xs' :: Forall nxs [x], Forall ys' :: Forall nys [y]) (Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> (xs', ys') `lexLeq2` (xs, ys) .=> result (Forall xs', Forall ys') (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) (xs, ys) a b c d e)
-                            (indResult [nxs, nys, na, nb, nc, nd, ne] (result (Forall xs, Forall ys) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-
 -- | Instantiation for a universally quantified variable
 newtype Inst (nm :: Symbol) a = Inst (SBV a)
 
@@ -1139,20 +967,15 @@ class Instantiatable a where
   -- | Apply a universal proof to some arguments, creating an instance of the proof itself.
   at :: Proof -> a -> Proof
 
-  -- | Apply a universal proof to some arguments, for a pair of arguments, creating an instance of the proof itself
-  at2 :: Proof -> a -> Proof
-
 -- | Single parameter
 instance (KnownSymbol na, HasKind a, Typeable a) => Instantiatable (Inst na a) where
   at  = instantiate $ \f (Inst a) -> f (Forall a :: Forall na a)
-  at2 = at  -- Single parameter, so no chance of having a pair. Just use at.
 
 -- | Two parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nb, HasKind b, Typeable b
          ) => Instantiatable (Inst na a, Inst nb b) where
   at  = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b)
-  at2 = instantiate $ \f (Inst a, Inst b) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b)
 
 -- | Three parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -1160,7 +983,6 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nc, HasKind c, Typeable c
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c) where
   at  = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c)
-  at2 = instantiate $ \f (Inst a, Inst b, Inst c) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c)
 
 -- | Four parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -1169,7 +991,6 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol nd, HasKind d, Typeable d
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d) where
   at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
-  at2 = instantiate $ \f (Inst a, Inst b, Inst c, Inst d) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d)
 
 -- | Five parameters
 instance ( KnownSymbol na, HasKind a, Typeable a
@@ -1179,7 +1000,6 @@ instance ( KnownSymbol na, HasKind a, Typeable a
          , KnownSymbol ne, HasKind e, Typeable e
          ) => Instantiatable (Inst na a, Inst nb b, Inst nc c, Inst nd d, Inst ne e) where
   at  = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a) (Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
-  at2 = instantiate $ \f (Inst a, Inst b, Inst c, Inst d, Inst e) -> f (Forall a :: Forall na a,  Forall b :: Forall nb b) (Forall c :: Forall nc c) (Forall d :: Forall nd d) (Forall e :: Forall ne e)
 
 -- | Instantiate a proof over an arg. This uses dynamic typing, kind of hacky, but works sufficiently well.
 instantiate :: (Typeable f, Show arg) => (f -> arg -> SBool) -> Proof -> arg -> Proof
