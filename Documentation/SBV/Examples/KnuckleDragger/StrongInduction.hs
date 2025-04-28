@@ -221,10 +221,10 @@ interleaveLen :: IO Proof
 interleaveLen = runKD $ do
 
    sInduct "interleaveLen"
-           (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) -> length xs + length ys .== length (interleave xs ys))
-           (\(xs :: SList Integer) (ys :: SList Integer) -> length xs + length ys) $
-           \ih xs (ys :: SList Integer) ->
-              [] |- length xs + length ys .== length (interleave xs ys)
+           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs + length ys .== length (interleave @Integer xs ys))
+           (\xs ys -> length @Integer xs + length @Integer ys) $
+           \ih xs ys ->
+              [] |- length xs + length ys .== length (interleave @Integer xs ys)
                  =: split xs
                           trivial
                           (\a as -> length (a .: as) + length ys .== length (interleave (a .: as) ys)
@@ -251,35 +251,39 @@ uninterleaveGen = smtFunction "uninterleave" (\xs alts -> let (es, os) = untuple
 interleaveRoundTrip :: IO Proof
 interleaveRoundTrip = runKD $ do
    -- Generalize the theorem first to take the helper lists explicitly
-   roundTripGen <- sInduct
+   roundTripGen <- sInductWith cvc5
          "roundTripGen"
-         (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) (Forall @"alts" alts) ->
-               length xs .== length ys .=> let (es, os) = untuple alts
-                                           in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
-         (\(xs :: SList Integer) (ys :: SList Integer) (_alts :: STuple [Integer] [Integer]) -> length xs + length ys) $
-         \ih (xs :: SList Integer) (ys :: SList Integer) (alts :: STuple [Integer] [Integer]) ->
-             [length xs .== length ys] |- let (es, os) = untuple alts
-                                          in uninterleaveGen (interleave xs ys) alts
-                                          =: split xs
-                                                   trivial
-                                                   (\a as -> uninterleaveGen (a .: interleave ys as) alts
-                                                          =: uninterleaveGen (interleave ys as) (tuple (os, a .: es))
-                                                          ?? [ hprf (ih `at` (Inst @"xs" ys, Inst @"ys" as, Inst @"alts" (tuple (os, a .: es))))
-                                                             , hasm (length xs .== length ys)
-                                                             ]
-                                                          =: tuple (reverse es ++ xs, reverse os ++ ys)
-                                                          =: qed)
+         (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"alts" alts) ->
+               length @Integer xs .== length ys
+                  .=> let (es, os) = untuple alts
+                      in uninterleaveGen (interleave xs ys) alts .== tuple (reverse es ++ xs, reverse os ++ ys))
+         (\xs ys (_alts :: STuple [Integer] [Integer]) -> length @Integer xs + length @Integer ys) $
+         \ih xs ys alts -> [length @Integer xs .== length ys]
+                        |- let (es, os) = untuple alts
+                        in uninterleaveGen (interleave xs ys) alts
+                        =: split xs
+                        trivial
+                        (\a as -> uninterleaveGen (a .: interleave ys as) alts
+                               ?? [ hasm $ head xs .== a
+                                  , hasm $ tail xs .== as
+                                  ]
+                               =: uninterleaveGen (interleave ys as) (tuple (os, a .: es))
+                               ?? [ hprf (ih `at` (Inst @"xs" ys, Inst @"ys" as, Inst @"alts" (tuple (os, a .: es))))
+                                  , hasm (length xs .== length ys)
+                                  , hcmnt "slow"
+                                  ]
+                               =: tuple (reverse es ++ xs, reverse os ++ ys)
+                               =: qed)
 
    -- Round-trip theorem:
    calc "interleaveRoundTrip"
-           (\(Forall @"xs" (xs :: SList Integer)) (Forall @"ys" ys) ->
-               length xs .== length ys .=> uninterleave (interleave xs ys) .== tuple (xs, ys)) $
-           \(xs :: SList Integer) ys ->
-                  [length xs .== length ys] |- uninterleave (interleave xs ys)
-                                            =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                                            ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
-                                               , hasm (length xs .== length ys)
-                                               , hprf sorry
-                                               ]
-                                            =: tuple (reverse nil ++ xs, reverse nil ++ ys)
-                                            =: qed
+           (\(Forall @"xs" xs) (Forall @"ys" ys) -> length xs .== length ys .=> uninterleave (interleave @Integer xs ys) .== tuple (xs, ys)) $
+           \xs ys -> [length xs .== length ys]
+                  |- uninterleave (interleave @Integer xs ys)
+                  =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
+                  ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
+                     , hasm (length xs .== length ys)
+                     , hprf sorry
+                     ]
+                  =: tuple (reverse nil ++ xs, reverse nil ++ ys)
+                  =: qed
