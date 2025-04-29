@@ -99,8 +99,9 @@ See `proveWithAny`/`proveWithAll` and `satWithAny`/`satWithAll` functions. The f
 
 While SMT solvers are quite powerful, there is a certain class of problems that they are just not well suited for. In particular, SMT
 solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
-any recursive algorithm, and most such proofs require carefully constructed equational steps. SBV allows for a
-style of semi-automated theorem proving, called KnuckleDragger, that can be used to construct such proofs.
+any recursive algorithm, and most such proofs require carefully constructed equational steps.
+
+SBV allows for a style of semi-automated theorem proving, called KnuckleDragger, that can be used to construct such proofs.
 The documentation includes example proofs for many list functions, and even inductive proofs for the familiar insertion
 and merge-sort algorithms, along with a proof that the square-root of 2 is irrational. While a proper theorem prover (such as Lean, Isabelle
 etc.) is a more appropriate choice for such proofs, with some guidance (and acceptance of a much larger trusted code base!), SBV can
