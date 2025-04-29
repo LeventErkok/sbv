@@ -95,7 +95,7 @@ Other SMT solvers can be used with SBV as well, with a relatively easy hook-up m
 SBV also allows for running multiple solvers at the same time, either picking the result of the first to complete, or getting results from all.
 See `proveWithAny`/`proveWithAll` and `satWithAny`/`satWithAll` functions. The function `sbvAvailableSolvers` can be used to query the available solvers at run-time.
 
-## Semi-automated theorem proving
+## KnuckleDragger: Semi-automated theorem proving
 
 While SMT solvers are quite powerful, there is a certain class of problems that they are just not well suited for. In particular, SMT
 solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
