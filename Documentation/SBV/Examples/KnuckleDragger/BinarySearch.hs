@@ -91,20 +91,19 @@ correctness = runKD $ do
                                (isNothing res)
                      =: cases [ inArray arr (lo, hi) x
                                   ==> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x
-                                   ?? [ hyp  (nonDecreasing arr (lo, hi))
+                                   ?? [ hasm (nonDecreasing arr (lo, hi))
                                       , hprf (bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
                                       ]
                                    =: sTrue
                                    =: qed
                               , sNot (inArray arr (lo, hi) x)
                                   ==> isNothing (bsearch arr (lo, hi) x)
-                                   ?? [ hyp  (nonDecreasing arr (lo, hi))
+                                   ?? [ hasm (nonDecreasing arr (lo, hi))
                                       , hprf (bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
                                       ]
                                    =: sTrue
                                    =: qed
                               ]
-                     =: qed
 
 {-
         \xs x -> [nonDecreasing xs]
