@@ -134,19 +134,51 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                     , hasm $ sNot (inArray arr (lo, hi) x)
                                     , hasm $ nonDecreasing arr (lo, hi)
                                     ]
-                                 =: ite (xmid .< x)
-                                        sTrue
-                                        sTrue
+                                 =: ite (xmid .< x) sTrue sTrue
                                  ?? "simplify"
                                  =: sTrue
                                  =: qed
                     ]
 
   -- Prove the case when the target is in the array
-  bsearchPresent <- lemma "bsearchPresent"
+  bsearchPresent <- calc "bsearchPresent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
-            nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
-        [sorry]
+            nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x) $
+        \arr lo hi x ->
+             [nonDecreasing arr (lo, hi), inArray arr (lo, hi) x]
+          |- x .== arr `readArray` fromJust (bsearch arr (lo, hi) x)
+          ?? "unfold bsearch"
+          =: let mid  = (lo + hi) `sEDiv` 2
+                 xmid = arr `readArray` mid
+          in x .== arr `readArray` fromJust (ite (lo .> hi)
+                                                 sNothing
+                                                 (ite (xmid .== x)
+                                                      (sJust mid)
+                                                      (ite (xmid .< x)
+                                                           (bsearch arr (mid+1, hi)    x)
+                                                           (bsearch arr (lo,    mid-1) x))))
+          ?? "simplify"
+          =: ite (lo .> hi)
+                 (x .== arr `readArray` fromJust sNothing)
+                 (ite (xmid .== x)
+                      (x .== arr `readArray` mid)
+                      (ite (xmid .< x)
+                           (x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x))
+                           (x .== arr `readArray` fromJust (bsearch arr (lo,    mid-1) x))))
+          =: cases [ lo .>  hi ==> trivial
+                   , lo .== hi ==> trivial
+                   , lo .<  hi ==> ite (xmid .== x)
+                                       (x .== arr `readArray` mid)
+                                       (ite (xmid .< x)
+                                            (x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x))
+                                            (x .== arr `readArray` fromJust (bsearch arr (lo,    mid-1) x)))
+                                =: cases [ xmid .== x ==> trivial
+                                         , xmid .< x  ==> x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x)
+                                                       =: qed
+                                         , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo,    mid-1) x)
+                                                       =: qed
+                                         ]
+                   ]
 
   calc "bsearchCorrect"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
