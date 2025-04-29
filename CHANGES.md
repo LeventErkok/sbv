@@ -7,9 +7,9 @@
     unless you can't use anything newer.
 
   * KnuckleDragger:
-      - Simplify and generalize inductive proofs.
-      - Tweak proof-traces to print user given hints (aids in debugging)
-      - Add a proof of correctness for the binary-search algorithm
+      - Simplify and generalize inductive proofs. You can now do proofs with user-specified measure functions.
+      - Tweak proof-traces to print user given hints (aids in debugging).
+      - Add a proof of correctness for the binary-search algorithm.
 
 ### Version 11.5, 2025-04-25
 
