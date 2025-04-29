@@ -31,11 +31,11 @@ module Data.SBV.Tools.KnuckleDragger (
        -- * Reasoning via regular induction
        , induct,  inductWith, inductThm, inductThmWith
 
-       -- * Reasoning via strong induction
+       -- * Reasoning via measure-based strong induction
        , sInduct, sInductWith, sInductThm, sInductThmWith
 
        -- * Creating instances of proofs
-       , at, at2, Inst(..)
+       , at, Inst(..)
 
        -- * Faking proofs
        , sorry
@@ -50,7 +50,7 @@ module Data.SBV.Tools.KnuckleDragger (
        , (=:), (≡)
 
        -- * Supplying hints for a calculation step
-       , (??), (⁇), hprf, hyp
+       , (??), (⁇), hprf, hasm, hcmnt
 
        -- * Case splits
        , split, split2, cases, (⟹), (==>)

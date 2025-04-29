@@ -10,6 +10,7 @@
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE TypeAbstractions    #-}
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
@@ -66,113 +67,119 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- We have:
 --
 -- >>> correctness
--- Lemma: nonDecrInsert                              Q.E.D.
+-- Lemma: nonDecrInsert                                        Q.E.D.
 -- Inductive lemma (strong): mergeKeepsSort
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2                                               Q.E.D.
+--     Step: 1.3                                               Q.E.D.
+--     Step: 1.4.1 (unfold merge)                              Q.E.D.
 --     Step: 1.4.2 (2 way case split)
---       Step: 1.4.2.1.1                             Q.E.D.
---       Step: 1.4.2.1.2                             Q.E.D.
---       Step: 1.4.2.2.1                             Q.E.D.
---       Step: 1.4.2.2.2                             Q.E.D.
---       Step: 1.4.2.Completeness                    Q.E.D.
---   Result:                                         Q.E.D.
+--       Step: 1.4.2.1.1 (case split)                          Q.E.D.
+--       Step: 1.4.2.1.2                                       Q.E.D.
+--       Step: 1.4.2.2.1 (case split)                          Q.E.D.
+--       Step: 1.4.2.2.2                                       Q.E.D.
+--       Step: 1.4.2.Completeness                              Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortNonDecreasing
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.2.3                                   Q.E.D.
---     Step: 1.2.4                                   Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1 (unfold)                                    Q.E.D.
+--     Step: 1.2.2 (push nonDecreasing down)                   Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): mergeCount
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (4 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2                                     Q.E.D.
---     Step: 1.3                                     Q.E.D.
---     Step: 1.4.1                                   Q.E.D.
---     Step: 1.4.2                                   Q.E.D.
---     Step: 1.4.3                                   Q.E.D.
---     Step: 1.4.4                                   Q.E.D.
---     Step: 1.4.5                                   Q.E.D.
---     Step: 1.4.6                                   Q.E.D.
---     Step: 1.4.7                                   Q.E.D.
---   Result:                                         Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2                                               Q.E.D.
+--     Step: 1.3                                               Q.E.D.
+--     Step: 1.4.1 (unfold merge)                              Q.E.D.
+--     Step: 1.4.2 (push count inside)                         Q.E.D.
+--     Step: 1.4.3 (unfold count, twice)                       Q.E.D.
+--     Step: 1.4.4                                             Q.E.D.
+--     Step: 1.4.5                                             Q.E.D.
+--     Step: 1.4.6 (unfold count in reverse, twice)            Q.E.D.
+--     Step: 1.4.7 (simplify)                                  Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma: countAppend
---   Step: Base                                      Q.E.D.
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Step: 3                                         Q.E.D.
---   Step: 4                                         Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: take_drop                                  Q.E.D.
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (unfold count)                                    Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Step: 4 (simplify)                                        Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: take_drop                                            Q.E.D.
 -- Lemma: takeDropCount
---   Step: 1                                         Q.E.D.
---   Step: 2                                         Q.E.D.
---   Result:                                         Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
 -- Inductive lemma (strong): sortIsPermutation
+--   Step: Measure is non-negative                             Q.E.D.
 --   Step: 1 (2 way full case split)
---     Step: 1.1                                     Q.E.D.
---     Step: 1.2.1                                   Q.E.D.
---     Step: 1.2.2                                   Q.E.D.
---     Step: 1.2.3                                   Q.E.D.
---     Step: 1.2.4                                   Q.E.D.
---     Step: 1.2.5                                   Q.E.D.
---     Step: 1.2.6                                   Q.E.D.
---   Result:                                         Q.E.D.
--- Lemma: mergeSortIsCorrect                         Q.E.D.
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1 (unfold mergeSort)                          Q.E.D.
+--     Step: 1.2.2 (push count down, simplify, rearrange)      Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.2.5                                             Q.E.D.
+--     Step: 1.2.6                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: mergeSortIsCorrect                                   Q.E.D.
 -- [Proven] mergeSortIsCorrect
 correctness :: IO Proof
-correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     --------------------------------------------------------------------------------------------
     -- Part I. Prove that the output of merge sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
-    nonDecrIns  <- lemma "nonDecrInsert"
-                         (\(Forall @"x" x) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
-                                                            .=> nonDecreasing (x .: ys))
-                         []
+    nonDecrIns <- lemma "nonDecrInsert"
+                        (\(Forall @"x" x) (Forall @"ys" ys) -> nonDecreasing ys .&& sNot (null ys) .&& x .<= head ys
+                                                           .=> nonDecreasing (x .: ys))
+                        []
 
     mergeKeepsSort <-
         sInductWith cvc5 "mergeKeepsSort"
-           (\(Forall @"xs" xs, Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys)) $
-           \ih (xs, ys) -> [nonDecreasing xs, nonDecreasing ys]
-                        |- split2 (xs, ys)
-                                  trivial           -- when both xs and ys are empty.  Trivial.
-                                  trivial           -- when xs is empty, but ys isn't. Trivial.
-                                  trivial           -- when ys is empty, but xs isn't. Trivial.
-                                  (\(a, as) (b, bs) ->
-                                        nonDecreasing (merge (a .: as) (b .: bs))
-                                     ?? "unfold merge"
-                                     =: nonDecreasing (ite (a .<= b)
-                                                           (a .: merge as (b .: bs))
-                                                           (b .: merge (a .: as) bs))
-                                     ?? "case split"
-                                     =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                         ?? [ hprf $ ih         `at2` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                            , hprf $ nonDecrIns `at`  (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                            , hyp  $ nonDecreasing (a .: as)
-                                                            , hyp  $ nonDecreasing (b .: bs)
-                                                            ]
-                                                         =: sTrue
-                                                         =: qed
-                                              , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                         ?? [ hprf $ ih         `at2` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                            , hprf $ nonDecrIns `at`  (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
-                                                            , hyp  $ nonDecreasing (a .: as)
-                                                            , hyp  $ nonDecreasing (b .: bs)
-                                                            ]
-                                                         =: sTrue
-                                                         =: qed
-                                              ])
+           (\(Forall @"xs" xs) (Forall @"ys" ys) -> nonDecreasing xs .&& nonDecreasing ys .=> nonDecreasing (merge xs ys))
+           (\(xs :: SList Integer) (ys :: SList Integer) -> (length xs, length ys)) $
+           \ih xs ys -> [nonDecreasing xs, nonDecreasing ys]
+                     |- split2 (xs, ys)
+                               trivial           -- when both xs and ys are empty.  Trivial.
+                               trivial           -- when xs is empty, but ys isn't. Trivial.
+                               trivial           -- when ys is empty, but xs isn't. Trivial.
+                               (\(a, as) (b, bs) ->
+                                     nonDecreasing (merge (a .: as) (b .: bs))
+                                  ?? "unfold merge"
+                                  =: nonDecreasing (ite (a .<= b)
+                                                        (a .: merge as (b .: bs))
+                                                        (b .: merge (a .: as) bs))
+                                  ?? "case split"
+                                  =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
+                                                      ?? [ hprf $ ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                         , hprf $ nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
+                                                         , hasm $ nonDecreasing (a .: as)
+                                                         , hasm $ nonDecreasing (b .: bs)
+                                                         ]
+                                                      =: sTrue
+                                                      =: qed
+                                           , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
+                                                      ?? [ hprf $ ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                         , hprf $ nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
+                                                         , hasm $ nonDecreasing (a .: as)
+                                                         , hasm $ nonDecreasing (b .: bs)
+                                                         ]
+                                                      =: sTrue
+                                                      =: qed
+                                           ])
 
     sortNonDecreasing <-
         sInduct "sortNonDecreasing"
-                (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs)) $
+                (\(Forall @"xs" xs) -> nonDecreasing (mergeSort xs))
+                (length @Integer) $
                 \ih xs -> [] |- split xs
                                       qed
                                       (\e es -> nonDecreasing (mergeSort (e .: es))
@@ -191,7 +198,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                     (nonDecreasing (merge (mergeSort h1) (mergeSort h2)))
                                              ?? [ ih `at` Inst @"xs" h1
                                                 , ih `at` Inst @"xs" h2
-                                                , mergeKeepsSort `at2` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
+                                                , mergeKeepsSort `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2))
                                                 ]
                                              =: sTrue
                                              =: qed)
@@ -201,8 +208,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
     --------------------------------------------------------------------------------------------
     mergeCount <-
         sInduct "mergeCount"
-                (\(Forall @"xs" xs, Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys) $
-                \ih (as, bs) e -> [] |-
+                (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (merge xs ys) .== count e xs + count e ys)
+                (\(xs :: SList Integer) (ys :: SList Integer) (_e :: SInteger) -> (length xs, length ys)) $
+                \ih as bs e -> [] |-
                         split2 (as, bs)
                                trivial
                                trivial
@@ -220,11 +228,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                  =: ite (x .<= y)
                                                         (let r = count e (merge xs (y .: ys)) in ite (e .== x) (1+r) r)
                                                         (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                 ?? ih `at2` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
+                                                 ?? ih `at` (Inst @"xs" xs, Inst @"ys" (y .: ys), Inst @"e" e)
                                                  =: ite (x .<= y)
                                                         (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
                                                         (let r = count e (merge (x .: xs) ys) in ite (e .== y) (1+r) r)
-                                                 ?? ih `at2` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
+                                                 ?? ih `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"e" e)
                                                  =: ite (x .<= y)
                                                         (let r = count e xs + count e (y .: ys) in ite (e .== x) (1+r) r)
                                                         (let r = count e (x .: xs) + count e ys in ite (e .== y) (1+r) r)
@@ -265,8 +273,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                           =: qed
 
     sortIsPermutation <-
-        sInduct "sortIsPermutation"
-                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs)) $
+        sInductWith cvc5 "sortIsPermutation"
+                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (mergeSort xs))
+                (\(xs :: SList Integer) (_e :: SInteger) -> length xs) $
                 \ih as e -> [] |- split as
                                         qed
                                         (\x xs -> count e (mergeSort (x .: xs))
@@ -280,12 +289,16 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
                                                in ite (null xs)
                                                       (count e (singleton x))
                                                       (count e (merge (mergeSort h1) (mergeSort h2)))
-                                               ?? mergeCount `at2` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
+                                               ?? mergeCount `at` (Inst @"xs" (mergeSort h1), Inst @"ys" (mergeSort h2), Inst @"e" e)
                                                =: ite (null xs)
                                                       (count e (singleton x))
                                                       (count e (mergeSort h1) + count e (mergeSort h2))
-                                               ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
-                                               =: ite (null xs) (count e (singleton x)) (count e h1 + count e (mergeSort h2))
+                                               ?? [ hprf  (ih `at` (Inst @"xs" h1, Inst @"e" e))
+                                                  , hasm  (length h1 .< length (x .: xs))
+                                                  ]
+                                               =: ite (null xs)
+                                                      (count e (singleton x))
+                                                      (count e h1 + count e (mergeSort h2))
                                                ?? ih `at` (Inst @"xs" h2, Inst @"e" e)
                                                =: ite (null xs)
                                                       (count e (singleton x))

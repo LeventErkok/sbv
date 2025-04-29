@@ -9,9 +9,11 @@
 -- Example use of inductive KnuckleDragger proofs, over integers.
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE TypeAbstractions #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
 
@@ -21,6 +23,13 @@ import Prelude hiding (sum, length)
 
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
+
+#ifndef HADDOCK
+-- $setup
+-- >>> -- For doctest purposes only:
+-- >>> :set -XScopedTypeVariables
+-- >>> import Control.Exception
+#endif
 
 -- | Prove that sum of constants @c@ from @0@ to @n@ is @n*c@.
 --
@@ -50,7 +59,7 @@ sumConstProof = runKD $ do
    induct "sumConst_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> sum n .== spec n) $
           \ih n -> [n .>= 0] |- sum (n+1)  ?? n .>= 0
-                             =: c + sum n  ?? [hprf ih, hyp (n .>= 0)]
+                             =: c + sum n  ?? [hprf ih, hasm (n .>= 0)]
                              =: c + spec n
                              =: c + c*n
                              =: c*(n+1)
@@ -81,7 +90,7 @@ sumProof = runKD $ do
    induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih n -> [n .>= 0] |- sum (n+1)    ?? n .>= 0
-                             =: n+1 + sum n  ?? [hprf ih, hyp (n .>= 0)]
+                             =: n+1 + sum n  ?? [hprf ih, hasm (n .>= 0)]
                              =: n+1 + spec n
                              =: spec (n+1)
                              =: qed
@@ -110,7 +119,7 @@ sumSquareProof = runKD $ do
    induct "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
           \ih n -> [n .>= 0] |- sumSquare (n+1)           ?? n .>= 0
-                             =: (n+1)*(n+1) + sumSquare n ?? [hprf ih, hyp (n .>= 0)]
+                             =: (n+1)*(n+1) + sumSquare n ?? [hprf ih, hasm (n .>= 0)]
                              =: (n+1)*(n+1) + spec n
                              =: spec (n+1)
                              =: qed
@@ -151,15 +160,36 @@ elevenMinusFour = runKD $ do
           \ih n -> [n .>= 0]
                 |- emf (n+1)
                 =: 7 `sDivides` (11 `pow` (n+1) - 4 `pow` (n+1))
-                ?? [hyp (n .>= 0), hprf (powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n))]
+                ?? [hasm (n .>= 0), hprf (powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n))]
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 `pow` (n+1))
-                ?? [hyp (n .>= 0), hprf (powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n))]
+                ?? [hasm (n .>= 0), hprf (powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n))]
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * (11 `pow` n - 4 `pow` n))
-                ?? [hyp (n .>= 0), hprf ih]
+                ?? [hasm (n .>= 0), hprf ih]
                 =: let x = some "x" (\v -> 7*v .== 11 `pow` n - 4 `pow` n)   -- Apply the IH and grab the witness for it
                 in 7 `sDivides` (7 * 11 `pow` n + 4 * 7 * x)
                 =: 7 `sDivides` (7 * (11 `pow` n + 4 * x))
                 =: sTrue
                 =: qed
+
+-- | A negative example: The regular inductive proof on integers (i.e., proving at @0@, assuming at @n@ and proving at
+-- @n+1@ will not allow you to conclude things when @n < 0@. The following example demonstrates this with the most
+-- obvious example:
+--
+-- >>> badNonNegative `catch` (\(_ :: SomeException) -> pure ())
+-- Inductive lemma: badNonNegative
+--   Step: Base                            Q.E.D.
+--   Step: 1
+-- *** Failed to prove badNonNegative.1.
+-- Falsifiable. Counter-example:
+--   n = -2 :: Integer
+badNonNegative :: IO ()
+badNonNegative = runKD $ do
+    _ <- induct "badNonNegative"
+                (\(Forall @"n" (n :: SInteger)) -> n .>= 0) $
+                \ih n -> [] |- n + 1 .>= (0 :: SInteger)
+                            ?? ih
+                            =: sTrue
+                            =: qed
+    pure ()

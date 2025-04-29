@@ -1,13 +1,23 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.4.5, Not yet released
+### Version 11.5.5, Not yet released
+ 
+  * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,
+    unless you can't use anything newer.
+
+  * KnuckleDragger: Simplify and generalize inductive proofs.
+
+  * KnuckleDragger: Tweak proof-traces to print user given hints (aids in debugging)
+
+
+### Version 11.5, 2025-04-25
 
   * Documentation updates
 
-  * KD: Add support for case-splitting, trivial proofs, and other improvements.
+  * KnuckleDragger: Add support for case-splitting, trivial proofs, and other improvements.
 
-  * KD: Add support for strong-induction principle over integers and lists.
+  * KnuckleDragger: Add support for strong-induction principle over integers and lists.
 
 ### Version 11.4, 2025-03-12
 
