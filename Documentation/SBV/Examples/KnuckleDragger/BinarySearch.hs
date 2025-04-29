@@ -35,17 +35,17 @@ type Idx = (SInteger, SInteger)
 
 -- | Encode binary search in a functional style.
 bsearch :: Arr -> Idx -> SInteger -> SMaybe Integer
-bsearch arr (low, high) = f arr low high
-  where f = smtFunction "bsearch" $ \a lo hi x ->
+bsearch array (low, high) = f array low high
+  where f = smtFunction "bsearch" $ \arr lo hi x ->
                let mid  = (lo + hi) `sEDiv` 2
-                   xmid = a `readArray` mid
+                   xmid = arr `readArray` mid
                in ite (lo .> hi)
                       sNothing
                       (ite (xmid .== x)
                            (sJust mid)
                            (ite (xmid .< x)
-                                (bsearch a (mid+1, hi)    x)
-                                (bsearch a (lo,    mid-1) x)))
+                                (bsearch arr (mid+1, hi)    x)
+                                (bsearch arr (lo,    mid-1) x)))
 
 -- * Correctness proof
 
@@ -64,13 +64,80 @@ inArray arr (low, high) elt = quantifiedBool $ \(Exists @"i" i) -> low .<= i .&&
 --
 -- >>> correctness
 correctness :: IO Proof
-correctness = runKD $ do
+correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ do
+
+  -- Helper: if a value is not in a range, then it isn't in any subrange of it:
+  notInRange <- lemma "notInRange"
+                      (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                          ->  sNot (inArray arr (lo, hi) x) .&& lo .<= md .&& md .<= hi
+                          .=> sNot (inArray arr (lo, md) x) .&& sNot (inArray arr (md, hi) x))
+                      []
+
+  -- Helper: if an array is nonDecreasing, then its parts are also non-decreasing when cut in any middle point
+  nonDecreasingInRange <- lemma "nonDecreasing"
+                                (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md)
+                                    ->  nonDecreasing arr (lo, hi) .&& lo .<= md .&& md .<= hi
+                                    .=> nonDecreasing arr (lo, md) .&& nonDecreasing arr (md, hi))
+                                []
 
   -- Prove the case when the target is not in the array
-  bsearchAbsent <- lemma "bsearchAbsent"
+  bsearchAbsent <- sInduct "bsearchAbsent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& sNot (inArray arr (lo, hi) x) .=> isNothing (bsearch arr (lo, hi) x))
-        [sorry]
+        (\(_arr :: Arr) (lo :: SInteger) (hi :: SInteger) (_x :: SInteger) -> abs (hi - lo + 1)) $
+        \ih arr lo hi x ->
+              [nonDecreasing arr (lo, hi), sNot (inArray arr (lo, hi) x)]
+           |- isNothing (bsearch arr (lo, hi) x)
+           ?? "unfold bsearch"
+           =: let mid  = (lo + hi) `sEDiv` 2
+                  xmid = arr `readArray` mid
+           in isNothing (ite (lo .> hi)
+                             sNothing
+                             (ite (xmid .== x)
+                                  (sJust mid)
+                                  (ite (xmid .< x)
+                                       (bsearch arr (mid+1, hi)    x)
+                                       (bsearch arr (lo,    mid-1) x))))
+           ?? "push isNothing down, simplify"
+           =: ite (lo .> hi)
+                  sTrue
+                  (ite (xmid .== x)
+                       sFalse
+                       (ite (xmid .< x)
+                            (isNothing (bsearch arr (mid+1, hi)    x))
+                            (isNothing (bsearch arr (lo,    mid-1) x))))
+           =: cases [ lo .> hi  ==> qed
+                    , lo .<= hi ==> ite (xmid .== x)
+                                        sFalse
+                                        (ite (xmid .< x)
+                                             (isNothing (bsearch arr (mid+1, hi)    x))
+                                             (isNothing (bsearch arr (lo,    mid-1) x)))
+                                 ?? sNot (inArray arr (lo, hi) x)
+                                 =: ite (xmid .< x)
+                                        (isNothing (bsearch arr (mid+1, hi)    x))
+                                        (isNothing (bsearch arr (lo,    mid-1) x))
+                                 ?? [ hprf $ notInRange           `at` (Inst @"arr" arr, Inst @"lo" lo,      Inst @"hi" hi, Inst @"m" (mid+1), Inst @"x" x)
+                                    , hprf $ nonDecreasingInRange `at` (Inst @"arr" arr, Inst @"lo" lo,      Inst @"hi" hi, Inst @"m" (mid+1))
+                                    , hprf $ ih                   `at` (Inst @"arr" arr, Inst @"lo" (mid+1), Inst @"hi" hi,                    Inst @"x" x)
+                                    , hasm $ sNot (inArray arr (lo, hi) x)
+                                    , hasm $ nonDecreasing arr (lo, hi)
+                                    ]
+                                 =: ite (xmid .< x)
+                                        sTrue
+                                        (isNothing (bsearch arr (lo,    mid-1) x))
+                                 ?? [ hprf $ notInRange           `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi,      Inst @"m" (mid-1), Inst @"x" x)
+                                    , hprf $ nonDecreasingInRange `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi,      Inst @"m" (mid-1))
+                                    , hprf $ ih                   `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" (mid-1),                    Inst @"x" x)
+                                    , hasm $ sNot (inArray arr (lo, hi) x)
+                                    , hasm $ nonDecreasing arr (lo, hi)
+                                    ]
+                                 =: ite (xmid .< x)
+                                        sTrue
+                                        sTrue
+                                 ?? "simplify"
+                                 =: sTrue
+                                 =: qed
+                    ]
 
   -- Prove the case when the target is in the array
   bsearchPresent <- lemma "bsearchPresent"
@@ -104,205 +171,3 @@ correctness = runKD $ do
                                    =: sTrue
                                    =: qed
                               ]
-
-{-
-        \xs x -> [nonDecreasing xs]
-              |- let res = bsearch xs x
-                 in ite (x `elem` xs)
-                        (xs !! fromJust res .== x)
-                        (isNothing res)
-              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearch xs x) .== x
-                                         ?? [ hyp  (nonDecreasing xs)
-                                            , hprf (bsearchPresent `at` (Inst @"xs" xs, Inst @"x" x))
-                                            ]
-                                         =: sTrue
-                                         =: qed
-                       , x `notElem` xs ==> isNothing (bsearch xs x)
-                                         ?? [ hyp  (nonDecreasing xs)
-                                            , hprf (bsearchAbsent `at` (Inst @"xs" xs, Inst @"x" x))
-                                            ]
-                                         =: sTrue
-                                         =: qed
-                       ]
-  lemma "bsearchCorrect"
-        (\(Forall @"arr" arr) (Forall @"low" low) (Forall @"high" high) (Forall @"x" x) ->
-            nonDecreasing arr 0  .=> let res = bsearch xs x
-                                 in ite (x `elem` xs)
-                                        (xs !! fromJust res .== x)
-                                        (isNothing res)) $
-  -- helper: if an element is not in a list, then it isn't an element of any of its suffixes either
-  notElemSuffix <- lemma "notElemSuffix"
-        (\(Forall @"n" n) (Forall @"x" (x :: SInteger)) (Forall @"xs" xs) -> x `notElem` xs .=> x `notElem` drop n xs)
-        []
-
-  -- helper: if an element is not in a list, then it isn't an element of any of its prefixes either
-  notElemPrefix <- lemma "notElemPrefix"
-        (\(Forall @"n" n) (Forall @"x" (x :: SInteger)) (Forall @"xs" xs) -> x `notElem` xs .=> x `notElem` take n xs)
-        []
-
-  -- helper: if a list is non-decreasing, so is any suffix of it
-  nonDecreasingSuffix <- inductWith cvc5 "nonDecreasingSuffix"
-        (\(Forall @"xs" xs) (Forall @"n" n) -> nonDecreasing xs .=> nonDecreasing (drop n xs)) $
-        \ih x xs n -> [nonDecreasing (x .: xs)]
-                   |- nonDecreasing (drop n (x .: xs))
-                   =: cases [ n .<= 0 ==> trivial
-                            , n .> 0  ==> nonDecreasing (drop (n-1) xs)
-                                       ?? [ hprf (ih `at` Inst @"n" (n-1))
-                                          , hyp  (nonDecreasing xs)
-                                          ]
-                                       =: sTrue
-                                       =: qed
-                            ]
-
-  -- helper: if a list is non-decreasing, so is any prefix of it
-  nonDecreasingPrefix <- inductWith cvc5 "nonDecreasingPrefix"
-      (\(Forall @"n" n) (Forall @"xs" xs) -> nonDecreasing xs .=> nonDecreasing (take n xs)) $
-      \ih n xs -> [nonDecreasing xs]
-               |- nonDecreasing (take (n+1) xs)
-               =: split xs
-                        trivial
-                        (\a as -> nonDecreasing (a .: take n as)
-                               =: cases [ n .<= 0 ==> trivial
-                                        , n .> 0  ==> split as
-                                                            trivial
-                                                            (\b bs -> nonDecreasing (a .: b .: take (n-1) bs)
-                                                                   ?? [ hprf ih
-                                                                      , hyp (nonDecreasing xs)
-                                                                      ]
-                                                                   =: sTrue
-                                                                   =: qed)
-                                        ])
-
-  -- helper: if an element is present and is less than another element, it must be in the prefix
-  presentInPrefix <- induct "presentInPrefix"
-      (\(Forall @"xs" xs) (Forall @"n" n) (Forall @"e" e) ->
-          n .>= 0 .&& n .< length xs .&& nonDecreasing xs .&& e `elem` xs .&& e .< xs !! n .=> e `elem` take n xs) $
-      \ih x xs n e -> [ n .>= 0
-                      , n .< length (x .: xs)
-                      , nonDecreasing (x .: xs)
-                      , e `elem` (x .: xs)
-                      , e .< (x .: xs) !! n
-                      ]
-                   |- e `elem` take n (x .: xs)
-                   =: cases [ n .<= 0 ==> trivial
-                            , n .>  0 ==> e `elem` (x .: take (n-1) xs)
-                                       =: cases [ e .== x ==> trivial
-                                                , e ./= x ==> e `elem` take (n-1) xs
-                                                           ?? [ ih                  `at` (Inst @"n" (n-1), Inst @"e" e)
-                                                              , nonDecreasingSuffix `at` (Inst @"xs" xs, Inst @"n" (1::SInteger))
-                                                              ]
-                                                           =: sTrue
-                                                           =: qed
-                                                ]
-                            ]
-
-  -- Prove the case when the target is not in the list
-  bsearchAbsent <- sInductWith cvc5 "bsearchAbsent"
-        (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .&& x `notElem` xs .=> isNothing (bsearch xs x)) $
-        \ih xs x -> [nonDecreasing xs, x `notElem` xs]
-                 |- isNothing (bsearch xs x)
-                 ?? "expand bsearch and push isNothing down"
-                 =: let mid  = (length xs - 1) `sEDiv` 2
-                        xmid = xs !! mid
-                        mid1 = mid + 1
-                 in ite (null xs)
-                        sTrue
-                        (ite (xmid .== x)
-                             sFalse
-                             (ite (xmid .< x)
-                                  (isNothing (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
-                                  (isNothing (                 bsearch (take mid  xs) x))))
-                 ?? [ hprf (ih                  `at` (Inst @"xs" (drop mid1 xs), Inst @"x" x))
-                    , hprf (notElemSuffix       `at` (Inst @"n" mid1, Inst @"x" x, Inst @"xs" xs))
-                    , hprf (nonDecreasingSuffix `at` (Inst @"xs" xs, Inst @"n" mid1))
-                    , hyp  (nonDecreasing xs)
-                    , hyp  (x `notElem` xs)
-                    ]
-                 =: ite (null xs)
-                        sTrue
-                        (ite (xmid .== x)
-                             sFalse
-                             (ite (xmid .< x)
-                                  (isNothing (SM.map (+ mid1) sNothing))
-                                  (isNothing (bsearch (take mid xs) x))))
-                 ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
-                    , hprf (notElemPrefix       `at` (Inst @"n" mid, Inst @"x" x, Inst @"xs" xs))
-                    , hprf (nonDecreasingPrefix `at` (Inst @"n" mid,              Inst @"xs" xs))
-                    , hyp  (nonDecreasing xs)
-                    , hyp  (x `notElem` xs)
-                    ]
-                 =: ite (null xs)
-                        sTrue
-                        (ite (xmid .== x)
-                             sFalse
-                             (ite (xmid .< x)
-                                  (isNothing (SM.map (+ mid1) sNothing))
-                                  (isNothing (sNothing :: SMaybe Integer))))
-                 ?? "simplify"
-                 =: null xs .|| xmid ./== x
-                 =: qed
-
-  -- Prove the case when the target is in the list
-  bsearchPresent <- sInductWith cvc5 "bsearchPresent"
-        (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .&& x `elem` xs .=> xs !! fromJust (bsearch xs x) .== x) $
-        \ih xs x -> [nonDecreasing xs, x `elem` xs]
-                 |- xs !! fromJust (bsearch xs x) .== x
-                 ?? "expand bsearch and push fromJust down"
-                 =: let mid  = (length xs - 1) `sEDiv` 2
-                        xmid = xs !! mid
-                        mid1 = mid + 1
-                 in ite (null xs)
-                        (x .== xs !! fromJust (bsearch xs x))
-                        (ite (xmid .== x)
-                             sTrue
-                             (ite (xmid .< x)
-                                  (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
-                                  (x .== xs !! fromJust (                 bsearch (take mid  xs) x))))
-                 ?? x `elem` xs
-                 =: ite (xmid .== x)
-                        sTrue
-                        (ite (xmid .< x)
-                             (x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x)))
-                             (x .== xs !! fromJust (                 bsearch (take mid  xs) x)))
-                 =: cases [ xmid .== x ==> trivial
-                          , xmid .> x  ==> x .== xs !! fromJust (bsearch (take mid xs) x)
-                                        ?? [ hprf (ih                  `at` (Inst @"xs" (take mid xs), Inst @"x" x))
-                                           , hprf (nonDecreasingPrefix `at` (Inst @"n" mid, Inst @"xs" xs))
-                                           , hprf (presentInPrefix     `at` (Inst @"n" mid, Inst @"x" x, Inst @"xs" xs))
-                                           ]
-                                        =: sTrue
-                                        =: qed
-                          , xmid .< x  ==> x .== xs !! fromJust (SM.map (+ mid1) (bsearch (drop mid1 xs) x))
-                                        ?? sorry
-                                        =: sTrue
-                                        =: qed
-                          ]
-
-  -- Combine the above two results for the final theorem:
-  calc "bsearchCorrect"
-        (\(Forall @"xs" xs) (Forall @"x" x) ->
-            nonDecreasing xs .=> let res = bsearch xs x
-                                 in ite (x `elem` xs)
-                                        (xs !! fromJust res .== x)
-                                        (isNothing res)) $
-        \xs x -> [nonDecreasing xs]
-              |- let res = bsearch xs x
-                 in ite (x `elem` xs)
-                        (xs !! fromJust res .== x)
-                        (isNothing res)
-              =: cases [ x `elem` xs    ==> xs !! fromJust (bsearch xs x) .== x
-                                         ?? [ hyp  (nonDecreasing xs)
-                                            , hprf (bsearchPresent `at` (Inst @"xs" xs, Inst @"x" x))
-                                            ]
-                                         =: sTrue
-                                         =: qed
-                       , x `notElem` xs ==> isNothing (bsearch xs x)
-                                         ?? [ hyp  (nonDecreasing xs)
-                                            , hprf (bsearchAbsent `at` (Inst @"xs" xs, Inst @"x" x))
-                                            ]
-                                         =: sTrue
-                                         =: qed
-                       ]
--}
