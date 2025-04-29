@@ -68,10 +68,24 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
 
   -- Helper: if a value is not in a range, then it isn't in any subrange of it:
   notInRange <- lemma "notInRange"
-                      (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
-                          ->  sNot (inArray arr (lo, hi) x) .&& lo .<= md .&& md .<= hi
-                          .=> sNot (inArray arr (lo, md) x) .&& sNot (inArray arr (md, hi) x))
-                      []
+                           (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                               ->  sNot (inArray arr (lo, hi) x) .&& lo .<= md .&& md .<= hi
+                               .=> sNot (inArray arr (lo, md) x) .&& sNot (inArray arr (md, hi) x))
+                           []
+
+  -- Helper: if a value is in a range of a nonDecreasing array, and if its value is larger than a given mid point, then it's in the higher part
+  inRangeHigh <- lemma "inRangeHigh"
+                       (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                           ->  nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .&& lo .<= md .&& md .<= hi .&& x .> arr `readArray` md
+                           .=> inArray arr (md+1, hi) x)
+                       []
+
+  -- Helper: if a value is in a range of a nonDecreasing array, and if its value is lower than a given mid point, then it's in the lowr part
+  inRangeLow  <- lemma "inRangeLow"
+                       (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"m" md) (Forall @"x" x)
+                           ->  nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .&& lo .<= md .&& md .<= hi .&& x .< arr `readArray` md
+                           .=> inArray arr (lo, md-1) x)
+                       []
 
   -- Helper: if an array is nonDecreasing, then its parts are also non-decreasing when cut in any middle point
   nonDecreasingInRange <- lemma "nonDecreasing"
@@ -141,10 +155,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                     ]
 
   -- Prove the case when the target is in the array
-  bsearchPresent <- calc "bsearchPresent"
+  bsearchPresent <- sInduct "bsearchPresent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
-            nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x) $
-        \arr lo hi x ->
+            nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
+        (\(_arr :: Arr) (lo :: SInteger) (hi :: SInteger) (_x :: SInteger) -> abs (hi - lo + 1)) $
+        \ih arr lo hi x ->
              [nonDecreasing arr (lo, hi), inArray arr (lo, hi) x]
           |- x .== arr `readArray` fromJust (bsearch arr (lo, hi) x)
           ?? "unfold bsearch"
@@ -172,10 +187,29 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                        (ite (xmid .< x)
                                             (x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x))
                                             (x .== arr `readArray` fromJust (bsearch arr (lo,    mid-1) x)))
-                                =: cases [ xmid .== x ==> trivial
+                                =: let inst1 l h m = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h, Inst @"m" m, Inst @"x" x)
+                                       inst2 l h m = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h, Inst @"m" m             )
+                                       inst3 l h   = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h,              Inst @"x" x)
+                                in cases [ xmid .== x ==> trivial
                                          , xmid .< x  ==> x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x)
+                                                       ?? [ hprf $ inRangeHigh          `at` inst1 lo      hi (mid+1)
+                                                          , hprf $ nonDecreasingInRange `at` inst2 lo      hi (mid+1)
+                                                          , hprf $ ih                   `at` inst3 (mid+1) hi
+                                                          , hasm $ inArray       arr (lo, hi) x
+                                                          , hasm $ nonDecreasing arr (lo, hi)
+                                                          ]
+                                                       =: sTrue
                                                        =: qed
-                                         , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo,    mid-1) x)
+                                         , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo, mid-1) x)
+                                                       ?? [ hprf $ inRangeLow           `at` inst1 lo hi      (mid-1)
+                                                          , hprf $ nonDecreasingInRange `at` inst2 lo hi      (mid-1)
+                                                          , hprf $ ih                   `at` inst3 lo (mid-1)
+                                                          , hasm $ inArray       arr (lo, hi) x
+                                                          , hasm $ nonDecreasing arr (lo, hi)
+                                                          , hcmnt "hard"
+                                                          , hprf sorry
+                                                          ]
+                                                       =: sTrue
                                                        =: qed
                                          ]
                    ]
