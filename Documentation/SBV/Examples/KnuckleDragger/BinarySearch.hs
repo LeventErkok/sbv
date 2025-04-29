@@ -192,7 +192,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                        inst3 l h   = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h,              Inst @"x" x)
                                 in cases [ xmid .== x ==> trivial
                                          , xmid .< x  ==> x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x)
-                                                       ?? [ hprf $ inRangeHigh          `at` inst1 lo      hi (mid+1)
+                                                       ?? [ hprf $ inRangeHigh          `at` inst1 lo      hi mid
                                                           , hprf $ nonDecreasingInRange `at` inst2 lo      hi (mid+1)
                                                           , hprf $ ih                   `at` inst3 (mid+1) hi
                                                           , hasm $ inArray       arr (lo, hi) x
@@ -201,13 +201,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                                        =: sTrue
                                                        =: qed
                                          , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo, mid-1) x)
-                                                       ?? [ hprf $ inRangeLow           `at` inst1 lo hi      (mid-1)
+                                                       ?? [ hprf $ inRangeLow           `at` inst1 lo hi      mid
                                                           , hprf $ nonDecreasingInRange `at` inst2 lo hi      (mid-1)
                                                           , hprf $ ih                   `at` inst3 lo (mid-1)
                                                           , hasm $ inArray       arr (lo, hi) x
                                                           , hasm $ nonDecreasing arr (lo, hi)
-                                                          , hcmnt "hard"
-                                                          , hprf sorry
                                                           ]
                                                        =: sTrue
                                                        =: qed
