@@ -15,6 +15,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE TemplateHaskell    #-}
 {-# LANGUAGE TypeAbstractions   #-}
+{-# LANGUAGE TypeApplications   #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 {-# OPTIONS_GHC -Wall -Werror #-}
@@ -177,3 +178,35 @@ existsConjunctionNot = runKD $ do
                             []
 
     pure ()
+
+-- * No termination checks
+
+-- | It's important to realize that KnuckleDragger proofs in SBV neither check nor guarantee that the
+-- functions we use are terminating. This is beyond the scope (and current capabilities) of what SBV can handle.
+-- That is, the proof is up-to-termination, i.e., any proof implicitly assumes all functions defined (or axiomatized)
+-- terminate for all possible inputs. If non-termination is possible, then the logic becomes inconsistent, i.e.,
+-- we can prove arbitrary results.
+--
+-- Here is a simple example where we tell SBV that there is a function @f@ with non terminating behavior. Using this,
+-- we can deduce @False@:
+--
+-- >>> noTerminationChecks
+-- Axiom: bad
+-- Lemma: noTerminationImpliesFalse
+--   Step: 1                               Q.E.D.
+--   Result:                               Q.E.D.
+-- [Proven] noTerminationImpliesFalse
+noTerminationChecks :: IO Proof
+noTerminationChecks = runKD $ do
+
+   let f :: SInteger -> SInteger
+       f = uninterpret "f"
+
+   badAxiom <- axiom "bad" (\(Forall @"n" n) -> f n .== 1 + f n)
+
+   calc "noTerminationImpliesFalse"
+        sFalse
+        ([] |- f 0
+            ?? badAxiom `at` Inst @"n" (0 :: SInteger)
+            =: 1 + f 0
+            =: qed)

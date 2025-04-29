@@ -150,12 +150,13 @@
 -- get in touch if there is a solver you'd like to see included.
 --
 --
--- __Semi-automated theorem proving__
+-- __KnuckleDragger: Semi-automated theorem proving__
 --
 -- While SMT solvers are quite powerful, there is a certain class of problems that they are just not well suited for. In particular, SMT
 -- solvers are not good at proofs that require induction, or those that require complex chains of reasoning. Induction is necessary to reason about
--- any recursive algorithm, and most such proofs require carefully constructed equational steps. SBV allows for a
--- style of semi-automated theorem proving, called KnuckleDragger, that can be used to construct such proofs.
+-- any recursive algorithm, and most such proofs require carefully constructed equational steps.
+--
+-- SBV allows for a style of semi-automated theorem proving, called KnuckleDragger, that can be used to construct such proofs.
 -- The documentation includes example proofs for many list functions, and even inductive proofs for the familiar insertion
 -- and merge-sort algorithms, along with a proof that the square-root of 2 is irrational. While a proper theorem prover (such as Lean, Isabelle
 -- etc.) is a more appropriate choice for such proofs, with some guidance (and acceptance of a much larger trusted code base!), SBV can
@@ -169,6 +170,12 @@
 --    - "Documentation.SBV.Examples.KnuckleDragger.Lists"
 --
 -- for various proofs performed in this style.
+--
+-- Note that knuckle-dragger proofs are upto termination, i.e., if you axiomatize
+-- non-terminating behavior, then you can prove arbitrary results. SBV neither
+-- checks nor ensures termination, which is beyond its scope and capabilities.
+-- So, any KnuckleDragger proof should be considered true so long as all functions
+-- used in the property are terminating.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds             #-}
