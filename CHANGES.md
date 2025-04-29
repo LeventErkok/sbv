@@ -6,10 +6,10 @@
   * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,
     unless you can't use anything newer.
 
-  * KnuckleDragger: Simplify and generalize inductive proofs.
-
-  * KnuckleDragger: Tweak proof-traces to print user given hints (aids in debugging)
-
+  * KnuckleDragger:
+      - Simplify and generalize inductive proofs.
+      - Tweak proof-traces to print user given hints (aids in debugging)
+      - Add a proof of correctness for the binary-search algorithm
 
 ### Version 11.5, 2025-04-25
 
