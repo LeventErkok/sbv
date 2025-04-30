@@ -1954,24 +1954,33 @@ runSymbolic cfg currentRunMode comp = do
 
 -- | Catch the catastrophic case of context mismatch
 contextMismatchError :: SBVContext -> SBVContext -> Maybe (Int, Int) -> Maybe (Int, Int) -> a
-contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ prefix ++ rest
-  where prefix | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
-                                , "***"
-                                , "*** Current context: " ++ show ctx1
-                                , "*** Mixed with     : " ++ show ctx2
-                                ]
-               | True         = [ "Data.SBV: Mismatched levels detected in the same context."
-                                , "***"
-                                , "*** Refers to: " ++ show level1
-                                , "*** And also : " ++ show level2
-                                ]
-
-        rest = [ "***"
-               , "*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc."
-               , "*** while another one is in execution, or use results from one such call in another."
-               , "*** Please avoid such nested calls, all interactions should be from the same context."
-               , "*** See https://github.com/LeventErkok/sbv/issues/71 for several examples."
-               ]
+contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ msg
+  where msg | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
+                             , "***"
+                             , "***   Current context: " ++ show ctx1
+                             , "***   Mixed with     : " ++ show ctx2
+                             , "***"
+                             , "*** This happens if you call a proof-function (prove/sat/runSMT/isSatisfiable) etc."
+                             , "*** while another one is in execution, or use results from one such call in another."
+                             , "*** Please avoid such nested calls, all interactions should be from the same context."
+                             , "*** See https://github.com/LeventErkok/sbv/issues/71 for several examples."
+                             ]
+            | True         = [ "Data.SBV: Mismatched levels detected in the same context."
+                             , "***"
+                             , "***   Refers to: " ++ show level1
+                             , "***   And also : " ++ show level2
+                             , "***"
+                             , "*** A typical reason for this is the use of a higher order function, typically from"
+                             , "*** Data.SBV.List, with a lambda that refers to a free variable. (For instance calling"
+                             , "*** 'f e xs = filter (.> e) xs' where 'x' is free in the lambda-expression '(.> e)'.)"
+                             , "***"
+                             , "*** While SBV does allow symbolic use of a selected subset of higher-order functions"
+                             , "*** like filter/map/fold, the lambda-arguments must be closed. (This is due to the"
+                             , "*** fact that SMTLib doesn't allow higher-order functions, and SBV firstifies such"
+                             , "*** uses with a simple translation that doesn't allow for captured variables.) As"
+                             , "*** SMTLib gains more higher order features, we might relax this constraint. Please"
+                             , "*** report your use case as an example application."
+                             ]
 
 -- | Run a symbolic computation in a given state
 runSymbolicInState :: MonadIO m => State -> SymbolicT m a -> m (a, Result)
