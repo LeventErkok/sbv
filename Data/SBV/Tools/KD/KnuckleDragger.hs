@@ -553,7 +553,7 @@ instance (KnownSymbol nn, EqSymbolic z) => Inductive (Forall nn Integer -> SBool
        (n, nn) <- mkVar (Proxy @nn)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0)))
-                            (steps (internalAxiom "IH" (n .>= 0 .=> result (Forall n))) n)
+                            (steps (internalAxiom "IH" (n .>= zero .=> result (Forall n))) n)
                             (indResult [nn ++ "+1"] (result (Forall (n+1))))
 
 -- | Induction over 'SInteger', taking an extra argument
@@ -563,7 +563,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, EqSymbolic z) => Inductive (
        (a, na) <- mkVar (Proxy @na)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> n .>= 0 .=> result (Forall n) (Forall a'))) n a)
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) -> n .>= zero .=> result (Forall n) (Forall a'))) n a)
                             (indResult [nn ++ "+1", na] (result (Forall (n+1)) (Forall a)))
 
 -- | Induction over 'SInteger', taking two extra arguments
@@ -574,7 +574,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Eq
        (b, nb) <- mkVar (Proxy @nb)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> n .>= 0 .=> result (Forall n) (Forall a') (Forall b'))) n a b)
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b'))) n a b)
                             (indResult [nn ++ "+1", na, nb] (result (Forall (n+1)) (Forall a) (Forall b)))
 
 -- | Induction over 'SInteger', taking three extra arguments
@@ -586,7 +586,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (c, nc) <- mkVar (Proxy @nc)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> n .>= 0 .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c'))) n a b c)
                             (indResult [nn ++ "+1", na, nb, nc] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c)))
 
 -- | Induction over 'SInteger', taking four extra arguments
@@ -599,7 +599,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (d, nd) <- mkVar (Proxy @nd)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> n .>= 0 .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d'))) n a b c d)
                             (indResult [nn ++ "+1", na, nb, nc, nd] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d)))
 
 -- | Induction over 'SInteger', taking five extra arguments
@@ -613,7 +613,7 @@ instance (KnownSymbol nn, KnownSymbol na, SymVal a, KnownSymbol nb, SymVal b, Kn
        (e, ne) <- mkVar (Proxy @ne)
        pure $ mkIndStrategy Nothing
                             (Just (result (Forall 0) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
-                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> n .>= 0 .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
+                            (steps (internalAxiom "IH" (\(Forall a' :: Forall na a) (Forall b' :: Forall nb b) (Forall c' :: Forall nc c) (Forall d' :: Forall nd d) (Forall e' :: Forall ne e) -> n .>= zero .=> result (Forall n) (Forall a') (Forall b') (Forall c') (Forall d') (Forall e'))) n a b c d e)
                             (indResult [nn ++ "+1", na, nb, nc, nd, ne] (result (Forall (n+1)) (Forall a) (Forall b) (Forall c) (Forall d) (Forall e)))
 
 -- Given a user name for the list, get a name for the element, in the most suggestive way possible
