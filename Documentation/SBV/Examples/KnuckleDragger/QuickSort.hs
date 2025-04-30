@@ -97,13 +97,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
     -- Part I. Prove that the output of quick sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
-    nonDecreasingCons <-
+    _onDecreasingCons <-
         lemma "nonDecreasingCons"
               (\(Forall @"xs" xs) (Forall @"e" e) ->
                  nonDecreasing xs .&& leAll e xs .=> nonDecreasing (singleton e ++ xs))
               []
 
-    nonDecreasingApp <-
+    _onDecreasingApp <-
         lemma "nonDecreasingApp"
               (\(Forall @"xs" xs) (Forall @"ys" ys) ->
                   nonDecreasing xs .&& nonDecreasing ys .&& sNot (null ys) .&& gtAll (head ys) xs .=> nonDecreasing (xs ++ ys))
@@ -119,14 +119,21 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                (\(Forall @"e" e) (Forall @"l" l) -> leAll e (filterGE e l))
                [sorry]
 
-    filterLTNotLonger <-
+    filterLTShorter <-
         lemma "filterLTNotLonger"
-              (\(Forall @"xs" xs) (Forall @"e" e) -> length (filterLT e xs) .<= length xs)
+              (\(Forall @"xs" xs) (Forall @"x" x) -> length (filterLT x xs) .< length (x .: xs))
               [sorry]
 
-    filterGENotLonger <-
+    filterGEShorter <-
         lemma "filterGENotLonger"
-              (\(Forall @"xs" xs) (Forall @"e" e) -> length (filterGE e xs) .<= length xs)
+              (\(Forall @"xs" xs) (Forall @"x" x) -> length (filterGE x xs) .< length (x .: xs))
+              [sorry]
+
+    nonDecreasingJoin <-
+        lemma "nonDecreasingJoin"
+              (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"ys" ys) ->
+                 nonDecreasing xs .&& gtAll e xs .&& leAll e ys .&& nonDecreasing ys .=>
+                    nonDecreasing (xs ++ singleton e ++ ys))
               [sorry]
 
     sortNonDecreasing <-
@@ -141,14 +148,14 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                          mid   = singleton x
                                          right = quickSort (filterGE x xs)
                                   in nonDecreasing (left ++ mid ++ right)
-                                  ?? [ ih                `at` Inst @"l" (filterLT x xs)
-                                     , ih                `at` Inst @"l" (filterGE x xs)
-                                     , filterLTWorks     `at` (Inst @"e" x, Inst @"l" xs)
-                                     , filterGEWorks     `at` (Inst @"e" x, Inst @"l" xs)
-                                     , nonDecreasingCons `at` (Inst @"xs" right, Inst @"e" x)
-                                     , nonDecreasingApp  `at` (Inst @"xs" left,  Inst @"ys" (singleton x ++ right))
-                                     , filterLTNotLonger `at` (Inst @"xs" xs, Inst @"e" x)
-                                     , filterGENotLonger `at` (Inst @"xs" xs, Inst @"e" x)
+                                  ?? [ hprf $ ih                `at` Inst @"l" (filterLT x xs)
+                                     , hprf $ ih                `at` Inst @"l" (filterGE x xs)
+                                     , hprf $ nonDecreasingJoin `at` (Inst @"xs" left, Inst @"e" x, Inst @"ys" right)
+                                     , hprf $ filterLTWorks     `at` (Inst @"e" x, Inst @"l" xs)
+                                     , hprf $ filterGEWorks     `at` (Inst @"e" x, Inst @"l" xs)
+                                     , hprf $ filterLTShorter   `at` (Inst @"xs" xs, Inst @"x" x)
+                                     , hprf $ filterGEShorter   `at` (Inst @"xs" xs, Inst @"x" x)
+                                     , hasm $ x .: xs .== l
                                      ]
                                   =: sTrue
                                   =: qed)
