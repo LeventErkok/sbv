@@ -31,7 +31,27 @@ quickSort :: SList Integer -> SList Integer
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x, xs) = uncons l
-                                                 in filter (.< x) xs ++ singleton x ++ filter (.>= x) xs)
+                                                 in filterLess x xs ++ singleton x ++ filterMoreEq x xs)
+
+-- | Filter all elements that are less than the first argument. Unfortunately we can't just define
+-- this as @filter (.< e)@. Why? Because SBV firstifies higher-order calls, and the argument to these
+-- functions would become free variables. This is currently not supported, hence the need for explicit definitions.
+filterLess :: SInteger -> SList Integer -> SList Integer
+filterLess = smtFunction "filterLess" $ \e l -> ite (null l)
+                                                    nil
+                                                    (let (x, xs) = uncons l
+                                                         rest    = filterLess e xs
+                                                     in ite (e .< x) (e .: rest) rest)
+
+-- | Filter all elements that are greater than or equal to the first argument. Unfortunately we can't just define
+-- this as @filter (.>= e)@ for the same reasons quoted above for 'filterLess'.
+filterMoreEq :: SInteger -> SList Integer -> SList Integer
+filterMoreEq = smtFunction "filterMoreEq" $ \e l -> ite (null l)
+                                                        nil
+                                                        (let (x, xs) = uncons l
+                                                             rest    = filterLess e xs
+                                                         in ite (e .>= x) (e .: rest) rest)
+
 -- * Helper functions
 
 -- | A predicate testing whether a given list is non-decreasing.
@@ -75,6 +95,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                       qed
                                       (\e es -> nonDecreasing (quickSort (e .: es))
                                              ?? "unfold"
+                                             =: sTrue
                                              =: qed)
 
     --------------------------------------------------------------------------------------------
