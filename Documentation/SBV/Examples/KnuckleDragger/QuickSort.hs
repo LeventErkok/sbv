@@ -21,7 +21,7 @@ module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-import Prelude hiding (null, filter, (++), tail, length)
+import Prelude hiding (null, filter, (++), head, tail, length, all)
 import Data.SBV.List
 
 -- * Quick sort
@@ -31,26 +31,28 @@ quickSort :: SList Integer -> SList Integer
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x, xs) = uncons l
-                                                 in filterLess x xs ++ singleton x ++ filterMoreEq x xs)
+                                                 in    quickSort (filterLT x xs)
+                                                    ++ singleton x
+                                                    ++ quickSort (filterGE x xs))
 
 -- | Filter all elements that are less than the first argument. Unfortunately we can't just define
 -- this as @filter (.< e)@. Why? Because SBV firstifies higher-order calls, and the argument to these
 -- functions would become free variables. This is currently not supported, hence the need for explicit definitions.
-filterLess :: SInteger -> SList Integer -> SList Integer
-filterLess = smtFunction "filterLess" $ \e l -> ite (null l)
-                                                    nil
-                                                    (let (x, xs) = uncons l
-                                                         rest    = filterLess e xs
-                                                     in ite (e .< x) (e .: rest) rest)
+filterLT :: SInteger -> SList Integer -> SList Integer
+filterLT = smtFunction "filterLT" $ \e l -> ite (null l)
+                                                nil
+                                                (let (x, xs) = uncons l
+                                                     rest    = filterLT e xs
+                                                 in ite (x .< e) (x .: rest) rest)
 
 -- | Filter all elements that are greater than or equal to the first argument. Unfortunately we can't just define
--- this as @filter (.>= e)@ for the same reasons quoted above for 'filterLess'.
-filterMoreEq :: SInteger -> SList Integer -> SList Integer
-filterMoreEq = smtFunction "filterMoreEq" $ \e l -> ite (null l)
-                                                        nil
-                                                        (let (x, xs) = uncons l
-                                                             rest    = filterLess e xs
-                                                         in ite (e .>= x) (e .: rest) rest)
+-- this as @filter (.>= e)@ for the same reasons quoted above for 'filterLT.
+filterGE :: SInteger -> SList Integer -> SList Integer
+filterGE = smtFunction "filterMoreEq" $ \e l -> ite (null l)
+                                                    nil
+                                                    (let (x, xs) = uncons l
+                                                         rest    = filterGE e xs
+                                                     in ite (x .>= e) (x .: rest) rest)
 
 -- * Helper functions
 
@@ -60,6 +62,14 @@ nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
                                                  .|| let (x, l') = uncons l
                                                          (y, _)  = uncons l'
                                                      in x .<= y .&& nonDecreasing l'
+
+-- | Is the given value less than or equal to all the elements in the list?
+leAll :: SInteger -> SList Integer -> SBool
+leAll = smtFunction "leAll" $ \e l -> null l .|| e .<= head l .&& leAll e (tail l)
+
+-- | Is the given value greater than all the elements in the list?
+gtAll :: SInteger -> SList Integer -> SBool
+gtAll = smtFunction "geAll" $ \e l -> null l .|| e .>  head l .&& gtAll e (tail l)
 
 -- | Count the number of occurrences of an element in a list
 count :: SInteger -> SList Integer -> SInteger
@@ -87,16 +97,61 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
     -- Part I. Prove that the output of quick sort is non-decreasing.
     --------------------------------------------------------------------------------------------
 
+    nonDecreasingCons <-
+        lemma "nonDecreasingCons"
+              (\(Forall @"xs" xs) (Forall @"e" e) ->
+                 nonDecreasing xs .&& leAll e xs .=> nonDecreasing (singleton e ++ xs))
+              []
+
+    nonDecreasingApp <-
+        lemma "nonDecreasingApp"
+              (\(Forall @"xs" xs) (Forall @"ys" ys) ->
+                  nonDecreasing xs .&& nonDecreasing ys .&& sNot (null ys) .&& gtAll (head ys) xs .=> nonDecreasing (xs ++ ys))
+              [sorry]
+
+    filterLTWorks <-
+        lemma "filterLTWorks"
+               (\(Forall @"e" e) (Forall @"l" l) -> gtAll e (filterLT e l))
+               [sorry]
+
+    filterGEWorks <-
+        lemma "filterGEWorks"
+               (\(Forall @"e" e) (Forall @"l" l) -> leAll e (filterGE e l))
+               [sorry]
+
+    filterLTNotLonger <-
+        lemma "filterLTNotLonger"
+              (\(Forall @"xs" xs) (Forall @"e" e) -> length (filterLT e xs) .<= length xs)
+              [sorry]
+
+    filterGENotLonger <-
+        lemma "filterGENotLonger"
+              (\(Forall @"xs" xs) (Forall @"e" e) -> length (filterGE e xs) .<= length xs)
+              [sorry]
+
     sortNonDecreasing <-
-        sInduct "sortNonDecreasing"
-                (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
+        sInductWith cvc5 "sortNonDecreasing"
+                (\(Forall @"l" l) -> nonDecreasing (quickSort l))
                 (length @Integer) $
-                \_h xs -> [] |- split xs
-                                      qed
-                                      (\e es -> nonDecreasing (quickSort (e .: es))
-                                             ?? "unfold"
-                                             =: sTrue
-                                             =: qed)
+                \ih l -> [] |-
+                     split l trivial
+                           (\x xs -> nonDecreasing (quickSort (x .: xs))
+                                  ?? "unfold"
+                                  =: let left  = quickSort (filterLT x xs)
+                                         mid   = singleton x
+                                         right = quickSort (filterGE x xs)
+                                  in nonDecreasing (left ++ mid ++ right)
+                                  ?? [ ih                `at` Inst @"l" (filterLT x xs)
+                                     , ih                `at` Inst @"l" (filterGE x xs)
+                                     , filterLTWorks     `at` (Inst @"e" x, Inst @"l" xs)
+                                     , filterGEWorks     `at` (Inst @"e" x, Inst @"l" xs)
+                                     , nonDecreasingCons `at` (Inst @"xs" right, Inst @"e" x)
+                                     , nonDecreasingApp  `at` (Inst @"xs" left,  Inst @"ys" (singleton x ++ right))
+                                     , filterLTNotLonger `at` (Inst @"xs" xs, Inst @"e" x)
+                                     , filterGENotLonger `at` (Inst @"xs" xs, Inst @"e" x)
+                                     ]
+                                  =: sTrue
+                                  =: qed)
 
     --------------------------------------------------------------------------------------------
     -- Part II. Prove that the output of quick sort is a permuation of its input
@@ -104,13 +159,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     sortIsPermutation <-
         sInductWith cvc5 "sortIsPermutation"
-                (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
-                (\(xs :: SList Integer) (_e :: SInteger) -> length xs) $
-                \_h as e -> [] |- split as
-                                        qed
-                                        (\x xs -> count e (quickSort (x .: xs))
-                                               ?? "unfold"
-                                               =: qed)
+                (\(Forall @"l" l) (Forall @"e" e) -> count e l .== count e (quickSort l))
+                (\(l :: SList Integer) (_e :: SInteger) -> length l) $
+                \_h l e -> [] |- split l trivial
+                                       (\x xs -> count e (quickSort (x .: xs))
+                                              ?? "unfold"
+                                              =: count e (x .: xs)
+                                              =: qed)
 
     --------------------------------------------------------------------------------------------
     -- Put the two parts together for the final proof
