@@ -1597,6 +1597,27 @@ lift2SReal w a b = SBV $ SVal k $ Right $ cache r
                   swb <- sbvToSV st b
                   newExpr st k (SBVApp (NonLinear w) [swa, swb])
 
+-- Bail out nicely.
+noEquals :: String -> String -> (String, String) -> a
+noEquals o n (l, r) = error $ unlines [ ""
+                                      , "*** Data.SBV: Comparing symbolic values using Haskell's Eq class!"
+                                      , "***"
+                                      , "*** Received:    (" ++ l ++ ")  " ++ o ++ " (" ++ r ++ ")"
+                                      , "*** Instead use: (" ++ l ++ ") "  ++ n ++ " (" ++ r ++ ")"
+                                      , "***"
+                                      , "*** The Eq instance for symbolic values are necessiated only because"
+                                      , "*** of the Bits class requirement. You must use symbolic equality"
+                                      , "*** operators instead. (And complain to Haskell folks that they"
+                                      , "*** remove the 'Eq' superclass from 'Bits'!.)"
+                                      ]
+
+-- | This instance is only defined so that we can define an instance for
+-- 'Data.Bits.Bits'. '==' and '/=' simply throw an error. Use
+-- 'Data.SBV.EqSymbolic' instead.
+instance SymVal a => Eq (SBV a) where
+  a == b = fromMaybe (noEquals "==" ".==" (show a, show b)) (unliteral (a .== b))
+  a /= b = fromMaybe (noEquals "/=" "./=" (show a, show b)) (unliteral (a ./= b))
+
 -- NB. In the optimizations below, use of -1 is valid as
 -- -1 has all bits set to True for both signed and unsigned values
 -- | Using 'popCount' or 'testBit' on non-concrete values will result in an

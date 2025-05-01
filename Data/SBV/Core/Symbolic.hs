@@ -1167,7 +1167,7 @@ addUserInput sv nm = goAll . goUser
 
 -- | Find a user-input from its SV. Note that only level-0 vars
 -- can be found this way.
-lookupInput :: Eq a => (a -> SV) -> SV -> S.Seq a -> Maybe a
+lookupInput :: (a -> SV) -> SV -> S.Seq a -> Maybe a
 lookupInput f sv ns
    | l == Just 0 = res
    | True        = Nothing  -- l != Just 0, a lambda var, whether top-level or in a scope, so we ignore
@@ -1282,6 +1282,7 @@ inSMTMode State{runMode} = do rm <- readIORef runMode
 -- sure sharing is preserved.
 data SVal = SVal !Kind !(Either CV (Cached SV))
 
+-- | Kind instance for SVal simply passes the kind out
 instance HasKind SVal where
   kindOf (SVal k _) = k
 
@@ -1293,29 +1294,6 @@ instance Show SVal where
   show (SVal KBool (Left c))  = showCV False c
   show (SVal k     (Left c))  = showCV False c ++ " :: " ++ show k
   show (SVal k     (Right _)) =         "<symbolic> :: " ++ show k
-
--- | This instance is only defined so that we can define an instance for
--- 'Data.Bits.Bits'. '==' and '/=' simply throw an error.
--- We really don't want an 'Eq' instance for 'Data.SBV.SBV' or t'SVal'. As it really makes no sense.
--- But since we do want the 'Data.Bits.Bits' instance, we're forced to define equality. See
--- <http://github.com/LeventErkok/sbv/issues/301>. We simply error out.
-instance Eq SVal where
-  a == b = noEquals "==" ".==" (show a, show b)
-  a /= b = noEquals "/=" "./=" (show a, show b)
-
--- Bail out nicely.
-noEquals :: String -> String -> (String, String) -> a
-noEquals o n (l, r) = error $ unlines [ ""
-                                      , "*** Data.SBV: Comparing symbolic values using Haskell's Eq class!"
-                                      , "***"
-                                      , "*** Received:    " ++ l ++ "  " ++ o ++ " " ++ r
-                                      , "*** Instead use: " ++ l ++ " "  ++ n ++ " " ++ r
-                                      , "***"
-                                      , "*** The Eq instance for symbolic values are necessiated only because"
-                                      , "*** of the Bits class requirement. You must use symbolic equality"
-                                      , "*** operators instead. (And complain to Haskell folks that they"
-                                      , "*** remove the 'Eq' superclass from 'Bits'!.)"
-                                      ]
 
 -- | Things we do not support in interactive mode, at least for now!
 noInteractive :: [String] -> a

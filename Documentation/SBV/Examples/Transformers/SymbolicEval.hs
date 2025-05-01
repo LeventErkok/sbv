@@ -63,7 +63,7 @@ data Env = Env { envX   :: SBV Integer
                                       -- we only have a value during property
                                       -- evaluation.
                }
-    deriving (Eq, Show)
+    deriving Show
 
 -- | Allocate an integer variable with the provided name.
 alloc :: String -> Alloc (SBV Integer)

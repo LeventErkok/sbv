@@ -396,13 +396,6 @@ sRTZ = sRoundTowardZero
 instance Show (SBV a) where
   show (SBV sv) = show sv
 
--- | This instance is only defined so that we can define an instance for
--- 'Data.Bits.Bits'. '==' and '/=' simply throw an error. Use
--- 'Data.SBV.EqSymbolic' instead.
-instance Eq (SBV a) where
-  SBV a == SBV b = a == b
-  SBV a /= SBV b = a /= b
-
 instance HasKind a => HasKind (SBV a) where
   kindOf _ = kindOf (Proxy @a)
 
