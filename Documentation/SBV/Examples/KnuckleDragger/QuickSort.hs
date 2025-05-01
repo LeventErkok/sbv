@@ -69,7 +69,7 @@ leAll = smtFunction "leAll" $ \e l -> null l .|| e .<= head l .&& leAll e (tail 
 
 -- | Is the given value greater than all the elements in the list?
 gtAll :: SInteger -> SList Integer -> SBool
-gtAll = smtFunction "geAll" $ \e l -> null l .|| e .>  head l .&& gtAll e (tail l)
+gtAll = smtFunction "gtAll" $ \e l -> null l .|| e .>  head l .&& gtAll e (tail l)
 
 -- | Count the number of occurrences of an element in a list
 count :: SInteger -> SList Integer -> SInteger
@@ -145,9 +145,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                            (\x xs -> nonDecreasing (quickSort (x .: xs))
                                   ?? "unfold"
                                   =: let left  = quickSort (filterLT x xs)
-                                         mid   = singleton x
                                          right = quickSort (filterGE x xs)
-                                  in nonDecreasing (left ++ mid ++ right)
+                                  in nonDecreasing (left ++ singleton x ++ right)
                                   ?? [ hprf $ ih                `at` Inst @"l" (filterLT x xs)
                                      , hprf $ ih                `at` Inst @"l" (filterGE x xs)
                                      , hprf $ nonDecreasingJoin `at` (Inst @"xs" left, Inst @"e" x, Inst @"ys" right)
@@ -155,7 +154,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                      , hprf $ filterGEWorks     `at` (Inst @"e" x, Inst @"l" xs)
                                      , hprf $ filterLTShorter   `at` (Inst @"xs" xs, Inst @"x" x)
                                      , hprf $ filterGEShorter   `at` (Inst @"xs" xs, Inst @"x" x)
-                                     , hasm $ x .: xs .== l
+                                     , hasm $ nonDecreasing (singleton x)
                                      ]
                                   =: sTrue
                                   =: qed)
