@@ -82,6 +82,13 @@ else
 	cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages
 endif
 
+# Use to load in ghcid. Possibilities:
+#     make ghcid
+#     make ghcid TGT=SBVTest
+#     make ghcid TGT=SBVConnections
+#     make ghcid TGT=SBVDocTest
+#     make ghcid TGT=SBVHLint
+#     make ghcid TGT=SBVBench
 ghcid:
 ifdef TGT
 	ghcid --command="cabal repl ${CABAL_OPTS} --repl-options=-Wno-unused-packages ${TGT}"
