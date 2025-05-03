@@ -120,12 +120,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                [sorry]
 
     filterLTShorter <-
-        lemma "filterLTNotLonger"
+        lemma "filterLTShorter"
               (\(Forall @"xs" xs) (Forall @"x" x) -> length (filterLT x xs) .< length (x .: xs))
               [sorry]
 
     filterGEShorter <-
-        lemma "filterGENotLonger"
+        lemma "filterGEShorter"
               (\(Forall @"xs" xs) (Forall @"x" x) -> length (filterGE x xs) .< length (x .: xs))
               [sorry]
 
