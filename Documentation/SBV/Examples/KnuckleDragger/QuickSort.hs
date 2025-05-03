@@ -111,12 +111,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
     filterLTWorks <-
         lemma "filterLTWorks"
-               (\(Forall @"e" e) (Forall @"l" l) -> gtAll e (filterLT e l))
+               (\(Forall @"e" e) (Forall @"l" l) -> gtAll e (quickSort (filterLT e l)))
                [sorry]
 
     filterGEWorks <-
         lemma "filterGEWorks"
-               (\(Forall @"e" e) (Forall @"l" l) -> leAll e (filterGE e l))
+               (\(Forall @"e" e) (Forall @"l" l) -> leAll e (quickSort (filterGE e l)))
                [sorry]
 
     filterLTShorter <-
@@ -136,6 +136,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                     nonDecreasing (xs ++ singleton e ++ ys))
               [sorry]
 
+    quickSortKeepsSize <-
+        lemma "quickSortKeepsSize"
+              (\(Forall @"l" l) -> length (quickSort l) .== length l)
+              [sorry]
+
     sortNonDecreasing <-
         sInductWith cvc5 "sortNonDecreasing"
                 (\(Forall @"l" l) -> nonDecreasing (quickSort l))
@@ -147,14 +152,15 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                   =: let left  = quickSort (filterLT x xs)
                                          right = quickSort (filterGE x xs)
                                   in nonDecreasing (left ++ singleton x ++ right)
-                                  ?? [ hprf $ ih                `at` Inst @"l" (filterLT x xs)
-                                     , hprf $ ih                `at` Inst @"l" (filterGE x xs)
-                                     , hprf $ nonDecreasingJoin `at` (Inst @"xs" left, Inst @"e" x, Inst @"ys" right)
-                                     , hprf $ filterLTWorks     `at` (Inst @"e" x, Inst @"l" xs)
-                                     , hprf $ filterGEWorks     `at` (Inst @"e" x, Inst @"l" xs)
-                                     , hprf $ filterLTShorter   `at` (Inst @"xs" xs, Inst @"x" x)
-                                     , hprf $ filterGEShorter   `at` (Inst @"xs" xs, Inst @"x" x)
-                                     , hasm $ nonDecreasing (singleton x)
+                                  ?? [ hprf $ ih                 `at`  Inst @"l" (filterLT x xs)
+                                     , hprf $ ih                 `at`  Inst @"l" (filterGE x xs)
+                                     , hprf $ quickSortKeepsSize `at` (Inst @"l" (filterLT x xs))
+                                     , hprf $ quickSortKeepsSize `at` (Inst @"l" (filterGE x xs))
+                                     , hprf $ filterLTWorks      `at` (Inst @"e" x, Inst @"l" xs)
+                                     , hprf $ filterGEWorks      `at` (Inst @"e" x, Inst @"l" xs)
+                                     , hprf $ filterLTShorter    `at` (Inst @"xs" xs, Inst @"x" x)
+                                     , hprf $ filterGEShorter    `at` (Inst @"xs" xs, Inst @"x" x)
+                                     , hprf $ nonDecreasingJoin  `at` (Inst @"xs" left, Inst @"e" x, Inst @"ys" right)
                                      ]
                                   =: sTrue
                                   =: qed)
