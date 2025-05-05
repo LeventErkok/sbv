@@ -38,7 +38,7 @@ module Data.SBV.Tools.KD.KnuckleDragger (
        , sInduct, sInductWith, sInductThm, sInductThmWith
        , sorry
        , KD, runKD, runKDWith, use
-       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hasm, hprf, hcmnt, qed, trivial
+       , (|-), (⊢), (=:), (≡), (??), (⁇), split, split2, cases, (==>), (⟹), hasm, hprf, hcmnt, qed, trivial, contradiction
        ) where
 
 import Data.SBV
@@ -1076,18 +1076,32 @@ instance ChainStep (KDProofRaw a) (KDProofRaw a) where
 qed :: KDProofRaw a
 qed = ProofEnd () []
 
--- | Mark a trivial proof. This is the same as 'qed', but reads better in proof scripts.
+-- | Mark a trivial proof. This is essentially the same as 'qed', but reads better in proof scripts.
 class Trivial a where
-   -- | Mark a proof as trivial, i.e., the solver should be able to deduce it without any help.
-   trivial :: a
+  -- | Mark a proof as trivial, i.e., the solver should be able to deduce it without any help.
+  trivial :: a
 
--- | Proofs with no arguments
+-- | Trivial proofs with no arguments
 instance Trivial (KDProofRaw a) where
-   trivial = qed
+  trivial = qed
 
--- | Proofs with many arguments arguments
+-- | Trivial proofs with many arguments arguments
 instance Trivial a => Trivial (b -> a) where
-   trivial = const trivial
+  trivial = const trivial
+
+-- | Mark a contradictory proof path. This is essentially the same as @sFalse := qed@, but reads better in proof scripts.
+class Contradiction a where
+  -- | Mark a proof as contradiction, i.e., the solver should be able to conclude it by reasoning that the current path is infeasible
+  contradiction :: a
+
+-- | Contradiction proofs with no arguments
+instance Contradiction (KDProofRaw SBool) where
+  contradiction = sFalse =: qed
+
+-- | Contradiction proofs with many arguments
+instance Contradiction a => Contradiction (b -> a) where
+  contradiction = const contradiction
+
 
 -- | Start a calculational proof, with the given hypothesis. Use @[]@ as the
 -- first argument if the calculation holds unconditionally. The first argument is
