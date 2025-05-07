@@ -155,20 +155,20 @@ sheffer3 = axiom "ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)" $ \ABC 
 -- Axiom: a ⏐ (b ⏐ ﬧb) == ﬧa
 -- Axiom: ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a)
 -- Lemma: a | b = b | a
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
+--   Step: 1 (ﬧﬧa == a)                                        Q.E.D.
+--   Step: 2 (ﬧﬧa == a)                                        Q.E.D.
 --   Step: 3                                                   Q.E.D.
---   Step: 4                                                   Q.E.D.
+--   Step: 4 (ﬧ(a ⏐ (b ⏐ c)) == (ﬧb ⏐ a) ⏐ (ﬧc ⏐ a))           Q.E.D.
 --   Step: 5                                                   Q.E.D.
---   Step: 6                                                   Q.E.D.
---   Step: 7                                                   Q.E.D.
+--   Step: 6 (ﬧﬧa == a)                                        Q.E.D.
+--   Step: 7 (ﬧﬧa == a)                                        Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a | a′ = b | b′
---   Step: 1                                                   Q.E.D.
---   Step: 2                                                   Q.E.D.
+--   Step: 1 (ﬧﬧa == a)                                        Q.E.D.
+--   Step: 2 (a ⏐ (b ⏐ ﬧb) == ﬧa)                              Q.E.D.
 --   Step: 3                                                   Q.E.D.
---   Step: 4                                                   Q.E.D.
---   Step: 5                                                   Q.E.D.
+--   Step: 4 (a ⏐ (b ⏐ ﬧb) == ﬧa)                              Q.E.D.
+--   Step: 5 (ﬧﬧa == a)                                        Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: a ⊔ b = b ⊔ a                                        Q.E.D.
 -- Lemma: a ⊓ b = b ⊓ a                                        Q.E.D.

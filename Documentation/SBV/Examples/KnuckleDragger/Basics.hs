@@ -193,7 +193,7 @@ existsConjunctionNot = runKD $ do
 -- >>> noTerminationChecks
 -- Axiom: bad
 -- Lemma: noTerminationImpliesFalse
---   Step: 1                               Q.E.D.
+--   Step: 1 (bad @ (n |-> 0 :: SInteger)) Q.E.D.
 --   Result:                               Q.E.D.
 -- [Proven] noTerminationImpliesFalse
 noTerminationChecks :: IO Proof

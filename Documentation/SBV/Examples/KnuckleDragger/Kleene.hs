@@ -76,10 +76,10 @@ x <= y = x + y .== y
 -- Lemma: par_monotone                     Q.E.D.
 -- Lemma: seq_monotone                     Q.E.D.
 -- Lemma: star_star_1
---   Step: 1                               Q.E.D.
---   Step: 2                               Q.E.D.
---   Step: 3                               Q.E.D.
---   Step: 4                               Q.E.D.
+--   Step: 1 (unfold)                      Q.E.D.
+--   Step: 2 (factor out x * star x)       Q.E.D.
+--   Step: 3 (par_idem)                    Q.E.D.
+--   Step: 4 (unfold)                      Q.E.D.
 --   Result:                               Q.E.D.
 -- Lemma: subset_eq                        Q.E.D.
 -- Lemma: star_star_2_2                    Q.E.D.
@@ -123,7 +123,8 @@ kleeneProofs = runKD $ do
   star_star_1  <- calc "star_star_1"
                        (\(Forall @"x" (x :: SKleene)) -> star x * star x .== star x) $
                        \x -> [] |- star x * star x                     ?? unfold
-                                =: (1 + x * star x) * (1 + x * star x) ?? kleene
+                                =: (1 + x * star x) * (1 + x * star x)
+                                ?? hcmnt "factor out x * star x" : map hprf kleene
                                 =: (1 + 1) + (x * star x + x * star x) ?? par_idem
                                 =: 1 + x * star x                      ?? unfold
                                 =: star x

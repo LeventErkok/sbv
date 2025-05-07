@@ -263,7 +263,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                  | True        = (cfg{kdOptions = (kdOptions cfg) { quiet = True}}, const (pure ()))
 
                as = concatMap getHelperAssumes hs
-               ss = concatMap getHelperStrings hs
+               ss = getHelperText hs
            case as of
              [] -> pure ()
              _  -> smtProofStep quietCfg kdSt "Asms" level
@@ -323,7 +323,7 @@ mkCalcSteps (intros, kdp) = CalcStrategy { calcIntros    = intros
                                      CalcStep begin end hs' -> ProofEnd (begin .== end) (hs' ++ hs)
 
         -- Branch: Just push it down. We use the hints from previous step, and pass the current ones down.
-        go step (ProofBranch c hs ps) = ProofBranch c (concatMap getHelperStrings hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
+        go step (ProofBranch c hs ps) = ProofBranch c (getHelperText hs) [(branchCond, go step' p) | (branchCond, p) <- ps]
            where step' = case step of
                            CalcStart hs'     -> CalcStart (hs' ++ hs)
                            CalcStep  a b hs' -> CalcStep a b (hs' ++ hs)
@@ -921,11 +921,15 @@ getHelperAssumes HelperProof  {} = []
 getHelperAssumes (HelperAssum b) = [b]
 getHelperAssumes HelperString {} = []
 
--- | Get hint strings helpers
-getHelperStrings :: Helper -> [String]
-getHelperStrings HelperProof  {}  = []
-getHelperStrings HelperAssum  {}  = []
-getHelperStrings (HelperString s) = [s]
+-- | Get hint strings from helpers. If there's an explicit comment given, just pass that. If not, collect all the names
+getHelperText :: [Helper] -> [String]
+getHelperText hs = case [s | HelperString s <- hs] of
+                     [] -> concatMap collect hs
+                     ss -> ss
+  where collect :: Helper -> [String]
+        collect (HelperProof  p) = [proofName p | isUserAxiom p]  -- Don't put out internals (inductive hypotheses)
+        collect HelperAssum  {}  = []
+        collect (HelperString s) = [s]
 
 -- | Smart constructor for creating a helper from a boolean. This is hardly needed, unless you're
 -- mixing proofs and booleans in one group of hints.
