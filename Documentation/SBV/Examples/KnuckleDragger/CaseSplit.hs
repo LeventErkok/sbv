@@ -74,7 +74,7 @@ notDiv3 = runKD $ do
    -- Case 0: n = 0 (mod 3)
    c0 <- calc "case_n_mod_3_eq_0"
               (\(Forall @"n" n) -> case0 n .=> p n) $
-              \n -> [case0 n] |- s n                                       ?? case0 n
+              \n -> [case0 n] |- s n
                               =: let w = some "witness" $ \k -> n .== 3*k  -- Grab the witness for the case
                               in s (3*w)
                               =: s (3*w)
@@ -86,7 +86,7 @@ notDiv3 = runKD $ do
    -- Case 1: n = 1 (mod 3)
    c1 <- calc "case_n_mod_3_eq_1"
               (\(Forall @"n" n) -> case1 n .=> p n) $
-              \n -> [case1 n] |- s n                                         ?? case1 n
+              \n -> [case1 n] |- s n
                               =: let w = some "witness" $ \k -> n .== 3*k+1  -- Grab the witness for n being 1 modulo 3
                               in s (3*w+1)
                               =: 2*(3*w+1)*(3*w+1) + (3*w+1) + 1
@@ -99,7 +99,7 @@ notDiv3 = runKD $ do
    -- Case 2: n = 2 (mod 3)
    c2 <- calc "case_n_mod_3_eq_2"
               (\(Forall @"n" n) -> case2 n .=> p n) $
-              \n -> [case2 n] |- s n                                        ?? case2 n
+              \n -> [case2 n] |- s n
                               =: let w = some "witness" $ \k -> n .== 3*k+2 -- Grab the witness for n being 2 modulo 3
                               in s (3*w+2)
                               =: 2*(3*w+2)*(3*w+2) + (3*w+2) + 1

@@ -78,7 +78,6 @@ sqrt2IsIrrational = runKD $ do
     oddSquaredIsOdd <- calc "oddSquaredIsOdd"
                              (\(Forall @"a" a) -> odd a .=> odd (sq a)) $
                              \a -> [odd a] |- sq a
-                                           ?? odd a
                                            =: let k = some "k" $ \_k -> a .== 2*_k + 1  -- Grab the witness that a is odd
                                            in sq (2 * k + 1)
                                            ?? "expand square"
@@ -95,7 +94,6 @@ sqrt2IsIrrational = runKD $ do
     evenSquaredIsMult4 <- calc "evenSquaredIsMult4"
                                (\(Forall @"a" a) -> even a .=> 4 `sDivides` sq a) $
                                \a -> [even a] |- sq a
-                                              ?? even a
                                               =: let k = some "k" $ \_k -> a .== 2*_k -- Grab the witness that a is even
                                               in sq (2 * k)
                                               ?? "expand square"

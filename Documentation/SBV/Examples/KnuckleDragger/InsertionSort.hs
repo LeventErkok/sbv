@@ -135,11 +135,10 @@ correctness = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }}
                           =: ite (e .<= x)
                                  (nonDecreasing (x .: xs))
                                  (nonDecreasing (x .: insert e xs))
-                          ??  nonDecreasing (x .: xs)
+                          ?? nonDecreasing (x .: xs)
                           =: (e .> x .=> nonDecreasing (x .: insert e xs))
-                          ?? [ hasm (nonDecreasing (x .: xs))
-                             , hprf (nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs)))
-                             , hprf ih
+                          ?? [ nonDecrTail `at` (Inst @"x" x, Inst @"xs" (insert e xs))
+                             , ih
                              ]
                           =: sTrue
                           =: qed
@@ -150,9 +149,9 @@ correctness = runKDWith cvc5{kdOptions = (kdOptions cvc5) { ribbonLength = 45 }}
                \ih x xs -> [] |- nonDecreasing (insertionSort (x .: xs))
                               ?? "unfold insertionSort"
                               =: nonDecreasing (insert x (insertionSort xs))
-                              ?? [ hprf (insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x))
-                                , hprf ih
-                                ]
+                              ?? [ insertNonDecreasing `at` (Inst @"xs" (insertionSort xs), Inst @"e" x)
+                                 , ih
+                                 ]
                               =: sTrue
                               =: qed
 

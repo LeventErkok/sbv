@@ -169,27 +169,22 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                         (ite (xmid .< x)
                                              (isNothing (bsearch arr (mid+1, hi)    x))
                                              (isNothing (bsearch arr (lo,    mid-1) x)))
-                                 ?? sNot (inArray arr (lo, hi) x)
                                  =: let inst1 l h m = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h, Inst @"m" m, Inst @"x" x)
                                         inst2 l h m = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h, Inst @"m" m             )
                                         inst3 l h   = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h,              Inst @"x" x)
                                  in ite (xmid .< x)
                                         (isNothing (bsearch arr (mid+1, hi)    x))
                                         (isNothing (bsearch arr (lo,    mid-1) x))
-                                 ?? [ hprf $ notInRange           `at` inst1 lo      hi (mid+1)
-                                    , hprf $ nonDecreasingInRange `at` inst2 lo      hi (mid+1)
-                                    , hprf $ ih                   `at` inst3 (mid+1) hi
-                                    , hasm $ sNot (inArray arr (lo, hi) x)
-                                    , hasm $ nonDecreasing arr (lo, hi)
+                                 ?? [ notInRange           `at` inst1 lo      hi (mid+1)
+                                    , nonDecreasingInRange `at` inst2 lo      hi (mid+1)
+                                    , ih                   `at` inst3 (mid+1) hi
                                     ]
                                  =: ite (xmid .< x)
                                         sTrue
                                         (isNothing (bsearch arr (lo,    mid-1) x))
-                                 ?? [ hprf $ notInRange           `at` inst1 lo hi      (mid-1)
-                                    , hprf $ nonDecreasingInRange `at` inst2 lo hi      (mid-1)
-                                    , hprf $ ih                   `at` inst3 lo (mid-1)
-                                    , hasm $ sNot (inArray arr (lo, hi) x)
-                                    , hasm $ nonDecreasing arr (lo, hi)
+                                 ?? [ notInRange           `at` inst1 lo hi      (mid-1)
+                                    , nonDecreasingInRange `at` inst2 lo hi      (mid-1)
+                                    , ih                   `at` inst3 lo (mid-1)
                                     ]
                                  =: ite (xmid .< x) sTrue sTrue
                                  ?? "simplify"
@@ -235,20 +230,16 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                        inst3 l h   = (Inst @"arr" arr, Inst @"lo" l, Inst @"hi" h,              Inst @"x" x)
                                 in cases [ xmid .== x ==> trivial
                                          , xmid .< x  ==> x .== arr `readArray` fromJust (bsearch arr (mid+1, hi)    x)
-                                                       ?? [ hprf $ inRangeHigh          `at` inst1 lo      hi mid
-                                                          , hprf $ nonDecreasingInRange `at` inst2 lo      hi (mid+1)
-                                                          , hprf $ ih                   `at` inst3 (mid+1) hi
-                                                          , hasm $ inArray       arr (lo, hi) x
-                                                          , hasm $ nonDecreasing arr (lo, hi)
+                                                       ?? [ inRangeHigh          `at` inst1 lo      hi mid
+                                                          , nonDecreasingInRange `at` inst2 lo      hi (mid+1)
+                                                          , ih                   `at` inst3 (mid+1) hi
                                                           ]
                                                        =: sTrue
                                                        =: qed
                                          , xmid .> x  ==> x .== arr `readArray` fromJust (bsearch arr (lo, mid-1) x)
-                                                       ?? [ hprf $ inRangeLow           `at` inst1 lo hi      mid
-                                                          , hprf $ nonDecreasingInRange `at` inst2 lo hi      (mid-1)
-                                                          , hprf $ ih                   `at` inst3 lo (mid-1)
-                                                          , hasm $ inArray       arr (lo, hi) x
-                                                          , hasm $ nonDecreasing arr (lo, hi)
+                                                       ?? [ inRangeLow           `at` inst1 lo hi      mid
+                                                          , nonDecreasingInRange `at` inst2 lo hi      (mid-1)
+                                                          , ih                   `at` inst3 lo (mid-1)
                                                           ]
                                                        =: sTrue
                                                        =: qed
@@ -268,16 +259,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                                (isNothing res)
                      =: cases [ inArray arr (lo, hi) x
                                   ==> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x
-                                   ?? [ hasm (nonDecreasing arr (lo, hi))
-                                      , hprf (bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
-                                      ]
+                                   ?? bsearchPresent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
                                    =: sTrue
                                    =: qed
                               , sNot (inArray arr (lo, hi) x)
                                   ==> isNothing (bsearch arr (lo, hi) x)
-                                   ?? [ hasm (nonDecreasing arr (lo, hi))
-                                      , hprf (bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x))
-                                      ]
+                                   ?? bsearchAbsent `at` (Inst @"arr" arr, Inst @"lo" lo, Inst @"hi" hi, Inst @"x" x)
                                    =: sTrue
                                    =: qed
                               ]

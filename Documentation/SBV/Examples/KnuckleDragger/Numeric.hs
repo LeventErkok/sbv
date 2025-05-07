@@ -58,8 +58,8 @@ sumConstProof = runKD $ do
 
    induct "sumConst_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> sum n .== spec n) $
-          \ih n -> [n .>= 0] |- sum (n+1)  ?? n .>= 0
-                             =: c + sum n  ?? [hprf ih, hasm (n .>= 0)]
+          \ih n -> [n .>= 0] |- sum (n+1)
+                             =: c + sum n  ?? ih
                              =: c + spec n
                              =: c + c*n
                              =: c*(n+1)
@@ -89,8 +89,8 @@ sumProof = runKD $ do
 
    induct "sum_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih n -> [n .>= 0] |- sum (n+1)    ?? n .>= 0
-                             =: n+1 + sum n  ?? [hprf ih, hasm (n .>= 0)]
+          \ih n -> [n .>= 0] |- sum (n+1)
+                             =: n+1 + sum n  ?? ih
                              =: n+1 + spec n
                              =: spec (n+1)
                              =: qed
@@ -118,8 +118,8 @@ sumSquareProof = runKD $ do
 
    induct "sumSquare_correct"
           (\(Forall @"n" n) -> n .>= 0 .=> p n) $
-          \ih n -> [n .>= 0] |- sumSquare (n+1)           ?? n .>= 0
-                             =: (n+1)*(n+1) + sumSquare n ?? [hprf ih, hasm (n .>= 0)]
+          \ih n -> [n .>= 0] |- sumSquare (n+1)
+                             =: (n+1)*(n+1) + sumSquare n ?? ih
                              =: (n+1)*(n+1) + spec n
                              =: spec (n+1)
                              =: qed
@@ -160,13 +160,13 @@ elevenMinusFour = runKD $ do
           \ih n -> [n .>= 0]
                 |- emf (n+1)
                 =: 7 `sDivides` (11 `pow` (n+1) - 4 `pow` (n+1))
-                ?? [hasm (n .>= 0), hprf (powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n))]
+                ?? powN `at` (Inst @"x" (11 :: SInteger), Inst @"n" n)
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 `pow` (n+1))
-                ?? [hasm (n .>= 0), hprf (powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n))]
+                ?? powN `at` (Inst @"x" ( 4 :: SInteger), Inst @"n" n)
                 =: 7 `sDivides` (11 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * 11 `pow` n - 4 * 4 `pow` n)
                 =: 7 `sDivides` (7 * 11 `pow` n + 4 * (11 `pow` n - 4 `pow` n))
-                ?? [hasm (n .>= 0), hprf ih]
+                ?? ih
                 =: let x = some "x" (\v -> 7*v .== 11 `pow` n - 4 `pow` n)   -- Apply the IH and grab the witness for it
                 in 7 `sDivides` (7 * 11 `pow` n + 4 * 7 * x)
                 =: 7 `sDivides` (7 * (11 `pow` n + 4 * x))

@@ -159,18 +159,14 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                                         (b .: merge (a .: as) bs))
                                   ?? "case split"
                                   =: cases [ a .<= b ==> nonDecreasing (a .: merge as (b .: bs))
-                                                      ?? [ hprf $ ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
-                                                         , hprf $ nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
-                                                         , hasm $ nonDecreasing (a .: as)
-                                                         , hasm $ nonDecreasing (b .: bs)
+                                                      ?? [ ih         `at` (Inst @"xs" as, Inst @"ys" (b .: bs))
+                                                         , nonDecrIns `at` (Inst @"x" a, Inst @"ys" (merge as (b .: bs)))
                                                          ]
                                                       =: sTrue
                                                       =: qed
                                            , a .> b  ==> nonDecreasing (b .: merge (a .: as) bs)
-                                                      ?? [ hprf $ ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
-                                                         , hprf $ nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
-                                                         , hasm $ nonDecreasing (a .: as)
-                                                         , hasm $ nonDecreasing (b .: bs)
+                                                      ?? [ ih         `at` (Inst @"xs" (a .: as), Inst @"ys" bs)
+                                                         , nonDecrIns `at` (Inst @"x" b, Inst @"ys" (merge (a .: as) bs))
                                                          ]
                                                       =: sTrue
                                                       =: qed
@@ -293,9 +289,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                                =: ite (null xs)
                                                       (count e (singleton x))
                                                       (count e (mergeSort h1) + count e (mergeSort h2))
-                                               ?? [ hprf  (ih `at` (Inst @"xs" h1, Inst @"e" e))
-                                                  , hasm  (length h1 .< length (x .: xs))
-                                                  ]
+                                               ?? ih `at` (Inst @"xs" h1, Inst @"e" e)
                                                =: ite (null xs)
                                                       (count e (singleton x))
                                                       (count e h1 + count e (mergeSort h2))

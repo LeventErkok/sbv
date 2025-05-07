@@ -221,7 +221,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                                                          finishKD cfg "Q.E.D." (tab, Nothing) []
                                     _     -> pure ()
 
-               pure [initialHypotheses .&& intros .=> calcResult]
+               pure [intros .=> calcResult]
 
       -- Do the branches separately and collect the results. If there's coverage needed, we do it too; which
       -- is essentially the assumption here.
@@ -244,7 +244,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
 
         when checkCompleteness $ smtProofStep cfg kdSt "Step" (level+1)
                                                        (KDProofStep False nm [] (stepName ++ ["Completeness"]))
-                                                       (Just (initialHypotheses .&& intros))
+                                                       (Just intros)
                                                        (sOr (map fst ps))
                                                        (\d -> finishKD cfg "Q.E.D." d [])
         pure results
@@ -268,7 +268,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
              [] -> pure ()
              _  -> smtProofStep quietCfg kdSt "Asms" level
                                          (KDProofStep True nm [] stepName)
-                                         (Just (initialHypotheses .&& intros))
+                                         (Just intros)
                                          (sAnd as)
                                          finalizer
 
@@ -283,7 +283,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
            -- Move to next
            walk intros level (next bn, p)
 
-  results <- walk sTrue 1 ([1], calcProofTree)
+  results <- walk initialHypotheses 1 ([1], calcProofTree)
 
   queryDebug [nm ++ ": Proof end: proving the result:"]
 

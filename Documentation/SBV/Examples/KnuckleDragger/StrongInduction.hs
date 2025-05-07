@@ -64,7 +64,6 @@ oddSequence1 = runKD $ do
   sInductWith cvc5 "oddSequence"
           (\(Forall @"n" n) -> n .>= 0 .=> sNot (2 `sDivides` s n)) (abs @SInteger) $
           \ih n -> [n .>= 0] |- 2 `sDivides` s n
-                             ?? n .>= 0
                              =: cases [ n .== 0 ==> sFalse =: qed
                                       , n .== 1 ==> sFalse =: qed
                                       , n .>= 2 ==>    2 `sDivides` (s (n-2) + 2 * s (n-1))
@@ -112,15 +111,12 @@ oddSequence2 = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
   sNp2 <- sInduct "oddSequence_sNp2"
                   (\(Forall @"n" n) -> n .>= 2 .=> s n .== 2 * n + 1) (abs @SInteger) $
                   \ih n -> [n .>= 2] |- s n
-                                     ?? n .>= 2
                                      =: 2 * s (n-1) - s (n-2)
-                                     ?? [ hasm (n .>= 2)
-                                        , hprf (ih `at` Inst @"n" (n-1))
-                                        ]
+                                     ?? ih `at` Inst @"n" (n-1)
                                      =: 2 * (2 * (n-1) + 1) - s (n-2)
                                      ?? "simplify"
                                      =: 4*n - 4 + 2 - s (n-2)
-                                     ?? [hasm (n .>= 2), hprf (ih `at` Inst @"n" (n-2))]
+                                     ?? ih `at` Inst @"n" (n-2)
                                      =: 4*n - 2 - (2 * (n-2) + 1)
                                      ?? "simplify"
                                      =: 4*n - 2 - 2*n + 4 - 1
@@ -129,14 +125,12 @@ oddSequence2 = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 50}} $ do
 
   calc "oddSequence2" (\(Forall @"n" n) -> n .>= 0 .=> s n .== 2 * n + 1) $
                       \n -> [n .>= 0] |- s n
-                                      ?? n .>= 0
                                       =: cases [ n .== 0 ==> (1 :: SInteger) =: qed
                                                , n .== 1 ==> (3 :: SInteger) =: qed
                                                , n .>= 2 ==>    s n
-                                                             ?? [ hasm (n .>= 0)
-                                                                , hprf s0
-                                                                , hprf s1
-                                                                , hprf $ sNp2 `at` Inst @"n" n
+                                                             ?? [ s0
+                                                                , s1
+                                                                , sNp2 `at` Inst @"n" n
                                                                 ]
                                                              =: 2 * n + 1
                                                              =: qed
@@ -242,18 +236,12 @@ interleaveRoundTrip = runKDWith cvc5 $ do
                                                     =: uninterleaveGen (a .: interleave (b .: bs) as) alts
                                                     =: uninterleaveGen (a .: b .: interleave as bs) alts
                                                     =: uninterleaveGen (interleave as bs) (tuple (a .: es, b .: os))
-                                                    ?? [ hprf $ ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
-                                                       , hasm $ length xs .== length ys
-                                                       , hasm $ length as .== length bs
-                                                       ]
+                                                    ?? ih `at` (Inst @"xs" as, Inst @"ys" bs, Inst @"alts" (tuple (a .: es, b .: os)))
                                                     =: tuple (reverse (a .: es) ++ as, reverse (b .: os) ++ bs)
-                                                    ?? [ hprf $ revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as) ]
+                                                    ?? revHelper `at` (Inst @"a" a, Inst @"as" es, Inst @"bs" as)
                                                     =: tuple (reverse es ++ (a .: as), reverse (b .: os) ++ bs)
-                                                    ?? [ hprf $ revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs) ]
+                                                    ?? revHelper `at` (Inst @"a" b, Inst @"as" os, Inst @"bs" bs)
                                                     =: tuple (reverse es ++ (a .: as), reverse os ++ (b .: bs))
-                                                    ?? [ hasm $ xs .== a .: as
-                                                       , hasm $ ys .== b .: bs
-                                                       ]
                                                     =: tuple (reverse es ++ xs, reverse os ++ ys)
                                                     =: qed)
 
@@ -263,9 +251,7 @@ interleaveRoundTrip = runKDWith cvc5 $ do
            \xs ys -> [length xs .== length ys]
                   |- uninterleave (interleave @Integer xs ys)
                   =: uninterleaveGen (interleave xs ys) (tuple (nil, nil))
-                  ?? [ hprf (roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer))))
-                     , hasm (length xs .== length ys)
-                     ]
+                  ?? roundTripGen `at` (Inst @"xs" xs, Inst @"ys" ys, Inst @"alts" (tuple (nil :: SList Integer, nil :: SList Integer)))
                   =: tuple (reverse nil ++ xs, reverse nil ++ ys)
                   =: qed
 
