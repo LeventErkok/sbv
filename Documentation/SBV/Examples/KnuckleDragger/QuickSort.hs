@@ -9,77 +9,123 @@
 -- Proving quick sort correct.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE TypeAbstractions    #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 
+import Prelude hiding (null, (++), head, tail, elem, notElem, fst, snd, length)
+
+import Data.SBV
+import Data.SBV.List hiding (partition)
+import Data.SBV.Tuple
+import Data.SBV.Tools.KnuckleDragger
+
+-- * Quick sort
+
+-- | Quick-sort, using the first element as pivot.
+quickSort :: SList Integer -> SList Integer
+quickSort = smtFunction "quickSort" $ \l -> ite (null l)
+                                                nil
+                                                (let (x,  xs) = uncons l
+                                                     (lo, hi) = untuple (partition x xs)
+                                                 in  quickSort lo ++ singleton x ++ quickSort hi)
+
+-- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
+-- with @\pivot xs -> Data.List.SBV.partition (.<= pivot) xs@ because that would create a firstified version of partition
+-- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
+partition :: SInteger -> SList Integer -> STuple [Integer] [Integer]
+partition = smtFunction "split" $ \pivot xs -> ite (null xs)
+                                                   (tuple (nil, nil))
+                                                   (let (a,  as) = uncons xs
+                                                        (lo, hi) = untuple (partition pivot as)
+                                                    in ite (a .<= pivot)
+                                                           (tuple (a .: lo, hi))
+                                                           (tuple (lo, a .: hi)))
+
+-- * Helper functions
+
+-- | A predicate testing whether a given list is non-decreasing.
+nonDecreasing :: SList Integer -> SBool
+nonDecreasing = smtFunction "nonDecreasing" $ \l ->  null l .|| null (tail l)
+                                                 .|| let (x, l') = uncons l
+                                                         (y, _)  = uncons l'
+                                                     in x .<= y .&& nonDecreasing l'
+
+-- | Count the number of occurrences of an element in a list
+count :: SInteger -> SList Integer -> SInteger
+count = smtFunction "count" $ \e l -> ite (null l)
+                                          0
+                                          (let (x, xs) = uncons l
+                                               cxs     = count e xs
+                                           in ite (e .== x) (1 + cxs) cxs)
+
+-- | Are two lists permutations of each other?
+isPermutation :: SList Integer -> SList Integer -> SBool
+isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x ys)
+
+-- * Correctness proof
+
+-- | Correctness of quick-sort.
+--
+-- We have:
+--
+-- >>> correctness
+correctness :: IO Proof
+correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
+
+  --------------------------------------------------------------------------------------------
+  -- Part I. Prove that the output of quick sort is a permutation of its input
+  --------------------------------------------------------------------------------------------
+
+  countAppend <-
+      induct "countAppend"
+             (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
+             \ih x xs ys e -> [] |- count e ((x .: xs) ++ ys)
+                                 =: count e (x .: (xs ++ ys))
+                                 ?? "unfold count"
+                                 =: (let r = count e (xs ++ ys) in ite (e .== x) (1+r) r)
+                                 ?? ih `at` (Inst @"ys" ys, Inst @"e" e)
+                                 =: (let r = count e xs + count e ys in ite (e .== x) (1+r) r)
+                                 ?? "simplify"
+                                 =: count e (x .: xs) + count e ys
+                                 =: qed
+
+  partitionLoSize <-
+      lemma "partitionLoSize"
+            (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition pivot l)) .<= length l)
+            [sorry]
+
+  _artitionHiSize <-
+      lemma "partitionHiSize"
+            (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition pivot l)) .<= length l)
+            [sorry]
+
+  countPartitionLT <-
+      sInduct  "countPartitionLT"
+               (\(Forall @"l" l) (Forall @"pivot" pivot) (Forall @"e" e) ->
+                      count e (fst (partition pivot l)) .== ite (e .<= pivot) (count e l) 0)
+               (\l (_ :: SInteger) (_ :: SInteger) -> length @Integer l) $
+               \ih l pivot e ->
+                   [] |- split l trivial
+                               (\a as -> count e (fst (partition pivot (a .: as)))
+                                      ?? "unfold count/partition"
+                                      =: let lo = fst (partition pivot as)
+                                      in count e (ite (a .<= pivot) (a .: lo) lo)
+                                      ?? [ ih              `at` (Inst @"l" as, Inst @"pivot" pivot, Inst @"e" e)
+                                         , partitionLoSize `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                         ]
+                                      =: ite (e .<= pivot) (count e (a .: lo)) 0
+                                      =: qed)
+
+
+  error "stop here" countAppend countPartitionLT
+
 {-
-theory QuickSort_Standalone
-begin
-
-(* Define natural numbers *)
-datatype nat = Z | S nat
-
-(* Define addition on nat *)
-fun add :: "nat ⇒ nat ⇒ nat" where
-  "add Z n = n"
-| "add (S m) n = S (add m n)"
-
-(* Define integers as an abstract type (for simplicity, assume they exist) *)
-typedecl int
-
-consts
-  le :: "int ⇒ int ⇒ bool" (infix "≤" 50)
-  lt :: "int ⇒ int ⇒ bool" (infix "<" 50)
-  eq :: "int ⇒ int ⇒ bool" (infix "=" 50)
-
-axiomatization where
-  le_refl: "x ≤ x" and
-  le_trans: "x ≤ y ⟹ y ≤ z ⟹ x ≤ z" and
-  le_antisym: "x ≤ y ⟹ y ≤ x ⟹ x = y" and
-  le_lt: "x ≤ y ⟷ (x < y ∨ x = y)"
-
-(* Define lists *)
-datatype 'a list = Nil | Cons 'a "'a list"
-
-(* Append *)
-fun app :: "'a list ⇒ 'a list ⇒ 'a list" (infixr "@" 65) where
-  "Nil @ ys = ys"
-| "Cons x xs @ ys = Cons x (xs @ ys)"
-
-(* Filter function *)
-fun filter :: "('a ⇒ bool) ⇒ 'a list ⇒ 'a list" where
-  "filter P Nil = Nil"
-| "filter P (Cons x xs) = (if P x then Cons x (filter P xs) else filter P xs)"
-
-(* Count: number of times x appears in list *)
-fun count :: "'a ⇒ 'a list ⇒ nat" where
-  "count x Nil = Z"
-| "count x (Cons y ys) = (if x = y then S (count x ys) else count x ys)"
-
-(* Permutation: equal counts of all elements *)
-definition perm :: "'a list ⇒ 'a list ⇒ bool" where
-  "perm xs ys ⟷ (∀x. count x xs = count x ys)"
-
-(* Sorted predicate *)
-fun sorted :: "int list ⇒ bool" where
-  "sorted Nil = True"
-| "sorted (Cons x Nil) = True"
-| "sorted (Cons x (Cons y ys)) = (x ≤ y ∧ sorted (Cons y ys))"
-
-(* Quicksort definition *)
-fun quicksort :: "int list ⇒ int list" where
-  "quicksort Nil = Nil"
-| "quicksort (Cons x xs) = 
-     quicksort (filter (λy. y ≤ x) xs) @ 
-     Cons x (quicksort (filter (λy. x < y) xs))"
-
-(* Lemmas to support main theorem *)
-lemma count_app: "count x (xs @ ys) = add (count x xs) (count x ys)"
-  apply (induction xs)
-   apply auto
-  done
-
 lemma count_filter_le:
   "count x (filter (λy. y ≤ z) xs) = (if x ≤ z then count x xs else Z)"
   apply (induction xs)
