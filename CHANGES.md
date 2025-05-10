@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.5.5, Not yet released
+### Version 11.6, 2025-05-10
  
   * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,
     unless you can't use anything newer.
