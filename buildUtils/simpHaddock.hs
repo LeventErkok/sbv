@@ -114,6 +114,7 @@ sbvIgnore input = any (`isPrefixOf` s) (map fmt patterns)
                    , "Tools.KD.KnuckleDragger.Inductive"
                    , "Tools.KD.KnuckleDragger.SInductive"
                    , "Tools.KD.KnuckleDragger.CalcLemma"
+                   , "Tools.KD.KnuckleDragger.Contradiction"
                    , "Tools.STree.STreeInternal"
                    , "Tuple.Tuple"
                    , "Tuple.HasField"
