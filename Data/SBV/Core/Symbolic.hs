@@ -1932,7 +1932,7 @@ runSymbolic cfg currentRunMode comp = do
 
 -- | Catch the catastrophic case of context mismatch
 contextMismatchError :: SBVContext -> SBVContext -> Maybe (Int, Int) -> Maybe (Int, Int) -> a
-contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines $ msg
+contextMismatchError ctx1 ctx2 level1 level2 = error $ unlines msg
   where msg | ctx1 /= ctx2 = [ "Data.SBV: Mismatched contexts detected."
                              , "***"
                              , "***   Current context: " ++ show ctx1
