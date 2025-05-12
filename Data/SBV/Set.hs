@@ -21,6 +21,7 @@
 -- it into a list or necessarily enumerate its elements.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -56,11 +57,13 @@ import Data.SBV.Core.Symbolic (SetOp(..))
 
 import Data.SBV.Core.Kind
 
+#ifdef DOCTEST
 -- $setup
 -- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding(null)
 -- >>> import Data.SBV hiding(complement)
 -- >>> :set -XScopedTypeVariables
+#endif
 
 -- | Empty set.
 --
@@ -496,7 +499,7 @@ difference sa sb
         ka = kindOf (Proxy @a)
 
 -- | Synonym for 'Data.SBV.Set.difference'.
-infixl 9 \\
+infixl 9 \\  -- This comment avoids CPP to eat up the trailing backspace in this line  Do not remove!
 (\\) :: (Ord a, SymVal a) => SSet a -> SSet a -> SSet a
 (\\) = difference
 
