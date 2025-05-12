@@ -10,6 +10,7 @@
 -- Accessing symbolic tuple fields and deconstruction.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                    #-}
 {-# LANGUAGE DataKinds              #-}
 {-# LANGUAGE FlexibleContexts       #-}
 {-# LANGUAGE FlexibleInstances      #-}
@@ -42,10 +43,11 @@ import Data.SBV.Core.Model
 
 import Prelude hiding (fst, snd)
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV
+#endif
 
 -- | Field access, inspired by the lens library. This is merely reverse
 -- application, but allows us to write things like @(1, 2)^._1@ which is

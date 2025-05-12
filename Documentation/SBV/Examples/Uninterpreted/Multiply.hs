@@ -19,9 +19,8 @@ module Documentation.SBV.Examples.Uninterpreted.Multiply where
 
 import Data.SBV
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

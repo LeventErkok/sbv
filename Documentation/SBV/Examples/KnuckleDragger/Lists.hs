@@ -35,9 +35,8 @@ import Data.SBV.Tools.KnuckleDragger
 import Control.Monad (void)
 import Data.Proxy
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> :set -XTypeApplications
 -- >>> import Data.SBV

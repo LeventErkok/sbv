@@ -74,7 +74,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- We have:
 --
--- >>> correctness
+-- correctness
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 

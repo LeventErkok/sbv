@@ -24,9 +24,8 @@ import Prelude hiding (sum, length)
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
 #endif

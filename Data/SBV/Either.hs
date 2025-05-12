@@ -10,6 +10,7 @@
 -- Symbolic coproduct, symbolic version of Haskell's 'Either' type.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -35,10 +36,11 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model () -- instances only
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding(either)
 -- >>> import Data.SBV
+#endif
 
 -- | Construct an @SEither a b@ from an @SBV a@
 --

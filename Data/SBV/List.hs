@@ -14,6 +14,7 @@
 -- be used as symbolic-lists.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE OverloadedLists     #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -65,14 +66,15 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf, parti
 
 import Data.Proxy
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, elem, notElem, reverse, (++), (!!), map, foldl, foldr, zip, zipWith, filter, all, any)
 -- >>> import qualified Prelude as P(map)
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds
 -- >>> :set -XOverloadedLists
 -- >>> :set -XScopedTypeVariables
+#endif
 
 -- | Length of a list.
 --

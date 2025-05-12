@@ -21,6 +21,7 @@
 -- we will provide full unicode versions as well.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -53,12 +54,13 @@ import qualified Data.Char as C
 
 import Data.SBV.String (isInfixOf, singleton)
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.String (isInfixOf, singleton)
 -- >>> import Prelude hiding(elem, notElem)
 -- >>> :set -XOverloadedStrings
+#endif
 
 -- | Is the character in the string?
 --

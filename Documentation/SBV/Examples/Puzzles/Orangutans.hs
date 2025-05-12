@@ -25,9 +25,8 @@ module Documentation.SBV.Examples.Puzzles.Orangutans where
 import Data.SBV
 import GHC.Generics (Generic)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

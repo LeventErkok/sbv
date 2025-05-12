@@ -15,6 +15,7 @@
 -- used as symbolic-strings.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -51,11 +52,12 @@ import qualified Data.List as L (tails, isSuffixOf, isPrefixOf, isInfixOf)
 
 import Data.Proxy
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Prelude hiding (head, tail, init, length, take, drop, concat, null, reverse, (++), (!!))
 -- >>> :set -XOverloadedStrings
+#endif
 
 -- | Length of a string.
 --

@@ -17,9 +17,8 @@ module Documentation.SBV.Examples.Optimization.LinearOpt where
 
 import Data.SBV
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

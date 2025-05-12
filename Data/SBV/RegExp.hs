@@ -14,6 +14,7 @@
 -- this module.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE Rank2Types          #-}
@@ -66,14 +67,15 @@ import Data.Proxy
 -- For testing only
 import Data.SBV.Char
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Char
 -- >>> import Data.SBV.String
 -- >>> import Prelude hiding (length, take, elem, notElem, head)
 -- >>> :set -XOverloadedStrings
 -- >>> :set -XScopedTypeVariables
+#endif
 
 -- | Matchable class. Things we can match against a 'RegExp'.
 --

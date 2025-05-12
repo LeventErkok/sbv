@@ -69,7 +69,7 @@ docs:
 
 # To upload docs to hackage, first run the below target (part of release), then run the next target..
 hackage-docs:
-	@cabal haddock ${HADDOCK_OPTS} -fhaddock_is_running --haddock-for-hackage | ghc ./buildUtils/simpHaddock.hs -e main
+	@cabal haddock ${HADDOCK_OPTS} --haddock-for-hackage | ghc ./buildUtils/simpHaddock.hs -e main
 	@echo "*** If all is well, then run:"
 	@echo "      cabal upload -d --publish ./dist-newstyle/sbv-XXX-docs.tar.gz"
 	@echo "*** If the above fails for some reason, use the workaround in: https://github.com/haskell/cabal/issues/10252#issuecomment-2422130252"
@@ -128,10 +128,10 @@ DOCTEST_GOLD = SBVTestSuite/GoldFiles/doctest_sanity.gold
 # If you specify TGT, it'll just run on that target. Give the full path to the haskell file with .hs extension
 docTest:
 ifdef TGT
-	cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
+	cabal run SBVDocTest ${CABAL_OPTS} -fdoctest_is_running -- --timeout ${DOCTESTTIMEOUT} --module $(basename $(subst /,.,${TGT}))
 else
 	@/bin/rm -f ${DOCTEST_GOLD}_temp
-	@$(TIME) cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
+	@$(TIME) cabal run SBVDocTest ${CABAL_OPTS} -fdoctest_is_running -- --timeout ${DOCTESTTIMEOUT} 2>&1 | tee ${DOCTEST_GOLD}_temp
 	@ghc -package process buildUtils/checkDocSpec.hs -e "start \"${DOCTEST_GOLD} ${ACCEPT}\""
 endif
 

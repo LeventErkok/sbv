@@ -23,9 +23,8 @@ module Documentation.SBV.Examples.Queries.Interpolants where
 import Data.SBV
 import Data.SBV.Control
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
 #endif

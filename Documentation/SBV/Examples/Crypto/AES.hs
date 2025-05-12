@@ -52,9 +52,8 @@ import Numeric (showHex)
 
 import Test.QuickCheck hiding (verbose)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

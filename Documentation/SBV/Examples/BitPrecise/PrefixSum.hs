@@ -22,9 +22,8 @@ module Documentation.SBV.Examples.BitPrecise.PrefixSum where
 
 import Data.SBV
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

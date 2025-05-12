@@ -18,9 +18,8 @@ module Documentation.SBV.Examples.Misc.SetAlgebra where
 
 import Data.SBV hiding (complement)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV hiding (complement)
 -- >>> import Data.SBV.Set
 -- >>> :set -XScopedTypeVariables

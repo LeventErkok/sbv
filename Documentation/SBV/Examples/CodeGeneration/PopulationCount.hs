@@ -19,9 +19,8 @@ module Documentation.SBV.Examples.CodeGeneration.PopulationCount where
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

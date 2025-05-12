@@ -21,8 +21,8 @@ Extra-Doc-Files    : INSTALL, README.md, COPYRIGHT, CHANGES.md
 
 Tested-With        : GHC==9.10.1
 
-flag haddock_is_running
-  description: Define this flag during Haddock generation
+flag doctest_is_running
+  description: Define this flag during doctest run
   default    : False
   manual     : True
 
@@ -88,8 +88,8 @@ common common-settings
 Library
   import          : common-settings
 
-  if flag(haddock_is_running)
-    CPP-Options: -DHADDOCK
+  if flag(doctest_is_running)
+    CPP-Options: -DDOCTEST
 
   default-language: Haskell2010
   build-depends   : QuickCheck

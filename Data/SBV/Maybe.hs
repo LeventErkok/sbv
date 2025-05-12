@@ -10,6 +10,7 @@
 -- Symbolic option type, symbolic version of Haskell's 'Maybe' type.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE Rank2Types          #-}
@@ -37,10 +38,11 @@ import Data.Proxy (Proxy(Proxy))
 import Data.SBV.Core.Data
 import Data.SBV.Core.Model (ite)
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Prelude hiding (maybe, map)
 -- >>> import Data.SBV
+#endif
 
 -- | The symbolic 'Nothing'.
 --

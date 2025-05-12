@@ -23,9 +23,8 @@ import Prelude hiding (ceiling)
 import Data.SBV
 import qualified Data.SBV.Internals as SI
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

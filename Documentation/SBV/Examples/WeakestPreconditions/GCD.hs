@@ -36,9 +36,8 @@ import GHC.Generics (Generic)
 import Prelude hiding (gcd)
 import qualified Prelude as P (gcd)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
 -- >>> import Data.SBV.Tools.WeakestPreconditions

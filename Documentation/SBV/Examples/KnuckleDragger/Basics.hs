@@ -25,12 +25,13 @@ module Documentation.SBV.Examples.KnuckleDragger.Basics where
 import Data.SBV
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
 #endif
+
+-- * Truth and falsity
 
 -- | @sTrue@ is provable.
 --
@@ -55,6 +56,8 @@ falseIsn'tProvable = runKD $ do
         _won'tGoThrough <- lemma "sFalse" sFalse []
         pure ()
 
+-- * Quantification
+
 -- | Basic quantification example: For every integer, there's a larger integer.
 --
 -- We have:
@@ -69,6 +72,8 @@ largerIntegerExists = runKD $ lemma "largerIntegerExists"
 -- | Use an uninterpreted type for the domain
 data T
 mkUninterpretedSort ''T
+
+-- * Basic connectives
 
 -- | Pushing a universal through conjunction. We have:
 --

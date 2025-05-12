@@ -26,9 +26,8 @@ import Data.SBV.List
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XScopedTypeVariables
 -- >>> import Control.Exception
 #endif

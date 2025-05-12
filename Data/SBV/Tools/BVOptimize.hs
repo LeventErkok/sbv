@@ -16,6 +16,8 @@
 -- This implementation is based on an idea by Nikolaj Bjorner, see <https://github.com/Z3Prover/z3/issues/7156>.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP #-}
+
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.BVOptimize (
@@ -32,10 +34,11 @@ import Control.Monad
 import Data.SBV
 import Data.SBV.Control
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> :set -XDataKinds
 -- >>> import Data.SBV
+#endif
 
 {- $maxBVEx
 

@@ -9,6 +9,7 @@
 -- Single variable valid range detection.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                 #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -32,10 +33,11 @@ import Data.Proxy
 
 import Data.SBV.Internals hiding (Range, free_)
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> :set -XScopedTypeVariables -XDataKinds
+#endif
 
 -- | A boundary value
 data Boundary a = Unbounded -- ^ Unbounded

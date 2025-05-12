@@ -25,9 +25,8 @@ import Data.Maybe (fromMaybe)
 import Data.SBV
 import Data.SBV.Tools.CodeGen
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 

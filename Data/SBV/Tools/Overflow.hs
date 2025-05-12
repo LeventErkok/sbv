@@ -10,6 +10,7 @@
 -- Based on: <http://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/z3prefix.pdf>
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                  #-}
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE FlexibleInstances    #-}
@@ -48,9 +49,10 @@ import Data.Int
 import Data.Word
 import Data.Proxy
 
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
+#endif
 
 -- | Detecting overflow. Each function here will return 'sTrue' if the result will not fit in the target
 -- type, i.e., if it overflows or underflows.

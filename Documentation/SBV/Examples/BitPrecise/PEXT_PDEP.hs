@@ -48,9 +48,8 @@ module Documentation.SBV.Examples.BitPrecise.PEXT_PDEP where
 import Data.SBV
 import GHC.TypeLits (KnownNat)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds -XTypeApplications
 #endif

@@ -29,9 +29,8 @@ module Documentation.SBV.Examples.Misc.FirstOrderLogic where
 
 import Data.SBV
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only, ignore.
 -- >>> import Data.SBV
 -- >>> :set -XDataKinds -XScopedTypeVariables
 #endif

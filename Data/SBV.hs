@@ -178,6 +178,7 @@
 -- used in the property are terminating.
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DefaultSignatures     #-}
 {-# LANGUAGE FlexibleContexts      #-}
@@ -542,10 +543,11 @@ import Prelude hiding((+), (-)) -- to avoid the haddock ambiguity
 
 import Data.Char (isSpace, isPunctuation)
 
+#ifdef DOCTEST
 --- $setup
---- >>> -- For doctest purposes only:
 --- >>> :set -XDataKinds -XFlexibleContexts -XTypeApplications -XRankNTypes
 --- >>> import Data.Proxy
+#endif
 
 -- | Show a value in detailed (cracked) form, if possible.
 -- This makes most sense with numbers, and especially floating-point types.

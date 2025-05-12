@@ -19,7 +19,7 @@ module Documentation.SBV.Examples.BitPrecise.BrokenSearch where
 import Data.SBV
 import Data.SBV.Tools.Overflow
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
 -- >>> import Data.SBV
 -- >>> import Data.Int

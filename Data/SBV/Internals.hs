@@ -17,6 +17,7 @@
 -- is a very good but also a very difficult question to answer!)
 -----------------------------------------------------------------------------
 
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types       #-}
 {-# LANGUAGE TypeOperators    #-}
@@ -102,10 +103,11 @@ import qualified Data.SBV.Control.Utils as Query
 
 import Data.SBV.Lambda
 
+#ifdef DOCTEST
 --- $setup
---- >>> -- For doctest purposes only:
 --  >>> :set -XScopedTypeVariables
 --- >>> import Data.SBV
+#endif
 
 -- | Send an arbitrary string to the solver in a query.
 -- Note that this is inherently dangerous as it can put the solver in an arbitrary

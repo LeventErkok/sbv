@@ -30,9 +30,8 @@ import Data.SBV.Tools.WeakestPreconditions
 
 import GHC.Generics (Generic)
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 -- >>> import Data.SBV.Control
 -- >>> import Data.SBV.Tools.WeakestPreconditions

@@ -27,9 +27,8 @@ module Documentation.SBV.Examples.Misc.Floating where
 
 import Data.SBV
 
-#ifndef HADDOCK
+#ifdef DOCTEST
 -- $setup
--- >>> -- For doctest purposes only:
 -- >>> import Data.SBV
 #endif
 
