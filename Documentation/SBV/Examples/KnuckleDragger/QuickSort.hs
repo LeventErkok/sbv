@@ -237,7 +237,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: count e (quickSort lo) + count e (singleton a ++ quickSort hi)
                                    ?? countAppend `at` (Inst @"xs" (singleton a), Inst @"ys" (quickSort hi), Inst @"e" e)
                                    =: count e (quickSort lo) + count e (singleton a) + count e (quickSort hi)
-                                   =: count e (quickSort lo) + count e (singleton a) + count e (quickSort hi)
                                    ?? [ hprf  $ ih                    `at` (Inst @"xs" lo, Inst @"e" e)
                                       , hprf  $ partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
                                       , hasm  $ xs .== a .: as
