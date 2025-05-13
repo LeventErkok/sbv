@@ -85,38 +85,38 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   -- Part I. Helper lemmas for partition
   --------------------------------------------------------------------------------------------
 
-  -- lt: the element is less than all the elements in the list
-  -- ge: the element is greater than or equal to all the elements in the list
-  let lt, ge :: SInteger -> SList Integer -> SBool
-      lt = smtFunction "lt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& lt pivot xs
-      ge = smtFunction "ge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& ge pivot xs
+  -- llt: list less-than:     all the elements are <  pivot
+  -- lge: list greater-equal: all the elements are >= pivot
+  let llt, lge :: SInteger -> SList Integer -> SBool
+      llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
+      lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
 
   -- The first element of the partition produces all smaller elements
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lt pivot (fst (partition pivot l))) $
-     \ih a as pivot -> [] |- lt pivot (fst (partition pivot (a .: as)))
-                          =: lt pivot (ite (a .< pivot)
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> llt pivot (fst (partition pivot l))) $
+     \ih a as pivot -> [] |- llt pivot (fst (partition pivot (a .: as)))
+                          =: llt pivot (ite (a .< pivot)
                                            (a .: fst (partition pivot as))
                                            (fst (partition pivot as)))
-                          ?? "push lt down"
+                          ?? "push llt down"
                           =: ite (a .< pivot)
-                                 (a .< pivot .&& lt pivot (fst (partition pivot as)))
-                                 (               lt pivot (fst (partition pivot as)))
+                                 (a .< pivot .&& llt pivot (fst (partition pivot as)))
+                                 (               llt pivot (fst (partition pivot as)))
                           ?? ih
                           =: sTrue
                           =: qed
 
   -- The second element of the partition produces all greater-than-or-equal to elements
   partitionSndGE <- inductWith cvc5 "partitionSndGE"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> ge pivot (snd (partition pivot l))) $
-     \ih a as pivot -> [] |- ge pivot (snd (partition pivot (a .: as)))
-                          =: ge pivot (ite (a .< pivot)
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lge pivot (snd (partition pivot l))) $
+     \ih a as pivot -> [] |- lge pivot (snd (partition pivot (a .: as)))
+                          =: lge pivot (ite (a .< pivot)
                                            (     snd (partition pivot as))
                                            (a .: snd (partition pivot as)))
-                          ?? "push ge down"
+                          ?? "push lge down"
                           =: ite (a .< pivot)
-                                 (a .< pivot .&& ge pivot (snd (partition pivot as)))
-                                 (               ge pivot (snd (partition pivot as)))
+                                 (a .< pivot .&& lge pivot (snd (partition pivot as)))
+                                 (               lge pivot (snd (partition pivot as)))
                           ?? ih
                           =: sTrue
                           =: qed
@@ -215,12 +215,22 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                             ]
 
 
+  -- If a value is less than all the elements in a list, then it is also less than all the elements of all its permutations
+  lltPermutation <- lemma "lltPermutation"
+                          (\(Forall @"pivot" pivot) (Forall @"xs" xs) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
+                          [sorry]
+
+  -- Ditto, for greater
+  lgePermutation <- lemma "lgePermutation"
+                          (\(Forall @"pivot" pivot) (Forall @"xs" xs) (Forall @"ys" ys) -> lge pivot xs .&& isPermutation xs ys .=> lge pivot ys)
+                          [sorry]
+
   --------------------------------------------------------------------------------------------
   -- Part III. Prove that the output of quick sort is a permutation of its input
   --------------------------------------------------------------------------------------------
 
-  sortIsPermutation <-
-     sInduct "sortIsPermutation"
+  sortCountsMatch <-
+     sInduct "sortCountsMatch"
              (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
              (\xs (_ :: SInteger) -> length @Integer xs) $
              \ih xs e ->
@@ -253,20 +263,69 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: count e xs
                                    =: qed)
 
+  sortIsPermutation <- lemma "sortIsPermutation" (\(Forall @"xs" xs) -> isPermutation xs (quickSort xs)) [sortCountsMatch]
+
   --------------------------------------------------------------------------------------------
-  -- Part IV. Prove that the output of quick sort is non-decreasing
+  -- Part IV. Helper lemmas for nonDecreasing
   --------------------------------------------------------------------------------------------
-  sortIsNonDecreasing <-
-     lemma   "sortIsNonDecreasing"
-             (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
+  nonDecreasingMerge <-
+      lemma  "nonDecreasingMerge"
+             (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
+                        nonDecreasing xs .&& llt pivot xs
+                    .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ singleton pivot ++ ys))
              [sorry]
 
   --------------------------------------------------------------------------------------------
-  -- Part V. Putting it together
+  -- Part V. Prove that the output of quick sort is non-decreasing
+  --------------------------------------------------------------------------------------------
+  sortIsNonDecreasing <-
+     sInductWith cvc5 "sortIsNonDecreasing"
+             (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
+             (length @Integer) $
+             \ih xs ->
+                [] |- nonDecreasing (quickSort xs)
+                   =: split xs trivial
+                            (\a as -> nonDecreasing (quickSort (a .: as))
+                                   ?? "expand quickSort"
+                                   =: nonDecreasing (let (lo, hi) = untuple (partition a as)
+                                                     in quickSort lo ++ singleton a ++ quickSort hi)
+                                   ?? "push nonDecreasing down"
+                                   =: let (lo, hi) = untuple (partition a as)
+                                   in nonDecreasing (quickSort lo ++ singleton a ++ quickSort hi)
+                                   ?? [
+                                        -- Guaranteed by the split
+                                        hasm $ xs .== a .: as
+
+                                        -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
+                                      , hprf $ partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                                      , hprf $ partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
+
+                                        -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
+                                      , hprf $ ih `at` (Inst @"xs" lo)  -- nonDecreasing (quickSort lo)
+                                      , hprf $ ih `at` (Inst @"xs" hi)  -- nonDecreasing (quickSort hi)
+
+                                      -- Deduce that lo is all less than a, and hi is all greater than or equal to a
+                                      , hprf $ partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
+                                      , hprf $ partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
+
+                                      -- Deduce that quickSort lo is all less than a
+                                      , hprf $ sortIsPermutation `at` Inst @"xs" lo
+                                      , hprf $ lltPermutation    `at` (Inst @"pivot" a, Inst @"xs" lo, Inst @"ys" (quickSort lo))
+
+                                      -- Deduce that quickSort hi is all greater than or equal to a
+                                      , hprf $ sortIsPermutation `at` Inst @"xs" hi
+                                      , hprf $ lgePermutation    `at` (Inst @"pivot" a, Inst @"xs" hi, Inst @"ys" (quickSort hi))
+
+                                      -- Finally conclude that the whole reconstruction is non-decreasing
+                                      , hprf $ nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
+                                      ]
+                                   =: sTrue
+                                   =: qed)
+
+  --------------------------------------------------------------------------------------------
+  -- Part VI. Putting it together
   --------------------------------------------------------------------------------------------
 
-  _ <- lemma "quickSortIsCorrect"
+  lemma "quickSortIsCorrect"
         (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
         [sortIsPermutation, sortIsNonDecreasing]
-
-  error "stop here" partitionFstLT partitionSndGE
