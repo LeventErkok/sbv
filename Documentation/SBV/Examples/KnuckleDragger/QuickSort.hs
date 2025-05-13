@@ -292,12 +292,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    ?? "push nonDecreasing down"
                                    =: let (lo, hi) = untuple (partition a as)
                                    in nonDecreasing (quickSort lo ++ singleton a ++ quickSort hi)
-                                   ?? [
-                                        -- Guaranteed by the split
-                                        hasm $ xs .== a .: as
-
-                                        -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
-                                      , hprf $ partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                                   ?? [ -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
+                                        hprf $ partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
                                       , hprf $ partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
                                         -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
