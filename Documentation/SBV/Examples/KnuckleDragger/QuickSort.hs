@@ -6,7 +6,10 @@
 -- Maintainer: erkokl@gmail.com
 -- Stability : experimental
 --
--- Proving quick sort correct.
+-- Proving quick sort correct. The proof here closely follows the development
+-- given by Tobias Nipkow, in his paper  "Term Rewriting and Beyond -- Theorem
+-- Proving in Isabelle," published in Formal Aspects of Computing 1: 320-338
+-- back in 1989.
 -----------------------------------------------------------------------------
 
 {-# LANGUAGE DataKinds           #-}
@@ -251,4 +254,20 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: count e xs
                                    =: qed)
 
-  error "stop here" partitionFstLT partitionSndGE sortIsPermutation
+  --------------------------------------------------------------------------------------------
+  -- Part IV. Prove that the output of quick sort is non-decreasing
+  --------------------------------------------------------------------------------------------
+  sortIsNonDecreasing <-
+     lemma   "sortIsNonDecreasing"
+             (\(Forall @"xs" xs) -> nonDecreasing (quickSort xs))
+             [sorry]
+
+  --------------------------------------------------------------------------------------------
+  -- Part V. Putting it together
+  --------------------------------------------------------------------------------------------
+
+  _ <- lemma "quickSortIsCorrect"
+        (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
+        [sortIsPermutation, sortIsNonDecreasing]
+
+  error "stop here" partitionFstLT partitionSndGE
