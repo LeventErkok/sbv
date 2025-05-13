@@ -21,7 +21,7 @@ module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 import Prelude hiding (null, length, (++), tail, all, fst, snd)
 
 import Data.SBV
-import Data.SBV.List
+import Data.SBV.List hiding (partition)
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
@@ -32,20 +32,20 @@ quickSort :: SList Integer -> SList Integer
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x,  xs) = uncons l
-                                                     (lo, hi) = untuple (part x xs)
+                                                     (lo, hi) = untuple (partition x xs)
                                                  in  quickSort lo ++ singleton x ++ quickSort hi)
 
--- | We define @part@ as an explicit function. Unfortunately, we can't just replace this
+-- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
 -- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
-part :: SInteger -> SList Integer -> STuple [Integer] [Integer]
-part = smtFunction "part" $ \pivot xs -> ite (null xs)
-                                             (tuple (nil, nil))
-                                             (let (a,  as) = uncons xs
-                                                  (lo, hi) = untuple (part pivot as)
-                                              in ite (a .< pivot)
-                                                     (tuple (a .: lo, hi))
-                                                     (tuple (lo, a .: hi)))
+partition :: SInteger -> SList Integer -> STuple [Integer] [Integer]
+partition = smtFunction "partition" $ \pivot xs -> ite (null xs)
+                                                       (tuple (nil, nil))
+                                                       (let (a,  as) = uncons xs
+                                                            (lo, hi) = untuple (partition pivot as)
+                                                        in ite (a .< pivot)
+                                                               (tuple (a .: lo, hi))
+                                                               (tuple (lo, a .: hi)))
 
 -- * Helper functions
 
@@ -81,44 +81,50 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   --------------------------------------------------------------------------------------------
   -- Part I. Helper lemmas
   --------------------------------------------------------------------------------------------
+
+  -- lt: the element is less than all the elements in the list
+  -- ge: the element is greater than or equal to all the elements in the list
   let lt, ge :: SInteger -> SList Integer -> SBool
       lt = smtFunction "lt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& lt pivot xs
       ge = smtFunction "ge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& ge pivot xs
 
+  -- The first element of the partition produces all smaller elements
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lt pivot (fst (part pivot l))) $
-     \ih a as pivot -> [] |- lt pivot (fst (part pivot (a .: as)))
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lt pivot (fst (partition pivot l))) $
+     \ih a as pivot -> [] |- lt pivot (fst (partition pivot (a .: as)))
                           =: lt pivot (ite (a .< pivot)
-                                           (a .: fst (part pivot as))
-                                           (fst (part pivot as)))
+                                           (a .: fst (partition pivot as))
+                                           (fst (partition pivot as)))
                           ?? "push lt down"
                           =: ite (a .< pivot)
-                                 (a .< pivot .&& lt pivot (fst (part pivot as)))
-                                 (               lt pivot (fst (part pivot as)))
+                                 (a .< pivot .&& lt pivot (fst (partition pivot as)))
+                                 (               lt pivot (fst (partition pivot as)))
                           ?? ih
                           =: sTrue
                           =: qed
 
+  -- The second element of the partition produces all greater-than-or-equal to elements
   partitionSndGE <- inductWith cvc5 "partitionSndGE"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> ge pivot (snd (part pivot l))) $
-     \ih a as pivot -> [] |- ge pivot (snd (part pivot (a .: as)))
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> ge pivot (snd (partition pivot l))) $
+     \ih a as pivot -> [] |- ge pivot (snd (partition pivot (a .: as)))
                           =: ge pivot (ite (a .< pivot)
-                                           (     snd (part pivot as))
-                                           (a .: snd (part pivot as)))
+                                           (     snd (partition pivot as))
+                                           (a .: snd (partition pivot as)))
                           ?? "push ge down"
                           =: ite (a .< pivot)
-                                 (a .< pivot .&& ge pivot (snd (part pivot as)))
-                                 (               ge pivot (snd (part pivot as)))
+                                 (a .< pivot .&& ge pivot (snd (partition pivot as)))
+                                 (               ge pivot (snd (partition pivot as)))
                           ?? ih
                           =: sTrue
                           =: qed
 
+  -- The first element of partition does not increase in size
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (part pivot l)) .<= length l)
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition pivot l)) .<= length l)
      (\l (_ :: SInteger) -> length @Integer l) $
-     (\ih l pivot -> [] |- length (fst (part pivot l)) .<= length l
+     (\ih l pivot -> [] |- length (fst (partition pivot l)) .<= length l
                         =: split l trivial
-                                 (\a as -> let lo = fst (part pivot as)
+                                 (\a as -> let lo = fst (partition pivot as)
                                         in ite (a .< pivot)
                                                (length (a .: lo) .<= length (a .: as))
                                                (length       lo  .<= length (a .: as))
@@ -130,12 +136,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                         =: sTrue
                                         =: qed))
 
+  -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
-     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (part pivot l)) .<= length l)
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition pivot l)) .<= length l)
      (\l (_ :: SInteger) -> length @Integer l) $
-     (\ih l pivot -> [] |- length (snd (part pivot l)) .<= length l
+     (\ih l pivot -> [] |- length (snd (partition pivot l)) .<= length l
                         =: split l trivial
-                                 (\a as -> let hi = snd (part pivot as)
+                                 (\a as -> let hi = snd (partition pivot as)
                                         in ite (a .< pivot)
                                                (length       hi  .<= length (a .: as))
                                                (length (a .: hi) .<= length (a .: as))
