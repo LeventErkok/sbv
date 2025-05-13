@@ -79,7 +79,7 @@ correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   --------------------------------------------------------------------------------------------
-  -- Part I. Helper lemmas
+  -- Part I. Helper lemmas for partition
   --------------------------------------------------------------------------------------------
 
   -- lt: the element is less than all the elements in the list
@@ -154,14 +154,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                         =: sTrue
                                         =: qed))
 
-  error "stop here" partitionFstLT partitionSndGE partitionNotLongerFst partitionNotLongerSnd ge
-
   --------------------------------------------------------------------------------------------
-  -- Part II. Prove that the output of quick sort is a permutation of its input
+  -- Part II. Helper lemmas for count
   --------------------------------------------------------------------------------------------
 
-
-{-
+  -- Count distributes over append
   countAppend <-
       induct "countAppend"
              (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
@@ -175,88 +172,83 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                  =: count e (x .: xs) + count e ys
                                  =: qed
 
-  partitionLoSize <-
-      lemma "partitionLoSize"
-            (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition pivot l)) .<= length l)
-            [sorry]
 
-  _artitionHiSize <-
-      lemma "partitionHiSize"
-            (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition pivot l)) .<= length l)
-            [sorry]
+  -- Count is preserved over partition
+  let countTuple :: SInteger -> STuple [Integer] [Integer] -> SInteger
+      countTuple e xsys = count e xs + count e ys
+        where (xs, ys) = untuple xsys
 
-  countPartitionLT <-
-      sInduct  "countPartitionLT"
-               (\(Forall @"l" l) (Forall @"pivot" pivot) (Forall @"e" e) ->
-                      count e (fst (partition pivot l)) .== ite (e .<= pivot) (count e l) 0)
-               (\l (_ :: SInteger) (_ :: SInteger) -> length @Integer l) $
-               \ih l pivot e ->
-                   [] |- split l trivial
-                               (\a as -> count e (fst (partition pivot (a .: as)))
-                                      ?? "unfold count/partition"
-                                      =: let lo = fst (partition pivot as)
-                                      in count e (ite (a .<= pivot) (a .: lo) lo)
-                                      ?? [ ih              `at` (Inst @"l" as, Inst @"pivot" pivot, Inst @"e" e)
-                                         , partitionLoSize `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                         ]
-                                      =: ite (e .<= pivot) (count e (a .: lo)) 0
-                                      =: qed)
+  countPartition <-
+     induct "countPartition"
+            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"e" e) -> countTuple e (partition pivot xs) .== count e xs) $
+            \ih a as pivot e ->
+                [] |- countTuple e (partition pivot (a .: as))
+                   ?? "expand partition"
+                   =: countTuple e (let (lo, hi) = untuple (partition pivot as)
+                                    in ite (a .< pivot)
+                                           (tuple (a .: lo, hi))
+                                           (tuple (lo, a .: hi)))
+                   ?? "push countTuple down"
+                   =: let (lo, hi) = untuple (partition pivot as)
+                   in ite (a .< pivot)
+                          (count e (a .: lo) + count e hi)
+                          (count e lo + count e (a .: hi))
+                   =: cases [e .== a  ==> ite (a .< pivot)
+                                              (1 + count e lo + count e hi)
+                                              (count e lo + 1 + count e hi)
+                                       ?? "simplify"
+                                       =: 1 + count e lo + count e hi
+                                       ?? ih
+                                       =: 1 + count e as
+                                       =: qed
+                            , e ./= a ==> ite (a .< pivot)
+                                              (count e lo + count e hi)
+                                              (count e lo + count e hi)
+                                       ?? "simplify"
+                                       =: count e lo + count e hi
+                                       ?? ih
+                                       =: count e as
+                                       =: qed
+                            ]
 
 
-  error "stop here" countAppend countPartitionLT
+  --------------------------------------------------------------------------------------------
+  -- Part III. Prove that the output of quick sort is a permutation of its input
+  --------------------------------------------------------------------------------------------
 
-{-
-lemma count_filter_le:
-  "count x (filter (λy. y ≤ z) xs) = (if x ≤ z then count x xs else Z)"
-  apply (induction xs)
-   apply auto
-  done
+  sortIsPermutation <-
+     sInduct "sortIsPermutation"
+             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .== count e (quickSort xs))
+             (\xs (_ :: SInteger) -> length @Integer xs) $
+             \ih xs e ->
+                [] |- count e (quickSort xs)
+                   =: split xs trivial
+                            (\a as -> count e (quickSort (a .: as))
+                                   ?? "expand quickSort"
+                                   =: count e (let (lo, hi) = untuple (partition a as)
+                                               in quickSort lo ++ singleton a ++ quickSort hi)
+                                   ?? "push count down"
+                                   =: let (lo, hi) = untuple (partition a as)
+                                   in count e (quickSort lo ++ singleton a ++ quickSort hi)
+                                   ?? countAppend `at` (Inst @"xs" (quickSort lo), Inst @"ys" (singleton a ++ quickSort hi), Inst @"e" e)
+                                   =: count e (quickSort lo) + count e (singleton a ++ quickSort hi)
+                                   ?? countAppend `at` (Inst @"xs" (singleton a), Inst @"ys" (quickSort hi), Inst @"e" e)
+                                   =: count e (quickSort lo) + count e (singleton a) + count e (quickSort hi)
+                                   =: count e (quickSort lo) + count e (singleton a) + count e (quickSort hi)
+                                   ?? [ hprf  $ ih                    `at` (Inst @"xs" lo, Inst @"e" e)
+                                      , hprf  $ partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
+                                      , hasm  $ xs .== a .: as
+                                      , hcmnt $ "IH on lo"
+                                      ]
+                                   =: count e lo + count e (singleton a) + count e (quickSort hi)
+                                   ?? [ hprf  $ ih                    `at` (Inst @"xs" hi, Inst @"e" e)
+                                      , hprf  $ partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
+                                      , hasm  $ xs .== a .: as
+                                      , hcmnt $ "IH on hi"
+                                      ]
+                                   =: count e lo + count e (singleton a) + count e hi
+                                   ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
+                                   =: count e xs
+                                   =: qed)
 
-lemma count_filter_gt:
-  "count x (filter (λy. z < y) xs) = (if z < x then count x xs else Z)"
-  apply (induction xs)
-   apply auto
-  done
-
-theorem quicksort_perm: "perm (quicksort xs) xs"
-proof (induction xs)
-  case Nil
-  then show ?case by (simp add: perm_def)
-next
-  case (Cons x xs)
-  let ?L = "filter (λy. y ≤ x) xs"
-  let ?R = "filter (λy. x < y) xs"
-  have "perm (quicksort xs) (quicksort ?L @ Cons x (quicksort ?R))" by simp
-  also have "perm … (?L @ Cons x ?R)"
-    using Cons.IH by (auto simp: perm_def count_app count_filter_le count_filter_gt)
-  also have "perm … (Cons x xs)"
-    unfolding perm_def
-    by (auto simp: count.simps count_filter_le count_filter_gt count_app)
-  finally show ?case .
-qed
-
-theorem quicksort_sorted: "sorted (quicksort xs)"
-proof (induction xs)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons x xs)
-  let ?L = "quicksort (filter (λy. y ≤ x) xs)"
-  let ?R = "quicksort (filter (λy. x < y) xs)"
-  have L: "sorted ?L" using Cons.IH(1) by simp
-  have R: "sorted ?R" using Cons.IH(2) by simp
-  show ?case
-  proof (cases ?L)
-    case Nil
-    then show ?thesis using R by simp
-  next
-    case (Cons l1 lxs)
-    have "sorted (?L @ Cons x ?R)" using L R
-      by (auto simp: sorted.simps)
-    then show ?thesis by simp
-  qed
-qed
-
-end
--}
--}
+  error "stop here" partitionFstLT partitionSndGE sortIsPermutation
