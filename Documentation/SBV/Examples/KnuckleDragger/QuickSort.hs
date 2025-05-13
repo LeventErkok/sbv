@@ -18,10 +18,10 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 
-import Prelude hiding (null, (++), head, tail, elem, notElem, fst, snd, length)
+import Prelude hiding (null, length, (++), tail, all, fst, snd)
 
 import Data.SBV
-import Data.SBV.List hiding (partition)
+import Data.SBV.List
 import Data.SBV.Tuple
 import Data.SBV.Tools.KnuckleDragger
 
@@ -32,20 +32,20 @@ quickSort :: SList Integer -> SList Integer
 quickSort = smtFunction "quickSort" $ \l -> ite (null l)
                                                 nil
                                                 (let (x,  xs) = uncons l
-                                                     (lo, hi) = untuple (partition x xs)
+                                                     (lo, hi) = untuple (part x xs)
                                                  in  quickSort lo ++ singleton x ++ quickSort hi)
 
--- | We define @partition@ as an explicit function. Unfortunately, we can't just replace this
--- with @\pivot xs -> Data.List.SBV.partition (.<= pivot) xs@ because that would create a firstified version of partition
+-- | We define @part@ as an explicit function. Unfortunately, we can't just replace this
+-- with @\pivot xs -> Data.List.SBV.partition (.< pivot) xs@ because that would create a firstified version of partition
 -- with a free-variable captured, which isn't supported due to higher-order limitations in SMTLib.
-partition :: SInteger -> SList Integer -> STuple [Integer] [Integer]
-partition = smtFunction "split" $ \pivot xs -> ite (null xs)
-                                                   (tuple (nil, nil))
-                                                   (let (a,  as) = uncons xs
-                                                        (lo, hi) = untuple (partition pivot as)
-                                                    in ite (a .<= pivot)
-                                                           (tuple (a .: lo, hi))
-                                                           (tuple (lo, a .: hi)))
+part :: SInteger -> SList Integer -> STuple [Integer] [Integer]
+part = smtFunction "part" $ \pivot xs -> ite (null xs)
+                                             (tuple (nil, nil))
+                                             (let (a,  as) = uncons xs
+                                                  (lo, hi) = untuple (part pivot as)
+                                              in ite (a .< pivot)
+                                                     (tuple (a .: lo, hi))
+                                                     (tuple (lo, a .: hi)))
 
 -- * Helper functions
 
@@ -79,9 +79,82 @@ correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   --------------------------------------------------------------------------------------------
-  -- Part I. Prove that the output of quick sort is a permutation of its input
+  -- Part I. Helper lemmas
+  --------------------------------------------------------------------------------------------
+  let lt, ge :: SInteger -> SList Integer -> SBool
+      lt = smtFunction "lt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& lt pivot xs
+      ge = smtFunction "ge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& ge pivot xs
+
+  partitionFstLT <- inductWith cvc5 "partitionFstLT"
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> lt pivot (fst (part pivot l))) $
+     \ih a as pivot -> [] |- lt pivot (fst (part pivot (a .: as)))
+                          =: lt pivot (ite (a .< pivot)
+                                           (a .: fst (part pivot as))
+                                           (fst (part pivot as)))
+                          ?? "push lt down"
+                          =: ite (a .< pivot)
+                                 (a .< pivot .&& lt pivot (fst (part pivot as)))
+                                 (               lt pivot (fst (part pivot as)))
+                          ?? ih
+                          =: sTrue
+                          =: qed
+
+  partitionSndGE <- inductWith cvc5 "partitionSndGE"
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> ge pivot (snd (part pivot l))) $
+     \ih a as pivot -> [] |- ge pivot (snd (part pivot (a .: as)))
+                          =: ge pivot (ite (a .< pivot)
+                                           (     snd (part pivot as))
+                                           (a .: snd (part pivot as)))
+                          ?? "push ge down"
+                          =: ite (a .< pivot)
+                                 (a .< pivot .&& ge pivot (snd (part pivot as)))
+                                 (               ge pivot (snd (part pivot as)))
+                          ?? ih
+                          =: sTrue
+                          =: qed
+
+  partitionNotLongerFst <- sInduct "partitionNotLongerFst"
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (part pivot l)) .<= length l)
+     (\l (_ :: SInteger) -> length @Integer l) $
+     (\ih l pivot -> [] |- length (fst (part pivot l)) .<= length l
+                        =: split l trivial
+                                 (\a as -> let lo = fst (part pivot as)
+                                        in ite (a .< pivot)
+                                               (length (a .: lo) .<= length (a .: as))
+                                               (length       lo  .<= length (a .: as))
+                                        ?? "simplify"
+                                        =: ite (a .< pivot)
+                                               (length lo .<=     length as)
+                                               (length lo .<= 1 + length as)
+                                        ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                        =: sTrue
+                                        =: qed))
+
+  partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
+     (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (part pivot l)) .<= length l)
+     (\l (_ :: SInteger) -> length @Integer l) $
+     (\ih l pivot -> [] |- length (snd (part pivot l)) .<= length l
+                        =: split l trivial
+                                 (\a as -> let hi = snd (part pivot as)
+                                        in ite (a .< pivot)
+                                               (length       hi  .<= length (a .: as))
+                                               (length (a .: hi) .<= length (a .: as))
+                                        ?? "simplify"
+                                        =: ite (a .< pivot)
+                                               (length hi .<= 1 + length as)
+                                               (length hi .<=     length as)
+                                        ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                        =: sTrue
+                                        =: qed))
+
+  error "stop here" partitionFstLT partitionSndGE partitionNotLongerFst partitionNotLongerSnd ge
+
+  --------------------------------------------------------------------------------------------
+  -- Part II. Prove that the output of quick sort is a permutation of its input
   --------------------------------------------------------------------------------------------
 
+
+{-
   countAppend <-
       induct "countAppend"
              (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"e" e) -> count e (xs ++ ys) .== count e xs + count e ys) $
@@ -178,4 +251,5 @@ next
 qed
 
 end
+-}
 -}
