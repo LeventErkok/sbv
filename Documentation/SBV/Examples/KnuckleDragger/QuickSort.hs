@@ -96,12 +96,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- llt correctness
   lltCorrect <- lemma "lltCorrect"
-                      (\(Forall @"x" x) (Forall @"pivot" pivot) (Forall @"xs" xs) -> llt pivot xs .&& x `elem` xs .=> x .< pivot)
+                      (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot)
                       [sorry]
 
   -- lge correctness
   lgeCorrect <- lemma "lgeCorrect"
-                      (\(Forall @"x" x) (Forall @"pivot" pivot) (Forall @"xs" xs) -> lge pivot xs .&& x `elem` xs .=> x .>= pivot)
+                      (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot)
                       [sorry]
 
   -- If one list is a subset of another, then cons is an elem
@@ -128,8 +128,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .< pivot .&& llt pivot xs
                               ?? [ -- To establish x .< pivot, observe that x is in ys, and together
                                    -- with llt pivot ys, we get that x is less than pivot
-                                   subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
-                                 , lltCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+                                   subsetElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                 , lltCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a subset of ys too so it can satisfy its precondition
@@ -160,8 +160,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .>= pivot .&& lge pivot xs
                               ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
                                    -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                   subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
-                                 , lgeCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+                                   subsetElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                 , lgeCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a subset of ys too so it can satisfy its precondition
