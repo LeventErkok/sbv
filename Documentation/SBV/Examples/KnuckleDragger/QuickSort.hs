@@ -316,8 +316,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- If one list is a sublist of another so is its tail
   sublistTail <- lemma "sublistTail"
-                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
-                      []
+                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
+                       []
 
   -- Permutation implies sublist
   permutationImpliesSublist <- lemma "permutationImpliesSublist"
@@ -366,12 +366,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
                                    -- with lge pivot ys, we get that x is greater than equal to the pivot
                                    sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
-                                 , lgeCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
+                                 , lgeCorrect  `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a sublist of ys too so it can satisfy its precondition
                                  , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 , ih          `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
                               =: qed
