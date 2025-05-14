@@ -114,10 +114,21 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
+  -- relationship between count and elem
+  countElem <- lemma "countElem"
+                     (\(Forall @"x" x) (Forall @"xs" xs) -> x `elem` xs .== (count x xs .> 0))
+                     [sorry]
+
   -- sublist correctness
-  sublistCorrect <- lemma "sublistCorrect"
-                          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys)
-                          [sorry]
+  sublistCorrect <- calc "sublistCorrect"
+                          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
+                          \xs ys x -> [xs `sublist` ys, x `elem` xs]
+                                   |- x `elem` ys
+                                   ?? [ countElem `at` (Inst @"x" x, Inst @"xs" xs)
+                                      , countElem `at` (Inst @"x" x, Inst @"xs" ys)
+                                      ]
+                                   =: sTrue
+                                   =: qed
 
   -- If one list is a sublist of another, then its head is an elem
   sublistElem <- calc "sublistElem"
