@@ -128,7 +128,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .< pivot .&& llt pivot xs
                               ?? [ -- To establish x .< pivot, observe that x is in ys, and together
                                    -- with llt pivot ys, we get that x is less than pivot
-                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
                                  , hprf $ lltCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
@@ -160,7 +160,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .>= pivot .&& lge pivot xs
                               ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
                                    -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
                                  , hprf $ lgeCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
