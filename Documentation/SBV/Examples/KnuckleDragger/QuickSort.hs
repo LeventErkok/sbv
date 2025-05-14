@@ -114,18 +114,23 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
-  -- relationship between count and elem
-  countElem <- lemma "countElem"
-                     (\(Forall @"x" x) (Forall @"xs" xs) -> x `elem` xs .== (count x xs .> 0))
-                     [sorry]
+  -- relationship between count and elem, forward direction
+  countElem1 <- lemma "countElem1"
+                      (\(Forall @"x" x) (Forall @"xs" xs) -> x `elem` xs .=> count x xs .> 0)
+                      [sorry]
+
+  -- relationship between count and elem, backwards direction
+  countElem2 <- lemma "countElem2"
+                      (\(Forall @"x" x) (Forall @"xs" xs) -> count x xs .> 0 .=> x `elem` xs)
+                      [sorry]
 
   -- sublist correctness
   sublistCorrect <- calc "sublistCorrect"
                           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
                           \xs ys x -> [xs `sublist` ys, x `elem` xs]
                                    |- x `elem` ys
-                                   ?? [ countElem `at` (Inst @"x" x, Inst @"xs" xs)
-                                      , countElem `at` (Inst @"x" x, Inst @"xs" ys)
+                                   ?? [ countElem1 `at` (Inst @"x" x, Inst @"xs" xs)
+                                      , countElem2 `at` (Inst @"x" x, Inst @"xs" ys)
                                       ]
                                    =: sTrue
                                    =: qed
