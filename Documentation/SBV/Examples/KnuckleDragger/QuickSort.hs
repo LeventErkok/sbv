@@ -81,26 +81,107 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
-  --------------------------------------------------------------------------------------------
-  -- Part I. Formalizing less-than/greater-than-or-equal over lists
-  --------------------------------------------------------------------------------------------
+  ---------------------------------------------------------------------------------------------------
+  -- Part I. Formalizing less-than/greater-than-or-equal over lists and relationship to permutations
+  ---------------------------------------------------------------------------------------------------
   -- llt: list less-than:     all the elements are <  pivot
   -- lge: list greater-equal: all the elements are >= pivot
   let llt, lge :: SInteger -> SList Integer -> SBool
       llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
       lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
 
-  -- If a value is less than all the elements in a list, then it is also less than all the elements of all its permutations
-  lltPermutation <-
-     lemma "lltPermutation"
-           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
-           [sorry]
+      -- Subset relationship
+      subset :: SList Integer -> SList Integer -> SBool
+      subset xs ys = quantifiedBool (\(Forall @"e" e) -> e `elem` xs .=> e `elem` ys)
 
-  -- Ditto, for greater
+  -- llt correctness
+  lltCorrect <- lemma "lltCorrect"
+                      (\(Forall @"x" x) (Forall @"pivot" pivot) (Forall @"xs" xs) -> llt pivot xs .&& x `elem` xs .=> x .< pivot)
+                      [sorry]
+
+  -- lge correctness
+  lgeCorrect <- lemma "lgeCorrect"
+                      (\(Forall @"x" x) (Forall @"pivot" pivot) (Forall @"xs" xs) -> lge pivot xs .&& x `elem` xs .=> x .>= pivot)
+                      [sorry]
+
+  -- If one list is a subset of another, then cons is an elem
+  subsetElem <- lemma "subsetElem"
+                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `subset` ys .=> x `elem` ys)
+                      []
+
+  -- If one list is a subset of another so is its tail
+  subsetTail <- lemma "subsetTail"
+                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `subset` ys .=> xs `subset` ys)
+                      []
+
+  -- Permutation implies subset
+  permutationImpliesSubset <- lemma "permutationImpliesSubset"
+                                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> isPermutation xs ys .=> xs `subset` ys)
+                                    [sorry]
+
+  -- If a value is less than all the elements in a list, then it is also less than all the elements of any subset of it
+  lltSubset <-
+     inductWith cvc5 "lltSubset"
+            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& xs `subset` ys .=> llt pivot xs) $
+            \ih x xs pivot ys -> [llt pivot ys, (x .: xs) `subset` ys]
+                              |- llt pivot (x .: xs)
+                              =: x .< pivot .&& llt pivot xs
+                              ?? [ -- To establish x .< pivot, observe that x is in ys, and together
+                                   -- with llt pivot ys, we get that x is less than pivot
+                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , hprf $ lltCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+
+                                   -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                                   -- the prover that xs is a subset of ys too so it can satisfy its precondition
+                                 , hprf $ subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , hprf $ ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 ]
+                              =: sTrue
+                              =: qed
+
+  -- Variant of the above for the permutation case
+  lltPermutation <-
+     calc "lltPermutation"
+           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
+           \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
+                        |- llt pivot xs
+                        ?? [ lltSubset                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , permutationImpliesSubset `at` (Inst @"xs" xs, Inst @"ys" ys)
+                           ]
+                        =: sTrue
+                        =: qed
+
+  -- If a value is greater than or equal to all the elements in a list, then it is also less than all the elements of any subset of it
+  lgeSubset <-
+     inductWith cvc5 "lgeSubset"
+            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& xs `subset` ys .=> lge pivot xs) $
+            \ih x xs pivot ys -> [lge pivot ys, (x .: xs) `subset` ys]
+                              |- lge pivot (x .: xs)
+                              =: x .>= pivot .&& lge pivot xs
+                              ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
+                                   -- with lge pivot ys, we get that x is greater than equal to the pivot
+                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , hprf $ lgeCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+
+                                   -- Use induction hypothesis to get rid of the second conjunct. We need to tell
+                                   -- the prover that xs is a subset of ys too so it can satisfy its precondition
+                                 , hprf $ subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , hprf $ ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 ]
+                              =: sTrue
+                              =: qed
+
+  -- Variant of the above for the permutation case
   lgePermutation <-
-     lemma "lgePermutation"
-           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot xs .&& isPermutation xs ys .=> lge pivot ys)
-           [sorry]
+     calc "lgePermutation"
+           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
+           \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
+                        |- lge pivot xs
+                        ?? [ lgeSubset                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , permutationImpliesSubset `at` (Inst @"xs" xs, Inst @"ys" ys)
+                           ]
+                        =: sTrue
+                        =: qed
 
   --------------------------------------------------------------------------------------------
   -- Part II. Helper lemmas for partition
@@ -317,11 +398,11 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
                                       -- Deduce that quickSort lo is all less than a
                                       , hprf $ sortIsPermutation `at`  Inst @"xs" lo
-                                      , hprf $ lltPermutation    `at` (Inst @"xs" lo, Inst @"pivot" a, Inst @"ys" (quickSort lo))
+                                      , hprf $ lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
 
                                       -- Deduce that quickSort hi is all greater than or equal to a
                                       , hprf $ sortIsPermutation `at`  Inst @"xs" hi
-                                      , hprf $ lgePermutation    `at` (Inst @"xs" hi, Inst @"pivot" a, Inst @"ys" (quickSort hi))
+                                      , hprf $ lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
 
                                       -- Finally conclude that the whole reconstruction is non-decreasing
                                       , hprf $ nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
