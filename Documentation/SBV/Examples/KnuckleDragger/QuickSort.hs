@@ -92,7 +92,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
       -- Subset relationship
       subset :: SList Integer -> SList Integer -> SBool
-      subset xs ys = quantifiedBool (\(Forall @"e" e) -> e `elem` xs .=> e `elem` ys)
+      subset xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
 
   -- llt correctness
   lltCorrect <-
@@ -117,7 +117,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   -- If one list is a subset of another, then cons is an elem
   subsetElem <- lemma "subsetElem"
                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `subset` ys .=> x `elem` ys)
-                      []
+                      [sorry]
 
   -- If one list is a subset of another so is its tail
   subsetTail <- lemma "subsetTail"
@@ -127,7 +127,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   -- Permutation implies subset
   permutationImpliesSubset <- lemma "permutationImpliesSubset"
                                     (\(Forall @"xs" xs) (Forall @"ys" ys) -> isPermutation xs ys .=> xs `subset` ys)
-                                    [sorry]
+                                    []
 
   -- If a value is less than all the elements in a list, then it is also less than all the elements of any subset of it
   lltSubset <-
