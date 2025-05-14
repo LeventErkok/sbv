@@ -21,7 +21,7 @@
 
 module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 
-import Prelude hiding (null, length, (++), tail, all, fst, snd)
+import Prelude hiding (null, length, (++), tail, all, fst, snd, elem)
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -82,14 +82,30 @@ correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   --------------------------------------------------------------------------------------------
-  -- Part I. Helper lemmas for partition
+  -- Part I. Formalizing less-than/greater-than-or-equal over lists
   --------------------------------------------------------------------------------------------
-
   -- llt: list less-than:     all the elements are <  pivot
   -- lge: list greater-equal: all the elements are >= pivot
   let llt, lge :: SInteger -> SList Integer -> SBool
       llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
       lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
+
+  -- If a value is less than all the elements in a list, then it is also less than all the elements of all its permutations
+  lltPermutation <-
+    lemma "lltPermutation"
+         (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
+         [sorry]
+
+  -- Ditto, for greater
+  lgePermutation <-
+     lemma "lgePermutation"
+           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot xs .&& isPermutation xs ys .=> lge pivot ys)
+           [sorry]
+
+
+  --------------------------------------------------------------------------------------------
+  -- Part II. Helper lemmas for partition
+  --------------------------------------------------------------------------------------------
 
   -- The first element of the partition produces all smaller elements
   partitionFstLT <- inductWith cvc5 "partitionFstLT"
@@ -158,7 +174,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                         =: qed))
 
   --------------------------------------------------------------------------------------------
-  -- Part II. Helper lemmas for count
+  -- Part III. Helper lemmas for count
   --------------------------------------------------------------------------------------------
 
   -- Count distributes over append
@@ -213,20 +229,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                        =: count e as
                                        =: qed
                             ]
-
-
-  -- If a value is less than all the elements in a list, then it is also less than all the elements of all its permutations
-  lltPermutation <- lemma "lltPermutation"
-                          (\(Forall @"pivot" pivot) (Forall @"xs" xs) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
-                          [sorry]
-
-  -- Ditto, for greater
-  lgePermutation <- lemma "lgePermutation"
-                          (\(Forall @"pivot" pivot) (Forall @"xs" xs) (Forall @"ys" ys) -> lge pivot xs .&& isPermutation xs ys .=> lge pivot ys)
-                          [sorry]
-
   --------------------------------------------------------------------------------------------
-  -- Part III. Prove that the output of quick sort is a permutation of its input
+  -- Part IV. Prove that the output of quick sort is a permutation of its input
   --------------------------------------------------------------------------------------------
 
   sortCountsMatch <-
@@ -266,7 +270,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   sortIsPermutation <- lemma "sortIsPermutation" (\(Forall @"xs" xs) -> isPermutation xs (quickSort xs)) [sortCountsMatch]
 
   --------------------------------------------------------------------------------------------
-  -- Part IV. Helper lemmas for nonDecreasing
+  -- Part V. Helper lemmas for nonDecreasing
   --------------------------------------------------------------------------------------------
   nonDecreasingMerge <-
       lemma  "nonDecreasingMerge"
@@ -276,7 +280,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
              [sorry]
 
   --------------------------------------------------------------------------------------------
-  -- Part V. Prove that the output of quick sort is non-decreasing
+  -- Part VI. Prove that the output of quick sort is non-decreasing
   --------------------------------------------------------------------------------------------
   sortIsNonDecreasing <-
      sInductWith cvc5 "sortIsNonDecreasing"
@@ -305,12 +309,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                       , hprf $ partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
 
                                       -- Deduce that quickSort lo is all less than a
-                                      , hprf $ sortIsPermutation `at` Inst @"xs" lo
-                                      , hprf $ lltPermutation    `at` (Inst @"pivot" a, Inst @"xs" lo, Inst @"ys" (quickSort lo))
+                                      , hprf $ sortIsPermutation `at`  Inst @"xs" lo
+                                      , hprf $ lltPermutation    `at` (Inst @"xs" lo, Inst @"pivot" a, Inst @"ys" (quickSort lo))
 
                                       -- Deduce that quickSort hi is all greater than or equal to a
-                                      , hprf $ sortIsPermutation `at` Inst @"xs" hi
-                                      , hprf $ lgePermutation    `at` (Inst @"pivot" a, Inst @"xs" hi, Inst @"ys" (quickSort hi))
+                                      , hprf $ sortIsPermutation `at`  Inst @"xs" hi
+                                      , hprf $ lgePermutation    `at` (Inst @"xs" hi, Inst @"pivot" a, Inst @"ys" (quickSort hi))
 
                                       -- Finally conclude that the whole reconstruction is non-decreasing
                                       , hprf $ nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
@@ -319,7 +323,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: qed)
 
   --------------------------------------------------------------------------------------------
-  -- Part VI. Putting it together
+  -- Part VII. Putting it together
   --------------------------------------------------------------------------------------------
 
   lemma "quickSortIsCorrect"
