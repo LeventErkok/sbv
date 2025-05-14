@@ -114,23 +114,45 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
+  -- count is always non-negative
+  countNonNegative <- lemma "countNonNegative"
+                            (\(Forall @"e" e) (Forall @"xs" xs) -> count e xs .>= 0)
+                            [sorry]
+
   -- relationship between count and elem, forward direction
-  countElem1 <- lemma "countElem1"
-                      (\(Forall @"x" x) (Forall @"xs" xs) -> x `elem` xs .=> count x xs .> 0)
-                      [sorry]
+  countElem1 <- induct "countElem1"
+                       (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` xs .=> count e xs .> 0) $
+                       \ih x xs e -> [e `elem` (x .: xs)]
+                                  |- count e (x .: xs) .> 0
+                                  =: cases [ e .== x ==> 1 + count e xs .> 0
+                                                      ?? countNonNegative
+                                                      =: sTrue
+                                                      =: qed
+                                           , e ./= x ==> count e xs .> 0
+                                                      ?? ih
+                                                      =: sTrue
+                                                      =: qed
+                                           ]
 
   -- relationship between count and elem, backwards direction
-  countElem2 <- lemma "countElem2"
-                      (\(Forall @"x" x) (Forall @"xs" xs) -> count x xs .> 0 .=> x `elem` xs)
-                      [sorry]
+  countElem2 <- induct "countElem2"
+                       (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .> 0 .=> e `elem` xs) $
+                       \ih x xs e -> [count e xs .> 0]
+                                  |- e `elem` (x .: xs)
+                                  =: cases [ e .== x ==> trivial
+                                           , e ./= x ==> e `elem` xs
+                                                      ?? ih
+                                                      =: sTrue
+                                                      =: qed
+                                           ]
 
   -- sublist correctness
   sublistCorrect <- calc "sublistCorrect"
                           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
                           \xs ys x -> [xs `sublist` ys, x `elem` xs]
                                    |- x `elem` ys
-                                   ?? [ countElem1 `at` (Inst @"x" x, Inst @"xs" xs)
-                                      , countElem2 `at` (Inst @"x" x, Inst @"xs" ys)
+                                   ?? [ countElem1 `at` (Inst @"xs" xs, Inst @"e" x)
+                                      , countElem2 `at` (Inst @"xs" ys, Inst @"e" x)
                                       ]
                                    =: sTrue
                                    =: qed
