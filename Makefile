@@ -176,4 +176,4 @@ KD_FILES          = $(addprefix --module ,$(basename $(subst /,.,$(wildcard Docu
 KD_MODULES        = ${KD_FILES}
 KD_DOCTESTTIMEOUT = 20
 kdDocTest:
-	cabal run SBVDocTest ${CABAL_OPTS} -- --timeout ${KD_DOCTESTTIMEOUT} ${KD_MODULES}
+	cabal run SBVDocTest ${CABAL_OPTS} -fdoctest_is_running -- --timeout ${KD_DOCTESTTIMEOUT} ${KD_MODULES}
