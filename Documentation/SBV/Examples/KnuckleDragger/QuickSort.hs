@@ -114,10 +114,19 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
+  -- sublist correctness
+  sublistCorrect <- lemma "sublistCorrect"
+                          (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys)
+                          [sorry]
+
   -- If one list is a sublist of another, then its head is an elem
-  sublistElem <- lemma "sublistElem"
-                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys)
-                       [sorry]
+  sublistElem <- calc "sublistElem"
+                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys) $
+                       \x xs ys -> [(x .: xs) `sublist` ys]
+                                |- x `elem` ys
+                                ?? sublistCorrect `at` (Inst @"xs" (x .: xs), Inst @"ys" ys, Inst @"x" x)
+                                =: sTrue
+                                =: qed
 
   -- If one list is a sublist of another so is its tail
   sublistTail <- lemma "sublistTail"
