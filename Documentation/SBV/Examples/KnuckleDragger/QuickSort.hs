@@ -90,9 +90,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
       llt = smtFunction "llt" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .<  pivot .&& llt pivot xs
       lge = smtFunction "lge" $ \pivot l -> null l .|| let (x, xs) = uncons l in x .>= pivot .&& lge pivot xs
 
-      -- Subset relationship
-      subset :: SList Integer -> SList Integer -> SBool
-      subset xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
+      -- Sublist relationship
+      sublist :: SList Integer -> SList Integer -> SBool
+      sublist xs ys = quantifiedBool (\(Forall @"e" e) -> count e xs .> 0 .=> count e ys .> 0)
 
   -- llt correctness
   lltCorrect <-
@@ -114,36 +114,36 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
-  -- If one list is a subset of another, then cons is an elem
-  subsetElem <- lemma "subsetElem"
-                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `subset` ys .=> x `elem` ys)
-                      [sorry]
+  -- If one list is a sublist of another, then cons is an elem
+  sublistElem <- lemma "sublistElem"
+                       (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys)
+                       [sorry]
 
-  -- If one list is a subset of another so is its tail
-  subsetTail <- lemma "subsetTail"
-                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `subset` ys .=> xs `subset` ys)
+  -- If one list is a sublist of another so is its tail
+  sublistTail <- lemma "sublistTail"
+                      (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> xs `sublist` ys)
                       []
 
-  -- Permutation implies subset
-  permutationImpliesSubset <- lemma "permutationImpliesSubset"
-                                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> isPermutation xs ys .=> xs `subset` ys)
+  -- Permutation implies sublist
+  permutationImpliesSublist <- lemma "permutationImpliesSublist"
+                                    (\(Forall @"xs" xs) (Forall @"ys" ys) -> isPermutation xs ys .=> xs `sublist` ys)
                                     []
 
-  -- If a value is less than all the elements in a list, then it is also less than all the elements of any subset of it
-  lltSubset <-
-     inductWith cvc5 "lltSubset"
-            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& xs `subset` ys .=> llt pivot xs) $
-            \ih x xs pivot ys -> [llt pivot ys, (x .: xs) `subset` ys]
+  -- If a value is less than all the elements in a list, then it is also less than all the elements of any sublist of it
+  lltSublist <-
+     inductWith cvc5 "lltSublist"
+            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& xs `sublist` ys .=> llt pivot xs) $
+            \ih x xs pivot ys -> [llt pivot ys, (x .: xs) `sublist` ys]
                               |- llt pivot (x .: xs)
                               =: x .< pivot .&& llt pivot xs
                               ?? [ -- To establish x .< pivot, observe that x is in ys, and together
                                    -- with llt pivot ys, we get that x is less than pivot
-                                   subsetElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                   sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
                                  , lltCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                   -- the prover that xs is a subset of ys too so it can satisfy its precondition
-                                 , subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                   -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                                 , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
                                  , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
@@ -155,27 +155,27 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot ys .&& isPermutation xs ys .=> llt pivot xs) $
            \xs pivot ys -> [llt pivot ys, isPermutation xs ys]
                         |- llt pivot xs
-                        ?? [ lltSubset                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , permutationImpliesSubset `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        ?? [ lltSublist                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , permutationImpliesSublist `at` (Inst @"xs" xs, Inst @"ys" ys)
                            ]
                         =: sTrue
                         =: qed
 
-  -- If a value is greater than or equal to all the elements in a list, then it is also less than all the elements of any subset of it
-  lgeSubset <-
-     inductWith cvc5 "lgeSubset"
-            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& xs `subset` ys .=> lge pivot xs) $
-            \ih x xs pivot ys -> [lge pivot ys, (x .: xs) `subset` ys]
+  -- If a value is greater than or equal to all the elements in a list, then it is also less than all the elements of any sublist of it
+  lgeSublist <-
+     inductWith cvc5 "lgeSublist"
+            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& xs `sublist` ys .=> lge pivot xs) $
+            \ih x xs pivot ys -> [lge pivot ys, (x .: xs) `sublist` ys]
                               |- lge pivot (x .: xs)
                               =: x .>= pivot .&& lge pivot xs
                               ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
                                    -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                   subsetElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
+                                   sublistElem `at` (Inst @"x" x,   Inst @"xs" xs, Inst @"ys" ys)
                                  , lgeCorrect `at` (Inst @"xs" ys, Inst @"e"  x,  Inst @"pivot" pivot)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
-                                   -- the prover that xs is a subset of ys too so it can satisfy its precondition
-                                 , subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                   -- the prover that xs is a sublist of ys too so it can satisfy its precondition
+                                 , sublistTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
                                  , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
@@ -187,8 +187,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot ys .&& isPermutation xs ys .=> lge pivot xs) $
            \xs pivot ys -> [lge pivot ys, isPermutation xs ys]
                         |- lge pivot xs
-                        ?? [ lgeSubset                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
-                           , permutationImpliesSubset `at` (Inst @"xs" xs, Inst @"ys" ys)
+                        ?? [ lgeSublist                `at` (Inst @"xs" xs, Inst @"pivot" pivot, Inst @"ys" ys)
+                           , permutationImpliesSublist `at` (Inst @"xs" xs, Inst @"ys" ys)
                            ]
                         =: sTrue
                         =: qed
