@@ -3,7 +3,7 @@
 
 ### Version 11.6.5, Not yet released
 
-  * New dev version
+  * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
 
 ### Version 11.6, 2025-05-10
  

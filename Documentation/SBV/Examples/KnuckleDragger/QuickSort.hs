@@ -77,7 +77,146 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --
 -- We have:
 --
--- correctness
+-- >>> correctness
+-- Inductive lemma: lltCorrect
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: lgeCorrect
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: countNonNegative
+--   Step: Base                                                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                             Q.E.D.
+--     Step: 1.1.2                                             Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: countElem1
+--   Step: Base                                                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1.1                                             Q.E.D.
+--     Step: 1.1.2                                             Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: countElem2
+--   Step: Base                                                Q.E.D.
+--   Step: 1 (2 way case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2                                             Q.E.D.
+--     Step: 1.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: sublistCorrect
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: sublistElem
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: sublistTail                                          Q.E.D.
+-- Lemma: permutationImpliesSublist                            Q.E.D.
+-- Inductive lemma: lltSublist
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: lltPermutation
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: lgeSublist
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: lgePermutation
+--   Step: 1                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: partitionFstLT
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (push llt down)                                   Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: partitionSndGE
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (push lge down)                                   Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (strong): partitionNotLongerFst
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2 (simplify)                                  Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (strong): partitionNotLongerSnd
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2 (simplify)                                  Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: countAppend
+--   Step: Base                                                Q.E.D.
+--   Step: 1                                                   Q.E.D.
+--   Step: 2 (unfold count)                                    Q.E.D.
+--   Step: 3                                                   Q.E.D.
+--   Step: 4 (simplify)                                        Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma: countPartition
+--   Step: Base                                                Q.E.D.
+--   Step: 1 (expand partition)                                Q.E.D.
+--   Step: 2 (push countTuple down)                            Q.E.D.
+--   Step: 3 (2 way case split)
+--     Step: 3.1.1                                             Q.E.D.
+--     Step: 3.1.2 (simplify)                                  Q.E.D.
+--     Step: 3.1.3                                             Q.E.D.
+--     Step: 3.2.1                                             Q.E.D.
+--     Step: 3.2.2 (simplify)                                  Q.E.D.
+--     Step: 3.2.3                                             Q.E.D.
+--     Step: 3.Completeness                                    Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (strong): sortCountsMatch
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2 (expand quickSort)                          Q.E.D.
+--     Step: 1.2.3 (push count down)                           Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--     Step: 1.2.5                                             Q.E.D.
+--     Step: 1.2.6 (IH on lo)                                  Q.E.D.
+--     Step: 1.2.7 (IH on hi)                                  Q.E.D.
+--     Step: 1.2.8                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: sortIsPermutation                                    Q.E.D.
+-- Inductive lemma: nonDecreasingMerge
+--   Step: Base                                                Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2                                             Q.E.D.
+--     Step: 1.2.3                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Inductive lemma (strong): sortIsNonDecreasing
+--   Step: Measure is non-negative                             Q.E.D.
+--   Step: 1 (2 way full case split)
+--     Step: 1.1                                               Q.E.D.
+--     Step: 1.2.1                                             Q.E.D.
+--     Step: 1.2.2 (expand quickSort)                          Q.E.D.
+--     Step: 1.2.3 (push nonDecreasing down)                   Q.E.D.
+--     Step: 1.2.4                                             Q.E.D.
+--   Result:                                                   Q.E.D.
+-- Lemma: quickSortIsCorrect                                   Q.E.D.
+-- [Proven] quickSortIsCorrect
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
@@ -115,9 +254,18 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: qed
 
   -- count is always non-negative
-  countNonNegative <- lemma "countNonNegative"
-                            (\(Forall @"e" e) (Forall @"xs" xs) -> count e xs .>= 0)
-                            [sorry]
+  countNonNegative <- induct "countNonNegative"
+                             (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .>= 0) $
+                             \ih x xs e -> [] |- count e (x .: xs) .>= 0
+                                              =: cases [ e .== x ==> 1 + count e xs .>= 0
+                                                                  ?? ih
+                                                                  =: sTrue
+                                                                  =: qed
+                                                       , e ./= x ==> count e xs .>= 0
+                                                                  ?? ih
+                                                                  =: sTrue
+                                                                  =: qed
+                                                       ]
 
   -- relationship between count and elem, forward direction
   countElem1 <- induct "countElem1"
