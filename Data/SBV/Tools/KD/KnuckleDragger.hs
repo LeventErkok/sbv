@@ -29,7 +29,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof, Instantiatable(..), Inst(..)
+         Proposition, Proof, Instantiatable(..), Inst(..), getProofDependencies, extractDependentProofs
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
@@ -295,11 +295,12 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                     let (ros, modulo) = calculateRootOfTrust nm (concatMap getHelperProofs (getAllHelpers calcProofTree))
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
-                    pure Proof { rootOfTrust = ros
-                               , isUserAxiom = False
-                               , getProof    = label nm (quantifiedBool result)
-                               , getProp     = toDyn result
-                               , proofName   = nm
+                    pure Proof { rootOfTrust  = ros
+                               , dependencies = KDDependencies $ transGetDeps $ getDependencies calcProofTree
+                               , isUserAxiom  = False
+                               , getProof     = label nm (quantifiedBool result)
+                               , getProp      = toDyn result
+                               , proofName    = nm
                                }
 
 -- Helper data-type for calc-step below
@@ -955,6 +956,22 @@ type KDProofRaw a = KDProofGen a [Helper] ()
 
 -- | A proof, as processed by KD. Producing a boolean result and each step is a boolean. Helpers on branches dispersed down, only strings are left for printing
 type KDProof = KDProofGen SBool [String] SBool
+
+-- | Collect dependencies
+getDependencies :: KDProof -> [Proof]
+getDependencies = collect
+  where collect (ProofStep   _ hs next) = concatMap getHelperProofs hs ++ collect next
+        collect (ProofBranch _ _  bs)   = concatMap (collect . snd) bs
+        collect (ProofEnd    _    hs)   = concatMap getHelperProofs hs
+
+-- | Return all the proofs this particular proof depends on
+getProofDependencies :: Proof -> KDDependencies
+getProofDependencies = dependencies
+
+-- | Get the underlying proofs
+extractDependentProofs :: Proof -> [Proof]
+extractDependentProofs p = case dependencies p of
+                            KDDependencies ps -> ps
 
 -- | Class capturing giving a proof-step helper
 type family Hinted a where

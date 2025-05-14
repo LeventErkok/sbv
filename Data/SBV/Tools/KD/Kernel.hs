@@ -27,11 +27,12 @@ module Data.SBV.Tools.KD.Kernel (
        , sorry
        , internalAxiom
        , KDProofContext (..), smtProofStep
+       , transGetDeps
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
 
-import Data.List  (intercalate)
+import Data.List  (intercalate, isInfixOf)
 import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data hiding (None)
@@ -69,22 +70,24 @@ axiom nm p = do cfg <- getKDConfig
 
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 internalAxiom :: Proposition a => String -> a -> Proof
-internalAxiom nm p = Proof { rootOfTrust = None
-                           , isUserAxiom = False
-                           , getProof    = label nm (quantifiedBool p)
-                           , getProp     = toDyn p
-                           , proofName   = nm
+internalAxiom nm p = Proof { rootOfTrust  = None
+                           , dependencies = KDDependencies []
+                           , isUserAxiom  = False
+                           , getProof     = label nm (quantifiedBool p)
+                           , getProp      = toDyn p
+                           , proofName    = nm
                            }
 
 -- | A manifestly false theorem. This is useful when we want to prove a theorem that the underlying solver
 -- cannot deal with, or if we want to postpone the proof for the time being. KnuckleDragger will keep
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proof
-sorry = Proof { rootOfTrust = Self
-              , isUserAxiom = False
-              , getProof    = label "sorry" (quantifiedBool p)
-              , getProp     = toDyn p
-              , proofName   = "sorry"
+sorry = Proof { rootOfTrust  = Self
+              , dependencies = KDDependencies []
+              , isUserAxiom  = False
+              , getProof     = label "sorry" (quantifiedBool p)
+              , getProp      = toDyn p
+              , proofName    = "sorry"
               }
   where -- ideally, I'd rather just use
         --   p = sFalse
@@ -106,11 +109,12 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         -- What to do if all goes well
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
                             liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
-                            pure Proof { rootOfTrust = ros
-                                       , isUserAxiom = False
-                                       , getProof    = label nm (quantifiedBool inputProp)
-                                       , getProp     = toDyn inputProp
-                                       , proofName   = nm
+                            pure Proof { rootOfTrust  = ros
+                                       , dependencies = KDDependencies $ transGetDeps by
+                                       , isUserAxiom  = False
+                                       , getProof     = label nm (quantifiedBool inputProp)
+                                       , getProp      = toDyn inputProp
+                                       , proofName    = nm
                                        }
           where (ros, modulo) = calculateRootOfTrust nm by
 
@@ -207,3 +211,20 @@ smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
          liftIO $ print $ ThmResult res
 
          die
+
+-- Transitively get all the dependencies
+transGetDeps :: [Proof] -> [Proof]
+transGetDeps = map snd . concatMap go
+ where go p | "IH" `isInfixOf` pn -- skip over inductive hypotheses
+            = []
+            | True
+            = case dependencies p of
+                KDDependencies subs -> add (short pn) $ concatMap go subs
+         where pn = proofName p
+
+               short n
+                 | " @ " `isInfixOf` n = reverse . drop 1 . reverse . takeWhile (/= '@') $ n
+                 | True                = n
+
+               add n rest | n `elem` map fst rest = rest
+                          | True                  = (n, p) : rest

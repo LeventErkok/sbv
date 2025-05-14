@@ -17,7 +17,7 @@
 
 module Data.SBV.Tools.KnuckleDragger (
        -- * Propositions and their proofs
-         Proposition, Proof
+         Proposition, Proof, getProofDependencies, extractDependentProofs
 
        -- * Adding axioms/definitions
        , axiom

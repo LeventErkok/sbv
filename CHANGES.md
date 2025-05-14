@@ -5,6 +5,10 @@
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
 
+  * KnuckleDragger: Add methods getProofDependencies and extractDependentProofs to inspect/collect
+    the subproofs that a given proof depends on. Useful for programming methods/tactics
+    on top of knuckle-dragger provided facilities.
+
 ### Version 11.6, 2025-05-10
  
   * Make SBV compile cleanly with GHC 9.8.4. This is really as far back a GHC you should be using,

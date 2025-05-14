@@ -21,6 +21,7 @@ module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
        , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
        , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
+       , KDDependencies(..)
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -28,7 +29,8 @@ import Control.Monad.Trans  (MonadIO)
 
 import Data.Time (NominalDiffTime)
 
-import Data.List (intercalate, nub, sort)
+import Data.Ord  (comparing)
+import Data.List (intercalate, nub, sort, groupBy, sortBy, isInfixOf)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data (SBool)
@@ -142,19 +144,43 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof = Proof { rootOfTrust :: RootOfTrust  -- ^ Root of trust, described above.
-                   , isUserAxiom :: Bool         -- ^ Was this an axiom given by the user?
-                   , getProof    :: SBool        -- ^ Get the underlying boolean
-                   , getProp     :: Dynamic      -- ^ The actual proposition
-                   , proofName   :: String       -- ^ User given name
+data Proof = Proof { rootOfTrust  :: RootOfTrust    -- ^ Root of trust, described above.
+                   , dependencies :: KDDependencies -- ^ All the proofs we depend on
+                   , isUserAxiom  :: Bool           -- ^ Was this an axiom given by the user?
+                   , getProof     :: SBool          -- ^ Get the underlying boolean
+                   , getProp      :: Dynamic        -- ^ The actual proposition
+                   , proofName    :: String         -- ^ User given name
                    }
 
 -- | NFData ignores the getProp field
 instance NFData Proof where
-  rnf (Proof rootOfTrust isUserAxiom getProof _getProp proofName) =     rnf rootOfTrust
-                                                                  `seq` rnf isUserAxiom
-                                                                  `seq` rnf getProof
-                                                                  `seq` rnf proofName
+  rnf (Proof rootOfTrust dependencies isUserAxiom getProof _getProp proofName) =     rnf rootOfTrust
+                                                                               `seq` rnf dependencies
+                                                                               `seq` rnf isUserAxiom
+                                                                               `seq` rnf getProof
+                                                                               `seq` rnf proofName
+
+-- | Represent dependencies with a newtype so we can have a custom show instance
+newtype KDDependencies = KDDependencies [Proof]
+
+-- | NFData instance for t 'KDDependencies'
+instance NFData KDDependencies where
+   rnf (KDDependencies ds) = rnf ds
+
+-- | Show instance displays the dependencies in a compact form
+instance Show KDDependencies where
+   show (KDDependencies ps) = intercalate "\n" $ map disp $ groupBy (\p1 p2 -> pn p1 == pn p2)
+                                                                    (sortBy (comparing pn) ps)
+     where disp :: [Proof] -> String
+           disp []        = error "Impossible happened: groupBy returned an empty group! Please report!"
+           disp [p]       = pn p
+           disp l@(p : _) = pn p ++ " (x" ++ show (length l) ++ ")"
+
+           -- simplify by getting rid of instantiations
+           pn p
+            | " @ " `isInfixOf` n = reverse $ drop 1 $ reverse $ takeWhile (/= '@') n
+            | True                = n
+            where n = proofName p
 
 -- | Show instance for t'Proof'
 instance Show Proof where

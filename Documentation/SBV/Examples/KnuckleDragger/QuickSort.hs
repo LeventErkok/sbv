@@ -621,3 +621,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   lemma "quickSortIsCorrect"
         (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
         [sortIsPermutation, sortIsNonDecreasing]
+
+deps :: IO ()
+deps = do p <- correctness
+          putStrLn "======"
+          print $ getProofDependencies p
