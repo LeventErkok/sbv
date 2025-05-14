@@ -102,7 +102,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
            (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> lge pivot xs .&& isPermutation xs ys .=> lge pivot ys)
            [sorry]
 
-
   --------------------------------------------------------------------------------------------
   -- Part II. Helper lemmas for partition
   --------------------------------------------------------------------------------------------
