@@ -111,8 +111,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> llt pivot (fst (partition pivot l))) $
      \ih a as pivot -> [] |- llt pivot (fst (partition pivot (a .: as)))
                           =: llt pivot (ite (a .< pivot)
-                                           (a .: fst (partition pivot as))
-                                           (fst (partition pivot as)))
+                                            (a .: fst (partition pivot as))
+                                            (     fst (partition pivot as)))
                           ?? "push llt down"
                           =: ite (a .< pivot)
                                  (a .< pivot .&& llt pivot (fst (partition pivot as)))
@@ -126,8 +126,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> lge pivot (snd (partition pivot l))) $
      \ih a as pivot -> [] |- lge pivot (snd (partition pivot (a .: as)))
                           =: lge pivot (ite (a .< pivot)
-                                           (     snd (partition pivot as))
-                                           (a .: snd (partition pivot as)))
+                                            (     snd (partition pivot as))
+                                            (a .: snd (partition pivot as)))
                           ?? "push lge down"
                           =: ite (a .< pivot)
                                  (a .< pivot .&& lge pivot (snd (partition pivot as)))
