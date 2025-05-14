@@ -476,7 +476,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                  =: count e (x .: xs) + count e ys
                                  =: qed
 
-
   -- Count is preserved over partition
   let countTuple :: SInteger -> STuple [Integer] [Integer] -> SInteger
       countTuple e xsys = count e xs + count e ys
