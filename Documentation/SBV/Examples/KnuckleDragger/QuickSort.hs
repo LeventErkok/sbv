@@ -92,9 +92,9 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- If a value is less than all the elements in a list, then it is also less than all the elements of all its permutations
   lltPermutation <-
-    lemma "lltPermutation"
-         (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
-         [sorry]
+     lemma "lltPermutation"
+           (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) -> llt pivot xs .&& isPermutation xs ys .=> llt pivot ys)
+           [sorry]
 
   -- Ditto, for greater
   lgePermutation <-
