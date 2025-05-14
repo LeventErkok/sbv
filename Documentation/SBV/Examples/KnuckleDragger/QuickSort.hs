@@ -273,16 +273,18 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   --------------------------------------------------------------------------------------------
   nonDecreasingMerge <-
       inductWith cvc5 "nonDecreasingMerge"
-             (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
-                        nonDecreasing xs .&& llt pivot xs
-                    .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ singleton pivot ++ ys)) $
-             \_h x xs pivot ys ->
-                  [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
-               |- nonDecreasing (x .: xs ++ singleton pivot ++ ys)
-               =: split xs trivial
-                        (\a as -> nonDecreasing (x .: a .: as ++ singleton pivot ++ ys)
-                               =: x .<= a .&& nonDecreasing (a .: as ++ singleton pivot ++ ys)
-                               =: qed)
+          (\(Forall @"xs" xs) (Forall @"pivot" pivot) (Forall @"ys" ys) ->
+                     nonDecreasing xs .&& llt pivot xs
+                 .&& nonDecreasing ys .&& lge pivot ys .=> nonDecreasing (xs ++ singleton pivot ++ ys)) $
+          \ih x xs pivot ys ->
+               [nonDecreasing (x .: xs), llt pivot xs, nonDecreasing ys, lge pivot ys]
+            |- nonDecreasing (x .: xs ++ singleton pivot ++ ys)
+            =: split xs trivial
+                     (\a as -> nonDecreasing (x .: a .: as ++ singleton pivot ++ ys)
+                            =: x .<= a .&& nonDecreasing (a .: as ++ singleton pivot ++ ys)
+                            ?? ih
+                            =: sTrue
+                            =: qed)
 
   --------------------------------------------------------------------------------------------
   -- Part VI. Prove that the output of quick sort is non-decreasing
