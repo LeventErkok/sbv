@@ -114,7 +114,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                              =: sTrue
                              =: qed
 
-  -- If one list is a sublist of another, then cons is an elem
+  -- If one list is a sublist of another, then its head is an elem
   sublistElem <- lemma "sublistElem"
                        (\(Forall @"x" x) (Forall @"xs" xs) (Forall @"ys" ys) -> (x .: xs) `sublist` ys .=> x `elem` ys)
                        [sorry]
