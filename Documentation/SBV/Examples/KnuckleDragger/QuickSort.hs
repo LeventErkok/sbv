@@ -128,13 +128,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .< pivot .&& llt pivot xs
                               ?? [ -- To establish x .< pivot, observe that x is in ys, and together
                                    -- with llt pivot ys, we get that x is less than pivot
-                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
-                                 , hprf $ lltCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+                                   subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
+                                 , lltCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a subset of ys too so it can satisfy its precondition
-                                 , hprf $ subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , hprf $ ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 , subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
                               =: qed
@@ -160,13 +160,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                               =: x .>= pivot .&& lge pivot xs
                               ?? [ -- To establish x .>= pivot, observe that x is in ys, and together
                                    -- with lge pivot ys, we get that x is greater than equal to the pivot
-                                   hprf $ subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
-                                 , hprf $ lgeCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
+                                   subsetElem `at` (Inst @"x" x, Inst @"xs" xs,       Inst @"ys" ys)
+                                 , lgeCorrect `at` (Inst @"x" x, Inst @"pivot" pivot, Inst @"xs" ys)
 
                                    -- Use induction hypothesis to get rid of the second conjunct. We need to tell
                                    -- the prover that xs is a subset of ys too so it can satisfy its precondition
-                                 , hprf $ subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
-                                 , hprf $ ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
+                                 , subsetTail `at` (Inst @"x" x, Inst @"xs" xs, Inst @"ys" ys)
+                                 , ih         `at` (Inst @"pivot" pivot, Inst @"ys" ys)
                                  ]
                               =: sTrue
                               =: qed
@@ -385,27 +385,27 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    =: let (lo, hi) = untuple (partition a as)
                                    in nonDecreasing (quickSort lo ++ singleton a ++ quickSort hi)
                                    ?? [ -- Deduce that lo/hi is not longer than as, and hence, shorter than xs
-                                        hprf $ partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
-                                      , hprf $ partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
+                                        partitionNotLongerFst `at` (Inst @"l" as, Inst @"pivot" a)
+                                      , partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
                                         -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
-                                      , hprf $ ih `at` (Inst @"xs" lo)  -- nonDecreasing (quickSort lo)
-                                      , hprf $ ih `at` (Inst @"xs" hi)  -- nonDecreasing (quickSort hi)
+                                      , ih `at` (Inst @"xs" lo)  -- nonDecreasing (quickSort lo)
+                                      , ih `at` (Inst @"xs" hi)  -- nonDecreasing (quickSort hi)
 
                                       -- Deduce that lo is all less than a, and hi is all greater than or equal to a
-                                      , hprf $ partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
-                                      , hprf $ partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
+                                      , partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
+                                      , partitionSndGE `at` (Inst @"l" as, Inst @"pivot" a)
 
                                       -- Deduce that quickSort lo is all less than a
-                                      , hprf $ sortIsPermutation `at`  Inst @"xs" lo
-                                      , hprf $ lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
+                                      , sortIsPermutation `at`  Inst @"xs" lo
+                                      , lltPermutation    `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" lo)
 
                                       -- Deduce that quickSort hi is all greater than or equal to a
-                                      , hprf $ sortIsPermutation `at`  Inst @"xs" hi
-                                      , hprf $ lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
+                                      , sortIsPermutation `at`  Inst @"xs" hi
+                                      , lgePermutation    `at` (Inst @"xs" (quickSort hi), Inst @"pivot" a, Inst @"ys" hi)
 
                                       -- Finally conclude that the whole reconstruction is non-decreasing
-                                      , hprf $ nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
+                                      , nonDecreasingMerge `at` (Inst @"xs" (quickSort lo), Inst @"pivot" a, Inst @"ys" (quickSort hi))
                                       ]
                                    =: sTrue
                                    =: qed)
