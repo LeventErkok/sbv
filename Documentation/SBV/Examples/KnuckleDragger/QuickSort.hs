@@ -95,14 +95,24 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
       subset xs ys = quantifiedBool (\(Forall @"e" e) -> e `elem` xs .=> e `elem` ys)
 
   -- llt correctness
-  lltCorrect <- lemma "lltCorrect"
-                      (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot)
-                      [sorry]
+  lltCorrect <-
+     induct "lltCorrect"
+            (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> llt pivot xs .&& e `elem` xs .=> e .< pivot) $
+            \ih x xs e pivot -> [llt pivot (x .: xs), e `elem` (x .: xs)]
+                             |- e .< pivot
+                             ?? ih
+                             =: sTrue
+                             =: qed
 
   -- lge correctness
-  lgeCorrect <- lemma "lgeCorrect"
-                      (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot)
-                      [sorry]
+  lgeCorrect <-
+     induct "lgeCorrect"
+            (\(Forall @"xs" xs) (Forall @"e" e) (Forall @"pivot" pivot) -> lge pivot xs .&& e `elem` xs .=> e .>= pivot) $
+            \ih x xs e pivot -> [lge pivot (x .: xs), e `elem` (x .: xs)]
+                             |- e .>= pivot
+                             ?? ih
+                             =: sTrue
+                             =: qed
 
   -- If one list is a subset of another, then cons is an elem
   subsetElem <- lemma "subsetElem"
