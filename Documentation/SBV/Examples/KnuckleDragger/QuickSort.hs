@@ -22,6 +22,7 @@
 module Documentation.SBV.Examples.KnuckleDragger.QuickSort where
 
 import Prelude hiding (null, length, (++), tail, all, fst, snd, elem)
+import Control.Monad.Trans (liftIO)
 
 import Data.SBV
 import Data.SBV.List hiding (partition)
@@ -618,11 +619,12 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   -- Part VII. Putting it together
   --------------------------------------------------------------------------------------------
 
-  lemma "quickSortIsCorrect"
-        (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
-        [sortIsPermutation, sortIsNonDecreasing]
+  qs <- lemma "quickSortIsCorrect"
+           (\(Forall @"xs" xs) -> let out = quickSort xs in isPermutation xs out .&& nonDecreasing out)
+           [sortIsPermutation, sortIsNonDecreasing]
 
-deps :: IO ()
-deps = do p <- correctness
-          putStrLn "======"
-          print $ getProofDependencies p
+  -- | We can display the dependencies in a proof
+  liftIO $ do putStrLn "== Dependencies:"
+              print $ getProofDependencies qs
+
+  pure qs

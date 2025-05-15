@@ -296,7 +296,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
                     pure Proof { rootOfTrust  = ros
-                               , dependencies = KDDependencies $ transGetDeps $ getDependencies calcProofTree
+                               , dependencies = KDDependencies $ kdProofDeps $ getDependencies calcProofTree
                                , isUserAxiom  = False
                                , getProof     = label nm (quantifiedBool result)
                                , getProp      = toDyn result

@@ -30,7 +30,7 @@ import Control.Monad.Trans  (MonadIO)
 import Data.Time (NominalDiffTime)
 
 import Data.Ord  (comparing)
-import Data.List (intercalate, nub, sort, groupBy, sortBy, isInfixOf)
+import Data.List (intercalate, nub, sort, groupBy, sortBy)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data (SBool)
@@ -169,18 +169,13 @@ instance NFData KDDependencies where
 
 -- | Show instance displays the dependencies in a compact form
 instance Show KDDependencies where
-   show (KDDependencies ps) = intercalate "\n" $ map disp $ groupBy (\p1 p2 -> pn p1 == pn p2)
-                                                                    (sortBy (comparing pn) ps)
+   show (KDDependencies ps) = intercalate "\n" $ map disp $ groupBy (\p1 p2 -> proofName p1 == proofName p2)
+                                                                    (sortBy (comparing proofName) ps)
      where disp :: [Proof] -> String
            disp []        = error "Impossible happened: groupBy returned an empty group! Please report!"
-           disp [p]       = pn p
-           disp l@(p : _) = pn p ++ " (x" ++ show (length l) ++ ")"
+           disp [p]       = proofName p
+           disp l@(p : _) = proofName p ++ " (x" ++ show (length l) ++ ")"
 
-           -- simplify by getting rid of instantiations
-           pn p
-            | " @ " `isInfixOf` n = reverse $ drop 1 $ reverse $ takeWhile (/= '@') n
-            | True                = n
-            where n = proofName p
 
 -- | Show instance for t'Proof'
 instance Show Proof where

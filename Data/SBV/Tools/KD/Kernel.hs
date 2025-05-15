@@ -27,12 +27,12 @@ module Data.SBV.Tools.KD.Kernel (
        , sorry
        , internalAxiom
        , KDProofContext (..), smtProofStep
-       , transGetDeps
+       , kdProofDeps
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
 
-import Data.List  (intercalate, isInfixOf)
+import Data.List  (intercalate)
 import Data.Maybe (catMaybes)
 
 import Data.SBV.Core.Data hiding (None)
@@ -110,7 +110,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
                             liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
                             pure Proof { rootOfTrust  = ros
-                                       , dependencies = KDDependencies $ transGetDeps by
+                                       , dependencies = KDDependencies $ kdProofDeps by
                                        , isUserAxiom  = False
                                        , getProof     = label nm (quantifiedBool inputProp)
                                        , getProp      = toDyn inputProp
@@ -213,18 +213,7 @@ smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
          die
 
 -- Transitively get all the dependencies
-transGetDeps :: [Proof] -> [Proof]
-transGetDeps = map snd . concatMap go
- where go p | "IH" `isInfixOf` pn -- skip over inductive hypotheses
-            = []
-            | True
-            = case dependencies p of
-                KDDependencies subs -> add (short pn) $ concatMap go subs
-         where pn = proofName p
-
-               short n
-                 | " @ " `isInfixOf` n = reverse . drop 1 . reverse . takeWhile (/= '@') $ n
-                 | True                = n
-
-               add n rest | n `elem` map fst rest = rest
-                          | True                  = (n, p) : rest
+kdProofDeps :: [Proof] -> [Proof]
+kdProofDeps = concatMap go
+ where go p = case dependencies p of
+                KDDependencies subs -> p : concatMap go subs
