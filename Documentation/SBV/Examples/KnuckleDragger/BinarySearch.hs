@@ -194,7 +194,7 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) { ribbonLength = 50 }} $ d
                     ]
 
   -- Prove the case when the target is in the array
-  bsearchPresent <- sInductWith cvc5 "bsearchPresent"
+  bsearchPresent <- sInduct "bsearchPresent"
         (\(Forall @"arr" arr) (Forall @"lo" lo) (Forall @"hi" hi) (Forall @"x" x) ->
             nonDecreasing arr (lo, hi) .&& inArray arr (lo, hi) x .=> arr `readArray` fromJust (bsearch arr (lo, hi) x) .== x)
         (\(_arr :: Arr) (lo :: SInteger) (hi :: SInteger) (_x :: SInteger) -> abs (hi - lo + 1)) $
