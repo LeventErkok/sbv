@@ -63,13 +63,12 @@ oddSequence1 = runKD $ do
   sInductWith cvc5 "oddSequence"
           (\(Forall @"n" n) -> n .>= 0 .=> sNot (2 `sDivides` s n)) (abs @SInteger) $
           \ih n -> [n .>= 0] |- 2 `sDivides` s n
-                             =: cases [ n .== 0 ==> sFalse =: qed
-                                      , n .== 1 ==> sFalse =: qed
-                                      , n .>= 2 ==>    2 `sDivides` (s (n-2) + 2 * s (n-1))
-                                                    =: 2 `sDivides` s (n-2)
-                                                    ?? ih `at` Inst @"n" (n - 2)
-                                                    =: sFalse
-                                                    =: qed
+                             =: cases [ n .== 0 ==> contradiction
+                                      , n .== 1 ==> contradiction
+                                      , n .>= 2 ==> 2 `sDivides` (s (n-2) + 2 * s (n-1))
+                                                 =: 2 `sDivides` s (n-2)
+                                                 ?? ih `at` Inst @"n" (n - 2)
+                                                 =: contradiction
                                       ]
 
 -- | Prove that the sequence @1@, @3@, @2 S_{k-1} - S_{k-2}@ generates sequence of odd numbers.
