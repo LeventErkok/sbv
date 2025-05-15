@@ -296,7 +296,7 @@ proveProofTree cfg kdSt nm (result, resultBool) initialHypotheses calcProofTree 
                     finishKD cfg ("Q.E.D." ++ modulo) d (catMaybes [mbElapsed])
 
                     pure Proof { rootOfTrust  = ros
-                               , dependencies = KDDependencies $ kdProofDeps $ getDependencies calcProofTree
+                               , dependencies = getDependencies calcProofTree
                                , isUserAxiom  = False
                                , getProof     = label nm (quantifiedBool result)
                                , getProp      = toDyn result
@@ -964,14 +964,16 @@ getDependencies = collect
         collect (ProofBranch _ _  bs)   = concatMap (collect . snd) bs
         collect (ProofEnd    _    hs)   = concatMap getHelperProofs hs
 
--- | Return all the proofs this particular proof depends on
+-- | Return all the proofs this particular proof depends on, transitively
+-- Note that we leave out ourselves..
 getProofDependencies :: Proof -> KDDependencies
-getProofDependencies = dependencies
+getProofDependencies = KDDependencies . concatMap go . dependencies
+  where go p = p : concatMap go (dependencies p)
 
 -- | Get the underlying proofs
 extractDependentProofs :: Proof -> [Proof]
-extractDependentProofs p = case dependencies p of
-                            KDDependencies ps -> ps
+extractDependentProofs p = case getProofDependencies p of
+                             KDDependencies ps -> ps
 
 -- | Class capturing giving a proof-step helper
 type family Hinted a where

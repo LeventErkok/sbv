@@ -29,8 +29,8 @@ import Control.Monad.Trans  (MonadIO)
 
 import Data.Time (NominalDiffTime)
 
-import Data.Ord  (comparing)
-import Data.List (intercalate, nub, sort, groupBy, sortBy)
+import Data.Char (isSpace)
+import Data.List (intercalate, nub, sort, partition)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data (SBool)
@@ -144,12 +144,12 @@ data RootOfTrust = None        -- ^ Trusts nothing (aside from SBV, underlying s
 -- is still large: The underlying solver, SBV, and KnuckleDragger kernel itself. But this
 -- mechanism ensures we can't create proven things out of thin air, following the standard LCF
 -- methodology.)
-data Proof = Proof { rootOfTrust  :: RootOfTrust    -- ^ Root of trust, described above.
-                   , dependencies :: KDDependencies -- ^ All the proofs we depend on
-                   , isUserAxiom  :: Bool           -- ^ Was this an axiom given by the user?
-                   , getProof     :: SBool          -- ^ Get the underlying boolean
-                   , getProp      :: Dynamic        -- ^ The actual proposition
-                   , proofName    :: String         -- ^ User given name
+data Proof = Proof { rootOfTrust  :: RootOfTrust -- ^ Root of trust, described above.
+                   , dependencies :: [Proof]     -- ^ Immediate dependencies of this proof. (Not transitive)
+                   , isUserAxiom  :: Bool        -- ^ Was this an axiom given by the user?
+                   , getProof     :: SBool       -- ^ Get the underlying boolean
+                   , getProp      :: Dynamic     -- ^ The actual proposition
+                   , proofName    :: String      -- ^ User given name
                    }
 
 -- | NFData ignores the getProp field
@@ -161,6 +161,7 @@ instance NFData Proof where
                                                                                `seq` rnf proofName
 
 -- | Represent dependencies with a newtype so we can have a custom show instance
+-- Note that this is transitive; i.e., all the dependencies plus the dependencies of those etc.
 newtype KDDependencies = KDDependencies [Proof]
 
 -- | NFData instance for t 'KDDependencies'
@@ -169,13 +170,27 @@ instance NFData KDDependencies where
 
 -- | Show instance displays the dependencies in a compact form
 instance Show KDDependencies where
-   show (KDDependencies ps) = intercalate "\n" $ map disp $ groupBy (\p1 p2 -> proofName p1 == proofName p2)
-                                                                    (sortBy (comparing proofName) ps)
-     where disp :: [Proof] -> String
-           disp []        = error "Impossible happened: groupBy returned an empty group! Please report!"
-           disp [p]       = proofName p
-           disp l@(p : _) = proofName p ++ " (x" ++ show (length l) ++ ")"
+   show (KDDependencies ps) = intercalate "\n" $ map sh sorted
+     where -- Simplify the names by dropping instantiations
+           nm = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') . proofName
 
+           -- Some proofs are not interesting
+           interesting n = n `notElem` ["IH"]   -- Inductive hypotheses as marked by KD
+
+           sorted   = simp (filter interesting (map nm ps))
+           plen     = maximum $ 0 : map (length . fst) sorted
+           hasMulti = not $ null [() | (_, i) <- sorted, i > 0]
+
+           -- Group stably
+           simp :: [String] -> [(String, Int)]
+           simp []       = []
+           simp (x : xs) = let (eqs, nonEqs) = partition (== x) xs
+                           in (x, length eqs) : simp nonEqs
+
+           sh (n, 0) | not hasMulti = n
+           sh (n, i)                = pad n ++ " (x" ++ show (i+1) ++ ")"
+
+           pad n = take plen $ n ++ repeat ' '
 
 -- | Show instance for t'Proof'
 instance Show Proof where

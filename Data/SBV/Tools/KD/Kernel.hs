@@ -27,7 +27,6 @@ module Data.SBV.Tools.KD.Kernel (
        , sorry
        , internalAxiom
        , KDProofContext (..), smtProofStep
-       , kdProofDeps
        ) where
 
 import Control.Monad.Trans  (liftIO, MonadIO)
@@ -71,7 +70,7 @@ axiom nm p = do cfg <- getKDConfig
 -- | Internal axiom generator; so we can keep truck of KnuckleDrugger's trusted axioms, vs. user given axioms.
 internalAxiom :: Proposition a => String -> a -> Proof
 internalAxiom nm p = Proof { rootOfTrust  = None
-                           , dependencies = KDDependencies []
+                           , dependencies = []
                            , isUserAxiom  = False
                            , getProof     = label nm (quantifiedBool p)
                            , getProp      = toDyn p
@@ -83,7 +82,7 @@ internalAxiom nm p = Proof { rootOfTrust  = None
 -- track of the uses of 'sorry' and will print them appropriately while printing proofs.
 sorry :: Proof
 sorry = Proof { rootOfTrust  = Self
-              , dependencies = KDDependencies []
+              , dependencies = []
               , isUserAxiom  = False
               , getProof     = label "sorry" (quantifiedBool p)
               , getProp      = toDyn p
@@ -110,7 +109,7 @@ lemmaGen cfg@SMTConfig{kdOptions = KDOptions{measureTime}} tag nm inputProp by =
         good mbStart d = do mbElapsed <- getElapsedTime mbStart
                             liftIO $ finishKD cfg ("Q.E.D." ++ modulo) d $ catMaybes [mbElapsed]
                             pure Proof { rootOfTrust  = ros
-                                       , dependencies = KDDependencies $ kdProofDeps by
+                                       , dependencies = by
                                        , isUserAxiom  = False
                                        , getProof     = label nm (quantifiedBool inputProp)
                                        , getProp      = toDyn inputProp
@@ -211,9 +210,3 @@ smtProofStep cfg@SMTConfig{verbose, kdOptions = KDOptions{measureTime}} kdState 
          liftIO $ print $ ThmResult res
 
          die
-
--- Transitively get all the dependencies
-kdProofDeps :: [Proof] -> [Proof]
-kdProofDeps = concatMap go
- where go p = case dependencies p of
-                KDDependencies subs -> p : concatMap go subs

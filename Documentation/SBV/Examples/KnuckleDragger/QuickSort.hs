@@ -217,6 +217,30 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.4                                             Q.E.D.
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
+-- == Dependencies:
+-- sortIsPermutation         (x3)
+-- sortCountsMatch           (x3)
+-- countAppend               (x6)
+-- partitionNotLongerFst     (x4)
+-- partitionNotLongerSnd     (x4)
+-- countPartition            (x3)
+-- sortIsNonDecreasing       (x1)
+-- partitionFstLT            (x1)
+-- partitionSndGE            (x1)
+-- lltPermutation            (x1)
+-- lltSublist                (x1)
+-- sublistElem               (x2)
+-- sublistCorrect            (x2)
+-- countElem1                (x2)
+-- countNonNegative          (x2)
+-- countElem2                (x2)
+-- lltCorrect                (x1)
+-- sublistTail               (x2)
+-- permutationImpliesSublist (x2)
+-- lgePermutation            (x1)
+-- lgeSublist                (x1)
+-- lgeCorrect                (x1)
+-- nonDecreasingMerge        (x1)
 -- [Proven] quickSortIsCorrect
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
