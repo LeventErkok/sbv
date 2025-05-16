@@ -171,10 +171,11 @@ getProofTree :: Proof -> KDProofDeps
 getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
-depsToTree :: (String -> Int -> a) -> (Int, KDProofDeps) -> Tree a
-depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt)
-                                                  (map (depsToTree xform) (compress (filter interesting ds)))
-  where -- Don't show IH's, just not interesting
+depsToTree :: (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> Tree a
+depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt (length chlds)) chlds
+  where chlds = map (depsToTree xform) (compress (filter interesting ds))
+
+        -- Don't show IH's, just not interesting
         interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
 
         -- If a proof is used twice in the same proof, compress it
@@ -194,18 +195,27 @@ depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt)
 -- | Display the dependencies as a tree
 instance Show KDProofDeps where
   show d = showTree $ depsToTree sh (1, d)
-    where sh nm 1 = nm
-          sh nm x = nm ++ " (x" ++ show x ++ ")"
+    where sh nm 1 _ = nm
+          sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
 -- | Display the tree as an html doc for rendering purposes.
 -- The first argument is Path (or URL) to external CSS file, if needed.
 kdShowDepsHTML :: Maybe FilePath -> KDProofDeps -> String
-kdShowDepsHTML mbCSS d = htmlTree mbCSS $ depsToTree nodify (1, d)
-  where nodify :: String -> Int -> NodeInfo
-        nodify nm cnt = NodeInfo { nodeBehavior = InitiallyExpanded
-                                 , nodeName     = nm
-                                 , nodeInfo     = if cnt == 1 then "" else "Used " ++ show cnt ++ " times"
-                                 }
+kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ depsToTree nodify (1, deps)
+  where nodify :: String -> Int -> Int -> NodeInfo
+        nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
+                                    , nodeName     = nm
+                                    , nodeInfo     = spc (used cnt) ++ depCount dc
+                                    }
+        used 1 = ""
+        used n = "Used " ++ show n ++ " times."
+
+        spc "" = ""
+        spc s  = s ++ " "
+
+        depCount 0 = ""
+        depCount 1 = "Has one dependency."
+        depCount n = "Has " ++ show n ++ " dependencies."
 
 -- | Show instance for t'Proof'
 instance Show Proof where
