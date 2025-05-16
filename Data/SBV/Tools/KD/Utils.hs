@@ -195,8 +195,10 @@ instance Show KDProofDeps where
             where s = proofName p
 
          space = replicate 5 ' '
+         sep   = "+-- "
+
          tab 0 = ""
-         tab l = prefix l ++ "+-- "
+         tab l = drop (length sep - 1) $ prefix l ++ sep
 
          prefix 0 = ""
          prefix 1 = space

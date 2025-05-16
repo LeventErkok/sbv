@@ -96,7 +96,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countElem1
+-- Inductive lemma: countElem
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1.1                                             Q.E.D.
@@ -105,7 +105,7 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --     Step: 1.2.2                                             Q.E.D.
 --     Step: 1.Completeness                                    Q.E.D.
 --   Result:                                                   Q.E.D.
--- Inductive lemma: countElem2
+-- Inductive lemma: elemCount
 --   Step: Base                                                Q.E.D.
 --   Step: 1 (2 way case split)
 --     Step: 1.1                                               Q.E.D.
@@ -218,29 +218,51 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 --   Result:                                                   Q.E.D.
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
 -- == Dependencies:
--- sortIsPermutation         (x3)
--- sortCountsMatch           (x3)
--- countAppend               (x6)
--- partitionNotLongerFst     (x4)
--- partitionNotLongerSnd     (x4)
--- countPartition            (x3)
--- sortIsNonDecreasing       (x1)
--- partitionFstLT            (x1)
--- partitionSndGE            (x1)
--- lltPermutation            (x1)
--- lltSublist                (x1)
--- sublistElem               (x2)
--- sublistCorrect            (x2)
--- countElem1                (x2)
--- countNonNegative          (x2)
--- countElem2                (x2)
--- lltCorrect                (x1)
--- sublistTail               (x2)
--- permutationImpliesSublist (x2)
--- lgePermutation            (x1)
--- lgeSublist                (x1)
--- lgeCorrect                (x1)
--- nonDecreasingMerge        (x1)
+-- quickSortIsCorrect
+--   +-- sortIsPermutation
+--   |     +-- sortCountsMatch
+--   |     |     +-- countAppend (x2)
+--   |     |     +-- partitionNotLongerFst
+--   |     |     +-- partitionNotLongerSnd
+--   |     |     +-- countPartition
+--   +-- sortIsNonDecreasing
+--   |     +-- partitionNotLongerFst
+--   |     +-- partitionNotLongerSnd
+--   |     +-- partitionFstLT
+--   |     +-- partitionSndGE
+--   |     +-- sortIsPermutation
+--   |     |     +-- sortCountsMatch
+--   |     |     |     +-- countAppend (x2)
+--   |     |     |     +-- partitionNotLongerFst
+--   |     |     |     +-- partitionNotLongerSnd
+--   |     |     |     +-- countPartition
+--   |     +-- lltPermutation
+--   |     |     +-- lltSublist
+--   |     |     |     +-- sublistElem
+--   |     |     |     |     +-- sublistCorrect
+--   |     |     |     |     |     +-- countElem
+--   |     |     |     |     |     |     +-- countNonNegative
+--   |     |     |     |     |     +-- elemCount
+--   |     |     |     +-- lltCorrect
+--   |     |     |     +-- sublistTail
+--   |     |     +-- permutationImpliesSublist
+--   |     +-- sortIsPermutation
+--   |     |     +-- sortCountsMatch
+--   |     |     |     +-- countAppend (x2)
+--   |     |     |     +-- partitionNotLongerFst
+--   |     |     |     +-- partitionNotLongerSnd
+--   |     |     |     +-- countPartition
+--   |     +-- lgePermutation
+--   |     |     +-- lgeSublist
+--   |     |     |     +-- sublistElem
+--   |     |     |     |     +-- sublistCorrect
+--   |     |     |     |     |     +-- countElem
+--   |     |     |     |     |     |     +-- countNonNegative
+--   |     |     |     |     |     +-- elemCount
+--   |     |     |     +-- lgeCorrect
+--   |     |     |     +-- sublistTail
+--   |     |     +-- permutationImpliesSublist
+--   |     +-- nonDecreasingMerge
 -- [Proven] quickSortIsCorrect
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
@@ -293,39 +315,39 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                                        ]
 
   -- relationship between count and elem, forward direction
-  countElem1 <- induct "countElem1"
-                       (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` xs .=> count e xs .> 0) $
-                       \ih x xs e -> [e `elem` (x .: xs)]
-                                  |- count e (x .: xs) .> 0
-                                  =: cases [ e .== x ==> 1 + count e xs .> 0
-                                                      ?? countNonNegative
-                                                      =: sTrue
-                                                      =: qed
-                                           , e ./= x ==> count e xs .> 0
-                                                      ?? ih
-                                                      =: sTrue
-                                                      =: qed
-                                           ]
+  countElem <- induct "countElem"
+                      (\(Forall @"xs" xs) (Forall @"e" e) -> e `elem` xs .=> count e xs .> 0) $
+                      \ih x xs e -> [e `elem` (x .: xs)]
+                                 |- count e (x .: xs) .> 0
+                                 =: cases [ e .== x ==> 1 + count e xs .> 0
+                                                     ?? countNonNegative
+                                                     =: sTrue
+                                                     =: qed
+                                          , e ./= x ==> count e xs .> 0
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
 
   -- relationship between count and elem, backwards direction
-  countElem2 <- induct "countElem2"
-                       (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .> 0 .=> e `elem` xs) $
-                       \ih x xs e -> [count e xs .> 0]
-                                  |- e `elem` (x .: xs)
-                                  =: cases [ e .== x ==> trivial
-                                           , e ./= x ==> e `elem` xs
-                                                      ?? ih
-                                                      =: sTrue
-                                                      =: qed
-                                           ]
+  elemCount <- induct "elemCount"
+                      (\(Forall @"xs" xs) (Forall @"e" e) -> count e xs .> 0 .=> e `elem` xs) $
+                      \ih x xs e -> [count e xs .> 0]
+                                 |- e `elem` (x .: xs)
+                                 =: cases [ e .== x ==> trivial
+                                          , e ./= x ==> e `elem` xs
+                                                     ?? ih
+                                                     =: sTrue
+                                                     =: qed
+                                          ]
 
   -- sublist correctness
   sublistCorrect <- calc "sublistCorrect"
                           (\(Forall @"xs" xs) (Forall @"ys" ys) (Forall @"x" x) -> xs `sublist` ys .&& x `elem` xs .=> x `elem` ys) $
                           \xs ys x -> [xs `sublist` ys, x `elem` xs]
                                    |- x `elem` ys
-                                   ?? [ countElem1 `at` (Inst @"xs" xs, Inst @"e" x)
-                                      , countElem2 `at` (Inst @"xs" ys, Inst @"e" x)
+                                   ?? [ countElem `at` (Inst @"xs" xs, Inst @"e" x)
+                                      , elemCount `at` (Inst @"xs" ys, Inst @"e" x)
                                       ]
                                    =: sTrue
                                    =: qed
