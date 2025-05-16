@@ -20,7 +20,7 @@ module Data.SBV.Tools.KnuckleDragger (
          Proposition, Proof
 
        -- * Getting the proof tree
-       , getProofTree, KDProofDeps(..)
+       , KDProofDeps(), getProofTree, kdShowDepsHTML
 
        -- * Adding axioms/definitions
        , axiom

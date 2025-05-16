@@ -5,9 +5,9 @@
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
 
-  * KnuckleDragger: Add getProofTree to inspect/collect the subproofs that a given proof
-    depends on, as a tree. Useful for programming methods/tactics on top of knuckle-dragger
-    provided facilities.
+  * KnuckleDragger: Add methods 'getProofTree' and 'kdShowDepsHTML' to collect and render
+    the subproofs that a given proof depends on, as a tree, ascii or as HTML. Useful for programming
+    methods/tactics on top of knuckle-dragger provided facilities.
 
 ### Version 11.6, 2025-05-10
  

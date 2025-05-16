@@ -21,13 +21,16 @@ module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
        , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
        , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
-       , KDProofDeps(..), getProofTree
+       , KDProofDeps(..), getProofTree, kdShowDepsHTML
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
 import Control.Monad.Trans  (MonadIO)
 
 import Data.Time (NominalDiffTime)
+
+import Data.Tree
+import Data.Tree.View
 
 import Data.Char (isSpace)
 import Data.List (intercalate, nub, sort, isInfixOf)
@@ -167,42 +170,42 @@ data KDProofDeps = KDProofDeps Proof [KDProofDeps]
 getProofTree :: Proof -> KDProofDeps
 getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 
+-- | Turn dependencies to a container tree, for display purposes
+depsToTree :: (String -> Int -> a) -> (Int, KDProofDeps) -> Tree a
+depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt)
+                                                  (map (depsToTree xform) (compress (filter interesting ds)))
+  where -- Don't show IH's, just not interesting
+        interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
+
+        -- If a proof is used twice in the same proof, compress it
+        compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
+        compress []       = []
+        compress (p : ps) = (1 + length [() | (_, True) <- filtered], p) : compress [d | (d, False) <- filtered]
+          where filtered = [(d, shortName p' == curName) | d@(KDProofDeps p' _) <- ps]
+                curName  = case p of
+                             KDProofDeps curProof _ -> shortName curProof
+
+        -- Drop the instantiation part
+        shortName :: Proof -> String
+        shortName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+                    | True              = s
+           where s = proofName p
+
 -- | Display the dependencies as a tree
 instance Show KDProofDeps where
-  show deps = intercalate "\n" $ go 0 (1, deps)
-   where go :: Int -> (Int, KDProofDeps) -> [String]
-         go level (cnt, KDProofDeps p ds) = (tab level ++ shortName p ++ showCount cnt)
-                                          : concatMap (go (level + 1)) (compress (filter interesting ds))
+  show d = showTree $ depsToTree sh (1, d)
+    where sh nm 1 = nm
+          sh nm x = nm ++ " (x" ++ show x ++ ")"
 
-         showCount 1 = ""
-         showCount x = " (x" ++ show x ++ ")"
-
-         -- Don't show IH's, just not interesting
-         interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
-
-         -- If a proof is used twice in the same proof, compress it
-         compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
-         compress []       = []
-         compress (p : ps) = (1 + length [() | (_, True) <- filtered], p) : [(1, d) | (d, False) <- filtered]
-           where filtered = [(d, shortName p' == curName) | d@(KDProofDeps p' _) <- ps]
-                 curName  = case p of
-                              KDProofDeps curProof _ -> shortName curProof
-
-         -- Drop the instantiation part
-         shortName :: Proof -> String
-         shortName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
-                     | True              = s
-            where s = proofName p
-
-         space = replicate 5 ' '
-         sep   = "+-- "
-
-         tab 0 = ""
-         tab l = drop (length sep - 1) $ prefix l ++ sep
-
-         prefix 0 = ""
-         prefix 1 = space
-         prefix l = space ++ "|" ++ prefix (l-1)
+-- | Display the tree as an html doc for rendering purposes.
+-- The first argument is Path (or URL) to external CSS file, if needed.
+kdShowDepsHTML :: Maybe FilePath KDProofDeps -> String
+kdShowDepsHTML css d = htmlTree mbCSS $ depsToTree nodify (1, d)
+  where nodify :: String -> Int -> NodeInfo
+        nodify nm cnt = NodeInfo { nodeBehavior = InitiallyExpanded
+                                 , nodeName     = nm
+                                 , nodeInfo     = if cnt == 1 then "" else "Used " ++ show cnt ++ " times"
+                                 }
 
 -- | Show instance for t'Proof'
 instance Show Proof where

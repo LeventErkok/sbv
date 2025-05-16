@@ -219,50 +219,44 @@ isPermutation xs ys = quantifiedBool (\(Forall @"x" x) -> count x xs .== count x
 -- Lemma: quickSortIsCorrect                                   Q.E.D.
 -- == Dependencies:
 -- quickSortIsCorrect
---   +-- sortIsPermutation
---   |     +-- sortCountsMatch
---   |     |     +-- countAppend (x2)
---   |     |     +-- partitionNotLongerFst
---   |     |     +-- partitionNotLongerSnd
---   |     |     +-- countPartition
---   +-- sortIsNonDecreasing
---   |     +-- partitionNotLongerFst
---   |     +-- partitionNotLongerSnd
---   |     +-- partitionFstLT
---   |     +-- partitionSndGE
---   |     +-- sortIsPermutation
---   |     |     +-- sortCountsMatch
---   |     |     |     +-- countAppend (x2)
---   |     |     |     +-- partitionNotLongerFst
---   |     |     |     +-- partitionNotLongerSnd
---   |     |     |     +-- countPartition
---   |     +-- lltPermutation
---   |     |     +-- lltSublist
---   |     |     |     +-- sublistElem
---   |     |     |     |     +-- sublistCorrect
---   |     |     |     |     |     +-- countElem
---   |     |     |     |     |     |     +-- countNonNegative
---   |     |     |     |     |     +-- elemCount
---   |     |     |     +-- lltCorrect
---   |     |     |     +-- sublistTail
---   |     |     +-- permutationImpliesSublist
---   |     +-- sortIsPermutation
---   |     |     +-- sortCountsMatch
---   |     |     |     +-- countAppend (x2)
---   |     |     |     +-- partitionNotLongerFst
---   |     |     |     +-- partitionNotLongerSnd
---   |     |     |     +-- countPartition
---   |     +-- lgePermutation
---   |     |     +-- lgeSublist
---   |     |     |     +-- sublistElem
---   |     |     |     |     +-- sublistCorrect
---   |     |     |     |     |     +-- countElem
---   |     |     |     |     |     |     +-- countNonNegative
---   |     |     |     |     |     +-- elemCount
---   |     |     |     +-- lgeCorrect
---   |     |     |     +-- sublistTail
---   |     |     +-- permutationImpliesSublist
---   |     +-- nonDecreasingMerge
+--  ├╴sortIsPermutation
+--  │  └╴sortCountsMatch
+--  │     ├╴countAppend (x2)
+--  │     ├╴partitionNotLongerFst
+--  │     ├╴partitionNotLongerSnd
+--  │     └╴countPartition
+--  └╴sortIsNonDecreasing
+--     ├╴partitionNotLongerFst
+--     ├╴partitionNotLongerSnd
+--     ├╴partitionFstLT
+--     ├╴partitionSndGE
+--     ├╴sortIsPermutation (x2)
+--     │  └╴sortCountsMatch
+--     │     ├╴countAppend (x2)
+--     │     ├╴partitionNotLongerFst
+--     │     ├╴partitionNotLongerSnd
+--     │     └╴countPartition
+--     ├╴lltPermutation
+--     │  ├╴lltSublist
+--     │  │  ├╴sublistElem
+--     │  │  │  └╴sublistCorrect
+--     │  │  │     ├╴countElem
+--     │  │  │     │  └╴countNonNegative
+--     │  │  │     └╴elemCount
+--     │  │  ├╴lltCorrect
+--     │  │  └╴sublistTail
+--     │  └╴permutationImpliesSublist
+--     ├╴lgePermutation
+--     │  ├╴lgeSublist
+--     │  │  ├╴sublistElem
+--     │  │  │  └╴sublistCorrect
+--     │  │  │     ├╴countElem
+--     │  │  │     │  └╴countNonNegative
+--     │  │  │     └╴elemCount
+--     │  │  ├╴lgeCorrect
+--     │  │  └╴sublistTail
+--     │  └╴permutationImpliesSublist
+--     └╴nonDecreasingMerge
 -- [Proven] quickSortIsCorrect
 correctness :: IO Proof
 correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
@@ -671,6 +665,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- | We can display the dependencies in a proof
   liftIO $ do putStrLn "== Dependencies:"
-              print $ getProofTree qs
+              putStr $ show $ getProofTree qs
 
   pure qs

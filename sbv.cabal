@@ -112,6 +112,7 @@ Library
                   , text
                   , time
                   , transformers
+                  , tree-view
                   , uniplate
   Exposed-modules : Data.SBV
                   , Data.SBV.Control
