@@ -171,9 +171,17 @@ getProofTree :: Proof -> KDProofDeps
 getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 
 -- | Turn dependencies to a container tree, for display purposes
-depsToTree :: (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> Tree a
-depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt (length chlds)) chlds
-  where chlds = map (depsToTree xform) (compress (filter interesting ds))
+depsToTree :: [String] -> (String -> Int -> Int -> a) -> (Int, KDProofDeps) -> ([String], Tree a)
+depsToTree visited xform (cnt, KDProofDeps top ds) = (nVisited, Node (xform nTop cnt (length chlds)) chlds)
+  where nTop = shortName top
+
+        (nVisited, chlds) | nTop `elem` visited = (visited, [])
+                          | True                = walk (nTop : visited) (compress (filter interesting ds))
+
+        walk v []     = (v, [])
+        walk v (c:cs) = let (v',  t)  = depsToTree v xform c
+                            (v'', ts) = walk v' cs
+                        in (v'', t : ts)
 
         -- Don't show IH's, just not interesting
         interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
@@ -194,14 +202,14 @@ depsToTree xform (cnt, KDProofDeps top ds) = Node (xform (shortName top) cnt (le
 
 -- | Display the dependencies as a tree
 instance Show KDProofDeps where
-  show d = showTree $ depsToTree sh (1, d)
+  show d = showTree $ snd $ depsToTree [] sh (1, d)
     where sh nm 1 _ = nm
           sh nm x _= nm ++ " (x" ++ show x ++ ")"
 
 -- | Display the tree as an html doc for rendering purposes.
 -- The first argument is Path (or URL) to external CSS file, if needed.
 kdShowDepsHTML :: Maybe FilePath -> KDProofDeps -> String
-kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ depsToTree nodify (1, deps)
+kdShowDepsHTML mbCSS deps = htmlTree mbCSS $ snd $ depsToTree [] nodify (1, deps)
   where nodify :: String -> Int -> Int -> NodeInfo
         nodify nm cnt dc = NodeInfo { nodeBehavior = InitiallyExpanded
                                     , nodeName     = nm
