@@ -199,8 +199,8 @@ instance Show KDProofDeps where
 
 -- | Display the tree as an html doc for rendering purposes.
 -- The first argument is Path (or URL) to external CSS file, if needed.
-kdShowDepsHTML :: Maybe FilePath KDProofDeps -> String
-kdShowDepsHTML css d = htmlTree mbCSS $ depsToTree nodify (1, d)
+kdShowDepsHTML :: Maybe FilePath -> KDProofDeps -> String
+kdShowDepsHTML mbCSS d = htmlTree mbCSS $ depsToTree nodify (1, d)
   where nodify :: String -> Int -> NodeInfo
         nodify nm cnt = NodeInfo { nodeBehavior = InitiallyExpanded
                                  , nodeName     = nm
