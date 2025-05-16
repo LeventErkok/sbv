@@ -1,7 +1,7 @@
 * Hackage: <http://hackage.haskell.org/package/sbv>
 * GitHub:  <http://github.com/LeventErkok/sbv>
 
-### Version 11.6.5, Not yet released
+### Version 11.7, 2025-05-16
 
   * KnuckleDragger: Add a proof of correctness for the quick-sort algorithm.
 
