@@ -458,37 +458,37 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
   partitionNotLongerFst <- sInduct "partitionNotLongerFst"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (fst (partition pivot l)) .<= length l)
      (\l (_ :: SInteger) -> length @Integer l) $
-     (\ih l pivot -> [] |- length (fst (partition pivot l)) .<= length l
-                        =: split l trivial
-                                 (\a as -> let lo = fst (partition pivot as)
-                                        in ite (a .< pivot)
-                                               (length (a .: lo) .<= length (a .: as))
-                                               (length       lo  .<= length (a .: as))
-                                        ?? "simplify"
-                                        =: ite (a .< pivot)
-                                               (length lo .<=     length as)
-                                               (length lo .<= 1 + length as)
-                                        ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                        =: sTrue
-                                        =: qed))
+     \ih l pivot -> [] |- length (fst (partition pivot l)) .<= length l
+                       =: split l trivial
+                                (\a as -> let lo = fst (partition pivot as)
+                                       in ite (a .< pivot)
+                                              (length (a .: lo) .<= length (a .: as))
+                                              (length       lo  .<= length (a .: as))
+                                       ?? "simplify"
+                                       =: ite (a .< pivot)
+                                              (length lo .<=     length as)
+                                              (length lo .<= 1 + length as)
+                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                       =: sTrue
+                                       =: qed)
 
   -- The second element of partition does not increase in size
   partitionNotLongerSnd <- sInduct "partitionNotLongerSnd"
      (\(Forall @"l" l) (Forall @"pivot" pivot) -> length (snd (partition pivot l)) .<= length l)
      (\l (_ :: SInteger) -> length @Integer l) $
-     (\ih l pivot -> [] |- length (snd (partition pivot l)) .<= length l
-                        =: split l trivial
-                                 (\a as -> let hi = snd (partition pivot as)
-                                        in ite (a .< pivot)
-                                               (length       hi  .<= length (a .: as))
-                                               (length (a .: hi) .<= length (a .: as))
-                                        ?? "simplify"
-                                        =: ite (a .< pivot)
-                                               (length hi .<= 1 + length as)
-                                               (length hi .<=     length as)
-                                        ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
-                                        =: sTrue
-                                        =: qed))
+     \ih l pivot -> [] |- length (snd (partition pivot l)) .<= length l
+                       =: split l trivial
+                                (\a as -> let hi = snd (partition pivot as)
+                                       in ite (a .< pivot)
+                                              (length       hi  .<= length (a .: as))
+                                              (length (a .: hi) .<= length (a .: as))
+                                       ?? "simplify"
+                                       =: ite (a .< pivot)
+                                              (length hi .<= 1 + length as)
+                                              (length hi .<=     length as)
+                                       ?? ih `at` (Inst @"l" as, Inst @"pivot" pivot)
+                                       =: sTrue
+                                       =: qed)
 
   --------------------------------------------------------------------------------------------
   -- Part III. Helper lemmas for count
@@ -570,13 +570,13 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                    ?? [ hprf  $ ih                    `at` (Inst @"xs" lo, Inst @"e" e)
                                       , hprf  $ partitionNotLongerFst `at` (Inst @"l"  as, Inst @"pivot" a)
                                       , hasm  $ xs .== a .: as
-                                      , hcmnt $ "IH on lo"
+                                      , hcmnt "IH on lo"
                                       ]
                                    =: count e lo + count e (singleton a) + count e (quickSort hi)
                                    ?? [ hprf  $ ih                    `at` (Inst @"xs" hi, Inst @"e" e)
                                       , hprf  $ partitionNotLongerSnd `at` (Inst @"l"  as, Inst @"pivot" a)
                                       , hasm  $ xs .== a .: as
-                                      , hcmnt $ "IH on hi"
+                                      , hcmnt "IH on hi"
                                       ]
                                    =: count e lo + count e (singleton a) + count e hi
                                    ?? countPartition `at` (Inst @"xs" as, Inst @"pivot" a, Inst @"e" e)
@@ -625,8 +625,8 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
                                       , partitionNotLongerSnd `at` (Inst @"l" as, Inst @"pivot" a)
 
                                         -- Use the inductive hypothesis twice to deduce quickSort of lo and hi are nonDecreasing
-                                      , ih `at` (Inst @"xs" lo)  -- nonDecreasing (quickSort lo)
-                                      , ih `at` (Inst @"xs" hi)  -- nonDecreasing (quickSort hi)
+                                      , ih `at` Inst @"xs" lo  -- nonDecreasing (quickSort lo)
+                                      , ih `at` Inst @"xs" hi  -- nonDecreasing (quickSort hi)
 
                                       -- Deduce that lo is all less than a, and hi is all greater than or equal to a
                                       , partitionFstLT `at` (Inst @"l" as, Inst @"pivot" a)
