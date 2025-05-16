@@ -29,7 +29,7 @@
 {-# OPTIONS_GHC -Wall -Werror #-}
 
 module Data.SBV.Tools.KD.KnuckleDragger (
-         Proposition, Proof, Instantiatable(..), Inst(..), getProofDependencies, extractDependentProofs
+         Proposition, Proof, Instantiatable(..), Inst(..), getProofTree, KDProofDeps(..)
        , axiom
        , lemma,   lemmaWith
        , theorem, theoremWith
@@ -957,23 +957,12 @@ type KDProofRaw a = KDProofGen a [Helper] ()
 -- | A proof, as processed by KD. Producing a boolean result and each step is a boolean. Helpers on branches dispersed down, only strings are left for printing
 type KDProof = KDProofGen SBool [String] SBool
 
--- | Collect dependencies
+-- | Collect dependencies for a KDProof
 getDependencies :: KDProof -> [Proof]
 getDependencies = collect
   where collect (ProofStep   _ hs next) = concatMap getHelperProofs hs ++ collect next
         collect (ProofBranch _ _  bs)   = concatMap (collect . snd) bs
         collect (ProofEnd    _    hs)   = concatMap getHelperProofs hs
-
--- | Return all the proofs this particular proof depends on, transitively
--- Note that we leave out ourselves..
-getProofDependencies :: Proof -> KDDependencies
-getProofDependencies = KDDependencies . concatMap go . dependencies
-  where go p = p : concatMap go (dependencies p)
-
--- | Get the underlying proofs
-extractDependentProofs :: Proof -> [Proof]
-extractDependentProofs p = case getProofDependencies p of
-                             KDDependencies ps -> ps
 
 -- | Class capturing giving a proof-step helper
 type family Hinted a where

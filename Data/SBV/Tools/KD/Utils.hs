@@ -21,7 +21,7 @@ module Data.SBV.Tools.KD.Utils (
          KD, runKD, runKDWith, Proof(..)
        , startKD, finishKD, getKDState, getKDConfig, KDState(..), KDStats(..)
        , RootOfTrust(..), KDProofContext(..), calculateRootOfTrust, message, updStats
-       , KDDependencies(..)
+       , KDProofDeps(..), getProofTree
        ) where
 
 import Control.Monad.Reader (ReaderT, runReaderT, MonadReader, ask, liftIO)
@@ -30,7 +30,7 @@ import Control.Monad.Trans  (MonadIO)
 import Data.Time (NominalDiffTime)
 
 import Data.Char (isSpace)
-import Data.List (intercalate, nub, sort, partition)
+import Data.List (intercalate, nub, sort, isInfixOf)
 import System.IO (hFlush, stdout)
 
 import Data.SBV.Core.Data (SBool)
@@ -160,37 +160,47 @@ instance NFData Proof where
                                                                                `seq` rnf getProof
                                                                                `seq` rnf proofName
 
--- | Represent dependencies with a newtype so we can have a custom show instance
--- Note that this is transitive; i.e., all the dependencies plus the dependencies of those etc.
-newtype KDDependencies = KDDependencies [Proof]
+-- | Dependencies of a proof, in a tree format.
+data KDProofDeps = KDProofDeps Proof [KDProofDeps]
 
--- | NFData instance for t 'KDDependencies'
-instance NFData KDDependencies where
-   rnf (KDDependencies ds) = rnf ds
+-- | Return all the proofs this particular proof depends on, transitively
+getProofTree :: Proof -> KDProofDeps
+getProofTree p = KDProofDeps p $ map getProofTree (dependencies p)
 
--- | Show instance displays the dependencies in a compact form
-instance Show KDDependencies where
-   show (KDDependencies ps) = intercalate "\n" $ map sh sorted
-     where -- Simplify the names by dropping instantiations
-           nm = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') . proofName
+-- | Display the dependencies as a tree
+instance Show KDProofDeps where
+  show deps = intercalate "\n" $ go 0 (1, deps)
+   where go :: Int -> (Int, KDProofDeps) -> [String]
+         go level (cnt, KDProofDeps p ds) = (tab level ++ shortName p ++ showCount cnt)
+                                          : concatMap (go (level + 1)) (compress (filter interesting ds))
 
-           -- Some proofs are not interesting
-           interesting n = n `notElem` ["IH"]   -- Inductive hypotheses as marked by KD
+         showCount 1 = ""
+         showCount x = " (x" ++ show x ++ ")"
 
-           sorted   = simp (filter interesting (map nm ps))
-           plen     = maximum $ 0 : map (length . fst) sorted
-           hasMulti = not $ null [() | (_, i) <- sorted, i > 0]
+         -- Don't show IH's, just not interesting
+         interesting (KDProofDeps p _) = not ("IH" `isInfixOf` proofName p)
 
-           -- Group stably
-           simp :: [String] -> [(String, Int)]
-           simp []       = []
-           simp (x : xs) = let (eqs, nonEqs) = partition (== x) xs
-                           in (x, length eqs) : simp nonEqs
+         -- If a proof is used twice in the same proof, compress it
+         compress :: [KDProofDeps] -> [(Int, KDProofDeps)]
+         compress []       = []
+         compress (p : ps) = (1 + length [() | (_, True) <- filtered], p) : [(1, d) | (d, False) <- filtered]
+           where filtered = [(d, shortName p' == curName) | d@(KDProofDeps p' _) <- ps]
+                 curName  = case p of
+                              KDProofDeps curProof _ -> shortName curProof
 
-           sh (n, 0) | not hasMulti = n
-           sh (n, i)                = pad n ++ " (x" ++ show (i+1) ++ ")"
+         -- Drop the instantiation part
+         shortName :: Proof -> String
+         shortName p | "@" `isInfixOf` s = reverse . dropWhile isSpace . reverse . takeWhile (/= '@') $ s
+                     | True              = s
+            where s = proofName p
 
-           pad n = take plen $ n ++ repeat ' '
+         space = replicate 5 ' '
+         tab 0 = ""
+         tab l = prefix l ++ "+-- "
+
+         prefix 0 = ""
+         prefix 1 = space
+         prefix l = space ++ "|" ++ prefix (l-1)
 
 -- | Show instance for t'Proof'
 instance Show Proof where

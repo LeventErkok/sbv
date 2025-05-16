@@ -649,6 +649,6 @@ correctness = runKDWith z3{kdOptions = (kdOptions z3) {ribbonLength = 60}} $ do
 
   -- | We can display the dependencies in a proof
   liftIO $ do putStrLn "== Dependencies:"
-              print $ getProofDependencies qs
+              print $ getProofTree qs
 
   pure qs
